@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#05060a">
+<title>VOIGT ZONE</title>
+<style>
+  :root{
+    --cyan:#22e6ff;
+    --cyan-soft:rgba(34,230,255,.35);
+    --pink:#ff3d6e;
+    --violet:#a855f7;
+    --green:#4dff9e;
+    --bg:#05060a;
+    --panel:rgba(4,12,20,.78);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{
+    height:100%;width:100%;overflow:hidden;background:var(--bg);color:#dbe9f4;
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-user-select:none;user-select:none;touch-action:none;
+    overscroll-behavior:none;
+  }
+  #app{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 45%,#0a1220 0%,#05060a 62%,#020306 100%)}
+  #stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;will-change:transform}
+  #game{display:block;width:1280px;height:720px;background:#05060a;
+        box-shadow:0 0 60px rgba(34,230,255,.12),0 0 140px rgba(34,230,255,.06)}
+
+  /* ---------------- Layout ---------------- */
+  #app{display:flex;flex-direction:column}
+  #stagewrap{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+
+  /* ---------------- Top-Leiste (außerhalb des Spielfelds) ---------------- */
+  #topbar{
+    flex:0 0 auto;display:flex;align-items:center;gap:14px;
+    padding:9px 16px;font-size:14px;z-index:40;
+    background:linear-gradient(180deg,rgba(8,14,22,.98),rgba(4,7,12,.98));
+    border-bottom:1px solid rgba(34,230,255,.22);
+    box-shadow:0 8px 28px rgba(0,0,0,.65);
+    flex-wrap:nowrap;
+  }
+  .brand{
+    font-weight:800;letter-spacing:.16em;font-size:1.05em;white-space:nowrap;
+    background:linear-gradient(135deg,#22e6ff,#7a7bff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 10px rgba(34,230,255,.45));
+  }
+  .brand i{font-style:normal;color:#a855f7;-webkit-text-fill-color:#a855f7;margin-left:.02em}
+  .stat{
+    display:flex;align-items:baseline;gap:.5em;white-space:nowrap;
+    background:rgba(10,20,30,.75);border:1px solid rgba(34,230,255,.26);
+    border-radius:.45em;padding:.32em .65em;
+    box-shadow:inset 0 0 14px rgba(34,230,255,.05);
+  }
+  .stat .lbl{font-size:.74em;letter-spacing:.13em;text-transform:uppercase;color:#79a0b6}
+  .stat b,.stat .val{font-size:1.02em;font-weight:700;color:var(--cyan);
+    text-shadow:0 0 10px rgba(34,230,255,.5);font-variant-numeric:tabular-nums}
+  #hudLives{display:inline-flex;align-items:center;gap:.26em}
+  .life{width:.66em;height:.66em;border-radius:50%;background:var(--pink);
+        box-shadow:0 0 .6em var(--pink);display:inline-block;transition:.25s}
+  .life.off{background:rgba(255,61,110,.14);box-shadow:none}
+  .progress{flex:1 1 180px;min-width:110px;display:flex;flex-direction:column;gap:5px}
+  .track{
+    position:relative;height:9px;border-radius:999px;overflow:hidden;
+    background:rgba(3,9,15,.95);border:1px solid rgba(34,230,255,.32);
+    box-shadow:inset 0 0 10px rgba(0,0,0,.9);
+  }
+  .fill{
+    position:absolute;left:0;top:0;bottom:0;width:0%;
+    background:linear-gradient(90deg,#0b7fa5,#22e6ff);
+    box-shadow:0 0 14px rgba(34,230,255,.9);
+    transition:width .18s linear,background .3s;
+  }
+  .fill.done{background:linear-gradient(90deg,#12a35e,#4dff9e);box-shadow:0 0 16px rgba(77,255,158,.95)}
+  .marker{position:absolute;left:75%;top:-2px;bottom:-2px;width:2px;background:rgba(255,255,255,.55);
+          box-shadow:0 0 7px rgba(255,255,255,.6)}
+  .ptext{display:flex;justify-content:space-between;font-size:.74em;letter-spacing:.11em;
+         text-transform:uppercase;color:#7fa6bb;line-height:1}
+  .ptext b{color:#d8f6ff;font-weight:700}
+  .actions{display:flex;gap:8px;flex-shrink:0}
+  .btn{
+    pointer-events:auto;cursor:pointer;font:inherit;font-size:.8em;letter-spacing:.09em;
+    text-transform:uppercase;font-weight:600;white-space:nowrap;
+    background:rgba(10,20,30,.85);border:1px solid rgba(34,230,255,.42);color:#bfe9f7;
+    border-radius:.45em;padding:.5em .8em;
+    transition:background .15s,box-shadow .15s,color .15s,transform .1s;
+  }
+  .btn:hover{background:rgba(34,230,255,.18);color:#fff;box-shadow:0 0 16px rgba(34,230,255,.45)}
+  .btn:active{transform:translateY(1px)}
+  @media (max-width:860px){
+    #topbar{gap:9px;padding:7px 10px;font-size:13px}
+    .brand{display:none}
+    .stat{padding:.28em .5em}
+    .actions .btn{padding:.45em .6em;font-size:.75em}
+  }
+  @media (max-width:620px){
+    #topbar{flex-wrap:wrap;gap:7px}
+    .progress{order:5;flex:1 1 100%}
+    .actions{margin-left:auto}
+  }
+
+  /* ---------------- Screens ---------------- */
+  .screen{
+    position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:1.1rem;text-align:center;padding:26px;z-index:60;
+    background:radial-gradient(ellipse at center,rgba(5,10,17,.62) 0%,rgba(2,4,8,.88) 78%);
+    backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+  }
+  .screen.open{display:flex}
+  .screen h1{
+    font-size:clamp(30px,7vw,58px);line-height:1.05;letter-spacing:.08em;font-weight:800;
+    background:linear-gradient(135deg,#22e6ff 0%,#5b8cff 55%,#a855f7 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 22px rgba(34,230,255,.35));
+  }
+  .screen h1.danger{background:linear-gradient(135deg,#ff3d6e 0%,#ff7a3d 100%);
+    -webkit-background-clip:text;background-clip:text;
+    filter:drop-shadow(0 0 22px rgba(255,61,110,.4))}
+  .screen h1.win{background:linear-gradient(135deg,#4dff9e 0%,#22e6ff 100%);
+    -webkit-background-clip:text;background-clip:text;
+    filter:drop-shadow(0 0 22px rgba(77,255,158,.4))}
+  .screen p{font-size:clamp(13px,2.2vw,17px);color:#9fb8c9;max-width:34em;line-height:1.5}
+  /* Untertitel unter dem Spielnamen */
+  .screen .tagline{
+    margin-top:-.9rem;font-size:clamp(10px,1.7vw,13px);letter-spacing:.42em;
+    text-transform:uppercase;color:#6f93a8;max-width:none;
+  }
+  /* Spielname auf Game-Over- und Abschlussbildschirm */
+  .screen .brandline{
+    font-size:clamp(11px,1.8vw,14px);letter-spacing:.44em;text-transform:uppercase;
+    font-weight:800;max-width:none;
+    background:linear-gradient(135deg,#22e6ff,#7a7bff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 12px rgba(34,230,255,.4));
+  }
+  .screen .hint{font-size:clamp(11px,1.7vw,13px);color:#5f7d90;letter-spacing:.06em}
+  .screen .big{font-size:clamp(20px,4vw,30px);color:#e8f6ff;font-weight:700;letter-spacing:.04em}
+  .screen .accent{color:var(--cyan);text-shadow:0 0 14px rgba(34,230,255,.6);font-weight:700}
+  .cta{
+    cursor:pointer;font:inherit;font-size:clamp(14px,2.4vw,17px);font-weight:800;
+    letter-spacing:.12em;text-transform:uppercase;color:#03131b;
+    background:linear-gradient(135deg,#22e6ff,#4aa8ff);
+    border:none;border-radius:.45em;padding:.85em 2.2em;min-width:200px;
+    box-shadow:0 0 28px rgba(34,230,255,.35),0 6px 18px rgba(0,0,0,.5);
+    transition:transform .12s,box-shadow .18s,filter .18s;
+  }
+  .cta:hover{transform:translateY(-2px);box-shadow:0 0 40px rgba(34,230,255,.55);filter:brightness(1.08)}
+  .cta:active{transform:translateY(1px)}
+  .cta.ghost{
+    background:transparent;color:#bfe9f7;border:1px solid rgba(34,230,255,.45);
+    box-shadow:none;font-weight:600;
+  }
+  .cta.ghost:hover{background:rgba(34,230,255,.12);box-shadow:0 0 20px rgba(34,230,255,.25)}
+  .btnrow{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center}
+  .keys{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center;font-size:clamp(11px,1.8vw,13px);color:#7fa6bb}
+  .keys kbd{
+    display:inline-block;background:rgba(34,230,255,.08);border:1px solid rgba(34,230,255,.3);
+    border-bottom-width:2px;border-radius:.3em;padding:.22em .55em;font-family:inherit;
+    font-size:.95em;color:#bfe9f7;letter-spacing:.05em;
+  }
+  .spinner{
+    width:34px;height:34px;border-radius:50%;
+    border:3px solid rgba(34,230,255,.18);border-top-color:var(--cyan);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Level-complete banner (does NOT cover the picture) */
+  #screenLevel{
+    position:fixed;left:50%;top:var(--topbar-h,0px);transform:translateX(-50%);
+    display:none;flex-direction:column;align-items:center;gap:.2rem;
+    padding:.7rem 2rem .85rem;z-index:55;pointer-events:none;text-align:center;
+    background:linear-gradient(180deg,rgba(4,14,22,.92),rgba(4,14,22,.45) 72%,rgba(4,14,22,0));
+    border-bottom:1px solid rgba(77,255,158,.35);
+    border-radius:0 0 1rem 1rem;
+    animation:bannerIn .35s ease;
+  }
+  #screenLevel.open{display:flex}
+  #screenLevel .t{
+    font-size:clamp(18px,3.4vw,30px);font-weight:800;letter-spacing:.14em;
+    background:linear-gradient(135deg,#4dff9e,#22e6ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 18px rgba(77,255,158,.45));
+  }
+  #screenLevel .s{font-size:clamp(10px,1.5vw,12px);letter-spacing:.16em;color:#9fe9cf;text-transform:uppercase}
+  #screenLevel .c{font-size:clamp(10px,1.5vw,13px);color:#8fb6c8;letter-spacing:.1em;margin-top:.15rem}
+  #screenLevel .c b{color:#fff;font-size:1.25em}
+  @keyframes bannerIn{from{transform:translate(-50%,-100%);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+
+  /* ---------------- Touch controls ---------------- */
+  #touch{
+    position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    transform:translateX(-50%);display:none;z-index:35;
+    grid-template-columns:repeat(3,var(--tb));grid-template-rows:repeat(2,var(--tb));
+    gap:7px;--tb:56px;opacity:.62;
+  }
+  #touch.on{display:grid}
+  .dp{
+    width:var(--tb);height:var(--tb);border-radius:14px;
+    background:rgba(6,18,28,.62);border:1px solid rgba(34,230,255,.5);
+    color:#bff2ff;display:flex;align-items:center;justify-content:center;
+    font-size:20px;line-height:1;cursor:pointer;
+    box-shadow:0 0 16px rgba(34,230,255,.18),inset 0 0 12px rgba(34,230,255,.08);
+    touch-action:none;user-select:none;
+  }
+  .dp.press{background:rgba(34,230,255,.42);color:#04121a;box-shadow:0 0 26px rgba(34,230,255,.7)}
+  #dpUp{grid-column:2;grid-row:1}
+  #dpLeft{grid-column:1;grid-row:2}
+  #dpDown{grid-column:2;grid-row:2}
+  #dpRight{grid-column:3;grid-row:2}
+
+  @media (max-height:520px){
+    #touch{--tb:48px;bottom:8px;opacity:.5}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">VOIGT <i>ZONE</i></div>
+    <div class="stat"><span class="lbl">Level</span><b id="hudLevel">1 / 1</b></div>
+    <div class="stat"><span class="lbl">Leben</span><span id="hudLives" class="val"></span></div>
+    <div class="progress">
+      <div class="track">
+        <div class="fill" id="progressFill"></div>
+        <div class="marker" id="hudMarker" title="Ziel 75 %"></div>
+      </div>
+      <div class="ptext"><span id="hudPercent">0 %</span><span>Ziel <b id="hudTarget">75 %</b></span></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnPause" type="button">Pause</button>
+      <button class="btn" id="btnRestart" type="button">Neustart</button>
+    </div>
+  </header>
+
+  <div id="stagewrap">
+    <div id="stage"><canvas id="game" width="1280" height="720"></canvas></div>
+
+    <div id="touch">
+      <button class="dp" id="dpUp"    type="button" aria-label="Hoch">▲</button>
+      <button class="dp" id="dpLeft"  type="button" aria-label="Links">◀</button>
+      <button class="dp" id="dpDown"  type="button" aria-label="Runter">▼</button>
+      <button class="dp" id="dpRight" type="button" aria-label="Rechts">▶</button>
+    </div>
+  </div>
+
+  <!-- Start -->
+  <div class="screen open" id="screenStart">
+    <h1>VOIGT ZONE</h1>
+    <p class="tagline">A Thomas Voigt Game</p>
+    <p>Zeichne Linien durch das verborgene Feld und schließe Flächen ein.
+       Erobere <span class="accent">75 %</span> der Fläche – mit jedem Level steigt
+       das Ziel um einen Prozentpunkt bis <span class="accent">90 %</span>.</p>
+    <div id="startLoading" class="btnrow" style="flex-direction:column;align-items:center;gap:.9rem">
+      <div class="spinner"></div>
+      <p class="hint" id="startLoadingText">Levelbilder werden gesucht …</p>
+    </div>
+    <div id="startReady" class="btnrow" style="display:none;flex-direction:column;align-items:center;gap:1rem">
+      <button class="cta" id="btnStart" type="button">Spiel starten</button>
+      <p class="hint" id="startLevelCount"></p>
+    </div>
+    <div class="keys">
+      <span><kbd>←↑↓→</kbd> / <kbd>WASD</kbd> bewegen</span>
+      <span><kbd>Leertaste</kbd> Pause</span>
+      <span><kbd>R</kbd> Neustart</span>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div class="screen" id="screenPause">
+    <h1>PAUSE</h1>
+    <p>Das Spiel ist angehalten.</p>
+    <div class="btnrow">
+      <button class="cta" id="btnResume" type="button">Weiter</button>
+      <button class="cta ghost" id="btnRestart2" type="button">Neustart</button>
+    </div>
+    <p class="hint">Leertaste setzt das Spiel fort</p>
+  </div>
+
+  <!-- Game over -->
+  <div class="screen" id="screenGameOver">
+    <p class="brandline">VOIGT ZONE</p>
+    <h1 class="danger">GAME OVER</h1>
+    <p class="big">Level <span class="accent" id="overLevel">1</span> ·
+       <span class="accent" id="overPercent">0 %</span> erobert</p>
+    <p>Keine Leben mehr übrig. Neustart gefällig?</p>
+    <button class="cta" id="btnAgain" type="button">Nochmal spielen</button>
+  </div>
+
+  <!-- Final -->
+  <div class="screen" id="screenFinal">
+    <p class="brandline">VOIGT ZONE</p>
+    <h1 class="win">ALLE LEVEL GESCHAFFT</h1>
+    <p class="big">Du hast alle <span class="accent" id="finalCount">3</span> Bilder vollständig enthüllt.</p>
+    <p>Das war die Abschlussanzeige – Zeit für einen neuen Durchlauf.</p>
+    <button class="cta" id="btnAgain2" type="button">Neu beginnen</button>
+  </div>
+
+  <!-- Level complete banner -->
+  <div id="screenLevel">
+    <div class="t">LEVEL KOMPLETT</div>
+    <div class="s" id="levelBannerSub">Ziel erreicht</div>
+    <div class="c">Nächstes Level in <b id="levelCountdown">5</b> s</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function () {
+
+/* =====================================================================
+   KONSTANTEN
+   ===================================================================== */
+const W = 1280, H = 720;              // interne Spielfeldgröße
+const CELL = 4;                        // Rasterzellengröße in px
+const COLS = W / CELL;                 // 320
+const ROWS = H / CELL;                 // 180
+const BC = 4;                          // Randstärke in Zellen (16 px)
+const BORDER_PX = BC * CELL;           // 16 px
+
+const EMPTY = 0, FILLED = 1, TRAIL = 2;
+
+/* Zielprozent je Level: min(75 + (Level-1), 90) – Prozentpunkte, keine relative Steigerung */
+const TARGET_BASE = 75;                // Level 1
+const TARGET_MAX = 90;                 // Obergrenze ab Level 16
+const START_LIVES = 3;
+const PLAYER_SPEED = 240;              // px/s
+const GHOST_SPEED = PLAYER_SPEED * 0.5; // Basiswert (Level 1)
+// Faktor je Level: 1 + (Levelnummer - 1) * 0.01  → Level 1: 1.00, Level 20: 1.19
+const GHOST_SPEED_STEP = 0.01;
+const PLAYER_R = 8;
+const GHOST_R = 9;
+
+const STEP = 1 / 120;                  // feste Simulationsschritte
+const MAX_LEVELS = 40;
+const MAX_MISSES = 3;                  // aufeinanderfolgende fehlende Level
+const EXTENSIONS = ["jpg", "png", "webp"];
+const LEVEL_COMPLETE_SECONDS = 5;
+
+/* Grenzgegner: ab dem 5. Level, folgen der Begrenzung der verdeckten Fläche */
+const BORDER_GHOST_FROM_LEVEL = 5;     // 1-basiert (levelIdx + 1)
+const BORDER_GHOST_2_FROM_LEVEL = 10;  // zweiter Grenzgegner, Gegenrichtung
+const FIFTH_GHOST_FROM_LEVEL = 15;     // dritter freilaufender Gegner (Typ 1/2)
+const FRONTIER_MARGIN = 2;             // Zellen Abstand zur aufgedeckten Fläche
+const BORDER_GHOST_COLOR = "#ffb020";  // Gegner 3 – läuft vorwärts
+const BORDER_GHOST_COLOR_2 = "#7dff5a"; // Gegner 4 – läuft rückwärts
+
+/* =====================================================================
+   DOM
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const canvas = $("game");
+const ctx = canvas.getContext("2d");
+const stage = $("stage");
+const stagewrap = $("stagewrap");
+const elLevel = $("hudLevel");
+const elLives = $("hudLives");
+const elPercent = $("hudPercent");
+const elFill = $("progressFill");
+const elTarget = $("hudTarget");
+const elMarker = $("hudMarker");
+const screenStart = $("screenStart");
+const screenPause = $("screenPause");
+const screenOver = $("screenGameOver");
+const screenFinal = $("screenFinal");
+const screenLevel = $("screenLevel");
+const elCountdown = $("levelCountdown");
+const elBannerSub = $("levelBannerSub");
+
+/* =====================================================================
+   ZUSTAND
+   ===================================================================== */
+let res = 1;                            // Backing-Store-Skalierung
+
+let grid = new Uint8Array(COLS * ROWS);
+let maskDirty = true;
+let compDirty = true;
+
+let trailCells = [];
+let trailPoints = [];
+let trailStart = null;
+let drawing = false;
+let justClosed = false;
+let sparkTimer = 0;
+
+let ghosts = [];
+let particles = [];
+let tail = [];
+let tailT = 0;
+
+let player = { x: W / 2, y: H - 8, cx: 0, cy: 0, dir: { x: 0, y: 0 } };
+
+let state = "boot";                     // boot|playing|paused|levelcomplete|gameover|finished
+let levels = [];
+let levelIdx = 0;
+let lives = START_LIVES;
+let percent = 0;
+let shield = 0;
+let ghostSpeedFactor = 1;   // wird pro Level aus der Levelnummer berechnet
+let levelTarget = TARGET_BASE; // aktuell gültiges Eroberungsziel in Prozent
+let levelTime = 0;
+let levelCompleteTimer = 0;
+let lastCompleteDuration = 0;
+let levelRevealAll = false;
+
+const pressed = [];
+
+/* Offscreen-Canvases */
+const maskCanvas = document.createElement("canvas");
+maskCanvas.width = COLS; maskCanvas.height = ROWS;
+const maskCtx = maskCanvas.getContext("2d");
+let maskData = maskCtx.createImageData(COLS, ROWS);
+
+const compCanvas = document.createElement("canvas");
+compCanvas.width = W; compCanvas.height = H;
+const compCtx = compCanvas.getContext("2d");
+
+/* Neon-Kante um eroberte Flächen (nur bei Rasteränderung neu gebaut) */
+const edgeCanvas = document.createElement("canvas");
+edgeCanvas.width = W; edgeCanvas.height = H;
+const edgeCtx = edgeCanvas.getContext("2d");
+let edgeDirty = true;
+
+let levelCanvas = document.createElement("canvas");
+levelCanvas.width = W; levelCanvas.height = H;
+
+/* =====================================================================
+   HILFSFUNKTIONEN
+   ===================================================================== */
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const cellX = (x) => clamp((x / CELL) | 0, 0, COLS - 1);
+const cellY = (y) => clamp((y / CELL) | 0, 0, ROWS - 1);
+const idxOf = (cx, cy) => cy * COLS + cx;
+
+/* Erforderliche Aufdeckfläche für eine Levelnummer (1-basiert) */
+function targetForLevel(levelNumber) {
+  return Math.min(TARGET_BASE + (levelNumber - 1), TARGET_MAX);
+}
+
+function isBorderCell(cx, cy) {
+  return cx < BC || cy < BC || cx >= COLS - BC || cy >= ROWS - BC;
+}
+
+/* =====================================================================
+   LAYOUT / SKALIERUNG
+   ===================================================================== */
+function layout() {
+  const vw = stagewrap.clientWidth || window.innerWidth;
+  const vh = stagewrap.clientHeight || (window.innerHeight - 50);
+  if (vw <= 0 || vh <= 0) return;
+
+  const s = Math.min(vw / W, vh / H);
+  const cw = W * s, ch = H * s;
+  const ox = (vw - cw) / 2;
+  const oy = (vh - ch) / 2;
+
+  stage.style.transform =
+    "translate(" + ox + "px," + oy + "px) scale(" + s + ")";
+
+  // Touch-Steuerung: bevorzugt in den freien Streifen unter dem Feld
+  const touchEl = $("touch");
+  if (touchEl.classList.contains("on")) {
+    const below = vh - (oy + ch);
+    const tb = Math.round(clamp(Math.min(vw, vh) * 0.15, 44, 64));
+    touchEl.style.setProperty("--tb", tb + "px");
+
+    const pad = Math.round(clamp(Math.min(vw, vh) * 0.05, 10, 26));
+    if (below >= 130) {
+      const space = Math.min(below + oy, 130);
+      touchEl.style.bottom = (pad + (space - 130) / 2) + "px";
+      touchEl.style.left = "50%";
+      touchEl.style.transform = "translateX(-50%)";
+      touchEl.style.opacity = "0.85";
+    } else {
+      const sideRoom = ox;
+      if (sideRoom > 160) {
+        touchEl.style.left = (pad + 70) + "px";
+        touchEl.style.transform = "none";
+      } else {
+        touchEl.style.left = "50%";
+        touchEl.style.transform = "translateX(-50%)";
+      }
+      touchEl.style.bottom = pad + "px";
+      touchEl.style.opacity = "0.55";
+    }
+  }
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const want = clamp(s * dpr, 0.75, 2);
+  if (Math.abs(want - res) > 0.01) {
+    res = want;
+    canvas.width = Math.round(W * res);
+    canvas.height = Math.round(H * res);
+  }
+
+  const tb = document.getElementById("topbar");
+  if (tb) {
+    document.documentElement.style.setProperty("--topbar-h", tb.offsetHeight + "px");
+  }
+}
+
+/* =====================================================================
+   LEVEL-ERKENNUNG
+   ===================================================================== */
+function tryLoadImage(index) {
+  return new Promise((resolve) => {
+    let e = 0;
+    const next = () => {
+      if (e >= EXTENSIONS.length) { resolve(null); return; }
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => {
+        if (img.naturalWidth > 0) resolve(img);
+        else { e++; next(); }
+      };
+      img.onerror = () => { e++; next(); };
+      img.src = "bilder/level" + index + "." + EXTENSIONS[e];
+    };
+    next();
+  });
+}
+
+async function discoverLevels() {
+  const found = [];
+  let misses = 0;
+  for (let i = 1; i <= MAX_LEVELS && misses < MAX_MISSES; i++) {
+    const img = await tryLoadImage(i);
+    if (img) {
+      found.push({ index: i, img: img, name: "level" + i });
+      misses = 0;
+    } else {
+      misses++;
+    }
+    // UI-Feedback während der Suche
+    const txt = $("startLoadingText");
+    if (txt) txt.textContent = "Levelbilder werden gesucht … (" + found.length + " gefunden)";
+  }
+  if (found.length === 0) {
+    // Ohne Bilder trotzdem spielbar bleiben
+    found.push({ index: 1, img: null, name: "platzhalter" });
+  }
+  for (const lv of found) {
+    lv.canvas = makeLevelCanvas(lv);
+  }
+  return found;
+}
+
+/* Bild auf 1280x720 bringen – seitenverhältnistreu (cover), Originaldatei bleibt unberührt */
+function makeLevelCanvas(entry) {
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  g.fillStyle = "#08111c";
+  g.fillRect(0, 0, W, H);
+
+  if (entry.img && entry.img.naturalWidth > 0) {
+    const iw = entry.img.naturalWidth;
+    const ih = entry.img.naturalHeight;
+    const scale = Math.max(W / iw, H / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = "high";
+    g.drawImage(entry.img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  } else {
+    // Prozeduraler Platzhalter
+    const grd = g.createLinearGradient(0, 0, W, H);
+    grd.addColorStop(0, "#0b1b34");
+    grd.addColorStop(0.45, "#142a4d");
+    grd.addColorStop(1, "#2a1040");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, W, H);
+
+    g.save();
+    g.globalAlpha = 0.30;
+    g.strokeStyle = "#22e6ff";
+    g.lineWidth = 2;
+    for (let i = -H; i < W; i += 46) {
+      g.beginPath(); g.moveTo(i, 0); g.lineTo(i + H, H); g.stroke();
+    }
+    g.restore();
+
+    g.save();
+    g.textAlign = "center";
+    g.fillStyle = "#22e6ff";
+    g.shadowColor = "#22e6ff";
+    g.shadowBlur = 40;
+    g.font = "800 96px Segoe UI, Arial, sans-serif";
+    g.fillText("LEVEL " + entry.index, W / 2, H / 2 + 10);
+    g.font = "600 26px Segoe UI, Arial, sans-serif";
+    g.fillStyle = "#8fd8ee";
+    g.shadowBlur = 20;
+    g.fillText("PLATZHALTER – BILD FEHLT", W / 2, H / 2 + 70);
+    g.restore();
+  }
+  return c;
+}
+
+/* =====================================================================
+   RASTER
+   ===================================================================== */
+function resetGrid() {
+  grid = new Uint8Array(COLS * ROWS);
+  for (let cy = 0; cy < ROWS; cy++) {
+    for (let cx = 0; cx < COLS; cx++) {
+      if (isBorderCell(cx, cy)) grid[idxOf(cx, cy)] = FILLED;
+    }
+  }
+  maskDirty = true;
+  compDirty = true;
+  edgeDirty = true;
+}
+
+function renderMask() {
+  const d = maskData.data;
+  for (let cy = BC; cy < ROWS - BC; cy++) {
+    const row = cy * COLS;
+    for (let cx = BC; cx < COLS - BC; cx++) {
+      const i = row + cx;
+      const o = i * 4;
+      d[o] = 255; d[o + 1] = 255; d[o + 2] = 255;
+      d[o + 3] = grid[i] === FILLED ? 255 : 0;
+    }
+  }
+  maskCtx.putImageData(maskData, 0, 0);
+  maskDirty = false;
+  compDirty = true;
+  edgeDirty = true;
+}
+
+function buildComposite() {
+  const g = compCtx;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-over";
+  g.clearRect(0, 0, W, H);
+  g.drawImage(levelCanvas, 0, 0, W, H);
+  g.globalCompositeOperation = "destination-in";
+  g.imageSmoothingEnabled = true;
+  g.drawImage(maskCanvas, 0, 0, W, H);
+  g.globalCompositeOperation = "source-over";
+  compDirty = false;
+}
+
+/* Cyanfarbener Leuchtrand entlang der Grenze eroberter Flächen */
+function buildEdge() {
+  const g = edgeCtx;
+  const off = 6;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-over";
+  g.clearRect(0, 0, W, H);
+  g.imageSmoothingEnabled = true;
+  g.drawImage(maskCanvas, 0, 0, W, H);
+
+  // Inneres wegstanzen, damit nur die Kante übrig bleibt
+  g.globalCompositeOperation = "destination-out";
+  g.drawImage(maskCanvas, -off, 0, W, H);
+  g.drawImage(maskCanvas, off, 0, W, H);
+  g.drawImage(maskCanvas, 0, -off, W, H);
+  g.drawImage(maskCanvas, 0, off, W, H);
+
+  // Kante einfärben
+  g.globalCompositeOperation = "source-in";
+  g.fillStyle = "#22e6ff";
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = "source-over";
+  edgeDirty = false;
+}
+
+function computePercent() {
+  let filled = 0, total = 0;
+  for (let cy = BC; cy < ROWS - BC; cy++) {
+    const row = cy * COLS;
+    for (let cx = BC; cx < COLS - BC; cx++) {
+      total++;
+      if (grid[row + cx] === FILLED) filled++;
+    }
+  }
+  return total ? (filled / total) * 100 : 0;
+}
+
+/* =====================================================================
+   SPIELER
+   ===================================================================== */
+function setPlayerCell() {
+  player.cx = cellX(player.x);
+  player.cy = cellY(player.y);
+}
+
+function placePlayerAtStart() {
+  player.x = W / 2;
+  player.y = H - 8;
+  player.dir = { x: 0, y: 0 };
+  setPlayerCell();
+}
+
+function beginTrail(ox, oy) {
+  drawing = true;
+  trailStart = { x: ox, y: oy };
+  trailPoints = [{ x: ox, y: oy }];
+  trailCells = [];
+  sparkTimer = 0;
+}
+
+function markTrailCell(cx, cy) {
+  const i = idxOf(cx, cy);
+  if (grid[i] === EMPTY) {
+    grid[i] = TRAIL;
+    trailCells.push(i);
+  }
+}
+
+function clearTrail() {
+  for (let k = 0; k < trailCells.length; k++) {
+    const i = trailCells[k];
+    if (grid[i] === TRAIL) grid[i] = EMPTY;
+  }
+  trailCells.length = 0;
+  trailPoints = [];
+  trailStart = null;
+  drawing = false;
+  justClosed = false;
+  maskDirty = true;
+}
+
+function stepPlayer(dt) {
+  const dx = player.dir.x * PLAYER_SPEED * dt;
+  const dy = player.dir.y * PLAYER_SPEED * dt;
+  if (dx === 0 && dy === 0) return;
+
+  const dist = Math.abs(dx) + Math.abs(dy);
+  const n = Math.max(1, Math.ceil(dist));
+  const ix = dx / n, iy = dy / n;
+
+  for (let s = 0; s < n; s++) {
+    const ox = player.x, oy = player.y;
+    player.x = clamp(player.x + ix, PLAYER_R, W - PLAYER_R);
+    player.y = clamp(player.y + iy, PLAYER_R, H - PLAYER_R);
+    if (player.x === ox && player.y === oy) break;   // an der Wand
+    afterMove(ox, oy);
+    if (justClosed) { justClosed = false; break; }
+  }
+}
+
+function afterMove(ox, oy) {
+  const cx = cellX(player.x);
+  const cy = cellY(player.y);
+  if (cx === player.cx && cy === player.cy) return;
+
+  const i = idxOf(cx, cy);
+  const st = grid[i];
+
+  if (drawing) {
+    if (st === FILLED) {
+      // Linie trifft sichere Fläche -> Fläche schließen
+      trailPoints.push({ x: player.x, y: player.y });
+      player.cx = cx; player.cy = cy;
+      closeLoop();
+      return;
+    }
+    trailPoints.push({ x: player.x, y: player.y });
+    if (st === EMPTY) markTrailCell(cx, cy);
+  } else if (st === EMPTY) {
+    beginTrail(ox, oy);
+    markTrailCell(cx, cy);
+    trailPoints.push({ x: player.x, y: player.y });
+  }
+
+  player.cx = cx;
+  player.cy = cy;
+}
+
+/* =====================================================================
+   FLÄCHENSCHLUSS + FLUTBEREICHNUNG
+   ===================================================================== */
+function closeLoop() {
+  drawing = false;
+  justClosed = true;
+
+  const cells = trailCells;
+  trailCells = [];
+  const pts = trailPoints;
+  trailPoints = [];
+  trailStart = null;
+
+  // Linie wird zu sicherer Fläche
+  for (let k = 0; k < cells.length; k++) grid[cells[k]] = FILLED;
+
+  // Von jedem Gegner aus alle erreichbaren leeren Zellen markieren
+  const keep = new Uint8Array(COLS * ROWS);
+  const stack = [];
+
+  for (let k = 0; k < ghosts.length; k++) {
+    const g = ghosts[k];
+
+    // Der Grenzgegner hält – wie bisher – keine Flächen. Wird sein Gebiet
+    // erobert, setzt syncFrontierGhost ihn anschließend auf die neue Grenze.
+    if (g.border) continue;
+
+    let ci = idxOf(cellX(g.x), cellY(g.y));
+    if (grid[ci] !== EMPTY) {
+      const alt = nearestEmptyCell(cellX(g.x), cellY(g.y), 24);
+      if (alt >= 0) {
+        ci = alt;
+        g.x = (ci % COLS) * CELL + CELL / 2;
+        g.y = ((ci / COLS) | 0) * CELL + CELL / 2;
+      } else {
+        continue;
+      }
+    }
+    if (grid[ci] === EMPTY && !keep[ci]) { keep[ci] = 1; stack.push(ci); }
+  }
+
+  while (stack.length) {
+    const i = stack.pop();
+    const cx = i % COLS;
+    const cy = (i / COLS) | 0;
+    if (cx > 0) { const n = i - 1; if (grid[n] === EMPTY && !keep[n]) { keep[n] = 1; stack.push(n); } }
+    if (cx < COLS - 1) { const n = i + 1; if (grid[n] === EMPTY && !keep[n]) { keep[n] = 1; stack.push(n); } }
+    if (cy > 0) { const n = i - COLS; if (grid[n] === EMPTY && !keep[n]) { keep[n] = 1; stack.push(n); } }
+    if (cy < ROWS - 1) { const n = i + COLS; if (grid[n] === EMPTY && !keep[n]) { keep[n] = 1; stack.push(n); } }
+  }
+
+  // Alles, was kein Gegner erreichen kann, wird erobert
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i] === EMPTY && !keep[i]) grid[i] = FILLED;
+  }
+
+  maskDirty = true;
+  compDirty = true;
+
+  // Sicherheitsnetz: Gegner notfalls in freie Zelle schieben
+  for (let k = 0; k < ghosts.length; k++) {
+    const g = ghosts[k];
+    if (g.border) continue;   // Grenzgegner wird gleich neu aufgesetzt
+    const ci = idxOf(cellX(g.x), cellY(g.y));
+    if (grid[ci] !== EMPTY) {
+      const alt = nearestEmptyCell(cellX(g.x), cellY(g.y), 40);
+      if (alt >= 0) {
+        g.x = (alt % COLS) * CELL + CELL / 2;
+        g.y = ((alt / COLS) | 0) * CELL + CELL / 2;
+      }
+    }
+    g.tx = g.x; g.ty = g.y; g.retarget = 0;
+  }
+
+  // Neue Begrenzung der verdeckten Fläche berechnen und den Grenzgegner
+  // auf die geänderte Strecke übernehmen.
+  if (getFrontierGhosts().length) {
+    buildFrontier();
+    syncFrontierGhosts();
+  }
+
+  // Partikel an der Schließstelle
+  if (pts.length) {
+    const last = pts[pts.length - 1];
+    spawnSparks(last.x, last.y, "#4dff9e", 16, 170);
+  }
+
+  afterAreaClosed();
+}
+
+function nearestEmptyCell(cx, cy, maxR) {
+  for (let r = 1; r <= maxR; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
+        if (grid[idxOf(nx, ny)] === EMPTY) return idxOf(nx, ny);
+      }
+    }
+  }
+  return -1;
+}
+
+function afterAreaClosed() {
+  percent = computePercent();
+  updateHUD();
+  if (percent >= levelTarget && state === "playing") {
+    beginLevelComplete();
+  }
+}
+
+/* =====================================================================
+   GEGNER
+   ===================================================================== */
+function isFreePoint(x, y) {
+  if (x < 0 || y < 0 || x >= W || y >= H) return false;
+  return grid[idxOf(cellX(x), cellY(y))] === EMPTY;
+}
+
+function canOccupy(x, y) {
+  if (!isFreePoint(x, y)) return false;
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    if (!isFreePoint(x + Math.cos(a) * GHOST_R * 0.92,
+                     y + Math.sin(a) * GHOST_R * 0.92)) return false;
+  }
+  return true;
+}
+
+function pickGhostTarget(g) {
+  const margin = BORDER_PX + GHOST_R + 6;
+  for (let i = 0; i < 80; i++) {
+    const x = margin + Math.random() * (W - 2 * margin);
+    const y = margin + Math.random() * (H - 2 * margin);
+    if (!isFreePoint(x, y)) continue;
+    if (Math.hypot(x - g.x, y - g.y) < 90) continue;
+    g.tx = x; g.ty = y;
+    g.retarget = 1.6 + Math.random() * 2.6;
+    return;
+  }
+  const a = Math.random() * Math.PI * 2;
+  g.tx = clamp(g.x + Math.cos(a) * 180, margin, W - margin);
+  g.ty = clamp(g.y + Math.sin(a) * 180, margin, H - margin);
+  g.retarget = 1.2;
+}
+
+function attemptGhostMove(g, dx, dy) {
+  if (dx === 0 && dy === 0) return false;
+  const nx = g.x + dx, ny = g.y + dy;
+  if (!canOccupy(nx, ny)) return false;
+  g.x = nx; g.y = ny;
+  return true;
+}
+
+/* ---------------------------------------------------------------------
+   GRENZGEGNER (dritter Gegner ab Level 5)
+
+   Seine Fahrstrecke wird aus dem aktuellen Raster abgeleitet: Grenze
+   zwischen verdeckter und aufgedeckter Fläche. Dafür wird die Menge der
+   begehbaren Zellen (Abstand zur aufgedeckten Fläche > FRONTIER_MARGIN)
+   bestimmt, deren Rand in geschlossene Schleifen zerlegt und der Gegner
+   danach per Bogenlänge entlanggefahren. Nach jedem Flächenschluss wird
+   die Strecke neu berechnet.
+   --------------------------------------------------------------------- */
+let frontierLoops = [];        // [{ pts, cum, total, area }]
+let frontierDirty = true;
+
+function getFrontierGhosts() {
+  const out = [];
+  for (let i = 0; i < ghosts.length; i++) if (ghosts[i].border) out.push(ghosts[i]);
+  return out;
+}
+
+/* Manhattan-Abstand jeder Zelle zur nächsten aufgedeckten Zelle */
+function buildDistanceMap() {
+  const n = COLS * ROWS;
+  const dist = new Uint8Array(n);
+  for (let i = 0; i < n; i++) dist[i] = grid[i] === FILLED ? 0 : 250;
+
+  for (let y = 0; y < ROWS; y++) {
+    const row = y * COLS;
+    for (let x = 0; x < COLS; x++) {
+      const i = row + x;
+      if (dist[i] === 0) continue;
+      let d = dist[i];
+      if (x > 0 && dist[i - 1] + 1 < d) d = dist[i - 1] + 1;
+      if (y > 0 && dist[i - COLS] + 1 < d) d = dist[i - COLS] + 1;
+      dist[i] = d;
+    }
+  }
+  for (let y = ROWS - 1; y >= 0; y--) {
+    const row = y * COLS;
+    for (let x = COLS - 1; x >= 0; x--) {
+      const i = row + x;
+      if (dist[i] === 0) continue;
+      let d = dist[i];
+      if (x < COLS - 1 && dist[i + 1] + 1 < d) d = dist[i + 1] + 1;
+      if (y < ROWS - 1 && dist[i + COLS] + 1 < d) d = dist[i + COLS] + 1;
+      dist[i] = d;
+    }
+  }
+  return dist;
+}
+
+/* Randsegmente der begehbaren Fläche zu geschlossenen Schleifen verketten.
+   Orientierung: aufgedeckte Fläche liegt links der Laufrichtung. An
+   Knoten mit vier Segmenten (Diagonalberührung) wird rechts abgebogen,
+   was der 4er-Nachbarschaft des Rasters entspricht. */
+function buildFrontier() {
+  frontierLoops = [];
+  const dist = buildDistanceMap();
+
+  const walk = (x, y) =>
+    x >= 0 && y >= 0 && x < COLS && y < ROWS &&
+    dist[y * COLS + x] > FRONTIER_MARGIN;
+
+  const segs = [];
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!walk(x, y)) continue;
+      if (!walk(x, y - 1)) segs.push([x, y, x + 1, y]);             // Nordwand
+      if (!walk(x, y + 1)) segs.push([x + 1, y + 1, x, y + 1]);     // Südwand
+      if (!walk(x - 1, y)) segs.push([x, y + 1, x, y]);             // Westwand
+      if (!walk(x + 1, y)) segs.push([x + 1, y, x + 1, y + 1]);     // Ostwand
+    }
+  }
+  if (!segs.length) { frontierDirty = false; return; }
+
+  const VW = COLS + 1;
+  const vmap = new Map();
+  for (let i = 0; i < segs.length; i++) {
+    const v = segs[i][1] * VW + segs[i][0];
+    let a = vmap.get(v);
+    if (!a) { a = []; vmap.set(v, a); }
+    a.push(i);
+  }
+
+  const dirOf = (s) => {
+    const dx = s[2] - s[0], dy = s[3] - s[1];
+    return dx === 1 ? 0 : dy === 1 ? 1 : dx === -1 ? 2 : 3;
+  };
+
+  const used = new Uint8Array(segs.length);
+  for (let s0 = 0; s0 < segs.length; s0++) {
+    if (used[s0]) continue;
+
+    const raw = [];
+    const firstV = segs[s0][1] * VW + segs[s0][0];
+    let cur = s0;
+    let guard = 0;
+
+    while (guard++ < segs.length + 4) {
+      used[cur] = 1;
+      const s = segs[cur];
+      raw.push({ x: s[0] * CELL, y: s[1] * CELL });
+
+      const endV = s[3] * VW + s[2];
+      if (endV === firstV) break;                 // Schleife geschlossen
+
+      const d = dirOf(s);
+      const cands = vmap.get(endV) || [];
+      let pick = -1;
+      // rechts, geradeaus, links, zurück
+      for (const pref of [(d + 1) % 4, d, (d + 3) % 4, (d + 2) % 4]) {
+        for (let c = 0; c < cands.length; c++) {
+          const ci = cands[c];
+          if (used[ci]) continue;
+          if (dirOf(segs[ci]) === pref) { pick = ci; break; }
+        }
+        if (pick >= 0) break;
+      }
+      if (pick < 0) break;
+      cur = pick;
+    }
+
+    const loop = makeLoop(raw);
+    if (loop) frontierLoops.push(loop);
+  }
+
+  frontierDirty = false;
+}
+
+/* Punkte einer Schleife: Ecken behalten, Zwischenpunkte verwerfen */
+function makeLoop(raw) {
+  const n = raw.length;
+  if (n < 4) return null;
+
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = raw[(i - 1 + n) % n];
+    const p = raw[i];
+    const b = raw[(i + 1) % n];
+    const cross = (p.x - a.x) * (b.y - p.y) - (p.y - a.y) * (b.x - p.x);
+    if (cross !== 0) pts.push(p);
+  }
+  if (pts.length < 3) return null;
+
+  const cum = [0];
+  let total = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    total += Math.hypot(b.x - a.x, b.y - a.y);
+    cum.push(total);
+  }
+  if (!(total > 0)) return null;
+
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    area += a.x * b.y - b.x * a.y;
+  }
+
+  return { pts, cum, total, area: Math.abs(area / 2) };
+}
+
+function pointAtS(loop, s) {
+  const total = loop.total;
+  let d = ((s % total) + total) % total;
+  const n = loop.pts.length;
+
+  let lo = 0, hi = loop.cum.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (loop.cum[mid] <= d) lo = mid; else hi = mid;
+  }
+  const a = loop.pts[lo];
+  const b = loop.pts[(lo + 1) % n];
+  const segLen = loop.cum[lo + 1] - loop.cum[lo];
+  const f = segLen > 0 ? (d - loop.cum[lo]) / segLen : 0;
+  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+}
+
+function nearestOnLoop(loop, px, py) {
+  let best = { d: Infinity, s: 0, x: 0, y: 0 };
+  const n = loop.pts.length;
+  for (let i = 0; i < n; i++) {
+    const a = loop.pts[i];
+    const b = loop.pts[(i + 1) % n];
+    const abx = b.x - a.x, aby = b.y - a.y;
+    const len2 = abx * abx + aby * aby;
+    let t = len2 > 0 ? ((px - a.x) * abx + (py - a.y) * aby) / len2 : 0;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    const qx = a.x + abx * t;
+    const qy = a.y + aby * t;
+    const d = Math.hypot(px - qx, py - qy);
+    if (d < best.d) {
+      best = { d: d, s: loop.cum[i] + t * Math.sqrt(len2), x: qx, y: qy };
+    }
+  }
+  return best;
+}
+
+/* Nach einer Neuberechnung: alle Grenzgegner auf die neue Grenze setzen */
+function syncFrontierGhosts() {
+  const list = getFrontierGhosts();
+  if (!list.length) return;
+
+  if (!frontierLoops.length) {
+    for (let k = 0; k < list.length; k++) list[k].loop = -1;
+    return;
+  }
+
+  for (let k = 0; k < list.length; k++) {
+    const g = list[k];
+
+    // Liegt der Gegner auf aufgedecktem Grund, muss er in jedem Fall auf die
+    // neue Grenze – sonst würde er über das Bild fahren.
+    const onRevealed = grid[idxOf(cellX(g.x), cellY(g.y))] !== EMPTY;
+
+    let bi = -1, bd = Infinity, bs = 0, bx = 0, by = 0;
+    for (let i = 0; i < frontierLoops.length; i++) {
+      const r = nearestOnLoop(frontierLoops[i], g.x, g.y);
+      if (r.d < bd) { bd = r.d; bi = i; bs = r.s; bx = r.x; by = r.y; }
+    }
+    if (bi < 0) { g.loop = -1; continue; }
+
+    // In einer winzigen, noch verdeckten Restfläche: stehen bleiben, statt
+    // quer durch aufgedeckte Flächen zu springen.
+    if (bd > 90 && !onRevealed) { g.loop = -1; continue; }
+
+    if (onRevealed) {
+      // sichtbarer Versatz: kurzer Partikelblitz an alter und neuer Position
+      spawnSparks(g.x, g.y, g.color, 8, 150);
+      spawnSparks(bx, by, g.color, 8, 150);
+    }
+
+    g.loop = bi;
+    g.t = bs;
+    g.x = bx;
+    g.y = by;
+    g.tx = bx;
+    g.ty = by;
+  }
+}
+
+function stepFrontierGhost(g, dt) {
+  if (!frontierLoops.length) return;
+  const loop = frontierLoops[g.loop];
+  if (!loop || g.loop < 0) return;
+
+  const step = GHOST_SPEED * ghostSpeedFactor * dt * (g.dir < 0 ? -1 : 1);
+  g.t = ((g.t + step) % loop.total + loop.total) % loop.total;
+  const p = pointAtS(loop, g.t);
+  g.x = p.x;
+  g.y = p.y;
+  g.tx = p.x;
+  g.ty = p.y;
+  g.stuck = 0;
+  g.stuckT = 0;
+}
+
+/* Legt einen Grenzgegner auf die größte Schleife.
+   dir = +1 läuft vorwärts, dir = -1 exakt entgegengesetzt. */
+function addFrontierGhost(dir, loopIndex, t) {
+  const loop = frontierLoops[loopIndex];
+  if (!loop) return;
+  const p = pointAtS(loop, t);
+
+  ghosts.push({
+    border: true,
+    dir: dir,
+    loop: loopIndex,
+    t: t,
+    x: p.x, y: p.y,
+    tx: p.x, ty: p.y,
+    retarget: 0,
+    color: dir < 0 ? BORDER_GHOST_COLOR_2 : BORDER_GHOST_COLOR,
+    phase: Math.random() * Math.PI * 2,
+    lastX: p.x, lastY: p.y,
+    stuckT: 0, stuck: 0
+  });
+}
+
+function spawnFrontierGhosts() {
+  buildFrontier();
+  if (!frontierLoops.length) return;
+
+  let best = 0;
+  for (let i = 1; i < frontierLoops.length; i++) {
+    if (frontierLoops[i].area > frontierLoops[best].area) best = i;
+  }
+  const loop = frontierLoops[best];
+
+  const t1 = Math.random() * loop.total;
+  addFrontierGhost(1, best, t1);
+
+  // Ab Level 10 ein zweiter Grenzgegner, exakt gegenläufig, auf derselben
+  // Schleife und möglichst weit entfernt gestartet.
+  if (levelIdx + 1 >= BORDER_GHOST_2_FROM_LEVEL) {
+    const t2 = (t1 + loop.total * 0.5) % loop.total;
+    addFrontierGhost(-1, best, t2);
+  }
+}
+
+function spawnGhosts() {
+  ghosts = [];
+  const colors = ["#ff3d6e", "#a855f7", "#4d6bff"];
+  const margin = BORDER_PX + GHOST_R + 20;
+
+  // Ab Level 15 ein dritter freilaufender Gegner (Typ wie Gegner 1 und 2)
+  const normalCount = (levelIdx + 1 >= FIFTH_GHOST_FROM_LEVEL) ? 3 : 2;
+
+  for (let k = 0; k < normalCount; k++) {
+    let x = W / 2, y = H / 2, ok = false;
+    for (let i = 0; i < 600; i++) {
+      const tx = margin + Math.random() * (W - 2 * margin);
+      const ty = margin + Math.random() * (H - 2 * margin);
+      if (Math.hypot(tx - player.x, ty - player.y) < 300) continue;
+      if (!canOccupy(tx, ty)) continue;
+      x = tx; y = ty; ok = true;
+      break;
+    }
+    if (!ok) { x = W / 2 + (k - 1) * 260; y = H / 2; }
+
+    ghosts.push({
+      x: x, y: y,
+      tx: x, ty: y,
+      retarget: 0,
+      color: colors[k],
+      phase: Math.random() * Math.PI * 2,
+      lastX: x, lastY: y,
+      stuckT: 0, stuck: 0
+    });
+  }
+
+  // Ab Level 5 zusätzlich der Gegner, der der Grenze der verdeckten Fläche folgt
+  if (levelIdx + 1 >= BORDER_GHOST_FROM_LEVEL) {
+    spawnFrontierGhosts();
+  }
+}
+
+function stepGhosts(dt) {
+  if (debugFreezeGhosts) return;
+  for (let k = 0; k < ghosts.length; k++) {
+    const g = ghosts[k];
+
+    if (g.border) {          // Grenzgegner folgt der Begrenzung der verdeckten Fläche
+      stepFrontierGhost(g, dt);
+      continue;
+    }
+
+    g.retarget -= dt;
+    const dx = g.tx - g.x;
+    const dy = g.ty - g.y;
+    const d = Math.hypot(dx, dy);
+
+    if (d < 12 || g.retarget <= 0) {
+      pickGhostTarget(g);
+    }
+
+    const ndx = g.tx - g.x;
+    const ndy = g.ty - g.y;
+    const nd = Math.hypot(ndx, ndy) || 1;
+    const ux = ndx / nd, uy = ndy / nd;
+    const amount = GHOST_SPEED * ghostSpeedFactor * dt;
+
+    let moved = false;
+    if (attemptGhostMove(g, ux * amount, uy * amount)) moved = true;
+    else if (attemptGhostMove(g, ux * amount, 0)) moved = true;
+    else if (attemptGhostMove(g, 0, uy * amount)) moved = true;
+    else {
+      const a = Math.random() * Math.PI * 2;
+      if (attemptGhostMove(g, Math.cos(a) * amount, Math.sin(a) * amount)) moved = true;
+    }
+
+    if (!moved) {
+      g.stuckT += dt;
+      if (g.stuckT > 0.35) { pickGhostTarget(g); g.stuckT = 0; }
+    } else {
+      g.stuckT = 0;
+    }
+
+    // Feststeck-Erkennung über größeren Zeitraum
+    g.stuck += dt;
+    if (g.stuck > 1.4) {
+      const travelled = Math.hypot(g.x - g.lastX, g.y - g.lastY);
+      if (travelled < 4) {
+        pickGhostTarget(g);
+        const a = Math.random() * Math.PI * 2;
+        attemptGhostMove(g, Math.cos(a) * 3, Math.sin(a) * 3);
+      }
+      g.lastX = g.x; g.lastY = g.y; g.stuck = 0;
+    }
+  }
+}
+
+/* =====================================================================
+   KOLLISIONEN
+   ===================================================================== */
+function trailContact(g) {
+  const gx = cellX(g.x), gy = cellY(g.y);
+  for (let dy = -3; dy <= 3; dy++) {
+    const cy = gy + dy;
+    if (cy < 0 || cy >= ROWS) continue;
+    for (let dx = -3; dx <= 3; dx++) {
+      const cx = gx + dx;
+      if (cx < 0 || cx >= COLS) continue;
+      if (grid[idxOf(cx, cy)] !== TRAIL) continue;
+      const rx = cx * CELL, ry = cy * CELL;
+      const nx = clamp(g.x, rx, rx + CELL);
+      const ny = clamp(g.y, ry, ry + CELL);
+      if (Math.hypot(g.x - nx, g.y - ny) <= GHOST_R) return true;
+    }
+  }
+  return false;
+}
+
+function checkHits() {
+  if (shield > 0) return;
+  if (!drawing) return;
+
+  for (let k = 0; k < ghosts.length; k++) {
+    const g = ghosts[k];
+    if (trailContact(g)) { onHit(g); return; }
+    if (Math.hypot(g.x - player.x, g.y - player.y) < PLAYER_R + GHOST_R) {
+      onHit(g); return;
+    }
+  }
+}
+
+function onHit(g) {
+  lives--;
+  updateHUD();
+
+  spawnSparks(player.x, player.y, "#ff3d6e", 28, 260);
+  if (g) spawnSparks(g.x, g.y, g.color, 14, 180);
+
+  const sx = trailStart ? trailStart.x : W / 2;
+  const sy = trailStart ? trailStart.y : H - 8;
+
+  clearTrail();
+
+  player.x = clamp(sx, PLAYER_R, W - PLAYER_R);
+  player.y = clamp(sy, PLAYER_R, H - PLAYER_R);
+  player.dir = { x: 0, y: 0 };
+  setPlayerCell();
+  clearInput();
+
+  shield = 1.6;
+
+  if (lives <= 0) {
+    state = "gameover";
+    hideLevelBanner();
+    $("overLevel").textContent = String(levelIdx + 1);
+    $("overPercent").textContent = Math.round(percent) + " %";
+    window.setTimeout(() => {
+      if (state === "gameover") screenOver.classList.add("open");
+    }, 650);
+  }
+}
+
+/* =====================================================================
+   LEVEL-STEUERUNG
+   ===================================================================== */
+function loadLevel(index) {
+  levelIdx = index;
+  const entry = levels[index];
+
+  levelCanvas = entry.canvas;
+
+  // Geschwindigkeitsfaktor aus der Levelnummer: 1 + (Level - 1) * 0,01
+  ghostSpeedFactor = 1 + (index + 1 - 1) * GHOST_SPEED_STEP;
+
+  // Eroberungsziel dieses Levels: min(75 + (Level - 1), 90)
+  levelTarget = targetForLevel(index + 1);
+
+  resetGrid();
+  clearTrail();
+  particles = [];
+  tail = [];
+  tailT = 0;
+  lives = lives > 0 ? lives : START_LIVES;
+
+  placePlayerAtStart();
+  spawnGhosts();
+
+  percent = 0;
+  shield = 1.2;
+  levelTime = 0;
+  levelCompleteTimer = 0;
+  levelRevealAll = false;
+
+  state = "playing";
+  hideLevelBanner();
+  screenStart.classList.remove("open");
+  screenPause.classList.remove("open");
+  screenOver.classList.remove("open");
+  screenFinal.classList.remove("open");
+
+  updateHUD();
+  elBannerSub.textContent = "Ziel erreicht";
+}
+
+function startNewGame() {
+  lives = START_LIVES;
+  levelIdx = 0;
+  percent = 0;
+  loadLevel(0);
+}
+
+function beginLevelComplete() {
+  state = "levelcomplete";
+  levelCompleteTimer = 0;
+  levelRevealAll = true;
+  computePercent();          // bleibt der echte Wert für die Anzeige
+  percent = 100;
+  updateHUD();
+  elFill.classList.add("done");
+  elBannerSub.textContent = "Bild vollständig enthüllt";
+  elCountdown.textContent = String(LEVEL_COMPLETE_SECONDS);
+  screenLevel.classList.add("open");
+
+  // Feuerwerk
+  spawnSparks(W * 0.25, H * 0.4, "#4dff9e", 30, 320);
+  spawnSparks(W * 0.75, H * 0.4, "#22e6ff", 30, 320);
+  spawnSparks(W * 0.5, H * 0.62, "#a855f7", 30, 320);
+}
+
+function hideLevelBanner() {
+  screenLevel.classList.remove("open");
+}
+
+function advanceAfterLevel() {
+  lastCompleteDuration = levelCompleteTimer;
+  hideLevelBanner();
+  elFill.classList.remove("done");
+
+  if (levelIdx + 1 < levels.length) {
+    loadLevel(levelIdx + 1);
+  } else {
+    state = "finished";
+    $("finalCount").textContent = String(levels.length);
+    screenFinal.classList.add("open");
+  }
+}
+
+/* =====================================================================
+   EINGABE
+   ===================================================================== */
+const KEYMAP = {
+  ArrowUp: [0, -1], KeyW: [0, -1],
+  ArrowDown: [0, 1], KeyS: [0, 1],
+  ArrowLeft: [-1, 0], KeyA: [-1, 0],
+  ArrowRight: [1, 0], KeyD: [1, 0]
+};
+
+function applyDir() {
+  const last = pressed[pressed.length - 1];
+  player.dir = last ? { x: last.dx, y: last.dy } : { x: 0, y: 0 };
+}
+
+function clearInput() {
+  pressed.length = 0;
+  player.dir = { x: 0, y: 0 };
+  document.querySelectorAll(".dp.press").forEach((b) => b.classList.remove("press"));
+}
+
+function pressDirection(code, dx, dy) {
+  if (pressed.some((k) => k.code === code)) return;
+  pressed.push({ code: code, dx: dx, dy: dy });
+  applyDir();
+}
+
+function releaseDirection(code) {
+  const i = pressed.findIndex((k) => k.code === code);
+  if (i >= 0) pressed.splice(i, 1);
+  applyDir();
+}
+
+function onKeyDown(e) {
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (e.repeat) return;
+    if (state === "playing" || state === "paused") togglePause();
+    else if (state === "boot") { /* noch nicht bereit */ }
+    return;
+  }
+  if (e.code === "Enter") {
+    if (state === "boot" && $("btnStart") && $("startReady").style.display !== "none") {
+      e.preventDefault();
+      startNewGame();
+    }
+    return;
+  }
+  if (e.code === "KeyR") {
+    if (state !== "boot") { e.preventDefault(); startNewGame(); }
+    return;
+  }
+  if (e.code === "Escape") {
+    if (state === "playing" || state === "paused") { e.preventDefault(); togglePause(); }
+    return;
+  }
+
+  const m = KEYMAP[e.code];
+  if (!m) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (state !== "playing") return;
+  pressDirection(e.code, m[0], m[1]);
+}
+
+function onKeyUp(e) {
+  const m = KEYMAP[e.code];
+  if (!m) return;
+  e.preventDefault();
+  releaseDirection(e.code);
+}
+
+function bindTouchButton(el, code, dx, dy) {
+  const down = (ev) => {
+    ev.preventDefault();
+    if (state !== "playing") return;
+    el.classList.add("press");
+    pressDirection(code, dx, dy);
+  };
+  const up = (ev) => {
+    if (ev) ev.preventDefault();
+    el.classList.remove("press");
+    releaseDirection(code);
+  };
+  el.addEventListener("pointerdown", down);
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("pointerleave", up);
+  el.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+
+/* =====================================================================
+   PARTIKEL
+   ===================================================================== */
+function spawnSparks(x, y, color, count, speed) {
+  for (let i = 0; i < count; i++) {
+    if (particles.length > 460) break;
+    const a = Math.random() * Math.PI * 2;
+    const s = speed * (0.25 + Math.random() * 0.9);
+    const life = 0.45 + Math.random() * 0.7;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      life: life, max: life,
+      size: 1.4 + Math.random() * 2.6,
+      color: color
+    });
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.955;
+    p.vy *= 0.955;
+  }
+}
+
+/* =====================================================================
+   ZEICHNEN
+   ===================================================================== */
+function drawBackground() {
+  if (!bgCanvas) buildBackground();
+  ctx.drawImage(bgCanvas, 0, 0, W, H);
+}
+
+let bgCanvas = null;
+function buildBackground() {
+  bgCanvas = document.createElement("canvas");
+  bgCanvas.width = W; bgCanvas.height = H;
+  const g = bgCanvas.getContext("2d");
+
+  g.fillStyle = "#05060a";
+  g.fillRect(0, 0, W, H);
+
+  // Neon-Raster
+  g.strokeStyle = "rgba(34,230,255,0.05)";
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let x = 0; x <= W; x += 40) { g.moveTo(x + 0.5, 0); g.lineTo(x + 0.5, H); }
+  for (let y = 0; y <= H; y += 40) { g.moveTo(0, y + 0.5); g.lineTo(W, y + 0.5); }
+  g.stroke();
+
+  // Farbschimmer
+  const rg = g.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, W * 0.72);
+  rg.addColorStop(0, "rgba(20,60,90,0.18)");
+  rg.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = rg;
+  g.fillRect(0, 0, W, H);
+}
+
+/* Weiche Glow-Sprites (deutlich schneller als shadowBlur) */
+const glowCache = {};
+function glowSprite(color) {
+  if (glowCache[color]) return glowCache[color];
+  const size = 128;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  const grd = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grd.addColorStop(0, hexA(color, 0.85));
+  grd.addColorStop(0.28, hexA(color, 0.34));
+  grd.addColorStop(0.6, hexA(color, 0.09));
+  grd.addColorStop(1, hexA(color, 0));
+  g.fillStyle = grd;
+  g.fillRect(0, 0, size, size);
+  glowCache[color] = c;
+  return c;
+}
+
+function blitGlow(x, y, radius, color, alpha) {
+  const s = glowSprite(color);
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(s, x - radius, y - radius, radius * 2, radius * 2);
+  ctx.globalAlpha = 1;
+}
+
+function drawImageLayer() {
+  if (levelRevealAll) {
+    ctx.drawImage(levelCanvas, 0, 0, W, H);
+    return;
+  }
+  if (maskDirty) renderMask();
+  if (compDirty) buildComposite();
+  ctx.drawImage(compCanvas, 0, 0, W, H);
+
+  if (edgeDirty) buildEdge();
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.55;
+  ctx.drawImage(edgeCanvas, 0, 0, W, H);
+  ctx.restore();
+}
+
+function drawBorderBand(t) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.0);
+
+  // Sicherheitsband
+  ctx.save();
+  ctx.strokeStyle = "rgba(34,230,255," + (0.10 + 0.07 * pulse) + ")";
+  ctx.lineWidth = BORDER_PX;
+  ctx.strokeRect(BORDER_PX / 2, BORDER_PX / 2, W - BORDER_PX, H - BORDER_PX);
+  ctx.restore();
+}
+
+function drawFieldBorder(t) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
+  const complete = (state === "levelcomplete");
+  const flash = complete ? (0.5 + 0.5 * Math.sin(t * 12)) : 0;
+
+  const col = complete ? "77,255,158" : "34,230,255";
+  const base = complete ? (0.30 + 0.55 * flash) : (0.26 + 0.30 * pulse);
+
+  ctx.save();
+  ctx.lineJoin = "round";
+
+  // Außenschein als mehrere breite, transparente Striche
+  for (let i = 4; i >= 1; i--) {
+    ctx.strokeStyle = "rgba(" + col + "," + (base * 0.09 * i) + ")";
+    ctx.lineWidth = i * 5;
+    ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+  }
+
+  // harte Linie
+  ctx.strokeStyle = "rgba(" + col + "," + (base + 0.25) + ")";
+  ctx.lineWidth = complete ? 4 + 3 * flash : 3;
+  ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+
+  // innere Kante des Sicherheitsbandes
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "rgba(" + col + "," + (complete ? (0.4 + 0.5 * flash) : (0.16 + 0.16 * pulse)) + ")";
+  ctx.strokeRect(BORDER_PX, BORDER_PX, W - 2 * BORDER_PX, H - 2 * BORDER_PX);
+
+  // Eckakzente
+  const len = 54;
+  ctx.lineWidth = complete ? 4 : 2.5;
+  ctx.strokeStyle = "rgba(" + col + "," + (complete ? (0.5 + 0.5 * flash) : (0.45 + 0.4 * pulse)) + ")";
+  const corners = [
+    [BORDER_PX, BORDER_PX, 1, 1],
+    [W - BORDER_PX, BORDER_PX, -1, 1],
+    [BORDER_PX, H - BORDER_PX, 1, -1],
+    [W - BORDER_PX, H - BORDER_PX, -1, -1]
+  ];
+  ctx.beginPath();
+  for (const [x, y, sx, sy] of corners) {
+    ctx.moveTo(x + sx * len, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + sy * len);
+  }
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawTrail() {
+  if (!trailPoints || trailPoints.length < 2) return;
+
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  const path = new Path2D();
+  path.moveTo(trailPoints[0].x, trailPoints[0].y);
+  for (let i = 1; i < trailPoints.length; i++) {
+    path.lineTo(trailPoints[i].x, trailPoints[i].y);
+  }
+
+  // Außenschein (mehrfach gestrichelt statt shadowBlur)
+  ctx.strokeStyle = "rgba(34,230,255,0.10)";
+  ctx.lineWidth = 16;
+  ctx.stroke(path);
+  ctx.strokeStyle = "rgba(34,230,255,0.16)";
+  ctx.lineWidth = 10;
+  ctx.stroke(path);
+
+  // Kern
+  ctx.strokeStyle = "#40eaff";
+  ctx.lineWidth = 4;
+  ctx.stroke(path);
+
+  // heller Innenstrich
+  ctx.strokeStyle = "rgba(235,255,255,0.95)";
+  ctx.lineWidth = 1.4;
+  ctx.stroke(path);
+
+  ctx.restore();
+}
+
+function drawGhosts(t) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  for (let k = 0; k < ghosts.length; k++) {
+    const g = ghosts[k];
+    const pulse = 0.5 + 0.5 * Math.sin(t * 4 + g.phase);
+    const r = GHOST_R + pulse * 1.4;
+
+    blitGlow(g.x, g.y, r * 4.2, g.color, 0.55 + 0.25 * pulse);
+
+    ctx.fillStyle = g.color;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, r * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+
+  for (let k = 0; k < ghosts.length; k++) {
+    const g = ghosts[k];
+    const pulse = 0.5 + 0.5 * Math.sin(t * 4 + g.phase);
+    const r = GHOST_R + pulse * 1.4;
+    ctx.strokeStyle = hexA(g.color, 0.45 + 0.4 * pulse);
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, r + 5 + pulse * 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawPlayer(t) {
+  const blink = (shield > 0) && (Math.floor(t * 16) % 2 === 0);
+  if (blink) return;
+
+  ctx.save();
+
+  // Leuchtspur hinter dem Spieler
+  if (tail.length > 1) {
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < tail.length; i++) {
+      const p = tail[i];
+      const a = Math.max(0, p.life / 0.28);
+      blitGlow(p.x, p.y, 9 + 10 * a, "#22e6ff", 0.20 * a);
+      ctx.globalAlpha = 0.5 * a;
+      ctx.fillStyle = "#22e6ff";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.4 + 2.6 * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.globalCompositeOperation = "lighter";
+  blitGlow(player.x, player.y, 40, "#22e6ff", 0.85);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = "#22e6ff";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, PLAYER_R, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255,255,255,0.97)";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, PLAYER_R * 0.42, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (shield > 0) {
+    ctx.strokeStyle = "rgba(77,255,158," + (0.35 + 0.35 * Math.sin(t * 14)) + ")";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, PLAYER_R + 7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  if (!particles.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    const a = Math.max(0, p.life / p.max);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * (0.4 + a * 0.8), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function hexA(hex, a) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+}
+
+function render() {
+  const t = levelTime;
+
+  ctx.setTransform(res, 0, 0, res, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+
+  drawBackground();
+  drawImageLayer();
+  drawBorderBand(t);
+  drawTrail();
+  drawGhosts(t);
+  if (state !== "finished") drawPlayer(t);
+  drawParticles();
+  drawFieldBorder(t);
+}
+
+/* =====================================================================
+   HUD
+   ===================================================================== */
+function updateHUD() {
+  elLevel.textContent = (levelIdx + 1) + " / " + levels.length;
+
+  elLives.innerHTML = "";
+  for (let i = 0; i < START_LIVES; i++) {
+    const s = document.createElement("span");
+    s.className = "life" + (i < lives ? "" : " off");
+    elLives.appendChild(s);
+  }
+
+  const shown = Math.max(0, Math.min(100, percent));
+  elPercent.textContent = Math.round(shown) + " %";
+  elFill.style.width = shown + "%";
+
+  // Ziel dieses Levels anzeigen und Markierung entsprechend setzen
+  if (elTarget) elTarget.textContent = levelTarget + " %";
+  if (elMarker) {
+    elMarker.style.left = levelTarget + "%";
+    elMarker.title = "Ziel " + levelTarget + " %";
+  }
+
+  if (shown >= levelTarget) elFill.classList.add("done");
+  else elFill.classList.remove("done");
+}
+
+/* =====================================================================
+   PAUSE / NEUSTART
+   ===================================================================== */
+function togglePause() {
+  if (state === "playing") {
+    state = "paused";
+    screenPause.classList.add("open");
+    clearInput();
+  } else if (state === "paused") {
+    state = "playing";
+    screenPause.classList.remove("open");
+  }
+}
+
+/* =====================================================================
+   HAUPTSCHLEIFE
+   ===================================================================== */
+let lastTs = 0;
+let acc = 0;
+
+function frame(ts) {
+  requestAnimationFrame(frame);
+
+  if (!lastTs) lastTs = ts;
+  let dt = (ts - lastTs) / 1000;
+  lastTs = ts;
+  if (dt > 0.25) dt = 0.25;
+  if (dt < 0) dt = 0;
+
+  if (state === "playing") {
+    levelTime += dt;
+    acc += dt;
+    let guard = 0;
+    while (acc >= STEP && guard < 12) {
+      simulate(STEP);
+      acc -= STEP;
+      guard++;
+      if (state !== "playing") break;
+    }
+    if (guard >= 12) acc = 0;
+  } else {
+    acc = 0;
+    if (state === "levelcomplete") {
+      levelTime += dt;
+      levelCompleteTimer += dt;
+      const left = Math.max(0, Math.ceil(LEVEL_COMPLETE_SECONDS - levelCompleteTimer));
+      elCountdown.textContent = String(left);
+      if (levelCompleteTimer >= LEVEL_COMPLETE_SECONDS) {
+        advanceAfterLevel();
+      }
+    } else if (state === "gameover" || state === "finished") {
+      levelTime += dt;
+    }
+  }
+
+  updateParticles(dt);
+  if (DEBUG) {
+    const _t0 = performance.now();
+    render();
+    dbgPerf.sum += performance.now() - _t0;
+    dbgPerf.frames++;
+  } else {
+    render();
+  }
+}
+
+function simulate(dt) {
+  if (shield > 0) shield = Math.max(0, shield - dt);
+
+  stepGhosts(dt);
+  stepPlayer(dt);
+  checkHits();
+
+  // Leuchtspur des Spielers
+  tailT -= dt;
+  const moving = player.dir.x !== 0 || player.dir.y !== 0;
+  if (tailT <= 0 && moving) {
+    tailT = 0.03;
+    tail.push({ x: player.x, y: player.y, life: 0.28 });
+  }
+  for (let i = tail.length - 1; i >= 0; i--) {
+    tail[i].life -= dt;
+    if (tail[i].life <= 0) tail.splice(i, 1);
+  }
+
+  if (drawing) {
+    sparkTimer -= dt;
+    if (sparkTimer <= 0) {
+      sparkTimer = 0.05;
+      spawnSparks(player.x, player.y, "#22e6ff", 1, 40);
+    }
+  }
+}
+
+/* =====================================================================
+   DEBUG-HOOK (nur mit ?debug=1 aktiv) – dient ausschließlich Tests
+   ===================================================================== */
+const DEBUG = (typeof location !== "undefined") &&
+              location.search.indexOf("debug") >= 0;
+
+let debugFreezeGhosts = false;
+const dbgPerf = { sum: 0, frames: 0 };
+
+if (DEBUG) {
+  window.NQ = {
+    get perf() {
+      return {
+        avgRenderMs: dbgPerf.frames ? dbgPerf.sum / dbgPerf.frames : 0,
+        frames: dbgPerf.frames
+      };
+    },
+    resetPerf() { dbgPerf.sum = 0; dbgPerf.frames = 0; },
+    get state() { return state; },
+    get percent() { return percent; },
+    get percentLive() { return computePercent(); },
+    get lives() { return lives; },
+    get drawing() { return drawing; },
+    get levelIdx() { return levelIdx; },
+    get levelCount() { return levels.length; },
+    get levelCompleteTimer() { return levelCompleteTimer; },
+    get lastCompleteDuration() { return lastCompleteDuration; },
+    restartLevel() { clearInput(); loadLevel(levelIdx); },
+    gotoLevel(i) {
+      if (i < 0 || i >= levels.length) return false;
+      clearInput();
+      loadLevel(i);
+      return true;
+    },
+    clearShield() { shield = 0; },
+    setPlayerPos(x, y) {
+      player.x = x; player.y = y;
+      player.dir = { x: 0, y: 0 };
+      setPlayerCell();
+    },
+    /* Läuft eine Polylinie rechtwinklig (erst X, dann Y) durch die echte
+       Bewegungslogik ab. Bricht ab, sobald eine Fläche geschlossen wurde. */
+    walkTo(pts) {
+      let closed = false;
+      for (let k = 0; k < pts.length && !closed; k++) {
+        const t = pts[k];
+        for (let a = 0; a < 2 && !closed; a++) {
+          const axisX = (a === 0);
+          let guard = 0;
+          while (guard++ < 60000) {
+            const d = axisX ? (t.x - player.x) : (t.y - player.y);
+            if (Math.abs(d) < 0.01) break;
+            const s = Math.sign(d) * Math.min(2, Math.abs(d));
+            const ox = player.x, oy = player.y;
+            if (axisX) player.x = clamp(player.x + s, PLAYER_R, W - PLAYER_R);
+            else player.y = clamp(player.y + s, PLAYER_R, H - PLAYER_R);
+            if (player.x === ox && player.y === oy) break;
+            afterMove(ox, oy);
+            if (justClosed) { justClosed = false; closed = true; break; }
+          }
+        }
+      }
+      return { closed, percent: computePercent(), trail: trailCells.length };
+    },
+    get speeds() { return { player: PLAYER_SPEED, ghost: GHOST_SPEED, ratio: GHOST_SPEED / PLAYER_SPEED }; },
+    get layoutInfo() {
+      const c = canvas.getBoundingClientRect();
+      const t = document.getElementById("topbar").getBoundingClientRect();
+      const w = stagewrap.getBoundingClientRect();
+      return {
+        canvas: { x: c.x, y: c.y, w: c.width, h: c.height },
+        topbar: { h: t.height, bottom: t.bottom },
+        wrap: { x: w.x, y: w.y, w: w.width, h: w.height }
+      };
+    },
+    get player() { return { x: player.x, y: player.y, cx: player.cx, cy: player.cy }; },
+    get trailCellCount() { return trailCells.length; },
+    get trailPoints() { return trailPoints.map((p) => ({ x: p.x, y: p.y })); },
+    get ghostList() {
+      return ghosts.map((g) => ({
+        x: g.x, y: g.y, tx: g.tx, ty: g.ty, color: g.color,
+        border: !!g.border, t: g.t, loop: g.loop, dir: g.dir
+      }));
+    },
+    get ghostCount() { return ghosts.length; },
+    get borderGhostCount() { return ghosts.filter((g) => g.border).length; },
+    get ghostSpeedFactor() { return ghostSpeedFactor; },
+    get effectiveGhostSpeed() { return GHOST_SPEED * ghostSpeedFactor; },
+    get levelTarget() { return levelTarget; },
+    targetForLevel(n) { return targetForLevel(n); },
+    get hudTargetText() { return elTarget ? elTarget.textContent : null; },
+    get hudMarkerLeft() { return elMarker ? elMarker.style.left : null; },
+    frontierDebug() {
+      const list = getFrontierGhosts();
+      const loops = frontierLoops.map((l, i) => ({
+        i: i, pts: l.pts.length, total: +l.total.toFixed(2), area: +l.area.toFixed(0)
+      }));
+      return {
+        loopCount: frontierLoops.length,
+        loops: loops,
+        ghosts: list.map((g, i) => ({
+          i: i,
+          x: g.x, y: g.y, loop: g.loop, t: g.t, dir: g.dir, color: g.color,
+          cellEmpty: grid[idxOf(cellX(g.x), cellY(g.y))] === EMPTY,
+          distToPath: (g.loop >= 0 && frontierLoops[g.loop])
+            ? nearestOnLoop(frontierLoops[g.loop], g.x, g.y).d : null
+        }))
+      };
+    },
+    frontierDistanceAt(x, y) {
+      let best = Infinity;
+      for (let i = 0; i < frontierLoops.length; i++) {
+        const r = nearestOnLoop(frontierLoops[i], x, y);
+        if (r.d < best) best = r.d;
+      }
+      return best;
+    },
+    frontierLoopPoints() {
+      return frontierLoops.map((l) => l.pts.map((p) => ({ x: p.x, y: p.y })));
+    },
+    setBorderGhostS(s, which) {
+      const list = getFrontierGhosts();
+      const g = list[which || 0];
+      if (!g || g.loop < 0 || !frontierLoops[g.loop]) return false;
+      const loop = frontierLoops[g.loop];
+      g.t = ((s % loop.total) + loop.total) % loop.total;
+      const p = pointAtS(loop, g.t);
+      g.x = p.x; g.y = p.y;
+      return true;
+    },
+    frontierNearestS(x, y, which) {
+      const list = getFrontierGhosts();
+      const g = list[which || 0];
+      if (!g || g.loop < 0 || !frontierLoops[g.loop]) return null;
+      return nearestOnLoop(frontierLoops[g.loop], x, y).s;
+    },
+    rebuildFrontier() { buildFrontier(); syncFrontierGhosts(); return frontierLoops.length; },
+    get levelsInfo() {
+      return levels.map((l) => ({
+        index: l.index,
+        hasImg: !!l.img,
+        w: l.img ? l.img.naturalWidth : 0,
+        h: l.img ? l.img.naturalHeight : 0
+      }));
+    },
+    setLives(n) { lives = n; updateHUD(); },
+    freezeGhosts(v) { debugFreezeGhosts = !!v; },
+    setGhost(i, x, y) {
+      const g = ghosts[i];
+      if (!g) return false;
+      g.x = x; g.y = y; g.tx = x; g.ty = y; g.retarget = 999;
+      return true;
+    },
+    cellState(x, y) {
+      const cx = cellX(x), cy = cellY(y);
+      return grid[idxOf(cx, cy)];
+    },
+    filledCount() {
+      let n = 0;
+      for (let i = 0; i < grid.length; i++) if (grid[i] === FILLED) n++;
+      return n;
+    },
+    fillTo(p) {
+      const targetCells = Math.ceil(((COLS - 2 * BC) * (ROWS - 2 * BC)) * (p / 100));
+      let have = 0;
+      const list = [];
+      for (let cy = BC; cy < ROWS - BC; cy++) {
+        for (let cx = BC; cx < COLS - BC; cx++) {
+          const i = idxOf(cx, cy);
+          if (grid[i] === FILLED) have++;
+          else if (grid[i] === EMPTY) list.push(i);
+        }
+      }
+      for (let k = 0; k < list.length && have < targetCells; k++) {
+        grid[list[k]] = FILLED;
+        have++;
+      }
+      maskDirty = true; compDirty = true;
+      percent = computePercent();
+      updateHUD();
+      afterAreaClosed();
+      return percent;
+    },
+    forceCompleteCheck() { percent = computePercent(); afterAreaClosed(); return percent; },
+    rectFill(x0, y0, x1, y1) {
+      let f = 0, t = 0;
+      for (let cy = Math.max(BC, cellY(y0)); cy <= Math.min(ROWS - BC - 1, cellY(y1)); cy++) {
+        for (let cx = Math.max(BC, cellX(x0)); cx <= Math.min(COLS - BC - 1, cellX(x1)); cx++) {
+          t++;
+          if (grid[idxOf(cx, cy)] === FILLED) f++;
+        }
+      }
+      return t ? f / t : 0;
+    }
+  };
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+function boot() {
+  layout();
+  window.addEventListener("resize", layout);
+  window.addEventListener("load", layout);
+  window.addEventListener("orientationchange", () => window.setTimeout(layout, 150));
+  if (window.ResizeObserver) {
+    try { new ResizeObserver(() => layout()).observe(stagewrap); } catch (e) { /* egal */ }
+  }
+
+  document.addEventListener("keydown", onKeyDown, { passive: false });
+  document.addEventListener("keyup", onKeyUp, { passive: false });
+
+  // Touch-Steuerung
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  if (isTouch) $("touch").classList.add("on");
+  bindTouchButton($("dpUp"), "T-UP", 0, -1);
+  bindTouchButton($("dpDown"), "T-DOWN", 0, 1);
+  bindTouchButton($("dpLeft"), "T-LEFT", -1, 0);
+  bindTouchButton($("dpRight"), "T-RIGHT", 1, 0);
+
+  // Buttons
+  $("btnStart").addEventListener("click", startNewGame);
+  $("btnPause").addEventListener("click", togglePause);
+  $("btnRestart").addEventListener("click", () => {
+    screenPause.classList.remove("open");
+    startNewGame();
+  });
+  $("btnResume").addEventListener("click", togglePause);
+  $("btnRestart2").addEventListener("click", () => {
+    screenPause.classList.remove("open");
+    startNewGame();
+  });
+  $("btnAgain").addEventListener("click", () => {
+    screenOver.classList.remove("open");
+    startNewGame();
+  });
+  $("btnAgain2").addEventListener("click", () => {
+    screenFinal.classList.remove("open");
+    startNewGame();
+  });
+
+  // Auto-Pause
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && state === "playing") togglePause();
+  });
+  window.addEventListener("blur", () => {
+    if (state === "playing") togglePause();
+  });
+
+  // Standardzustand (Canvas zeigt das Feld hinter dem Startbildschirm)
+  resetGrid();
+  placePlayerAtStart();
+  spawnGhosts();
+  percent = 0;
+  updateHUD();
+  levelCanvas = makeLevelCanvas({ index: 1, img: null });
+  requestAnimationFrame(frame);
+
+  // Level suchen
+  discoverLevels().then((found) => {
+    levels = found;
+    levelIdx = 0;
+    $("startLoading").style.display = "none";
+    $("startReady").style.display = "flex";
+    $("startLevelCount").textContent =
+      found.length + (found.length === 1 ? " Levelbild gefunden" : " Levelbilder gefunden") +
+      "  ·  Ziel: 75 %, steigend bis 90 %";
+    elLevel.textContent = "1 / " + levels.length;
+    updateHUD();
+    state = "boot";
+    console.log("Level geladen:", found.length);
+  }).catch((err) => {
+    console.error("Level-Suche fehlgeschlagen:", err);
+    levels = [{ index: 1, img: null, canvas: makeLevelCanvas({ index: 1, img: null }) }];
+    $("startLoading").style.display = "none";
+    $("startReady").style.display = "flex";
+    $("startLevelCount").textContent = "1 Level (Platzhalter)";
+    updateHUD();
+  });
+}
+
+boot();
+
+})();
+</script>
+</body>
+</html>

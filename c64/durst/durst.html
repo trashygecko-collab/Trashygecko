@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DURST – Das Spiel</title>
+<style>
+:root{--bg:#050505;--panel:#151019;--line:#8c5a9e;--pink:#ff4fd8;--cyan:#42e8ff;--gold:#ffd35a;--text:#f5eaff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Consolas,Monaco,monospace;display:flex;justify-content:center;min-height:100vh}
+#cabinet{width:min(100%,1000px);padding:14px 16px 22px;text-align:center}
+h1{margin:2px 0 12px;color:var(--pink);font-size:clamp(25px,5vw,42px);letter-spacing:5px;text-shadow:0 0 8px #ff4fd8,0 0 22px #b000a0}
+#hud{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px 24px;margin:0 auto 10px;padding:9px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-weight:bold}
+.huditem{white-space:nowrap}.huditem b{color:var(--cyan)}
+#boardWrap{width:100%;max-width:900px;margin:auto;background:#000;border:3px solid #70417e;box-shadow:0 0 16px #8e32a8;padding:4px;line-height:0}
+canvas{display:block;width:100%;height:auto;background:#000;image-rendering:pixelated;touch-action:none}
+#status{min-height:24px;margin:9px 0;color:var(--gold);font-weight:bold}
+#controls{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;margin:10px auto}
+button,select{background:#24162b;color:var(--text);border:1px solid #a35db7;border-radius:6px;padding:9px 13px;font: bold 14px Consolas,monospace}
+button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
+#levelSelect{max-width:160px}
+#mobilePad{display:none;width:min(240px,75vw);margin:12px auto 0;grid-template-columns:repeat(3,1fr);gap:6px}
+#mobilePad button{font-size:22px;padding:13px 5px;touch-action:none}
+#mobilePad .empty{visibility:hidden}
+#mobilePad #giveup{grid-column:1/4;font-size:13px}
+#help{font-size:12px;color:#b9a9bf;margin:10px 0}
+#footer{font-size:11px;color:#765f7d;margin-top:18px}
+#overlay{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+#dialog{max-width:440px;width:100%;background:#17101b;border:2px solid var(--pink);border-radius:12px;padding:24px;box-shadow:0 0 25px #a000a0}
+#dialog h2{color:var(--gold);margin-top:0}
+#dialog p{line-height:1.5}
+@media(max-width:600px){#cabinet{padding:9px 8px 16px}#hud{gap:7px 13px;font-size:13px}#mobilePad{display:grid}#help{display:none}button,select{padding:8px 10px}}
+.pad-space {
+  grid-column: 1 / -1;
+  height: 30px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+<div id="cabinet">
+  <h1>DURST</h1>
+  <div id="hud">
+    <span class="huditem">LEVEL <b id="levelNum">01</b></span>
+    <span class="huditem">ZEIT <b id="time">02:00</b></span>
+    <span class="huditem">LEBEN <b id="lives">3</b></span>
+    <span class="huditem">BIER <b id="goal">FINDEN!</b></span>
+  </div>
+  <div id="boardWrap"><canvas id="game" width="800" height="480" aria-label="DURST Spielfeld"></canvas></div>
+ 
+<div id="mobilePad">
+  <button class="empty"> </button><button data-dir="up">▲</button><button class="empty"> </button>
+  <button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
+
+  <div class="pad-space">Vorsicht</div>
+
+  <button id="giveup">AUFGEBEN</button>
+</div>
+ <div id="status">Finde das Bier! Du hast 2 Minuten.</div>
+  <div id="controls">
+    <label for="levelSelect">Start-Level:</label>
+    <select id="levelSelect"></select>
+    <button id="startBtn">SPIEL STARTEN</button>
+    <button id="pauseBtn">PAUSE (P)</button>
+    <button id="giveupBtn">AUFGEBEN</button>
+    <button id="fullBtn">VOLLBILD</button>
+  </div>
+
+  <div id="help">Steuerung: Pfeiltasten oder WASD · P = Pause · Ziel: Bier erreichen · Steine mit ← / → schieben</div>
+  <div id="footer">20 × 12 FELDER · 65 LEVEL? NEIN – SO VIELE, WIE DU EINTRÄGST · MADE WITH DURST</div>
+</div>
+<div id="overlay"><div id="dialog"><h2 id="dialogTitle">DURST</h2><p id="dialogText"></p><button id="dialogBtn">WEITER</button></div></div>
+<script>
+// ============================================================
+// LEVEL-EDITOR-BEREICH: Hier kannst du später Level ergänzen.
+// 0=leer, 1=Mauer, 2=Sand, 3=Stein, 4=Gegner, 5=Spieler, 6=Bier
+// Jede Zeile muss genau 20 Ziffern enthalten, jedes Level 12 Zeilen.
+// Mehrere Gegner (4) sind erlaubt. Genau ein Spieler (5) und Bier (6).
+// Gegner starten standardmäßig nach rechts und drehen im Uhrzeigersinn.
+// ============================================================
+
+const LEVELS = [
+ {name:"Level 1", map:[
+  "11111111111111111111",
+  "12222222313322222231",
+  "12223222313321111221",
+  "12333331312332221321",
+  "11112122322231121221",
+  "12223222311233121231",
+  "12333332161222221221",
+  "11112120231111111121",
+  "12222211131322222221",
+  "15222212232223333321",
+  "12222212222222222221",
+  "11111111111111111111"
+ ]},
+
+ {name:"Level 2", map:[
+  "11111111111111111111",
+  "16000112222222222221",
+  "14000112222222222221",
+  "12222212222222222221",
+  "10000112222222222221",
+  "14000112222222222221",
+  "12222212222222222221",
+  "10000012222222222221",
+  "14000012222222222221",
+  "12222212222222222221",
+  "15222222222222222221",
+  "11111111111111111111"
+ ]},
+
+ {name:"Level 3", map:[
+  "11111111111111111111",
+  "14333312222222312221",
+  "13333122223223222221",
+  "13331400022232212221",
+  "13312320022322313331",
+  "13162300032223211311",
+  "12511111111332212221",
+  "10100000232211111221",
+  "10000000231212200001",
+  "10000000231000100001",
+  "10000000231222100001",
+  "11111111111111111111"
+ ]}
+
+];
+
+const W=20,H=12,TILE=40,STEP=180,STONE_DELAY=1000,LEVEL_TIME=120;
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+const images={},imageNames={1:'mauer',2:'sand',3:'stein',4:'gegner',5:'spieler',6:'bier'};
+for(const [id,name] of Object.entries(imageNames)){const im=new Image();im.src=`bilder/${name}.png`;im.onload=draw;images[id]=im;}
+let map=[],player={x:1,y:1},enemies=[],stones={},lives=3,levelIndex=0,timeLeft=LEVEL_TIME;
+let running=false,paused=false,dead=false,won=false,lastStep=0,clockTimer=null,stoneTimer=null,moveQueue=null,enemyId=0;
+const key=(x,y)=>`${x},${y}`;
+function parseLevel(i){
+ const src=LEVELS[i]; if(!src) return;
+ map=src.map.map(row=>row.split('').map(Number)); enemies=[];stones={};
+ let foundPlayer=false;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  if(map[y][x]===5){player={x,y};map[y][x]=0;foundPlayer=true;}
+  if(map[y][x]===4){enemies.push({id:++enemyId,x,y,dir:1,turn:1});map[y][x]=0;}
+  if(map[y][x]===3){stones[key(x,y)]={x,y,falling:false,readyAt:0};map[y][x]=0;}
+ }
+ if(!foundPlayer)player={x:1,y:1};
+}
+function tile(x,y){if(x<0||y<0||x>=W||y>=H)return 1;return map[y][x];}
+function enemyAt(x,y,except=null){return enemies.find(e=>e!==except&&e.x===x&&e.y===y);}
+function stoneAt(x,y){return !!stones[key(x,y)];}
+function occupied(x,y,except=null){return tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y,except)||(player.x===x&&player.y===y);}
+function loadLevel(i){levelIndex=i;parseLevel(i);timeLeft=LEVEL_TIME;running=false;paused=false;dead=false;won=false;moveQueue=null;updateHud();draw();$('status').textContent='Finde das Bier! Du hast 2 Minuten.';}
+function updateHud(){$('levelNum').textContent=String(levelIndex+1).padStart(2,'0');$('time').textContent=`${String(Math.floor(timeLeft/60)).padStart(2,'0')}:${String(timeLeft%60).padStart(2,'0')}`;$('lives').textContent=lives;$('goal').textContent='FINDEN!';}
+function draw(){
+ ctx.fillStyle='#000';ctx.fillRect(0,0,800,480);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=map[y][x];if(v)drawTile(v,x,y);}
+ for(const s of Object.values(stones))drawTile(3,s.x,s.y);
+ for(const e of enemies)drawTile(4,e.x,e.y);
+ drawTile(5,player.x,player.y);
+}
+function drawTile(v,x,y){
+ const im=images[v],px=x*TILE,py=y*TILE;
+ if(im&&im.complete&&im.naturalWidth){ctx.drawImage(im,px,py,TILE,TILE);return;}
+ const colors={1:'#6e6874',2:'#a66b36',3:'#aaaeb7',4:'#e04a3c',5:'#39d8e8',6:'#e7b52e'};
+ ctx.fillStyle=colors[v]||'#000';ctx.fillRect(px+1,py+1,TILE-2,TILE-2);
+ ctx.strokeStyle='#17121a';ctx.strokeRect(px+1,py+1,TILE-2,TILE-2);
+ ctx.fillStyle='#090909';ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillText(({1:'■',2:'·',3:'●',4:'☠',5:'☺',6:'🍺'})[v]||'',px+20,py+20);
+}
+function start(){if(won||dead)loadLevel(levelIndex);running=true;paused=false;lastStep=performance.now();startClock();$('status').textContent='Los geht’s!';draw();}
+function startClock(){clearInterval(clockTimer);clockTimer=setInterval(()=>{if(!running||paused)return;timeLeft--;updateHud();if(timeLeft<=0)die('Die Zeit ist abgelaufen!');},1000);}
+function togglePause(){if(!running||dead||won)return;paused=!paused;$('status').textContent=paused?'PAUSE – P zum Weiterspielen':'Weiter geht’s!';}
+function die(reason){if(dead||won)return;dead=true;running=false;lives--;updateHud();$('dialogTitle').textContent='AU — VERLOREN!';$('dialogText').textContent=reason+(lives>0?' Noch ein Versuch?':' Keine Leben mehr. Wähle ein Level und starte neu.');$('dialogBtn').textContent=lives>0?'NOCHMAL':'ZUR LEVELAUSWAHL';showDialog();}
+function win(){if(won||dead)return;won=true;running=false;lives++;updateHud();$('dialogTitle').textContent='BIER GEFUNDEN!';$('dialogText').textContent='Level geschafft! Du bekommst ein zusätzliches Leben.';$('dialogBtn').textContent=levelIndex<LEVELS.length-1?'NÄCHSTES LEVEL':'ZUR LEVELAUSWAHL';showDialog();}
+function showDialog(){$('overlay').style.display='flex';}
+function hideDialog(){$('overlay').style.display='none';}
+function movePlayer(dx,dy){
+ if(!running||paused||dead||won)return;
+ const nx=player.x+dx,ny=player.y+dy,v=tile(nx,ny);
+ if(v===1)return;
+ if(v===2)map[ny][nx]=0;
+ if(v===6){player.x=nx;player.y=ny;win();draw();return;}
+ if(v===3||stoneAt(nx,ny)){
+  if(dy!==0)return;
+  const sx=nx+dx,sy=ny;
+  if(occupied(sx,sy)||stoneAt(sx,sy))return;
+  if(stoneAt(nx,ny)){const s=stones[key(nx,ny)];delete stones[key(nx,ny)];s.x=sx;s.y=sy;stones[key(sx,sy)]=s;}
+  else if(map[ny][nx]===3){map[ny][nx]=0;stones[key(sx,sy)]={x:sx,y:sy,falling:false,readyAt:0};}
+  else return;
+ }else if(enemyAt(nx,ny)){die('Ein Gegner hat dich erwischt!');return;}
+else if(v!==0&&v!==2)return;
+ player.x=nx;player.y=ny;
+ draw();
+}
+function moveEnemies(){
+ const order=[...enemies];
+ const dirs=[[0,-1],[1,0],[0,1],[-1,0]];
+
+ for(const e of order){
+  if(!enemies.includes(e))continue;
+
+  const left=(e.dir+3)%4;
+  const right=(e.dir+1)%4;
+  const back=(e.dir+2)%4;
+
+  // Ursprüngliche Drehrichtung und Priorität beibehalten.
+  const choices=[
+   e.dir,
+   e.turn===1?right:left,
+   e.turn===1?left:right,
+   back
+  ];
+
+  let target=null;
+  let playerInWay=false;
+
+  for(const dir of choices){
+   const d=dirs[dir];
+   const nx=e.x+d[0];
+   const ny=e.y+d[1];
+
+   // Hindernisse prüfen.
+   if(occupiedForEnemy(nx,ny,e))continue;
+
+   // Spieler zunächst merken, aber andere Wege noch prüfen.
+   if(nx===player.x&&ny===player.y){
+    playerInWay=true;
+    continue;
+   }
+
+   target={x:nx,y:ny,dir};
+   break;
+  }
+
+  // Kein anderer Weg frei: Der Gegner würde den Spieler berühren.
+  if(!target){
+   if(playerInWay){
+    die('Ein Gegner hat dich berührt!');
+    return;
+   }
+
+   e.turn*=-1;
+   continue;
+  }
+
+  e.x=target.x;
+  e.y=target.y;
+  e.dir=target.dir;
+ }
+
+}function occupiedForEnemy(x,y,e){return tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y,e);}
+function stoneTick(now){
+ for(const k of Object.keys(stones)){
+  const s=stones[k];if(!s)continue;
+  const below=key(s.x,s.y+1),under=tile(s.x,s.y+1),otherStone=stones[below];
+const playerBelow=player.x===s.x&&player.y===s.y+1;
+const freeBelow=s.y+1<H&&under===0&&!otherStone&&!enemyAt(s.x,s.y+1)&&!playerBelow;
+  let target=null;
+if(freeBelow){
+ s.rollReadyAt=0;
+
+ // Prüfen, ob unterhalb bereits ein Stein derselben Gruppe fällt.
+ const groupFalling=Object.values(stones).some(o=>
+  o!==s&&o.falling&&o.x===s.x&&o.y>s.y
+ );
+
+ // Einzelne Steine warten normal, Gruppensteine nur kurz.
+ const fallDelay=groupFalling?150:STONE_DELAY;
+
+ if(!s.falling){
+  if(!s.readyAt)s.readyAt=now+fallDelay;
+  if(now>=s.readyAt){
+   s.falling=true;
+   target={x:s.x,y:s.y+1};
+  }
+ }else{
+  target={x:s.x,y:s.y+1};
+ }
+}
+   else{
+   s.falling=false;
+   s.readyAt=0;
+
+   // Rollen auf einer Mauer oder einem anderen Stein.
+   let rollTarget=null;
+
+   if(under===1||otherStone){
+    for(const dx of [-1,1]){
+     const sideX=s.x+dx;
+     const diagY=s.y+1;
+
+     if(!occupiedForStone(sideX,s.y)&&!occupiedForStone(sideX,diagY)){
+      rollTarget={x:sideX,y:s.y+1};
+      break;
+     }
+    }
+   }
+
+   if(rollTarget){
+    if(!s.rollReadyAt)s.rollReadyAt=now+STONE_DELAY;
+
+    if(now>=s.rollReadyAt){
+     target=rollTarget;
+     s.rollReadyAt=0;
+    }
+   }else{
+    s.rollReadyAt=0;
+   }
+}
+  if(target){
+   if(target.x===player.x&&target.y===player.y){die('Ein Stein ist auf dich gefallen!');return;}
+   delete stones[k];s.x=target.x;s.y=target.y;
+   if(s.falling){s.readyAt=0;}else{s.falling=false;s.readyAt=0;}
+   stones[key(s.x,s.y)]=s;
+  }
+ }
+ draw();
+}
+function occupiedForStone(x,y){
+ return x<0||x>=W||y<0||y>=H||
+ tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y);
+}
+function tick(){if(!running||paused||dead||won)return;moveEnemies();if(!dead)stoneTick(performance.now());}
+function queueMove(dx,dy){movePlayer(dx,dy);}
+document.addEventListener('keydown',e=>{
+ const k=e.key.toLowerCase();
+
+ const dirs={
+  arrowup:[0,-1],w:[0,-1],
+  arrowdown:[0,1],s:[0,1],
+  arrowleft:[-1,0],a:[-1,0],
+  arrowright:[1,0],d:[1,0]
+ };
+
+ // Enter startet das Spiel
+ if(k==='enter'){
+  e.preventDefault();
+  if(!running&&!dead&&!won)start();
+  return;
+ }
+
+ // P pausiert das Spiel
+ if(k==='p'){
+  e.preventDefault();
+  togglePause();
+  return;
+ }
+
+ // Pfeiltasten und WASD starten und bewegen
+ if(dirs[k]){
+  e.preventDefault();
+
+  if(!running&&!dead&&!won){
+   start();
+  }
+
+  if(running){
+   queueMove(...dirs[k]);
+  }
+ }
+});
+document.querySelectorAll('[data-dir]').forEach(b=>{
+ const fn=e=>{
+  e.preventDefault();
+
+  // Spiel beim ersten Tastendruck starten.
+  if(!running&&!dead&&!won){
+   start();
+  }
+
+  if(!running||paused||dead||won)return;
+
+  const d=b.dataset.dir;
+  queueMove(...({
+   up:[0,-1],
+   down:[0,1],
+   left:[-1,0],
+   right:[1,0]
+  })[d]);
+ };
+
+ b.addEventListener('pointerdown',fn);
+});
+$('startBtn').onclick=()=>start();
+$('pauseBtn').onclick=()=>togglePause();
+$('giveupBtn').onclick=()=>die('Du hast aufgegeben.');
+$('giveup').onclick=()=>die('Du hast aufgegeben.');
+$('fullBtn').onclick=async()=>{
+ try{
+  if(!document.fullscreenElement){
+   await document.documentElement.requestFullscreen();
+  }else{
+   await document.exitFullscreen();
+  }
+ }catch(e){
+  $('status').textContent='Vollbild wird von diesem Browser nicht unterstützt.';
+ }
+};
+$('dialogBtn').onclick=()=>{hideDialog();if(dead&&lives>0)start();else if(won&&levelIndex<LEVELS.length-1){loadLevel(levelIndex+1);start();}else{loadLevel(0);}};
+$('levelSelect').onchange=e=>loadLevel(Number(e.target.value));
+function init(){$('levelSelect').innerHTML=LEVELS.map((l,i)=>`<option value="${i}">${l.name||`Level ${i+1}`}</option>`).join('');loadLevel(0);setInterval(tick,STEP);}
+init();
+</script>
+</body>
+</html>

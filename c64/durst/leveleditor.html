@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DURST – Level-Editor</title>
+<style>
+:root{--bg:#08060a;--panel:#19121e;--line:#80508f;--pink:#ff4fd8;--cyan:#42e8ff;--gold:#ffd35a;--text:#f5eaff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Consolas,Monaco,monospace}
+#app{max-width:1250px;margin:auto;padding:14px}
+h1{margin:0 0 12px;text-align:center;color:var(--pink);letter-spacing:5px;text-shadow:0 0 9px #ff4fd8}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px;margin:10px 0}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+button,select,input,textarea{font: bold 14px Consolas,monospace;color:var(--text);background:#291b31;border:1px solid #a35db7;border-radius:6px;padding:9px}
+button{cursor:pointer}button:hover{background:#493052;border-color:var(--pink)}
+button.active{background:#56305f;border:2px solid var(--cyan);color:#fff}
+#palette{display:grid;grid-template-columns:repeat(7,minmax(90px,1fr));gap:7px}
+.tool{display:flex;align-items:center;gap:8px;justify-content:flex-start;min-height:54px}
+.swatch{width:28px;height:28px;display:grid;place-items:center;border:1px solid #aaa;border-radius:4px;font-size:17px;color:#080808;flex:none}
+#boardWrap{width:min(100%,900px);margin:12px auto;background:#000;border:3px solid #70417e;padding:4px;box-shadow:0 0 16px #8e32a8;line-height:0}
+canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+#counts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12px;color:#d9c9df}
+.count{padding:5px 8px;border:1px solid #543d5c;border-radius:5px}
+textarea{width:100%;min-height:210px;resize:vertical;background:#0d0a10;color:#d8faff;font-weight:normal;font-size:13px;line-height:1.45}
+.small{font-size:12px;color:#b9a9bf;line-height:1.5}
+.warn{color:#ffd35a}.good{color:#75f0a5}
+.section-title{color:var(--cyan);font-size:14px;margin:0 0 9px}
+#message{min-height:20px;text-align:center;color:var(--gold);font-size:12px}
+@media(max-width:650px){#app{padding:8px}#palette{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:9px}button,select,input{font-size:12px;padding:8px}}
+</style>
+</head>
+<body>
+<div id="app">
+<h1>DURST – LEVEL-EDITOR</h1>
+<div class="panel toolbar">
+  <label>Level: <select id="levelSelect"></select></label>
+  <button id="addLevel">+ NEUES LEVEL</button>
+  <button id="renameLevel">UMBENENNEN</button>
+  <button id="deleteLevel">LEVEL LÖSCHEN</button>
+</div>
+<div class="panel">
+  <h2 class="section-title">FELD AUSWÄHLEN – DANACH INS SPIELFELD KLICKEN</h2>
+  <div id="palette">
+    <button class="tool" data-tile="0"><span class="swatch" style="background:#111;color:#eee">·</span>0 – Leer</button>
+    <button class="tool" data-tile="1"><span class="swatch" style="background:#777">■</span>1 – Mauer</button>
+    <button class="tool active" data-tile="2"><span class="swatch" style="background:#a66b36">·</span>2 – Sand</button>
+    <button class="tool" data-tile="3"><span class="swatch" style="background:#aaaeb7">●</span>3 – Stein</button>
+    <button class="tool" data-tile="4"><span class="swatch" style="background:#e04a3c">☠</span>4 – Gegner</button>
+    <button class="tool" data-tile="5"><span class="swatch" style="background:#39d8e8">☺</span>5 – Spieler</button>
+    <button class="tool" data-tile="6"><span class="swatch" style="background:#e7b52e">🍺</span>6 – Bier</button>
+  </div>
+  <p class="small">Tipp: Linke Maustaste gedrückt halten und über mehrere Felder ziehen. Auf dem Handy kannst du die Felder mit dem Finger übermalen. Der Editor verwendet dieselben Grafiken wie das Spiel aus dem Ordner <b>bilder</b>.</p>
+</div>
+<div id="boardWrap"><canvas id="board" width="800" height="480"></canvas></div>
+<div id="counts"></div>
+<div id="message"></div>
+<div class="panel toolbar">
+  <button id="fillSand">ALLES AUF SAND</button>
+  <button id="fillEmpty">ALLES LEEREN</button>
+  <button id="validate">LEVEL PRÜFEN</button>
+  <button id="copy">LEVELCODE KOPIEREN</button>
+</div>
+<div class="panel">
+  <h2 class="section-title">LEVELCODE FÜR DAS SPIEL</h2>
+  <p class="small">Der Code passt direkt in den <code>const LEVELS = [ ... ];</code>-Bereich deiner DURST-Spielversion. Jede Zeile hat genau 20 Zeichen, jedes Level genau 12 Zeilen.</p>
+  <textarea id="output" spellcheck="false"></textarea>
+  <div class="toolbar"><button id="refresh">CODE AKTUALISIEREN</button><button id="download">CODE ALS TXT SPEICHERN</button></div>
+</div>
+<div class="panel">
+  <h2 class="section-title">LEVEL AUS CODE LADEN</h2>
+  <p class="small">Hier kannst du einen einzelnen Level-Block im JSON-Format einfügen. Beispiel: <code>{"name":"Level 1","map":["...12 Zeilen..."]}</code>. Das Laden ersetzt das gerade ausgewählte Level.</p>
+  <textarea id="importText" placeholder='{"name":"Level 1","map":["11111111111111111111", "... insgesamt 12 Zeilen ..."]}'></textarea>
+  <div class="toolbar"><button id="import">EINGEFÜGTEN LEVEL LADEN</button></div>
+</div>
+<p class="small" style="text-align:center">DURST · 20 × 12 FELDER · MADE BY THOMAS VOIGT</p>
+</div>
+<script>
+(()=> {
+'use strict';
+const W=20,H=12,S=40,STORE='durst-level-editor-v1';
+const board=document.getElementById('board'),ctx=board.getContext('2d');
+const $=id=>document.getElementById(id);
+const names={0:'Leer',1:'Mauer',2:'Sand',3:'Stein',4:'Gegner',5:'Spieler',6:'Bier'};
+const files={1:'mauer',2:'sand',3:'stein',4:'gegner',5:'spieler',6:'bier'};
+const colors={0:'#090909',1:'#6e6874',2:'#a66b36',3:'#aaaeb7',4:'#e04a3c',5:'#39d8e8',6:'#e7b52e'};
+const symbols={0:'',1:'■',2:'·',3:'●',4:'☠',5:'☺',6:'🍺'};
+const images={};
+for(const [id,file] of Object.entries(files)){const im=new Image();im.src='bilder/'+file+'.png';im.onload=draw;images[id]=im;}
+let levels=[{name:'Level 1',map:Array.from({length:H},()=>Array(W).fill(2))}];
+let current=0,selected=2,painting=false;
+function save(){try{localStorage.setItem(STORE,JSON.stringify({levels,current}));}catch(e){}}
+function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STORE));if(d&&Array.isArray(d.levels)&&d.levels.length){levels=d.levels;current=Math.max(0,Math.min(d.current||0,levels.length-1));}}catch(e){}}
+function rows(level){return level.map.map(row=>row.join(''));}
+function draw(){
+ ctx.clearRect(0,0,board.width,board.height);ctx.fillStyle='#000';ctx.fillRect(0,0,board.width,board.height);
+ const m=levels[current].map;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const v=m[y][x],im=images[v],px=x*S,py=y*S;
+  if(v!==0&&im&&im.complete&&im.naturalWidth)ctx.drawImage(im,px,py,S,S);
+  else if(v!==0){ctx.fillStyle=colors[v];ctx.fillRect(px+1,py+1,S-2,S-2);ctx.fillStyle='#111';ctx.font='bold 21px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(symbols[v],px+20,py+20);}
+  if(v===0){ctx.fillStyle='#090909';ctx.fillRect(px+1,py+1,S-2,S-2);}
+  ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;ctx.strokeRect(px+.5,py+.5,S,S);
+ }
+ updateCounts();
+}
+function updateCounts(){
+ const c=Array(7).fill(0);for(const row of levels[current].map)for(const v of row)c[v]++;
+ $('counts').innerHTML=c.map((n,i)=>`<span class="count">${i} ${names[i]}: <b>${n}</b></span>`).join('');
+}
+function setTile(x,y,v){if(x<0||y<0||x>=W||y>=H)return;levels[current].map[y][x]=v;draw();save();}
+function coords(e){const r=board.getBoundingClientRect();return {x:Math.floor((e.clientX-r.left)/r.width*W),y:Math.floor((e.clientY-r.top)/r.height*H)};}
+board.addEventListener('pointerdown',e=>{e.preventDefault();painting=true;board.setPointerCapture(e.pointerId);const p=coords(e);setTile(p.x,p.y,selected);});
+board.addEventListener('pointermove',e=>{if(!painting)return;const p=coords(e);setTile(p.x,p.y,selected);});
+board.addEventListener('pointerup',()=>painting=false);board.addEventListener('pointercancel',()=>painting=false);
+document.querySelectorAll('[data-tile]').forEach(b=>b.addEventListener('click',()=>{selected=Number(b.dataset.tile);document.querySelectorAll('[data-tile]').forEach(x=>x.classList.toggle('active',x===b));}));
+function refreshSelect(){ $('levelSelect').innerHTML=levels.map((l,i)=>`<option value="${i}">${escapeHtml(l.name||'Level '+(i+1))}</option>`).join('');$('levelSelect').value=current;}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function codeBlock(l){return ` {name:${JSON.stringify(l.name)}, map:[\n${rows(l).map(r=>'  '+JSON.stringify(r)).join(',\n')}\n ]}`;}
+function refreshCode(){ $('output').value='const LEVELS = [\n'+levels.map(codeBlock).join(',\n')+'\n];';}
+function validate(){
+ const c=Array(7).fill(0);for(const row of levels[current].map)for(const v of row)c[v]++;
+ const issues=[];if(c[5]!==1)issues.push('Es muss genau eine Spielfigur (5) geben.');if(c[6]!==1)issues.push('Es muss genau ein Bier (6) geben.');
+ const bad=levels[current].map.some(r=>r.length!==W||r.some(v=>!Number.isInteger(v)||v<0||v>6));
+ if(bad)issues.push('Das Raster enthält ungültige Felder oder Zeilen.');
+ $('message').innerHTML=issues.length?'<span class="warn">'+issues.join(' ')+'</span>':'<span class="good">Alles korrekt: 20 × 12 Felder, genau eine Spielfigur und ein Bier.</span>';
+ return !issues.length;
+}
+$('levelSelect').onchange=e=>{current=Number(e.target.value);draw();save();refreshCode();$('message').textContent='';};
+$('addLevel').onclick=()=>{levels.push({name:'Level '+(levels.length+1),map:Array.from({length:H},()=>Array(W).fill(2))});current=levels.length-1;refreshSelect();draw();refreshCode();save();};
+$('renameLevel').onclick=()=>{const n=prompt('Neuer Levelname:',levels[current].name);if(n&&n.trim()){levels[current].name=n.trim();refreshSelect();refreshCode();save();}};
+$('deleteLevel').onclick=()=>{if(levels.length===1){alert('Mindestens ein Level muss bleiben.');return;}if(!confirm('Dieses Level wirklich löschen?'))return;levels.splice(current,1);current=Math.max(0,current-1);refreshSelect();draw();refreshCode();save();};
+$('fillSand').onclick=()=>{levels[current].map=Array.from({length:H},()=>Array(W).fill(2));draw();refreshCode();save();$('message').textContent='Das ganze Spielfeld ist wieder mit Sand gefüllt.';};
+$('fillEmpty').onclick=()=>{levels[current].map=Array.from({length:H},()=>Array(W).fill(0));draw();refreshCode();save();};
+$('validate').onclick=validate;
+$('refresh').onclick=refreshCode;
+$('copy').onclick=async()=>{refreshCode();try{await navigator.clipboard.writeText($('output').value);$('message').textContent='Der komplette LEVELS-Code wurde kopiert.';}catch(e){$('output').focus();$('output').select();$('message').textContent='Bitte den markierten Code mit Strg+C kopieren.';}};
+$('download').onclick=()=>{refreshCode();const blob=new Blob([$('output').value],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DURST_LEVELS.txt';a.click();URL.revokeObjectURL(a.href);};
+$('import').onclick=()=>{try{const d=JSON.parse($('importText').value);if(!d||!Array.isArray(d.map)||d.map.length!==H)throw Error('Es müssen genau 12 Zeilen vorhanden sein.');const m=d.map.map(r=>{if(typeof r!=='string'||r.length!==W||!/^[0-6]{20}$/.test(r))throw Error('Jede Zeile muss aus genau 20 Ziffern von 0 bis 6 bestehen.');return [...r].map(Number);});levels[current]={name:String(d.name||levels[current].name),map:m};refreshSelect();draw();refreshCode();save();$('message').textContent='Level wurde geladen.';}catch(e){$('message').textContent='Import fehlgeschlagen: '+e.message;}};
+loadSaved();refreshSelect();draw();refreshCode();
+})();
+</script>
+</body>
+</html>

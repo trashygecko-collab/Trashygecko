@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level-Editor – Schlangenspiel</title>
+
+<style>
+:root {
+    color-scheme: dark;
+    --panel: #151c27;
+    --line: #2d3a4d;
+    --text: #edf4ff;
+    --accent: #35e6c3;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: radial-gradient(ellipse at top, #1a2a3b, #090c12 65%);
+    color: var(--text);
+    font: 16px/1.45 system-ui, Segoe UI, sans-serif;
+}
+
+main {
+    max-width: 1000px;
+    margin: auto;
+}
+
+h1 {
+    margin: 0 0 5px;
+    color: var(--accent);
+    font-size: clamp(25px, 4vw, 36px);
+}
+
+.intro {
+    color: #aebbd0;
+    margin: 0 0 18px;
+}
+
+section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 17px;
+    margin: 15px 0;
+    box-shadow: 0 8px 30px #0005;
+}
+
+h2 {
+    font-size: 20px;
+    margin: 0 0 12px;
+}
+
+.tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    align-items: center;
+    margin: 10px 0 14px;
+}
+
+button {
+    font: inherit;
+    cursor: pointer;
+}
+
+.tool, .action {
+    border: 1px solid #50627a;
+    background: #202c3c;
+    color: var(--text);
+    padding: 9px 13px;
+    border-radius: 9px;
+}
+
+.tool {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tool[aria-pressed="true"] {
+    border: 2px solid var(--accent);
+    background: #173c3a;
+}
+
+.tool .sample {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px solid #8292a8;
+    display: inline-grid;
+    place-items: center;
+    font-weight: 800;
+}
+
+.action:hover, .tool:hover {
+    border-color: var(--accent);
+}
+
+.primary {
+    background: #087f70;
+    border-color: #19c9ad;
+}
+
+#boardWrap {
+    overflow-x: auto;
+    padding: 4px 2px 10px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(20, minmax(22px, 1fr));
+    gap: 3px;
+    min-width: 510px;
+    max-width: 820px;
+    margin: auto;
+}
+
+.cell {
+    aspect-ratio: 1;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid #53647a;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: clamp(10px, 1.7vw, 15px);
+    color: white;
+}
+
+.cell.v0 {
+    background: #0b111b;
+    border-color: #29394d;
+}
+
+.cell.v1 {
+    background: linear-gradient(145deg, #53647b, #2c394d);
+}
+
+.cell.v2 {
+    background: linear-gradient(145deg, #a85b18, #68340f);
+    border-color: #e89b46;
+}
+
+.cell.v3 {
+    background: linear-gradient(145deg, #21b99c, #087060);
+    border: 2px solid #8affdf;
+    color: #041b17;
+}
+
+.cell.v4 {
+    background: linear-gradient(145deg, #d6a45b, #79502a);
+    border: 2px solid #f3c982;
+    color: #241506;
+}
+
+.cell.v5 {
+    background: linear-gradient(145deg, #9b78d1, #49336f);
+    border: 2px solid #c8aaff;
+    color: #fff;
+}
+
+.hint {
+    color: #9eacc0;
+    font-size: 13px;
+    margin: 8px 0 0;
+}
+
+#code, #importCode {
+    display: block;
+    width: 100%;
+    min-height: 250px;
+    resize: vertical;
+    padding: 13px;
+    border-radius: 9px;
+    border: 1px solid #43536a;
+    background: #080d14;
+    color: #9fffe9;
+    font: 14px/1.7 Consolas, monospace;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+#importCode {
+    min-height: 150px;
+    margin: 8px 0;
+    color: #ffe6a6;
+}
+
+.status {
+    color: #9eacc0;
+    font-size: 14px;
+    margin-left: auto;
+}
+
+@media(max-width:600px) {
+    body { padding: 11px; }
+    section { padding: 13px; }
+    #board { min-width: 460px; }
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<h1>Level-Editor</h1>
+
+<p class="intro">
+Der Rand bleibt automatisch Mauer. Innen beginnt ein neues Level mit Futter. Du kannst auch fertige Levelcodes einfügen.
+</p>
+
+<section>
+<h2>1. Feldtyp auswählen</h2>
+
+<div class="tools">
+
+<button class="tool" data-value="1" aria-pressed="true">
+<span class="sample" style="background:#40516a">1</span>
+Mauer
+</button>
+
+<button class="tool" data-value="2" aria-pressed="false">
+<span class="sample" style="background:#914b16">2</span>
+Feld mit Inhalt
+</button>
+
+<button class="tool" data-value="0" aria-pressed="false">
+<span class="sample" style="background:#0b111b">0</span>
+Leeres Feld
+</button>
+
+<button class="tool" data-value="3" aria-pressed="false">
+<span class="sample" style="background:#087f70">3</span>
+Startpunkt Wurm
+</button>
+
+<button class="tool" data-value="4" aria-pressed="false">
+<span class="sample" style="background:#a8793d">4</span>
+Brücke
+</button>
+
+<button class="tool" data-value="5" aria-pressed="false">
+<span class="sample" style="background:#72549f">5</span>
+Brücke mit Unterführung
+</button>
+
+</div>
+
+<p class="hint">
+Der ausgewählte Typ wird auf jedes angeklickte Feld gemalt.
+Es kann nur einen Startpunkt (3) geben.
+</p>
+</section>
+
+<section>
+<h2>2. Vorhandenen Levelcode einfügen</h2>
+
+<textarea id="importCode" spellcheck="false" placeholder="Hier den kompletten Levelcode einfügen ..."></textarea>
+
+<div class="tools">
+<button class="action primary" id="loadCode">Levelcode laden</button>
+<button class="action" id="clearImport">Eingabefeld leeren</button>
+<span class="status" id="importStatus"></span>
+</div>
+
+<p class="hint">
+Erwartet werden 11 Zeilen mit jeweils 20 Zahlen (0 bis 5). Der Außenrand wird beim Laden automatisch auf Mauer (1) gesetzt.
+</p>
+</section>
+
+<section>
+<h2>3. Spielfeld bearbeiten</h2>
+
+<div class="tools">
+
+<button class="action primary" id="reset">
+Neues Level: Innen Futter
+</button>
+
+<button class="action" id="clear">
+Innen leeren (0)
+</button>
+
+<span class="status" id="status"></span>
+
+</div>
+
+<div id="boardWrap">
+<div id="board"></div>
+</div>
+
+<p class="hint">
+20 Spalten und 11 Zeilen. Der Außenrand bleibt immer Mauer (1). Innen beginnt jedes neue Level mit Futter (2). Ein Feld anklicken, um es zu verändern.
+</p>
+</section>
+
+<section>
+<h2>4. Fertiger Level-Code</h2>
+
+<textarea id="code" spellcheck="false" readonly></textarea>
+
+<div class="tools">
+
+<button class="action primary" id="update">
+Code aktualisieren
+</button>
+
+<button class="action" id="copy">
+Code kopieren
+</button>
+
+<button class="action" id="select">
+Code markieren
+</button>
+
+<span class="status" id="copyStatus"></span>
+
+</div>
+
+<p class="hint">
+Jede Spielfeldzeile wird auch als eigene Codezeile ausgegeben.
+Keine Leerzeichen zwischen den Zahlen.
+</p>
+</section>
+
+</main>
+
+<script>
+(() => {
+
+    const columns = 20;
+    const rows = 11;
+
+    // Neues Level: Außenwand (1), innen Futter (2).
+    const values = Array.from({ length: columns * rows }, (_, index) => {
+        const x = index % columns;
+        const y = Math.floor(index / columns);
+        return x === 0 || y === 0 || x === columns - 1 || y === rows - 1 ? 1 : 2;
+    });
+
+    let selected = 2;
+
+    const board = document.getElementById('board');
+    const output = document.getElementById('code');
+    const status = document.getElementById('status');
+    const copyStatus = document.getElementById('copyStatus');
+    const importCode = document.getElementById('importCode');
+    const importStatus = document.getElementById('importStatus');
+
+        // Code zeilenweise erzeugen
+    function updateCode() {
+
+        let lines = [];
+
+        for (let row = 0; row < rows; row++) {
+
+            const start = row * columns;
+
+            const line = '[' + values.slice(
+                start,
+                start + columns
+            ).join(',') + ']';
+
+            lines.push(line);
+        }
+
+        output.value = '[\n' + lines.map(line => line + ',').join('\n') + '\n]';
+
+        const count = [0,1,2,3,4,5].map(
+            n => values.filter(v => v === n).length
+        );
+
+        status.textContent =
+            `0: ${count[0]} · 1: ${count[1]} · 2: ${count[2]} · Start: ${count[3]} · Brücke: ${count[4]} · Unterführung: ${count[5]}`;
+    }
+
+    // Feld darstellen
+    function isBorder(index) {
+        const x = index % columns;
+        const y = Math.floor(index / columns);
+        return x === 0 || y === 0 || x === columns - 1 || y === rows - 1;
+    }
+
+    function enforceBorder() {
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < columns; x++) {
+                if (x === 0 || y === 0 || x === columns - 1 || y === rows - 1) {
+                    values[y * columns + x] = 1;
+                }
+            }
+        }
+    }
+
+    function paintCell(cell, index) {
+
+        const value = isBorder(index) ? 1 : values[index];
+
+        cell.className = 'cell v' + value;
+        if (isBorder(index)) cell.classList.add('fixed-wall');
+
+        cell.textContent = value === 0 ? '' : String(value);
+
+        cell.title =
+            `Zeile ${Math.floor(index / columns)+1}, Spalte ${index % columns+1}: ${value}`;
+    }
+
+    // Feld verändern
+    function setCell(index) {
+
+        // Der Außenrand ist fest und kann nicht übermalt werden.
+        if (isBorder(index)) return;
+
+        if (selected === 3) {
+
+            const oldStart = values.indexOf(3);
+
+            if (oldStart !== -1 && oldStart !== index) {
+
+                values[oldStart] = 2;
+
+                paintCell(
+                    board.children[oldStart],
+                    oldStart
+                );
+            }
+        }
+
+        values[index] = selected;
+
+        paintCell(board.children[index], index);
+
+        updateCode();
+
+        copyStatus.textContent = '';
+    }
+
+    // Spielfeld aufbauen
+    function draw() {
+
+        board.innerHTML = '';
+
+        values.forEach((value, index) => {
+
+            const cell = document.createElement('button');
+
+            cell.type = 'button';
+
+            cell.addEventListener('click', () => {
+                setCell(index);
+            });
+
+            paintCell(cell, index);
+
+            board.appendChild(cell);
+        });
+
+        updateCode();
+    }
+
+    // Neues Level mit fester Außenmauer und Futter im Innenraum.
+    function makeNewLevel() {
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < columns; x++) {
+                values[y * columns + x] =
+                    x === 0 || y === 0 || x === columns - 1 || y === rows - 1 ? 1 : 2;
+            }
+        }
+        draw();
+        copyStatus.textContent = '';
+        importStatus.textContent = '';
+    }
+
+    // Liest eine eingefügte Levelmatrix, auch mit äußerem Variablentext
+    // und abschließenden Kommata.
+    function parseLevelCode(source) {
+        const start = source.indexOf('[');
+        if (start < 0) throw new Error('Keine Levelmatrix mit [ ... ] gefunden.');
+        let depth = 0;
+        let end = -1;
+        for (let i = start; i < source.length; i++) {
+            if (source[i] === '[') depth++;
+            else if (source[i] === ']') {
+                depth--;
+                if (depth === 0) { end = i + 1; break; }
+            }
+        }
+        if (end < 0) throw new Error('Die Klammern der Levelmatrix sind nicht vollständig.');
+        const jsonText = source.slice(start, end).replace(/,\s*([\]}])/g, '$1');
+        let matrix;
+        try { matrix = JSON.parse(jsonText); }
+        catch { throw new Error('Der Levelcode ist ungültig. Bitte die Zahlenmatrix einfügen.'); }
+        if (!Array.isArray(matrix) || matrix.length !== rows || matrix.some(row => !Array.isArray(row) || row.length !== columns)) {
+            throw new Error('Das Level muss genau 11 Zeilen mit jeweils 20 Zahlen haben.');
+        }
+        for (const row of matrix) {
+            for (const v of row) {
+                if (!Number.isInteger(v) || v < 0 || v > 5) {
+                    throw new Error('Erlaubte Feldwerte sind nur 0, 1, 2, 3, 4 und 5.');
+                }
+            }
+        }
+        const starts = matrix.flat().filter(v => v === 3).length;
+        if (starts > 1) throw new Error('Der Levelcode enthält mehrere Startpunkte (3). Es darf nur einen geben.');
+        return matrix;
+    }
+
+    document.getElementById('loadCode').addEventListener('click', () => {
+        try {
+            const matrix = parseLevelCode(importCode.value);
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < columns; x++) {
+                    values[y * columns + x] = matrix[y][x];
+                }
+            }
+            enforceBorder();
+            draw();
+            importStatus.textContent = 'Level geladen. Der Außenrand wurde als Mauer gesetzt.';
+            copyStatus.textContent = '';
+        } catch (error) {
+            importStatus.textContent = error.message;
+        }
+    });
+
+    document.getElementById('clearImport').addEventListener('click', () => {
+        importCode.value = '';
+        importStatus.textContent = '';
+    });
+
+    // Feldtyp auswählen
+    document.querySelectorAll('.tool').forEach(button => {
+
+        button.addEventListener('click', () => {
+
+            selected = Number(button.dataset.value);
+
+            document.querySelectorAll('.tool').forEach(b => {
+
+                b.setAttribute(
+                    'aria-pressed',
+                    String(b === button)
+                );
+            });
+        });
+    });
+
+    // Neues Level: innen Futter, außen feste Mauer.
+    document.getElementById('reset').addEventListener('click', makeNewLevel);
+
+    // Innenraum leeren, Außenmauer bleibt bestehen.
+    document.getElementById('clear').addEventListener('click', () => {
+        values.fill(0);
+        enforceBorder();
+        draw();
+        copyStatus.textContent = '';
+    });
+
+    // Manueller Aktualisierungsknopf
+    document.getElementById('update').addEventListener('click', () => {
+
+        updateCode();
+
+        copyStatus.textContent = 'Code wurde aktualisiert!';
+    });
+
+    // Code kopieren
+    document.getElementById('copy').addEventListener('click', async () => {
+
+        updateCode();
+
+        try {
+
+            await navigator.clipboard.writeText(output.value);
+
+            copyStatus.textContent = 'Code kopiert!';
+
+        } catch {
+
+            output.focus();
+            output.select();
+
+            copyStatus.textContent =
+                'Bitte mit Strg+C kopieren.';
+        }
+    });
+
+    // Code markieren
+    document.getElementById('select').addEventListener('click', () => {
+
+        updateCode();
+
+        output.focus();
+        output.select();
+
+        copyStatus.textContent =
+            'Markiert – Strg+C zum Kopieren.';
+    });
+
+    // Start: Futter als ausgewählter Feldtyp.
+    document.querySelector('.tool[data-value="2"]').setAttribute('aria-pressed', 'true');
+    document.querySelector('.tool[data-value="1"]').setAttribute('aria-pressed', 'false');
+    draw();
+
+})();
+</script>
+
+</body>
+</html>

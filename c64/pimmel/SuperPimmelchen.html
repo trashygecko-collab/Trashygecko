@@ -1,0 +1,2527 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Pimmelchen — Retro Arcade Edition (20×11)</title>
+  <style>
+    
+    :root {
+      --ink: #24142f;
+      --panel: #fff0bd;
+      --accent: #f32d83;
+      --accent-yellow: #f8c94e;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      color: var(--ink);
+      background-color: #30b9b2;
+      background-image: 
+        radial-gradient(#ffffff80 1.5px, transparent 1.5px),
+        linear-gradient(135deg, #20aaa8 0%, #52cfbd 45%, #f2b846 100%);
+      background-size: 14px 14px, auto;
+      font-family: 'Trebuchet MS', Arial, sans-serif;
+      user-select: none;
+    }
+
+    .cabinet {
+      width: min(100%, 960px);
+      padding: 24px;
+      border: 4px solid #24142f;
+      border-radius: 20px;
+      background: #fff0bd;
+      box-shadow: 8px 10px 0 #24142f, 0 20px 50px rgba(0, 0, 0, 0.35);
+      transform: rotate(-0.1deg);
+    }
+
+    .brand-title {
+      font-family: 'Courier New', monospace;
+      color: #f32d83;
+      -webkit-text-stroke: 1.5px #24142f;
+      text-shadow: 3px 3px 0 #24142f, 5px 5px 0 #f29a32;
+    }
+
+    .hud-box {
+      border: 3px solid #24142f;
+      border-radius: 10px;
+      background: #f8c94e;
+      box-shadow: 3px 4px 0 #24142f;
+      transform: rotate(-0.4deg);
+    }
+
+    .hud-label {
+      color: #56375b;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+    }
+
+    .hud-value {
+      font-family: 'Courier New', monospace;
+      color: #f32d83;
+      -webkit-text-stroke: 0.5px #24142f;
+      text-shadow: 2px 2px #fff0bd;
+    }
+
+    .screen-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      border: 5px solid #24142f;
+      border-radius: 12px;
+      background: #29bbb6;
+      box-shadow: 6px 7px 0 #f07836;
+      overflow: hidden;
+    }
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: auto;
+  outline: none;
+}
+
+    .game-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      width: 100%;
+      max-width: 800px;
+      margin: 14px auto 0;
+    }
+
+    /* Vollbild: Das originale Spielfeldverhältnis bleibt erhalten.
+       Der Canvas wird nur passend verkleinert/vergrößert, nie beschnitten. */
+    .cabinet:fullscreen {
+      box-sizing: border-box;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      max-width: none;
+      margin: 0;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 0;
+      transform: none;
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff0bd;
+    }
+
+    .cabinet:fullscreen .screen-wrapper {
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
+      width: 100%;
+      max-width: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+
+    .cabinet:fullscreen canvas {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 20 / 11;
+      object-fit: contain;
+      flex: 0 1 auto;
+    }
+
+    .cabinet:fullscreen .game-actions {
+      max-width: none;
+      margin-top: 8px;
+    }
+
+    .cabinet:fullscreen > header,
+    .cabinet:fullscreen > section,
+    .cabinet:fullscreen > #level-picker,
+    .cabinet:fullscreen > .mt-4 {
+      flex-shrink: 0;
+    }
+
+    @media (max-height: 650px) {
+      .cabinet:fullscreen { padding: 6px 12px; }
+      .cabinet:fullscreen > header { margin-bottom: 6px; }
+      .cabinet:fullscreen > section { margin-bottom: 8px; }
+      .cabinet:fullscreen .game-actions { margin-top: 5px; }
+      .cabinet:fullscreen .mt-4 { margin-top: 6px; }
+    }
+
+    .arcade-btn {
+      border: 3px solid #24142f;
+      border-radius: 8px;
+      background: #f8c94e;
+      color: #24142f;
+      box-shadow: 3px 4px 0 #24142f;
+      font-weight: 700;
+      transition: all 0.05s ease;
+      touch-action: manipulation;
+    }
+
+    .arcade-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 2px 0 #24142f;
+    }
+
+    kbd {
+      padding: 3px 7px;
+      border: 2px solid #24142f;
+      border-radius: 6px;
+      background: #fff0bd;
+      color: #24142f;
+      box-shadow: 2px 2px 0 #24142f;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    /* Lokale Ersatzklassen: kein Tailwind-CDN und keine externe CSS-Abfrage nötig */
+    .flex{display:flex}.grid{display:grid}.hidden{display:none}.block{display:block}
+    .flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}
+    .justify-between{justify-content:space-between}.justify-center{justify-content:center}
+    .text-center{text-align:center}.text-left{text-align:left}.mx-auto{margin-left:auto;margin-right:auto}
+    .w-full{width:100%}.w-56{width:14rem}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}
+    .gap-2{gap:.5rem}.gap-3{gap:.75rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}
+    .mb-4{margin-bottom:1rem}.mt-1{margin-top:.25rem}.mt-4{margin-top:1rem}.mt-6{margin-top:1.5rem}
+    .p-1\.5{padding:.375rem}.p-2{padding:.5rem}.p-3{padding:.75rem}.px-3{padding-left:.75rem;padding-right:.75rem}
+    .px-4{padding-left:1rem;padding-right:1rem}.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}
+    .py-2{padding-top:.5rem;padding-bottom:.5rem}.pt-4{padding-top:1rem}
+    .text-2xl{font-size:1.5rem;line-height:2rem}.text-\\[10px\\]{font-size:10px}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-base{font-size:1rem}.text-lg{font-size:1.125rem}
+    .font-bold{font-weight:700}.font-black{font-weight:900}.font-bold strong{font-weight:900}
+    .tracking-wide{letter-spacing:.025em}.tracking-wider{letter-spacing:.05em}.uppercase{text-transform:uppercase}
+    .rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.border-2{border-width:2px;border-style:solid}
+    .border-t-2{border-top:2px solid}.border-dashed{border-style:dashed}.text-gray-600{color:#4b5563}
+    .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .col-span-3{grid-column:span 3 / span 3}
+    .bg-white{background:#fff}.text-\[\#24142f\]{color:#24142f}.text-\[\#56375b\]{color:#56375b}
+    .text-\[\#f32d83\]{color:#f32d83}.bg-\[\#f8c94e\]{background:#f8c94e}
+    .bg-\[\#fff0bd\]{background:#fff0bd}.bg-\[\#fff5d7\]{background:#fff5d7}
+    .border-\[\#24142f\]{border-color:#24142f}.border-\[\#24142f40\]{border-color:#24142f40}
+    .shadow-\[2px_2px_0_\#24142f\]{box-shadow:2px 2px 0 #24142f}
+    @media(min-width:640px){.sm\:flex-row{flex-direction:row}.sm\:text-left{text-align:left}.sm\:gap-3{gap:.75rem}.sm\:text-3xl{font-size:1.875rem;line-height:2.25rem}.sm\:text-xl{font-size:1.25rem;line-height:1.75rem}.sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.sm\:hidden{display:none}}
+    @media(min-width:768px){.md\:flex-row{flex-direction:row}.md\:text-left{text-align:left}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+  </style>
+</head>
+<body>
+
+  <main class="cabinet">
+    <!-- Header / Logo -->
+<header class="flex flex-col md:flex-row items-center justify-center gap-2 mb-4 text-center">
+      <div>
+        <h1 class="brand-title text-2xl sm:text-3xl tracking-wider">SUPER PIMMELCHEN</h1>
+      </div>
+    </header>
+
+    <!-- HUD Readouts -->
+    <section class="grid gap-2 sm:gap-3 mb-4" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+      <div class="hud-box p-2 text-center">
+        <div class="hud-label">PUNKTE</div>
+        <div class="hud-value text-base sm:text-xl" id="score">0000</div>
+      </div>
+      <div class="hud-box p-2 text-center">
+        <div class="hud-label">ZEIT</div>
+        <div class="hud-value text-base sm:text-xl" id="time">90</div>
+      </div>
+      <div class="hud-box p-2 text-center">
+        <div class="hud-label">LEVEL</div>
+        <div class="hud-value text-base sm:text-xl" id="stage-display">01</div>
+      </div>
+      <div class="hud-box p-2 text-center">
+        <div class="hud-label">PUCK</div>
+        <div class="hud-value text-base sm:text-xl" id="pucks">00</div>
+      </div>
+      <div class="hud-box p-2 text-center">
+        <div class="hud-label">LEBEN</div>
+        <div class="hud-value text-base sm:text-xl" id="lives">3</div>
+      </div>
+    </section>
+
+    <!-- Game Screen (20x11 Tile Grid: 560x308 Pixel) -->
+    <div class="screen-wrapper">
+      <canvas id="game" width="672" height="336" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
+    </div>
+
+    <!-- Touch Mobile Steuer-Pad -->
+    <div class="mt-4 grid grid-cols-3 gap-2 w-56 mx-auto sm:hidden">
+      <div></div>
+      <button class="arcade-btn py-2 text-lg" data-dir="up">▲</button>
+      <div></div>
+      <button class="arcade-btn py-2 text-lg" data-dir="left">◀</button>
+      <button class="arcade-btn py-2 text-lg" data-dir="down">▼</button>
+      <button class="arcade-btn py-2 text-lg" data-dir="right">▶</button>
+      <button class="arcade-btn col-span-3 py-2 text-xs font-black mt-1" id="btn-fire">PUCK SCHIESSEN</button>
+    </div>
+
+    <div id="level-picker" class="flex flex-wrap items-center justify-center gap-3 mt-4 p-3 rounded-xl border-2 border-[#24142f] bg-[#fff0bd]">
+      <label for="start-level" class="font-black text-[#24142f]">START-LEVEL:</label>
+      <select id="start-level" class="rounded-lg border-2 border-[#24142f] px-3 py-2 font-bold bg-white text-[#24142f]">
+        <option value="0">Level 1</option>
+      </select>
+      <button id="start-game" class="arcade-btn px-4 py-2 font-black">SPIEL STARTEN</button>
+      <button id="show-highscore" class="arcade-btn px-4 py-2 font-black" type="button">🏆 HIGHSCORE</button>
+ <button id="fullscreen-button" class="arcade-btn px-4 py-2 font-black" type="button">⛶ VOLLBILD</button>
+    </div>
+
+    <!-- Desktop Steuerungs-Hinweise -->
+<div class="flex flex-col sm:flex-row justify-center items-center gap-3 mt-4 text-xs font-bold text-[#56375b]">
+      <div class="flex flex-wrap gap-1.5 items-center justify-center">
+        <kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+        <span class="mx-1">|</span>
+        <kbd>Leertaste</kbd> Puck
+        <span class="mx-1">|</span>
+        <kbd>Enter</kbd> Start
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // Raster-Maße exakt an das GIF/Soll-Bild anpassen:
+    const W = 20, H = 11, T = 28; // Levelraster: 20 x 11 Felder
+
+// Hochauflösender Canvas: gleiche sichtbare Größe, mehr Bildpunkte
+const canvas = document.querySelector('#game');
+const GAME_WIDTH = W * T;
+const GAME_HEIGHT = H * T;
+const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+
+canvas.width = Math.round(GAME_WIDTH * pixelRatio);
+canvas.height = Math.round(GAME_HEIGHT * pixelRatio);
+
+const ctx = canvas.getContext('2d');
+ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = 'high';
+
+    // Lokale Spielgrafiken liegen im Unterordner "assets".
+    // Der Dateiname wird ohne Endung festgelegt. Das Spiel sucht selbst
+    // nach einem unterstützten Bildformat (PNG, JPG/JPEG, WebP, GIF, BMP,
+    // AVIF oder SVG). Die Originalgröße ist egal: gezeichnet wird passend
+    // zum Spielfeld. Transparenz funktioniert bei PNG, WebP, GIF und SVG.
+    const ASSET_FILES = {
+    food: 'futter',
+    foodKlein: 'futterklein',
+    foodGross: 'futtergross',
+      uhr: 'uhr',
+      puck: 'puck',
+      eiswuerfel: 'eiswuerfel',
+      frucht: 'frucht',
+      totenschaedel: 'totenschaedel',
+      blitz: 'blitz',
+      herz: 'herz',
+      powerdose: 'powerdose',
+      'elixier-kurz': 'elixier-kurz',
+      'elixier-leer': 'elixier-leer',
+      'sonne-gross': 'sonne-gross',
+      'sonne-klein': 'sonne-klein',
+      snakeHead: 'schlangenkopf',
+      snakeBody: 'schlangekoerper',
+      snakeCorner: 'schlangekurve',
+      snakeTail: 'schlangenschwanz'
+    };
+    const ASSET_EXTENSIONS = ['png', 'webp', 'jpg', 'jpeg', 'gif', 'bmp', 'avif', 'svg'];
+    const assets = {};
+
+    function loadAsset(key, basename) {
+      const img = new Image();
+      assets[key] = img;
+      let extensionIndex = 0;
+      const tryNextFormat = () => {
+        if (extensionIndex >= ASSET_EXTENSIONS.length) {
+          assets[key] = null;
+          return;
+        }
+        const extension = ASSET_EXTENSIONS[extensionIndex++];
+        img.src = `assets/${basename}.${extension}`;
+      };
+      img.onerror = tryNextFormat;
+      img.onload = () => {
+        // Nach dem Laden neu zeichnen, damit das Bild sofort sichtbar wird.
+        if (typeof draw === 'function') draw();
+      };
+      tryNextFormat();
+    }
+
+    for (const [key, basename] of Object.entries(ASSET_FILES)) {
+      loadAsset(key, basename);
+    }
+    function drawAsset(key, x, y, size = T, angle = null, flipY = false) {
+      const img = assets[key];
+      if (!img || !img.complete || !img.naturalWidth) return false;
+      ctx.save();
+      ctx.translate(x, y);
+      if (angle !== null) ctx.rotate(angle);
+      if (flipY) ctx.scale(1, -1);
+      ctx.drawImage(img, -size / 2, -size / 2, size, size);
+      ctx.restore();
+      return true;
+    }
+
+    const ui = {
+      score: document.querySelector('#score'),
+      time: document.querySelector('#time'),
+      pucks: document.querySelector('#pucks'),
+      lives: document.querySelector('#lives'),
+      stage: document.querySelector('#stage-display'),
+      picker: document.querySelector('#level-picker'),
+      levelSelect: document.querySelector('#start-level'),
+      startButton: document.querySelector('#start-game')
+    };
+
+ // Lokale Top-10-Highscore: bleibt in diesem Browser auf diesem Gerät gespeichert.
+    const HIGHSCORE_STORAGE_KEY = 'superPimmelchenHighscore';
+    let highscoreForThisRunSaved = false;
+
+    function readHighscores() {
+      try {
+        const entries = JSON.parse(localStorage.getItem(HIGHSCORE_STORAGE_KEY) || '[]');
+        return Array.isArray(entries) ? entries.filter(entry =>
+          entry && typeof entry.name === 'string' &&
+          Number.isFinite(Number(entry.score)) && Number.isFinite(Number(entry.level))
+        ) : [];
+      } catch (error) {
+        console.warn('Highscore konnte nicht gelesen werden:', error);
+        return [];
+      }
+    }
+
+    function showHighscore() {
+      const entries = readHighscores().sort((a, b) =>
+        Number(b.score) - Number(a.score) || Number(b.level) - Number(a.level)
+      ).slice(0, 10);
+
+      if (!entries.length) {
+        alert('Noch keine Highscores vorhanden. Spiele eine Runde und sichere dir den ersten Platz!');
+        return;
+      }
+
+      const lines = entries.map((entry, index) =>
+        `${String(index + 1).padStart(2, '0')}. ${entry.name} – ${Number(entry.score)} Punkte | Level ${Number(entry.level)} | ${entry.date || ''}`
+      );
+      alert('🏆 SUPER PIMMELCHEN – TOP 10\n\n' + lines.join('\n'));
+    }
+
+    function recordHighscore() {
+      if (highscoreForThisRunSaved || score <= 0) return;
+      highscoreForThisRunSaved = true;
+
+      const entries = readHighscores();
+      entries.sort((a, b) => Number(b.score) - Number(a.score) || Number(b.level) - Number(a.level));
+      if (entries.length >= 10) {
+        const last = entries[9];
+        const reachedLevel = Math.min(stage + 1, LEVEL_COUNT);
+        if (score < Number(last.score) || (score === Number(last.score) && reachedLevel <= Number(last.level))) return;
+      }
+
+      const enteredName = prompt(`Neuer Highscore!\n${score} Punkte – Level ${Math.min(stage + 1, LEVEL_COUNT)}\n\nWie soll dein Name in der Rangliste lauten?`, 'Thomas');
+      if (enteredName === null || !enteredName.trim()) return;
+
+      entries.push({
+        name: enteredName.trim().slice(0, 20),
+        score: Number(score),
+        level: Number(Math.min(stage + 1, LEVEL_COUNT)),
+        date: new Date().toLocaleDateString('de-DE')
+      });
+      entries.sort((a, b) => Number(b.score) - Number(a.score) || Number(b.level) - Number(a.level));
+      try {
+        localStorage.setItem(HIGHSCORE_STORAGE_KEY, JSON.stringify(entries.slice(0, 10)));
+        alert('🏆 Dein Ergebnis wurde in der Highscore gespeichert!');
+      } catch (error) {
+        alert('Die Highscore konnte leider nicht gespeichert werden. Bitte prüfe, ob der Browser lokale Daten speichern darf.');
+        console.error('Highscore konnte nicht gespeichert werden:', error);
+      }
+    }
+
+    const highscoreButton = document.querySelector('#show-highscore');
+    if (highscoreButton) highscoreButton.addEventListener('click', showHighscore);
+
+
+    let selectedStartLevel = 0;
+    for (let i = 2; i <= 65; i++) {
+      const option = document.createElement('option');
+      option.value = String(i - 1);
+      option.textContent = `Level ${i}`;
+      ui.levelSelect.appendChild(option);
+    }
+    ui.levelSelect.addEventListener('change', () => {
+      selectedStartLevel = Number(ui.levelSelect.value) || 0;
+      stage = selectedStartLevel;
+      updateHud();
+      resetStage();
+    });
+    ui.startButton.addEventListener('click', () => start());
+
+    // Farbpaletten
+    const palettes = [
+      { floor: '#43c6bd', wall: '#ff9b38', trim: '#ffd34f', dot: '#f52d83', ink: '#24142f', cream: '#fff0bd' },
+      { floor: '#f5c94e', wall: '#8749d8', trim: '#35c6bd', dot: '#f22d83', ink: '#24142f', cream: '#fff4ca' },
+      { floor: '#fa813d', wall: '#25aaa9', trim: '#f6d34e', dot: '#8749d8', ink: '#24142f', cream: '#fff0bd' },
+      { floor: '#a978dc', wall: '#f34a88', trim: '#f6c747', dot: '#32bdb5', ink: '#24142f', cream: '#fff0bd' },
+      { floor: '#f2a53c', wall: '#33bbb6', trim: '#8547cf', dot: '#f42c83', ink: '#24142f', cream: '#fff0bd' }
+    ];
+
+// 0 = frei, 1 = Wand, 2 = Futter, 3 = Schlangenstart, 4 = Brücke, 5 = Brücke mit Unterführung
+const LEVEL_COUNT = 65;
+// LEVEL 01 — Original-Level (20 x 11)
+const LEVEL_1_MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+  [1,2,2,2,1,2,2,2,1,1,1,1,2,2,2,1,2,2,2,1],
+  [1,2,1,2,1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1],
+  [1,2,1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1,2,1],
+  [1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,1,2,1,2,1,1,1,1,2,1,2,1,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+// LEVEL 02 bis LEVEL 65: direkt bearbeitbare 20x11-Zahlenraster; jedes Level ist einzeln markiert.
+// 0 = frei, 1 = Wand, 2 = Futter, 3 = Schlangenstart, 4 = Brücke, 5 = Brücke mit Unterführung.
+// Setze genau eine 3 pro Level an die gewünschte Startposition.
+const LEVEL_MAPS = [
+      // LEVEL 02 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ],
+      // LEVEL 03 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 04 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,1,1,1,1,2,2,1,1,1,1,2,1,1,2,1],
+[1,2,1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1,2,1],
+[1,2,1,1,2,1,1,1,1,2,2,1,1,1,1,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 05 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,2,2,1,2,2,1,2,2,2,1,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 06 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 07 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1],
+[1,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1],
+[1,1,2,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,2,1],
+[1,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1],
+[1,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 08 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,1,1,1,1,1,1,1,2,1],
+[1,2,4,5,4,5,4,2,1,2,1,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,2,1,1,1,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,2,1,1,1,1,2,1,2,1],
+[1,2,4,5,4,5,4,2,1,2,1,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 09 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,4,1,2,2,1,4,1,2,1,2,1,2,1],
+[1,2,2,2,4,5,4,5,2,2,2,2,5,4,5,4,2,2,2,1],
+[1,2,1,2,1,2,1,4,1,2,2,1,4,1,2,1,2,1,2,1],
+[1,2,2,2,4,5,4,5,2,2,2,2,5,4,5,4,2,2,2,1],
+[1,2,1,2,1,2,1,4,1,2,2,1,4,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 10 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,1,2,2,2,1,1,1,1,2,2,2,1,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1,2,1],
+[1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 11 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,2,1,1,1,1,2,2,1,1,1,1,2,1,2,2,1],
+[1,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 12 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,1,1,2,2,2,1,1,2,1,1,2,1,1,2,1],
+[1,2,1,2,2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,1],
+[1,2,2,2,1,2,2,2,1,1,2,2,2,2,2,1,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,1,1,2,2,1,1,1,1,1,2,1],
+[1,2,2,2,1,2,2,2,1,1,2,2,2,2,2,1,2,2,2,1],
+[1,2,1,2,2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,1],
+[1,2,1,1,2,1,1,2,2,2,1,1,2,1,1,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 13 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,4,1,1,1,1,1,2,2,1,1,1,1,1,4,1,2,1],
+[1,2,2,5,2,2,2,2,2,2,2,2,2,2,2,2,5,2,2,1],
+[1,2,1,4,1,1,1,1,1,2,2,1,1,1,1,1,4,1,2,1],
+[1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 14 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,1],
+[1,1,1,1,2,1,1,1,1,2,2,1,1,1,1,2,1,1,1,1],
+[1,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,1],
+[1,1,1,1,2,1,1,1,1,2,2,1,1,1,1,2,1,1,1,1],
+[1,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,1],
+[1,1,1,1,2,1,1,1,1,2,2,1,1,1,1,2,1,1,1,1],
+[1,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,1],
+[1,1,1,1,2,1,1,1,1,2,2,1,1,1,1,2,1,1,1,1],
+[1,0,0,0,2,2,2,2,2,3,2,2,2,2,2,2,0,0,0,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 15 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,2,1],
+[1,2,1,0,1,1,2,4,5,4,4,5,4,2,1,1,0,1,2,1],
+[1,2,1,0,1,1,2,1,2,1,1,2,1,2,1,1,0,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,1,1,2,1,1,2,1,1,1,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,2,1,1,1,1,2,1,1,2,1,1,1,1,2,1,1,1],
+[1,1,1,2,2,2,2,2,2,3,2,2,2,2,2,2,2,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 16 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,2,1,2,1,1,1,1,2,1,2,1,1,1,2,1],
+[1,2,1,2,2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,2,2,2,2,2,2,2,2,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,1],
+[1,2,1,1,1,2,1,2,1,1,1,1,2,1,2,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 17 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 18 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,2,2,1,1,2,2,2,2,2,2,2,2,1,1,2,2,2,1],
+[1,2,2,2,1,1,2,2,2,2,2,2,2,2,1,1,2,2,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 19 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,4,1,2,2,1,2,1,2,1,4,1,2,1],
+[1,2,4,5,4,2,2,5,2,2,2,4,5,4,2,2,5,2,2,1],
+[1,2,1,2,1,2,1,4,1,2,2,1,2,1,2,1,4,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,4,1,2,1,2,1,2,2,1,4,1,2,1,2,1,2,1],
+[1,2,2,5,2,2,4,5,4,2,2,2,5,2,2,4,5,4,2,1],
+[1,2,1,4,1,2,1,2,1,2,2,1,4,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 20 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,1],
+[1,2,2,1,2,2,2,1,2,2,2,2,2,1,1,1,2,2,2,1],
+[1,2,2,2,1,1,1,1,1,2,2,2,2,1,1,1,2,2,2,1],
+[1,2,2,2,1,1,2,2,2,1,2,2,2,1,1,1,2,2,2,1],
+[1,2,2,2,1,1,2,2,2,2,1,1,1,2,2,2,1,1,2,1],
+[1,2,2,1,2,2,1,2,2,2,2,1,1,2,2,2,1,1,2,1],
+[1,2,1,2,2,2,2,1,2,2,2,2,1,2,2,1,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 21 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,2,1],
+[1,2,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,2,1],
+[1,2,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,2,1],
+[1,2,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 22 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,2,1,1,2,2,1,1,1,1,1,2,1],
+[1,2,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,2,1],
+[1,2,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,2,1],
+[1,2,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,1,1,1,1,1,2,1],
+[1,2,2,1,1,1,2,2,1,1,1,1,2,1,1,1,1,1,2,1],
+[1,2,2,1,1,1,2,2,2,2,2,2,2,1,1,1,1,1,2,1],
+[1,2,2,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 23 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,1,1,2,2,2,2,2,1],
+[1,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+[1,2,1,1,1,1,2,2,2,2,1,1,1,1,2,2,2,1,1,1],
+[1,2,1,1,1,1,2,2,2,1,1,1,1,1,1,2,2,1,1,1],
+[1,2,2,1,1,2,2,2,2,1,1,1,1,1,1,2,2,1,1,1],
+[1,2,2,2,2,2,2,2,2,1,1,1,1,1,1,2,2,1,1,1],
+[1,2,2,2,2,1,1,2,2,2,1,1,1,1,2,2,2,2,1,1],
+[1,2,2,2,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 24 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,1,1,1,2,2,2,1,1,1,1,1,2,2,1],
+[1,2,1,2,1,2,1,1,1,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,4,5,4,5,4,2,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,1,1,2,1,2,1,4,1,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,5,2,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,1,4,1,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,5,2,2,2,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,1,4,1,2,2,4,5,4,2,2,2,2,2,1],
+[1,2,2,2,2,2,1,2,2,2,2,1,1,1,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 25 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,1,1,1,2,2,1,1,1,2,2,1],
+[1,2,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,1,1,1,1,2,1,2,2,2,1,2,2,2,1,2,2,2,1],
+[1,2,1,2,2,2,2,1,2,1,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,1,1,1,2,1,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,2,2,2,1,2,1,2,2,2,1,2,1,2,1,2,1],
+[1,2,1,1,1,1,2,1,2,1,1,1,1,1,2,2,2,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 26 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,2,1,2,1,2,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,1,2,1,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,2,1,2,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,2,2,2,2,2,2,2,2,1],
+[1,2,1,2,2,2,2,2,1,1,1,2,2,2,2,2,2,1,2,1],
+[1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 27 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1],
+[1,2,2,2,2,2,1,1,1,1,1,1,1,1,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,2,1],
+[1,2,2,2,1,2,2,2,2,2,2,2,2,2,2,1,2,2,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,1,2,1,2,1],
+[1,2,2,2,2,2,2,2,1,2,2,1,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 28 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1],
+[1,1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1],
+[1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1],
+[1,2,1,1,2,2,2,1,1,2,2,1,1,2,2,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,2,2,1,1,2,2,1,1,2,2,2,1,1,2,1],
+[1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1],
+[1,1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1],
+[1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 29 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,1,2,2,1,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,2,1],
+[1,2,1,1,1,2,4,5,4,2,2,4,5,4,2,1,1,1,2,1],
+[1,2,2,2,2,2,1,2,1,1,1,1,2,1,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,1,2,1,1,1,1,2,1,2,2,2,2,2,1],
+[1,2,1,1,1,2,4,5,4,2,2,4,5,4,2,1,1,1,2,1],
+[1,2,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,1,2,2,1,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 30 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,1,1,1,2,2,2,2,2,2,1,1,1,2,2,2,1],
+[1,2,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,2,1],
+[1,1,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,1,1],
+[1,1,1,2,2,2,2,1,1,1,1,1,1,2,2,2,2,1,1,1],
+[1,1,1,1,2,2,1,1,1,1,1,1,1,1,2,2,1,1,1,1],
+[1,1,1,2,2,2,2,1,1,1,1,1,1,2,2,2,2,1,1,1],
+[1,1,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,1,1],
+[1,2,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,2,1],
+[1,2,2,2,1,1,1,2,2,2,2,2,2,1,1,1,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 31 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,1,2,2,2,2,2,2,1,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,2,1,2,1,2,2,2,2,2,2,1,2,1,2,1,1,1],
+[1,2,4,5,4,2,1,1,1,1,1,1,1,1,2,4,5,4,2,1],
+[1,2,1,2,1,2,2,2,2,1,1,2,2,2,2,1,2,1,2,1],
+[1,2,4,5,4,2,1,1,4,1,1,4,1,1,2,4,5,4,2,1],
+[1,1,1,2,1,2,2,2,5,2,2,5,2,2,2,1,2,1,1,1],
+[1,2,2,2,1,2,1,1,4,1,1,4,1,1,2,1,2,2,2,1],
+[1,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 32 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,1,2,2,2,2,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,1,2,2,2,2,1,2,2,2,2,2,2,1],
+[1,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,1,2,2,2,2,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,1,2,2,2,2,1,2,1],
+[1,2,1,2,2,2,2,1,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,1,1,1,1,1,2,2,2,2,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 33 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,2,2,2,2,2,1,1,1,1,2,2,2,2,2,1,1,1],
+[1,1,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,1,1],
+[1,1,2,2,2,1,2,2,1,1,1,1,2,2,1,2,2,2,1,1],
+[1,2,2,1,4,1,4,1,1,1,1,1,1,4,1,4,1,2,2,1],
+[1,2,2,2,5,2,5,2,2,2,2,2,2,5,2,5,2,2,2,1],
+[1,2,2,1,4,1,4,1,1,1,1,1,1,4,1,4,1,2,2,1],
+[1,2,2,2,2,1,2,1,1,1,1,1,1,2,1,2,2,2,2,1],
+[1,1,2,2,2,1,2,2,2,2,2,2,2,2,1,2,2,2,1,1],
+[1,1,1,2,2,1,1,2,2,2,2,2,2,1,1,2,2,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 34 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,1,1,1,1,2,1,1,2,2,1,1,2,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 35 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,1],
+[1,2,2,1,1,2,1,1,2,1,1,2,1,1,2,1,1,2,2,1],
+[1,2,2,2,2,2,1,2,2,1,1,2,2,1,2,2,2,2,2,1],
+[1,2,2,1,2,2,1,2,1,1,1,1,2,1,2,2,1,2,2,1],
+[1,1,2,1,2,2,4,5,4,2,2,4,5,4,2,2,1,2,1,1],
+[1,2,2,1,2,2,1,2,1,1,1,1,2,1,2,2,1,2,2,1],
+[1,2,2,2,2,2,1,2,2,1,1,2,2,1,2,2,2,2,2,1],
+[1,2,2,1,1,2,1,1,2,2,2,2,1,1,2,1,1,2,2,1],
+[1,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1,1,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 36 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,4,1,1,2,1,1,1,1,1,1,2,1,1,4,1,2,1],
+[1,2,2,5,2,4,5,4,2,2,2,2,4,5,4,2,5,2,2,1],
+[1,2,1,4,1,1,2,1,1,1,1,1,1,2,1,1,4,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,4,1,1,2,1,1,1,1,1,1,2,1,1,4,1,2,1],
+[1,2,2,5,2,4,5,4,2,2,2,2,4,5,4,2,5,2,2,1],
+[1,2,1,4,1,1,2,1,1,1,1,1,1,2,1,1,4,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 37 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,2,2,2,1,1,1,1,1,1,1,1,2,1,1,1,2,1],
+[1,1,2,2,2,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1],
+[1,2,2,2,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1],
+[1,2,2,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,1,1,1,1,1,1,2,2,2,2,2,2,1],
+[1,2,2,1,1,2,2,2,2,2,2,2,2,2,1,1,1,1,2,1],
+[1,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 38 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,1],
+[1,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,1],
+[1,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,1],
+[1,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,1],
+[1,1,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 39 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,1,1,2,1,1,1,1,2,1,1,2,1,1,2,1],
+[1,2,1,1,2,1,1,2,1,1,1,1,2,1,1,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,1,1,2,1,1,1,1,2,1,1,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,1,1,2,1,1,1,1,2,1,1,2,1,1,2,1],
+[1,2,1,1,2,1,1,2,1,1,1,1,2,1,1,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 40 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,2,1],
+[1,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,2,1,2,1,1,2,1,2,1,1,2,1,2,1],
+[1,2,1,2,1,1,2,1,2,1,1,2,1,2,1,1,2,1,2,1],
+[1,2,1,2,1,1,2,1,2,1,1,2,1,2,1,1,2,1,2,1],
+[1,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,1],
+[1,2,1,1,2,2,1,1,1,2,2,1,1,1,2,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 41 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,1,1,1,2,2,1,1,1,2,2,2,2,2,1],
+[1,2,2,2,2,1,1,1,1,1,1,1,1,1,1,2,2,2,2,1],
+[1,2,2,2,2,1,1,1,1,1,1,1,1,1,1,2,2,2,2,1],
+[1,2,2,2,2,2,1,1,1,1,1,1,1,1,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,1,1,1,1,1,1,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 42 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,1,4,1,1,1,1,4,1,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,5,2,2,2,2,5,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,4,1,1,1,1,4,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,5,2,2,2,2,5,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,4,1,1,1,1,4,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,5,2,2,2,2,5,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,1,4,1,1,1,1,4,1,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 43 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,2,2,1,1,1,1,1,1,2,2,1,1,1,2,1],
+[1,2,1,2,2,2,2,2,1,1,1,1,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,1,2,2,2,2,2,2,1,1,1,2,1,2,1],
+[1,2,2,2,1,1,1,2,1,1,1,1,2,1,1,1,2,2,2,1],
+[1,2,1,2,1,1,1,2,2,2,2,2,2,1,1,1,2,1,2,1],
+[1,2,1,2,2,2,2,2,1,1,1,1,2,2,2,2,2,1,2,1],
+[1,2,1,1,1,2,2,1,1,1,1,1,1,2,2,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 44 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,4,1,1,1,1,4,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,5,2,2,2,2,5,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,4,1,1,1,1,4,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 45 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,2,2,1,1,1,1,2,2,1,1,1,2,2,1],
+[1,2,2,1,1,1,2,2,1,1,1,1,2,2,1,1,1,2,2,1],
+[1,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,1],
+[1,2,2,1,1,1,2,2,1,1,1,1,2,2,1,1,1,2,2,1],
+[1,2,2,1,1,1,2,2,1,1,1,1,2,2,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 46 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,1],
+[1,2,2,2,2,2,1,1,2,1,1,2,1,1,2,2,2,2,2,1],
+[1,1,2,2,2,2,2,4,5,4,4,5,4,2,2,2,2,2,1,1],
+[1,1,2,2,1,1,1,1,2,1,1,2,1,1,1,1,2,2,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,2,2,1,1,1,1,2,1,1,2,1,1,1,1,2,2,1,1],
+[1,1,2,2,2,2,2,4,5,4,4,5,4,2,2,2,2,2,1,1],
+[1,2,2,2,2,2,1,1,2,1,1,2,1,1,2,2,2,2,2,1],
+[1,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 47 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1,2,2,1],
+[1,2,2,1,1,1,1,1,2,2,4,5,4,2,2,2,2,2,2,1],
+[1,2,2,1,1,1,1,1,2,1,1,1,1,1,1,1,2,2,2,1],
+[1,2,2,2,2,2,2,4,5,4,2,2,1,1,1,1,1,2,2,1],
+[1,2,2,2,1,1,1,1,2,1,1,2,1,1,1,1,1,2,2,1],
+[1,2,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,2,1],
+[1,2,2,1,1,1,1,1,2,2,2,2,1,1,1,1,1,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 48 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1],
+[1,1,2,2,2,1,1,1,4,1,1,4,1,1,1,2,2,2,1,1],
+[1,2,2,1,1,1,2,2,5,2,2,5,2,2,1,1,1,2,2,1],
+[1,2,1,2,2,2,2,1,4,1,1,4,1,2,2,2,2,1,2,1],
+[1,2,1,2,2,2,2,2,2,1,1,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,2,1,2,2,2,1,1,2,2,2,1,2,2,1,2,1],
+[1,2,1,2,2,1,1,1,1,1,1,1,1,1,1,2,2,1,2,1],
+[1,2,2,1,2,2,2,2,2,1,1,2,2,2,2,2,1,2,2,1],
+[1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 49 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,1,1,1,1,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,2,2,2,2,2,2,2,2,1,1,1,1,2,1],
+[1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,1],
+[1,2,1,2,1,1,1,1,2,2,2,2,1,1,1,1,2,1,2,1],
+[1,2,2,2,1,2,2,2,2,2,2,2,2,2,2,1,2,2,2,1],
+[1,2,2,2,1,2,1,1,1,1,1,1,1,1,2,1,2,2,2,1],
+[1,2,1,2,2,2,1,2,2,2,2,2,2,1,2,2,2,1,2,1],
+[1,2,1,1,2,2,1,2,2,2,2,2,2,1,2,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 50 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,1],
+[1,2,1,1,2,1,1,2,2,2,2,2,2,1,2,2,1,1,2,1],
+[1,2,2,2,2,1,1,1,2,2,2,2,1,1,1,2,2,2,2,1],
+[1,2,2,2,1,1,1,1,1,2,2,1,1,1,1,1,2,2,2,1],
+[1,2,2,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,2,1],
+[1,2,2,2,1,1,2,2,1,2,2,1,2,2,1,1,2,2,2,1],
+[1,2,2,2,2,2,2,2,1,2,2,1,2,2,2,2,2,2,2,1],
+[1,1,2,2,2,2,2,2,1,3,2,1,2,2,2,2,2,2,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 51 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,1,2,2,2,2,1,1,1,2,2,2,2,2,1,2,2,1],
+[1,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1],
+[1,2,2,1,2,1,2,2,2,2,2,2,2,1,2,2,1,2,2,1],
+[1,2,2,2,2,1,2,2,1,4,1,2,2,1,2,2,2,2,2,1],
+[1,2,2,2,2,1,2,2,2,5,2,2,2,1,2,2,2,2,2,1],
+[1,2,1,4,1,1,2,1,1,4,1,1,2,1,1,4,1,2,2,1],
+[1,2,2,5,2,4,5,4,2,5,2,4,5,4,2,5,2,2,2,1],
+[1,2,1,4,1,1,2,1,1,4,1,1,2,1,1,4,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 52 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1,1,2,2,1],
+[1,2,2,1,2,2,1,1,1,2,2,1,1,1,2,2,1,2,2,1],
+[1,2,1,2,2,1,2,2,2,2,2,2,2,2,1,2,2,1,2,1],
+[1,2,1,2,2,1,2,2,1,1,1,1,2,2,1,2,2,1,2,1],
+[1,2,2,2,2,1,2,2,2,2,2,2,2,2,1,2,2,2,2,1],
+[1,2,2,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,2,1],
+[1,2,2,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 53 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,4,5,4,2,2,4,5,4,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,4,5,4,2,2,4,5,4,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,4,5,4,2,2,4,5,4,2,2,2,2,2,1],
+[1,2,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 54 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,2,2,2,2,2,1,1,1,1,1,1,2,2,2,2,2,1,1],
+[1,2,2,2,2,1,2,2,1,1,1,1,2,2,1,2,2,2,2,1],
+[1,2,2,1,2,2,1,2,2,1,1,2,2,1,2,2,1,2,2,1],
+[1,2,2,2,1,2,2,2,2,1,1,2,2,2,2,1,2,2,2,1],
+[1,2,2,2,2,1,2,2,1,1,1,1,2,2,1,2,2,2,2,1],
+[1,2,2,2,2,2,1,2,2,2,2,2,2,1,2,2,2,2,2,1],
+[1,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,1],
+[1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 55 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,1,2,1,2,2,1,4,1,2,2,2,1,2,1,2,2,1],
+[1,2,2,1,2,1,2,2,2,5,2,2,2,2,1,2,1,2,2,1],
+[1,2,2,4,5,4,2,2,1,4,1,2,2,2,4,5,4,2,2,1],
+[1,2,2,1,2,1,2,2,1,2,1,2,2,2,1,2,1,2,2,1],
+[1,2,2,1,2,2,2,2,1,4,1,2,2,2,2,2,1,2,2,1],
+[1,2,2,1,1,1,2,2,2,5,2,2,2,2,1,1,1,2,2,1],
+[1,2,2,1,1,1,1,1,1,4,1,1,1,1,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 56 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,1,1,1,1,1,1,2,2,2,2,2,2,1,1,1,1,1,1,1],
+[1,2,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,2,1],
+[1,2,2,1,2,2,2,2,1,1,1,1,2,2,2,2,1,2,2,1],
+[1,2,1,1,1,2,2,1,1,1,1,1,1,2,2,1,1,1,2,1],
+[1,2,2,1,2,2,2,2,1,1,1,1,2,2,2,2,1,2,2,1],
+[1,1,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,1,1],
+[1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+[1,2,2,2,2,1,1,2,2,2,2,2,1,1,2,2,2,2,2,1],
+[1,2,2,2,1,1,1,1,2,2,2,1,1,1,1,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 57 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1],
+[1,2,2,2,2,1,1,1,1,1,1,1,1,1,1,2,2,2,2,1],
+[1,2,2,1,2,2,2,1,1,1,1,1,1,2,2,2,1,2,2,1],
+[1,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,1],
+[1,2,2,1,1,1,1,2,2,2,2,2,2,1,1,1,1,2,2,1],
+[1,2,2,2,2,2,2,2,1,2,2,1,2,2,2,2,2,2,2,1],
+[1,1,2,2,1,1,1,1,1,2,2,1,1,1,1,1,2,2,1,1],
+[1,1,2,2,1,1,1,1,1,2,2,1,1,1,1,1,2,2,1,1],
+[1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 58 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,4,1,1,2,1,2,1,1,2,1,2,1,1,4,1,2,1],
+[1,2,2,5,2,4,5,4,2,1,1,2,4,5,4,2,5,2,2,1],
+[1,2,1,4,1,1,2,1,2,1,1,2,1,2,1,1,4,1,2,1],
+[1,2,2,2,2,1,2,1,2,1,1,2,1,2,1,2,2,2,2,1],
+[1,2,2,2,2,4,5,4,2,1,1,2,4,5,4,2,2,2,2,1],
+[1,1,2,2,2,1,2,1,2,2,2,2,1,2,1,2,2,2,1,1],
+[1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1],
+[1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 59 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,1,2,2,1,2,2,2,1,2,2,1,2,2,2,2,1],
+[1,2,1,2,1,2,2,1,2,2,2,1,2,2,1,2,2,1,2,1],
+[1,2,1,2,1,2,2,1,2,1,2,1,2,2,1,2,2,1,2,1],
+[1,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,1,2,1,2,2,2,1,2,1,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,1,2,2,2,1,2,2,2,2,2,2,2,1],
+[1,2,2,2,1,2,2,1,2,2,2,1,2,2,1,2,2,2,2,1],
+[1,2,2,2,1,2,2,1,2,2,2,1,2,2,1,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 60 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,2,2,2,1,1,1,2,2,2,2,1,1,1,2,2,2,2,1],
+[1,2,1,1,2,1,1,2,2,1,1,2,2,1,1,2,1,1,2,1],
+[1,2,2,4,5,4,2,2,1,1,1,1,2,2,4,5,4,2,2,1],
+[1,2,2,1,2,1,2,2,2,1,1,2,2,2,1,2,1,2,2,1],
+[1,2,2,2,2,1,1,2,2,2,2,2,2,1,1,2,2,2,2,1],
+[1,2,1,1,2,2,1,1,2,2,2,2,1,1,2,2,1,1,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 61 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 62 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 63 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 64 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+],
+      // LEVEL 65 — bearbeitbares 20 x 11 Raster
+[
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+]
+];
+
+    function getLevelMap(levelIndex) {
+      const source = levelIndex === 0 ? LEVEL_1_MAP : LEVEL_MAPS[levelIndex - 1];
+      return source.map(row => [...row]);
+    }
+
+    // Spiel-Zustand
+    let grid = [];
+    let stage = 0;
+    let score = 0;
+    let lives = 3;
+    let pucks = 0;
+    let seconds = 120;
+    let state = 'title'; // 'title', 'playing', 'lost', 'gameover', 'won'
+
+    let snake = [];
+    let visualFrom = [];
+    let moveAnimStart = 0;
+    let animationFrame = 0;
+
+    let dir = { x: 1, y: 0 };
+    let facing = { x: 1, y: 0 };
+    let pellets = new Set();
+    let extra = null;
+    let projectile = null;
+
+    let moveTimer = null;
+    // Merkt sich die zuletzt gedrückte Richtung. Das Loslassen einer älteren
+    // Taste darf die Bewegung nach einem Richtungswechsel nicht stoppen.
+    let activeDirectionKey = null;
+    let clockTimer = null;
+    let extraTimer = null;
+    let extraExpireTimer = null;
+    let projectileTimer = null;
+
+    let growthPerFood = 1;
+    let foodRadius = 3.5;
+    let fruitCount = 0;
+    let moveDelay = 200;
+    let speedTimer = null;
+    let sunEffectTimer = null;
+
+    const dirs = {
+      ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
+      w: { x: 0, y: -1 }, s: { x: 0, y: 1 }, a: { x: -1, y: 0 }, d: { x: 1, y: 0 },
+      W: { x: 0, y: -1 }, S: { x: 0, y: 1 }, A: { x: -1, y: 0 }, D: { x: 1, y: 0 }
+    };
+
+    const key = (x, y) => `${x},${y}`;
+
+    function buildMap() {
+      grid = getLevelMap(Math.min(stage, LEVEL_COUNT - 1));
+    }
+
+    function placePellets() {
+      pellets.clear();
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (grid[y][x] === 2) {
+            pellets.add(`${x},${y}`);
+          }
+        }
+      }
+    }
+
+    function blocked(x, y) {
+      return x < 0 || y < 0 || x >= W || y >= H || grid[y][x] === 1;
+    }
+
+    // BRÜCKEN-KOLLISIONEN
+    // 4 = nur oben auf der Brücke befahrbar.
+    // 5 = oben entlang der Brücke ODER quer darunter hindurch.
+    // Die Brückenrichtung wird aus den benachbarten 4er-/5er-Feldern erkannt.
+    function bridgeAxisAt(x, y) {
+      const isBridge = (nx, ny) =>
+        nx >= 0 && ny >= 0 && nx < W && ny < H &&
+        (grid[ny][nx] === 4 || grid[ny][nx] === 5);
+
+      const left = isBridge(x - 1, y);
+      const right = isBridge(x + 1, y);
+      const up = isBridge(x, y - 1);
+      const down = isBridge(x, y + 1);
+
+      if (left && right) return 'horizontal';
+      if (up && down) return 'vertical';
+      if ((left || right) && !(up || down)) return 'horizontal';
+      if ((up || down) && !(left || right)) return 'vertical';
+
+      // Bei einer Kreuzung mit gleich vielen Anschlüssen ist die
+      // waagerechte Richtung die Hauptbrücke (wie in Level 8).
+      if ((left || right) && (up || down)) {
+        return (left && right) || !(up && down) ? 'horizontal' : 'vertical';
+      }
+
+      // Einzelnes Brückenfeld: waagerecht als Standard.
+      return 'horizontal';
+    }
+
+    // Liefert die Ebene für das nächste Feld:
+    // 0 = normaler Boden, 1 = oben auf der Brücke, 2 = darunter.
+    // null bedeutet: Diese Bewegungsrichtung ist an dieser Stelle gesperrt.
+    function layerForEntry(x, y, dx, dy) {
+      if (x < 0 || y < 0 || x >= W || y >= H || grid[y][x] === 1) {
+        return null;
+      }
+
+      const value = grid[y][x];
+      if (value !== 4 && value !== 5) return 0;
+
+      const axis = bridgeAxisAt(x, y);
+      const alongBridge = axis === 'horizontal' ? dy === 0 : dx === 0;
+
+      if (alongBridge) return 1;
+      if (value === 5) return 2;
+
+      // Ein 4er-Feld hat keine Unterführung.
+      return null;
+    }
+
+    function findSpawn() {
+      // Eine 3 im Zahlenraster legt den Startpunkt fest.
+      // Die 3 ist für das Spiel ein normales freies Feld.
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (grid[y][x] === 3 && !blocked(x, y)) return { x, y };
+        }
+      }
+
+      // Falls keine 3 eingetragen wurde: bisheriger Standard-Startpunkt.
+      const wanted = { x: 12, y: 9 };
+      if (!blocked(wanted.x, wanted.y)) return wanted;
+
+      for (let y = H - 2; y >= 1; y--) {
+        for (let x = 1; x < W - 1; x++) {
+          if (!blocked(x, y)) return { x, y };
+        }
+      }
+      return { x: 1, y: 1 };
+    }
+
+    function placeExtra() {
+      if (state !== 'playing' || extra) return;
+      const free = [];
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          const k = key(x, y);
+		if (!blocked(x, y) && !snake.some(s => s.x === x && s.y === y) && (!projectile || projectile.x !== x || projectile.y !== y)) {
+            free.push({ x, y });
+          }
+        }
+      }
+      if (free.length) {
+        // Pucks kommen jetzt häufiger: 3 von 10 möglichen Ziehungen.
+const types = [
+    'puck',
+    'puck',
+    'puck',
+    'uhr',
+    'eiswuerfel',
+    'frucht',
+    'totenschaedel',
+    'blitz',
+    'herz',
+    'powerdose',
+    'sonne-klein',
+    'sonne-gross',
+    'elixier-kurz',
+    'elixier-leer'
+];
+        const type = types[Math.floor(Math.random() * types.length)];
+        extra = { ...free[Math.floor(Math.random() * free.length)], type };
+        if (type === 'totenschaedel') {
+          clearTimeout(extraExpireTimer);
+          const thisSkull = extra;
+          extraExpireTimer = setTimeout(() => {
+            if (extra === thisSkull) { extra = null; draw(); }
+            extraExpireTimer = null;
+          }, 5000 + Math.random() * 5000);
+        }
+      }
+      draw();
+    }
+
+    function clearProjectile() {
+      clearInterval(projectileTimer);
+      projectileTimer = null;
+      projectile = null;
+    }
+
+    function updateHud() {
+      ui.score.textContent = String(score).padStart(4, '0');
+      ui.time.textContent = String(seconds).padStart(2, '0');
+      ui.pucks.textContent = String(pucks).padStart(2, '0');
+      ui.lives.textContent = String(lives);
+      ui.stage.textContent = String(stage + 1).padStart(2, '0');
+    }
+
+    function resetStage() {
+      buildMap();
+      const spawn = findSpawn();
+      snake = [{ ...spawn, layer: 0 }];
+      visualFrom = [];
+      moveAnimStart = 0;
+      dir = { x: 1, y: 0 };
+      facing = { x: 1, y: 0 };
+      clearProjectile();
+      clearTimeout(extraExpireTimer);
+      extraExpireTimer = null;
+      extra = null;
+      growthPerFood = 1;
+      foodRadius = 3.5;
+      placePellets();
+      pellets.delete(key(spawn.x, spawn.y));
+      seconds = 120;
+      updateHud();
+      draw();
+    }
+
+    function start() {
+      if (state === 'playing') return;
+      highscoreForThisRunSaved = false;
+      if (state === 'title' || state === 'gameover' || state === 'won') stage = selectedStartLevel;
+      state = 'playing';
+      resetStage();
+      clearInterval(clockTimer);
+      clearTimeout(extraTimer);
+      clockTimer = setInterval(() => {
+        if (state !== 'playing') return;
+        seconds--;
+        updateHud();
+        if (seconds <= 0) loseLife('ZEIT ABGELAUFEN');
+      }, 1000);
+      function scheduleNextExtra() {
+      extraTimer = setTimeout(() => {
+        placeExtra();
+        scheduleNextExtra();
+    }, Math.floor(5000 + Math.random() * 15001));
+}
+
+scheduleNextExtra();
+      canvas.focus();
+    }
+
+    function stopMove() {
+      clearInterval(moveTimer);
+      moveTimer = null;
+    }
+
+    function setDirection(d) {
+      if (state === 'title' || state === 'gameover' || state === 'won') {
+        if (state === 'gameover' || state === 'won') {
+          score = 0; lives = 3; pucks = 0; stage = selectedStartLevel; fruitCount = 0;
+        }
+        start();
+        return;
+      }
+      if (state !== 'playing') return;
+      if (snake.length > 1 && d.x === -dir.x && d.y === -dir.y) return;
+      dir = d;
+      facing = d;
+      if (!moveTimer) {
+        if (step()) moveTimer = setInterval(step, moveDelay);
+      } else {
+        // A held direction changes immediately without waiting for a stale timer tick.
+        clearInterval(moveTimer);
+        if (step()) moveTimer = setInterval(step, moveDelay);
+      }
+      if (!animationFrame) animationFrame = requestAnimationFrame(animate);
+    }
+
+    function activateSpeed() {
+      moveDelay = 120;
+      clearTimeout(speedTimer);
+      if (moveTimer) { clearInterval(moveTimer); moveTimer = setInterval(step, moveDelay); }
+      speedTimer = setTimeout(() => {
+        moveDelay = 200;
+        if (moveTimer) { clearInterval(moveTimer); moveTimer = setInterval(step, moveDelay); }
+      }, 7000);
+    }
+
+  function collectExtra(type) {
+    clearTimeout(extraExpireTimer);
+    extraExpireTimer = null;
+    extra = null;
+
+    switch (type) {
+        case 'puck':
+            pucks += 2;
+            break;
+
+        case 'uhr':
+            seconds += 40;
+            break;
+
+        case 'eiswuerfel':
+            snake = snake.slice(0, Math.max(1, Math.floor(snake.length / 2)));
+            break;
+
+        case 'frucht': {
+            const bonus = [100, 200, 400, 800];
+            score += bonus[Math.min(fruitCount++, bonus.length - 1)];
+            break;
+        }
+
+        case 'sonne-klein':
+            clearTimeout(sunEffectTimer);
+            foodRadius = 2.2;
+            growthPerFood = 0;
+
+            sunEffectTimer = setTimeout(() => {
+            foodRadius = 3.5;
+            growthPerFood = 1;
+            sunEffectTimer = null;
+            }, 10000);
+            break;
+
+       case 'sonne-gross':
+           clearTimeout(sunEffectTimer);
+           foodRadius = 5.5;
+           growthPerFood = 3;
+
+          sunEffectTimer = setTimeout(() => {
+          foodRadius = 3.5;
+          growthPerFood = 1;
+          sunEffectTimer = null;
+          }, 10000);
+          break;
+
+        case 'elixier-kurz':
+            snake = snake.slice(0, Math.max(1, snake.length - 5));
+            break;
+
+        case 'elixier-leer':
+            snake = snake.slice(0, 1);
+            break;
+
+        case 'totenschaedel':
+            loseLife('SCHÄDEL!');
+            return true;
+
+        case 'blitz':
+            advanceLevel();
+            return true;
+
+        case 'herz':
+            lives++;
+            break;
+
+        case 'powerdose':
+            activateSpeed();
+            break;
+    }
+
+    updateHud();
+    return false;
+}
+
+    function step() {
+      if (state !== 'playing') return;
+      const head = snake[0];
+      const next = { x: head.x + dir.x, y: head.y + dir.y };
+      const nextLayer = layerForEntry(next.x, next.y, dir.x, dir.y);
+      if (nextLayer === null) {
+        stopMove();
+        return false;
+      }
+      next.layer = nextLayer;
+
+      const nextKey = key(next.x, next.y);
+      const willGrow = pellets.has(nextKey) && growthPerFood > 0;
+      const tailIndex = snake.length - 1;
+      const hitBody = snake.some((part, i) =>
+        i > 0 &&
+        !(i === tailIndex && !willGrow) &&
+        part.x === next.x &&
+        part.y === next.y &&
+        (part.layer || 0) === nextLayer
+      );
+      if (hitBody) {
+        loseLife('KÖRPERKOLLISION');
+        return false;
+      }
+
+      const before = snake.map(s => ({ ...s }));
+      snake.unshift(next);
+      const k = key(next.x, next.y);
+
+      if (pellets.has(k)) {
+        pellets.delete(k);
+        score += 10;
+        if (growthPerFood === 0) snake.pop();
+        else for (let i = 1; i < growthPerFood; i++) snake.push({ ...snake[snake.length - 1] });
+        if (pellets.size === 0) { advanceLevel(); return; }
+        updateHud();
+      } else {
+        snake.pop();
+      }
+
+      if (extra && next.x === extra.x && next.y === extra.y && collectExtra(extra.type)) return;
+
+      visualFrom = before;
+      moveAnimStart = performance.now();
+      if (!animationFrame) animationFrame = requestAnimationFrame(animate);
+      draw();
+      return true;
+    }
+
+    function animate() {
+      animationFrame = 0;
+      if (state !== 'playing') return;
+      draw();
+      const progress = (performance.now() - moveAnimStart) / moveDelay;
+      if (moveTimer || projectile || progress < 1) animationFrame = requestAnimationFrame(animate);
+    }
+
+    function fire() {
+      if (state === 'title' || state === 'gameover' || state === 'won') {
+        if (state === 'gameover' || state === 'won') { score = 0; lives = 3; pucks = 0; stage = 0; }
+        start();
+        return;
+      }
+      if (state !== 'playing' || pucks < 1 || projectile) return;
+      const head = snake[0];
+      const x = head.x + facing.x;
+      const y = head.y + facing.y;
+      if (blocked(x, y)) return;
+      
+      pucks--;
+      projectile = { x, y, dx: facing.x, dy: facing.y };
+     // Extra direkt vor dem Wurm einsammeln, Puck fliegt weiter.
+if (extra && extra.x === x && extra.y === y) {
+  collectExtra(extra.type);
+}
+// Auch das direkt vor dem Wurm liegende erste Feld prüfen.
+if (pellets.delete(key(x, y))) {
+  score += 10;
+  if (pellets.size === 0) {
+    advanceLevel();
+    return;
+  }
+}
+      updateHud();
+      draw();
+      projectileTimer = setInterval(moveProjectile, 90);
+      if (!animationFrame) animationFrame = requestAnimationFrame(animate);
+    }
+
+    function moveProjectile() {
+      if (!projectile || state !== 'playing') { clearProjectile(); return; }
+      const nx = projectile.x + projectile.dx;
+      const ny = projectile.y + projectile.dy;
+      if (blocked(nx, ny)) { clearProjectile(); draw(); return; }
+      
+      projectile.x = nx;
+      projectile.y = ny;
+    // Puck sammelt Extras ein und fliegt danach weiter.
+if (extra && extra.x === nx && extra.y === ny) {
+  collectExtra(extra.type);
+}
+      if (pellets.delete(key(nx, ny))) {
+        score += 10;
+        if (pellets.size === 0) { advanceLevel(); return; }
+      }
+      updateHud();
+      draw();
+    }
+
+    function advanceLevel() {
+      stopMove();
+      clearProjectile();
+      stage++;
+      if (stage >= LEVEL_COUNT) {
+        state = 'won';
+        recordHighscore();
+        updateHud();
+        draw('ALLE 65 LEVEL GESCHAFFT!');
+        return;
+      }
+      resetStage();
+    }
+
+    function loseLife(message) {
+      stopMove();
+      clearTimeout(speedTimer);
+      speedTimer = null;
+      moveDelay = 200;
+      clearProjectile();
+      state = 'lost';
+      lives--;
+      updateHud();
+      draw(message);
+      
+      setTimeout(() => {
+        if (lives <= 0) {
+          state = 'gameover';
+          recordHighscore();
+          draw('SPIEL VORBEI');
+          return;
+        }
+        const spawn = findSpawn();
+        snake = [{ ...spawn, layer: 0 }];
+        pellets.delete(key(spawn.x, spawn.y));
+        visualFrom = [];
+        moveAnimStart = 0;
+        dir = { x: 1, y: 0 };
+        facing = { x: 1, y: 0 };
+        if (message === 'ZEIT ABGELAUFEN') seconds = 120;
+        state = 'playing';
+        updateHud();
+        draw();
+      }, 1200);
+    }
+
+    // Grafik & Renderer
+    function tile(x, y, p) {
+      const px = x * T;
+      const py = y * T;
+
+      if (grid[y][x] === 1) {
+        // Wandkachel im Retro-Bevel Stil
+        ctx.fillStyle = p.wall;
+        ctx.fillRect(px, py, T, T);
+        
+        ctx.strokeStyle = p.ink;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
+
+        // Licht- und Schattenkanten für 3D-Retro-Look
+        ctx.fillStyle = p.trim;
+        ctx.fillRect(px + 2, py + 2, T - 4, 3);
+        ctx.fillRect(px + 2, py + 2, 3, T - 4);
+        
+        ctx.fillStyle = p.cream + 'aa';
+        ctx.fillRect(px + 4, py + 4, 2, 2);
+      } else {
+        // Bodenkachel
+        ctx.fillStyle = p.floor;
+        ctx.fillRect(px, py, T, T);
+        ctx.strokeStyle = p.ink + '20';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
+
+        if ((x * 13 + y * 7) % 5 === 0) {
+          ctx.fillStyle = p.cream + '50';
+          ctx.beginPath();
+          ctx.arc(px + T / 2, py + T / 2, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+
+    // BRÜCKEN: 4 = Brückenfeld ohne Unterführung, 5 = Brückenfeld mit Unterführung.
+    // Die Richtung wird automatisch aus benachbarten 4er-/5er-Feldern erkannt.
+    const bridgeDirs = [
+      { x: 0, y: -1, name: 'N' },
+      { x: 1, y: 0, name: 'E' },
+      { x: 0, y: 1, name: 'S' },
+      { x: -1, y: 0, name: 'W' }
+    ];
+
+    function bridgeConnections(x, y) {
+      return bridgeDirs.filter(d => {
+        const nx = x + d.x, ny = y + d.y;
+        return nx >= 0 && ny >= 0 && nx < W && ny < H &&
+          (grid[ny][nx] === 4 || grid[ny][nx] === 5);
+      });
+    }
+
+    function drawBridgeTile(x, y, p, overlay = false) {
+      const value = grid[y][x];
+      if (value !== 4 && value !== 5) return;
+
+      const axis = bridgeAxisAt(x, y);
+      const vertical = axis === 'vertical';
+
+      // Zusammenhängende Brückenfelder gleicher Ausrichtung finden.
+      let first = axis === 'horizontal' ? x : y;
+      let last = first;
+
+      const isBridgeAt = n => {
+        const bx = axis === 'horizontal' ? n : x;
+        const by = axis === 'horizontal' ? y : n;
+
+        if (bx < 0 || by < 0 || bx >= W || by >= H) return false;
+
+        const v = grid[by][bx];
+        if (v !== 4 && v !== 5) return false;
+
+        return bridgeAxisAt(bx, by) === axis;
+      };
+
+      while (isBridgeAt(first - 1)) first--;
+      while (isBridgeAt(last + 1)) last++;
+
+      const span = Math.max(1, last - first + 1);
+      const u0 = ((axis === 'horizontal' ? x : y) - first) / span;
+      const u1 = u0 + 1 / span;
+      const localX = u => -T / 2 + (u - u0) * span * T;
+      const archY = u => {
+        const n = Math.max(-1, Math.min(1, (u - 0.5) * 2));
+        const shape = Math.sqrt(Math.max(0, 1 - n * n));
+        return T * (0.43 - 0.39 * shape);
+      };
+
+      ctx.save();
+      ctx.translate(x * T + T / 2, y * T + T / 2);
+      if (vertical) ctx.rotate(Math.PI / 2);
+
+      // Schatten auf den vorhandenen Weg – der Weg selbst wird nicht ersetzt.
+      if (!overlay) {
+        ctx.fillStyle = 'rgba(8, 13, 22, 0.30)';
+        ctx.fillRect(-T / 2, T * 0.02, T, T * 0.43);
+      }
+
+      // Seitenwand: nur der Bereich ÜBER dem Bogen wird gefüllt.
+      // Der Bereich UNTER dem Bogen ist der echte, offene Tunnel.
+      if (!overlay) {
+        ctx.beginPath();
+        ctx.moveTo(-T / 2, -T * 0.13);
+        ctx.lineTo(T / 2, -T * 0.13);
+        ctx.lineTo(T / 2, archY(u1));
+        for (let i = 12; i >= 0; i--) {
+          const u = u0 + (u1 - u0) * i / 12;
+          ctx.lineTo(localX(u), archY(u));
+        }
+        ctx.closePath();
+
+        const wall = ctx.createLinearGradient(0, -T * 0.13, 0, T * 0.44);
+        wall.addColorStop(0, '#b18a63');
+        wall.addColorStop(0.55, '#806044');
+        wall.addColorStop(1, '#49372d');
+        ctx.fillStyle = wall;
+        ctx.fill();
+
+        // Steinblöcke auf der sichtbaren Brückenseite
+        ctx.save();
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(48, 34, 27, 0.55)';
+        ctx.lineWidth = 1;
+        for (let row = 0; row < 4; row++) {
+          const yy = -T * 0.08 + row * T * 0.105;
+          ctx.beginPath();
+          ctx.moveTo(-T / 2, yy);
+          ctx.lineTo(T / 2, yy);
+          ctx.stroke();
+        }
+        for (let xx = -T / 2 + 5; xx < T / 2; xx += 10) {
+          ctx.beginPath();
+          ctx.moveTo(xx, -T * 0.13);
+          ctx.lineTo(xx, T * 0.38);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Dunkler Tunnelinnenrand und helle Steinlaibung.
+        ctx.strokeStyle = '#35271f';
+        ctx.lineWidth = Math.max(4, T * 0.10);
+        ctx.beginPath();
+        for (let i = 0; i <= 12; i++) {
+          const u = u0 + (u1 - u0) * i / 12;
+          const xx = localX(u);
+          const yy = archY(u);
+          if (i === 0) ctx.moveTo(xx, yy);
+          else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = '#d9bd98';
+        ctx.lineWidth = Math.max(2, T * 0.045);
+        ctx.beginPath();
+        for (let i = 0; i <= 12; i++) {
+          const u = u0 + (u1 - u0) * i / 12;
+          const xx = localX(u);
+          const yy = archY(u) - T * 0.025;
+          if (i === 0) ctx.moveTo(xx, yy);
+          else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      } else {
+        // Nach dem Wurm nur die innere Bogenkante zeichnen:
+        // keine Fläche über dem Wurm und keine geschlossene Tunnelöffnung.
+        ctx.strokeStyle = '#3b2b22';
+        ctx.lineWidth = Math.max(4, T * 0.10);
+        ctx.beginPath();
+        for (let i = 0; i <= 12; i++) {
+          const u = u0 + (u1 - u0) * i / 12;
+          const xx = localX(u);
+          const yy = archY(u);
+          if (i === 0) ctx.moveTo(xx, yy);
+          else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      }
+
+      // Gewölbtes Brückendeck mit deutlich steilerem Anstieg und Abfall.
+      if (!overlay) {
+        ctx.fillStyle = '#49301f';
+        ctx.beginPath();
+        ctx.moveTo(-T / 2, -T * 0.15);
+        ctx.quadraticCurveTo(0, -T * 0.43, T / 2, -T * 0.15);
+        ctx.lineTo(T / 2, -T * 0.055);
+        ctx.quadraticCurveTo(0, -T * 0.31, -T / 2, -T * 0.055);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#c58a4d';
+        ctx.beginPath();
+        ctx.moveTo(-T / 2, -T * 0.20);
+        ctx.quadraticCurveTo(0, -T * 0.47, T / 2, -T * 0.20);
+        ctx.lineTo(T / 2, -T * 0.13);
+        ctx.quadraticCurveTo(0, -T * 0.37, -T / 2, -T * 0.13);
+        ctx.closePath();
+        ctx.fill();
+
+        // Fahrbahnplanken folgen ebenfalls der gewölbten Oberkante.
+        ctx.strokeStyle = '#704522';
+        ctx.lineWidth = 1.2;
+        for (let i = 1; i < 6; i++) {
+          const u = i / 6;
+          const xx = -T / 2 + u * T;
+          const rise = Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.5) * 2, 2)));
+          const yy = -T * (0.20 + 0.27 * rise);
+          ctx.beginPath();
+          ctx.moveTo(xx, yy);
+          ctx.lineTo(xx, yy + T * 0.07);
+          ctx.stroke();
+        }
+
+        // Geländer mit klar erkennbarem Bogenverlauf
+        ctx.strokeStyle = '#f2c78d';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-T / 2, -T * 0.23);
+        ctx.quadraticCurveTo(0, -T * 0.51, T / 2, -T * 0.23);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#714626';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-T / 2, -T * 0.12);
+        ctx.quadraticCurveTo(0, -T * 0.40, T / 2, -T * 0.12);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawBridges(p) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) drawBridgeTile(x, y, p);
+      }
+    }
+
+function drawFood(x, y, p) {
+    const px = x * T + T / 2;
+    const py = y * T + T / 2;
+
+    let imageKey = 'food';
+    let size = T;
+
+    if (foodRadius === 2.2) {
+        imageKey = 'foodKlein';
+        size = T * 0.65;
+    } else if (foodRadius === 5.5) {
+        imageKey = 'foodGross';
+        size = T * 1.2;
+    }
+
+    if (!drawAsset(imageKey, px, py, size)) {
+        ctx.fillStyle = p.dot;
+        ctx.beginPath();
+        ctx.arc(px, py, foodRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = p.ink;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+}
+    function drawExtraItem(x, y, type) {
+      const px = x * T + T / 2;
+      const py = y * T + T / 2;
+      if (drawAsset(type, px, py, T * 0.9)) return;
+      const icons = {
+        uhr: '🕒', eiswuerfel: '🧊', frucht: '🍑', totenschaedel: '💀',
+        blitz: '⚡', herz: '❤️', powerdose: '🥤', puck: '🟡',
+        'elixier-kurz': '🧪', 'elixier-leer': '🧪',
+        'sonne-gross': '☀️', 'sonne-klein': '🌤️'
+      };
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icons[type] || '⭐', px, py);
+    }
+
+    function drawHead(s, dx, dy) {
+      const x = s.x * T + T / 2;
+      const y = s.y * T + T / 2;
+      // Das Kopf-Original zeigt nach OBEN (nicht nach rechts).
+      // Deshalb wird die gewünschte Laufrichtung um 90 Grad korrigiert.
+      const angle = Math.atan2(dy, dx) + Math.PI / 2;
+      if (drawAsset('snakeHead', x, y, T, angle)) return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#24142f';
+      const bodyGrad = ctx.createLinearGradient(0, -9, 0, 9);
+      bodyGrad.addColorStop(0, '#ff81b5');
+      bodyGrad.addColorStop(0.5, '#f52e83');
+      bodyGrad.addColorStop(1, '#c91469');
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff80';
+      ctx.beginPath();
+      ctx.ellipse(-2, -4, 4, 1.5, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff8df';
+      ctx.beginPath();
+      ctx.arc(3, -3, 2.8, 0, Math.PI * 2);
+      ctx.arc(6, -1.5, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#24142f';
+      ctx.beginPath();
+      ctx.arc(4, -3, 1.2, 0, Math.PI * 2);
+      ctx.arc(7, -1.5, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawWormBody(points) {
+      if (!points.length) return;
+
+      // ZUERST einen durchgehenden, weich gerundeten Körper zeichnen.
+      // Dadurch bleiben auch bei transparenten PNGs oder kleinen Abständen
+      // zwischen einzelnen Körpergrafiken keinerlei Lücken sichtbar.
+      if (points.length > 1) {
+        const centers = points.map(p => ({
+          x: p.x * T + T / 2,
+          y: p.y * T + T / 2
+        }));
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(centers[0].x, centers[0].y);
+        if (centers.length === 2) {
+          ctx.lineTo(centers[1].x, centers[1].y);
+        } else {
+          for (let i = 1; i < centers.length - 1; i++) {
+            const midX = (centers[i].x + centers[i + 1].x) / 2;
+            const midY = (centers[i].y + centers[i + 1].y) / 2;
+            ctx.quadraticCurveTo(centers[i].x, centers[i].y, midX, midY);
+          }
+          const last = centers[centers.length - 1];
+          const beforeLast = centers[centers.length - 2];
+          ctx.quadraticCurveTo(beforeLast.x, beforeLast.y, last.x, last.y);
+        }
+        ctx.strokeStyle = '#e6257a';
+        ctx.lineWidth = T * 0.50;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Austauschbare Körpergrafiken liegen AUF dem durchgehenden Körper.
+      // Der Untergrund bleibt sichtbar und verbindet transparente Ränder.
+      for (let i = 1; i < points.length - 1; i++) {
+        const prev = points[i - 1];
+        const next = points[i + 1];
+        const s = points[i];
+        const x = s.x * T + T / 2;
+        const y = s.y * T + T / 2;
+        const inDir = { x: s.x - prev.x, y: s.y - prev.y };
+        const outDir = { x: next.x - s.x, y: next.y - s.y };
+        const cross = inDir.x * outDir.y - inDir.y * outDir.x;
+        const isCorner = cross !== 0;
+        if (isCorner) {
+          // Die Kurvengrafik liegt im Original so: Eingang links, Ausgang unten.
+          // Bei einer Linkskurve wird sie gespiegelt, bei einer Rechtskurve gedreht.
+          const incomingAngle = Math.atan2(inDir.y, inDir.x);
+          if (!drawAsset('snakeCorner', x, y, T, incomingAngle, cross < 0)) {
+            // Fallback, falls noch keine eigene schlangekurve-Grafik vorhanden ist.
+            ctx.save();
+            ctx.strokeStyle = '#e6257a';
+            ctx.lineWidth = T * 0.50;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(prev.x * T + T / 2, prev.y * T + T / 2);
+            ctx.quadraticCurveTo(x, y, next.x * T + T / 2, next.y * T + T / 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        } else {
+          const angle = Math.atan2(outDir.y, outDir.x);
+          drawAsset('snakeBody', x, y, T, angle);
+        }
+      }
+
+      // Schwanzgrafik: Das Original zeigt mit der Spitze NACH UNTEN.
+      // Die gewünschte Richtung läuft vom letzten Körperfeld nach außen.
+      if (points.length > 1) {
+        const tail = points[points.length - 1];
+        const before = points[points.length - 2];
+        const x = tail.x * T + T / 2;
+        const y = tail.y * T + T / 2;
+        const outwardAngle = Math.atan2(tail.y - before.y, tail.x - before.x);
+        const tailRotation = outwardAngle - Math.PI / 2;
+        if (!drawAsset('snakeTail', x, y, T, tailRotation)) {
+          ctx.fillStyle = '#e6257a';
+          ctx.beginPath();
+          ctx.arc(x, y, T * 0.29, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+function drawPuckShot(s) {
+  const x = s.x * T + T / 2;
+  const y = s.y * T + T / 2;
+
+  // Das Puck-Bild zeigt ursprünglich nach oben.
+  // Je nach Flugrichtung wird es passend gedreht.
+  const angle = Math.atan2(s.dy, s.dx) + Math.PI / 2;
+
+  if (drawAsset('puck', x, y, T * 0.65, angle)) return;
+
+  // Ersatzdarstellung, falls das Bild nicht geladen wurde.
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#f8c94e';
+  ctx.strokeStyle = '#24142f';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+    function draw(message = '') {
+      const p = palettes[stage % palettes.length];
+      ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+      // Kacheln zeichnen
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          tile(x, y, p);
+        }
+      }
+
+      // Brücken liegen über dem Boden und unter Futter sowie Schlange.
+      drawBridges(p);
+
+      // Futter zeichnen – liegt ein Extra auf dem Feld, bleibt das Futter
+      // logisch vorhanden, wird aber optisch vom Extra verdeckt.
+      for (const k of pellets) {
+        if (extra && k === `${extra.x},${extra.y}`) continue;
+        const [x, y] = k.split(',').map(Number);
+        drawFood(x, y, p);
+      }
+
+      // Extras zeichnen
+      if (extra) {
+        drawExtraItem(extra.x, extra.y, extra.type);
+      }
+
+      // Wurm zeichnen
+      const progress = visualFrom.length ? Math.min(1, (performance.now() - moveAnimStart) / moveDelay) : 1;
+      const shownSnake = snake.map((s, i) => {
+        const from = visualFrom.length ? visualFrom[Math.min(Math.max(i - 1, 0), visualFrom.length - 1)] : s;
+        return {
+          x: from.x + (s.x - from.x) * progress,
+          y: from.y + (s.y - from.y) * progress,
+          layer: s.layer || 0
+        };
+      });
+
+      drawWormBody(shownSnake);
+      if (shownSnake.length) {
+        drawHead(shownSnake[0], facing.x, facing.y);
+      }
+
+      // Brückenkonturen nach dem Wurm zeichnen. Die Bogenöffnung bleibt
+      // durchsichtig, sodass der Wurm unter der Brücke sichtbar ist.
+      for (const part of shownSnake) {
+        if (part.layer === 2) {
+          drawBridgeTile(Math.round(part.x), Math.round(part.y), p, true);
+        }
+      }
+
+      // Puck-Schuss
+      if (projectile) {
+        drawPuckShot(projectile);
+      }
+
+      // Levelauswahl nur auf dem Start-/Endbildschirm anzeigen.
+      if (ui.picker) ui.picker.hidden = state === 'playing';
+
+      // Overlay Screen (Start/Pause/Lose)
+      if (state === 'title' || state === 'gameover' || state === 'won' || message) {
+        ctx.fillStyle = '#24142fcd';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.textAlign = 'center';
+        ctx.font = '700 22px "Press Start 2P", cursive, sans-serif';
+        
+        const titleText = message || (state === 'gameover' ? 'SPIEL VORBEI' : state === 'won' ? 'GESCHAFFT!' : 'SUPER PIMMELCHEN');
+        
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#24142f';
+        ctx.strokeText(titleText, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
+        ctx.fillStyle = '#ffd34f';
+        ctx.fillText(titleText, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
+
+        ctx.fillStyle = '#fff0bd';
+        ctx.font = '700 12px "Fredoka", sans-serif';
+        const subText = state === 'gameover' || state === 'won' ? 'DRÜCKE ENTER / LEERTASTE FÜR NEUSTART' : 'DRÜCKE ENTER / PFEILTASTE ZUM STARTEN';
+        ctx.fillText(subText, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
+      }
+    }
+
+    // Input-Verarbeitung
+    function handleKey(e) {
+      const d = dirs[e.key];
+      if (d) {
+        e.preventDefault();
+        if (e.repeat) return;
+        activeDirectionKey = e.key;
+        setDirection(d);
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        fire();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (state === 'gameover' || state === 'won') {
+          score = 0; lives = 3; pucks = 0; stage = selectedStartLevel; fruitCount = 0;
+          updateHud();
+          state = 'title';
+          draw();
+        } else {
+          start();
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keyup', e => {
+      if (dirs[e.key]) {
+        e.preventDefault();
+        // Nur das Loslassen der aktuell steuernden Taste stoppt die Schlange.
+        if (e.key === activeDirectionKey) {
+          activeDirectionKey = null;
+          stopMove();
+        }
+      }
+    });
+    window.addEventListener('blur', stopMove);
+
+    // Vollbild für den gesamten Automaten. Das Spielfeld behält sein
+    // festes Seitenverhältnis von 20:11 und wird niemals abgeschnitten.
+    const fullscreenButton = document.querySelector('#fullscreen-button');
+    if (fullscreenButton) {
+      fullscreenButton.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+          } else if (ui && document.querySelector('.cabinet').requestFullscreen) {
+            await document.querySelector('.cabinet').requestFullscreen();
+          } else {
+            fullscreenButton.textContent = 'Vollbild nicht verfügbar';
+          }
+        } catch (error) {
+          console.warn('Vollbild konnte nicht gestartet werden:', error);
+          fullscreenButton.textContent = 'Vollbild nicht verfügbar';
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        fullscreenButton.textContent = document.fullscreenElement ? '⤢ FENSTER' : '⛶ VOLLBILD';
+        stopMove();
+      });
+    }
+
+    // Touch-Steuerung
+    let activeDirectionPointer = null;
+    document.querySelectorAll('[data-dir]').forEach(btn => {
+      const dirMap = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
+      const d = dirs[dirMap[btn.dataset.dir]];
+      btn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
+        activeDirectionPointer = e.pointerId;
+        setDirection(d);
+      });
+      const releasePointer = e => {
+        if (e.pointerId === activeDirectionPointer) {
+          activeDirectionPointer = null;
+          stopMove();
+        }
+      };
+      btn.addEventListener('pointerup', releasePointer);
+      btn.addEventListener('pointercancel', releasePointer);
+      btn.addEventListener('lostpointercapture', releasePointer);
+    });
+
+    const fireBtn = document.querySelector('#btn-fire');
+    if (fireBtn) {
+      fireBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        fire();
+      });
+    }
+
+    // Init
+    resetStage();
+    state = 'title';
+    draw();
+
+  })();
+  </script>
+</body>
+</html>
