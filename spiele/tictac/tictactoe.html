@@ -1,0 +1,538 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#090611">
+<title>NEON TIC TAC TOE</title>
+
+<style>
+:root {
+  --bg: #090611;
+  --pink: #ff39d6;
+  --blue: #35d8ff;
+  --purple: #a52cff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  color: white;
+  background:
+    radial-gradient(ellipse at 50% 10%, #301044 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, #071e3c 0%, transparent 50%),
+    var(--bg);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game {
+  width: 100%;
+  max-width: 460px;
+  padding: 24px 18px;
+  text-align: center;
+  border: 1px solid #783d91;
+  border-radius: 24px;
+  background: linear-gradient(145deg,#1c102b,#0a1020);
+  box-shadow:
+    0 0 20px #bd36ff33,
+    inset 0 0 25px #a52cff18;
+}
+
+h1 {
+  margin: 0 0 10px;
+  font-size: clamp(30px, 8vw, 46px);
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: white;
+  text-shadow:
+    0 0 8px var(--pink),
+    0 0 18px var(--pink),
+    0 0 35px var(--purple);
+}
+
+.status {
+  min-height: 55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 20px;
+  font-size: clamp(21px, 5vw, 27px);
+  font-weight: bold;
+}
+
+.status.pink {
+  color: var(--pink);
+  text-shadow: 0 0 10px var(--pink), 0 0 25px var(--pink);
+}
+
+.status.blue {
+  color: var(--blue);
+  text-shadow: 0 0 10px var(--blue), 0 0 25px var(--blue);
+}
+
+.status.neutral {
+  color: white;
+  text-shadow: 0 0 12px white;
+}
+
+.status .mark {
+  font-size: 1.7em;
+}
+
+.board-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid #a84bd0;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow:
+    0 0 12px #c33cff88,
+    0 0 28px #a52cff44,
+    inset 0 0 18px #a52cff22;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-right: 2px solid #a84bd0;
+  border-bottom: 2px solid #a84bd0;
+  border-radius: 0;
+  background: linear-gradient(145deg,#201431,#0c1022);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background .15s;
+}
+
+.cell:nth-child(3n) {
+  border-right: 0;
+}
+
+.cell:nth-last-child(-n+3) {
+  border-bottom: 0;
+}
+
+.cell:active:not(:disabled) {
+  background: #382044;
+}
+
+.cell:disabled {
+  cursor: default;
+}
+
+.symbol {
+  display: block;
+  flex-shrink: 0;
+  font-family: Arial, sans-serif;
+  font-size: clamp(52px, 18vw, 100px);
+  font-weight: 900;
+  line-height: 1;
+  width: 1em;
+  text-align: center;
+}
+
+.cell.x .symbol {
+  color: var(--pink);
+  text-shadow:
+    0 0 5px white,
+    0 0 12px var(--pink),
+    0 0 25px var(--pink),
+    0 0 45px #ff00bb;
+}
+
+.cell.o .symbol {
+  color: var(--blue);
+  text-shadow:
+    0 0 5px white,
+    0 0 12px var(--blue),
+    0 0 25px var(--blue),
+    0 0 45px #008cff;
+}
+
+.cell.win {
+  background: #39203d;
+}
+
+.win-line {
+  position: absolute;
+  height: 7px;
+  border-radius: 20px;
+  transform-origin: left center;
+  pointer-events: none;
+  display: none;
+  z-index: 5;
+}
+
+.win-line.show {
+  display: block;
+}
+
+.message {
+  min-height: 35px;
+  margin: 18px 0 12px;
+  font-size: 19px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 10px white;
+}
+
+.reset {
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid #ff8be9;
+  border-radius: 15px;
+  color: white;
+  background: linear-gradient(100deg,#a51a91,#5424a4);
+  box-shadow:
+    0 0 15px #ff39d677,
+    inset 0 0 12px #ffffff22;
+  font-size: 19px;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.reset:active {
+  transform: scale(.98);
+  filter: brightness(1.3);
+}
+
+.hint {
+  margin: 14px 0 0;
+  color: #a99ab8;
+  font-size: 13px;
+}
+
+@media(max-width:380px) {
+  body {
+    padding: 10px;
+  }
+
+  .game {
+    padding: 19px 12px;
+  }
+
+  .symbol {
+    font-size: clamp(48px, 17vw, 68px);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<main class="game">
+
+  <h1>TIC TAC TOE</h1>
+
+  <div id="status" class="status pink">
+    <span class="mark">✕</span>
+    <span>Kreuz ist dran!</span>
+  </div>
+
+  <div class="board-wrap">
+
+    <div id="board" class="board">
+
+      <button class="cell" data-index="0" aria-label="Feld 1"></button>
+      <button class="cell" data-index="1" aria-label="Feld 2"></button>
+      <button class="cell" data-index="2" aria-label="Feld 3"></button>
+
+      <button class="cell" data-index="3" aria-label="Feld 4"></button>
+      <button class="cell" data-index="4" aria-label="Feld 5"></button>
+      <button class="cell" data-index="5" aria-label="Feld 6"></button>
+
+      <button class="cell" data-index="6" aria-label="Feld 7"></button>
+      <button class="cell" data-index="7" aria-label="Feld 8"></button>
+      <button class="cell" data-index="8" aria-label="Feld 9"></button>
+
+    </div>
+
+    <div id="winLine" class="win-line"></div>
+
+  </div>
+
+  <div id="message" class="message">
+    Kreuz beginnt – viel Spaß!
+  </div>
+
+  <button id="reset" class="reset">
+    ↻ NEUE RUNDE
+  </button>
+
+  <p class="hint">
+    ZWEI SPIELER · EIN HANDY · ABWECHSELND SPIELEN
+  </p>
+
+</main>
+
+<script>
+(() => {
+
+const cells = [...document.querySelectorAll('.cell')];
+const status = document.getElementById('status');
+const message = document.getElementById('message');
+const reset = document.getElementById('reset');
+const line = document.getElementById('winLine');
+
+const wins = [
+  [0,1,2],
+  [3,4,5],
+  [6,7,8],
+  [0,3,6],
+  [1,4,7],
+  [2,5,8],
+  [0,4,8],
+  [2,4,6]
+];
+
+let board = Array(9).fill('');
+let current = 'X';
+let finished = false;
+let winningCombo = null;
+
+function updateStatus() {
+
+  if(current === 'X') {
+
+    status.className = 'status pink';
+
+    status.innerHTML =
+      '<span class="mark">✕</span>' +
+      '<span>Kreuz ist dran!</span>';
+
+  } else {
+
+    status.className = 'status blue';
+
+    status.innerHTML =
+      '<span class="mark">○</span>' +
+      '<span>Kreis ist dran!</span>';
+
+  }
+
+}
+
+function getWinner() {
+
+  for(const combo of wins) {
+
+    if(combo.every(i => board[i] === current)) {
+      return combo;
+    }
+
+  }
+
+  return null;
+
+}
+
+function drawWinLine(combo) {
+
+  const boardRect =
+    document.getElementById('board').getBoundingClientRect();
+
+  const first =
+    cells[combo[0]].getBoundingClientRect();
+
+  const last =
+    cells[combo[2]].getBoundingClientRect();
+
+  const x1 =
+    first.left + first.width / 2 - boardRect.left;
+
+  const y1 =
+    first.top + first.height / 2 - boardRect.top;
+
+  const x2 =
+    last.left + last.width / 2 - boardRect.left;
+
+  const y2 =
+    last.top + last.height / 2 - boardRect.top;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+
+  line.style.left = x1 + 'px';
+  line.style.top = y1 + 'px';
+
+  line.style.width = Math.hypot(dx,dy) + 'px';
+
+  line.style.transform =
+    `rotate(${Math.atan2(dy,dx)}rad)`;
+
+  if(current === 'X') {
+
+    line.style.background = '#ff39d6';
+
+    line.style.boxShadow =
+      '0 0 7px white,0 0 16px #ff39d6,0 0 30px #ff39d6';
+
+  } else {
+
+    line.style.background = '#35d8ff';
+
+    line.style.boxShadow =
+      '0 0 7px white,0 0 16px #35d8ff,0 0 30px #35d8ff';
+
+  }
+
+  line.classList.add('show');
+
+}
+
+function play(index) {
+
+  if(finished || board[index]) return;
+
+  board[index] = current;
+
+  const cell = cells[index];
+
+  cell.classList.add(current === 'X' ? 'x' : 'o');
+
+  cell.innerHTML =
+    `<span class="symbol">${current === 'X' ? '✕' : '○'}</span>`;
+
+  cell.setAttribute(
+    'aria-label',
+    `Feld ${index + 1}: ${current === 'X' ? 'Kreuz' : 'Kreis'}`
+  );
+
+  cell.disabled = true;
+
+  const combo = getWinner();
+
+  if(combo) {
+
+    finished = true;
+    winningCombo = combo;
+
+    combo.forEach(i => {
+      cells[i].classList.add('win');
+    });
+
+    drawWinLine(combo);
+
+    const winner =
+      current === 'X' ? 'Kreuz' : 'Kreis';
+
+    status.className =
+      `status ${current === 'X' ? 'pink' : 'blue'}`;
+
+    status.innerHTML =
+      `<span>${winner} hat gewonnen!</span>`;
+
+    message.textContent =
+      `🎉 ${winner} gewinnt die Runde! 🎉`;
+
+    cells.forEach(c => c.disabled = true);
+
+    reset.textContent = '↻ NOCHMAL SPIELEN';
+
+    return;
+
+  }
+
+  if(board.every(Boolean)) {
+
+    finished = true;
+
+    status.className = 'status neutral';
+    status.textContent = 'Unentschieden!';
+
+    message.textContent =
+      'Keiner hat gewonnen – noch eine Runde?';
+
+    reset.textContent = '↻ NOCHMAL SPIELEN';
+
+    return;
+
+  }
+
+  current = current === 'X' ? 'O' : 'X';
+
+  updateStatus();
+
+  message.textContent = 'Du bist dran!';
+
+}
+
+function newGame() {
+
+  board = Array(9).fill('');
+  current = 'X';
+  finished = false;
+  winningCombo = null;
+
+  line.classList.remove('show');
+
+  cells.forEach((cell,index) => {
+
+    cell.disabled = false;
+    cell.className = 'cell';
+    cell.innerHTML = '';
+    cell.setAttribute('aria-label', `Feld ${index + 1}`);
+
+  });
+
+  updateStatus();
+
+  message.textContent =
+    'Kreuz beginnt – viel Spaß!';
+
+  reset.textContent = '↻ NEUE RUNDE';
+
+}
+
+cells.forEach(cell => {
+
+  cell.addEventListener('click', () => {
+    play(Number(cell.dataset.index));
+  });
+
+});
+
+reset.addEventListener('click', newGame);
+
+window.addEventListener('resize', () => {
+
+  if(finished && winningCombo) {
+    drawWinLine(winningCombo);
+  }
+
+});
+
+})();
+</script>
+
+</body>
+</html>

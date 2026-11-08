@@ -1,0 +1,445 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>NEON – Vier gewinnt</title>
+
+<style>
+:root {
+  --bg:#080710;
+  --panel:#151322;
+  --red:#ff405c;
+  --blue:#35d8ff;
+  --purple:#a855f7;
+  --white:#f5f0ff;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  min-height:100vh;
+  min-height:100svh;
+  background:var(--bg);
+  color:var(--white);
+  font-family:Arial,sans-serif;
+  display:flex;
+  justify-content:center;
+  padding:15px 10px 25px;
+}
+
+.game {
+  width:100%;
+  max-width:460px;
+  text-align:center;
+}
+
+h1 {
+  margin:5px 0 15px;
+  font-size:clamp(25px,7vw,36px);
+  color:#e5a2ff;
+  text-shadow:0 0 8px #a855f7,0 0 20px #a855f7;
+  letter-spacing:3px;
+}
+
+.turn {
+  background:var(--panel);
+  border:1px solid #69418b;
+  border-radius:12px;
+  padding:13px 8px;
+  margin-bottom:12px;
+  font-size:21px;
+  font-weight:bold;
+  text-shadow:0 0 10px currentColor;
+}
+
+.scores {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:15px;
+}
+
+.score {
+  flex:1;
+  padding:10px 5px;
+  background:var(--panel);
+  border:1px solid #393047;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:bold;
+}
+
+.score.red { color:var(--red); }
+.score.blue { color:var(--blue); }
+
+.score span {
+  display:block;
+  font-size:24px;
+  margin-top:4px;
+}
+
+.board-frame {
+  padding:9px;
+  border-radius:17px;
+  background:linear-gradient(145deg,#43215d,#171326,#33204d);
+  border:2px solid #a855f7;
+  box-shadow:0 0 12px #a855f7,0 0 30px #7c3aad66;
+}
+
+.board {
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:clamp(4px,1.5vw,8px);
+  background:#080710;
+  padding:5px;
+  border-radius:10px;
+}
+
+.cell {
+  position:relative;
+  width:100%;
+  aspect-ratio:1;
+  min-width:0;
+  padding:0;
+  border:2px solid #514366;
+  border-radius:50%;
+  background:#100e1b;
+  box-shadow:inset 0 3px 9px #000,0 0 3px #a855f733;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+.cell::before {
+  content:"";
+  position:absolute;
+  inset:7%;
+  border-radius:50%;
+  background:transparent;
+  transition:background .15s,box-shadow .15s;
+}
+
+.cell.red::before {
+  background:var(--red);
+  box-shadow:0 0 7px var(--red),0 0 15px var(--red),inset 0 2px 5px #ffffff66;
+  animation:drop .25s ease-out;
+}
+
+.cell.blue::before {
+  background:var(--blue);
+  box-shadow:0 0 7px var(--blue),0 0 15px var(--blue),inset 0 2px 5px #ffffff66;
+  animation:drop .25s ease-out;
+}
+
+.cell.win {
+  border-color:#fff;
+  box-shadow:0 0 10px white,0 0 18px currentColor;
+  animation:winning .65s infinite alternate;
+}
+
+.cell.red.win::before {
+  box-shadow:0 0 12px white,0 0 25px var(--red);
+}
+
+.cell.blue.win::before {
+  box-shadow:0 0 12px white,0 0 25px var(--blue);
+}
+
+.cell:disabled {
+  cursor:default;
+}
+
+@keyframes drop {
+  from { transform:translateY(-35px); opacity:.3; }
+  to { transform:translateY(0); opacity:1; }
+}
+
+@keyframes winning {
+  from { filter:brightness(1); }
+  to { filter:brightness(1.8); }
+}
+
+.message {
+  min-height:30px;
+  font-size:16px;
+  margin:14px 0;
+  color:#d8c6ed;
+  line-height:1.4;
+}
+
+.reset {
+  width:100%;
+  max-width:300px;
+  border:1px solid #c77aff;
+  border-radius:12px;
+  background:#24132f;
+  color:#fff;
+  padding:15px 20px;
+  font-size:17px;
+  font-weight:bold;
+  box-shadow:0 0 12px #a855f755;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+
+.reset:active {
+  transform:scale(.97);
+  background:#48205e;
+}
+
+.hint {
+  color:#82758f;
+  font-size:13px;
+  margin-top:13px;
+}
+
+@media (max-height:720px) {
+  body { padding-top:5px; }
+  h1 { margin:2px 0 8px; }
+  .turn { padding:9px; margin-bottom:8px; }
+  .scores { margin-bottom:9px; }
+  .score { padding:6px 4px; }
+  .board-frame { padding:6px; }
+  .message { margin:8px 0; }
+  .reset { padding:11px; }
+}
+
+@media (max-width:350px) {
+  .board-frame { padding:5px; }
+  .board { gap:3px; padding:3px; }
+  .cell { border-width:1px; }
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+
+  <h1>VIER GEWINNT</h1>
+
+  <div class="turn" id="turn">Rot ist am Zug</div>
+
+  <div class="scores">
+    <div class="score red">
+      ROT
+      <span id="redWins">0</span>
+      <small>Siege</small>
+    </div>
+    <div class="score blue">
+      BLAU
+      <span id="blueWins">0</span>
+      <small>Siege</small>
+    </div>
+  </div>
+
+  <div class="board-frame">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="message" id="message">
+    Tippe auf eine Spalte. Dein Stein fällt nach unten!
+  </div>
+
+  <button class="reset" id="resetBtn" onclick="newGame()">
+    ↻ NEUES SPIEL
+  </button>
+
+  <div class="hint">
+    Vier Steine in eine Reihe – waagerecht, senkrecht oder diagonal!
+  </div>
+
+</div>
+
+<script>
+const COLS = 7;
+const ROWS = 6;
+
+let grid;
+let current;
+let gameOver = false;
+let redWins = 0;
+let blueWins = 0;
+
+const board = document.getElementById("board");
+
+function newGame() {
+  grid = Array.from(
+    {length:ROWS},
+    () => Array(COLS).fill(null)
+  );
+
+  current = "red";
+  gameOver = false;
+
+  document.getElementById("message").textContent =
+    "Tippe auf eine Spalte. Dein Stein fällt nach unten!";
+
+  document.getElementById("resetBtn").textContent =
+    "↻ NEUES SPIEL";
+
+  drawBoard();
+  updateDisplay();
+}
+
+function drawBoard() {
+  board.innerHTML = "";
+
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const cell = document.createElement("button");
+
+      cell.className = "cell";
+      cell.setAttribute("aria-label",
+        "Spalte "+(c+1)+", Reihe "+(r+1)
+      );
+
+      if (grid[r][c]) {
+        cell.classList.add(grid[r][c]);
+      }
+
+      cell.onclick = () => playColumn(c);
+
+      board.appendChild(cell);
+    }
+  }
+}
+
+function playColumn(c) {
+  if (gameOver) return;
+
+  // Freie Position von unten suchen
+  let row = -1;
+
+  for (let r=ROWS-1; r>=0; r--) {
+    if (grid[r][c] === null) {
+      row = r;
+      break;
+    }
+  }
+
+  if (row === -1) {
+    document.getElementById("message").textContent =
+      "Diese Spalte ist voll! Nimm eine andere.";
+    return;
+  }
+
+  grid[row][c] = current;
+
+  drawBoard();
+
+  const winningCells = checkWin(row,c);
+
+  if (winningCells.length === 4) {
+    gameOver = true;
+
+    winningCells.forEach(([r,col]) => {
+      board.children[r*COLS+col].classList.add("win");
+    });
+
+    if (current === "red") {
+      redWins++;
+    } else {
+      blueWins++;
+    }
+
+    document.getElementById("message").textContent =
+      current === "red"
+        ? "🎉 Rot hat gewonnen!"
+        : "🎉 Blau hat gewonnen!";
+
+    document.getElementById("resetBtn").textContent =
+      "↻ NOCHMAL SPIELEN";
+
+    updateDisplay();
+    return;
+  }
+
+  // Prüfen, ob das Spielfeld voll ist
+  const full = grid.every(row => row.every(cell => cell !== null));
+
+  if (full) {
+    gameOver = true;
+    document.getElementById("message").textContent =
+      "Unentschieden! Das war knapp.";
+
+    document.getElementById("resetBtn").textContent =
+      "↻ NOCHMAL SPIELEN";
+
+    updateDisplay();
+    return;
+  }
+
+  // Spieler wechseln
+  current = current === "red" ? "blue" : "red";
+
+  document.getElementById("message").textContent =
+    "Weiter geht's!";
+
+  updateDisplay();
+}
+
+function checkWin(r,c) {
+  const directions = [
+    [0,1],   // waagerecht
+    [1,0],   // senkrecht
+    [1,1],   // diagonal
+    [1,-1]   // diagonal
+  ];
+
+  for (const [dr,dc] of directions) {
+    let cells = [[r,c]];
+
+    // In beide Richtungen prüfen
+    for (const sign of [-1,1]) {
+      let nr = r + dr*sign;
+      let nc = c + dc*sign;
+
+      while (
+        nr >= 0 && nr < ROWS &&
+        nc >= 0 && nc < COLS &&
+        grid[nr][nc] === current
+      ) {
+        cells.push([nr,nc]);
+        nr += dr*sign;
+        nc += dc*sign;
+      }
+    }
+
+    if (cells.length >= 4) {
+      return cells.slice(0,4);
+    }
+  }
+
+  return [];
+}
+
+function updateDisplay() {
+  const turn = document.getElementById("turn");
+
+  if (!gameOver) {
+    turn.textContent =
+      current === "red"
+        ? "Rot ist am Zug"
+        : "Blau ist am Zug";
+
+    turn.style.color =
+      current === "red"
+        ? "var(--red)"
+        : "var(--blue)";
+  } else {
+    turn.style.color = "#ffffff";
+    turn.textContent = "SPIEL BEENDET!";
+  }
+
+  document.getElementById("redWins").textContent = redWins;
+  document.getElementById("blueWins").textContent = blueWins;
+}
+
+newGame();
+</script>
+
+</body>
+</html>

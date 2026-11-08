@@ -1,0 +1,531 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>KALAHA – Neon Edition</title>
+<style>
+:root{
+  --bg:#050508;
+  --panel:#11101a;
+  --red:#ff315e;
+  --blue:#35cfff;
+  --purple:#a855f7;
+  --text:#f4edff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  padding:16px 10px 25px;
+  background:radial-gradient(ellipse at top,#171025 0%,#08070d 48%,#020204 100%);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+  text-align:center;
+}
+h1{
+  margin:8px 0 4px;
+  font-size:clamp(27px,7vw,43px);
+  letter-spacing:5px;
+  color:#fff;
+  text-shadow:0 0 8px var(--purple),0 0 22px var(--purple);
+}
+.subtitle{
+  color:#b9a9ca;
+  font-size:13px;
+  letter-spacing:2px;
+  margin-bottom:18px;
+}
+.game{
+  width:100%;
+  max-width:650px;
+  margin:auto;
+}
+.status{
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin:0 auto 14px;
+  padding:10px;
+  background:#100d19;
+  border:1px solid #653b83;
+  border-radius:12px;
+  box-shadow:0 0 14px #8b35b755;
+  font-weight:bold;
+  font-size:18px;
+}
+.status.red{color:var(--red);text-shadow:0 0 10px var(--red)}
+.status.blue{color:var(--blue);text-shadow:0 0 10px var(--blue)}
+.board{
+  display:grid;
+  grid-template-columns:minmax(43px,.8fr) repeat(6,minmax(0,1fr)) minmax(43px,.8fr);
+  grid-template-rows:1fr 1fr;
+  gap:7px;
+  padding:10px;
+  background:linear-gradient(145deg,#21152d,#0b0a12);
+  border:2px solid #9b54c8;
+  border-radius:22px;
+  box-shadow:0 0 12px #b44cff66,inset 0 0 22px #000;
+}
+.store{
+  grid-row:1 / 3;
+  min-width:0;
+  border-radius:30px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px 2px;
+  background:#08070d;
+  border:2px solid;
+  position:relative;
+  overflow:hidden;
+}
+.store.blue{grid-column:1;border-color:var(--blue);box-shadow:inset 0 0 18px #35cfff33,0 0 10px #35cfff55}
+.store.red{grid-column:8;border-color:var(--red);box-shadow:inset 0 0 18px #ff315e33,0 0 10px #ff315e55}
+.store-name{
+  font-size:clamp(9px,2.5vw,12px);
+  font-weight:bold;
+  letter-spacing:1px;
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+}
+.store.blue .store-name{color:var(--blue)}
+.store.red .store-name{color:var(--red)}
+.store-count{
+  font-size:clamp(23px,6vw,35px);
+  font-weight:bold;
+  line-height:1;
+}
+.store.blue .store-count{color:var(--blue);text-shadow:0 0 12px var(--blue)}
+.store.red .store-count{color:var(--red);text-shadow:0 0 12px var(--red)}
+.pit{
+  min-width:0;
+  aspect-ratio:1/1;
+  border-radius:50%;
+  border:2px solid #76558d;
+  background:radial-gradient(circle at 35% 30%,#292033,#09080e 70%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  position:relative;
+  padding:2px;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .15s,box-shadow .15s;
+}
+.pit.red{border-color:#a92c50;box-shadow:inset 0 0 10px #ff315e22}
+.pit.blue{border-color:#267e9c;box-shadow:inset 0 0 10px #35cfff22}
+.pit.red .count{color:var(--red);text-shadow:0 0 8px var(--red)}
+.pit.blue .count{color:var(--blue);text-shadow:0 0 8px var(--blue)}
+.pit.active{
+  box-shadow:0 0 12px currentColor,inset 0 0 15px #ffffff22;
+  transform:scale(1.04);
+}
+.pit:disabled{cursor:default;opacity:.8}
+.count{
+  font-size:clamp(17px,4.5vw,25px);
+  font-weight:bold;
+  line-height:1;
+  z-index:1;
+}
+.beads{
+  min-height:12px;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-content:center;
+  gap:2px;
+  max-width:80%;
+  z-index:1;
+}
+.bead{
+  width:5px;height:5px;
+  border-radius:50%;
+  display:block;
+}
+.red .bead{background:var(--red);box-shadow:0 0 5px var(--red)}
+.blue .bead{background:var(--blue);box-shadow:0 0 5px var(--blue)}
+.store .beads{max-width:90%;gap:3px}
+.store .bead{width:6px;height:6px}
+.player-label{
+  margin:13px 0 8px;
+  font-weight:bold;
+  font-size:13px;
+  letter-spacing:2px;
+}
+.player-label.blue{color:var(--blue);text-shadow:0 0 8px var(--blue)}
+.player-label.red{color:var(--red);text-shadow:0 0 8px var(--red)}
+.controls{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:18px 0 12px;
+}
+button.action{
+  border:1px solid var(--purple);
+  background:#171020;
+  color:#fff;
+  border-radius:10px;
+  padding:12px 18px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 9px #9b54c855;
+}
+button.action:active{transform:scale(.97)}
+button.action:hover{background:#291638}
+.message{
+  min-height:40px;
+  color:#d5c6e6;
+  font-size:14px;
+  line-height:1.5;
+  margin:12px auto;
+  max-width:520px;
+}
+.rules{
+  display:none;
+  text-align:left;
+  padding:16px;
+  margin:15px auto;
+  background:#100d19;
+  border:1px solid #8e4db5;
+  border-radius:13px;
+  line-height:1.55;
+  font-size:14px;
+  box-shadow:0 0 12px #8e4db544;
+}
+.rules.show{display:block}
+.rules h2{color:#d99aff;margin:0 0 10px;font-size:20px}
+.rules li{margin-bottom:7px}
+.footer{
+  margin-top:25px;
+  color:#766783;
+  font-size:11px;
+  letter-spacing:1px;
+}
+@media(max-width:390px){
+  body{padding-left:5px;padding-right:5px}
+  .board{gap:4px;padding:6px;border-radius:16px}
+  .pit{border-width:1px}
+  .store{border-width:1px}
+  .store-name{font-size:8px}
+  .count{font-size:17px}
+  .bead{width:4px;height:4px}
+}
+</style>
+</head>
+<body>
+
+<h1>KALAHA</h1>
+<div class="subtitle">MANCALA · NEON EDITION</div>
+
+<div class="game">
+
+  <div id="status" class="status red">🔴 Rot ist am Zug</div>
+
+  <div class="player-label blue">SPIELER BLAU</div>
+
+  <div class="board">
+    <div class="store blue">
+      <div class="store-name">BLAU</div>
+      <div id="storeBlue" class="store-count">0</div>
+      <div id="beadsBlue" class="beads"></div>
+    </div>
+
+    <div id="pit12" class="pit blue"></div>
+    <div id="pit11" class="pit blue"></div>
+    <div id="pit10" class="pit blue"></div>
+    <div id="pit9" class="pit blue"></div>
+    <div id="pit8" class="pit blue"></div>
+    <div id="pit7" class="pit blue"></div>
+
+    <div class="store red">
+      <div class="store-name">ROT</div>
+      <div id="storeRed" class="store-count">0</div>
+      <div id="beadsRed" class="beads"></div>
+    </div>
+
+    <div id="pit0" class="pit red"></div>
+    <div id="pit1" class="pit red"></div>
+    <div id="pit2" class="pit red"></div>
+    <div id="pit3" class="pit red"></div>
+    <div id="pit4" class="pit red"></div>
+    <div id="pit5" class="pit red"></div>
+  </div>
+
+  <div class="player-label red">SPIELER ROT</div>
+
+  <div id="message" class="message">
+    Wähle eine deiner Mulden mit Steinen aus.
+  </div>
+
+  <div class="controls">
+    <button class="action" onclick="newGame()">↻ Neues Spiel</button>
+    <button class="action" onclick="toggleRules()">📖 Spielregeln</button>
+  </div>
+
+  <div id="rules" class="rules">
+    <h2>So funktioniert Kalaha</h2>
+    <ol>
+      <li>Jeder Spieler hat sechs eigene Mulden mit jeweils vier Steinen.</li>
+      <li>Du wählst eine deiner Mulden aus. Alle Steine daraus werden aufgenommen.</li>
+      <li>Du verteilst die Steine einzeln gegen den Uhrzeigersinn auf die folgenden Mulden.</li>
+      <li>Dein eigenes großes Sammelbecken zählt mit. Das Sammelbecken des Gegners wird übersprungen.</li>
+      <li><b>Bonuszug:</b> Landet dein letzter Stein in deinem eigenen Sammelbecken, bist du gleich noch einmal dran.</li>
+      <li><b>Steine fangen:</b> Landet dein letzter Stein in einer vorher leeren Mulde auf deiner Seite und liegen gegenüber Steine, wandern beide Mengen in dein Sammelbecken.</li>
+      <li>Das Spiel endet, sobald eine Seite keine Steine mehr in ihren sechs Mulden hat.</li>
+      <li>Die restlichen Steine auf der anderen Seite kommen in deren Sammelbecken. Wer dort mehr Steine hat, gewinnt.</li>
+    </ol>
+    <p><b>Tipp:</b> Versuche, deinen letzten Stein möglichst oft in deinem Sammelbecken landen zu lassen. So bekommst du zusätzliche Züge!</p>
+  </div>
+
+  <div class="footer">KALAHA · TRASHYGECKO · NEON ARCADE</div>
+</div>
+
+<script>
+const RED=0;
+const BLUE=1;
+
+let pits=[];
+let current=RED;
+let busy=false;
+let finished=false;
+
+function newGame(){
+  pits=Array(14).fill(0);
+
+  // Rot: Mulden 0 bis 5, Sammelbecken 6
+  // Blau: Mulden 7 bis 12, Sammelbecken 13
+  for(let i=0;i<6;i++){
+    pits[i]=4;
+    pits[i+7]=4;
+  }
+
+  current=RED;
+  busy=false;
+  finished=false;
+
+  document.getElementById('message').textContent=
+    'Ein neues Spiel beginnt! Rot macht den ersten Zug.';
+
+  render();
+}
+
+function render(){
+  for(let i=0;i<14;i++){
+    if(i===6 || i===13) continue;
+
+    const el=document.getElementById('pit'+i);
+    const owner=i<=5?RED:BLUE;
+    const color=owner===RED?'red':'blue';
+    const count=pits[i];
+
+    el.className='pit '+color+
+      (owner===current && !finished?' active':'');
+
+    el.disabled=busy || finished || owner!==current || count===0;
+
+    el.innerHTML=
+      '<div class="count">'+count+'</div>'+
+      '<div class="beads">'+beadHTML(count,color)+'</div>';
+
+    el.onclick=()=>play(i);
+  }
+
+  document.getElementById('storeRed').textContent=pits[6];
+  document.getElementById('storeBlue').textContent=pits[13];
+
+  document.getElementById('beadsRed').innerHTML=beadHTML(pits[6],'red');
+  document.getElementById('beadsBlue').innerHTML=beadHTML(pits[13],'blue');
+
+  const status=document.getElementById('status');
+
+  if(finished){
+    status.className='status';
+    status.textContent='🏆 Spiel beendet!';
+  }else if(current===RED){
+    status.className='status red';
+    status.textContent='🔴 Rot ist am Zug';
+  }else{
+    status.className='status blue';
+    status.textContent='🔵 Blau ist am Zug';
+  }
+}
+
+function beadHTML(count,color){
+  // Bei großen Mengen begrenzen wir die sichtbaren Punkte.
+  // Die genaue Anzahl bleibt immer als Zahl sichtbar.
+  const shown=Math.min(count,18);
+  let html='';
+
+  for(let i=0;i<shown;i++){
+    html+='<span class="bead"></span>';
+  }
+
+  if(count>18){
+    html+='<span style="font-size:8px;color:white">…</span>';
+  }
+
+  return html;
+}
+
+function ownStore(player){
+  return player===RED?6:13;
+}
+
+function opponentStore(player){
+  return player===RED?13:6;
+}
+
+function isOwnPit(index,player){
+  if(player===RED) return index>=0 && index<=5;
+  return index>=7 && index<=12;
+}
+
+function oppositePit(index){
+  return 12-index;
+}
+
+function sleep(ms){
+  return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+async function play(index){
+  if(busy || finished) return;
+  if(!isOwnPit(index,current) || pits[index]===0) return;
+
+  busy=true;
+
+  const player=current;
+  let stones=pits[index];
+  pits[index]=0;
+
+  render();
+
+  document.getElementById('message').textContent=
+    (player===RED?'Rot':'Blau')+' verteilt die Steine …';
+
+  await sleep(180);
+
+  let position=index;
+
+  while(stones>0){
+    position=(position+1)%14;
+
+    // Das gegnerische Sammelbecken wird übersprungen.
+    if(position===opponentStore(player)) continue;
+
+    pits[position]++;
+    stones--;
+
+    render();
+    await sleep(230);
+  }
+
+  // Prüfen, ob der letzte Stein in einer eigenen Mulde gelandet ist.
+  let captured=false;
+
+  if(isOwnPit(position,player) && pits[position]===1){
+    const opposite=oppositePit(position);
+
+    if(pits[opposite]>0){
+      const capturedStones=pits[opposite]+pits[position];
+
+      pits[ownStore(player)]+=capturedStones;
+      pits[position]=0;
+      pits[opposite]=0;
+
+      captured=true;
+      render();
+
+      document.getElementById('message').textContent=
+        '🎯 '+(player===RED?'Rot':'Blau')+
+        ' fängt '+capturedStones+' Steine!';
+      await sleep(700);
+    }
+  }
+
+  // Prüfen, ob eine Seite leer ist.
+  if(checkGameEnd()){
+    finishGame();
+    busy=false;
+    render();
+    return;
+  }
+
+  // Letzter Stein im eigenen Sammelbecken = Bonuszug.
+  if(position===ownStore(player)){
+    current=player;
+    document.getElementById('message').textContent=
+      '⭐ Bonuszug! '+(player===RED?'Rot':'Blau')+
+      ' darf noch einmal spielen.';
+  }else{
+    current=player===RED?BLUE:RED;
+
+    if(!captured){
+      document.getElementById('message').textContent=
+        (current===RED?'Rot':'Blau')+' ist jetzt dran.';
+    }else{
+      document.getElementById('message').textContent=
+        'Die Steine wurden gefangen. '+
+        (current===RED?'Rot':'Blau')+' ist jetzt dran.';
+    }
+  }
+
+  busy=false;
+  render();
+}
+
+function checkGameEnd(){
+  const redEmpty=pits.slice(0,6).every(n=>n===0);
+  const blueEmpty=pits.slice(7,13).every(n=>n===0);
+
+  return redEmpty || blueEmpty;
+}
+
+function finishGame(){
+  // Alle übrigen Steine werden eingesammelt.
+  for(let i=0;i<6;i++){
+    pits[6]+=pits[i];
+    pits[i]=0;
+
+    pits[13]+=pits[i+7];
+    pits[i+7]=0;
+  }
+
+  finished=true;
+
+  const red=pits[6];
+  const blue=pits[13];
+
+  let result;
+
+  if(red>blue){
+    result='🔴 ROT GEWINNT!';
+  }else if(blue>red){
+    result='🔵 BLAU GEWINNT!';
+  }else{
+    result='🤝 UNENTSCHIEDEN!';
+  }
+
+  document.getElementById('message').innerHTML=
+    '<b>'+result+'</b><br>'+
+    'Rot: '+red+' Steine · Blau: '+blue+' Steine';
+}
+
+function toggleRules(){
+  document.getElementById('rules').classList.toggle('show');
+}
+
+newGame();
+</script>
+</body>
+</html>

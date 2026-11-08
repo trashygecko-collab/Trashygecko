@@ -1,0 +1,510 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Neon Käsekästchen</title>
+
+<style>
+:root {
+  --bg:#080710;
+  --panel:#151322;
+  --red:#ff405c;
+  --blue:#35d8ff;
+  --purple:#a855f7;
+  --white:#f5f0ff;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--white);
+  font-family:Arial,sans-serif;
+  display:flex;
+  justify-content:center;
+  padding:15px 10px 25px;
+}
+
+.game {
+  width:100%;
+  max-width:460px;
+  text-align:center;
+}
+
+h1 {
+  margin:5px 0 15px;
+  font-size:clamp(24px,7vw,34px);
+  color:#e5a2ff;
+  text-shadow:0 0 8px #a855f7,0 0 20px #a855f7;
+  letter-spacing:2px;
+}
+
+.turn {
+  background:var(--panel);
+  border:1px solid #69418b;
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:12px;
+  font-size:21px;
+  font-weight:bold;
+}
+
+.scores {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:15px;
+}
+
+.score {
+  flex:1;
+  padding:12px 5px;
+  background:var(--panel);
+  border:1px solid #393047;
+  border-radius:10px;
+  font-size:17px;
+  font-weight:bold;
+}
+
+.score.red { color:var(--red); }
+.score.blue { color:var(--blue); }
+
+#board {
+  position:relative;
+  width:min(100%, calc(68svh * 5 / 6));
+  aspect-ratio:5 / 6;
+  margin:0 auto 18px;
+  background:#100e1b;
+  border:1px solid #403050;
+  border-radius:5px;
+  box-shadow:0 0 18px #7c3aad55;
+  overflow:visible;
+  touch-action:none;
+}
+
+/* Die Kästchen liegen auf einer eigenen Ebene */
+.boxes-layer {
+  position:absolute;
+  inset:0;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  grid-template-rows:repeat(6,1fr);
+  z-index:1;
+}
+
+.box {
+  border:1px solid #292238;
+  background:#12101e;
+  transition:background .2s, box-shadow .2s;
+}
+
+.box.red {
+  background:#ff405c55;
+  box-shadow:inset 0 0 15px #ff405c88;
+}
+
+.box.blue {
+  background:#35d8ff55;
+  box-shadow:inset 0 0 15px #35d8ff88;
+}
+
+/* Linien und Punkte liegen darüber */
+.edges-layer {
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+}
+
+.edge {
+  position:absolute;
+  padding:0;
+  margin:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  touch-action:none;
+  pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.edge::after {
+  content:"";
+  position:absolute;
+  background:#655879;
+  border-radius:5px;
+  transition:background .15s,box-shadow .15s;
+}
+
+.edge.horizontal {
+  height:32px;
+  transform:translateY(-50%);
+}
+
+.edge.horizontal::after {
+  height:5px;
+  left:0;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+}
+
+.edge.vertical {
+  width:32px;
+  transform:translateX(-50%);
+}
+
+.edge.vertical::after {
+  width:5px;
+  top:0;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+}
+
+.edge.red::after {
+  background:var(--red);
+  box-shadow:0 0 7px var(--red),0 0 13px var(--red);
+}
+
+.edge.blue::after {
+  background:var(--blue);
+  box-shadow:0 0 7px var(--blue),0 0 13px var(--blue);
+}
+
+.edge:disabled {
+  cursor:default;
+}
+
+/* Die Punkte sitzen ganz oben */
+.dot {
+  position:absolute;
+  width:16px;
+  height:16px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:#d9c9ed;
+  box-shadow:0 0 6px #c69aff;
+  z-index:4;
+  pointer-events:none;
+}
+
+.message {
+  min-height:28px;
+  font-size:16px;
+  margin:10px 0 15px;
+  color:#d8c6ed;
+}
+
+.reset {
+  border:1px solid #c77aff;
+  border-radius:12px;
+  background:#24132f;
+  color:#fff;
+  padding:14px 25px;
+  font-size:17px;
+  font-weight:bold;
+  box-shadow:0 0 12px #a855f755;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+
+.reset:active {
+  transform:scale(.97);
+  background:#48205e;
+}
+
+@media (max-height:650px) {
+  body { padding-top:5px; }
+  h1 { margin:2px 0 8px; }
+  .turn { padding:8px; margin-bottom:8px; }
+  .scores { margin-bottom:8px; }
+  .score { padding:8px 4px; }
+  .message { margin:5px 0 8px; }
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+
+  <h1>KÄSEKÄSTCHEN</h1>
+
+  <div class="turn" id="turn">Rot ist am Zug</div>
+
+  <div class="scores">
+    <div class="score red">ROT<br><span id="redScore">0</span></div>
+    <div class="score blue">BLAU<br><span id="blueScore">0</span></div>
+  </div>
+
+  <div id="board">
+    <div class="boxes-layer" id="boxesLayer"></div>
+    <div class="edges-layer" id="edgesLayer"></div>
+  </div>
+
+  <div class="message" id="message">
+    Tippe auf eine freie Linie.
+  </div>
+
+  <button class="reset" id="resetBtn" onclick="newGame()">
+    ↻ NEUES SPIEL
+  </button>
+
+</div>
+
+<script>
+const COLS = 5;
+const ROWS = 6;
+
+let horizontal;
+let vertical;
+let boxes;
+let current;
+let redScore;
+let blueScore;
+let moves;
+let gameOver;
+
+const board = document.getElementById("board");
+const boxesLayer = document.getElementById("boxesLayer");
+const edgesLayer = document.getElementById("edgesLayer");
+
+function newGame() {
+  horizontal = Array.from(
+    {length:ROWS+1},
+    () => Array(COLS).fill(null)
+  );
+
+  vertical = Array.from(
+    {length:ROWS},
+    () => Array(COLS+1).fill(null)
+  );
+
+  boxes = Array.from(
+    {length:ROWS},
+    () => Array(COLS).fill(null)
+  );
+
+  current = "red";
+  redScore = 0;
+  blueScore = 0;
+  moves = 0;
+  gameOver = false;
+
+  document.getElementById("message").textContent =
+    "Tippe auf eine freie Linie.";
+
+  document.getElementById("resetBtn").textContent =
+    "↻ NEUES SPIEL";
+
+  updateDisplay();
+  drawBoard();
+}
+
+function drawBoard() {
+  boxesLayer.innerHTML = "";
+  edgesLayer.innerHTML = "";
+
+  // Echte Kästchen als eigene Fläche
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const box = document.createElement("div");
+      box.className = "box";
+
+      box.dataset.row = r;
+      box.dataset.col = c;
+
+      boxesLayer.appendChild(box);
+    }
+  }
+
+  // Waagerechte Linien
+  for (let r=0; r<=ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const btn = document.createElement("button");
+      btn.className = "edge horizontal";
+
+      btn.style.left = (c/COLS*100)+"%";
+      btn.style.top = (r/ROWS*100)+"%";
+      btn.style.width = (100/COLS)+"%";
+
+      btn.dataset.type = "h";
+      btn.dataset.row = r;
+      btn.dataset.col = c;
+
+      btn.onclick = () => chooseEdge("h",r,c);
+
+      edgesLayer.appendChild(btn);
+    }
+  }
+
+  // Senkrechte Linien
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<=COLS; c++) {
+      const btn = document.createElement("button");
+      btn.className = "edge vertical";
+
+      btn.style.left = (c/COLS*100)+"%";
+      btn.style.top = (r/ROWS*100)+"%";
+      btn.style.height = (100/ROWS)+"%";
+
+      btn.dataset.type = "v";
+      btn.dataset.row = r;
+      btn.dataset.col = c;
+
+      btn.onclick = () => chooseEdge("v",r,c);
+
+      edgesLayer.appendChild(btn);
+    }
+  }
+
+  // Punkte an den Kreuzungen
+  for (let r=0; r<=ROWS; r++) {
+    for (let c=0; c<=COLS; c++) {
+      const dot = document.createElement("div");
+      dot.className = "dot";
+
+      dot.style.left = (c/COLS*100)+"%";
+      dot.style.top = (r/ROWS*100)+"%";
+
+      edgesLayer.appendChild(dot);
+    }
+  }
+}
+
+function isComplete(r,c) {
+  return (
+    horizontal[r][c] !== null &&
+    horizontal[r+1][c] !== null &&
+    vertical[r][c] !== null &&
+    vertical[r][c+1] !== null
+  );
+}
+
+function chooseEdge(type,r,c) {
+  if (gameOver) return;
+
+  if (type === "h") {
+    if (horizontal[r][c] !== null) return;
+    horizontal[r][c] = current;
+  } else {
+    if (vertical[r][c] !== null) return;
+    vertical[r][c] = current;
+  }
+
+  moves++;
+
+  const btn = edgesLayer.querySelector(
+    `.edge[data-type="${type}"][data-row="${r}"][data-col="${c}"]`
+  );
+
+  btn.classList.add(current);
+  btn.disabled = true;
+
+  let completed = 0;
+
+  // Prüfen, ob durch die Linie Kästchen geschlossen wurden
+  if (type === "h") {
+    if (r > 0 && boxes[r-1][c] === null && isComplete(r-1,c)) {
+      boxes[r-1][c] = current;
+      completed++;
+    }
+
+    if (r < ROWS && boxes[r][c] === null && isComplete(r,c)) {
+      boxes[r][c] = current;
+      completed++;
+    }
+  } else {
+    if (c > 0 && boxes[r][c-1] === null && isComplete(r,c-1)) {
+      boxes[r][c-1] = current;
+      completed++;
+    }
+
+    if (c < COLS && boxes[r][c] === null && isComplete(r,c)) {
+      boxes[r][c] = current;
+      completed++;
+    }
+  }
+
+  // Geschlossene Kästchen einfärben und Punkte vergeben
+  if (completed > 0) {
+    if (current === "red") redScore += completed;
+    else blueScore += completed;
+
+    updateBoxes();
+    document.getElementById("message").textContent =
+      completed === 1
+        ? "Ein Kästchen! Du darfst nochmal."
+        : completed+" Kästchen! Du darfst nochmal.";
+  } else {
+    current = current === "red" ? "blue" : "red";
+    document.getElementById("message").textContent =
+      "Weiter geht's!";
+  }
+
+  updateDisplay();
+
+  if (redScore + blueScore === COLS*ROWS) {
+    finishGame();
+  }
+}
+
+function updateBoxes() {
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const box = boxesLayer.children[r*COLS+c];
+
+      box.classList.remove("red","blue");
+
+      if (boxes[r][c]) {
+        box.classList.add(boxes[r][c]);
+      }
+    }
+  }
+}
+
+function updateDisplay() {
+  const turn = document.getElementById("turn");
+
+  turn.textContent =
+    current === "red" ? "Rot ist am Zug" : "Blau ist am Zug";
+
+  turn.style.color =
+    current === "red" ? "var(--red)" : "var(--blue)";
+
+  document.getElementById("redScore").textContent = redScore;
+  document.getElementById("blueScore").textContent = blueScore;
+}
+
+function finishGame() {
+  gameOver = true;
+
+  const turn = document.getElementById("turn");
+  const message = document.getElementById("message");
+
+  if (redScore > blueScore) {
+    turn.textContent = "ROT HAT GEWONNEN!";
+    turn.style.color = "var(--red)";
+  } else if (blueScore > redScore) {
+    turn.textContent = "BLAU HAT GEWONNEN!";
+    turn.style.color = "var(--blue)";
+  } else {
+    turn.textContent = "UNENTSCHIEDEN!";
+    turn.style.color = "white";
+  }
+
+  message.textContent =
+    "Endstand: Rot "+redScore+" : "+blueScore+" Blau";
+
+  document.getElementById("resetBtn").textContent =
+    "↻ NOCHMAL SPIELEN";
+}
+
+newGame();
+</script>
+</body>
+</html>
