@@ -213,6 +213,64 @@ canvas {
     @media(min-width:640px){.sm\:flex-row{flex-direction:row}.sm\:text-left{text-align:left}.sm\:gap-3{gap:.75rem}.sm\:text-3xl{font-size:1.875rem;line-height:2.25rem}.sm\:text-xl{font-size:1.25rem;line-height:1.75rem}.sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.sm\:hidden{display:none}}
     @media(min-width:768px){.md\:flex-row{flex-direction:row}.md\:text-left{text-align:left}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
 
+
+    /* Touch-Steuerung: unabhängig von der Bildschirmbreite */
+    .game-area{position:relative;width:100%;max-width:800px;margin:0 auto}
+    .cabinet:fullscreen .game-area{
+      flex:1 1 0;
+      min-height:0;
+      min-width:0;
+      width:100%;
+      max-width:none;
+      display:flex;
+      flex-direction:column;
+    }
+    #touch-controls{display:none}
+    .touch-device #touch-controls{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+      width:224px;
+      margin:14px auto 0;
+      padding:8px;
+      border-radius:12px;
+      background:rgba(36,20,47,.16);
+      box-sizing:border-box;
+    }
+    .touch-device #touch-controls button{
+      min-height:48px;
+      touch-action:none;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+    }
+    .touch-device #touch-controls #btn-fire{grid-column:1 / -1}
+    @media (orientation:landscape) and (pointer:coarse), (orientation:landscape) and (hover:none){
+      .touch-device #touch-controls{
+        position:absolute;
+        z-index:5;
+        right:12px;
+        bottom:12px;
+        width:144px;
+        margin:0;
+        padding:6px;
+        gap:5px;
+        background:rgba(36,20,47,.28);
+        border:1px solid rgba(255,255,255,.35);
+        backdrop-filter:blur(2px);
+      }
+      .touch-device #touch-controls button{
+        min-height:40px;
+        padding:4px;
+        font-size:18px;
+        background:rgba(248,201,78,.72);
+        box-shadow:2px 2px 0 rgba(36,20,47,.75);
+      }
+      .touch-device #touch-controls #btn-fire{
+        min-height:32px;
+        font-size:10px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -240,7 +298,7 @@ canvas {
         <div class="hud-value text-base sm:text-xl" id="stage-display">01</div>
       </div>
       <div class="hud-box p-2 text-center">
-        <div class="hud-label">PUCK</div>
+        <div class="hud-label">SPERM</div>
         <div class="hud-value text-base sm:text-xl" id="pucks">00</div>
       </div>
       <div class="hud-box p-2 text-center">
@@ -250,19 +308,21 @@ canvas {
     </section>
 
     <!-- Game Screen (20x11 Tile Grid: 560x308 Pixel) -->
-    <div class="screen-wrapper">
-      <canvas id="game" width="672" height="336" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
-    </div>
+    <div class="game-area">
+      <div class="screen-wrapper">
+        <canvas id="game" width="672" height="336" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
+      </div>
 
-    <!-- Touch Mobile Steuer-Pad -->
-    <div class="mt-4 grid grid-cols-3 gap-2 w-56 mx-auto sm:hidden">
-      <div></div>
-      <button class="arcade-btn py-2 text-lg" data-dir="up">▲</button>
-      <div></div>
-      <button class="arcade-btn py-2 text-lg" data-dir="left">◀</button>
-      <button class="arcade-btn py-2 text-lg" data-dir="down">▼</button>
-      <button class="arcade-btn py-2 text-lg" data-dir="right">▶</button>
-      <button class="arcade-btn col-span-3 py-2 text-xs font-black mt-1" id="btn-fire">PUCK SCHIESSEN</button>
+      <!-- Touch-Steuerung: hochkant unter dem Spielfeld, quer als Overlay -->
+      <div id="touch-controls" class="grid grid-cols-3 gap-2 w-56 mx-auto">
+        <div></div>
+        <button class="arcade-btn py-2 text-lg" data-dir="up">▲</button>
+        <div></div>
+        <button class="arcade-btn py-2 text-lg" data-dir="left">◀</button>
+        <button class="arcade-btn py-2 text-lg" data-dir="down">▼</button>
+        <button class="arcade-btn py-2 text-lg" data-dir="right">▶</button>
+        <button class="arcade-btn col-span-3 py-2 text-xs font-black mt-1" id="btn-fire">SPERM SCHIESSEN</button>
+      </div>
     </div>
 
     <div id="level-picker" class="flex flex-wrap items-center justify-center gap-3 mt-4 p-3 rounded-xl border-2 border-[#24142f] bg-[#fff0bd]">
@@ -291,6 +351,11 @@ canvas {
   <script>
   (() => {
     'use strict';
+
+    // Touch-Geräte unabhängig von ihrer Auflösung erkennen.
+    if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) {
+      document.documentElement.classList.add('touch-device');
+    }
 
     // Raster-Maße exakt an das GIF/Soll-Bild anpassen:
     const W = 20, H = 11, T = 28; // Levelraster: 20 x 11 Felder
@@ -1430,6 +1495,7 @@ const LEVEL_MAPS = [
     let projectileTimer = null;
 
     let growthPerFood = 1;
+    let foodScoreMultiplier = 1;
     let foodRadius = 3.5;
     let fruitCount = 0;
     let moveDelay = 200;
@@ -1546,7 +1612,7 @@ const LEVEL_MAPS = [
         }
       }
       if (free.length) {
-        // Pucks kommen jetzt häufiger: 3 von 10 möglichen Ziehungen.
+        // Sperms kommen jetzt häufiger: 3 von 10 möglichen Ziehungen.
 const types = [
     'puck',
     'puck',
@@ -1604,6 +1670,7 @@ const types = [
       extraExpireTimer = null;
       extra = null;
       growthPerFood = 1;
+      foodScoreMultiplier = 1;
       foodRadius = 3.5;
       placePellets();
       pellets.delete(key(spawn.x, spawn.y));
@@ -1702,10 +1769,12 @@ scheduleNextExtra();
             clearTimeout(sunEffectTimer);
             foodRadius = 2.2;
             growthPerFood = 0;
+            foodScoreMultiplier = 1;
 
             sunEffectTimer = setTimeout(() => {
             foodRadius = 3.5;
             growthPerFood = 1;
+            foodScoreMultiplier = 1;
             sunEffectTimer = null;
             }, 10000);
             break;
@@ -1713,11 +1782,13 @@ scheduleNextExtra();
        case 'sonne-gross':
            clearTimeout(sunEffectTimer);
            foodRadius = 5.5;
-           growthPerFood = 3;
+           growthPerFood = 1;
+           foodScoreMultiplier = 2;
 
           sunEffectTimer = setTimeout(() => {
           foodRadius = 3.5;
           growthPerFood = 1;
+          foodScoreMultiplier = 1;
           sunEffectTimer = null;
           }, 10000);
           break;
@@ -1763,7 +1834,10 @@ scheduleNextExtra();
       next.layer = nextLayer;
 
       const nextKey = key(next.x, next.y);
-      const willGrow = pellets.has(nextKey) && growthPerFood > 0;
+      const eatingPellet = pellets.has(nextKey);
+      // Nur normales Wachstum beim Fressen; die große Sonne verändert
+      // ausschließlich die Punkte, nicht die Länge der Schlange.
+      const willGrow = eatingPellet && growthPerFood > 0;
       const tailIndex = snake.length - 1;
       const hitBody = snake.some((part, i) =>
         i > 0 &&
@@ -1781,16 +1855,13 @@ scheduleNextExtra();
       snake.unshift(next);
       const k = key(next.x, next.y);
 
-      if (pellets.has(k)) {
+      if (eatingPellet) {
         pellets.delete(k);
-        score += 10;
-        if (growthPerFood === 0) snake.pop();
-        else for (let i = 1; i < growthPerFood; i++) snake.push({ ...snake[snake.length - 1] });
+        score += 10 * foodScoreMultiplier;
         if (pellets.size === 0) { advanceLevel(); return; }
         updateHud();
-      } else {
-        snake.pop();
       }
+      if (!willGrow) snake.pop();
 
       if (extra && next.x === extra.x && next.y === extra.y && collectExtra(extra.type)) return;
 
@@ -1900,7 +1971,7 @@ if (extra && extra.x === nx && extra.y === ny) {
         moveAnimStart = 0;
         dir = { x: 1, y: 0 };
         facing = { x: 1, y: 0 };
-        if (message === 'ZEIT ABGELAUFEN') seconds = 120;
+        seconds = 120;
         state = 'playing';
         updateHud();
         draw();
