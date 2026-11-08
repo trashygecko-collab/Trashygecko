@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SIM – Neon Duel</title>
+<style>
+:root{
+  --bg:#050508;
+  --panel:#151019;
+  --red:#ff315f;
+  --blue:#36dfff;
+  --purple:#b45cff;
+  --text:#f5edff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  padding:15px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(ellipse at 15% 10%,#30102b 0%,transparent 40%),
+    radial-gradient(ellipse at 85% 90%,#082b3b 0%,transparent 45%),
+    var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+.game{
+  width:min(760px,100%);
+  padding:clamp(15px,4vw,28px);
+  border:2px solid #78418c;
+  border-radius:22px;
+  background:linear-gradient(145deg,#19121f,#0d1019);
+  box-shadow:0 0 25px #a52aff35,inset 0 0 25px #a52aff0c;
+}
+h1{
+  text-align:center;
+  font-size:clamp(34px,7vw,48px);
+  letter-spacing:7px;
+  margin:0;
+  color:white;
+  text-shadow:0 0 10px var(--purple),0 0 25px var(--purple);
+}
+.subtitle{
+  text-align:center;
+  color:#bbaacb;
+  font-size:13px;
+  letter-spacing:3px;
+  margin:5px 0 25px;
+}
+.players{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.player{
+  text-align:center;
+  padding:14px 8px;
+  border:2px solid #44334e;
+  border-radius:13px;
+  background:#0b0b12;
+  color:#aaa;
+  transition:.2s;
+}
+.player strong{
+  display:block;
+  font-size:22px;
+  letter-spacing:2px;
+}
+.player small{display:block;margin-top:4px}
+.player.red.active{
+  color:var(--red);
+  border-color:var(--red);
+  box-shadow:0 0 17px #ff315f55;
+}
+.player.blue.active{
+  color:var(--blue);
+  border-color:var(--blue);
+  box-shadow:0 0 17px #36dfff55;
+}
+.status{
+  text-align:center;
+  font-size:clamp(20px,4vw,26px);
+  font-weight:bold;
+  margin:22px 0 7px;
+  min-height:31px;
+}
+.status.red{color:var(--red);text-shadow:0 0 12px var(--red)}
+.status.blue{color:var(--blue);text-shadow:0 0 12px var(--blue)}
+.status.win{color:#ffe477;text-shadow:0 0 15px #ffcf37}
+.info{
+  text-align:center;
+  color:#bbaacb;
+  font-size:14px;
+  margin-bottom:12px;
+}
+.board{
+  width:100%;
+  max-width:580px;
+  margin:0 auto;
+  background:#090910;
+  border:1px solid #48344f;
+  border-radius:17px;
+  padding:10px;
+  box-shadow:inset 0 0 20px #000;
+}
+svg{
+  display:block;
+  width:100%;
+  height:auto;
+  overflow:visible;
+  touch-action:manipulation;
+}
+.edge{
+  stroke:#55465f;
+  stroke-width:2.5;
+  stroke-linecap:round;
+  transition:stroke .2s,filter .2s;
+}
+.edge.red{
+  stroke:var(--red);
+  stroke-width:4;
+  filter:drop-shadow(0 0 5px var(--red));
+}
+.edge.blue{
+  stroke:var(--blue);
+  stroke-width:4;
+  filter:drop-shadow(0 0 5px var(--blue));
+}
+.edge.winning{
+  stroke:#fff;
+  stroke-width:7;
+  filter:drop-shadow(0 0 9px white);
+  animation:blink .55s infinite alternate;
+}
+.hit{
+  stroke:transparent;
+  stroke-width:22;
+  stroke-linecap:round;
+  cursor:pointer;
+  pointer-events:stroke;
+}
+.hit:focus{outline:none}
+.node{
+  fill:#21152b;
+  stroke:#c77bff;
+  stroke-width:3;
+  filter:drop-shadow(0 0 6px #b45cff);
+}
+.node-label{
+  fill:white;
+  font-size:13px;
+  font-weight:bold;
+  text-anchor:middle;
+  dominant-baseline:middle;
+  pointer-events:none;
+}
+@keyframes blink{
+  from{opacity:.35}
+  to{opacity:1}
+}
+.legend{
+  display:flex;
+  justify-content:center;
+  gap:25px;
+  margin:17px 0 5px;
+  color:#c9bdd3;
+  font-size:13px;
+}
+.legend span{display:flex;align-items:center;gap:7px}
+.dot{
+  width:11px;height:11px;border-radius:50%;
+}
+.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot.blue{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.counter{
+  text-align:center;
+  color:#c9bdd3;
+  margin-top:18px;
+  font-size:15px;
+}
+.counter strong{
+  color:#ffe477;
+  font-size:22px;
+}
+.bottom{
+  display:flex;
+  justify-content:center;
+  margin-top:22px;
+}
+.reset{
+  padding:14px 28px;
+  border:2px solid var(--purple);
+  border-radius:12px;
+  background:#241331;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 13px #a52aff44;
+}
+.reset:active{transform:scale(.96)}
+.rule{
+  text-align:center;
+  color:#887d94;
+  font-size:12px;
+  line-height:1.6;
+  margin-top:17px;
+}
+@media(max-width:430px){
+  body{padding:7px}
+  .game{padding:14px 9px;border-radius:16px}
+  .board{padding:5px}
+  .subtitle{margin-bottom:19px}
+}
+</style>
+</head>
+<body>
+
+<main class="game">
+  <h1>SIM</h1>
+  <div class="subtitle">NEON DUEL · 2 SPIELER</div>
+
+  <section class="players">
+    <div class="player red active" id="redPlayer">
+      <strong>ROT</strong>
+      <small>Spieler 1</small>
+    </div>
+    <div class="player blue" id="bluePlayer">
+      <strong>BLAU</strong>
+      <small>Spieler 2</small>
+    </div>
+  </section>
+
+  <div class="status red" id="status">ROT IST AM ZUG</div>
+  <div class="info" id="info">Wähle eine freie Verbindungslinie!</div>
+
+  <div class="board">
+    <svg id="board" viewBox="0 0 500 440" aria-label="Sim Spielfeld"></svg>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot red"></i> Rot</span>
+    <span><i class="dot blue"></i> Blau</span>
+  </div>
+
+  <div class="counter">
+    Belegte Linien: <strong id="counter">0 / 15</strong>
+  </div>
+
+  <div class="bottom">
+    <button class="reset" id="restart">↻ NEUES SPIEL</button>
+  </div>
+
+  <div class="rule">
+    Abwechselnd eine Linie auswählen.<br>
+    Wer ein Dreieck in seiner Farbe vervollständigt, verliert!
+  </div>
+</main>
+
+<script>
+const svg = document.getElementById("board");
+
+const points = [
+  [250,45],
+  [425,145],
+  [425,345],
+  [250,405],
+  [75,345],
+  [75,145]
+];
+
+const edges = [];
+let current = "red";
+let gameOver = false;
+let moveCount = 0;
+let winningEdges = [];
+
+for(let a=0;a<6;a++){
+  for(let b=a+1;b<6;b++){
+    edges.push({
+      a,b,
+      color:null
+    });
+  }
+}
+
+function makeSvg(tag,attrs){
+  const el = document.createElementNS(
+    "http://www.w3.org/2000/svg",tag
+  );
+  for(const key in attrs){
+    el.setAttribute(key,attrs[key]);
+  }
+  return el;
+}
+
+function drawBoard(){
+  svg.innerHTML="";
+
+  // Verbindungslinien
+  edges.forEach((edge,index)=>{
+    const p1=points[edge.a];
+    const p2=points[edge.b];
+
+    const line=makeSvg("line",{
+      x1:p1[0],y1:p1[1],
+      x2:p2[0],y2:p2[1],
+      class:"edge"+
+        (edge.color ? " "+edge.color : "")+
+        (winningEdges.includes(index) ? " winning" : "")
+    });
+
+    svg.appendChild(line);
+
+    // Unsichtbare, größere Trefferfläche
+    const hit=makeSvg("line",{
+      x1:p1[0],y1:p1[1],
+      x2:p2[0],y2:p2[1],
+      class:"hit"
+    });
+
+    hit.addEventListener("click",()=>selectEdge(index));
+    svg.appendChild(hit);
+  });
+
+  // Punkte
+  points.forEach((p,i)=>{
+    const circle=makeSvg("circle",{
+      cx:p[0],cy:p[1],r:12,class:"node"
+    });
+    svg.appendChild(circle);
+
+    const label=makeSvg("text",{
+      x:p[0],y:p[1],class:"node-label"
+    });
+    label.textContent=i+1;
+    svg.appendChild(label);
+  });
+}
+
+function findTriangle(color){
+  for(let a=0;a<6;a++){
+    for(let b=a+1;b<6;b++){
+      for(let c=b+1;c<6;c++){
+        const ab=findEdge(a,b);
+        const ac=findEdge(a,c);
+        const bc=findEdge(b,c);
+
+        if(
+          edges[ab].color===color &&
+          edges[ac].color===color &&
+          edges[bc].color===color
+        ){
+          return [ab,ac,bc];
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findEdge(a,b){
+  return edges.findIndex(e=>
+    e.a===Math.min(a,b) &&
+    e.b===Math.max(a,b)
+  );
+}
+
+function selectEdge(index){
+  if(gameOver || edges[index].color) return;
+
+  edges[index].color=current;
+  moveCount++;
+
+  const triangle=findTriangle(current);
+
+  if(triangle){
+    winningEdges=triangle;
+    gameOver=true;
+
+    const winner=current==="red" ? "blue" : "red";
+
+    drawBoard();
+    updateCounter();
+    showWinner(current,winner);
+    return;
+  }
+
+  current=current==="red" ? "blue" : "red";
+
+  drawBoard();
+  updateCounter();
+  updateDisplay();
+}
+
+function updateCounter(){
+  document.getElementById("counter").textContent=
+    moveCount+" / 15";
+}
+
+function updateDisplay(){
+  const red=document.getElementById("redPlayer");
+  const blue=document.getElementById("bluePlayer");
+  const status=document.getElementById("status");
+
+  red.classList.toggle("active",current==="red");
+  blue.classList.toggle("active",current==="blue");
+
+  status.className="status "+current;
+  status.textContent=
+    current==="red" ? "ROT IST AM ZUG" : "BLAU IST AM ZUG";
+
+  document.getElementById("info").textContent=
+    "Wähle eine freie Verbindungslinie!";
+}
+
+function showWinner(loser,winner){
+  const status=document.getElementById("status");
+
+  status.className="status win";
+  status.textContent=
+    (winner==="red" ? "ROT" : "BLAU")+" GEWINNT! 🎉";
+
+  document.getElementById("redPlayer").classList.remove("active");
+  document.getElementById("bluePlayer").classList.remove("active");
+
+  document.getElementById("info").textContent=
+    (loser==="red" ? "Rot" : "Blau")+
+    " hat ein eigenes Dreieck gebildet und verloren!";
+}
+
+document.getElementById("restart").addEventListener("click",()=>{
+  edges.forEach(e=>e.color=null);
+  current="red";
+  gameOver=false;
+  moveCount=0;
+  winningEdges=[];
+
+  drawBoard();
+  updateCounter();
+  updateDisplay();
+});
+
+drawBoard();
+updateCounter();
+updateDisplay();
+</script>
+</body>
+</html>
