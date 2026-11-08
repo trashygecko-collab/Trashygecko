@@ -1,0 +1,416 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>21 Streichhölzer – Neon Duel</title>
+<style>
+:root{
+  --bg:#050508;
+  --panel:#151019;
+  --pink:#ff315f;
+  --blue:#36dfff;
+  --purple:#b45cff;
+  --gold:#ffd66b;
+  --text:#f5edff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  padding:18px;
+  background:
+    radial-gradient(ellipse at 15% 10%,#30102b 0%,transparent 40%),
+    radial-gradient(ellipse at 85% 90%,#082b3b 0%,transparent 45%),
+    var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.game{
+  width:min(850px,100%);
+  background:linear-gradient(145deg,#19121f,#0d1019);
+  border:2px solid #78418c;
+  border-radius:22px;
+  padding:clamp(16px,4vw,30px);
+  box-shadow:0 0 25px #a52aff35,inset 0 0 25px #a52aff0c;
+}
+h1{
+  text-align:center;
+  font-size:clamp(27px,6vw,43px);
+  margin:0 0 8px;
+  color:#fff;
+  letter-spacing:3px;
+  text-shadow:0 0 8px var(--purple),0 0 22px var(--purple);
+}
+.subtitle{
+  text-align:center;
+  color:#bbaacb;
+  font-size:14px;
+  margin-bottom:25px;
+}
+.players{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:22px;
+}
+.player{
+  text-align:center;
+  padding:15px 8px;
+  border:2px solid #44334e;
+  border-radius:14px;
+  background:#0b0b12;
+  color:#aaa;
+  transition:.2s;
+}
+.player strong{
+  display:block;
+  font-size:22px;
+  letter-spacing:2px;
+}
+.player small{display:block;margin-top:5px}
+.player.red.active{
+  border-color:var(--pink);
+  color:var(--pink);
+  box-shadow:0 0 18px #ff315f55,inset 0 0 15px #ff315f18;
+}
+.player.blue.active{
+  border-color:var(--blue);
+  color:var(--blue);
+  box-shadow:0 0 18px #36dfff55,inset 0 0 15px #36dfff18;
+}
+.status{
+  text-align:center;
+  font-size:clamp(19px,4vw,25px);
+  font-weight:bold;
+  margin:18px 0 8px;
+  min-height:32px;
+}
+.status.red{color:var(--pink);text-shadow:0 0 12px #ff315f}
+.status.blue{color:var(--blue);text-shadow:0 0 12px #36dfff}
+.status.win{color:#ffe477;text-shadow:0 0 15px #ffcf37}
+.question{
+  text-align:center;
+  color:#c9bdd3;
+  margin-bottom:17px;
+}
+.buttons{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  max-width:520px;
+  margin:0 auto 25px;
+}
+.take{
+  min-height:66px;
+  border-radius:13px;
+  border:2px solid var(--purple);
+  background:#1c1028;
+  color:#fff;
+  font-size:23px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 12px #a52aff35;
+  transition:.15s;
+}
+.take span{display:block;font-size:12px;margin-top:4px;color:#cdb3e8}
+.take:active:not(:disabled){
+  transform:scale(.95);
+  background:#542477;
+}
+.take:disabled{
+  opacity:.25;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+.board{
+  border:1px solid #48344f;
+  background:#090910;
+  border-radius:15px;
+  padding:18px 12px;
+  box-shadow:inset 0 0 18px #000;
+}
+.board-title{
+  text-align:center;
+  color:#d8c6e8;
+  font-size:15px;
+  margin-bottom:17px;
+}
+.matches{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:13px 7px;
+  justify-items:center;
+  max-width:620px;
+  margin:auto;
+}
+.match{
+  position:relative;
+  width:23px;
+  height:65px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+}
+.stick{
+  width:7px;
+  height:52px;
+  border-radius:3px;
+  background:linear-gradient(90deg,#a85a20,#ffca66,#e68b2e);
+  box-shadow:0 0 8px #ffb13c77;
+  position:relative;
+}
+.head{
+  width:13px;
+  height:14px;
+  border-radius:50% 50% 40% 40%;
+  background:radial-gradient(circle at 35% 30%,#fff4a0,#ff6c29 65%,#bd351e);
+  box-shadow:0 0 9px #ff7b35;
+  margin-bottom:-2px;
+  z-index:1;
+}
+.match.taken .stick{
+  background:#4a414c;
+  box-shadow:none;
+  opacity:.55;
+}
+.match.taken .head{
+  background:#55404b;
+  box-shadow:none;
+  opacity:.55;
+}
+.cross{
+  display:none;
+  position:absolute;
+  width:34px;
+  height:5px;
+  top:29px;
+  left:-5px;
+  transform:rotate(-43deg);
+  border-radius:5px;
+  z-index:3;
+}
+.match.taken .cross{display:block}
+.match.taken.red .cross{
+  background:var(--pink);
+  box-shadow:0 0 9px var(--pink),0 0 17px var(--pink);
+}
+.match.taken.blue .cross{
+  background:var(--blue);
+  box-shadow:0 0 9px var(--blue),0 0 17px var(--blue);
+}
+.match-number{
+  position:absolute;
+  bottom:-17px;
+  font-size:9px;
+  color:#766b80;
+}
+.count{
+  text-align:center;
+  margin-top:27px;
+  color:#d7c9e3;
+  font-size:17px;
+}
+.count strong{
+  color:var(--gold);
+  font-size:24px;
+  text-shadow:0 0 10px #ffcc55;
+}
+.legend{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:20px;
+  margin-top:18px;
+  font-size:13px;
+  color:#c9bdd3;
+}
+.legend span{display:flex;align-items:center;gap:7px}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot.red{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+.dot.blue{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.bottom{
+  display:flex;
+  justify-content:center;
+  margin-top:23px;
+}
+.reset{
+  border:2px solid #a45bce;
+  border-radius:12px;
+  padding:13px 28px;
+  background:#241331;
+  color:#fff;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 13px #a52aff44;
+}
+.reset:active{transform:scale(.96)}
+.rule{
+  text-align:center;
+  color:#887d94;
+  font-size:12px;
+  line-height:1.5;
+  margin-top:18px;
+}
+@media(max-width:430px){
+  body{padding:8px}
+  .game{padding:15px 10px;border-radius:16px}
+  .matches{gap:12px 3px}
+  .match{transform:scale(.9)}
+  .board{padding:16px 5px}
+  .take{min-height:60px;font-size:20px}
+}
+</style>
+</head>
+<body>
+<main class="game">
+  <h1>21 STREICHHÖLZER</h1>
+  <div class="subtitle">NEON DUEL · 2 SPIELER</div>
+
+  <section class="players">
+    <div class="player red active" id="redPlayer">
+      <strong>ROT</strong>
+      <small>Spieler 1</small>
+    </div>
+    <div class="player blue" id="bluePlayer">
+      <strong>BLAU</strong>
+      <small>Spieler 2</small>
+    </div>
+  </section>
+
+  <div class="status red" id="status">ROT IST AM ZUG</div>
+  <div class="question" id="question">Wie viele möchtest du nehmen?</div>
+
+  <div class="buttons">
+    <button class="take" data-take="1">1 <span>NEHMEN</span></button>
+    <button class="take" data-take="2">2 <span>NEHMEN</span></button>
+    <button class="take" data-take="3">3 <span>NEHMEN</span></button>
+  </div>
+
+  <section class="board">
+    <div class="board-title">DIE STREICHHÖLZER</div>
+    <div class="matches" id="matches"></div>
+    <div class="count">
+      Noch verfügbar: <strong id="remaining">21</strong>
+    </div>
+    <div class="legend">
+      <span><i class="dot red"></i> Von Rot genommen</span>
+      <span><i class="dot blue"></i> Von Blau genommen</span>
+    </div>
+  </section>
+
+  <div class="bottom">
+    <button class="reset" id="restart">↻ NEUES SPIEL</button>
+  </div>
+  <div class="rule">
+    Abwechselnd 1, 2 oder 3 Hölzer nehmen.<br>
+    Wer das letzte Streichholz nimmt, verliert!
+  </div>
+</main>
+
+<script>
+const TOTAL = 21;
+let remaining = TOTAL;
+let current = "red";
+let gameOver = false;
+let takenBy = Array(TOTAL).fill(null);
+
+const matches = document.getElementById("matches");
+const remainingDisplay = document.getElementById("remaining");
+const statusDisplay = document.getElementById("status");
+const questionDisplay = document.getElementById("question");
+const redPlayer = document.getElementById("redPlayer");
+const bluePlayer = document.getElementById("bluePlayer");
+const takeButtons = document.querySelectorAll(".take");
+
+function drawMatches(){
+  matches.innerHTML = "";
+
+  for(let i = 0; i < TOTAL; i++){
+    const match = document.createElement("div");
+    match.className = "match";
+
+    if(takenBy[i]){
+      match.classList.add("taken", takenBy[i]);
+    }
+
+    match.innerHTML = `
+      <div class="head"></div>
+      <div class="stick"></div>
+      <div class="cross"></div>
+      <div class="match-number">${i+1}</div>
+    `;
+
+    matches.appendChild(match);
+  }
+
+  remainingDisplay.textContent = remaining;
+}
+
+function updateDisplay(){
+  redPlayer.classList.toggle("active", current === "red" && !gameOver);
+  bluePlayer.classList.toggle("active", current === "blue" && !gameOver);
+
+  statusDisplay.className = "status " + (gameOver ? "win" : current);
+  statusDisplay.textContent = gameOver
+    ? (current === "red" ? "BLAU GEWINNT! 🎉" : "ROT GEWINNT! 🎉")
+    : (current === "red" ? "ROT IST AM ZUG" : "BLAU IST AM ZUG");
+
+  questionDisplay.textContent = gameOver
+    ? (current === "red" ? "Rot hat das letzte Streichholz genommen." : "Blau hat das letzte Streichholz genommen.")
+    : "Wie viele möchtest du nehmen?";
+
+  takeButtons.forEach(button => {
+    const amount = Number(button.dataset.take);
+    button.disabled = gameOver || amount > remaining;
+  });
+}
+
+function take(amount){
+  if(gameOver || amount > remaining) return;
+
+  const firstIndex = remaining - amount;
+
+  for(let i = firstIndex; i < remaining; i++){
+    takenBy[i] = current;
+  }
+
+  remaining -= amount;
+  drawMatches();
+
+  if(remaining === 0){
+    gameOver = true;
+    updateDisplay();
+    return;
+  }
+
+  current = current === "red" ? "blue" : "red";
+  updateDisplay();
+}
+
+takeButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    take(Number(button.dataset.take));
+  });
+});
+
+document.getElementById("restart").addEventListener("click", () => {
+  remaining = TOTAL;
+  current = "red";
+  gameOver = false;
+  takenBy = Array(TOTAL).fill(null);
+  drawMatches();
+  updateDisplay();
+});
+
+drawMatches();
+updateDisplay();
+</script>
+</body>
+</html>
