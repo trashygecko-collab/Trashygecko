@@ -56,20 +56,22 @@ textarea{width:100%;min-height:210px;resize:vertical;background:#0d0a10;color:#d
 <div id="counts"></div>
 <div id="message"></div>
 <div class="panel toolbar">
-  <button id="fillSand">ALLES AUF SAND</button>
-  <button id="fillEmpty">ALLES LEEREN</button>
-  <button id="validate">LEVEL PRÜFEN</button>
-  <button id="copy">LEVELCODE KOPIEREN</button>
+<button id="fillSand">ALLES AUF SAND</button>
+<button id="fillEmpty">ALLES LEEREN</button>
+<button id="wallSand">MAUER RUNDHERUM · SAND INNEN</button>
+<button id="wallEmpty">MAUER RUNDHERUM · INNEN LEER</button>
+<button id="validate">LEVEL PRÜFEN</button>
+<button id="copy">LEVELCODE KOPIEREN</button>
 </div>
 <div class="panel">
   <h2 class="section-title">LEVELCODE FÜR DAS SPIEL</h2>
-  <p class="small">Der Code passt direkt in den <code>const LEVELS = [ ... ];</code>-Bereich deiner DURST-Spielversion. Jede Zeile hat genau 20 Zeichen, jedes Level genau 12 Zeilen.</p>
+  <p class="small">Hier werden nur die Level-Blöcke ausgegeben – ohne <code>const LEVELS = [</code> und ohne <code>];</code>. Jeden Block kannst du direkt in deine LEVELS-Liste übernehmen. Jede Zeile hat genau 20 Zeichen, jedes Level genau 12 Zeilen.</p>
   <textarea id="output" spellcheck="false"></textarea>
   <div class="toolbar"><button id="refresh">CODE AKTUALISIEREN</button><button id="download">CODE ALS TXT SPEICHERN</button></div>
 </div>
 <div class="panel">
   <h2 class="section-title">LEVEL AUS CODE LADEN</h2>
-  <p class="small">Hier kannst du einen einzelnen Level-Block im JSON-Format einfügen. Beispiel: <code>{"name":"Level 1","map":["...12 Zeilen..."]}</code>. Das Laden ersetzt das gerade ausgewählte Level.</p>
+  <p class="small">Hier kannst du einen oder mehrere Level-Blöcke aus der Ausgabe einfügen. Eingefügte Level werden hinten angehängt; vorhandene Level bleiben erhalten.</p>
   <textarea id="importText" placeholder='{"name":"Level 1","map":["11111111111111111111", "... insgesamt 12 Zeilen ..."]}'></textarea>
   <div class="toolbar"><button id="import">EINGEFÜGTEN LEVEL LADEN</button></div>
 </div>
@@ -87,7 +89,12 @@ const colors={0:'#090909',1:'#6e6874',2:'#a66b36',3:'#aaaeb7',4:'#e04a3c',5:'#39
 const symbols={0:'',1:'■',2:'·',3:'●',4:'☠',5:'☺',6:'🍺'};
 const images={};
 for(const [id,file] of Object.entries(files)){const im=new Image();im.src='bilder/'+file+'.png';im.onload=draw;images[id]=im;}
-let levels=[{name:'Level 1',map:Array.from({length:H},()=>Array(W).fill(2))}];
+function createDefaultMap(){
+ const map=Array.from({length:H},()=>Array(W).fill(2));
+ map[0][0]=1;
+ return map;
+}
+let levels=[{name:'Level 1',map:createDefaultMap()}];
 let current=0,selected=2,painting=false;
 function save(){try{localStorage.setItem(STORE,JSON.stringify({levels,current}));}catch(e){}}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STORE));if(d&&Array.isArray(d.levels)&&d.levels.length){levels=d.levels;current=Math.max(0,Math.min(d.current||0,levels.length-1));}}catch(e){}}
@@ -117,7 +124,7 @@ document.querySelectorAll('[data-tile]').forEach(b=>b.addEventListener('click',(
 function refreshSelect(){ $('levelSelect').innerHTML=levels.map((l,i)=>`<option value="${i}">${escapeHtml(l.name||'Level '+(i+1))}</option>`).join('');$('levelSelect').value=current;}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function codeBlock(l){return ` {name:${JSON.stringify(l.name)}, map:[\n${rows(l).map(r=>'  '+JSON.stringify(r)).join(',\n')}\n ]}`;}
-function refreshCode(){ $('output').value='const LEVELS = [\n'+levels.map(codeBlock).join(',\n')+'\n];';}
+function refreshCode(){ $('output').value=levels.map(codeBlock).join(',\n');}
 function validate(){
  const c=Array(7).fill(0);for(const row of levels[current].map)for(const v of row)c[v]++;
  const issues=[];if(c[5]!==1)issues.push('Es muss genau eine Spielfigur (5) geben.');if(c[6]!==1)issues.push('Es muss genau ein Bier (6) geben.');
@@ -127,16 +134,105 @@ function validate(){
  return !issues.length;
 }
 $('levelSelect').onchange=e=>{current=Number(e.target.value);draw();save();refreshCode();$('message').textContent='';};
-$('addLevel').onclick=()=>{levels.push({name:'Level '+(levels.length+1),map:Array.from({length:H},()=>Array(W).fill(2))});current=levels.length-1;refreshSelect();draw();refreshCode();save();};
+$('addLevel').onclick=()=>{levels.push({name:'Level '+(levels.length+1),map:createDefaultMap()});current=levels.length-1;refreshSelect();draw();refreshCode();save();};
 $('renameLevel').onclick=()=>{const n=prompt('Neuer Levelname:',levels[current].name);if(n&&n.trim()){levels[current].name=n.trim();refreshSelect();refreshCode();save();}};
 $('deleteLevel').onclick=()=>{if(levels.length===1){alert('Mindestens ein Level muss bleiben.');return;}if(!confirm('Dieses Level wirklich löschen?'))return;levels.splice(current,1);current=Math.max(0,current-1);refreshSelect();draw();refreshCode();save();};
 $('fillSand').onclick=()=>{levels[current].map=Array.from({length:H},()=>Array(W).fill(2));draw();refreshCode();save();$('message').textContent='Das ganze Spielfeld ist wieder mit Sand gefüllt.';};
 $('fillEmpty').onclick=()=>{levels[current].map=Array.from({length:H},()=>Array(W).fill(0));draw();refreshCode();save();};
+// Mauer rundherum, Sand innen
+$('wallSand').onclick=()=>{
+ const map=Array.from({length:H},(_,y)=>
+  Array.from({length:W},(_,x)=>
+   (x===0||y===0||x===W-1||y===H-1)?1:2
+  )
+ );
+ levels[current].map=map;
+ draw();refreshCode();save();
+ $('message').textContent='Mauer außen, Sand innen.';
+};
+
+// Mauer rundherum, innen leer
+$('wallEmpty').onclick=()=>{
+ const map=Array.from({length:H},(_,y)=>
+  Array.from({length:W},(_,x)=>
+   (x===0||y===0||x===W-1||y===H-1)?1:0
+  )
+ );
+ levels[current].map=map;
+ draw();refreshCode();save();
+ $('message').textContent='Mauer außen, innen leer.';
+};
 $('validate').onclick=validate;
 $('refresh').onclick=refreshCode;
 $('copy').onclick=async()=>{refreshCode();try{await navigator.clipboard.writeText($('output').value);$('message').textContent='Der komplette LEVELS-Code wurde kopiert.';}catch(e){$('output').focus();$('output').select();$('message').textContent='Bitte den markierten Code mit Strg+C kopieren.';}};
 $('download').onclick=()=>{refreshCode();const blob=new Blob([$('output').value],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='DURST_LEVELS.txt';a.click();URL.revokeObjectURL(a.href);};
-$('import').onclick=()=>{try{const d=JSON.parse($('importText').value);if(!d||!Array.isArray(d.map)||d.map.length!==H)throw Error('Es müssen genau 12 Zeilen vorhanden sein.');const m=d.map.map(r=>{if(typeof r!=='string'||r.length!==W||!/^[0-6]{20}$/.test(r))throw Error('Jede Zeile muss aus genau 20 Ziffern von 0 bis 6 bestehen.');return [...r].map(Number);});levels[current]={name:String(d.name||levels[current].name),map:m};refreshSelect();draw();refreshCode();save();$('message').textContent='Level wurde geladen.';}catch(e){$('message').textContent='Import fehlgeschlagen: '+e.message;}};
+$('import').onclick=()=>{
+ try{
+  let raw=$('importText').value.trim();
+  if(!raw)throw Error('Bitte zuerst einen Levelcode einfügen.');
+
+  // Entfernt die JavaScript-Variablendeklaration der Editor-Ausgabe.
+  raw=raw.replace(/^\s*(?:const|let|var)\s+LEVELS\s*=\s*/,'').trim();
+  if(raw.endsWith(';'))raw=raw.slice(0,-1).trim();
+
+  let incoming;
+  try{
+   const parsed=JSON.parse(raw);
+   incoming=Array.isArray(parsed)?parsed:[parsed];
+  }catch(jsonError){
+   // Die Editor-Ausgabe verwendet JavaScript-Objekte mit name: und map:
+   // statt JSON-Schlüsseln. Die Level-Objekte werden einzeln herausgelesen.
+   let body=raw;
+   if(body.startsWith('[')&&body.endsWith(']'))body=body.slice(1,-1);
+   const blocks=[];
+   let depth=0,start=-1,inString=false,escaped=false;
+   for(let i=0;i<body.length;i++){
+    const ch=body[i];
+    if(inString){
+     if(escaped)escaped=false;
+     else if(ch==='\\')escaped=true;
+     else if(ch==='"')inString=false;
+     continue;
+    }
+    if(ch==='"'){inString=true;continue;}
+    if(ch==='{'){if(depth===0)start=i;depth++;}
+    else if(ch==='}'){
+     depth--;
+     if(depth===0&&start>=0){blocks.push(body.slice(start,i+1));start=-1;}
+     if(depth<0)throw Error('Die geschweiften Klammern im Levelcode stimmen nicht.');
+    }
+   }
+   if(depth!==0||!blocks.length)throw Error('Kein gültiger Level-Block gefunden. Bitte den Code aus „LEVELCODE FÜR DAS SPIEL“ einfügen.');
+   incoming=blocks.map(block=>{
+    const json=block
+     .replace(/([{,]\s*)name\s*:/g,'$1"name":')
+     .replace(/([{,]\s*)map\s*:/g,'$1"map":');
+    return JSON.parse(json);
+   });
+  }
+
+  if(!Array.isArray(incoming)||!incoming.length)throw Error('Der eingefügte Code enthält keine Level.');
+  const imported=incoming.map((d,index)=>{
+   if(!d||!Array.isArray(d.map)||d.map.length!==H)
+    throw Error('Level '+(index+1)+': Es müssen genau 12 Zeilen vorhanden sein.');
+   const m=d.map.map(r=>{
+    if(typeof r!=='string'||r.length!==W||!/^[0-6]{20}$/.test(r))
+     throw Error('Level '+(index+1)+': Jede Zeile muss genau 20 Ziffern von 0 bis 6 enthalten.');
+    return [...r].map(Number);
+   });
+   return {name:String(d.name||'Import Level '+(index+1)),map:m};
+  });
+
+  // Import hängt die Level hinten an, statt das aktuelle Level zu ersetzen.
+  const firstNewIndex=levels.length;
+  levels.push(...imported);
+  current=firstNewIndex;
+  refreshSelect();draw();refreshCode();save();
+  $('message').textContent=imported.length+' Level zusätzlich eingefügt. Vorhandene Level bleiben erhalten.';
+ }catch(e){
+  $('message').textContent='Import fehlgeschlagen: '+e.message;
+ }
+};
 loadSaved();refreshSelect();draw();refreshCode();
 })();
 </script>
