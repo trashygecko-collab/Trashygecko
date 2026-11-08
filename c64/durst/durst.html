@@ -179,6 +179,52 @@ button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
  #directionPad button{
   font-size:21px;
  }
+
+/* SPIEL-DIALOG – MITTIG ÜBER DEM GESAMTEN SPIEL */
+#overlay{
+ display:none;
+ position:fixed;
+ inset:0;
+ width:100%;
+ height:100%;
+ background:rgba(0,0,0,.82);
+ align-items:center;
+ justify-content:center;
+ z-index:9999;
+ padding:15px;
+}
+
+#dialog{
+ width:min(90%,440px);
+ padding:25px 20px;
+ text-align:center;
+ background:#151019;
+ border:2px solid var(--pink);
+ border-radius:12px;
+ box-shadow:0 0 25px #ff4fd8;
+ line-height:1.5;
+}
+
+#dialogTitle{
+ margin:0 0 15px;
+ color:var(--pink);
+ font-size:clamp(22px,5vw,30px);
+ text-shadow:0 0 10px var(--pink);
+}
+
+#dialogText{
+ color:var(--text);
+ font-size:16px;
+ margin:0 0 22px;
+}
+
+#dialogBtn{
+ min-width:150px;
+ padding:12px 20px;
+ border-color:var(--cyan);
+ color:var(--cyan);
+}
+
 }</style>
 </head>
 <body>
@@ -232,7 +278,7 @@ button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
 <div id="help">Steuerung: Pfeiltasten oder WASD · P = Pause · Ziel: Bier erreichen · Steine mit ← / → schieben</div>
 <div id="footer">20 × 12 FELDER · 65 LEVEL? NEIN – SO VIELE, WIE DU EINTRÄGST · MADE WITH DURST</div>
 </div>
-<div id="overlay"><div id="dialog"><h2 id="dialogTitle">DURST</h2><p id="dialogText"></p><button id="dialogBtn">WEITER</button></div></div>
+<div id="overlay" style="display:none"><div id="dialog"><h2 id="dialogTitle">DURST</h2><p id="dialogText"></p><button id="dialogBtn">WEITER</button></div></div>
 
 <script>
 // ============================================================
@@ -866,7 +912,33 @@ function win(){
 }
 
 function showDialog(){
- $('overlay').style.display='flex';
+ const overlay=$('overlay');
+ overlay.style.cssText=`
+  display:flex!important;
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  background:rgba(0,0,0,.82)!important;
+  align-items:center!important;
+  justify-content:center!important;
+  z-index:999999!important;
+  padding:15px!important;
+ `;
+
+ const dialog=$('dialog');
+ dialog.style.cssText=`
+  display:block!important;
+  position:relative!important;
+  width:min(90%,440px)!important;
+  padding:25px 20px!important;
+  text-align:center!important;
+  background:#151019!important;
+  border:2px solid var(--pink)!important;
+  border-radius:12px!important;
+  box-shadow:0 0 25px #ff4fd8!important;
+  line-height:1.5!important;
+ `;
 }
 
 function hideDialog(){
@@ -1033,10 +1105,55 @@ function moveEnemies(){
  }
 }
 
+
+
 function stoneTick(now){
- for(const k of Object.keys(stones)){
-  const s=stones[k];
+ const stoneList=Object.values(stones).filter(Boolean);
+
+ // Zusammenhängende Steingruppen ermitteln (auch diagonal)
+ const visited=new Set();
+ const accelerated=new Set();
+ const directions=[
+  [-1,-1],[0,-1],[1,-1],
+  [-1,0],        [1,0],
+  [-1,1],[0,1],[1,1]
+ ];
+
+ for(const first of stoneList){
+  if(visited.has(first))continue;
+
+  const group=[];
+  const queue=[first];
+  visited.add(first);
+
+  while(queue.length){
+   const s=queue.shift();
+   group.push(s);
+
+   for(const [dx,dy] of directions){
+    const neighbor=stones[key(s.x+dx,s.y+dy)];
+
+    if(neighbor&&!visited.has(neighbor)){
+     visited.add(neighbor);
+     queue.push(neighbor);
+    }
+   }
+  }
+
+  // Bewegt sich ein Stein, wird die ganze Gruppe beschleunigt
+  if(group.some(s=>s.falling||s.rolling)){
+   group.forEach(s=>accelerated.add(s));
+  }
+ }
+
+ // Von unten nach oben bearbeiten
+ stoneList.sort((a,b)=>b.y-a.y);
+
+ for(const s of stoneList){
   if(!s)continue;
+
+  const k=key(s.x,s.y);
+  if(stones[k]!==s)continue;
 
   const below=key(s.x,s.y+1);
   const under=tile(s.x,s.y+1);
@@ -1051,18 +1168,22 @@ function stoneTick(now){
    !playerBelow;
 
   let target=null;
+  const groupMoving=accelerated.has(s);
+  const groupDelay=150;
 
   if(freeBelow){
    s.rollReadyAt=0;
+   s.rolling=false;
 
-   const groupFalling=Object.values(stones).some(o=>
-    o!==s&&o.falling&&o.x===s.x&&o.y>s.y
-   );
-
-   const fallDelay=groupFalling?150:STONE_DELAY;
+   const fallDelay=groupMoving?groupDelay:STONE_DELAY;
 
    if(!s.falling){
-    if(!s.readyAt)s.readyAt=now+fallDelay;
+    if(!s.readyAt){
+     s.readyAt=now+fallDelay;
+    }else if(groupMoving&&s.readyAt>now+groupDelay){
+     s.readyAt=now+groupDelay;
+    }
+
     if(now>=s.readyAt){
      s.falling=true;
      target={x:s.x,y:s.y+1};
@@ -1081,22 +1202,31 @@ function stoneTick(now){
      const sideX=s.x+dx;
      const diagY=s.y+1;
 
-     if(!occupiedForStone(sideX,s.y)&&!occupiedForStone(sideX,diagY)){
-      rollTarget={x:sideX,y:s.y+1};
+     if(!occupiedForStone(sideX,s.y)&&
+        !occupiedForStone(sideX,diagY)){
+      rollTarget={x:sideX,y:diagY};
       break;
      }
     }
    }
 
    if(rollTarget){
-    if(!s.rollReadyAt)s.rollReadyAt=now+STONE_DELAY;
+    const rollDelay=groupMoving?groupDelay:STONE_DELAY;
+
+    if(!s.rollReadyAt){
+     s.rollReadyAt=now+rollDelay;
+    }else if(groupMoving&&s.rollReadyAt>now+groupDelay){
+     s.rollReadyAt=now+groupDelay;
+    }
 
     if(now>=s.rollReadyAt){
      target=rollTarget;
      s.rollReadyAt=0;
+     s.rolling=true;
     }
    }else{
     s.rollReadyAt=0;
+    s.rolling=false;
    }
   }
 
@@ -1107,11 +1237,13 @@ function stoneTick(now){
    }
 
    delete stones[k];
+
    s.x=target.x;
    s.y=target.y;
 
    if(s.falling){
     s.readyAt=0;
+    s.rolling=false;
    }else{
     s.falling=false;
     s.readyAt=0;
@@ -1123,7 +1255,6 @@ function stoneTick(now){
 
  draw();
 }
-
 function occupiedForStone(x,y){
  return x<0||x>=W||y<0||y>=H||
  tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y);
@@ -1134,11 +1265,20 @@ function tick(){
  moveEnemies();
  if(!dead)stoneTick(performance.now());
 }
-
 function queueMove(dx,dy){
  movePlayer(dx,dy);
 }
+if($('giveup')){
+ $('giveup').onclick=()=>{
+  die('Du hast aufgegeben.');
+ };
+}
 
+if($('giveupBtn')){
+ $('giveupBtn').onclick=()=>{
+  die('Du hast aufgegeben.');
+ };
+}
 document.addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
 
