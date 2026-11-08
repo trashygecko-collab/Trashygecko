@@ -176,6 +176,41 @@ button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
  #cabinet{padding:8px}
  #mobilePad{margin:12px auto}
  #help{display:none}
+@media (pointer:coarse) and (orientation:landscape){
+ h1{display:none!important}
+
+ #status{display:none!important}
+ #footer{display:none!important}
+ #help{display:none!important}
+
+ #controls{display:none!important}
+
+ #mobileActions{
+  left:5px;
+  bottom:5px;
+  gap:5px;
+ }
+
+ #mobileActions button,
+ #mobileActions select{
+  min-width:90px;
+  min-height:36px;
+  padding:5px 7px;
+  font-size:11px;
+ }
+
+ #directionPad{
+  right:5px;
+  bottom:5px;
+  grid-template-columns:repeat(3,48px);
+  grid-template-rows:repeat(3,43px);
+  gap:3px;
+ }
+
+ #directionPad button{
+  font-size:21px;
+ }
+}
 }</style>
 </head>
 <body>
@@ -192,8 +227,13 @@ button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
 <div id="mobilePad">
 
  <div id="mobileActions">
-  <button id="mobilePause">PAUSE</button>
-  <button id="giveup">AUFGEBEN</button>
+ <select id="mobileLevelSelect"></select>
+
+ <button id="mobileFull">VOLLBILD</button>
+
+ <button id="mobilePause">PAUSE</button>
+
+ <button id="giveup">AUFGEBEN</button>
  </div>
 
  <div id="directionPad">
@@ -1221,6 +1261,10 @@ $('fullBtn').onclick=async()=>{
  }
 };
 
+$('mobileFull').onclick=()=>{
+ $('fullBtn').click();
+};
+
 $('dialogBtn').onclick=()=>{
  hideDialog();
 
@@ -1236,11 +1280,16 @@ $('dialogBtn').onclick=()=>{
 };
 
 $('levelSelect').onchange=e=>loadLevel(Number(e.target.value));
-
+$('mobileLevelSelect').onchange=e=>{
+ $('levelSelect').value=e.target.value;
+ loadLevel(Number(e.target.value));
+};
 function init(){
  $('levelSelect').innerHTML=LEVELS.map((l,i)=>
   `<option value="${i}">${l.name||`Level ${i+1}`}</option>`
  ).join('');
+
+ $('mobileLevelSelect').innerHTML=$('levelSelect').innerHTML;
 
  loadLevel(0);
  setInterval(tick,STEP);
