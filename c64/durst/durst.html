@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -180,6 +179,8 @@ button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
   font-size:21px;
  }
 
+}
+
 /* SPIEL-DIALOG – MITTIG ÜBER DEM GESAMTEN SPIEL */
 #overlay{
  display:none;
@@ -225,7 +226,7 @@ button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
  color:var(--cyan);
 }
 
-}</style>
+</style>
 </head>
 <body>
 <div id="cabinet">
@@ -607,7 +608,7 @@ const LEVELS = [
   "12222223132222222221",
   "12222223112222222111",
   "12222223222222222221",
-  "12222222222222222221",
+  "15222222222222222221",
   "11111111111111111111"
  ]},
  {name:"Level 23", map:[
@@ -673,7 +674,7 @@ let map=[],player={x:1,y:1},enemies=[],stones={};
 let portals={},portalDestinations={};
 let lives=3,levelIndex=0,timeLeft=LEVEL_TIME;
 let running=false,paused=false,dead=false,won=false;
-let lastStep=0,clockTimer=null,moveQueue=null,enemyId=0;
+let lastStep=0,clockTimer=null,enemyId=0;
 
 const key=(x,y)=>`${x},${y}`;
 const isPortal=v=>typeof v==='string'&&/^7[a-z]$/i.test(v);
@@ -775,6 +776,7 @@ function occupied(x,y,except=null){
 }
 
 function loadLevel(i){
+ hideDialog();
  levelIndex=i;
  parseLevel(i);
  timeLeft=LEVEL_TIME;
@@ -782,7 +784,6 @@ function loadLevel(i){
  paused=false;
  dead=false;
  won=false;
- moveQueue=null;
  updateHud();
  draw();
  $('status').textContent='Finde das Bier! Du hast 2 Minuten.';
@@ -854,13 +855,18 @@ function drawTile(v,x,y){
 }
 
 function start(){
+ // Kein Leben mehr → auf Standard zurücksetzen.
+ if(lives<=0)lives=3;
+
  if(won||dead)loadLevel(levelIndex);
 
- // Auf Handys direkt Vollbild anfordern
- if(matchMedia('(pointer:coarse)').matches &&
-    !document.fullscreenElement){
-  document.documentElement.requestFullscreen().catch(()=>{});
- }
+ // Auf Handys direkt Vollbild anfordern (mit Fehlerbehandlung).
+ try{
+  if(matchMedia('(pointer:coarse)').matches &&
+     !document.fullscreenElement){
+   document.documentElement.requestFullscreen().catch(()=>{});
+  }
+ }catch(e){}
 
  running=true;
  paused=false;
@@ -887,7 +893,8 @@ function togglePause(){
 }
 
 function die(reason){
- if(dead||won)return;
+ // Nur während eines laufenden Spiels gültig.
+ if(!running||dead||won)return;
  dead=true;
  running=false;
  lives--;
@@ -945,12 +952,13 @@ function hideDialog(){
  $('overlay').style.display='none';
 }
 
-// Prüft, ob ein Portal-Ausgang frei ist.
-function portalExitFree(pos,entity=null){
+// Prüft, ob ein Portal-Ausgang für den Spieler begehbar ist.
+// Gegner zählen bewusst NICHT als blockierend, damit der
+// Todesfall „am Portal-Ausgang erwischt" eintreten kann.
+function portalExitFree(pos){
  if(!pos)return false;
  if(tile(pos.x,pos.y)===1)return false;
  if(stoneAt(pos.x,pos.y))return false;
- if(enemyAt(pos.x,pos.y,entity))return false;
  return true;
 }
 
@@ -972,6 +980,7 @@ function movePlayer(dx,dy){
 
   if(player.x===destination.x&&player.y===destination.y)return;
 
+  // Gegner am Portal-Ausgang: Spieler wird erwischt.
   if(enemyAt(destination.x,destination.y)){
    die('Ein Gegner hat dich am Portal-Ausgang erwischt!');
    return;
@@ -994,24 +1003,19 @@ function movePlayer(dx,dy){
   return;
  }
 
- if(v===3||stoneAt(nx,ny)){
+ if(stoneAt(nx,ny)){
   if(dy!==0)return;
 
   const sx=nx+dx;
   const sy=ny;
 
-  if(occupied(sx,sy)||stoneAt(sx,sy))return;
+  if(occupied(sx,sy))return;
 
-  if(stoneAt(nx,ny)){
-   const s=stones[key(nx,ny)];
-   delete stones[key(nx,ny)];
-   s.x=sx;
-   s.y=sy;
-   stones[key(sx,sy)]=s;
-  }else if(map[ny][nx]===3){
-   map[ny][nx]=0;
-   stones[key(sx,sy)]={x:sx,y:sy,falling:false,readyAt:0};
-  }else return;
+  const s=stones[key(nx,ny)];
+  delete stones[key(nx,ny)];
+  s.x=sx;
+  s.y=sy;
+  stones[key(sx,sy)]=s;
  }else if(enemyAt(nx,ny)){
   die('Ein Gegner hat dich erwischt!');
   return;
@@ -1105,8 +1109,6 @@ function moveEnemies(){
  }
 }
 
-
-
 function stoneTick(now){
  const stoneList=Object.values(stones).filter(Boolean);
 
@@ -1158,14 +1160,13 @@ function stoneTick(now){
   const below=key(s.x,s.y+1);
   const under=tile(s.x,s.y+1);
   const otherStone=stones[below];
-  const playerBelow=player.x===s.x&&player.y===s.y+1;
 
+  // Der Spieler blockiert das Fallen NICHT mehr – er wird erschlagen.
   const freeBelow=
    s.y+1<H&&
    under===0&&
    !otherStone&&
-   !enemyAt(s.x,s.y+1)&&
-   !playerBelow;
+   !enemyAt(s.x,s.y+1);
 
   let target=null;
   const groupMoving=accelerated.has(s);
@@ -1268,17 +1269,95 @@ function tick(){
 function queueMove(dx,dy){
  movePlayer(dx,dy);
 }
-if($('giveup')){
- $('giveup').onclick=()=>{
-  die('Du hast aufgegeben.');
- };
-}
 
-if($('giveupBtn')){
- $('giveupBtn').onclick=()=>{
-  die('Du hast aufgegeben.');
- };
-}
+/* ----------------------------------------------------------------- */
+/* UI-VERDRAHTUNG                                                    */
+/* ----------------------------------------------------------------- */
+
+// Desktop: Spiel starten
+$('startBtn').onclick=()=>{
+ if(running&&!paused&&!dead&&!won)return;
+ start();
+};
+
+// Desktop: Pause
+$('pauseBtn').onclick=()=>{
+ togglePause();
+};
+
+// Desktop: Vollbild
+$('fullBtn').onclick=async()=>{
+ try{
+  if(!document.fullscreenElement){
+   await document.documentElement.requestFullscreen();
+  }else{
+   await document.exitFullscreen();
+  }
+ }catch(e){
+  $('status').textContent='Vollbild wird von diesem Browser nicht unterstützt.';
+ }
+};
+
+// Mobile: Vollbild
+$('mobileFull').onclick=()=>{
+ $('fullBtn').click();
+};
+
+// Aufgeben (Desktop)
+$('giveupBtn').onclick=()=>{
+ if(running&&!paused)die('Du hast aufgegeben.');
+ else if(running&&paused)die('Du hast aufgegeben.');
+};
+
+// Aufgeben (Mobile)
+$('giveup').onclick=()=>{
+ if(running&&!paused)die('Du hast aufgegeben.');
+ else if(running&&paused)die('Du hast aufgegeben.');
+};
+
+// Mobile: Pause
+$('mobilePause').addEventListener('pointerdown',e=>{
+ e.preventDefault();
+ stopTouchMove();
+ togglePause();
+});
+
+// Dialog-Button
+$('dialogBtn').onclick=()=>{
+ hideDialog();
+
+ if(dead&&lives>0){
+  // Noch Leben übrig → gleiches Level nochmal.
+  start();
+ }else if(won&&levelIndex<LEVELS.length-1){
+  // Nächstes Level.
+  loadLevel(levelIndex+1);
+  start();
+ }else{
+  // Game Over oder letztes Level geschafft → Levelauswahl.
+  lives=3;
+  updateHud();
+  // Kein automatischer Start; Spieler wählt selbst.
+ }
+};
+
+// Level-Auswahl (Desktop)
+$('levelSelect').onchange=e=>{
+ if(lives<=0)lives=3;
+ $('mobileLevelSelect').value=e.target.value;
+ loadLevel(Number(e.target.value));
+};
+
+// Level-Auswahl (Mobile)
+$('mobileLevelSelect').onchange=e=>{
+ if(lives<=0)lives=3;
+ $('levelSelect').value=e.target.value;
+ loadLevel(Number(e.target.value));
+};
+
+/* ----------------------------------------------------------------- */
+/* TASTATUR                                                          */
+/* ----------------------------------------------------------------- */
 document.addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
 
@@ -1310,7 +1389,9 @@ document.addEventListener('keydown',e=>{
  }
 });
 
-// TOUCH-STEUERUNG
+/* ----------------------------------------------------------------- */
+/* TOUCH-STEUERUNG                                                   */
+/* ----------------------------------------------------------------- */
 let touchMoveTimer=null;
 
 function stopTouchMove(){
@@ -1357,48 +1438,9 @@ window.addEventListener('pointerup',stopTouchMove);
 window.addEventListener('pointercancel',stopTouchMove);
 window.addEventListener('blur',stopTouchMove);
 
-$('mobilePause').addEventListener('pointerdown',e=>{
- e.preventDefault();
- stopTouchMove();
- togglePause();
-});
-$('giveup').onclick=()=>die('Du hast aufgegeben.');
-
-$('fullBtn').onclick=async()=>{
- try{
-  if(!document.fullscreenElement){
-   await document.documentElement.requestFullscreen();
-  }else{
-   await document.exitFullscreen();
-  }
- }catch(e){
-  $('status').textContent='Vollbild wird von diesem Browser nicht unterstützt.';
- }
-};
-
-$('mobileFull').onclick=()=>{
- $('fullBtn').click();
-};
-
-$('dialogBtn').onclick=()=>{
- hideDialog();
-
- if(dead&&lives>0){
-  start();
- }else if(won&&levelIndex<LEVELS.length-1){
-  loadLevel(levelIndex+1);
-  start();
- }else{
-  lives=3;
-  loadLevel(0);
- }
-};
-
-$('levelSelect').onchange=e=>loadLevel(Number(e.target.value));
-$('mobileLevelSelect').onchange=e=>{
- $('levelSelect').value=e.target.value;
- loadLevel(Number(e.target.value));
-};
+/* ----------------------------------------------------------------- */
+/* INIT                                                              */
+/* ----------------------------------------------------------------- */
 function init(){
  $('levelSelect').innerHTML=LEVELS.map((l,i)=>
   `<option value="${i}">${l.name||`Level ${i+1}`}</option>`

@@ -13,6 +13,9 @@
       --accent-yellow: #f8c94e;
     }
 
+    /* FIX: [hidden] muss Autoren-Display-Regeln wie .flex überschreiben */
+    [hidden]{display:none !important}
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -97,8 +100,6 @@ canvas {
       margin: 14px auto 0;
     }
 
-    /* Vollbild: Das originale Spielfeldverhältnis bleibt erhalten.
-       Der Canvas wird nur passend verkleinert/vergrößert, nie beschnitten. */
     .cabinet:fullscreen {
       box-sizing: border-box;
       width: 100vw;
@@ -186,7 +187,6 @@ canvas {
       font-weight: bold;
     }
 
-    /* Lokale Ersatzklassen: kein Tailwind-CDN und keine externe CSS-Abfrage nötig */
     .flex{display:flex}.grid{display:grid}.hidden{display:none}.block{display:block}
     .flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}
     .justify-between{justify-content:space-between}.justify-center{justify-content:center}
@@ -214,7 +214,6 @@ canvas {
     @media(min-width:768px){.md\:flex-row{flex-direction:row}.md\:text-left{text-align:left}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
 
 
-    /* Touch-Steuerung: unabhängig von der Bildschirmbreite */
     .game-area{position:relative;width:100%;max-width:800px;margin:0 auto}
     .cabinet:fullscreen .game-area{
       flex:1 1 0;
@@ -276,14 +275,12 @@ canvas {
 <body>
 
   <main class="cabinet">
-    <!-- Header / Logo -->
 <header class="flex flex-col md:flex-row items-center justify-center gap-2 mb-4 text-center">
       <div>
         <h1 class="brand-title text-2xl sm:text-3xl tracking-wider">SUPER PIMMELCHEN</h1>
       </div>
     </header>
 
-    <!-- HUD Readouts -->
     <section class="grid gap-2 sm:gap-3 mb-4" style="grid-template-columns:repeat(5,minmax(0,1fr))">
       <div class="hud-box p-2 text-center">
         <div class="hud-label">PUNKTE</div>
@@ -291,7 +288,8 @@ canvas {
       </div>
       <div class="hud-box p-2 text-center">
         <div class="hud-label">ZEIT</div>
-        <div class="hud-value text-base sm:text-xl" id="time">90</div>
+        <!-- FIX: Startwert an Spielcode (120) angepasst -->
+        <div class="hud-value text-base sm:text-xl" id="time">120</div>
       </div>
       <div class="hud-box p-2 text-center">
         <div class="hud-label">LEVEL</div>
@@ -307,13 +305,12 @@ canvas {
       </div>
     </section>
 
-    <!-- Game Screen (20x11 Tile Grid: 560x308 Pixel) -->
+    <!-- FIX: Canvas-Größe 560x308 (= 20:11) statt 672x336 (= 2:1) -->
     <div class="game-area">
       <div class="screen-wrapper">
-        <canvas id="game" width="672" height="336" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
+        <canvas id="game" width="560" height="308" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
       </div>
 
-      <!-- Touch-Steuerung: hochkant unter dem Spielfeld, quer als Overlay -->
       <div id="touch-controls" class="grid grid-cols-3 gap-2 w-56 mx-auto">
         <div></div>
         <button class="arcade-btn py-2 text-lg" data-dir="up">▲</button>
@@ -335,7 +332,6 @@ canvas {
  <button id="fullscreen-button" class="arcade-btn px-4 py-2 font-black" type="button">⛶ VOLLBILD</button>
     </div>
 
-    <!-- Desktop Steuerungs-Hinweise -->
 <div class="flex flex-col sm:flex-row justify-center items-center gap-3 mt-4 text-xs font-bold text-[#56375b]">
       <div class="flex flex-wrap gap-1.5 items-center justify-center">
         <kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
@@ -352,15 +348,12 @@ canvas {
   (() => {
     'use strict';
 
-    // Touch-Geräte unabhängig von ihrer Auflösung erkennen.
     if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) {
       document.documentElement.classList.add('touch-device');
     }
 
-    // Raster-Maße exakt an das GIF/Soll-Bild anpassen:
-    const W = 20, H = 11, T = 28; // Levelraster: 20 x 11 Felder
+    const W = 20, H = 11, T = 28;
 
-// Hochauflösender Canvas: gleiche sichtbare Größe, mehr Bildpunkte
 const canvas = document.querySelector('#game');
 const GAME_WIDTH = W * T;
 const GAME_HEIGHT = H * T;
@@ -374,11 +367,6 @@ ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 ctx.imageSmoothingEnabled = true;
 ctx.imageSmoothingQuality = 'high';
 
-    // Lokale Spielgrafiken liegen im Unterordner "assets".
-    // Der Dateiname wird ohne Endung festgelegt. Das Spiel sucht selbst
-    // nach einem unterstützten Bildformat (PNG, JPG/JPEG, WebP, GIF, BMP,
-    // AVIF oder SVG). Die Originalgröße ist egal: gezeichnet wird passend
-    // zum Spielfeld. Transparenz funktioniert bei PNG, WebP, GIF und SVG.
     const ASSET_FILES = {
     food: 'futter',
     foodKlein: 'futterklein',
@@ -417,7 +405,6 @@ ctx.imageSmoothingQuality = 'high';
       };
       img.onerror = tryNextFormat;
       img.onload = () => {
-        // Nach dem Laden neu zeichnen, damit das Bild sofort sichtbar wird.
         if (typeof draw === 'function') draw();
       };
       tryNextFormat();
@@ -449,7 +436,6 @@ ctx.imageSmoothingQuality = 'high';
       startButton: document.querySelector('#start-game')
     };
 
- // Lokale Top-10-Highscore: bleibt in diesem Browser auf diesem Gerät gespeichert.
     const HIGHSCORE_STORAGE_KEY = 'superPimmelchenHighscore';
     let highscoreForThisRunSaved = false;
 
@@ -524,7 +510,12 @@ ctx.imageSmoothingQuality = 'high';
       option.textContent = `Level ${i}`;
       ui.levelSelect.appendChild(option);
     }
+    // FIX: Level-Wechsel während des Spiels blockieren.
     ui.levelSelect.addEventListener('change', () => {
+      if (state === 'playing' || state === 'lost') {
+        ui.levelSelect.value = String(stage);
+        return;
+      }
       selectedStartLevel = Number(ui.levelSelect.value) || 0;
       stage = selectedStartLevel;
       updateHud();
@@ -532,7 +523,6 @@ ctx.imageSmoothingQuality = 'high';
     });
     ui.startButton.addEventListener('click', () => start());
 
-    // Farbpaletten
     const palettes = [
       { floor: '#43c6bd', wall: '#ff9b38', trim: '#ffd34f', dot: '#f52d83', ink: '#24142f', cream: '#fff0bd' },
       { floor: '#f5c94e', wall: '#8749d8', trim: '#35c6bd', dot: '#f22d83', ink: '#24142f', cream: '#fff4ca' },
@@ -541,9 +531,7 @@ ctx.imageSmoothingQuality = 'high';
       { floor: '#f2a53c', wall: '#33bbb6', trim: '#8547cf', dot: '#f42c83', ink: '#24142f', cream: '#fff0bd' }
     ];
 
-// 0 = frei, 1 = Wand, 2 = Futter, 3 = Schlangenstart, 4 = Brücke, 5 = Brücke mit Unterführung
 const LEVEL_COUNT = 65;
-// LEVEL 01 — Original-Level (20 x 11)
 const LEVEL_1_MAP = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
@@ -558,9 +546,6 @@ const LEVEL_1_MAP = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
-// LEVEL 02 bis LEVEL 65: direkt bearbeitbare 20x11-Zahlenraster; jedes Level ist einzeln markiert.
-// 0 = frei, 1 = Wand, 2 = Futter, 3 = Schlangenstart, 4 = Brücke, 5 = Brücke mit Unterführung.
-// Setze genau eine 3 pro Level an die gewünschte Startposition.
 const LEVEL_MAPS = [
       // LEVEL 02 — bearbeitbares 20 x 11 Raster
 [
@@ -1460,19 +1445,21 @@ const LEVEL_MAPS = [
 ]
 ];
 
+    // FIX: Absicherung gegen fehlende Level-Einträge
     function getLevelMap(levelIndex) {
-      const source = levelIndex === 0 ? LEVEL_1_MAP : LEVEL_MAPS[levelIndex - 1];
+      const source = levelIndex === 0
+        ? LEVEL_1_MAP
+        : (LEVEL_MAPS[levelIndex - 1] || LEVEL_1_MAP);
       return source.map(row => [...row]);
     }
 
-    // Spiel-Zustand
     let grid = [];
     let stage = 0;
     let score = 0;
     let lives = 3;
     let pucks = 0;
     let seconds = 120;
-    let state = 'title'; // 'title', 'playing', 'lost', 'gameover', 'won'
+    let state = 'title';
 
     let snake = [];
     let visualFrom = [];
@@ -1486,13 +1473,13 @@ const LEVEL_MAPS = [
     let projectile = null;
 
     let moveTimer = null;
-    // Merkt sich die zuletzt gedrückte Richtung. Das Loslassen einer älteren
-    // Taste darf die Bewegung nach einem Richtungswechsel nicht stoppen.
     let activeDirectionKey = null;
     let clockTimer = null;
     let extraTimer = null;
     let extraExpireTimer = null;
     let projectileTimer = null;
+    // FIX: Handle für den Respawn-Timeout nach einem Leben-Verlust
+    let respawnTimer = null;
 
     let growthPerFood = 1;
     let foodScoreMultiplier = 1;
@@ -1529,10 +1516,6 @@ const LEVEL_MAPS = [
       return x < 0 || y < 0 || x >= W || y >= H || grid[y][x] === 1;
     }
 
-    // BRÜCKEN-KOLLISIONEN
-    // 4 = nur oben auf der Brücke befahrbar.
-    // 5 = oben entlang der Brücke ODER quer darunter hindurch.
-    // Die Brückenrichtung wird aus den benachbarten 4er-/5er-Feldern erkannt.
     function bridgeAxisAt(x, y) {
       const isBridge = (nx, ny) =>
         nx >= 0 && ny >= 0 && nx < W && ny < H &&
@@ -1548,19 +1531,13 @@ const LEVEL_MAPS = [
       if ((left || right) && !(up || down)) return 'horizontal';
       if ((up || down) && !(left || right)) return 'vertical';
 
-      // Bei einer Kreuzung mit gleich vielen Anschlüssen ist die
-      // waagerechte Richtung die Hauptbrücke (wie in Level 8).
       if ((left || right) && (up || down)) {
         return (left && right) || !(up && down) ? 'horizontal' : 'vertical';
       }
 
-      // Einzelnes Brückenfeld: waagerecht als Standard.
       return 'horizontal';
     }
 
-    // Liefert die Ebene für das nächste Feld:
-    // 0 = normaler Boden, 1 = oben auf der Brücke, 2 = darunter.
-    // null bedeutet: Diese Bewegungsrichtung ist an dieser Stelle gesperrt.
     function layerForEntry(x, y, dx, dy) {
       if (x < 0 || y < 0 || x >= W || y >= H || grid[y][x] === 1) {
         return null;
@@ -1575,20 +1552,16 @@ const LEVEL_MAPS = [
       if (alongBridge) return 1;
       if (value === 5) return 2;
 
-      // Ein 4er-Feld hat keine Unterführung.
       return null;
     }
 
     function findSpawn() {
-      // Eine 3 im Zahlenraster legt den Startpunkt fest.
-      // Die 3 ist für das Spiel ein normales freies Feld.
       for (let y = 0; y < H; y++) {
         for (let x = 0; x < W; x++) {
           if (grid[y][x] === 3 && !blocked(x, y)) return { x, y };
         }
       }
 
-      // Falls keine 3 eingetragen wurde: bisheriger Standard-Startpunkt.
       const wanted = { x: 12, y: 9 };
       if (!blocked(wanted.x, wanted.y)) return wanted;
 
@@ -1612,7 +1585,6 @@ const LEVEL_MAPS = [
         }
       }
       if (free.length) {
-        // Sperms kommen jetzt häufiger: 3 von 10 möglichen Ziehungen.
 const types = [
     'puck',
     'puck',
@@ -1658,6 +1630,8 @@ const types = [
     }
 
     function resetStage() {
+      // FIX: Sicherheitshalber Bewegung stoppen (verhindert, dass ein alter moveTimer weiterläuft)
+      stopMove();
       buildMap();
       const spawn = findSpawn();
       snake = [{ ...spawn, layer: 0 }];
@@ -1669,9 +1643,18 @@ const types = [
       clearTimeout(extraExpireTimer);
       extraExpireTimer = null;
       extra = null;
+      // FIX: Speed- und Sonnen-Effekt beim Levelwechsel zurücksetzen
+      clearTimeout(speedTimer); speedTimer = null;
+      clearTimeout(sunEffectTimer); sunEffectTimer = null;
+      // FIX: Eventuell noch laufenden Respawn-Callback canceln
+      clearTimeout(respawnTimer); respawnTimer = null;
       growthPerFood = 1;
       foodScoreMultiplier = 1;
       foodRadius = 3.5;
+      // FIX: Frucht-Bonus pro Level neu starten
+      fruitCount = 0;
+      // FIX: Basis-Geschwindigkeit zurücksetzen
+      moveDelay = 200;
       placePellets();
       pellets.delete(key(spawn.x, spawn.y));
       seconds = 120;
@@ -1680,13 +1663,22 @@ const types = [
     }
 
     function start() {
-      if (state === 'playing') return;
+      // FIX: 'lost' ebenfalls blocken, damit die Todesanimation nicht übersprungen/zerstört wird
+      if (state === 'playing' || state === 'lost') return;
       highscoreForThisRunSaved = false;
+      // FIX: Punkte, Leben, Sperms und Frucht-Bonus bei jedem Neustart zurücksetzen
+      score = 0;
+      lives = 3;
+      pucks = 0;
+      fruitCount = 0;
+      moveDelay = 200;
       if (state === 'title' || state === 'gameover' || state === 'won') stage = selectedStartLevel;
       state = 'playing';
       resetStage();
+      // FIX: Alle Timer sauber neu aufsetzen
       clearInterval(clockTimer);
       clearTimeout(extraTimer);
+      clearTimeout(respawnTimer); respawnTimer = null;
       clockTimer = setInterval(() => {
         if (state !== 'playing') return;
         seconds--;
@@ -1694,13 +1686,13 @@ const types = [
         if (seconds <= 0) loseLife('ZEIT ABGELAUFEN');
       }, 1000);
       function scheduleNextExtra() {
-      extraTimer = setTimeout(() => {
-        placeExtra();
-        scheduleNextExtra();
-    }, Math.floor(5000 + Math.random() * 15001));
-}
-
-scheduleNextExtra();
+        extraTimer = setTimeout(() => {
+          if (state === 'playing') placeExtra();
+          // FIX: Nicht weiter planen, sobald das Spiel vorbei ist
+          if (state !== 'gameover' && state !== 'won') scheduleNextExtra();
+        }, Math.floor(5000 + Math.random() * 15001));
+      }
+      scheduleNextExtra();
       canvas.focus();
     }
 
@@ -1711,9 +1703,7 @@ scheduleNextExtra();
 
     function setDirection(d) {
       if (state === 'title' || state === 'gameover' || state === 'won') {
-        if (state === 'gameover' || state === 'won') {
-          score = 0; lives = 3; pucks = 0; stage = selectedStartLevel; fruitCount = 0;
-        }
+        // FIX: start() übernimmt das Zurücksetzen – kein doppelter Reset mehr nötig
         start();
         return;
       }
@@ -1724,7 +1714,6 @@ scheduleNextExtra();
       if (!moveTimer) {
         if (step()) moveTimer = setInterval(step, moveDelay);
       } else {
-        // A held direction changes immediately without waiting for a stale timer tick.
         clearInterval(moveTimer);
         if (step()) moveTimer = setInterval(step, moveDelay);
       }
@@ -1835,8 +1824,6 @@ scheduleNextExtra();
 
       const nextKey = key(next.x, next.y);
       const eatingPellet = pellets.has(nextKey);
-      // Nur normales Wachstum beim Fressen; die große Sonne verändert
-      // ausschließlich die Punkte, nicht die Länge der Schlange.
       const willGrow = eatingPellet && growthPerFood > 0;
       const tailIndex = snake.length - 1;
       const hitBody = snake.some((part, i) =>
@@ -1882,7 +1869,7 @@ scheduleNextExtra();
 
     function fire() {
       if (state === 'title' || state === 'gameover' || state === 'won') {
-        if (state === 'gameover' || state === 'won') { score = 0; lives = 3; pucks = 0; stage = 0; }
+        // FIX: start() kümmert sich um sämtliche Resets (score, lives, pucks, stage)
         start();
         return;
       }
@@ -1894,18 +1881,23 @@ scheduleNextExtra();
       
       pucks--;
       projectile = { x, y, dx: facing.x, dy: facing.y };
-     // Extra direkt vor dem Wurm einsammeln, Puck fliegt weiter.
-if (extra && extra.x === x && extra.y === y) {
-  collectExtra(extra.type);
-}
-// Auch das direkt vor dem Wurm liegende erste Feld prüfen.
-if (pellets.delete(key(x, y))) {
-  score += 10;
-  if (pellets.size === 0) {
-    advanceLevel();
-    return;
-  }
-}
+
+      // FIX: Wenn das Extra den Level wechselt oder ein Leben kostet, sofort abbrechen –
+      // sonst würden Futter/Punkte im neuen Level fälschlich verarbeitet.
+      if (extra && extra.x === x && extra.y === y) {
+        if (collectExtra(extra.type)) {
+          updateHud();
+          return;
+        }
+      }
+      if (pellets.delete(key(x, y))) {
+        score += 10;
+        if (pellets.size === 0) {
+          advanceLevel();
+          updateHud();
+          return;
+        }
+      }
       updateHud();
       draw();
       projectileTimer = setInterval(moveProjectile, 90);
@@ -1920,10 +1912,14 @@ if (pellets.delete(key(x, y))) {
       
       projectile.x = nx;
       projectile.y = ny;
-    // Puck sammelt Extras ein und fliegt danach weiter.
-if (extra && extra.x === nx && extra.y === ny) {
-  collectExtra(extra.type);
-}
+
+      // FIX: Bei Level-Wechsel / Tod sofort abbrechen (siehe fire())
+      if (extra && extra.x === nx && extra.y === ny) {
+        if (collectExtra(extra.type)) {
+          updateHud();
+          return;
+        }
+      }
       if (pellets.delete(key(nx, ny))) {
         score += 10;
         if (pellets.size === 0) { advanceLevel(); return; }
@@ -1938,6 +1934,10 @@ if (extra && extra.x === nx && extra.y === ny) {
       stage++;
       if (stage >= LEVEL_COUNT) {
         state = 'won';
+        // FIX: Timer beim Sieg beenden
+        clearInterval(clockTimer); clockTimer = null;
+        clearTimeout(extraTimer); extraTimer = null;
+        clearTimeout(respawnTimer); respawnTimer = null;
         recordHighscore();
         updateHud();
         draw('ALLE 65 LEVEL GESCHAFFT!');
@@ -1957,9 +1957,17 @@ if (extra && extra.x === nx && extra.y === ny) {
       updateHud();
       draw(message);
       
-      setTimeout(() => {
+      // FIX: Respawn-Timeout als Handle speichern, damit start()/resetStage() ihn abbrechen können
+      clearTimeout(respawnTimer);
+      respawnTimer = setTimeout(() => {
+        respawnTimer = null;
+        // FIX: Falls zwischenzeitlich neu gestartet wurde, abbrechen
+        if (state !== 'lost') return;
         if (lives <= 0) {
           state = 'gameover';
+          // FIX: Timer beim Game-Over beenden
+          clearInterval(clockTimer); clockTimer = null;
+          clearTimeout(extraTimer); extraTimer = null;
           recordHighscore();
           draw('SPIEL VORBEI');
           return;
@@ -1984,7 +1992,6 @@ if (extra && extra.x === nx && extra.y === ny) {
       const py = y * T;
 
       if (grid[y][x] === 1) {
-        // Wandkachel im Retro-Bevel Stil
         ctx.fillStyle = p.wall;
         ctx.fillRect(px, py, T, T);
         
@@ -1992,7 +1999,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         ctx.lineWidth = 1.5;
         ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
 
-        // Licht- und Schattenkanten für 3D-Retro-Look
         ctx.fillStyle = p.trim;
         ctx.fillRect(px + 2, py + 2, T - 4, 3);
         ctx.fillRect(px + 2, py + 2, 3, T - 4);
@@ -2000,7 +2006,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         ctx.fillStyle = p.cream + 'aa';
         ctx.fillRect(px + 4, py + 4, 2, 2);
       } else {
-        // Bodenkachel
         ctx.fillStyle = p.floor;
         ctx.fillRect(px, py, T, T);
         ctx.strokeStyle = p.ink + '20';
@@ -2017,8 +2022,6 @@ if (extra && extra.x === nx && extra.y === ny) {
     }
 
 
-    // BRÜCKEN: 4 = Brückenfeld ohne Unterführung, 5 = Brückenfeld mit Unterführung.
-    // Die Richtung wird automatisch aus benachbarten 4er-/5er-Feldern erkannt.
     const bridgeDirs = [
       { x: 0, y: -1, name: 'N' },
       { x: 1, y: 0, name: 'E' },
@@ -2026,13 +2029,7 @@ if (extra && extra.x === nx && extra.y === ny) {
       { x: -1, y: 0, name: 'W' }
     ];
 
-    function bridgeConnections(x, y) {
-      return bridgeDirs.filter(d => {
-        const nx = x + d.x, ny = y + d.y;
-        return nx >= 0 && ny >= 0 && nx < W && ny < H &&
-          (grid[ny][nx] === 4 || grid[ny][nx] === 5);
-      });
-    }
+    // (unbenutzte Hilfsfunktion entfernt – war toter Code)
 
     function drawBridgeTile(x, y, p, overlay = false) {
       const value = grid[y][x];
@@ -2041,7 +2038,6 @@ if (extra && extra.x === nx && extra.y === ny) {
       const axis = bridgeAxisAt(x, y);
       const vertical = axis === 'vertical';
 
-      // Zusammenhängende Brückenfelder gleicher Ausrichtung finden.
       let first = axis === 'horizontal' ? x : y;
       let last = first;
 
@@ -2074,14 +2070,11 @@ if (extra && extra.x === nx && extra.y === ny) {
       ctx.translate(x * T + T / 2, y * T + T / 2);
       if (vertical) ctx.rotate(Math.PI / 2);
 
-      // Schatten auf den vorhandenen Weg – der Weg selbst wird nicht ersetzt.
       if (!overlay) {
         ctx.fillStyle = 'rgba(8, 13, 22, 0.30)';
         ctx.fillRect(-T / 2, T * 0.02, T, T * 0.43);
       }
 
-      // Seitenwand: nur der Bereich ÜBER dem Bogen wird gefüllt.
-      // Der Bereich UNTER dem Bogen ist der echte, offene Tunnel.
       if (!overlay) {
         ctx.beginPath();
         ctx.moveTo(-T / 2, -T * 0.13);
@@ -2100,7 +2093,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         ctx.fillStyle = wall;
         ctx.fill();
 
-        // Steinblöcke auf der sichtbaren Brückenseite
         ctx.save();
         ctx.clip();
         ctx.strokeStyle = 'rgba(48, 34, 27, 0.55)';
@@ -2120,7 +2112,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         }
         ctx.restore();
 
-        // Dunkler Tunnelinnenrand und helle Steinlaibung.
         ctx.strokeStyle = '#35271f';
         ctx.lineWidth = Math.max(4, T * 0.10);
         ctx.beginPath();
@@ -2145,8 +2136,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         }
         ctx.stroke();
       } else {
-        // Nach dem Wurm nur die innere Bogenkante zeichnen:
-        // keine Fläche über dem Wurm und keine geschlossene Tunnelöffnung.
         ctx.strokeStyle = '#3b2b22';
         ctx.lineWidth = Math.max(4, T * 0.10);
         ctx.beginPath();
@@ -2160,7 +2149,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         ctx.stroke();
       }
 
-      // Gewölbtes Brückendeck mit deutlich steilerem Anstieg und Abfall.
       if (!overlay) {
         ctx.fillStyle = '#49301f';
         ctx.beginPath();
@@ -2180,7 +2168,6 @@ if (extra && extra.x === nx && extra.y === ny) {
         ctx.closePath();
         ctx.fill();
 
-        // Fahrbahnplanken folgen ebenfalls der gewölbten Oberkante.
         ctx.strokeStyle = '#704522';
         ctx.lineWidth = 1.2;
         for (let i = 1; i < 6; i++) {
@@ -2194,7 +2181,6 @@ if (extra && extra.x === nx && extra.y === ny) {
           ctx.stroke();
         }
 
-        // Geländer mit klar erkennbarem Bogenverlauf
         ctx.strokeStyle = '#f2c78d';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -2263,8 +2249,6 @@ function drawFood(x, y, p) {
     function drawHead(s, dx, dy) {
       const x = s.x * T + T / 2;
       const y = s.y * T + T / 2;
-      // Das Kopf-Original zeigt nach OBEN (nicht nach rechts).
-      // Deshalb wird die gewünschte Laufrichtung um 90 Grad korrigiert.
       const angle = Math.atan2(dy, dx) + Math.PI / 2;
       if (drawAsset('snakeHead', x, y, T, angle)) return;
       ctx.save();
@@ -2302,9 +2286,6 @@ function drawFood(x, y, p) {
     function drawWormBody(points) {
       if (!points.length) return;
 
-      // ZUERST einen durchgehenden, weich gerundeten Körper zeichnen.
-      // Dadurch bleiben auch bei transparenten PNGs oder kleinen Abständen
-      // zwischen einzelnen Körpergrafiken keinerlei Lücken sichtbar.
       if (points.length > 1) {
         const centers = points.map(p => ({
           x: p.x * T + T / 2,
@@ -2333,8 +2314,6 @@ function drawFood(x, y, p) {
         ctx.restore();
       }
 
-      // Austauschbare Körpergrafiken liegen AUF dem durchgehenden Körper.
-      // Der Untergrund bleibt sichtbar und verbindet transparente Ränder.
       for (let i = 1; i < points.length - 1; i++) {
         const prev = points[i - 1];
         const next = points[i + 1];
@@ -2346,11 +2325,8 @@ function drawFood(x, y, p) {
         const cross = inDir.x * outDir.y - inDir.y * outDir.x;
         const isCorner = cross !== 0;
         if (isCorner) {
-          // Die Kurvengrafik liegt im Original so: Eingang links, Ausgang unten.
-          // Bei einer Linkskurve wird sie gespiegelt, bei einer Rechtskurve gedreht.
           const incomingAngle = Math.atan2(inDir.y, inDir.x);
           if (!drawAsset('snakeCorner', x, y, T, incomingAngle, cross < 0)) {
-            // Fallback, falls noch keine eigene schlangekurve-Grafik vorhanden ist.
             ctx.save();
             ctx.strokeStyle = '#e6257a';
             ctx.lineWidth = T * 0.50;
@@ -2367,8 +2343,6 @@ function drawFood(x, y, p) {
         }
       }
 
-      // Schwanzgrafik: Das Original zeigt mit der Spitze NACH UNTEN.
-      // Die gewünschte Richtung läuft vom letzten Körperfeld nach außen.
       if (points.length > 1) {
         const tail = points[points.length - 1];
         const before = points[points.length - 2];
@@ -2389,13 +2363,10 @@ function drawPuckShot(s) {
   const x = s.x * T + T / 2;
   const y = s.y * T + T / 2;
 
-  // Das Puck-Bild zeigt ursprünglich nach oben.
-  // Je nach Flugrichtung wird es passend gedreht.
   const angle = Math.atan2(s.dy, s.dx) + Math.PI / 2;
 
   if (drawAsset('puck', x, y, T * 0.65, angle)) return;
 
-  // Ersatzdarstellung, falls das Bild nicht geladen wurde.
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
@@ -2413,30 +2384,24 @@ function drawPuckShot(s) {
       const p = palettes[stage % palettes.length];
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-      // Kacheln zeichnen
       for (let y = 0; y < H; y++) {
         for (let x = 0; x < W; x++) {
           tile(x, y, p);
         }
       }
 
-      // Brücken liegen über dem Boden und unter Futter sowie Schlange.
       drawBridges(p);
 
-      // Futter zeichnen – liegt ein Extra auf dem Feld, bleibt das Futter
-      // logisch vorhanden, wird aber optisch vom Extra verdeckt.
       for (const k of pellets) {
         if (extra && k === `${extra.x},${extra.y}`) continue;
         const [x, y] = k.split(',').map(Number);
         drawFood(x, y, p);
       }
 
-      // Extras zeichnen
       if (extra) {
         drawExtraItem(extra.x, extra.y, extra.type);
       }
 
-      // Wurm zeichnen
       const progress = visualFrom.length ? Math.min(1, (performance.now() - moveAnimStart) / moveDelay) : 1;
       const shownSnake = snake.map((s, i) => {
         const from = visualFrom.length ? visualFrom[Math.min(Math.max(i - 1, 0), visualFrom.length - 1)] : s;
@@ -2452,26 +2417,24 @@ function drawPuckShot(s) {
         drawHead(shownSnake[0], facing.x, facing.y);
       }
 
-      // Brückenkonturen nach dem Wurm zeichnen. Die Bogenöffnung bleibt
-      // durchsichtig, sodass der Wurm unter der Brücke sichtbar ist.
       for (const part of shownSnake) {
         if (part.layer === 2) {
           drawBridgeTile(Math.round(part.x), Math.round(part.y), p, true);
         }
       }
 
-      // Puck-Schuss
       if (projectile) {
         drawPuckShot(projectile);
       }
 
-      // Levelauswahl nur auf dem Start-/Endbildschirm anzeigen.
+      // FIX: Sichtbarkeit der Levelauswahl zuverlässig steuern
+      // (mit [hidden]{display:none !important} im CSS wirkt das jetzt auch bei .flex)
       if (ui.picker) ui.picker.hidden = state === 'playing';
 
-      // Overlay Screen (Start/Pause/Lose)
       if (state === 'title' || state === 'gameover' || state === 'won' || message) {
+        // FIX: In logischen Pixeln füllen (ctx ist bereits mit pixelRatio skaliert)
         ctx.fillStyle = '#24142fcd';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         
         ctx.textAlign = 'center';
         ctx.font = '700 22px "Press Start 2P", cursive, sans-serif';
@@ -2508,14 +2471,9 @@ function drawPuckShot(s) {
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        if (state === 'gameover' || state === 'won') {
-          score = 0; lives = 3; pucks = 0; stage = selectedStartLevel; fruitCount = 0;
-          updateHud();
-          state = 'title';
-          draw();
-        } else {
-          start();
-        }
+        // FIX: start() behandelt 'lost' (Todesanimation) selbst als No-Op,
+        // und startet aus 'gameover'/'won'/'title' direkt (statt Zwischenschritt 'title').
+        start();
       }
     }
 
@@ -2523,7 +2481,6 @@ function drawPuckShot(s) {
     window.addEventListener('keyup', e => {
       if (dirs[e.key]) {
         e.preventDefault();
-        // Nur das Loslassen der aktuell steuernden Taste stoppt die Schlange.
         if (e.key === activeDirectionKey) {
           activeDirectionKey = null;
           stopMove();
@@ -2532,8 +2489,6 @@ function drawPuckShot(s) {
     });
     window.addEventListener('blur', stopMove);
 
-    // Vollbild für den gesamten Automaten. Das Spielfeld behält sein
-    // festes Seitenverhältnis von 20:11 und wird niemals abgeschnitten.
     const fullscreenButton = document.querySelector('#fullscreen-button');
     if (fullscreenButton) {
       fullscreenButton.addEventListener('click', async () => {

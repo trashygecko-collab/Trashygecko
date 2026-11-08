@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#05060a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>VOIGT ZONE</title>
 <style>
   :root{
@@ -100,6 +103,17 @@
     .actions{margin-left:auto}
   }
 
+  /* Landscape-Touch: kompakte Topbar, mehr Platz für's Spielfeld */
+  @media (orientation: landscape) and (max-height: 520px) {
+    #topbar { padding: 3px 8px; gap: 6px; font-size: 10.5px; }
+    #topbar .brand { display: none; }
+    #topbar .stat { padding: .15em .35em; }
+    #topbar .actions .btn { padding: .3em .45em; font-size: .68em; }
+    .progress { gap: 3px; }
+    .track { height: 7px; }
+    .ptext { font-size: .65em; }
+  }
+
   /* ---------------- Screens ---------------- */
   .screen{
     position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -121,12 +135,10 @@
     -webkit-background-clip:text;background-clip:text;
     filter:drop-shadow(0 0 22px rgba(77,255,158,.4))}
   .screen p{font-size:clamp(13px,2.2vw,17px);color:#9fb8c9;max-width:34em;line-height:1.5}
-  /* Untertitel unter dem Spielnamen */
   .screen .tagline{
     margin-top:-.9rem;font-size:clamp(10px,1.7vw,13px);letter-spacing:.42em;
     text-transform:uppercase;color:#6f93a8;max-width:none;
   }
-  /* Spielname auf Game-Over- und Abschlussbildschirm */
   .screen .brandline{
     font-size:clamp(11px,1.8vw,14px);letter-spacing:.44em;text-transform:uppercase;
     font-weight:800;max-width:none;
@@ -194,6 +206,7 @@
     transform:translateX(-50%);display:none;z-index:35;
     grid-template-columns:repeat(3,var(--tb));grid-template-rows:repeat(2,var(--tb));
     gap:7px;--tb:56px;opacity:.62;
+    transition:opacity .2s;
   }
   #touch.on{display:grid}
   .dp{
@@ -210,9 +223,20 @@
   #dpDown{grid-column:2;grid-row:2}
   #dpRight{grid-column:3;grid-row:2}
 
-  @media (max-height:520px){
-    #touch{--tb:48px;bottom:8px;opacity:.5}
+  /* Portrait, sehr flache Geräte */
+  @media (max-height:520px) and (orientation: portrait){
+    #touch{--tb:48px;bottom:8px;opacity:.55}
   }
+
+  /* Landscape-Touch: durchsichtige Buttons über dem Spielfeld */
+  @media (orientation: landscape) and (max-height: 520px) {
+    .dp {
+      background: rgba(6,18,28,.55);
+      border-color: rgba(34,230,255,.45);
+      box-shadow: 0 0 12px rgba(34,230,255,.15);
+    }
+  }
+
   @media (prefers-reduced-motion:reduce){
     *{animation-duration:.01ms !important;transition-duration:.01ms !important}
   }
@@ -461,31 +485,44 @@ function layout() {
   stage.style.transform =
     "translate(" + ox + "px," + oy + "px) scale(" + s + ")";
 
-  // Touch-Steuerung: bevorzugt in den freien Streifen unter dem Feld
+  // Touch-Steuerung: bevorzugt in den freien Streifen unter dem Feld (Portrait),
+  // im Landscape: halbtransparent unten rechts über dem Spielfeld.
   const touchEl = $("touch");
   if (touchEl.classList.contains("on")) {
-    const below = vh - (oy + ch);
-    const tb = Math.round(clamp(Math.min(vw, vh) * 0.15, 44, 64));
+    const isLandscape = vw > vh;
+    const tb = Math.round(
+      clamp(Math.min(vw, vh) * (isLandscape ? 0.12 : 0.15), 42, 64)
+    );
     touchEl.style.setProperty("--tb", tb + "px");
 
-    const pad = Math.round(clamp(Math.min(vw, vh) * 0.05, 10, 26));
-    if (below >= 130) {
-      const space = Math.min(below + oy, 130);
-      touchEl.style.bottom = (pad + (space - 130) / 2) + "px";
-      touchEl.style.left = "50%";
-      touchEl.style.transform = "translateX(-50%)";
-      touchEl.style.opacity = "0.85";
+    const safeR = "env(safe-area-inset-right, 0px)";
+    const safeB = "env(safe-area-inset-bottom, 0px)";
+
+    if (isLandscape) {
+      // Landscape: unten rechts, halbtransparent über dem Spiel
+      touchEl.style.left = "auto";
+      touchEl.style.right = "calc(10px + " + safeR + ")";
+      touchEl.style.bottom = "calc(10px + " + safeB + ")";
+      touchEl.style.transform = "none";
+      touchEl.style.opacity = "0.42";
     } else {
-      const sideRoom = ox;
-      if (sideRoom > 160) {
-        touchEl.style.left = (pad + 70) + "px";
-        touchEl.style.transform = "none";
+      // Portrait: bisheriges Verhalten (unter dem Feld oder unten)
+      const below = vh - (oy + ch);
+      const pad = Math.round(clamp(Math.min(vw, vh) * 0.05, 10, 26));
+      touchEl.style.right = "auto";
+      if (below >= 130) {
+        const space = Math.min(below + oy, 130);
+        touchEl.style.left = "50%";
+        touchEl.style.bottom =
+          "calc(" + (pad + (space - 130) / 2) + "px + " + safeB + ")";
+        touchEl.style.transform = "translateX(-50%)";
+        touchEl.style.opacity = "0.85";
       } else {
         touchEl.style.left = "50%";
+        touchEl.style.bottom = "calc(" + pad + "px + " + safeB + ")";
         touchEl.style.transform = "translateX(-50%)";
+        touchEl.style.opacity = "0.55";
       }
-      touchEl.style.bottom = pad + "px";
-      touchEl.style.opacity = "0.55";
     }
   }
 
@@ -500,6 +537,28 @@ function layout() {
   const tb = document.getElementById("topbar");
   if (tb) {
     document.documentElement.style.setProperty("--topbar-h", tb.offsetHeight + "px");
+  }
+}
+
+/* =====================================================================
+   VOLLBILD (nur Touch-Geräte, nur bei Spielstart ausgelöst)
+   ===================================================================== */
+function requestFullscreenIfMobile() {
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  const isSmall = Math.min(window.innerWidth, window.innerHeight) < 820;
+  if (!isTouch || !isSmall) return;
+
+  const el = document.documentElement;
+  const req =
+    el.requestFullscreen ||
+    el.webkitRequestFullscreen ||
+    el.mozRequestFullScreen ||
+    el.msRequestFullscreen;
+  if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+    try {
+      const p = req.call(el);
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) { /* ignorieren */ }
   }
 }
 
@@ -535,12 +594,10 @@ async function discoverLevels() {
     } else {
       misses++;
     }
-    // UI-Feedback während der Suche
     const txt = $("startLoadingText");
     if (txt) txt.textContent = "Levelbilder werden gesucht … (" + found.length + " gefunden)";
   }
   if (found.length === 0) {
-    // Ohne Bilder trotzdem spielbar bleiben
     found.push({ index: 1, img: null, name: "platzhalter" });
   }
   for (const lv of found) {
@@ -549,7 +606,7 @@ async function discoverLevels() {
   return found;
 }
 
-/* Bild auf 1280x720 bringen – seitenverhältnistreu (cover), Originaldatei bleibt unberührt */
+/* Bild auf 1280x720 bringen – seitenverhältnistreu (cover) */
 function makeLevelCanvas(entry) {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
@@ -567,7 +624,6 @@ function makeLevelCanvas(entry) {
     g.imageSmoothingQuality = "high";
     g.drawImage(entry.img, (W - dw) / 2, (H - dh) / 2, dw, dh);
   } else {
-    // Prozeduraler Platzhalter
     const grd = g.createLinearGradient(0, 0, W, H);
     grd.addColorStop(0, "#0b1b34");
     grd.addColorStop(0.45, "#142a4d");
@@ -645,7 +701,6 @@ function buildComposite() {
   compDirty = false;
 }
 
-/* Cyanfarbener Leuchtrand entlang der Grenze eroberter Flächen */
 function buildEdge() {
   const g = edgeCtx;
   const off = 6;
@@ -655,14 +710,12 @@ function buildEdge() {
   g.imageSmoothingEnabled = true;
   g.drawImage(maskCanvas, 0, 0, W, H);
 
-  // Inneres wegstanzen, damit nur die Kante übrig bleibt
   g.globalCompositeOperation = "destination-out";
   g.drawImage(maskCanvas, -off, 0, W, H);
   g.drawImage(maskCanvas, off, 0, W, H);
   g.drawImage(maskCanvas, 0, -off, W, H);
   g.drawImage(maskCanvas, 0, off, W, H);
 
-  // Kante einfärben
   g.globalCompositeOperation = "source-in";
   g.fillStyle = "#22e6ff";
   g.fillRect(0, 0, W, H);
@@ -739,7 +792,7 @@ function stepPlayer(dt) {
     const ox = player.x, oy = player.y;
     player.x = clamp(player.x + ix, PLAYER_R, W - PLAYER_R);
     player.y = clamp(player.y + iy, PLAYER_R, H - PLAYER_R);
-    if (player.x === ox && player.y === oy) break;   // an der Wand
+    if (player.x === ox && player.y === oy) break;
     afterMove(ox, oy);
     if (justClosed) { justClosed = false; break; }
   }
@@ -755,7 +808,6 @@ function afterMove(ox, oy) {
 
   if (drawing) {
     if (st === FILLED) {
-      // Linie trifft sichere Fläche -> Fläche schließen
       trailPoints.push({ x: player.x, y: player.y });
       player.cx = cx; player.cy = cy;
       closeLoop();
@@ -786,18 +838,13 @@ function closeLoop() {
   trailPoints = [];
   trailStart = null;
 
-  // Linie wird zu sicherer Fläche
   for (let k = 0; k < cells.length; k++) grid[cells[k]] = FILLED;
 
-  // Von jedem Gegner aus alle erreichbaren leeren Zellen markieren
   const keep = new Uint8Array(COLS * ROWS);
   const stack = [];
 
   for (let k = 0; k < ghosts.length; k++) {
     const g = ghosts[k];
-
-    // Der Grenzgegner hält – wie bisher – keine Flächen. Wird sein Gebiet
-    // erobert, setzt syncFrontierGhost ihn anschließend auf die neue Grenze.
     if (g.border) continue;
 
     let ci = idxOf(cellX(g.x), cellY(g.y));
@@ -824,7 +871,6 @@ function closeLoop() {
     if (cy < ROWS - 1) { const n = i + COLS; if (grid[n] === EMPTY && !keep[n]) { keep[n] = 1; stack.push(n); } }
   }
 
-  // Alles, was kein Gegner erreichen kann, wird erobert
   for (let i = 0; i < grid.length; i++) {
     if (grid[i] === EMPTY && !keep[i]) grid[i] = FILLED;
   }
@@ -832,10 +878,9 @@ function closeLoop() {
   maskDirty = true;
   compDirty = true;
 
-  // Sicherheitsnetz: Gegner notfalls in freie Zelle schieben
   for (let k = 0; k < ghosts.length; k++) {
     const g = ghosts[k];
-    if (g.border) continue;   // Grenzgegner wird gleich neu aufgesetzt
+    if (g.border) continue;
     const ci = idxOf(cellX(g.x), cellY(g.y));
     if (grid[ci] !== EMPTY) {
       const alt = nearestEmptyCell(cellX(g.x), cellY(g.y), 40);
@@ -847,14 +892,11 @@ function closeLoop() {
     g.tx = g.x; g.ty = g.y; g.retarget = 0;
   }
 
-  // Neue Begrenzung der verdeckten Fläche berechnen und den Grenzgegner
-  // auf die geänderte Strecke übernehmen.
   if (getFrontierGhosts().length) {
     buildFrontier();
     syncFrontierGhosts();
   }
 
-  // Partikel an der Schließstelle
   if (pts.length) {
     const last = pts[pts.length - 1];
     spawnSparks(last.x, last.y, "#4dff9e", 16, 170);
@@ -929,14 +971,7 @@ function attemptGhostMove(g, dx, dy) {
 }
 
 /* ---------------------------------------------------------------------
-   GRENZGEGNER (dritter Gegner ab Level 5)
-
-   Seine Fahrstrecke wird aus dem aktuellen Raster abgeleitet: Grenze
-   zwischen verdeckter und aufgedeckter Fläche. Dafür wird die Menge der
-   begehbaren Zellen (Abstand zur aufgedeckten Fläche > FRONTIER_MARGIN)
-   bestimmt, deren Rand in geschlossene Schleifen zerlegt und der Gegner
-   danach per Bogenlänge entlanggefahren. Nach jedem Flächenschluss wird
-   die Strecke neu berechnet.
+   GRENZGEGNER
    --------------------------------------------------------------------- */
 let frontierLoops = [];        // [{ pts, cum, total, area }]
 let frontierDirty = true;
@@ -947,7 +982,6 @@ function getFrontierGhosts() {
   return out;
 }
 
-/* Manhattan-Abstand jeder Zelle zur nächsten aufgedeckten Zelle */
 function buildDistanceMap() {
   const n = COLS * ROWS;
   const dist = new Uint8Array(n);
@@ -978,10 +1012,6 @@ function buildDistanceMap() {
   return dist;
 }
 
-/* Randsegmente der begehbaren Fläche zu geschlossenen Schleifen verketten.
-   Orientierung: aufgedeckte Fläche liegt links der Laufrichtung. An
-   Knoten mit vier Segmenten (Diagonalberührung) wird rechts abgebogen,
-   was der 4er-Nachbarschaft des Rasters entspricht. */
 function buildFrontier() {
   frontierLoops = [];
   const dist = buildDistanceMap();
@@ -994,10 +1024,10 @@ function buildFrontier() {
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       if (!walk(x, y)) continue;
-      if (!walk(x, y - 1)) segs.push([x, y, x + 1, y]);             // Nordwand
-      if (!walk(x, y + 1)) segs.push([x + 1, y + 1, x, y + 1]);     // Südwand
-      if (!walk(x - 1, y)) segs.push([x, y + 1, x, y]);             // Westwand
-      if (!walk(x + 1, y)) segs.push([x + 1, y, x + 1, y + 1]);     // Ostwand
+      if (!walk(x, y - 1)) segs.push([x, y, x + 1, y]);
+      if (!walk(x, y + 1)) segs.push([x + 1, y + 1, x, y + 1]);
+      if (!walk(x - 1, y)) segs.push([x, y + 1, x, y]);
+      if (!walk(x + 1, y)) segs.push([x + 1, y, x + 1, y + 1]);
     }
   }
   if (!segs.length) { frontierDirty = false; return; }
@@ -1031,12 +1061,11 @@ function buildFrontier() {
       raw.push({ x: s[0] * CELL, y: s[1] * CELL });
 
       const endV = s[3] * VW + s[2];
-      if (endV === firstV) break;                 // Schleife geschlossen
+      if (endV === firstV) break;
 
       const d = dirOf(s);
       const cands = vmap.get(endV) || [];
       let pick = -1;
-      // rechts, geradeaus, links, zurück
       for (const pref of [(d + 1) % 4, d, (d + 3) % 4, (d + 2) % 4]) {
         for (let c = 0; c < cands.length; c++) {
           const ci = cands[c];
@@ -1056,7 +1085,6 @@ function buildFrontier() {
   frontierDirty = false;
 }
 
-/* Punkte einer Schleife: Ecken behalten, Zwischenpunkte verwerfen */
 function makeLoop(raw) {
   const n = raw.length;
   if (n < 4) return null;
@@ -1126,7 +1154,6 @@ function nearestOnLoop(loop, px, py) {
   return best;
 }
 
-/* Nach einer Neuberechnung: alle Grenzgegner auf die neue Grenze setzen */
 function syncFrontierGhosts() {
   const list = getFrontierGhosts();
   if (!list.length) return;
@@ -1138,9 +1165,6 @@ function syncFrontierGhosts() {
 
   for (let k = 0; k < list.length; k++) {
     const g = list[k];
-
-    // Liegt der Gegner auf aufgedecktem Grund, muss er in jedem Fall auf die
-    // neue Grenze – sonst würde er über das Bild fahren.
     const onRevealed = grid[idxOf(cellX(g.x), cellY(g.y))] !== EMPTY;
 
     let bi = -1, bd = Infinity, bs = 0, bx = 0, by = 0;
@@ -1150,12 +1174,9 @@ function syncFrontierGhosts() {
     }
     if (bi < 0) { g.loop = -1; continue; }
 
-    // In einer winzigen, noch verdeckten Restfläche: stehen bleiben, statt
-    // quer durch aufgedeckte Flächen zu springen.
     if (bd > 90 && !onRevealed) { g.loop = -1; continue; }
 
     if (onRevealed) {
-      // sichtbarer Versatz: kurzer Partikelblitz an alter und neuer Position
       spawnSparks(g.x, g.y, g.color, 8, 150);
       spawnSparks(bx, by, g.color, 8, 150);
     }
@@ -1185,8 +1206,6 @@ function stepFrontierGhost(g, dt) {
   g.stuckT = 0;
 }
 
-/* Legt einen Grenzgegner auf die größte Schleife.
-   dir = +1 läuft vorwärts, dir = -1 exakt entgegengesetzt. */
 function addFrontierGhost(dir, loopIndex, t) {
   const loop = frontierLoops[loopIndex];
   if (!loop) return;
@@ -1220,8 +1239,6 @@ function spawnFrontierGhosts() {
   const t1 = Math.random() * loop.total;
   addFrontierGhost(1, best, t1);
 
-  // Ab Level 10 ein zweiter Grenzgegner, exakt gegenläufig, auf derselben
-  // Schleife und möglichst weit entfernt gestartet.
   if (levelIdx + 1 >= BORDER_GHOST_2_FROM_LEVEL) {
     const t2 = (t1 + loop.total * 0.5) % loop.total;
     addFrontierGhost(-1, best, t2);
@@ -1233,7 +1250,6 @@ function spawnGhosts() {
   const colors = ["#ff3d6e", "#a855f7", "#4d6bff"];
   const margin = BORDER_PX + GHOST_R + 20;
 
-  // Ab Level 15 ein dritter freilaufender Gegner (Typ wie Gegner 1 und 2)
   const normalCount = (levelIdx + 1 >= FIFTH_GHOST_FROM_LEVEL) ? 3 : 2;
 
   for (let k = 0; k < normalCount; k++) {
@@ -1259,7 +1275,6 @@ function spawnGhosts() {
     });
   }
 
-  // Ab Level 5 zusätzlich der Gegner, der der Grenze der verdeckten Fläche folgt
   if (levelIdx + 1 >= BORDER_GHOST_FROM_LEVEL) {
     spawnFrontierGhosts();
   }
@@ -1270,7 +1285,7 @@ function stepGhosts(dt) {
   for (let k = 0; k < ghosts.length; k++) {
     const g = ghosts[k];
 
-    if (g.border) {          // Grenzgegner folgt der Begrenzung der verdeckten Fläche
+    if (g.border) {
       stepFrontierGhost(g, dt);
       continue;
     }
@@ -1306,7 +1321,6 @@ function stepGhosts(dt) {
       g.stuckT = 0;
     }
 
-    // Feststeck-Erkennung über größeren Zeitraum
     g.stuck += dt;
     if (g.stuck > 1.4) {
       const travelled = Math.hypot(g.x - g.lastX, g.y - g.lastY);
@@ -1394,10 +1408,7 @@ function loadLevel(index) {
 
   levelCanvas = entry.canvas;
 
-  // Geschwindigkeitsfaktor aus der Levelnummer: 1 + (Level - 1) * 0,01
   ghostSpeedFactor = 1 + (index + 1 - 1) * GHOST_SPEED_STEP;
-
-  // Eroberungsziel dieses Levels: min(75 + (Level - 1), 90)
   levelTarget = targetForLevel(index + 1);
 
   resetGrid();
@@ -1428,6 +1439,7 @@ function loadLevel(index) {
 }
 
 function startNewGame() {
+  requestFullscreenIfMobile();
   lives = START_LIVES;
   levelIdx = 0;
   percent = 0;
@@ -1438,7 +1450,7 @@ function beginLevelComplete() {
   state = "levelcomplete";
   levelCompleteTimer = 0;
   levelRevealAll = true;
-  computePercent();          // bleibt der echte Wert für die Anzeige
+  computePercent();
   percent = 100;
   updateHUD();
   elFill.classList.add("done");
@@ -1446,7 +1458,6 @@ function beginLevelComplete() {
   elCountdown.textContent = String(LEVEL_COMPLETE_SECONDS);
   screenLevel.classList.add("open");
 
-  // Feuerwerk
   spawnSparks(W * 0.25, H * 0.4, "#4dff9e", 30, 320);
   spawnSparks(W * 0.75, H * 0.4, "#22e6ff", 30, 320);
   spawnSparks(W * 0.5, H * 0.62, "#a855f7", 30, 320);
@@ -1610,7 +1621,6 @@ function buildBackground() {
   g.fillStyle = "#05060a";
   g.fillRect(0, 0, W, H);
 
-  // Neon-Raster
   g.strokeStyle = "rgba(34,230,255,0.05)";
   g.lineWidth = 1;
   g.beginPath();
@@ -1618,7 +1628,6 @@ function buildBackground() {
   for (let y = 0; y <= H; y += 40) { g.moveTo(0, y + 0.5); g.lineTo(W, y + 0.5); }
   g.stroke();
 
-  // Farbschimmer
   const rg = g.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, W * 0.72);
   rg.addColorStop(0, "rgba(20,60,90,0.18)");
   rg.addColorStop(1, "rgba(0,0,0,0)");
@@ -1626,7 +1635,6 @@ function buildBackground() {
   g.fillRect(0, 0, W, H);
 }
 
-/* Weiche Glow-Sprites (deutlich schneller als shadowBlur) */
 const glowCache = {};
 function glowSprite(color) {
   if (glowCache[color]) return glowCache[color];
@@ -1671,8 +1679,6 @@ function drawImageLayer() {
 
 function drawBorderBand(t) {
   const pulse = 0.5 + 0.5 * Math.sin(t * 2.0);
-
-  // Sicherheitsband
   ctx.save();
   ctx.strokeStyle = "rgba(34,230,255," + (0.10 + 0.07 * pulse) + ")";
   ctx.lineWidth = BORDER_PX;
@@ -1691,24 +1697,20 @@ function drawFieldBorder(t) {
   ctx.save();
   ctx.lineJoin = "round";
 
-  // Außenschein als mehrere breite, transparente Striche
   for (let i = 4; i >= 1; i--) {
     ctx.strokeStyle = "rgba(" + col + "," + (base * 0.09 * i) + ")";
     ctx.lineWidth = i * 5;
     ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
   }
 
-  // harte Linie
   ctx.strokeStyle = "rgba(" + col + "," + (base + 0.25) + ")";
   ctx.lineWidth = complete ? 4 + 3 * flash : 3;
   ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
 
-  // innere Kante des Sicherheitsbandes
   ctx.lineWidth = 1.2;
   ctx.strokeStyle = "rgba(" + col + "," + (complete ? (0.4 + 0.5 * flash) : (0.16 + 0.16 * pulse)) + ")";
   ctx.strokeRect(BORDER_PX, BORDER_PX, W - 2 * BORDER_PX, H - 2 * BORDER_PX);
 
-  // Eckakzente
   const len = 54;
   ctx.lineWidth = complete ? 4 : 2.5;
   ctx.strokeStyle = "rgba(" + col + "," + (complete ? (0.5 + 0.5 * flash) : (0.45 + 0.4 * pulse)) + ")";
@@ -1742,7 +1744,6 @@ function drawTrail() {
     path.lineTo(trailPoints[i].x, trailPoints[i].y);
   }
 
-  // Außenschein (mehrfach gestrichelt statt shadowBlur)
   ctx.strokeStyle = "rgba(34,230,255,0.10)";
   ctx.lineWidth = 16;
   ctx.stroke(path);
@@ -1750,12 +1751,10 @@ function drawTrail() {
   ctx.lineWidth = 10;
   ctx.stroke(path);
 
-  // Kern
   ctx.strokeStyle = "#40eaff";
   ctx.lineWidth = 4;
   ctx.stroke(path);
 
-  // heller Innenstrich
   ctx.strokeStyle = "rgba(235,255,255,0.95)";
   ctx.lineWidth = 1.4;
   ctx.stroke(path);
@@ -1808,7 +1807,6 @@ function drawPlayer(t) {
 
   ctx.save();
 
-  // Leuchtspur hinter dem Spieler
   if (tail.length > 1) {
     ctx.globalCompositeOperation = "lighter";
     for (let i = 0; i < tail.length; i++) {
@@ -1907,7 +1905,6 @@ function updateHUD() {
   elPercent.textContent = Math.round(shown) + " %";
   elFill.style.width = shown + "%";
 
-  // Ziel dieses Levels anzeigen und Markierung entsprechend setzen
   if (elTarget) elTarget.textContent = levelTarget + " %";
   if (elMarker) {
     elMarker.style.left = levelTarget + "%";
@@ -1991,7 +1988,6 @@ function simulate(dt) {
   stepPlayer(dt);
   checkHits();
 
-  // Leuchtspur des Spielers
   tailT -= dt;
   const moving = player.dir.x !== 0 || player.dir.y !== 0;
   if (tailT <= 0 && moving) {
@@ -2013,7 +2009,7 @@ function simulate(dt) {
 }
 
 /* =====================================================================
-   DEBUG-HOOK (nur mit ?debug=1 aktiv) – dient ausschließlich Tests
+   DEBUG-HOOK (nur mit ?debug=1 aktiv)
    ===================================================================== */
 const DEBUG = (typeof location !== "undefined") &&
               location.search.indexOf("debug") >= 0;
@@ -2052,8 +2048,6 @@ if (DEBUG) {
       player.dir = { x: 0, y: 0 };
       setPlayerCell();
     },
-    /* Läuft eine Polylinie rechtwinklig (erst X, dann Y) durch die echte
-       Bewegungslogik ab. Bricht ab, sobald eine Fläche geschlossen wurde. */
     walkTo(pts) {
       let closed = false;
       for (let k = 0; k < pts.length && !closed; k++) {
@@ -2217,6 +2211,11 @@ function boot() {
   window.addEventListener("resize", layout);
   window.addEventListener("load", layout);
   window.addEventListener("orientationchange", () => window.setTimeout(layout, 150));
+
+  // Vollbild-Wechsel → Layout neu berechnen
+  document.addEventListener("fullscreenchange", () => window.setTimeout(layout, 150));
+  document.addEventListener("webkitfullscreenchange", () => window.setTimeout(layout, 150));
+
   if (window.ResizeObserver) {
     try { new ResizeObserver(() => layout()).observe(stagewrap); } catch (e) { /* egal */ }
   }
@@ -2261,7 +2260,7 @@ function boot() {
     if (state === "playing") togglePause();
   });
 
-  // Standardzustand (Canvas zeigt das Feld hinter dem Startbildschirm)
+  // Standardzustand
   resetGrid();
   placePlayerAtStart();
   spawnGhosts();
