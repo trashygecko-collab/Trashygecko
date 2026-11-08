@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -16,380 +17,940 @@ h1{margin:2px 0 12px;color:var(--pink);font-size:clamp(25px,5vw,42px);letter-spa
 canvas{display:block;width:100%;height:auto;background:#000;image-rendering:pixelated;touch-action:none}
 #status{min-height:24px;margin:9px 0;color:var(--gold);font-weight:bold}
 #controls{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;margin:10px auto}
-button,select{background:#24162b;color:var(--text);border:1px solid #a35db7;border-radius:6px;padding:9px 13px;font: bold 14px Consolas,monospace}
+button,select{background:#24162b;color:var(--text);border:1px solid #a35db7;border-radius:6px;padding:9px 13px;font:bold 14px Consolas,monospace}
 button{cursor:pointer}button:hover{background:#492653;border-color:var(--pink)}
 #levelSelect{max-width:160px}
-#mobilePad{display:none;width:min(240px,75vw);margin:12px auto 0;grid-template-columns:repeat(3,1fr);gap:6px}
-#mobilePad button{font-size:22px;padding:13px 5px;touch-action:none}
-#mobilePad .empty{visibility:hidden}
-#mobilePad #giveup{grid-column:1/4;font-size:13px}
-#help{font-size:12px;color:#b9a9bf;margin:10px 0}
-#footer{font-size:11px;color:#765f7d;margin-top:18px}
-#overlay{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
-#dialog{max-width:440px;width:100%;background:#17101b;border:2px solid var(--pink);border-radius:12px;padding:24px;box-shadow:0 0 25px #a000a0}
-#dialog h2{color:var(--gold);margin-top:0}
-#dialog p{line-height:1.5}
-@media(max-width:600px){#cabinet{padding:9px 8px 16px}#hud{gap:7px 13px;font-size:13px}#mobilePad{display:grid}#help{display:none}button,select{padding:8px 10px}}
-.pad-space {
-  grid-column: 1 / -1;
-  height: 30px;
-  text-align: center;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
+#boardWrap{position:relative}
+
+#mobilePad{
+ display:none;
+ align-items:end;
+ justify-content:space-between;
+ gap:12px;
+ width:min(100%,520px);
+ margin:12px auto 0;
 }
-</style>
+
+#directionPad{
+ display:grid;
+ grid-template-columns:repeat(3,58px);
+ grid-template-rows:repeat(3,54px);
+ gap:5px;
+}
+
+#directionPad button{
+ font-size:25px;
+ padding:4px;
+ touch-action:none;
+ user-select:none;
+ -webkit-user-select:none;
+}
+
+#directionPad .empty{visibility:hidden}
+
+#mobileActions{
+ display:flex;
+ flex-direction:column;
+ gap:8px;
+}
+
+#mobileActions button{
+ font-size:13px;
+ min-width:105px;
+ min-height:48px;
+ touch-action:none;
+}
+
+#mobilePause{border-color:var(--cyan)}
+#giveup{border-color:var(--pink)}
+
+@media (pointer:coarse){
+ #mobilePad{display:flex}
+
+ #mobilePad button{
+  opacity:.72;
+  background:rgba(65,35,75,.72);
+  box-shadow:0 0 8px #000;
+  backdrop-filter:blur(3px);
+ }
+
+ #mobilePad button:active{
+  opacity:1;
+  background:rgba(150,55,160,.9);
+ }
+
+ #boardWrap{touch-action:none}
+}
+
+@media (pointer:coarse) and (orientation:landscape){
+ body{min-height:100dvh;overflow:hidden}
+
+ #cabinet{
+  width:100%;
+  max-width:none;
+  height:100dvh;
+  min-height:0;
+  padding:3px 6px;
+  display:flex;
+  flex-direction:column;
+ }
+
+ h1{
+  font-size:22px;
+  margin:0 0 3px;
+  letter-spacing:3px;
+ }
+
+ #hud{
+  margin:0 auto 4px;
+  padding:4px 9px;
+  gap:5px 18px;
+  font-size:12px;
+ }
+
+ #boardWrap{
+  flex:1;
+  min-height:0;
+  width:100%;
+  max-width:none;
+  margin:0 auto;
+  padding:2px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+ }
+
+ #game{
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+ }
+
+ #mobilePad{
+  position:absolute;
+  inset:0;
+  width:auto;
+  max-width:none;
+  margin:0;
+  pointer-events:none;
+  z-index:2;
+ }
+
+ #directionPad{
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  grid-template-columns:repeat(3,58px);
+  grid-template-rows:repeat(3,54px);
+  pointer-events:auto;
+ }
+
+ #mobileActions{
+  position:absolute;
+  left:10px;
+  bottom:10px;
+  pointer-events:auto;
+ }
+
+ #status{
+  min-height:16px;
+  margin:2px 0;
+  font-size:12px;
+ }
+
+ #controls{
+  margin:3px auto;
+  gap:5px;
+ }
+
+ #controls button,#controls select{
+  padding:5px 8px;
+  font-size:11px;
+ }
+
+ #help,#footer{display:none}
+}
+
+@media (pointer:coarse) and (orientation:portrait){
+ #cabinet{padding:8px}
+ #mobilePad{margin:12px auto}
+ #help{display:none}
+}</style>
 </head>
 <body>
 <div id="cabinet">
-  <h1>DURST</h1>
-  <div id="hud">
-    <span class="huditem">LEVEL <b id="levelNum">01</b></span>
-    <span class="huditem">ZEIT <b id="time">02:00</b></span>
-    <span class="huditem">LEBEN <b id="lives">3</b></span>
-    <span class="huditem">BIER <b id="goal">FINDEN!</b></span>
-  </div>
-  <div id="boardWrap"><canvas id="game" width="800" height="480" aria-label="DURST Spielfeld"></canvas></div>
- 
-<div id="mobilePad">
-  <button class="empty"> </button><button data-dir="up">▲</button><button class="empty"> </button>
-  <button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
-
-  <div class="pad-space">Vorsicht</div>
-
-  <button id="giveup">AUFGEBEN</button>
+<h1>DURST</h1>
+<div id="hud">
+<span class="huditem">LEVEL <b id="levelNum">01</b></span>
+<span class="huditem">ZEIT <b id="time">02:00</b></span>
+<span class="huditem">LEBEN <b id="lives">3</b></span>
+<span class="huditem">BIER <b id="goal">FINDEN!</b></span>
 </div>
- <div id="status">Finde das Bier! Du hast 2 Minuten.</div>
-  <div id="controls">
-    <label for="levelSelect">Start-Level:</label>
-    <select id="levelSelect"></select>
-    <button id="startBtn">SPIEL STARTEN</button>
-    <button id="pauseBtn">PAUSE (P)</button>
-    <button id="giveupBtn">AUFGEBEN</button>
-    <button id="fullBtn">VOLLBILD</button>
-  </div>
 
-  <div id="help">Steuerung: Pfeiltasten oder WASD · P = Pause · Ziel: Bier erreichen · Steine mit ← / → schieben</div>
-  <div id="footer">20 × 12 FELDER · 65 LEVEL? NEIN – SO VIELE, WIE DU EINTRÄGST · MADE WITH DURST</div>
+<div id="boardWrap"><canvas id="game" width="800" height="480" aria-label="DURST Spielfeld"></canvas>
+<div id="mobilePad">
+
+ <div id="mobileActions">
+  <button id="mobilePause">PAUSE</button>
+  <button id="giveup">AUFGEBEN</button>
+ </div>
+
+ <div id="directionPad">
+  <button class="empty"> </button>
+  <button data-dir="up">▲</button>
+  <button class="empty"> </button>
+
+  <button data-dir="left">◀</button>
+  <button class="empty"> </button>
+  <button data-dir="right">▶</button>
+
+  <button class="empty"> </button>
+  <button data-dir="down">▼</button>
+  <button class="empty"> </button>
+ </div>
+</div>
+
+</div>
+<div id="status">Finde das Bier! Du hast 2 Minuten.</div>
+<div id="controls">
+<label for="levelSelect">Start-Level:</label>
+<select id="levelSelect"></select>
+<button id="startBtn">SPIEL STARTEN</button>
+<button id="pauseBtn">PAUSE (P)</button>
+<button id="giveupBtn">AUFGEBEN</button>
+<button id="fullBtn">VOLLBILD</button>
+</div>
+<div id="help">Steuerung: Pfeiltasten oder WASD · P = Pause · Ziel: Bier erreichen · Steine mit ← / → schieben</div>
+<div id="footer">20 × 12 FELDER · 65 LEVEL? NEIN – SO VIELE, WIE DU EINTRÄGST · MADE WITH DURST</div>
 </div>
 <div id="overlay"><div id="dialog"><h2 id="dialogTitle">DURST</h2><p id="dialogText"></p><button id="dialogBtn">WEITER</button></div></div>
+
 <script>
 // ============================================================
-// LEVEL-EDITOR-BEREICH: Hier kannst du später Level ergänzen.
-// 0=leer, 1=Mauer, 2=Sand, 3=Stein, 4=Gegner, 5=Spieler, 6=Bier
-// Jede Zeile muss genau 20 Ziffern enthalten, jedes Level 12 Zeilen.
-// Mehrere Gegner (4) sind erlaubt. Genau ein Spieler (5) und Bier (6).
-// Gegner starten standardmäßig nach rechts und drehen im Uhrzeigersinn.
+// LEVEL-EDITOR-BEREICH
+// 0=leer, 1=Mauer, 2=Sand, 3=Stein,
+// 4=Gegner, 5=Spieler, 6=Bier, 7a/7b/...=Portal
+//
+// ALTE SCHREIBWEISE:
+// "12222222222222222221"
+//
+// NEUE SCHREIBWEISE:
+// "1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1"
+//
+// PORTALE:
+// "7a" verbindet sich mit "7a".
+// "7b" verbindet sich mit "7b".
+// Jedes Portal muss genau zweimal vorkommen.
+//
+// Jede Zeile hat weiterhin 20 Felder.
+// Jedes Level hat weiterhin 12 Zeilen.
 // ============================================================
 
 const LEVELS = [
- {name:"Level 1", map:[
-  "11111111111111111111",
-  "12222222313322222231",
-  "12223222313321111221",
-  "12333331312332221321",
-  "11112122322231121221",
-  "12223222311233121231",
-  "12333332161222221221",
-  "11112120231111111121",
-  "12222211131322222221",
-  "15222212232223333321",
-  "12222212222222222221",
-  "11111111111111111111"
- ]},
- {name:"Level 2", map:[
-  "11111111111111111111",
-  "16000112222222222221",
-  "14000112222222222221",
-  "12222212222222222221",
-  "10000112222222222221",
-  "14000112222222222221",
-  "12222212222222222221",
-  "10000012222222222221",
-  "14000012222222222221",
-  "12222212222222222221",
-  "15222222222222222221",
-  "11111111111111111111"
- ]},
- {name:"Level 3", map:[
-  "11111111111111111111",
-  "14333312222222312221",
-  "13333122223223222221",
-  "13331400022232212221",
-  "13312320022322313331",
-  "13162300032223211311",
-  "12511111111332212221",
-  "10100000232211111221",
-  "10000000231212200001",
-  "10000000231000100001",
-  "10000000231222100001",
-  "11111111111111111111"
- ]},
-{name:"Level 4", map:[
-  "11111111111111111111",
-  "15000000122222222231",
-  "10000000122222211221",
-  "11110111111101111321",
-  "10000004140000011221",
-  "11110111111101111231",
-  "10000004140000011221",
-  "11110111111101112321",
-  "10000004140000012221",
-  "11110111111101112231",
-  "10000000000000016221",
-  "11111111111111111111"
- ]},
- {name:"Level 5", map:[
-  "11111111111111111111",
-  "14000022222222222221",
-  "10000012222222222221",
-  "10000012211111111121",
-  "16000011112222223121",
-  "11111113211121122121",
-  "12223002240000032121",
-  "12033312311121122121",
-  "11022112214000023121",
-  "14300210210000022121",
-  "10350210010000022221",
-  "11111111111111111111"
- ]},
- {name:"Level 6", map:[
-  "11111111113111111111",
+{name:"Level 1",map:[
+"11111111111111111111",
+"12222222313322222231",
+"12223222313321111221",
+"12333331312332221321",
+"11112122322231121221",
+"12223222311233121231",
+"12333332161222221221",
+"11112120231111111121",
+"12222211131322222221",
+"15222212232223333321",
+"12222212222222222221",
+"11111111111111111111"
+]},
+{name:"Level 2",map:[
+"11111111111111111111",
+"16000112222222222221",
+"14000112222222222221",
+"12222212222222222221",
+"10000112222222222221",
+"14000112222222222221",
+"12222212222222222221",
+"10000012222222222221",
+"14000012222222222221",
+"12222212222222222221",
+"15222222222222222221",
+"11111111111111111111"
+]},
+{name:"Level 3",map:[
+"11111111111111111111",
+"14333312222222312221",
+"13333122223223222221",
+"13331400022232212221",
+"13312320022322313331",
+"13162300032223211311",
+"12511111111332212221",
+"10100000232211111221",
+"10000000231212200001",
+"10000000231000100001",
+"10000000231222100001",
+"11111111111111111111"
+]},
+{name:"Level 4",map:[
+"11111111111111111111",
+"15000000122222222231",
+"10000000122222211221",
+"11110111111101111321",
+"10000004140000011221",
+"11110111111101111231",
+"10000004140000011221",
+"11110111111101112321",
+"10000004140000012221",
+"11110111111101112231",
+"10000000000000016221",
+"11111111111111111111"
+]},
+{name:"Level 5",map:[
+"11111111111111111111",
+"14000022222222222221",
+"10000012222222222221",
+"10000012211111111121",
+"16000011112222223121",
+"11111113211121122121",
+"12223002240000032121",
+"12033312311121122121",
+"11022112214000023121",
+"14300210210000022121",
+"10350210010000022221",
+"11111111111111111111"
+]},
+{name:"Level 6",map:[
+"11111111113111111111",
+"12222222222222222221",
+"12111111111111111121",
+"12000400010000040021",
+"12111111111111111121",
+"12000040010000004021",
+"12111111111111111121",
+"12000004010000000421",
+"12111111111111111121",
+"12000000411111111121",
+"15111111116222222221",
+"11111111111111111111"
+]},
+{name:"Level 7",map:[
+"11111111111111111111",
+"12222224000000000001",
+"11112111111111111001",
+"14000001620000000001",
+"11110111111111111111",
+"10000000000000000001",
+"10000000000000000001",
+"11111111111111111101",
+"12212221222100000001",
+"12212121212144411111",
+"15222122212244444441",
+"11111111111111111111"
+]},
+{name:"Level 8",map:[
+"11111111111111111111",
+"10000000000000000001",
+"10111111111111111101",
+"10100000000000000101",
+"10101111111111110101",
+"10101222252222210101",
+"10201400000000010101",
+"10101111211111110101",
+"14141000000000000101",
+"11111111111111111101",
+"16000000000000000001",
+"11111111111111111111"
+]},
+{name:"Level 9",map:[
+"11111111111111111111",
+"14000000010000000001",
+"10111111000111111101",
+"10000000010000000041",
+"11110111111111011111",
+"14000000010000000001",
+"10000000010000000041",
+"11110111111111011111",
+"14000000010000000041",
+"10111111010111110021",
+"10000000010000000251",
+"11111111611111111111"
+]},
+{name:"Level 10",map:[
+"11111111111111111111",
+"12222222221222222221",
+"10000122221221222111",
+"10000100001001222331",
+"14400140001001222331",
+"12222122221001112221",
+"10000122221401332221",
+"10000100001401332221",
+"14400140001401222111",
+"12222122221401222331",
+"15222122222401222261",
+"11111111111111111111"
+]},
+{name:"Level 11",map:[
+"11111111111111111111",
+"12200000232220000001",
+"12202120232120111101",
+"12202120232120111101",
+"12202125232120144001",
+"12202120232120101111",
+"12202120232120101111",
+"12202120232120101111",
+"10000120232120144001",
+"10000120222120111101",
+"10000120000000160001",
+"11111111111111111111"
+]},
+{name:"Level 12",map:[
+"11111111111111111111",
+"12222222222222222221",
+"12232222222222222221",
+"12232222222222222221",
+"12232222222222222221",
+"12222222222222222221",
+"12222222222222222221",
+"12222222222222222251",
+"14444444444444442221",
+"14444444444444444321",
+"16444444444444442321",
+"11111111111111111111"
+]},
+{name:"Level 13",map:[
+"11111111111111111111",
+"10000000000000000001",
+"12111111111111111101",
+"12100000000000000101",
+"12100000000000010101",
+"12100000050000010101",
+"12100000000000010101",
+"12111111111111110101",
+"12222222222222222101",
+"11111111111111111101",
+"16444444440000000001",
+"11111111111111111111"
+]},
+{name:"Level 14",map:[
+"11111111111111111111",
+"12121212121212121221",
+"12124212121242121221",
+"12420242124202421241",
+"12020202420202024201",
+"12020202020202020201",
+"12020202020202020201",
+"12020202020202020201",
+"12021202020212020201",
+"12121212021212120161",
+"15121212121212121121",
+"11111111111111111111"
+]},
+{name:"Level 15",map:[
+"11111111111611111111",
+"00040000400044004404",
+"44000440000000000000",
+"00000000000000004000",
+"00000000041040000000",
+"40000000001000000000",
+"00040004001000400000",
+"00000000000000000400",
+"04000004000000004000",
+"00000000000000000000",
+"00000000000000000000",
+"11111111511111111111"
+]},
+{name:"Level 16",map:[
+"11111111111111111111",
+"12222222223122226221",
+"13322233123100000401",
+"13322233123101111101",
+"13333333123100004041",
+"13333333123123333221",
+"13332333123333223331",
+"13333333123333333331",
+"12222222123233333321",
+"12222222123222222221",
+"12252222122222222221",
+"11111111111111111111"
+]},
+{name:"Level 17",map:[
+"11111111111111111111",
+"12240002221333331221",
+"12600001221222331231",
+"10000001222222221331",
+"11111111111112221331",
+"14000024000012221321",
+"10000010000012222321",
+"11121111000012221321",
+"12222221112111111321",
+"12252221222222222221",
+"12222221222222222221",
+"11111111111111111111"
+]},
+{name:"Level 18",map:[
+"11111111111111111111",
+"12221222333313212221",
+"12621212222213212221",
+"12111211111222222121",
+"12333312222211112121",
+"11122112111112222121",
+"12200000002222111121",
+"11111100401222222221",
+"10000111111111111121",
+"12222200444022222121",
+"12522222222222222221",
+"11111111111111111111"
+]},
+{name:"Level 19",map:[
+"11111111115111111111",
+"10004040402000404041",
+"00000014041000000000",
+"10000010001400000041",
+"00000014040000040400",
+"10000000000002220041",
+"00000004040002220400",
+"10000010000002220041",
+"00000010040000040400",
+"10000010000000000001",
+"00000000000004040000",
+"11111116111111111111"
+]},
+{name:"Level 20",map:[
+"11111111111111111111",
+"12222222233222223221",
+"10000042233222223221",
+"12222111233111221221",
+"10000041122101221521",
+"12262112222401221111",
+"11111122122111222221",
+"12222222111122223321",
+"10000000423331111321",
+"10000000012222222121",
+"10000000012222212221",
+"11111111111111111111"
+]},
+{name:"Level 21",map:[
+"11111111111111111111",
+"12222222233231222221",
+"12222332233221221021",
+"12222222221321221021",
+"11100040111221221401",
+"12222222221231221021",
+"12222222221222221021",
+"12222222221111111221",
+"1,2,2,2,2,2,4,4,4,4,1,0,0,0,0,0,0,0,0,7a",
+"7a,0,0,0,4,4,4,4,2,2,1,0,1,1,1,1,1,1,2,1",
+"12222222051001622221",
+"11111111111111111111"
+]},
+ {name:"Level 22", map:[
+  "11111111222322223611",
+  "13333114242111113111",
+  "13333003030023333331",
+  "13332013131023333331",
+  "13333013131023333331",
+  "12222013231022222221",
+  "12222013131011111121",
+  "12222223132222222221",
+  "12222223112222222111",
+  "12222223222222222221",
   "12222222222222222221",
-  "12111111111111111121",
-  "12000400010000040021",
-  "12111111111111111121",
-  "12000040010000004021",
-  "12111111111111111121",
-  "12000004010000000421",
-  "12111111111111111121",
-  "12000000411111111121",
-  "15111111116222222221",
   "11111111111111111111"
  ]},
-{name:"Level 7", map:[
-  "11111111111111111111",
-  "12222224000000000001",
-  "11112111111111111001",
-  "14000001620000000001",
-  "11110111111111111111",
-  "10000000000000000001",
-  "10000000000000000001",
-  "11111111111111111101",
-  "12212221222100000001",
-  "12212121212144411111",
-  "15222122212244444441",
+ {name:"Level 23", map:[
+  "16111111111111111111",
+  "10000100010004100101",
+  "10040011110000100001",
+  "10001000000000000041",
+  "10401000000000100001",
+  "10000000100000100001",
+  "11000100111100000001",
+  "10004100004000011001",
+  "10000111000001110401",
+  "10000000000000000025",
+  "10000010000000000011",
   "11111111111111111111"
  ]},
- {name:"Level 8", map:[
+ {name:"Level 24", map:[
   "11111111111111111111",
-  "10000000000000000001",
-  "10111111111111111101",
-  "10100000000000000101",
-  "10101111111111110101",
-  "10101222252222210101",
-  "10201400000000010101",
-  "10101111211111110101",
-  "14141000000000000101",
-  "11111111111111111101",
-  "16000000000000000001",
-  "11111111111111111111"
- ]},
- {name:"Level 9", map:[
-  "11111111111111111111",
-  "14000000010000000001",
-  "10111111000111111101",
-  "10000000010000000041",
-  "11110111111111011111",
-  "14000000010000000001",
-  "10000000010000000041",
-  "11110111111111011111",
-  "14000000010000000041",
-  "10111111010111110021",
-  "10000000010000000251",
-  "11111111611111111111"
- ]},
- {name:"Level 10", map:[
-  "11111111111111111111",
-  "12222222221222222221",
-  "10000122221221222111",
-  "10000100001001222331",
-  "14400140001001222331",
-  "12222122221001112221",
-  "10000122221401332221",
-  "10000100001401332221",
-  "14400140001401222111",
-  "12222122221401222331",
-  "15222122222401222261",
-  "11111111111111111111"
- ]},
- {name:"Level 11", map:[
-  "11111111111111111111",
-  "12200000232220000001",
-  "12202120232120111101",
-  "12202120232120111101",
-  "12202125232120144001",
-  "12202120232120101111",
-  "12202120232120101111",
-  "12202120232120101111",
-  "10000120232120144001",
-  "10000120222120111101",
-  "10000120000000160001",
-  "11111111111111111111"
- ]},
- {name:"Level 12", map:[
-  "11111111111111111111",
+  "12222222222222222121",
+  "12111121111111112121",
+  "12100000000000012221",
+  "12100011111111112121",
+  "12123444444443612121",
+  "12121144444443012121",
+  "12122111111111112121",
+  "12152222222222222121",
+  "12111211112111111121",
   "12222222222222222221",
-  "12232222222222222221",
-  "12232222222222222221",
-  "12232222222222222221",
-  "12222222222222222221",
-  "12222222222222222221",
-  "12222222222222222251",
-  "14444444444444442221",
-  "14444444444444444321",
-  "16444444444444442321",
   "11111111111111111111"
  ]},
- {name:"Level 13", map:[
-  "11111111111111111111",
-  "10000000000000000001",
-  "12111111111111111101",
-  "12100000000000000101",
-  "12100000000000010101",
-  "12100000050000010101",
-  "12100000000000010101",
-  "12111111111111110101",
-  "12222222222222222101",
-  "11111111111111111101",
-  "16444444440000000001",
-  "11111111111111111111"
- ]},
-{name:"Level 14", map:[
-  "11111111111111111111",
-  "12121212121212121221",
-  "12124212121242121221",
-  "12420242124202421241",
-  "12020202420202024201",
-  "12020202020202020201",
-  "12020202020202020201",
-  "12020202020202020201",
-  "12021202020212020201",
-  "12121212021212120161",
-  "15121212121212121121",
-  "11111111111111111111"
- ]},
- {name:"Level 15", map:[
-  "11111111111611111111",
-  "00040000400044004404",
-  "44000440000000000000",
-  "00000000000000004000",
-  "00000000041040000000",
-  "40000000001000000000",
-  "00040004001000400000",
-  "00000000000000000400",
-  "04000004000000004000",
-  "00000000000000000000",
-  "00000000000000000000",
-  "11111111511111111111"
- ]},
- {name:"Level 16", map:[
-  "11111111111111111111",
-  "12222222223122226221",
-  "13322233123100000401",
-  "13322233123101111101",
-  "13333333123100004041",
-  "13333333123123333221",
-  "13332333123333223331",
-  "13333333123333333331",
-  "12222222123233333321",
-  "12222222123222222221",
-  "12252222122222222221",
-  "11111111111111111111"
- ]},
- {name:"Level 17", map:[
-  "11111111111111111111",
-  "12240002221333331221",
-  "12600001221222331231",
-  "10000001222222221331",
-  "11111111111112221331",
-  "14000024000012221321",
-  "10000010000012222321",
-  "11121111000012221321",
-  "12222221112111111321",
-  "12252221222222222221",
-  "12222221222222222221",
-  "11111111111111111111"
+ {name:"Level 25", map:[
+  "10331111111111333311",
+  "12222212222211333361",
+  "13231212221221222111",
+  "13331210001221004001",
+  "13331210401221004001",
+  "13331212221221004001",
+  "13231210001221004001",
+  "13331210401221222221",
+  "12221212221221212121",
+  "12221212221221212121",
+  "15221222221222222221",
+  "12221111111111111111"
  ]}
 ];
 
 const W=20,H=12,TILE=40,STEP=180,STONE_DELAY=1000,LEVEL_TIME=120;
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
-const images={},imageNames={1:'mauer',2:'sand',3:'stein',4:'gegner',5:'spieler',6:'bier'};
-for(const [id,name] of Object.entries(imageNames)){const im=new Image();im.src=`bilder/${name}.png`;im.onload=draw;images[id]=im;}
-let map=[],player={x:1,y:1},enemies=[],stones={},lives=3,levelIndex=0,timeLeft=LEVEL_TIME;
-let running=false,paused=false,dead=false,won=false,lastStep=0,clockTimer=null,stoneTimer=null,moveQueue=null,enemyId=0;
+
+const images={};
+const imageNames={1:'mauer',2:'sand',3:'stein',4:'gegner',5:'spieler',6:'bier',7:'portal'};
+
+for(const [id,name] of Object.entries(imageNames)){
+ const im=new Image();
+ im.src=`bilder/${name}.png`;
+ im.onload=draw;
+ images[id]=im;
+}
+
+let map=[],player={x:1,y:1},enemies=[],stones={};
+let portals={},portalDestinations={};
+let lives=3,levelIndex=0,timeLeft=LEVEL_TIME;
+let running=false,paused=false,dead=false,won=false;
+let lastStep=0,clockTimer=null,moveQueue=null,enemyId=0;
+
 const key=(x,y)=>`${x},${y}`;
-function parseLevel(i){
- const src=LEVELS[i]; if(!src) return;
- map=src.map.map(row=>row.split('').map(Number)); enemies=[];stones={};
- let foundPlayer=false;
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-  if(map[y][x]===5){player={x,y};map[y][x]=0;foundPlayer=true;}
-  if(map[y][x]===4){enemies.push({id:++enemyId,x,y,dir:1,turn:1});map[y][x]=0;}
-  if(map[y][x]===3){stones[key(x,y)]={x,y,falling:false,readyAt:0};map[y][x]=0;}
+const isPortal=v=>typeof v==='string'&&/^7[a-z]$/i.test(v);
+
+function parseRow(row){
+ // Neue Schreibweise: kommagetrennte Felder.
+ if(row.includes(',')){
+  return row.split(',').map(v=>{
+   v=v.trim();
+   return isPortal(v)?v:Number(v);
+  });
  }
+ // Alte Schreibweise: eine Ziffer pro Feld.
+ return row.split('').map(Number);
+}
+
+function portalDestination(x,y){
+ return portalDestinations[key(x,y)]||null;
+}
+
+function parseLevel(i){
+ const src=LEVELS[i];
+ if(!src)return;
+
+ map=src.map.map(parseRow);
+ enemies=[];
+ stones={};
+ portals={};
+ portalDestinations={};
+
+ let foundPlayer=false;
+
+ // Alle Portalpositionen sammeln.
+ for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+   const v=map[y][x];
+   if(isPortal(v)){
+    const id=v.slice(1).toLowerCase();
+    if(!portals[id])portals[id]=[];
+    portals[id].push({x,y});
+   }
+  }
+ }
+
+ // Nur Portalpaare mit genau zwei Feldern aktivieren.
+ for(const [id,positions] of Object.entries(portals)){
+  if(positions.length===2){
+   const [a,b]=positions;
+   portalDestinations[key(a.x,a.y)]=b;
+   portalDestinations[key(b.x,b.y)]=a;
+  }else{
+   console.warn(`Portal ${id} in Level ${i+1}: ${positions.length} Felder statt genau 2.`);
+  }
+ }
+
+ // Spielfigur, Gegner und Steine einlesen.
+ for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+   const v=map[y][x];
+
+   if(v===5){
+    player={x,y};
+    map[y][x]=0;
+    foundPlayer=true;
+   }
+
+   if(v===4){
+    enemies.push({id:++enemyId,x,y,dir:1,turn:1});
+    map[y][x]=0;
+   }
+
+   if(v===3){
+    stones[key(x,y)]={x,y,falling:false,readyAt:0};
+    map[y][x]=0;
+   }
+  }
+ }
+
  if(!foundPlayer)player={x:1,y:1};
 }
-function tile(x,y){if(x<0||y<0||x>=W||y>=H)return 1;return map[y][x];}
-function enemyAt(x,y,except=null){return enemies.find(e=>e!==except&&e.x===x&&e.y===y);}
-function stoneAt(x,y){return !!stones[key(x,y)];}
-function occupied(x,y,except=null){return tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y,except)||(player.x===x&&player.y===y);}
-function loadLevel(i){levelIndex=i;parseLevel(i);timeLeft=LEVEL_TIME;running=false;paused=false;dead=false;won=false;moveQueue=null;updateHud();draw();$('status').textContent='Finde das Bier! Du hast 2 Minuten.';}
-function updateHud(){$('levelNum').textContent=String(levelIndex+1).padStart(2,'0');$('time').textContent=`${String(Math.floor(timeLeft/60)).padStart(2,'0')}:${String(timeLeft%60).padStart(2,'0')}`;$('lives').textContent=lives;$('goal').textContent='FINDEN!';}
+
+function tile(x,y){
+ if(x<0||y<0||x>=W||y>=H)return 1;
+ return map[y][x];
+}
+
+function enemyAt(x,y,except=null){
+ return enemies.find(e=>e!==except&&e.x===x&&e.y===y);
+}
+
+function stoneAt(x,y){
+ return !!stones[key(x,y)];
+}
+
+function occupied(x,y,except=null){
+ return tile(x,y)!==0||stoneAt(x,y)||
+ !!enemyAt(x,y,except)||
+ (player.x===x&&player.y===y);
+}
+
+function loadLevel(i){
+ levelIndex=i;
+ parseLevel(i);
+ timeLeft=LEVEL_TIME;
+ running=false;
+ paused=false;
+ dead=false;
+ won=false;
+ moveQueue=null;
+ updateHud();
+ draw();
+ $('status').textContent='Finde das Bier! Du hast 2 Minuten.';
+}
+
+function updateHud(){
+ $('levelNum').textContent=String(levelIndex+1).padStart(2,'0');
+ $('time').textContent=
+  `${String(Math.floor(timeLeft/60)).padStart(2,'0')}:${String(timeLeft%60).padStart(2,'0')}`;
+ $('lives').textContent=lives;
+ $('goal').textContent='FINDEN!';
+}
+
 function draw(){
- ctx.fillStyle='#000';ctx.fillRect(0,0,800,480);
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=map[y][x];if(v)drawTile(v,x,y);}
+ ctx.fillStyle='#000';
+ ctx.fillRect(0,0,800,480);
+
+ for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+   const v=map[y][x];
+   if(v!==0)drawTile(v,x,y);
+  }
+ }
+
  for(const s of Object.values(stones))drawTile(3,s.x,s.y);
  for(const e of enemies)drawTile(4,e.x,e.y);
  drawTile(5,player.x,player.y);
 }
+
 function drawTile(v,x,y){
- const im=images[v],px=x*TILE,py=y*TILE;
- if(im&&im.complete&&im.naturalWidth){ctx.drawImage(im,px,py,TILE,TILE);return;}
- const colors={1:'#6e6874',2:'#a66b36',3:'#aaaeb7',4:'#e04a3c',5:'#39d8e8',6:'#e7b52e'};
- ctx.fillStyle=colors[v]||'#000';ctx.fillRect(px+1,py+1,TILE-2,TILE-2);
- ctx.strokeStyle='#17121a';ctx.strokeRect(px+1,py+1,TILE-2,TILE-2);
- ctx.fillStyle='#090909';ctx.font='bold 20px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.fillText(({1:'■',2:'·',3:'●',4:'☠',5:'☺',6:'🍺'})[v]||'',px+20,py+20);
+ const portal=isPortal(v);
+ const imageId=portal?7:v;
+ const im=images[imageId];
+ const px=x*TILE,py=y*TILE;
+
+ if(im&&im.complete&&im.naturalWidth){
+  ctx.drawImage(im,px,py,TILE,TILE);
+  if(portal){
+   ctx.fillStyle='#fff';
+   ctx.font='bold 13px monospace';
+   ctx.textAlign='center';
+   ctx.textBaseline='middle';
+   ctx.fillText(v.slice(1).toUpperCase(),px+20,py+20);
+  }
+  return;
+ }
+
+ const colors={
+  1:'#6e6874',2:'#a66b36',3:'#aaaeb7',
+  4:'#e04a3c',5:'#39d8e8',6:'#e7b52e',7:'#8d35c5'
+ };
+
+ ctx.fillStyle=portal?colors[7]:(colors[v]||'#000');
+ ctx.fillRect(px+1,py+1,TILE-2,TILE-2);
+ ctx.strokeStyle=portal?'#ff4fd8':'#17121a';
+ ctx.lineWidth=portal?3:1;
+ ctx.strokeRect(px+1,py+1,TILE-2,TILE-2);
+
+ ctx.fillStyle='#fff';
+ ctx.font='bold 18px monospace';
+ ctx.textAlign='center';
+ ctx.textBaseline='middle';
+
+ const symbols={
+  1:'■',2:'·',3:'●',4:'☠',5:'☺',6:'🍺',7:'↔'
+ };
+
+ ctx.fillText(portal?v.slice(1).toUpperCase():(symbols[v]||''),px+20,py+20);
 }
-function start(){if(won||dead)loadLevel(levelIndex);running=true;paused=false;lastStep=performance.now();startClock();$('status').textContent='Los geht’s!';draw();}
-function startClock(){clearInterval(clockTimer);clockTimer=setInterval(()=>{if(!running||paused)return;timeLeft--;updateHud();if(timeLeft<=0)die('Die Zeit ist abgelaufen!');},1000);}
-function togglePause(){if(!running||dead||won)return;paused=!paused;$('status').textContent=paused?'PAUSE – P zum Weiterspielen':'Weiter geht’s!';}
-function die(reason){if(dead||won)return;dead=true;running=false;lives--;updateHud();$('dialogTitle').textContent='AU — VERLOREN!';$('dialogText').textContent=reason+(lives>0?' Noch ein Versuch?':' Keine Leben mehr. Wähle ein Level und starte neu.');$('dialogBtn').textContent=lives>0?'NOCHMAL':'ZUR LEVELAUSWAHL';showDialog();}
-function win(){if(won||dead)return;won=true;running=false;lives++;updateHud();$('dialogTitle').textContent='BIER GEFUNDEN!';$('dialogText').textContent='Level geschafft! Du bekommst ein zusätzliches Leben.';$('dialogBtn').textContent=levelIndex<LEVELS.length-1?'NÄCHSTES LEVEL':'ZUR LEVELAUSWAHL';showDialog();}
-function showDialog(){$('overlay').style.display='flex';}
-function hideDialog(){$('overlay').style.display='none';}
-function movePlayer(dx,dy){
- if(!running||paused||dead||won)return;
- const nx=player.x+dx,ny=player.y+dy,v=tile(nx,ny);
- if(v===1)return;
- if(v===2)map[ny][nx]=0;
- if(v===6){player.x=nx;player.y=ny;win();draw();return;}
- if(v===3||stoneAt(nx,ny)){
-  if(dy!==0)return;
-  const sx=nx+dx,sy=ny;
-  if(occupied(sx,sy)||stoneAt(sx,sy))return;
-  if(stoneAt(nx,ny)){const s=stones[key(nx,ny)];delete stones[key(nx,ny)];s.x=sx;s.y=sy;stones[key(sx,sy)]=s;}
-  else if(map[ny][nx]===3){map[ny][nx]=0;stones[key(sx,sy)]={x:sx,y:sy,falling:false,readyAt:0};}
-  else return;
- }else if(enemyAt(nx,ny)){die('Ein Gegner hat dich erwischt!');return;}
-else if(v!==0&&v!==2)return;
- player.x=nx;player.y=ny;
+
+function start(){
+ if(won||dead)loadLevel(levelIndex);
+ running=true;
+ paused=false;
+ lastStep=performance.now();
+ startClock();
+ $('status').textContent='Los geht’s!';
  draw();
 }
+
+function startClock(){
+ clearInterval(clockTimer);
+ clockTimer=setInterval(()=>{
+  if(!running||paused)return;
+  timeLeft--;
+  updateHud();
+  if(timeLeft<=0)die('Die Zeit ist abgelaufen!');
+ },1000);
+}
+
+function togglePause(){
+ if(!running||dead||won)return;
+ paused=!paused;
+ $('status').textContent=paused?'PAUSE – P zum Weiterspielen':'Weiter geht’s!';
+}
+
+function die(reason){
+ if(dead||won)return;
+ dead=true;
+ running=false;
+ lives--;
+ updateHud();
+ $('dialogTitle').textContent='AU — VERLOREN!';
+ $('dialogText').textContent=reason+
+  (lives>0?' Noch ein Versuch?':' Keine Leben mehr. Wähle ein Level und starte neu.');
+ $('dialogBtn').textContent=lives>0?'NOCHMAL':'ZUR LEVELAUSWAHL';
+ showDialog();
+}
+
+function win(){
+ if(won||dead)return;
+ won=true;
+ running=false;
+ lives++;
+ updateHud();
+ $('dialogTitle').textContent='BIER GEFUNDEN!';
+ $('dialogText').textContent='Level geschafft! Du bekommst ein zusätzliches Leben.';
+ $('dialogBtn').textContent=levelIndex<LEVELS.length-1?'NÄCHSTES LEVEL':'ZUR LEVELAUSWAHL';
+ showDialog();
+}
+
+function showDialog(){
+ $('overlay').style.display='flex';
+}
+
+function hideDialog(){
+ $('overlay').style.display='none';
+}
+
+// Prüft, ob ein Portal-Ausgang frei ist.
+function portalExitFree(pos,entity=null){
+ if(!pos)return false;
+ if(tile(pos.x,pos.y)===1)return false;
+ if(stoneAt(pos.x,pos.y))return false;
+ if(enemyAt(pos.x,pos.y,entity))return false;
+ return true;
+}
+
+function movePlayer(dx,dy){
+ if(!running||paused||dead||won)return;
+
+ const nx=player.x+dx;
+ const ny=player.y+dy;
+ const v=tile(nx,ny);
+
+ // Ein Portal betreten.
+ if(isPortal(v)){
+  const destination=portalDestination(nx,ny);
+
+  // Unvollständige Portalpaare sind gesperrt.
+  if(!destination)return;
+
+  if(!portalExitFree(destination))return;
+
+  if(player.x===destination.x&&player.y===destination.y)return;
+
+  if(enemyAt(destination.x,destination.y)){
+   die('Ein Gegner hat dich am Portal-Ausgang erwischt!');
+   return;
+  }
+
+  player.x=destination.x;
+  player.y=destination.y;
+  draw();
+  return;
+ }
+
+ if(v===1)return;
+ if(v===2)map[ny][nx]=0;
+
+ if(v===6){
+  player.x=nx;
+  player.y=ny;
+  win();
+  draw();
+  return;
+ }
+
+ if(v===3||stoneAt(nx,ny)){
+  if(dy!==0)return;
+
+  const sx=nx+dx;
+  const sy=ny;
+
+  if(occupied(sx,sy)||stoneAt(sx,sy))return;
+
+  if(stoneAt(nx,ny)){
+   const s=stones[key(nx,ny)];
+   delete stones[key(nx,ny)];
+   s.x=sx;
+   s.y=sy;
+   stones[key(sx,sy)]=s;
+  }else if(map[ny][nx]===3){
+   map[ny][nx]=0;
+   stones[key(sx,sy)]={x:sx,y:sy,falling:false,readyAt:0};
+  }else return;
+ }else if(enemyAt(nx,ny)){
+  die('Ein Gegner hat dich erwischt!');
+  return;
+ }else if(v!==0&&v!==2){
+  return;
+ }
+
+ player.x=nx;
+ player.y=ny;
+ draw();
+}
+
+function occupiedForEnemy(x,y,e){
+ const v=tile(x,y);
+
+ // Spielfeldgrenzen sind geschlossen.
+ if(x<0||x>=W||y<0||y>=H)return true;
+
+ // Gültige Portale dürfen betreten werden.
+ if(isPortal(v)){
+  return !portalDestination(x,y)||stoneAt(x,y)||!!enemyAt(x,y,e);
+ }
+
+ return v!==0||stoneAt(x,y)||!!enemyAt(x,y,e);
+}
+
 function moveEnemies(){
  const order=[...enemies];
  const dirs=[[0,-1],[1,0],[0,1],[-1,0]];
@@ -401,7 +962,6 @@ function moveEnemies(){
   const right=(e.dir+1)%4;
   const back=(e.dir+2)%4;
 
-  // Ursprüngliche Drehrichtung und Priorität beibehalten.
   const choices=[
    e.dir,
    e.turn===1?right:left,
@@ -417,26 +977,37 @@ function moveEnemies(){
    const nx=e.x+d[0];
    const ny=e.y+d[1];
 
-   // Hindernisse prüfen.
    if(occupiedForEnemy(nx,ny,e))continue;
 
-   // Spieler zunächst merken, aber andere Wege noch prüfen.
-   if(nx===player.x&&ny===player.y){
+   let destination={x:nx,y:ny};
+
+   // Gegner betritt ein Portal.
+   if(isPortal(tile(nx,ny))){
+    const exit=portalDestination(nx,ny);
+    if(!exit)continue;
+
+    // Ausgang muss frei sein.
+    if(stoneAt(exit.x,exit.y))continue;
+    if(enemyAt(exit.x,exit.y,e))continue;
+
+    destination=exit;
+   }
+
+   // Spieler am Portal-Ausgang oder auf dem Zielfeld.
+   if(destination.x===player.x&&destination.y===player.y){
     playerInWay=true;
     continue;
    }
 
-   target={x:nx,y:ny,dir};
+   target={x:destination.x,y:destination.y,dir};
    break;
   }
 
-  // Kein anderer Weg frei: Der Gegner würde den Spieler berühren.
   if(!target){
    if(playerInWay){
     die('Ein Gegner hat dich berührt!');
     return;
    }
-
    e.turn*=-1;
    continue;
   }
@@ -445,41 +1016,49 @@ function moveEnemies(){
   e.y=target.y;
   e.dir=target.dir;
  }
+}
 
-}function occupiedForEnemy(x,y,e){return tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y,e);}
 function stoneTick(now){
  for(const k of Object.keys(stones)){
-  const s=stones[k];if(!s)continue;
-  const below=key(s.x,s.y+1),under=tile(s.x,s.y+1),otherStone=stones[below];
-const playerBelow=player.x===s.x&&player.y===s.y+1;
-const freeBelow=s.y+1<H&&under===0&&!otherStone&&!enemyAt(s.x,s.y+1)&&!playerBelow;
+  const s=stones[k];
+  if(!s)continue;
+
+  const below=key(s.x,s.y+1);
+  const under=tile(s.x,s.y+1);
+  const otherStone=stones[below];
+  const playerBelow=player.x===s.x&&player.y===s.y+1;
+
+  const freeBelow=
+   s.y+1<H&&
+   under===0&&
+   !otherStone&&
+   !enemyAt(s.x,s.y+1)&&
+   !playerBelow;
+
   let target=null;
-if(freeBelow){
- s.rollReadyAt=0;
 
- // Prüfen, ob unterhalb bereits ein Stein derselben Gruppe fällt.
- const groupFalling=Object.values(stones).some(o=>
-  o!==s&&o.falling&&o.x===s.x&&o.y>s.y
- );
+  if(freeBelow){
+   s.rollReadyAt=0;
 
- // Einzelne Steine warten normal, Gruppensteine nur kurz.
- const fallDelay=groupFalling?150:STONE_DELAY;
+   const groupFalling=Object.values(stones).some(o=>
+    o!==s&&o.falling&&o.x===s.x&&o.y>s.y
+   );
 
- if(!s.falling){
-  if(!s.readyAt)s.readyAt=now+fallDelay;
-  if(now>=s.readyAt){
-   s.falling=true;
-   target={x:s.x,y:s.y+1};
-  }
- }else{
-  target={x:s.x,y:s.y+1};
- }
-}
-   else{
+   const fallDelay=groupFalling?150:STONE_DELAY;
+
+   if(!s.falling){
+    if(!s.readyAt)s.readyAt=now+fallDelay;
+    if(now>=s.readyAt){
+     s.falling=true;
+     target={x:s.x,y:s.y+1};
+    }
+   }else{
+    target={x:s.x,y:s.y+1};
+   }
+  }else{
    s.falling=false;
    s.readyAt=0;
 
-   // Rollen auf einer Mauer oder einem anderen Stein.
    let rollTarget=null;
 
    if(under===1||otherStone){
@@ -504,22 +1083,47 @@ if(freeBelow){
    }else{
     s.rollReadyAt=0;
    }
-}
+  }
+
   if(target){
-   if(target.x===player.x&&target.y===player.y){die('Ein Stein ist auf dich gefallen!');return;}
-   delete stones[k];s.x=target.x;s.y=target.y;
-   if(s.falling){s.readyAt=0;}else{s.falling=false;s.readyAt=0;}
+   if(target.x===player.x&&target.y===player.y){
+    die('Ein Stein ist auf dich gefallen!');
+    return;
+   }
+
+   delete stones[k];
+   s.x=target.x;
+   s.y=target.y;
+
+   if(s.falling){
+    s.readyAt=0;
+   }else{
+    s.falling=false;
+    s.readyAt=0;
+   }
+
    stones[key(s.x,s.y)]=s;
   }
  }
+
  draw();
 }
+
 function occupiedForStone(x,y){
  return x<0||x>=W||y<0||y>=H||
  tile(x,y)!==0||stoneAt(x,y)||!!enemyAt(x,y);
 }
-function tick(){if(!running||paused||dead||won)return;moveEnemies();if(!dead)stoneTick(performance.now());}
-function queueMove(dx,dy){movePlayer(dx,dy);}
+
+function tick(){
+ if(!running||paused||dead||won)return;
+ moveEnemies();
+ if(!dead)stoneTick(performance.now());
+}
+
+function queueMove(dx,dy){
+ movePlayer(dx,dy);
+}
+
 document.addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
 
@@ -530,59 +1134,81 @@ document.addEventListener('keydown',e=>{
   arrowright:[1,0],d:[1,0]
  };
 
- // Enter startet das Spiel
  if(k==='enter'){
   e.preventDefault();
   if(!running&&!dead&&!won)start();
   return;
  }
 
- // P pausiert das Spiel
  if(k==='p'){
   e.preventDefault();
   togglePause();
   return;
  }
 
- // Pfeiltasten und WASD starten und bewegen
  if(dirs[k]){
   e.preventDefault();
 
-  if(!running&&!dead&&!won){
-   start();
-  }
+  if(!running&&!dead&&!won)start();
 
-  if(running){
-   queueMove(...dirs[k]);
-  }
+  if(running)queueMove(...dirs[k]);
  }
 });
+
+// TOUCH-STEUERUNG
+let touchMoveTimer=null;
+
+function stopTouchMove(){
+ if(touchMoveTimer){
+  clearInterval(touchMoveTimer);
+  touchMoveTimer=null;
+ }
+}
+
+const touchDirections={
+ up:[0,-1],
+ down:[0,1],
+ left:[-1,0],
+ right:[1,0]
+};
+
 document.querySelectorAll('[data-dir]').forEach(b=>{
- const fn=e=>{
+
+ b.addEventListener('pointerdown',e=>{
   e.preventDefault();
 
-  // Spiel beim ersten Tastendruck starten.
-  if(!running&&!dead&&!won){
-   start();
-  }
+  stopTouchMove();
 
+  if(!running&&!dead&&!won)start();
   if(!running||paused||dead||won)return;
 
-  const d=b.dataset.dir;
-  queueMove(...({
-   up:[0,-1],
-   down:[0,1],
-   left:[-1,0],
-   right:[1,0]
-  })[d]);
- };
+  const dir=touchDirections[b.dataset.dir];
 
- b.addEventListener('pointerdown',fn);
+  queueMove(...dir);
+
+  touchMoveTimer=setInterval(()=>{
+   if(!running||paused||dead||won){
+    stopTouchMove();
+    return;
+   }
+
+   queueMove(...dir);
+  },STEP);
+ });
+
 });
-$('startBtn').onclick=()=>start();
-$('pauseBtn').onclick=()=>togglePause();
-$('giveupBtn').onclick=()=>die('Du hast aufgegeben.');
+
+window.addEventListener('pointerup',stopTouchMove);
+window.addEventListener('pointercancel',stopTouchMove);
+window.addEventListener('blur',stopTouchMove);
+
+$('mobilePause').addEventListener('pointerdown',e=>{
+ e.preventDefault();
+ stopTouchMove();
+ togglePause();
+});
 $('giveup').onclick=()=>die('Du hast aufgegeben.');
+
 $('fullBtn').onclick=async()=>{
  try{
   if(!document.fullscreenElement){
@@ -594,9 +1220,32 @@ $('fullBtn').onclick=async()=>{
   $('status').textContent='Vollbild wird von diesem Browser nicht unterstützt.';
  }
 };
-$('dialogBtn').onclick=()=>{hideDialog();if(dead&&lives>0)start();else if(won&&levelIndex<LEVELS.length-1){loadLevel(levelIndex+1);start();}else{loadLevel(0);}};
+
+$('dialogBtn').onclick=()=>{
+ hideDialog();
+
+ if(dead&&lives>0){
+  start();
+ }else if(won&&levelIndex<LEVELS.length-1){
+  loadLevel(levelIndex+1);
+  start();
+ }else{
+  lives=3;
+  loadLevel(0);
+ }
+};
+
 $('levelSelect').onchange=e=>loadLevel(Number(e.target.value));
-function init(){$('levelSelect').innerHTML=LEVELS.map((l,i)=>`<option value="${i}">${l.name||`Level ${i+1}`}</option>`).join('');loadLevel(0);setInterval(tick,STEP);}
+
+function init(){
+ $('levelSelect').innerHTML=LEVELS.map((l,i)=>
+  `<option value="${i}">${l.name||`Level ${i+1}`}</option>`
+ ).join('');
+
+ loadLevel(0);
+ setInterval(tick,STEP);
+}
+
 init();
 </script>
 </body>
