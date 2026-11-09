@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Backgammon – Neon Edition</title>
+<style>
+:root{--bg:#030509;--panel:#0c111b;--line:#26384a;--cyan:#43e8ff;--pink:#ff4fd8;--gold:#e9b86c;--text:#eef5ff;--muted:#9caabb}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body{padding:10px}
+button{font:inherit;touch-action:manipulation}
+.app{width:min(100%,1000px);margin:0 auto;display:flex;flex-direction:column;gap:12px;align-items:center}
+header{text-align:center;width:100%}
+h1{margin:4px 0;color:var(--cyan);font-size:clamp(24px,4vw,38px);letter-spacing:2px;text-shadow:0 0 10px #00bcd4,0 0 24px #00bcd477}
+.subtitle{color:var(--pink);font-size:11px;letter-spacing:3px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;width:100%}
+.setup{max-width:560px;display:grid;gap:12px}
+.section-title{text-align:center;color:var(--cyan);font-size:12px;letter-spacing:2px;margin-bottom:8px}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.color-card{border:1px solid #33475c;border-radius:9px;padding:10px;background:#080d16;text-align:center}
+.color-dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;margin-right:7px}
+.color-card strong{font-size:14px}
+.small-note{font-size:12px;color:var(--muted);text-align:center;line-height:1.4}
+.primary,.secondary{border:1px solid var(--cyan);background:#0c2b37;color:var(--cyan);border-radius:9px;padding:12px 16px;font-weight:bold;cursor:pointer}
+.primary{font-size:16px;letter-spacing:2px}
+.secondary{border-color:#52657b;background:#141c29;color:#e4edfa;padding:9px 12px;font-size:13px}
+.primary:disabled,.secondary:disabled{opacity:.4;cursor:default}
+.game{display:none;width:100%;gap:12px;align-items:start;grid-template-columns:minmax(0,570px) minmax(230px,1fr)}
+.board-column{width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+.turnbar{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 12px;border:1px solid #33475c;border-radius:10px;background:#0b101a}
+.turnname{font-weight:bold;font-size:14px}
+.turnhint{color:var(--muted);font-size:12px;text-align:right}
+.board-frame{width:min(100%,560px);position:relative;border-radius:12px;overflow:hidden;border:2px solid #5c6977;box-shadow:0 0 18px #43e8ff20}
+#board{display:block;width:100%;height:auto;aspect-ratio:640/820;background:#101b2a;touch-action:manipulation}
+.board-wood{fill:#111a29;stroke:#7b899a;stroke-width:5}
+.point-a{fill:#e4a65d}.point-b{fill:#3c99ad}
+.point-shape{stroke:#09111b;stroke-width:1.5;opacity:.94}
+.point-hit{fill:transparent;stroke:transparent;stroke-width:3;cursor:pointer}
+.point-hit.source{stroke:#fff;fill:#43e8ff22;filter:drop-shadow(0 0 5px #43e8ff)}
+.point-hit.target{stroke:#f9e27d;fill:#f9e27d35;filter:drop-shadow(0 0 7px #f9e27d)}
+.point-number{fill:#e5eaf1;font-size:12px;text-anchor:middle;font-weight:bold;opacity:.55;pointer-events:none}
+.checker{stroke-width:3;cursor:pointer;filter:drop-shadow(0 2px 3px #000a)}
+.checker.white{fill:#e8f4f4;stroke:#44eaff}
+.checker.black{fill:#171c29;stroke:#ff4fd8}
+.checker.source{stroke:#fff;stroke-width:5;filter:drop-shadow(0 0 7px #43e8ff)}
+.checker text{pointer-events:none}
+.bar-bg{fill:#29384b;stroke:#91a1b2;stroke-width:2}
+.bar-count{fill:#fff;font-size:12px;text-anchor:middle;font-weight:bold;pointer-events:none}
+.dice-area{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;min-height:66px}
+.die{width:49px;height:49px;border-radius:10px;border:2px solid #c9d5e3;background:#eef3f8;position:relative;box-shadow:0 2px 6px #0008;cursor:pointer}
+.die.selected{outline:3px solid var(--cyan);box-shadow:0 0 13px #43e8ff99}
+.die.used{opacity:.23;cursor:default;filter:grayscale(1)}
+.pip{position:absolute;width:8px;height:8px;border-radius:50%;background:#111c2a;transform:translate(-50%,-50%)}
+.roll-note{font-size:12px;color:var(--muted);text-align:center;min-height:17px}
+.side{display:flex;flex-direction:column;gap:10px;width:100%}
+.side .panel{padding:12px}
+.side h2{margin:0 0 9px;color:var(--cyan);font-size:13px;letter-spacing:1.4px;text-align:center}
+.player-info{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.player-badge{border:1px solid #34465b;background:#080e18;border-radius:8px;padding:8px;font-size:12px;text-align:center}
+.player-badge.active{box-shadow:0 0 10px #43e8ff55;border-color:var(--cyan)}
+.player-badge strong{display:block;margin-bottom:4px}
+.player-badge .count{color:var(--muted)}
+.instructions{font-size:12px;line-height:1.45;color:#c1ccda}
+.instructions b{color:#fff}
+.actionrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.off-button{width:100%;border:1px solid #e9c56f;background:#332712;color:#ffe2a0;border-radius:8px;padding:10px;font-weight:bold;cursor:pointer}
+.off-button:disabled{opacity:.3;cursor:default}
+.status{min-height:38px;display:flex;align-items:center;justify-content:center;text-align:center;color:#dce8f6;font-size:13px;line-height:1.35;padding:7px;background:#080d16;border:1px solid #293a4e;border-radius:8px}
+.winner{display:none;text-align:center;color:#ffe08a;font-size:20px;font-weight:bold;text-shadow:0 0 12px #efbd55;padding:10px}
+@keyframes diceShake{0%{transform:rotate(-9deg)}100%{transform:rotate(9deg)}}
+.dice-rolling{animation:diceShake .09s infinite alternate}
+@media(max-width:760px){
+ body{padding:6px}
+ .game{grid-template-columns:1fr;max-width:570px}
+ .side{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+ .side .instructions-panel{grid-column:1/-1}
+ .board-frame{width:min(100%,560px)}
+ .turnbar{padding:8px 10px}
+}
+@media(max-width:420px){
+ h1{letter-spacing:1px}
+ .side{grid-template-columns:1fr 1fr;gap:7px}
+ .panel{padding:9px}
+ .die{width:44px;height:44px}
+ .pip{width:7px;height:7px}
+ .turnhint{font-size:11px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+<header>
+ <h1>BACKGAMMON</h1>
+ <div class="subtitle">NEON EDITION · 2 SPIELER</div>
+</header>
+<section class="panel setup" id="setup">
+ <div class="section-title">SPIELER UND FARBEN</div>
+ <div class="colors">
+  <div class="color-card"><span class="color-dot" style="background:#e8f4f4;box-shadow:0 0 8px #43e8ff"></span><strong>Spieler 1 · Eisweiß</strong></div>
+  <div class="color-card"><span class="color-dot" style="background:#171c29;box-shadow:0 0 8px #ff4fd8;border:1px solid #ff4fd8"></span><strong>Spieler 2 · Nachtpink</strong></div>
+ </div>
+ <div class="small-note">Zwei Spieler spielen abwechselnd auf demselben Gerät. Namen müssen nicht eingegeben werden.</div>
+ <button class="primary" id="start">SPIEL STARTEN</button>
+</section>
+
+<section class="game" id="game">
+ <div class="board-column">
+  <div class="turnbar"><div class="turnname" id="turnName">Spieler 1</div><div class="turnhint" id="turnHint">Würfle mit beiden Würfeln.</div></div>
+  <div class="board-frame">
+   <svg id="board" viewBox="0 0 640 820" role="img" aria-label="Backgammon-Spielbrett">
+    <rect class="board-wood" x="8" y="8" width="624" height="804" rx="13"/>
+    <rect x="17" y="17" width="606" height="786" rx="8" fill="#172538" stroke="#b08a55" stroke-width="5"/>
+    <g id="points"></g>
+    <rect class="bar-bg" x="17" y="390" width="606" height="40" rx="5"/>
+    <g id="barCheckers"></g>
+    <g id="checkers"></g>
+    <g id="targets"></g>
+    <g id="pointLabels"></g>
+   </svg>
+  </div>
+  <div class="dice-area" id="diceArea"></div>
+  <div class="roll-note" id="rollNote">Würfle, um deinen Zug zu beginnen.</div>
+  <button class="primary" id="rollButton">🎲 WÜRFELN</button>
+  <div class="winner" id="winner"></div>
+ </div>
+ <aside class="side">
+  <section class="panel">
+   <h2>SPIELSTAND</h2>
+   <div class="player-info" id="playerInfo"></div>
+  </section>
+  <section class="panel">
+   <h2>ZUG-HILFE</h2>
+   <div class="instructions" id="instructions">Würfle. Wähle einen deiner Steine und anschließend das Zielfeld. Deine möglichen Züge leuchten auf.</div>
+  </section>
+  <section class="panel instructions-panel">
+   <h2>SO FUNKTIONIERT'S</h2>
+   <div class="instructions">Tippe zuerst einen deiner Steine an, dann ein leuchtendes Zielfeld. Du musst beide Würfel nutzen, wenn möglich. Bei einem Pasch darfst du viermal ziehen. Einzelne gegnerische Steine werden geschlagen und müssen erst von der Bar zurück ins Spiel. Sind alle 15 Steine im eigenen Heimfeld, kannst du sie herauswürfeln.</div>
+  </section>
+  <section class="panel">
+   <div class="actionrow">
+    <button class="off-button" id="offButton" disabled>STEIN AUSWÜRFELN</button>
+    <button class="secondary" id="newGame">NEUES SPIEL</button>
+   </div>
+  </section>
+  <div class="status" id="status">Spieler 1 ist am Zug.</div>
+ </aside>
+</section>
+</main>
+<script>
+'use strict';
+(()=>{
+const $=id=>document.getElementById(id);
+const NS='http://www.w3.org/2000/svg';
+const COLORS=[{name:'Eisweiß',cls:'white',hex:'#e8f4f4'},{name:'Nachtpink',cls:'black',hex:'#ff4fd8'}];
+const pointLayer=$('points'),checkerLayer=$('checkers'),barLayer=$('barCheckers'),targetLayer=$('targets'),labelLayer=$('pointLabels');
+let state,player=0,dice=[],selectedDie=null,selectedFrom=null,rolled=false,gameOver=false,rolling=false,rollAnimation=null,passTimer=null;
+let cache=new Map();
+function svg(tag,attrs={}){const e=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,String(v));return e;}
+function emptyState(){return {points:Array(24).fill(0),bar:[0,0],off:[0,0]};}
+function initialState(){const s=emptyState();s.points[23]=2;s.points[12]=5;s.points[7]=3;s.points[5]=5;s.points[0]=-2;s.points[11]=-5;s.points[16]=-3;s.points[18]=-5;return s;}
+function cloneState(s){return {points:s.points.slice(),bar:s.bar.slice(),off:s.off.slice()};}
+function coord(index){
+ const n=index+1;
+ if(n>=13&&n<=18)return {side:'left',row:'top',slot:n-13};
+ if(n>=7&&n<=12)return {side:'right',row:'top',slot:12-n};
+ if(n>=19&&n<=24)return {side:'left',row:'bottom',slot:n-19};
+ return {side:'right',row:'bottom',slot:6-n};
+}
+function pointCenter(index){
+ const c=coord(index);
+ return {x:c.side==='left'?34:606,y:c.row==='top'?48+c.slot*59:478+c.slot*59};
+}
+function pointPath(index){
+ const c=coord(index),cy=pointCenter(index).y;
+ if(c.side==='left')return `M 18 ${cy-27} L 18 ${cy+27} L 288 ${cy} Z`;
+ return `M 622 ${cy-27} L 622 ${cy+27} L 352 ${cy} Z`;
+}
+function drawBoard(){
+ pointLayer.innerHTML='';labelLayer.innerHTML='';
+ for(let i=0;i<24;i++){
+  const c=coord(i),p=svg('path',{d:pointPath(i),class:'point-shape '+((i%2===0)?'point-a':'point-b')});pointLayer.appendChild(p);
+  const hit=svg('path',{d:pointPath(i),class:'point-hit','data-point':i});pointLayer.appendChild(hit);
+  const pc=pointCenter(i),labelX=c.side==='left'?278:362;
+  const lab=svg('text',{x:labelX,y:pc.y+4,class:'point-number'});lab.textContent=i+1;labelLayer.appendChild(lab);
+ }
+}
+function playerCountOnPoint(point,p){return p===0?Math.max(0,state.points[point]):Math.max(0,-state.points[point]);}
+function isHome(p){
+ if(state.bar[p]>0)return false;
+ for(let i=0;i<24;i++)if(playerCountOnPoint(i,p)>0){if(p===0&&i>5)return false;if(p===1&&i<18)return false;}
+ return true;
+}
+function legalMovesForDie(s,p,die){
+ const moves=[],sign=p===0?1:-1,opponent=1-p;
+ const add=(from,to)=>{
+  if(to!=='off'){
+   const v=s.points[to];
+   if((p===0&&v<=-2)||(p===1&&v>=2))return;
+  }
+  moves.push({from,to,die});
+ };
+ if(s.bar[p]>0){
+  const to=p===0?24-die:die-1;
+  add('bar',to);return moves;
+ }
+ const home=isHomeFor(s,p);
+ for(let from=0;from<24;from++){
+  if((p===0&&s.points[from]<=0)||(p===1&&s.points[from]>=0))continue;
+  const to=p===0?from-die:from+die;
+  if(to>=0&&to<24){add(from,to);continue;}
+  if(!home)continue;
+  const exact=to===-1||to===24;
+  if(exact){add(from,'off');continue;}
+  if(p===0&&to<0){
+   let farther=false;for(let j=from+1;j<=5;j++)if(s.points[j]>0)farther=true;
+   if(!farther)add(from,'off');
+  }else if(p===1&&to>23){
+   let farther=false;for(let j=18;j<from;j++)if(s.points[j]<0)farther=true;
+   if(!farther)add(from,'off');
+  }
+ }
+ return moves;
+}
+function isHomeFor(s,p){
+ if(s.bar[p]>0)return false;
+ for(let i=0;i<24;i++){
+  const count=p===0?s.points[i]:-s.points[i];
+  if(count>0&&((p===0&&i>5)||(p===1&&i<18)))return false;
+ }
+ return true;
+}
+function applyMove(s,p,m){
+ const n=cloneState(s),sign=p===0?1:-1,opp=1-p;
+ if(m.from==='bar')n.bar[p]--;else n.points[m.from]-=sign;
+ if(m.to==='off'){n.off[p]++;return n;}
+ if((p===0&&n.points[m.to]===-1)||(p===1&&n.points[m.to]===1)){
+  n.points[m.to]=0;n.bar[opp]++;
+ }
+ n.points[m.to]+=sign;return n;
+}
+function bestCount(s,p,values){
+ if(!values.length)return 0;
+ const sorted=values.slice().sort((a,b)=>a-b),key=p+'|'+s.points.join(',')+'|'+s.bar.join(',')+'|'+s.off.join(',')+'|'+sorted.join(',');
+ if(cache.has(key))return cache.get(key);
+ let best=0;const seen=new Set();
+ for(let i=0;i<values.length;i++){
+  const die=values[i];if(seen.has(die))continue;seen.add(die);
+  const rest=values.slice();rest.splice(i,1);
+  for(const m of legalMovesForDie(s,p,die))best=Math.max(best,1+bestCount(applyMove(s,p,m),p,rest));
+ }
+ cache.set(key,best);return best;
+}
+function optimalMoves(s,p,values){
+ const max=bestCount(s,p,values),out=[],seen=new Set();
+ if(!max)return out;
+ for(let i=0;i<values.length;i++){
+  const die=values[i];if(seen.has(die))continue;seen.add(die);
+  const rest=values.slice();rest.splice(i,1);
+  for(const m of legalMovesForDie(s,p,die)){
+   if(1+bestCount(applyMove(s,p,m),p,rest)===max)out.push(m);
+  }
+ }
+ /* Wenn bei zwei verschiedenen Würfeln nur einer spielbar ist, gilt der höhere. */
+ if(values.length===2&&values[0]!==values[1]&&max===1){
+  const high=Math.max(...values),highMoves=out.filter(m=>m.die===high);
+  if(highMoves.length)return highMoves;
+ }
+ return out;
+}
+function pointPos(index,stack){
+ const c=coord(index),center=pointCenter(index),step=22;
+ const layer=Math.min(stack,7);
+ return {x:c.side==='left'?34+layer*step:606-layer*step,y:center.y};
+}
+function addChecker(parent,x,y,p,extra=''){
+ const g=svg('g',{class:'checker '+(p===0?'white':'black')+' '+extra});
+ g.appendChild(svg('circle',{cx:x,cy:y,r:17}));
+ g.appendChild(svg('circle',{cx:x,cy:y,r:11,fill:'none',stroke:p===0?'#8bbdc7':'#aa3e91','stroke-width':1.5,opacity:.8}));
+ parent.appendChild(g);return g;
+}
+function drawCheckers(){
+ checkerLayer.innerHTML='';barLayer.innerHTML='';
+ for(let i=0;i<24;i++){
+  const count=Math.abs(state.points[i]),p=state.points[i]>0?0:1;
+  const visible=Math.min(count,8);
+  for(let k=0;k<visible;k++){
+   const pos=pointPos(i,k),g=addChecker(checkerLayer,pos.x,pos.y,p);
+   g.dataset.point=i;
+   if(k===visible-1&&count>visible){const t=svg('text',{x:pos.x,y:pos.y+4,'text-anchor':'middle',fill:p===0?'#14242d':'#fff',style:'font-size:12px;font-weight:bold'});t.textContent=count;g.appendChild(t);}
+  }
+ }
+ for(let p=0;p<2;p++){
+  const count=state.bar[p];
+  for(let k=0;k<count;k++){
+   const x=105+k*28,y=p===0?399:421;
+   addChecker(barLayer,x,y,p).dataset.bar='true';
+  }
+  if(count){const t=svg('text',{x:22,y:p===0?397:431,class:'bar-count','text-anchor':'start'});t.textContent='BAR '+count;barLayer.appendChild(t);}
+ }
+}
+function currentOptimal(){return rolled?optimalMoves(state,player,dice.filter(d=>!d.used).map(d=>d.value)):[];}
+function movesForSelected(){const opts=currentOptimal();return selectedDie===null?[]:opts.filter(m=>m.die===dice.find(d=>d.id===selectedDie)?.value);}
+function renderTargets(){
+ targetLayer.innerHTML='';
+ if(!rolled||gameOver)return;
+ const opts=movesForSelected();
+ if(selectedFrom!==null){
+  for(const m of opts.filter(m=>m.from===selectedFrom)){
+   if(m.to==='off')continue;
+   targetLayer.appendChild(svg('path',{d:pointPath(m.to),fill:'#ffe27b24',stroke:'#ffe27b','stroke-width':5,'data-target':m.to}));
+  }
+ }else{
+  const sources=[...new Set(opts.map(m=>m.from))];
+  for(const from of sources){
+   if(from==='bar'){
+    targetLayer.appendChild(svg('rect',{x:12,y:390,width:616,height:40,rx:6,fill:'#43e8ff22',stroke:'#43e8ff','stroke-width':3,'data-bar-source':'true'}));
+   }else{
+    const c=pointCenter(from);
+    targetLayer.appendChild(svg('circle',{cx:c.x,cy:c.y,r:20,fill:'#43e8ff22',stroke:'#43e8ff','stroke-width':3,'data-source':from}));
+   }
+  }
+ }
+}
+function draw(){
+ drawCheckers();renderTargets();renderDice();renderPlayers();updateControls();
+}
+function diePips(value){
+ const map={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+ const coords=[[25,25],[50,25],[75,25],[25,50],[50,50],[75,50],[25,75],[50,75],[75,75]];
+ return (map[value]||[]).map(i=>`<i class="pip" style="left:${coords[i][0]}%;top:${coords[i][1]}%"></i>`).join('');
+}
+function renderDice(){
+ const area=$('diceArea');area.innerHTML='';
+ const usable=currentOptimal();
+ dice.forEach(d=>{
+  const canUse=usable.some(m=>m.die===d.value);
+  const b=document.createElement('button');b.className='die'+(d.used||(!canUse&&rolled)?' used':'')+(selectedDie===d.id?' selected':'');b.type='button';b.disabled=d.used||!rolled||gameOver||!canUse;
+  b.innerHTML=diePips(d.value);b.setAttribute('aria-label','Würfel '+d.value);
+  b.addEventListener('click',()=>{if(d.used||!rolled||!currentOptimal().some(m=>m.die===d.value))return;selectedDie=d.id;selectedFrom=null;draw();$('status').textContent='Würfel '+d.value+' ausgewählt. Jetzt einen leuchtenden Stein antippen.';});
+  area.appendChild(b);
+ });
+ if(!dice.length)area.textContent='Noch nicht gewürfelt';
+}
+function renderPlayers(){
+ $('playerInfo').innerHTML='';
+ for(let p=0;p<2;p++){
+  const d=document.createElement('div');d.className='player-badge'+(p===player&&!gameOver?' active':'');
+  d.innerHTML=`<strong style="color:${p===0?'#8ff5ff':'#ff8bea'}">Spieler ${p+1}</strong><span class="count">Im Spiel: ${15-state.off[p]} · Raus: ${state.off[p]}<br>Bar: ${state.bar[p]}</span>`;
+  $('playerInfo').appendChild(d);
+ }
+ $('turnName').textContent='Spieler '+(player+1)+' ist am Zug';
+ $('turnName').style.color=player===0?'#8ff5ff':'#ff8bea';
+ $('turnHint').textContent=gameOver?'Spiel beendet':!rolled?'Würfle mit beiden Würfeln.':dice.some(d=>!d.used)?'Wähle Würfel, Stein und Zielfeld.':'Zug beendet';
+}
+function updateControls(){
+ const haveMoves=rolled&&currentOptimal().length>0;
+ $('rollButton').disabled=rolled||rolling||gameOver;
+ $('rollButton').textContent=rolling?'WÜRFEL ROLLT …':rolled?'WURF ABGESCHLOSSEN':'🎲 WÜRFELN';
+ $('offButton').disabled=!(selectedFrom!==null&&movesForSelected().some(m=>m.from===selectedFrom&&m.to==='off'));
+}
+function setStatus(text){$('status').textContent=text;}
+function selectSource(from){
+ const opts=movesForSelected().filter(m=>m.from===from);
+ if(!opts.length)return false;
+ selectedFrom=from;draw();
+ const canOff=opts.some(m=>m.to==='off');
+ $('instructions').textContent=canOff?'Wähle ein leuchtendes Zielfeld oder „Stein auswürfeln“.':'Wähle jetzt eines der leuchtenden Zielfelder.';
+ setStatus('Stein ausgewählt. Wohin soll er ziehen?');return true;
+}
+function handlePointClick(index){
+ if(!rolled||gameOver||selectedDie===null)return;
+ const moves=movesForSelected();
+ if(selectedFrom!==null){
+  const move=moves.find(m=>m.from===selectedFrom&&m.to===index);
+  if(move){executeMove(move);return;}
+ }
+ if(moves.some(m=>m.from===index)){selectSource(index);return;}
+ setStatus('Dieser Stein kann mit dem ausgewählten Würfel nicht ziehen.');
+}
+function executeMove(move){
+ state=applyMove(state,player,move);
+ const dieIndex=dice.findIndex(d=>d.id===selectedDie);
+ if(dieIndex>=0)dice[dieIndex].used=true;
+ selectedFrom=null;selectedDie=null;cache.clear();
+ if(state.off[player]===15){finishGame();return;}
+ const remaining=dice.filter(d=>!d.used).map(d=>d.value);
+ const best=optimalMoves(state,player,remaining);
+ if(!remaining.length||!best.length){
+  if(remaining.length){setStatus('Kein weiterer Zug möglich – Spielerwechsel.');draw();passTimer=setTimeout(nextTurn,900);}
+  else{setStatus('Alle Würfel verwendet – Spielerwechsel.');draw();passTimer=setTimeout(nextTurn,700);}
+  return;
+ }
+ const nextDie=remaining.find(v=>best.some(m=>m.die===v));
+ selectedDie=dice.find(d=>!d.used&&d.value===nextDie)?.id??null;
+ draw();
+ setStatus('Guter Zug! Wähle den nächsten Würfel und Stein.');
+ $('instructions').textContent='Wähle einen noch verfügbaren Würfel, dann einen leuchtenden Stein.';
+}
+function moveOff(){
+ if(selectedFrom===null)return;
+ const move=movesForSelected().find(m=>m.from===selectedFrom&&m.to==='off');
+ if(move)executeMove(move);
+}
+function roll(){
+ if(rolled||rolling||gameOver)return;
+ rolling=true;$('rollButton').disabled=true;$('rollButton').textContent='WÜRFEL ROLLT …';
+ let ticks=0;
+ rollAnimation=setInterval(()=>{
+  const a=1+Math.floor(Math.random()*6),b=1+Math.floor(Math.random()*6);
+  $('diceArea').innerHTML='';[a,b].forEach(v=>{const d=document.createElement('div');d.className='die';d.innerHTML=diePips(v);$('diceArea').appendChild(d);});
+  ticks++;
+  if(ticks>=9){clearInterval(rollAnimation);rollAnimation=null;finishRoll(a,b);}
+ },70);
+}
+function finishRoll(a,b){
+ rolling=false;rolled=true;
+ const values=a===b?[a,a,a,a]:[a,b];
+ dice=values.map((value,i)=>({id:'d'+i,value,used:false}));
+ cache.clear();
+ const best=optimalMoves(state,player,values);
+ if(!best.length){selectedDie=null;draw();$('rollNote').textContent=a===b?`Pasch ${a}, aber kein Zug möglich.`:`${a} und ${b}: kein Zug möglich.`;setStatus('Kein Zug möglich. In einer Sekunde ist der andere Spieler dran.');passTimer=setTimeout(nextTurn,1100);return;}
+ const validValues=[...new Set(best.map(m=>m.die))];
+ const chosen=validValues[0];selectedDie=dice.find(d=>d.value===chosen)?.id??null;
+ draw();
+ $('rollNote').textContent=a===b?`Pasch! Vier Züge mit der ${a}.`:`Du hast ${a} und ${b} gewürfelt.`;
+ $('instructions').textContent='Tippe einen Würfel an, danach einen deiner leuchtenden Steine und sein Zielfeld.';
+ setStatus('Wähle einen Würfel. Deine möglichen Steine leuchten.');
+}
+function nextTurn(){
+ if(passTimer){clearTimeout(passTimer);passTimer=null;}
+ player=1-player;dice=[];selectedDie=null;selectedFrom=null;rolled=false;rolling=false;cache.clear();
+ $('rollNote').textContent='Würfle, um deinen Zug zu beginnen.';
+ $('instructions').textContent='Würfle. Wähle einen deiner Steine und anschließend das Zielfeld. Deine möglichen Züge leuchten auf.';
+ draw();setStatus('Spieler '+(player+1)+' ist am Zug.');
+}
+function finishGame(){
+ gameOver=true;rolled=false;selectedFrom=null;selectedDie=null;draw();
+ const loser=1-player;
+ const inLoserHome=state.points.some((v,i)=>loser===0?v>0&&i>=18:v<0&&i<=5);
+ const multiplier=state.off[loser]===0?(state.bar[loser]>0||inLoserHome?3:2):1;
+ const type=multiplier===3?'Backgammon':multiplier===2?'Gammon':'Einfacher Sieg';
+ $('winner').style.display='block';$('winner').textContent=`🏆 SPIELER ${player+1} GEWINNT! 🏆\n${type} · ${multiplier} Punkt${multiplier>1?'e':''}`;
+ $('rollNote').textContent='Partie beendet';$('rollButton').disabled=true;
+ setStatus('Alle 15 Steine sind im Ziel.');
+}
+function clickBoard(e){
+ const target=e.target.closest('[data-target]');
+ if(target&&selectedFrom!==null){handlePointClick(Number(target.dataset.target));return;}
+ const barHit=e.target.closest('[data-bar-source]');
+ if(barHit){if(state.bar[player]>0)selectSource('bar');return;}
+ const source=e.target.closest('[data-source]');
+ if(source){selectSource(Number(source.dataset.source));return;}
+ const hit=e.target.closest('[data-point]');
+ if(hit){handlePointClick(Number(hit.dataset.point));return;}
+}
+function startGame(){
+ if(passTimer){clearTimeout(passTimer);passTimer=null;}
+ state=initialState();player=0;dice=[];selectedDie=null;selectedFrom=null;rolled=false;gameOver=false;rolling=false;cache.clear();
+ $('setup').style.display='none';$('game').style.display='grid';$('winner').style.display='none';
+ $('rollNote').textContent='Würfle, um deinen Zug zu beginnen.';drawBoard();draw();setStatus('Spieler 1 ist am Zug.');
+}
+$('start').addEventListener('click',startGame);
+$('rollButton').addEventListener('click',roll);
+$('offButton').addEventListener('click',moveOff);
+$('newGame').addEventListener('click',()=>{if(passTimer){clearTimeout(passTimer);passTimer=null;}if(rollAnimation){clearInterval(rollAnimation);rollAnimation=null;}rolling=false;$('game').style.display='none';$('setup').style.display='grid';});
+$('board').addEventListener('click',clickBoard);
+drawBoard();
+})();
+</script>
+</body>
+</html>
