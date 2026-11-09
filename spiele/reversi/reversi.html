@@ -1,0 +1,585 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>REVERSI – Neon Edition</title>
+<style>
+:root {
+  --bg:#050509;
+  --panel:#101019;
+  --cyan:#42e8ff;
+  --pink:#ff4fd8;
+  --gold:#ffd166;
+  --green:#54ff9f;
+}
+* { box-sizing:border-box; }
+html,body {
+  margin:0;
+  width:100%;
+  min-height:100%;
+  background:var(--bg);
+  color:#fff;
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+body {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow-x:hidden;
+  overflow-y:auto;
+  min-height:100vh;
+  height:auto;
+  padding:8px;
+}
+
+.game {
+  width:min(94vw, 700px);
+  max-height:none;
+  flex-shrink:0;
+h1 {
+  margin:0;
+  text-align:center;
+  font-size:clamp(22px,4vh,36px);
+  letter-spacing:.18em;
+  color:var(--cyan);
+  text-shadow:0 0 8px #00dfff,0 0 22px #00dfff;
+}
+.subtitle {
+  font-size:clamp(10px,1.5vh,13px);
+  letter-spacing:.13em;
+  color:#aaa;
+  text-align:center;
+}
+.topline {
+  width:100%;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:8px;
+  align-items:center;
+}
+.player {
+  background:var(--panel);
+  border:1px solid #343448;
+  border-radius:12px;
+  padding:7px 10px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+}
+.player.right {
+  justify-content:flex-end;
+  text-align:right;
+}
+.player.active.black {
+  border-color:var(--cyan);
+  box-shadow:0 0 12px #00dfff55;
+}
+.player.active.white {
+  border-color:var(--pink);
+  box-shadow:0 0 12px #ff4fd855;
+}
+.disc {
+  width:clamp(18px,3vh,27px);
+  height:clamp(18px,3vh,27px);
+  border-radius:50%;
+  flex:none;
+}
+.disc.black {
+  background:radial-gradient(circle at 35% 30%,#555 0,#111 42%,#000 75%);
+  border:1px solid var(--cyan);
+  box-shadow:0 0 8px #00dfff;
+}
+.disc.white {
+  background:radial-gradient(circle at 35% 30%,#fff 0,#ddd 55%,#999 100%);
+  border:1px solid var(--pink);
+  box-shadow:0 0 8px #ff4fd8;
+}
+.player-name {
+  font-size:clamp(10px,1.7vh,14px);
+  color:#bbb;
+}
+.score {
+  font-weight:bold;
+  font-size:clamp(20px,3.2vh,28px);
+  line-height:1.05;
+}
+.turn {
+  font-size:clamp(9px,1.35vh,11px);
+  color:var(--gold);
+  min-height:1em;
+}
+.vs {
+  font-weight:bold;
+  color:#777;
+  font-size:12px;
+}
+.board-wrap {
+  width:100%;
+  padding:clamp(5px,1vh,9px);
+  border-radius:15px;
+  background:#080d12;
+  border:1px solid #176b79;
+  box-shadow:0 0 10px #00dfff55,inset 0 0 18px #00dfff12;
+}
+.board {
+  width:100%;
+  aspect-ratio:1;
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:clamp(2px,.45vw,4px);
+  background:#0a1117;
+  padding:clamp(2px,.45vw,4px);
+  border-radius:9px;
+}
+.cell {
+  position:relative;
+  border:1px solid #1b6a72;
+  border-radius:4px;
+  background:linear-gradient(145deg,#123d39,#092a2a);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  min-width:0;
+  min-height:0;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.cell:focus-visible {
+  outline:2px solid var(--gold);
+  outline-offset:-2px;
+}
+.stone {
+  width:78%;
+  height:78%;
+  border-radius:50%;
+  pointer-events:none;
+  transition:transform .15s;
+}
+.stone.black {
+  background:radial-gradient(circle at 32% 27%,#666 0,#222 35%,#050505 75%);
+  border:1px solid #8df4ff;
+  box-shadow:0 0 5px #00dfff,inset 0 0 5px #fff3;
+}
+.stone.white {
+  background:radial-gradient(circle at 32% 27%,#fff 0,#e9e9ef 58%,#a6a6b2 100%);
+  border:1px solid #fff;
+  box-shadow:0 0 6px #ff4fd8;
+}
+.cell.legal:after {
+  content:"";
+  position:absolute;
+  width:20%;
+  height:20%;
+  border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 7px var(--gold);
+  opacity:.9;
+}
+.cell.last {
+  outline:2px solid var(--pink);
+  outline-offset:-3px;
+}
+.status {
+  width:100%;
+  min-height:2.2em;
+  text-align:center;
+  color:var(--gold);
+  font-size:clamp(12px,1.8vh,15px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.controls {
+  width:100%;
+  display:flex;
+  gap:8px;
+  justify-content:center;
+}
+button.action {
+  border:1px solid var(--cyan);
+  background:#101b24;
+  color:var(--cyan);
+  border-radius:9px;
+  padding:9px 17px;
+  font-weight:bold;
+  font-size:clamp(12px,1.7vh,14px);
+  cursor:pointer;
+  box-shadow:0 0 8px #00dfff33;
+}
+button.action:hover { background:#17313b; }
+button.action:disabled {
+  opacity:.35;
+  cursor:not-allowed;
+}
+button.action.pink {
+  border-color:var(--pink);
+  color:var(--pink);
+  box-shadow:0 0 8px #ff4fd833;
+}
+.help {
+  color:#777;
+  text-align:center;
+  font-size:clamp(9px,1.35vh,11px);
+  line-height:1.3;
+}
+@media(max-width:420px) {
+  body { padding:6px; }
+  .game {
+    width:min(98vw,calc(100vh - 12px));
+    gap:5px;
+  }
+  .player { padding:5px 7px;gap:6px; }
+  .board-wrap { padding:4px; }
+  .controls { gap:6px; }
+  button.action { padding:8px 12px; }
+}
+@media(max-height:620px) and (min-width:421px) {
+  .game {
+    width:min(88vh,calc(100vh - 12px),620px);
+    gap:4px;
+  }
+  h1 { font-size:22px; }
+  .subtitle,.help { display:none; }
+  .player { padding:4px 8px; }
+  .status { min-height:1.5em; }
+  button.action { padding:6px 14px; }
+}
+</style>
+</head>
+<body>
+
+<main class="game">
+
+  <h1>REVERSI</h1>
+  <div class="subtitle">NEON EDITION · 2 SPIELER · 8 × 8</div>
+
+  <section class="topline">
+
+    <div class="player active black" id="blackPlayer">
+      <span class="disc black"></span>
+      <div>
+        <div class="player-name">SCHWARZ</div>
+        <div class="score" id="blackScore">2</div>
+        <div class="turn" id="blackTurn">AM ZUG</div>
+      </div>
+    </div>
+
+    <div class="vs">VS</div>
+
+    <div class="player right" id="whitePlayer">
+      <div>
+        <div class="player-name">WEISS</div>
+        <div class="score" id="whiteScore">2</div>
+        <div class="turn" id="whiteTurn"></div>
+      </div>
+      <span class="disc white"></span>
+    </div>
+
+  </section>
+
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="Reversi Spielfeld"></div>
+  </div>
+
+  <div class="status" id="status" aria-live="polite">
+    Schwarz beginnt. Setze einen Stein auf ein markiertes Feld.
+  </div>
+
+  <div class="controls">
+    <button class="action" id="passBtn" disabled>PASSEN</button>
+    <button class="action pink" id="restartBtn">NEUES SPIEL</button>
+  </div>
+
+  <div class="help">
+    Setze deinen Stein so, dass gegnerische Steine zwischen zwei eigenen Steinen liegen.<br>
+    Alle eingeschlossenen Steine wechseln dann deine Farbe.
+  </div>
+
+</main>
+
+<script>
+(() => {
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const blackScore = document.getElementById('blackScore');
+  const whiteScore = document.getElementById('whiteScore');
+  const blackPlayer = document.getElementById('blackPlayer');
+  const whitePlayer = document.getElementById('whitePlayer');
+  const blackTurn = document.getElementById('blackTurn');
+  const whiteTurn = document.getElementById('whiteTurn');
+  const passBtn = document.getElementById('passBtn');
+  const restartBtn = document.getElementById('restartBtn');
+
+  const dirs = [
+    [-1,-1],[-1,0],[-1,1],
+    [0,-1],[0,1],
+    [1,-1],[1,0],[1,1]
+  ];
+
+  let board;
+  let turn;
+  let lastMove;
+  let finished;
+
+  const inside = (r,c) => r>=0 && r<8 && c>=0 && c<8;
+
+  function flipsFor(r,c,color) {
+
+    if(board[r][c] !== 0) return [];
+
+    const all = [];
+
+    for(const [dr,dc] of dirs) {
+
+      let rr = r+dr;
+      let cc = c+dc;
+      const line = [];
+
+      while(inside(rr,cc) && board[rr][cc] === -color) {
+        line.push([rr,cc]);
+        rr += dr;
+        cc += dc;
+      }
+
+      if(
+        line.length &&
+        inside(rr,cc) &&
+        board[rr][cc] === color
+      ) {
+        all.push(...line);
+      }
+    }
+
+    return all;
+  }
+
+  function legalMoves(color) {
+
+    const moves = [];
+
+    for(let r=0;r<8;r++) {
+      for(let c=0;c<8;c++) {
+
+        const flips = flipsFor(r,c,color);
+
+        if(flips.length) {
+          moves.push({r,c,flips});
+        }
+      }
+    }
+
+    return moves;
+  }
+
+  function count() {
+
+    let b=0;
+    let w=0;
+
+    for(const row of board) {
+      for(const v of row) {
+        if(v===1) b++;
+        if(v===-1) w++;
+      }
+    }
+
+    return {b,w};
+  }
+
+  function render() {
+
+    boardEl.innerHTML = '';
+
+    const moves = finished ? [] : legalMoves(turn);
+
+    for(let r=0;r<8;r++) {
+      for(let c=0;c<8;c++) {
+
+        const cell = document.createElement('button');
+
+        cell.type = 'button';
+        cell.className = 'cell';
+        cell.setAttribute('role','gridcell');
+
+        cell.setAttribute(
+          'aria-label',
+          `Zeile ${r+1}, Spalte ${c+1}`
+        );
+
+        if(moves.some(m=>m.r===r && m.c===c)) {
+          cell.classList.add('legal');
+        }
+
+        if(lastMove && lastMove[0]===r && lastMove[1]===c) {
+          cell.classList.add('last');
+        }
+
+        if(board[r][c] !== 0) {
+
+          const stone = document.createElement('span');
+
+          stone.className =
+            'stone ' + (board[r][c]===1 ? 'black' : 'white');
+
+          cell.appendChild(stone);
+        }
+
+        cell.addEventListener('click',()=>play(r,c));
+
+        boardEl.appendChild(cell);
+      }
+    }
+
+    const s = count();
+
+    blackScore.textContent = s.b;
+    whiteScore.textContent = s.w;
+
+    blackPlayer.classList.toggle(
+      'active',
+      turn===1 && !finished
+    );
+
+    whitePlayer.classList.toggle(
+      'active',
+      turn===-1 && !finished
+    );
+
+    blackTurn.textContent =
+      turn===1 && !finished ? 'AM ZUG' : '';
+
+    whiteTurn.textContent =
+      turn===-1 && !finished ? 'AM ZUG' : '';
+
+    passBtn.disabled = finished || moves.length!==0;
+  }
+
+  function endGame() {
+
+    finished = true;
+
+    const s = count();
+
+    if(s.b>s.w) {
+      statusEl.textContent =
+        `Spiel beendet! Schwarz gewinnt mit ${s.b} zu ${s.w} Steinen.`;
+    }
+    else if(s.w>s.b) {
+      statusEl.textContent =
+        `Spiel beendet! Weiß gewinnt mit ${s.w} zu ${s.b} Steinen.`;
+    }
+    else {
+      statusEl.textContent =
+        `Spiel beendet! Unentschieden – ${s.b} zu ${s.w}.`;
+    }
+
+    render();
+  }
+
+  function checkTurn() {
+
+    const moves = legalMoves(turn);
+
+    if(moves.length) {
+      statusEl.textContent =
+        (turn===1?'Schwarz':'Weiß') + ' ist am Zug.';
+      return;
+    }
+
+    const other = legalMoves(-turn);
+
+    if(!other.length) {
+      endGame();
+      return;
+    }
+
+    const skipped = turn===1?'Schwarz':'Weiß';
+
+    turn = -turn;
+
+    statusEl.textContent =
+      `${skipped} kann nicht setzen und muss aussetzen. Jetzt ist ${turn===1?'Schwarz':'Weiß'} dran.`;
+
+    render();
+  }
+
+  function play(r,c) {
+
+    if(finished) return;
+
+    const flips = flipsFor(r,c,turn);
+
+    if(!flips.length) {
+      statusEl.textContent =
+        'Dort ist kein gültiger Zug möglich. Wähle ein markiertes Feld.';
+      return;
+    }
+
+    board[r][c] = turn;
+
+    for(const [rr,cc] of flips) {
+      board[rr][cc] = turn;
+    }
+
+    lastMove = [r,c];
+    turn = -turn;
+
+    render();
+    checkTurn();
+  }
+
+  function pass() {
+
+    if(finished || legalMoves(turn).length) return;
+
+    if(!legalMoves(-turn).length) {
+      endGame();
+      return;
+    }
+
+    turn = -turn;
+
+    statusEl.textContent =
+      (turn===1?'Schwarz':'Weiß') + ' ist am Zug.';
+
+    render();
+  }
+
+  function newGame() {
+
+    board = Array.from(
+      {length:8},
+      ()=>Array(8).fill(0)
+    );
+
+    board[3][3] = -1;
+    board[3][4] = 1;
+    board[4][3] = 1;
+    board[4][4] = -1;
+
+    turn = 1;
+    lastMove = null;
+    finished = false;
+
+    statusEl.textContent =
+      'Schwarz beginnt. Setze einen Stein auf ein markiertes Feld.';
+
+    render();
+  }
+
+  passBtn.addEventListener('click',pass);
+  restartBtn.addEventListener('click',newGame);
+
+  newGame();
+
+})();
+</script>
+
+</body>
+</html>

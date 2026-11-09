@@ -1,0 +1,263 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEON DICE</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;padding:15px;
+  display:flex;justify-content:center;align-items:center;
+  background:#05050b;color:white;font-family:Arial,sans-serif
+}
+.game{width:min(100%,700px);display:grid;gap:15px}
+h1{text-align:center;color:#42e8ff;letter-spacing:8px;
+  text-shadow:0 0 12px #42e8ff;margin:0;font-size:clamp(30px,7vw,48px)}
+.subtitle{text-align:center;color:#ff4fd8;letter-spacing:4px;font-size:11px}
+.area,.controls,.result,.history{
+  background:#10121e;border:1px solid #294454;border-radius:15px;padding:15px
+}
+.cup{min-height:120px;display:flex;justify-content:center;
+  align-items:center;gap:12px;flex-wrap:wrap}
+.die {
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
+  position: relative;
+  background: linear-gradient(145deg,#fff,#cbd5df);
+  border: 2px solid white;
+  border-radius: 13px;
+  box-shadow: 0 0 12px #42e8ff99, inset 0 0 8px #777;
+}
+
+/* Jedes Auge wird absolut positioniert */
+.pip {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%,-50%);
+}
+
+.pip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #101827;
+  box-shadow: 0 0 5px #42e8ff, 0 0 9px #42e8ff;
+  opacity: 0;
+}
+
+.pip.on::after {
+  opacity: 1;
+}
+
+/* Drei Spalten und drei Reihen */
+.pip:nth-child(1) {left:25%;top:25%}
+.pip:nth-child(2) {left:50%;top:25%}
+.pip:nth-child(3) {left:75%;top:25%}
+.pip:nth-child(4) {left:25%;top:50%}
+.pip:nth-child(5) {left:50%;top:50%}
+.pip:nth-child(6) {left:75%;top:50%}
+.pip:nth-child(7) {left:25%;top:75%}
+.pip:nth-child(8) {left:50%;top:75%}
+.pip:nth-child(9) {left:75%;top:75%}.pip.on::after {
+  opacity: 1;
+}.label{text-align:center;color:#aaa;font-size:12px;letter-spacing:2px;margin-bottom:12px}
+.counts{display:flex;justify-content:center;gap:9px}
+.count-btn{
+  width:43px;height:43px;border-radius:9px;
+  background:#191d2b;color:white;border:1px solid #506070;
+  font-size:19px;cursor:pointer
+}
+.count-btn.active{color:#42e8ff;border-color:#42e8ff;box-shadow:0 0 10px #42e8ff66}
+.roll-btn{
+  width:100%;padding:15px;margin-top:15px;
+  background:#102b38;border:1px solid #42e8ff;
+  border-radius:10px;color:#42e8ff;font-size:19px;
+  font-weight:bold;letter-spacing:3px;cursor:pointer
+}
+.roll-btn:disabled{opacity:.5}
+.total{text-align:center;color:#ffd166;font-size:44px;font-weight:bold}
+.history-list{display:grid;gap:6px;max-height:150px;overflow:auto}
+.entry{display:flex;justify-content:space-between;background:#1a1d2b;padding:8px;border-radius:7px;font-size:13px}
+.values{color:#42e8ff;font-weight:bold}
+.sum{color:#ffd166;font-weight:bold}
+.clear{
+  display:block;margin:auto;background:none;color:#aaa;
+  border:1px solid #555;border-radius:8px;padding:9px 16px;cursor:pointer
+}
+@media(max-height:650px) and (min-width:600px){
+  body{align-items:flex-start}
+  .game{gap:8px}
+  .area,.controls,.result,.history{padding:9px}
+  .cup{min-height:85px}
+  .die{width:60px}
+  .roll-btn{padding:10px;margin-top:8px}
+  .total{font-size:32px}
+}
+</style>
+</head>
+<body>
+<main class="game">
+  <header>
+    <h1>NEON DICE</h1>
+    <div class="subtitle">VIRTUAL DICE CUP</div>
+  </header>
+
+  <section class="area">
+    <div class="cup" id="cup">
+      <span style="color:#888">BEREIT ZUM WÜRFELN</span>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="label">ANZAHL DER WÜRFEL</div>
+    <div class="counts">
+      <button class="count-btn active" data-count="1">1</button>
+      <button class="count-btn" data-count="2">2</button>
+      <button class="count-btn" data-count="3">3</button>
+      <button class="count-btn" data-count="4">4</button>
+      <button class="count-btn" data-count="5">5</button>
+    </div>
+    <button class="roll-btn" id="roll">🎲 WÜRFELN</button>
+  </section>
+
+  <section class="result">
+    <div class="label">GESAMTSUMME</div>
+    <div class="total" id="total">–</div>
+  </section>
+
+  <section class="history">
+    <div class="label">LETZTE WÜRFE</div>
+    <div class="history-list" id="history">
+      <div style="text-align:center;color:#888">Noch keine Würfe</div>
+    </div>
+  </section>
+
+  <button class="clear" id="clear">VERLAUF LÖSCHEN</button>
+</main>
+
+<script>
+(() => {
+  const cup=document.getElementById("cup");
+  const rollButton=document.getElementById("roll");
+  const totalElement=document.getElementById("total");
+  const historyElement=document.getElementById("history");
+  const countButtons=document.querySelectorAll(".count-btn");
+
+  const patterns={
+    1:[4],
+    2:[0,8],
+    3:[0,4,8],
+    4:[0,2,6,8],
+    5:[0,2,4,6,8],
+    6:[0,2,3,5,6,8]
+  };
+
+  let diceCount=1;
+  let history=[];
+  let busy=false;
+
+  function createDie(value,animated=false){
+    const die=document.createElement("div");
+    die.className="die"+(animated?" rolling":"");
+
+    for(let i=0;i<9;i++){
+      const pip=document.createElement("div");
+      pip.className="pip";
+
+      if(patterns[value].includes(i)){
+        pip.classList.add("on");
+      }
+
+      die.appendChild(pip);
+    }
+    return die;
+  }
+
+  function showDice(values,animated=false){
+    cup.innerHTML="";
+    values.forEach(value=>{
+      cup.appendChild(createDie(value,animated));
+    });
+  }
+
+  function randomDie(){
+    return Math.floor(Math.random()*6)+1;
+  }
+
+  function renderHistory(){
+    historyElement.innerHTML="";
+    if(history.length===0){
+      historyElement.textContent="Noch keine Würfe";
+      return;
+    }
+
+    history.slice(0,10).forEach((item,index)=>{
+      const row=document.createElement("div");
+      row.className="entry";
+
+      const number=document.createElement("span");
+      number.textContent="Wurf "+(history.length-index);
+
+      const values=document.createElement("span");
+      values.className="values";
+      values.textContent=item.values.join(" · ");
+
+      const sum=document.createElement("span");
+      sum.className="sum";
+      sum.textContent="Σ "+item.sum;
+
+      row.append(number,values,sum);
+      historyElement.appendChild(row);
+    });
+  }
+
+  countButtons.forEach(button=>{
+    button.addEventListener("click",()=>{
+      if(busy)return;
+      diceCount=Number(button.dataset.count);
+      countButtons.forEach(b=>b.classList.toggle("active",b===button));
+    });
+  });
+
+  rollButton.addEventListener("click",async()=>{
+    if(busy)return;
+    busy=true;
+    rollButton.disabled=true;
+    rollButton.textContent="WÜRFEL ROLLEN ...";
+    totalElement.textContent="…";
+
+    showDice(Array.from({length:diceCount},randomDie),true);
+    await new Promise(resolve=>setTimeout(resolve,900));
+
+    const values=Array.from({length:diceCount},randomDie);
+    const sum=values.reduce((a,b)=>a+b,0);
+
+    showDice(values);
+    totalElement.textContent=sum;
+    history.unshift({values,sum});
+    renderHistory();
+
+    busy=false;
+    rollButton.disabled=false;
+    rollButton.textContent="🎲 NOCHMAL WÜRFELN";
+  });
+
+  document.getElementById("clear").addEventListener("click",()=>{
+    if(busy)return;
+    history=[];
+    renderHistory();
+    totalElement.textContent="–";
+    cup.innerHTML='<span style="color:#888">BEREIT ZUM WÜRFELN</span>';
+    rollButton.textContent="🎲 WÜRFELN";
+  });
+
+  renderHistory();
+})();
+</script>
+</body>
+</html>
