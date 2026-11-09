@@ -1,0 +1,335 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEON SANDUHR</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;padding:15px;
+  display:flex;align-items:center;justify-content:center;
+  background:#05050b;color:white;
+  font-family:Arial,Helvetica,sans-serif;
+  transition:background .15s;
+}
+body.alarm{animation:alarm .45s ease-in-out 6}
+@keyframes alarm{
+  0%,100%{background:#05050b}
+  50%{background:#d00018}
+}
+.app{
+  width:min(100%,440px);
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+}
+h1{
+  margin:0;color:#42e8ff;
+  font-size:clamp(30px,7vw,44px);
+  letter-spacing:7px;
+  text-shadow:0 0 10px #42e8ff,0 0 25px #00cfff;
+}
+.subtitle{
+  color:#ff4fd8;font-size:11px;
+  letter-spacing:4px;margin-top:-10px;
+}
+.glass{
+  width:210px;height:310px;
+  filter:drop-shadow(0 0 12px #42e8ff66);
+}
+.glass svg{width:100%;height:100%;overflow:visible}
+.glass-frame{
+  fill:none;stroke:#42e8ff;stroke-width:5;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.sand{
+  fill:#ffd166;
+  filter:drop-shadow(0 0 5px #ffb700);
+}
+.stream{
+  fill:none;stroke:#ffd166;stroke-width:4;
+  stroke-linecap:round;
+  filter:drop-shadow(0 0 4px #ffd166);
+}
+#topSand{transform-origin:100px 25px}
+#bottomSand{transform-origin:100px 275px}
+#sandStream{opacity:0}
+.glass.running #sandStream{opacity:1}
+.glass.running #topSand{
+  animation:topfall 2s linear infinite;
+}
+.glass.running #bottomSand{
+  animation:bottomrise 2s linear infinite;
+}
+@keyframes topfall{
+  0%{transform:scaleY(1)}
+  100%{transform:scaleY(.08)}
+}
+@keyframes bottomrise{
+  0%{transform:scaleY(.12)}
+  100%{transform:scaleY(1)}
+}
+.timer{
+  font-size:clamp(48px,13vw,68px);
+  font-weight:bold;color:#ffd166;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 0 12px #ffb70088;
+  letter-spacing:4px;
+}
+.settings{
+  width:100%;background:#10121e;
+  border:1px solid #294454;border-radius:15px;
+  padding:15px;display:flex;flex-direction:column;gap:12px;
+}
+.label{
+  color:#aaa;text-align:center;
+  font-size:12px;letter-spacing:2px;
+}
+.adjust{
+  display:flex;justify-content:center;
+  align-items:center;gap:10px;
+}
+.adjust button{
+  width:43px;height:43px;border-radius:9px;
+  background:#191d2b;color:#42e8ff;
+  border:1px solid #42e8ff;font-size:23px;
+  cursor:pointer;
+}
+.adjust input{
+  width:100px;text-align:center;
+  background:#080b14;color:white;
+  border:1px solid #506070;border-radius:8px;
+  padding:10px;font-size:23px;
+  font-variant-numeric:tabular-nums;
+}
+.buttons{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;width:100%;
+}
+.action{
+  padding:14px 8px;border-radius:10px;
+  border:1px solid #42e8ff;
+  background:#102b38;color:#42e8ff;
+  font-size:16px;font-weight:bold;
+  cursor:pointer;
+}
+.action.secondary{
+  border-color:#ff4fd8;color:#ff4fd8;
+  background:#281329;
+}
+.action:disabled{opacity:.35;cursor:not-allowed}
+.status{
+  color:#aaa;text-align:center;
+  font-size:12px;min-height:16px;
+}
+@media(max-height:650px) and (min-width:500px){
+  body{align-items:flex-start}
+  .app{gap:8px}
+  .glass{height:210px;width:145px}
+  .settings{padding:9px;gap:7px}
+  .timer{font-size:42px}
+  .action{padding:10px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>NEON TIMER</h1>
+  <div class="subtitle">DIE KLASSISCHE SANDUHR</div>
+
+  <div class="glass" id="glass">
+    <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="topClip">
+          <path d="M43 25 L157 25 C157 83 125 112 100 145 C75 112 43 83 43 25Z"/>
+        </clipPath>
+        <clipPath id="bottomClip">
+          <path d="M100 155 C125 188 157 217 157 275 L43 275 C43 217 75 188 100 155Z"/>
+        </clipPath>
+      </defs>
+
+      <path class="sand" id="topSand"
+        d="M43 25 L157 25 C157 83 125 112 100 145 C75 112 43 83 43 25Z"
+        clip-path="url(#topClip)"/>
+      <path class="sand" id="bottomSand"
+        d="M100 155 C125 188 157 217 157 275 L43 275 C43 217 75 188 100 155Z"
+        clip-path="url(#bottomClip)"/>
+
+      <path class="stream" id="sandStream" d="M100 140 L100 160"/>
+
+      <path class="glass-frame"
+        d="M35 15 L165 15 M43 25 C43 83 75 112 100 145 C125 112 157 83 157 25 M43 275 C43 217 75 188 100 155 C125 188 157 217 157 275 M35 285 L165 285"/>
+    </svg>
+  </div>
+
+  <div class="timer" id="display">03:00</div>
+
+  <section class="settings">
+    <div class="label">LAUFZEIT EINSTELLEN</div>
+    <div class="adjust">
+      <button id="minus" aria-label="Zeit verringern">−</button>
+      <input id="minutes" type="number" min="0" max="9" value="3">
+      <span style="font-size:25px;color:#ffd166">:</span>
+      <input id="seconds" type="number" min="0" max="59" value="0">
+      <button id="plus" aria-label="Zeit erhöhen">+</button>
+    </div>
+    <div class="label">MAXIMAL 09:59 MINUTEN</div>
+  </section>
+
+  <div class="buttons">
+    <button class="action" id="start">▶ START</button>
+    <button class="action secondary" id="pause" disabled>Ⅱ PAUSE</button>
+    <button class="action secondary" id="reset">↺ ZURÜCKSETZEN</button>
+  </div>
+
+  <div class="status" id="status">Bereit – Zeit einstellen und starten</div>
+</main>
+
+<script>
+(() => {
+  const display=document.getElementById("display");
+  const minInput=document.getElementById("minutes");
+  const secInput=document.getElementById("seconds");
+  const startBtn=document.getElementById("start");
+  const pauseBtn=document.getElementById("pause");
+  const resetBtn=document.getElementById("reset");
+  const glass=document.getElementById("glass");
+  const status=document.getElementById("status");
+  const topSand=document.getElementById("topSand");
+  const bottomSand=document.getElementById("bottomSand");
+  const stream=document.getElementById("sandStream");
+
+  let remaining=180;
+  let initial=180;
+  let running=false;
+  let finished=false;
+  let endTime=0;
+  let interval=null;
+
+  function getInputTime(){
+    let m=Math.max(0,Math.min(9,parseInt(minInput.value)||0));
+    let s=Math.max(0,Math.min(59,parseInt(secInput.value)||0));
+    minInput.value=m;
+    secInput.value=String(s).padStart(2,"0");
+    return Math.min(599,m*60+s);
+  }
+
+  function formatTime(t){
+    const m=Math.floor(t/60);
+    const s=t%60;
+    return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  }
+
+  function updateDisplay(){
+    display.textContent=formatTime(remaining);
+  }
+
+  function updateSand(){
+    const progress=initial>0?1-remaining/initial:0;
+    const topScale=Math.max(0.02,1-progress);
+    const bottomScale=Math.max(0.02,progress);
+
+    topSand.style.transform=`scaleY(${topScale})`;
+    bottomSand.style.transform=`scaleY(${bottomScale})`;
+  }
+
+  function stopInterval(){
+    if(interval!==null){
+      clearInterval(interval);
+      interval=null;
+    }
+  }
+
+  function alarm(){
+    finished=true;
+    running=false;
+    stopInterval();
+    glass.classList.remove("running");
+    stream.style.opacity="0";
+    document.body.classList.remove("alarm");
+    void document.body.offsetWidth;
+    document.body.classList.add("alarm");
+    setTimeout(()=>document.body.classList.remove("alarm"),2800);
+    startBtn.disabled=true;
+    pauseBtn.disabled=true;
+    status.textContent="⏰ ZEIT ABGELAUFEN!";
+  }
+
+  function tick(){
+    remaining=Math.max(0,Math.ceil((endTime-Date.now())/1000));
+    updateDisplay();
+    updateSand();
+
+    if(remaining<=0){
+      alarm();
+    }
+  }
+
+  function start(){
+    if(running||finished)return;
+
+    if(remaining<=0)remaining=getInputTime();
+    if(remaining<=0){
+      status.textContent="Bitte eine Zeit größer als 00:00 einstellen.";
+      return;
+    }
+
+    initial=remaining;
+    endTime=Date.now()+remaining*1000;
+    running=true;
+    glass.classList.add("running");
+    startBtn.disabled=true;
+    pauseBtn.disabled=false;
+    status.textContent="Sand läuft …";
+    interval=setInterval(tick,100);
+  }
+
+  function pause(){
+    if(!running)return;
+    tick();
+    if(!running)return;
+    running=false;
+    stopInterval();
+    glass.classList.remove("running");
+    startBtn.disabled=false;
+    pauseBtn.disabled=true;
+    status.textContent="Pausiert";
+  }
+
+  function reset(){
+    stopInterval();
+    running=false;
+    finished=false;
+    document.body.classList.remove("alarm");
+    glass.classList.remove("running");
+    remaining=getInputTime();
+    initial=remaining;
+    updateDisplay();
+    updateSand();
+    startBtn.disabled=false;
+    pauseBtn.disabled=true;
+    status.textContent="Bereit – Zeit einstellen und starten";
+  }
+
+  function adjust(delta){
+    if(running)return;
+    let t=Math.max(0,Math.min(599,getInputTime()+delta));
+    minInput.value=Math.floor(t/60);
+    secInput.value=String(t%60);
+    reset();
+  }
+
+  minInput.addEventListener("change",reset);
+  secInput.addEventListener("change",reset);
+  document.getElementById("minus").addEventListener("click",()=>adjust(-10));
+  document.getElementById("plus").addEventListener("click",()=>adjust(10));
+  startBtn.addEventListener("click",start);
+  pauseBtn.addEventListener("click",pause);
+  resetBtn.addEventListener("click",reset);
+
+  updateDisplay();
+  updateSand();
+})();
+</script>
+</body>
+</html>

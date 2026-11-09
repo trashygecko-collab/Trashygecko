@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEON – Mensch ärgere dich nicht</title>
+<style>
+:root{
+  --bg:#000;
+  --panel:#090b10;
+  --cyan:#42e8ff;
+  --pink:#ff4fd8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  padding:12px;
+  min-height:100vh;
+  background:var(--bg);
+  color:#fff;
+  font-family:Arial,Helvetica,sans-serif;
+}
+button,select{font:inherit}
+.app{
+  width:min(100%,1000px);
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+}
+header{text-align:center}
+h1{
+  margin:4px 0;
+  color:var(--cyan);
+  font-size:clamp(24px,5vw,40px);
+  letter-spacing:2px;
+  text-shadow:0 0 10px var(--cyan),0 0 24px #00cfff;
+}
+.subtitle{
+  color:var(--pink);
+  font-size:11px;
+  letter-spacing:3px;
+}
+.panel{
+  width:100%;
+  background:var(--panel);
+  border:1px solid #29394c;
+  border-radius:14px;
+  padding:13px;
+}
+.setup{display:flex;flex-direction:column;gap:12px}
+.section-title{
+  color:var(--cyan);
+  text-align:center;
+  font-size:13px;
+  letter-spacing:2px;
+  margin-bottom:8px;
+}
+.player-count{display:flex;justify-content:center;gap:9px}
+.count-btn{
+  width:48px;height:43px;
+  border:1px solid #536174;
+  border-radius:9px;
+  background:#191e2d;
+  color:#fff;
+  font-size:19px;
+  cursor:pointer;
+}
+.count-btn.active{
+  color:var(--cyan);
+  border-color:var(--cyan);
+  box-shadow:0 0 10px #42e8ff66;
+}
+.player-settings{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.player-setting{
+  display:flex;align-items:center;gap:8px;
+  background:#191e2d;border-radius:8px;
+  padding:8px;font-size:13px;
+}
+.player-setting select{
+  min-width:0;width:100%;padding:8px;
+  background:#090d18;color:#fff;
+  border:1px solid #46566b;border-radius:6px;
+}
+.start-game,.action{
+  padding:12px 18px;
+  border:1px solid var(--cyan);
+  border-radius:9px;
+  background:#102b38;color:var(--cyan);
+  font-weight:bold;cursor:pointer;
+}
+.start-game{width:100%;font-size:17px;letter-spacing:2px}
+.game-area{
+  width:100%;display:none;
+  flex-direction:column;align-items:center;gap:9px;
+}
+.top-info{
+  width:100%;display:flex;
+  justify-content:space-between;align-items:center;
+  gap:8px;flex-wrap:wrap;
+}
+.turn{
+  font-size:15px;font-weight:bold;
+  padding:9px 13px;border:1px solid #435166;
+  border-radius:9px;background:#111522;
+}
+.turn-dot{
+  display:inline-block;width:12px;height:12px;
+  border-radius:50%;margin-right:7px;vertical-align:middle;
+}
+.message{
+  flex:1;color:#bbb;font-size:12px;
+  text-align:center;min-height:16px;
+}
+.board-wrap{
+  position:relative;
+  width:min(100%,720px);
+  aspect-ratio:1;
+  background:#000;
+  border:2px solid #292929;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 0 18px #42e8ff22;
+}
+#board{display:block;width:100%;height:100%;touch-action:manipulation}
+.board-cross{fill:#101317;stroke:#555d69;stroke-width:2}
+.base{fill:#080a0e;stroke-width:3}
+.base-slot{stroke-width:3}
+.track{fill:#e5e9ef;stroke:#aab3c0;stroke-width:2}
+.track.safe{stroke:#fff;stroke-width:3}
+.lane{stroke:#fff;stroke-width:2}
+.token{
+  stroke:#fff;stroke-width:2;
+  cursor:pointer;
+  filter:drop-shadow(0 2px 3px #000);
+}
+.token.legal{
+  stroke:#fff;stroke-width:4;
+  filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor);
+  animation:tokenPulse .7s ease-in-out infinite alternate;
+}
+@keyframes tokenPulse{from{opacity:1}to{opacity:.62}}
+.token-number{
+  fill:#fff;font-size:12px;font-weight:bold;
+  text-anchor:middle;dominant-baseline:central;
+  pointer-events:none;
+}
+.die{
+  width:64px;height:64px;
+  position:absolute;left:50%;top:50%;z-index:5;
+  transform:translate(-50%,-50%);
+  display:flex;align-items:center;justify-content:center;
+  background:var(--die-color,#ed3434);
+  border:3px solid #fff;border-radius:13px;
+  box-shadow:0 0 18px var(--die-glow,#ed3434),inset 0 0 8px #0008;
+  cursor:pointer;touch-action:manipulation;user-select:none;
+}
+.die.rolling{animation:shake .15s infinite alternate}
+@keyframes shake{
+  from{transform:translate(-50%,-50%) rotate(-12deg)}
+  to{transform:translate(-50%,-50%) rotate(12deg)}
+}
+.die-pip{
+  position:absolute;width:11px;height:11px;
+  border-radius:50%;background:var(--pip-color,#fff);
+  box-shadow:0 0 4px #0008;
+  transform:translate(-50%,-50%);
+}
+.players-status{
+  width:100%;display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;
+}
+.player-card{
+  padding:9px 5px;text-align:center;
+  background:#111522;border:1px solid #354155;
+  border-radius:9px;font-size:11px;min-width:0;
+}
+.player-card.current{border-color:var(--cyan);box-shadow:0 0 10px #42e8ff55}
+.player-card .name{font-weight:bold;margin-bottom:4px}
+.player-card .pieces{color:#bbb}
+.winner{
+  color:#ffd166;font-weight:bold;text-align:center;
+  font-size:20px;text-shadow:0 0 12px #ffbb33;
+}
+.new-game{background:#281329;color:var(--pink);border-color:var(--pink)}
+@media(max-width:520px){
+  body{padding:6px}
+  .app{gap:8px}
+  .panel{padding:9px}
+  .player-settings{grid-template-columns:1fr 1fr}
+  .players-status{gap:4px}
+  .player-card{font-size:10px;padding:7px 2px}
+  .die{width:58px;height:58px}
+}
+@media(max-width:360px){
+  h1{letter-spacing:1px}
+  .top-info{justify-content:center}
+  .message{flex-basis:100%}
+  .die{width:52px;height:52px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+<header>
+  <h1>MENSCH ÄRGERE DICH NICHT</h1>
+  <div class="subtitle">NEON BOARD GAME · 2–4 SPIELER</div>
+</header>
+
+<section class="panel setup" id="setup">
+  <div>
+    <div class="section-title">WIE VIELE SPIELER?</div>
+    <div class="player-count">
+      <button class="count-btn active" data-count="2">2</button>
+      <button class="count-btn" data-count="3">3</button>
+      <button class="count-btn" data-count="4">4</button>
+    </div>
+  </div>
+  <div>
+    <div class="section-title">FARBEN AUSWÄHLEN</div>
+    <div class="player-settings" id="playerSettings"></div>
+  </div>
+  <button class="start-game" id="startGame">SPIEL STARTEN</button>
+</section>
+
+<section class="game-area" id="gameArea">
+  <div class="top-info">
+    <div class="turn" id="turnDisplay">Am Zug</div>
+    <div class="message" id="message">Würfle eine Sechs!</div>
+  </div>
+
+  <div class="board-wrap">
+    <svg id="board" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg"
+         aria-label="Kreuzförmiges Mensch ärgere dich nicht Spielfeld">
+      <rect width="800" height="800" fill="#000"/>
+      <g id="boardDrawing"></g>
+      <g id="tokens"></g>
+    </svg>
+    <div class="die" id="die" role="button" aria-label="Würfeln" title="Zum Würfeln anklicken"></div>
+  </div>
+
+  <button class="action new-game" id="newGame">NEUES SPIEL</button>
+  <div class="players-status" id="playersStatus"></div>
+  <div class="winner" id="winner"></div>
+</section>
+</main>
+
+<script>
+(() => {
+"use strict";
+
+const COLORS = {
+  red:{name:"Rot",hex:"#ed3434",dark:"#8e111b"},
+  blue:{name:"Blau",hex:"#258cff",dark:"#104a9a"},
+  yellow:{name:"Gelb",hex:"#ffd52e",dark:"#9d7610"},
+  green:{name:"Grün",hex:"#20cf78",dark:"#087c46"}
+};
+
+const ORDER=["red","green","yellow","blue"];
+const CELL=64;
+const MARGIN=48;
+
+/* 40 Rundfelder: vier Abschnitte mit jeweils zehn Feldern. */
+const TRACK=[
+  [6,0],[5,0],[4,0],[4,1],[4,2],[4,3],[4,4],[3,4],[2,4],[1,4],
+  [0,4],[0,5],[0,6],[1,6],[2,6],[3,6],[4,6],[4,7],[4,8],[4,9],
+  [4,10],[5,10],[6,10],[6,9],[6,8],[6,7],[6,6],[7,6],[8,6],[9,6],
+  [10,6],[10,5],[10,4],[9,4],[8,4],[7,4],[6,4],[6,3],[6,2],[6,1]
+];
+
+/* Startfelder: oben, links, unten, rechts – jeweils zehn Felder auseinander. */
+const START_INDEX={green:0,yellow:10,blue:20,red:30};
+
+/* Vier Zielfelder jeder Farbe, gerade bis zur Brettmitte. */
+const HOME_LANES={
+  green:[[5,1],[5,2],[5,3],[5,4]],
+  yellow:[[1,5],[2,5],[3,5],[4,5]],
+  blue:[[5,9],[5,8],[5,7],[5,6]],
+  red:[[9,5],[8,5],[7,5],[6,5]]
+};
+
+/* Vier Warteplätze in jeder Ecke, passend zur Lage auf dem Spielbrett. */
+const HOME_SLOTS={
+  yellow:[[96,96],[192,96],[96,192],[192,192]],
+  green:[[608,96],[704,96],[608,192],[704,192]],
+  blue:[[96,608],[192,608],[96,704],[192,704]],
+  red:[[608,608],[704,608],[608,704],[704,704]]
+};
+
+const BASE_BOXES={
+  yellow:{x:16,y:16},green:{x:528,y:16},
+  blue:{x:16,y:528},red:{x:528,y:528}
+};
+
+const boardDrawing=document.getElementById("boardDrawing");
+const tokensGroup=document.getElementById("tokens");
+const setup=document.getElementById("setup");
+const gameArea=document.getElementById("gameArea");
+const playerSettings=document.getElementById("playerSettings");
+const turnDisplay=document.getElementById("turnDisplay");
+const message=document.getElementById("message");
+const dieElement=document.getElementById("die");
+const playersStatus=document.getElementById("playersStatus");
+const winnerElement=document.getElementById("winner");
+
+let playerCount=2;
+let chosenColors=["red","yellow"];
+let players=[];
+let currentPlayer=0;
+let diceValue=null;
+let rolling=false;
+let gameOver=false;
+let canMove=false;
+let extraRoll=false;
+let rollAttempts=0;
+let turnLocked=false;
+let rollTimer=null;
+let autoAdvanceTimer=null;
+
+const NS="http://www.w3.org/2000/svg";
+
+function svgElement(tag,attrs={}){
+  const el=document.createElementNS(NS,tag);
+  Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
+  return el;
+}
+
+function cellCenter(col,row){
+  return [MARGIN+(col+.5)*CELL,MARGIN+(row+.5)*CELL];
+}
+
+function addBase(color){
+  const box=BASE_BOXES[color];
+  const c=COLORS[color];
+  boardDrawing.appendChild(svgElement("rect",{
+    x:box.x,y:box.y,width:256,height:256,rx:17,
+    class:"base",stroke:c.hex
+  }));
+  HOME_SLOTS[color].forEach(([cx,cy])=>{
+    boardDrawing.appendChild(svgElement("circle",{
+      cx,cy,r:25,class:"base-slot",fill:"#111318",stroke:c.hex
+    }));
+  });
+}
+
+function drawBoard(){
+  boardDrawing.innerHTML="";
+
+  /* Der Spielplan ist ein echtes Kreuz, nicht ein Quadrat mit vier Farbfeldern. */
+  boardDrawing.appendChild(svgElement("rect",{
+    x:MARGIN+4*CELL,y:MARGIN,width:3*CELL,height:11*CELL,
+    rx:7,class:"board-cross"
+  }));
+  boardDrawing.appendChild(svgElement("rect",{
+    x:MARGIN,y:MARGIN+4*CELL,width:11*CELL,height:3*CELL,
+    rx:7,class:"board-cross"
+  }));
+
+  ["yellow","green","blue","red"].forEach(addBase);
+
+  TRACK.forEach((point,index)=>{
+    const [x,y]=point;
+    const [cx,cy]=cellCenter(x,y);
+    const startColor=Object.keys(START_INDEX).find(color=>START_INDEX[color]===index);
+    boardDrawing.appendChild(svgElement("circle",{
+      cx,cy,r:22,class:"track"+(startColor?" safe":""),
+      fill:startColor?COLORS[startColor].hex:"#e5e9ef",
+      stroke:startColor?"#fff":"#aab3c0"
+    }));
+    if(startColor){
+      boardDrawing.appendChild(svgElement("circle",{
+        cx,cy,r:6,fill:COLORS[startColor].dark
+      }));
+    }
+  });
+
+  Object.entries(HOME_LANES).forEach(([color,lane])=>{
+    lane.forEach(([x,y],index)=>{
+      const [cx,cy]=cellCenter(x,y);
+      boardDrawing.appendChild(svgElement("circle",{
+        cx,cy,r:22,class:"lane",fill:COLORS[color].hex,
+        stroke:"#fff",opacity:index===3?1:.86
+      }));
+    });
+  });
+
+  /* Neutrales Mittelfeld – kein vierfarbiges Quadrat. */
+  boardDrawing.appendChild(svgElement("circle",{
+    cx:400,cy:400,r:23,fill:"#050505",stroke:"#aab3c0","stroke-width":2
+  }));
+}
+
+function renderSetup(){
+  playerSettings.innerHTML="";
+  chosenColors=chosenColors.slice(0,playerCount);
+  while(chosenColors.length<playerCount){
+    const available=ORDER.filter(color=>!chosenColors.includes(color));
+    chosenColors.push(available[0]);
+  }
+
+  for(let i=0;i<playerCount;i++){
+    const row=document.createElement("label");
+    row.className="player-setting";
+    const select=document.createElement("select");
+    select.dataset.player=i;
+
+    ORDER.forEach(color=>{
+      const option=document.createElement("option");
+      option.value=color;
+      option.textContent=COLORS[color].name;
+      option.selected=chosenColors[i]===color;
+      select.appendChild(option);
+    });
+
+    select.addEventListener("change",()=>{
+      const value=select.value;
+      const duplicate=chosenColors.findIndex((color,index)=>color===value&&index!==i);
+      if(duplicate!==-1){
+        const old=chosenColors[i];
+        chosenColors[i]=value;
+        chosenColors[duplicate]=old;
+      }else{
+        chosenColors[i]=value;
+      }
+      renderSetup();
+    });
+
+    const title=document.createElement("span");
+    title.textContent="Spieler "+(i+1);
+    row.append(title,select);
+    playerSettings.appendChild(row);
+  }
+}
+
+document.querySelectorAll(".count-btn").forEach(button=>{
+  button.addEventListener("click",()=>{
+    playerCount=Number(button.dataset.count);
+    document.querySelectorAll(".count-btn").forEach(item=>
+      item.classList.toggle("active",item===button)
+    );
+    const defaults={
+      2:["red","yellow"],
+      3:["red","green","yellow"],
+      4:["red","green","yellow","blue"]
+    };
+    chosenColors=defaults[playerCount].slice();
+    renderSetup();
+  });
+});
+
+function clearTimers(){
+  if(rollTimer!==null){clearInterval(rollTimer);rollTimer=null;}
+  if(autoAdvanceTimer!==null){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null;}
+}
+
+function startGame(){
+  clearTimers();
+  players=chosenColors.map(color=>({
+    color,name:COLORS[color].name,pieces:[-1,-1,-1,-1]
+  }));
+  currentPlayer=0;
+  diceValue=null;
+  rolling=false;
+  gameOver=false;
+  canMove=false;
+  extraRoll=false;
+  rollAttempts=0;
+  turnLocked=false;
+  setup.style.display="none";
+  gameArea.style.display="flex";
+  winnerElement.textContent="";
+  dieElement.style.pointerEvents="auto";
+  drawBoard();
+  updateAll();
+  showDie(null);
+  message.textContent="Würfle eine Sechs, um eine Figur herauszubringen!";
+}
+
+function playerPosition(player,pieceIndex){
+  const progress=player.pieces[pieceIndex];
+  if(progress<0){
+    return {home:true,coords:HOME_SLOTS[player.color][pieceIndex]};
+  }
+  if(progress<=39){
+    const index=(START_INDEX[player.color]+progress)%40;
+    const [x,y]=TRACK[index];
+    return {home:false,coords:cellCenter(x,y),trackIndex:index};
+  }
+  const lane=HOME_LANES[player.color];
+  const [x,y]=lane[progress-40];
+  return {home:false,coords:cellCenter(x,y),lane:true};
+}
+
+function legalMoves(){
+  if(diceValue===null||!players.length)return [];
+  const player=players[currentPlayer];
+  const result=[];
+
+  player.pieces.forEach((progress,pieceIndex)=>{
+    let destination;
+    if(progress===-1){
+      if(diceValue!==6)return;
+      destination=0;
+    }else{
+      if(progress===44)return;
+      destination=progress+diceValue;
+      if(destination>44)return;
+    }
+
+    /* Auf einem Feld darf nur eine eigene Figur stehen. Überspringen ist erlaubt. */
+    if(destination<=39){
+      const target=(START_INDEX[player.color]+destination)%40;
+      const occupied=player.pieces.some((other,otherIndex)=>
+        otherIndex!==pieceIndex&&other>=0&&other<=39&&
+        (START_INDEX[player.color]+other)%40===target
+      );
+      if(occupied)return;
+    }else{
+      const occupied=player.pieces.some((other,otherIndex)=>
+        otherIndex!==pieceIndex&&other===destination
+      );
+      if(occupied)return;
+    }
+    result.push(pieceIndex);
+  });
+  return result;
+}
+
+function renderTokens(){
+  tokensGroup.innerHTML="";
+  const legal=legalMoves();
+  const groups=new Map();
+
+  players.forEach((player,pIndex)=>{
+    player.pieces.forEach((progress,pieceIndex)=>{
+      const pos=playerPosition(player,pieceIndex);
+      if(pos.home)return;
+      const key=pos.coords.join(",");
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push({pIndex,pieceIndex});
+    });
+  });
+
+  players.forEach((player,pIndex)=>{
+    player.pieces.forEach((progress,pieceIndex)=>{
+      const pos=playerPosition(player,pieceIndex);
+      let [cx,cy]=pos.coords;
+      const key=pos.coords.join(",");
+      const group=groups.get(key)||[];
+      const stackIndex=group.findIndex(item=>item.pIndex===pIndex&&item.pieceIndex===pieceIndex);
+      const offsets=[[0,0],[-9,-9],[9,-9],[-9,9],[9,9]];
+      if(group.length>1){
+        const offset=offsets[Math.min(stackIndex,4)];
+        cx+=offset[0];cy+=offset[1];
+      }
+
+      const isLegal=pIndex===currentPlayer&&legal.includes(pieceIndex);
+      const circle=svgElement("circle",{
+        cx,cy,r:16,fill:COLORS[player.color].hex,
+        class:"token"+(isLegal?" legal":""),
+        style:isLegal?"color:"+COLORS[player.color].hex:"",
+        "data-player":pIndex,"data-piece":pieceIndex
+      });
+      const title=svgElement("title");
+      title.textContent=player.name+" – Figur "+(pieceIndex+1);
+      circle.appendChild(title);
+      tokensGroup.appendChild(circle);
+
+      const number=svgElement("text",{x:cx,y:cy,class:"token-number"});
+      number.textContent=pieceIndex+1;
+      tokensGroup.appendChild(number);
+    });
+  });
+}
+
+function renderPlayerCards(){
+  playersStatus.innerHTML="";
+  players.forEach((player,index)=>{
+    const card=document.createElement("div");
+    card.className="player-card"+(index===currentPlayer&&!gameOver?" current":"");
+    if(index===currentPlayer&&!gameOver){
+      card.style.borderColor=COLORS[player.color].hex;
+      card.style.boxShadow="0 0 12px "+COLORS[player.color].hex+"66";
+    }
+    const name=document.createElement("div");
+    name.className="name";
+    name.style.color=COLORS[player.color].hex;
+    name.textContent=player.name;
+    const pieces=document.createElement("div");
+    pieces.className="pieces";
+    const home=player.pieces.filter(value=>value===-1).length;
+    const goal=player.pieces.filter(value=>value===44).length;
+    pieces.textContent="Haus: "+home+" · Ziel: "+goal;
+    card.append(name,pieces);
+    playersStatus.appendChild(card);
+  });
+}
+
+function updateTurn(){
+  if(!players.length)return;
+  const player=players[currentPlayer];
+  const color=COLORS[player.color];
+  turnDisplay.style.borderColor=color.hex;
+  turnDisplay.style.boxShadow="0 0 12px "+color.hex+"66";
+  turnDisplay.innerHTML=
+    '<span class="turn-dot" style="background:'+color.hex+';box-shadow:0 0 8px '+color.hex+'"></span>'+player.name+" ist am Zug";
+  dieElement.style.setProperty("--die-color",color.hex);
+  dieElement.style.setProperty("--die-glow",color.hex);
+  dieElement.style.setProperty("--pip-color",player.color==="yellow"?"#171717":"#fff");
+  const canRoll=!gameOver&&!turnLocked&&!rolling&&!canMove;
+  dieElement.style.cursor=canRoll?"pointer":"default";
+  dieElement.style.pointerEvents=canRoll?"auto":"none";
+}
+
+function updateAll(){
+  updateTurn();
+  renderTokens();
+  renderPlayerCards();
+}
+
+function showDie(value){
+  dieElement.innerHTML="";
+  dieElement.classList.remove("rolling");
+  if(value===null)return;
+  const positions={
+    1:[4],2:[0,8],3:[0,4,8],
+    4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]
+  };
+  const coords=[
+    [25,25],[50,25],[75,25],
+    [25,50],[50,50],[75,50],
+    [25,75],[50,75],[75,75]
+  ];
+  positions[value].forEach(index=>{
+    const pip=document.createElement("span");
+    pip.className="die-pip";
+    pip.style.left=coords[index][0]+"%";
+    pip.style.top=coords[index][1]+"%";
+    dieElement.appendChild(pip);
+  });
+}
+
+function lockAndAdvance(text){
+  turnLocked=true;
+  canMove=false;
+  message.textContent=text;
+  updateTurn();
+  if(autoAdvanceTimer!==null)clearTimeout(autoAdvanceTimer);
+  autoAdvanceTimer=setTimeout(()=>{
+    autoAdvanceTimer=null;
+    if(!gameOver)nextPlayer();
+  },1000);
+}
+
+function rollDice(){
+  if(rolling||gameOver||canMove||turnLocked)return;
+  rolling=true;
+  updateTurn();
+  message.textContent="Der Würfel rollt …";
+  dieElement.classList.add("rolling");
+
+  let count=0;
+  rollTimer=setInterval(()=>{
+    showDie(Math.floor(Math.random()*6)+1);
+    dieElement.classList.add("rolling");
+    count++;
+    if(count>=12){
+      clearInterval(rollTimer);
+      rollTimer=null;
+      diceValue=Math.floor(Math.random()*6)+1;
+      rolling=false;
+      showDie(diceValue);
+      updateTurn();
+
+      const player=players[currentPlayer];
+      const hasPieceInPlay=player.pieces.some(value=>value>=0&&value<44);
+      if(diceValue!==6&&!hasPieceInPlay&&!extraRoll){
+        rollAttempts++;
+        if(rollAttempts<3){
+          message.textContent="Keine Sechs! Noch "+(3-rollAttempts)+" Wurfversuch(e).";
+          updateTurn();
+          return;
+        }
+        lockAndAdvance("Dreimal keine Sechs – Spielerwechsel …");
+        return;
+      }
+
+      if(diceValue===6)rollAttempts=0;
+      afterRoll();
+    }
+  },75);
+}
+
+function afterRoll(){
+  const moves=legalMoves();
+  if(moves.length===0){
+    lockAndAdvance(diceValue===6
+      ?"Keine Figur kann ziehen – nächster Spieler …"
+      :"Kein gültiger Zug möglich – nächster Spieler …");
+    return;
+  }
+  canMove=true;
+  updateTurn();
+  message.textContent=moves.length===1
+    ?"Deine leuchtende Figur anklicken!"
+    :"Wähle eine der leuchtenden Figuren!";
+  renderTokens();
+}
+
+function movePiece(pieceIndex){
+  if(!canMove||gameOver||turnLocked)return;
+  const moves=legalMoves();
+  if(!moves.includes(pieceIndex))return;
+
+  const player=players[currentPlayer];
+  const old=player.pieces[pieceIndex];
+  player.pieces[pieceIndex]=old===-1?0:old+diceValue;
+  const newProgress=player.pieces[pieceIndex];
+
+  /* Gegner auf dem Rundweg schlagen – die eigenen Startfelder sind nicht geschützt. */
+  if(newProgress<=39){
+    const target=(START_INDEX[player.color]+newProgress)%40;
+    players.forEach((other,otherIndex)=>{
+      if(otherIndex===currentPlayer)return;
+      other.pieces.forEach((progress,otherPiece)=>{
+        if(progress>=0&&progress<=39){
+          const otherTarget=(START_INDEX[other.color]+progress)%40;
+          if(otherTarget===target){
+            other.pieces[otherPiece]=-1;
+            message.textContent=other.name+" wurde geschlagen!";
+          }
+        }
+      });
+    });
+  }
+
+  canMove=false;
+  if(player.pieces.every(value=>value===44)){
+    gameOver=true;
+    message.textContent="";
+    winnerElement.textContent="🏆 "+player.name+" GEWINNT! 🏆";
+    updateAll();
+    return;
+  }
+
+  const rolledSix=diceValue===6;
+  diceValue=null;
+  if(rolledSix){
+    extraRoll=true;
+    rollAttempts=0;
+    message.textContent="Sechs! Du darfst noch einmal würfeln – Würfel anklicken.";
+  }else{
+    extraRoll=false;
+    nextPlayer();
+    return;
+  }
+  updateAll();
+  showDie(null);
+}
+
+function nextPlayer(){
+  if(autoAdvanceTimer!==null){clearTimeout(autoAdvanceTimer);autoAdvanceTimer=null;}
+  currentPlayer=(currentPlayer+1)%players.length;
+  diceValue=null;
+  canMove=false;
+  extraRoll=false;
+  rollAttempts=0;
+  rolling=false;
+  turnLocked=false;
+  message.textContent="Würfle eine Sechs, um eine Figur herauszubringen!";
+  showDie(null);
+  updateAll();
+}
+
+tokensGroup.addEventListener("click",event=>{
+  const token=event.target.closest(".token");
+  if(!token)return;
+  const playerIndex=Number(token.dataset.player);
+  const pieceIndex=Number(token.dataset.piece);
+  if(playerIndex!==currentPlayer)return;
+  movePiece(pieceIndex);
+});
+
+dieElement.addEventListener("click",rollDice);
+document.getElementById("startGame").addEventListener("click",startGame);
+document.getElementById("newGame").addEventListener("click",()=>{
+  clearTimers();
+  rolling=false;
+  turnLocked=false;
+  gameArea.style.display="none";
+  setup.style.display="flex";
+  winnerElement.textContent="";
+  renderSetup();
+});
+
+renderSetup();
+drawBoard();
+})();
+</script>
+</body>
+</html>
