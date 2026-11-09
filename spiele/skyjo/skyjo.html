@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>SKYJO – Neon Edition</title>
+
 <style>
 :root {
   --bg:#070610;
@@ -15,189 +16,536 @@
   --gold:#ffd166;
   --text:#f5efff;
 }
+
 *{box-sizing:border-box}
-body{
-  margin:0;padding:12px;min-height:100vh;
-  background:radial-gradient(ellipse at top,#211632,#070610 72%);
-  color:var(--text);font-family:Arial,sans-serif;text-align:center;
+
+html,body{
+  margin:0;
+  min-height:100%;
+  overscroll-behavior:none;
 }
+
+body{
+  padding:5px;
+  min-height:100vh;
+  background:radial-gradient(ellipse at top,#211632,#070610 72%);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+  text-align:center;
+}
+
 h1{
-  margin:7px 0 2px;font-size:clamp(30px,6vw,44px);
-  letter-spacing:5px;color:var(--cyan);
+  margin:2px 0 0;
+  font-size:clamp(20px,3.2vw,30px);
+  letter-spacing:4px;
+  color:var(--cyan);
   text-shadow:0 0 8px var(--cyan),0 0 24px #008cff;
 }
-.subtitle{font-size:11px;letter-spacing:4px;color:var(--violet-light);margin-bottom:12px}
+
+.subtitle{
+  font-size:9px;
+  letter-spacing:3px;
+  color:var(--violet-light);
+  margin-bottom:5px;
+}
+
 .game{
-  max-width:700px;margin:auto;padding:12px;
+  width:min(100%,660px);
+  margin:auto;
+  padding:6px;
   background:rgba(21,18,37,.96);
-  border:1px solid #55416d;border-radius:17px;
-  box-shadow:0 0 30px #140e2c;
+  border:1px solid #55416d;
+  border-radius:12px;
+  box-shadow:0 0 20px #140e2c;
 }
+
 .player-area{
-  border:1px solid #393052;border-radius:12px;
-  background:#0c0a17;padding:9px;margin:8px 0;
+  border:1px solid #393052;
+  border-radius:8px;
+  background:#0c0a17;
+  padding:5px;
+  margin:4px 0;
 }
+
 .player-head{
-  display:flex;justify-content:space-between;align-items:center;
-  gap:8px;margin-bottom:9px;font-size:13px;font-weight:bold;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+  font-size:11px;
+  font-weight:bold;
 }
+
 .player-name{letter-spacing:1px}
 .player-score{color:var(--gold)}
 .p1 .player-name{color:var(--cyan)}
 .p2 .player-name{color:var(--violet-light)}
-.active-p1{border-color:var(--cyan);box-shadow:0 0 12px #42e8ff33}
-.active-p2{border-color:var(--violet);box-shadow:0 0 12px #8529a033}
-.hand{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:7px;max-width:490px;margin:auto;
+
+.active-p1{
+  border-color:var(--cyan);
+  box-shadow:0 0 9px #42e8ff33;
 }
+
+.active-p2{
+  border-color:var(--violet);
+  box-shadow:0 0 9px #8529a033;
+}
+
+.hand{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:4px;
+  max-width:430px;
+  margin:auto;
+}
+
 .card{
   position:relative;
-  aspect-ratio:0.72;
+  aspect-ratio:1.22;
   min-width:0;
-  border-radius:8px;
+  border-radius:4px;
   border:2px solid #888;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  cursor:pointer;user-select:none;
-  box-shadow:0 3px 7px #0009;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  user-select:none;
+  box-shadow:0 2px 5px #0009;
   transition:filter .12s,transform .12s;
-  padding:2px;
+  padding:1px;
   font-weight:bold;
 }
+
 .card:active{filter:brightness(1.3)}
+
 .card .value{
-  font-size:clamp(23px,5.5vw,39px);
+  font-size:clamp(15px,3vw,27px);
   line-height:1;
 }
+
 .card .mini{
-  font-size:9px;opacity:.85;margin-top:5px;
+  font-size:7px;
+  opacity:.85;
+  margin-top:2px;
 }
+
 .card.blue{
-  color:#c9faff;background:#073d59;
+  color:#c9faff;
+  background:#073d59;
   border-color:#28cfff;
   box-shadow:inset 0 0 13px #0078aa66,0 0 7px #28cfff55;
 }
+
 .card.green{
-  color:#d7ffdb;background:#07502c;
+  color:#d7ffdb;
+  background:#07502c;
   border-color:#29e77b;
   box-shadow:inset 0 0 13px #00a94d66,0 0 7px #29e77b55;
 }
+
 .card.yellow{
-  color:#fff2b2;background:#69500a;
+  color:#fff2b2;
+  background:#69500a;
   border-color:#ffdc38;
   box-shadow:inset 0 0 13px #b58b0066,0 0 7px #ffdc3855;
 }
+
 .card.orange{
-  color:#ffe2ae;background:#74330a;
+  color:#ffe2ae;
+  background:#74330a;
   border-color:#ff9c35;
   box-shadow:inset 0 0 13px #d45c0066,0 0 7px #ff9c3555;
 }
+
 .card.red{
-  color:#ffd0e4;background:#650c37;
+  color:#ffd0e4;
+  background:#650c37;
   border-color:#ff438e;
   box-shadow:inset 0 0 13px #c0005566,0 0 7px #ff438e55;
 }
+
 .card.back{
-  background:repeating-linear-gradient(135deg,#171126,#171126 7px,#251a3d 7px,#251a3d 14px);
+  background:repeating-linear-gradient(
+    135deg,#171126,#171126 7px,#251a3d 7px,#251a3d 14px
+  );
   border-color:#8d43a8;
   color:#bd55d4;
   box-shadow:inset 0 0 12px #8b27ad55,0 0 7px #8b27ad44;
 }
-.card.back .value{font-size:clamp(21px,5vw,34px);text-shadow:0 0 10px #bd55d4}
-.card.removed{
-  background:#171421;border:1px dashed #494052;
-  box-shadow:none;cursor:default;
+
+.card.back .value{
+  font-size:clamp(15px,3vw,24px);
+  text-shadow:0 0 10px #bd55d4;
 }
+
+.card.removed{
+  background:#171421;
+  border:1px dashed #494052;
+  box-shadow:none;
+  cursor:default;
+}
+
 .card.removed .value{color:#51495e}
+
 .card.selected{
   outline:3px solid var(--gold);
   outline-offset:2px;
   filter:brightness(1.3);
 }
+
 .p2 .hand .card{transform:rotate(180deg)}
 .p2 .hand .card.selected{transform:rotate(180deg)}
+
+/* KOMPAKTE SPIELMITTE */
 .middle{
-  margin:12px 0;padding:12px 8px;
-  border:1px solid #393052;border-radius:12px;
+  margin:5px 0;
+  padding:5px;
+  border:1px solid #393052;
+  border-radius:8px;
   background:#0b0916;
 }
+
 #status{
-  color:var(--gold);font-size:14px;font-weight:bold;
-  min-height:30px;display:flex;align-items:center;justify-content:center;
+  color:var(--gold);
+  font-size:12px;
+  font-weight:bold;
+  min-height:19px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-#info{color:#a99ebd;font-size:12px;min-height:20px;margin:3px 0 10px}
-.piles{display:flex;justify-content:center;align-items:center;gap:24px;flex-wrap:wrap}
-.pile-wrap{display:flex;flex-direction:column;align-items:center;gap:7px}
-.pile-label{font-size:10px;letter-spacing:2px;color:#a99ebd}
+
+#info{
+  color:#a99ebd;
+  font-size:10px;
+  min-height:14px;
+  margin:1px 0 4px;
+}
+
+/* Stapel und Aktionsknöpfe in einer Reihe */
+.piles{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  flex-wrap:nowrap;
+}
+
+.pile-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+}
+
+.pile-label{
+  font-size:8px;
+  letter-spacing:1px;
+  color:#a99ebd;
+}
+
 .pile{
-  width:67px;height:94px;border:2px solid var(--cyan);
-  border-radius:9px;display:flex;align-items:center;
-  justify-content:center;cursor:pointer;
-  background:repeating-linear-gradient(135deg,#151025,#151025 7px,#27203b 7px,#27203b 14px);
-  color:var(--cyan);font-size:27px;font-weight:bold;
-  box-shadow:0 0 12px #42e8ff44;
+  width:48px;
+  height:58px;
+  border:2px solid var(--cyan);
+  border-radius:5px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  background:repeating-linear-gradient(
+    135deg,#151025,#151025 7px,#27203b 7px,#27203b 14px
+  );
+  color:var(--cyan);
+  font-size:20px;
+  font-weight:bold;
+  box-shadow:0 0 9px #42e8ff44;
 }
+
 .pile.discard{
-  background:#171326;border-color:var(--violet);
-  color:var(--violet-light);box-shadow:0 0 12px #8529a044;
+  background:#171326;
+  border-color:var(--violet);
+  color:var(--violet-light);
+  box-shadow:0 0 12px #8529a044;
 }
-.pile .discard-value{font-size:30px}
+
+.pile .discard-value{font-size:21px}
 .pile.disabled{opacity:.35;cursor:not-allowed}
-.drawn{
-  margin-top:12px;color:var(--gold);font-size:13px;
-  min-height:20px;
+
+/* AKTIONSKNÖPFE NEBEN DEN STAPELN */
+.pile-actions{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  min-width:112px;
 }
-.controls{
-  display:flex;justify-content:center;flex-wrap:wrap;
-  gap:8px;margin-top:12px;
-}
+
 button.control{
-  background:#211a35;border:1px solid var(--cyan);
-  color:var(--cyan);border-radius:9px;padding:11px 14px;
-  font-size:13px;font-weight:bold;cursor:pointer;
+  background:#211a35;
+  border:1px solid var(--cyan);
+  color:var(--cyan);
+  border-radius:6px;
+  padding:7px 9px;
+  font-size:11px;
+  font-weight:bold;
+  cursor:pointer;
 }
-button.control:hover{background:#26334a;box-shadow:0 0 12px #42e8ff55}
-button.control:disabled{opacity:.35;cursor:not-allowed}
-button.control.violet{border-color:var(--violet);color:var(--violet-light)}
-button.control.gold{border-color:var(--gold);color:var(--gold)}
+
+button.control:hover{
+  background:#26334a;
+  box-shadow:0 0 12px #42e8ff55;
+}
+
+button.control:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+}
+
+button.control.violet{
+  border-color:var(--violet);
+  color:var(--violet-light);
+}
+
+button.control.gold{
+  border-color:var(--gold);
+  color:var(--gold);
+}
+
+.drawn{
+  margin-top:4px;
+  color:var(--gold);
+  font-size:10px;
+  min-height:13px;
+}
+
+.controls{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:5px;
+}
+
 .scoreboard{
-  margin-top:13px;background:#0c0a17;
-  border:1px solid #393052;border-radius:10px;padding:10px;
+  margin-top:5px;
+  background:#0c0a17;
+  border:1px solid #393052;
+  border-radius:7px;
+  padding:5px;
 }
+
 .scoreboard h3{
-  margin:0 0 9px;font-size:11px;letter-spacing:2px;color:var(--violet-light);
+  margin:0 0 3px;
+  font-size:9px;
+  letter-spacing:1px;
+  color:var(--violet-light);
 }
+
 .score-row{
-  display:flex;justify-content:space-around;gap:10px;
-  font-size:13px;color:#b9b0c9;
+  display:flex;
+  justify-content:space-around;
+  gap:6px;
+  font-size:10px;
+  color:#b9b0c9;
 }
-.score-row strong{color:var(--gold);font-size:17px}
+
+.score-row strong{
+  color:var(--gold);
+  font-size:13px;
+}
+
 .rules{
-  margin-top:13px;padding:11px;background:#0c0a17;
-  border:1px solid #393052;border-radius:10px;
-  text-align:left;color:#b8aecb;font-size:11px;line-height:1.65;
+  margin-top:7px;
+  padding:7px;
+  background:#0c0a17;
+  border:1px solid #393052;
+  border-radius:7px;
+  text-align:left;
+  color:#b8aecb;
+  font-size:10px;
+  line-height:1.45;
 }
-.rules strong{color:var(--violet-light);letter-spacing:1px}
+
+.rules strong{
+  color:var(--violet-light);
+  letter-spacing:1px;
+}
+
 #result{
-  display:none;margin-top:12px;padding:13px;
-  border:1px solid var(--gold);border-radius:10px;
-  background:#211a25;color:var(--gold);font-size:14px;line-height:1.7;
+  display:none;
+  margin-top:8px;
+  padding:10px;
+  border:1px solid var(--gold);
+  border-radius:8px;
+  background:#211a25;
+  color:var(--gold);
+  font-size:12px;
+  line-height:1.6;
 }
+
 #result.show{display:block}
-.footer{margin:16px 0 4px;color:#786d8c;font-size:10px;letter-spacing:1px}
-@media(max-width:390px){
-  body{padding:6px}
-  .game{padding:7px}
-  .player-area{padding:7px}
-  .hand{gap:5px}
-  .card{border-radius:6px}
-  .card .value{font-size:clamp(21px,6vw,30px)}
-  .pile{width:58px;height:82px}
-  button.control{padding:10px 11px;font-size:12px}
+
+.footer{
+  margin:5px 0 1px;
+  color:#786d8c;
+  font-size:8px;
+  letter-spacing:1px;
+}
+
+/* HANDY */
+@media(max-width:520px){
+  body{padding:3px}
+
+  h1{
+    font-size:21px;
+    letter-spacing:3px;
+    margin-top:1px;
+  }
+
+  .subtitle{
+    font-size:8px;
+    margin-bottom:3px;
+  }
+
+  .game{
+    padding:4px;
+    border-radius:9px;
+  }
+
+  .player-area{
+    padding:4px;
+    margin:3px 0;
+  }
+
+  .player-head{
+    font-size:10px;
+    margin-bottom:3px;
+  }
+
+  .hand{
+    gap:3px;
+    max-width:100%;
+  }
+
+  .card{
+    aspect-ratio:1.12;
+    border-width:1px;
+    border-radius:3px;
+  }
+
+  .card .value{
+    font-size:clamp(15px,5vw,22px);
+  }
+
+  .card .mini{
+    font-size:6px;
+    margin-top:1px;
+  }
+
+  .middle{
+    margin:3px 0;
+    padding:4px;
+  }
+
+  #status{
+    font-size:11px;
+    min-height:17px;
+  }
+
+  #info{
+    font-size:9px;
+    min-height:12px;
+    margin:0 0 3px;
+  }
+
+  .piles{gap:7px}
+
+  .pile{
+    width:42px;
+    height:49px;
+    font-size:17px;
+  }
+
+  .pile .discard-value{font-size:21px}
+
+  .pile-label{
+    font-size:7px;
+    letter-spacing:.5px;
+  }
+
+  .pile-actions{
+    min-width:95px;
+    gap:4px;
+  }
+
+  .pile-actions button.control{
+    padding:6px 5px;
+    font-size:9px;
+    line-height:1.1;
+  }
+
+  .drawn{
+    font-size:9px;
+    min-height:11px;
+    margin-top:2px;
+  }
+
+  .controls{
+    gap:4px;
+    margin-top:4px;
+  }
+
+  button.control{
+    padding:6px 7px;
+    font-size:10px;
+    border-radius:5px;
+  }
+
+  .scoreboard{
+    margin-top:4px;
+    padding:4px;
+  }
+
+  .scoreboard h3{
+    font-size:8px;
+    margin-bottom:2px;
+  }
+
+  .score-row{font-size:9px}
+  .score-row strong{font-size:12px}
+
+  .rules{display:none}
+
+  .footer{
+    margin:5px 0 1px;
+    font-size:8px;
+  }
+}
+
+/* PC MIT NIEDRIGER FENSTERHÖHE */
+@media(max-height:760px) and (min-width:521px){
+  body{padding:2px}
+  h1{font-size:22px;margin:0}
+  .subtitle{margin-bottom:2px}
+  .game{padding:4px}
+  .player-area{padding:3px;margin:2px 0}
+  .player-head{margin-bottom:2px}
+  .hand{gap:3px;max-width:390px}
+  .card{aspect-ratio:1.25}
+  .middle{margin:3px 0;padding:3px}
+  #info{margin-bottom:2px}
+  .pile{width:42px;height:50px}
+  .pile-actions{min-width:105px}
+  .scoreboard{margin-top:3px;padding:3px}
+  .rules{display:none}
+  .footer{margin:3px 0 0}
 }
 </style>
 </head>
+
 <body>
 
 <h1>SKYJO</h1>
@@ -205,7 +553,6 @@ button.control.gold{border-color:var(--gold);color:var(--gold)}
 
 <div class="game">
 
-  <!-- SPIELER 2 OBEN -->
   <section class="player-area p2" id="area2">
     <div class="player-head">
       <span class="player-name">● SPIELER 2</span>
@@ -214,34 +561,36 @@ button.control.gold{border-color:var(--gold);color:var(--gold)}
     <div class="hand" id="hand2"></div>
   </section>
 
-  <!-- SPIELMITTE -->
   <div class="middle">
     <div id="status">SKYJO wird vorbereitet ...</div>
-    <div id="info">Schwarz? Nein – Spieler 1 beginnt mit der Auswahl.</div>
+    <div id="info">Spieler 1 beginnt mit der Auswahl.</div>
 
     <div class="piles">
+
       <div class="pile-wrap">
-        <div class="pile-label">NACHZIEHSTAPEL</div>
+        <div class="pile-label">NACHZIEHEN</div>
         <div class="pile" id="drawPile">?</div>
         <div class="pile-label" id="deckCount">150 Karten</div>
       </div>
 
       <div class="pile-wrap">
-        <div class="pile-label">ABLAGESTAPEL</div>
+        <div class="pile-label">ABLAGE</div>
         <div class="pile discard" id="discardPile">–</div>
-        <div class="pile-label">OBERSTE KARTE</div>
+        <div class="pile-label">OBEN</div>
       </div>
+
+      <div class="pile-actions">
+        <button class="control" id="discardDrawn" disabled>
+          Karte abwerfen
+        </button>
+        <button class="control gold" id="pass" disabled>–</button>
+      </div>
+
     </div>
 
     <div class="drawn" id="drawnInfo"></div>
-
-    <div class="controls">
-      <button class="control" id="discardDrawn" disabled>Gezogene Karte abwerfen</button>
-      <button class="control gold" id="pass" disabled>–</button>
-    </div>
   </div>
 
-  <!-- SPIELER 1 UNTEN -->
   <section class="player-area p1 active-p1" id="area1">
     <div class="player-head">
       <span class="player-name">● SPIELER 1</span>
@@ -277,6 +626,7 @@ button.control.gold{border-color:var(--gold);color:var(--gold)}
     7. Wer die Runde beendet, aber nicht die niedrigste Punktzahl hat, bekommt seine positiven Punkte verdoppelt.<br>
     8. Bei 100 Gesamtpunkten endet das Spiel. Die niedrigere Gesamtpunktzahl gewinnt.
   </div>
+
 </div>
 
 <div class="footer">SKYJO NEON EDITION · MADE BY THOMAS VOIGT</div>
@@ -317,14 +667,17 @@ function makeDeck(){
   for(const [value,count] of CARD_COUNTS){
     for(let i=0;i<count;i++)cards.push(value);
   }
+
   for(let i=cards.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
     [cards[i],cards[j]]=[cards[j],cards[i]];
   }
+
   return cards;
 }
 
 function newRound(){
+  history=[];
   deck=makeDeck();
   discard=[];
   players=[createPlayer(),createPlayer()];
@@ -339,7 +692,6 @@ function newRound(){
     p.removed=Array(12).fill(false);
   });
 
-  // Erste Karte auf den Ablagestapel
   discard.push(deck.pop());
 
   current=0;
@@ -355,8 +707,10 @@ function newRound(){
 
   message="Spieler 1: Decke zwei Karten auf.";
   info="Wähle zwei verdeckte Karten aus deinem Feld.";
+
   $("result").classList.remove("show");
   $("nextRound").style.display="none";
+
   render();
 }
 
@@ -367,19 +721,25 @@ function createPlayer(){
 function saveState(){
   history.push({
     players:players.map(p=>({
-      cards:[...p.cards],open:[...p.open],removed:[...p.removed]
+      cards:[...p.cards],
+      open:[...p.open],
+      removed:[...p.removed]
     })),
-    deck:[...deck],discard:[...discard],
+    deck:[...deck],
+    discard:[...discard],
     current,phase,setupPlayer,
     drawn,drawnSource,finisher,lastTurn,
-    roundScores:[...roundScores],totals:[...totals],
+    roundScores:[...roundScores],
+    totals:[...totals],
     roundNumber,gameFinished,message,info
   });
 }
 
 function undo(){
   if(!history.length)return;
+
   const s=history.pop();
+
   players=s.players;
   deck=s.deck;
   discard=s.discard;
@@ -396,9 +756,12 @@ function undo(){
   gameFinished=s.gameFinished;
   message=s.message;
   info=s.info;
+
   pendingAction=null;
+
   $("result").classList.remove("show");
   $("nextRound").style.display=phase==="between"?"inline-block":"none";
+
   render();
 }
 
@@ -415,9 +778,10 @@ function cardText(v){
   return v>0?"+"+v:String(v);
 }
 
-function cardElement(player,index,top){
+function cardElement(player,index){
   const p=players[player];
   const el=document.createElement("button");
+
   el.type="button";
   el.className="card";
   el.setAttribute("aria-label","Karte "+(index+1));
@@ -452,6 +816,9 @@ function cardElement(player,index,top){
     el.addEventListener("click",()=>setupReveal(player,index));
   }else if(phase==="play" && current===player){
     el.addEventListener("click",()=>selectCard(player,index));
+  }else if(phase==="reveal" && current===player &&
+           !p.open[index]){
+    el.addEventListener("click",()=>revealAfterDiscard(player,index));
   }else{
     el.disabled=true;
   }
@@ -462,8 +829,9 @@ function cardElement(player,index,top){
 function renderHand(player){
   const target=$("hand"+(player+1));
   target.innerHTML="";
+
   for(let i=0;i<12;i++){
-    target.appendChild(cardElement(player,i,player===1));
+    target.appendChild(cardElement(player,i));
   }
 }
 
@@ -476,26 +844,41 @@ function render(){
   $("round1").textContent=roundScores[0];
   $("round2").textContent=roundScores[1];
 
-  $("area1").classList.toggle("active-p1",phase==="setup"&&setupPlayer===0 || phase==="play"&&current===0);
-  $("area2").classList.toggle("active-p2",phase==="setup"&&setupPlayer===1 || phase==="play"&&current===1);
+  $("area1").classList.toggle(
+    "active-p1",
+    (phase==="setup"&&setupPlayer===0)||(phase==="play"&&current===0)
+  );
+
+  $("area2").classList.toggle(
+    "active-p2",
+    (phase==="setup"&&setupPlayer===1)||(phase==="play"&&current===1)
+  );
 
   $("status").textContent=message;
   $("info").textContent=info;
   $("deckCount").textContent=deck.length+" Karten";
 
   const top=discard.length?discard[discard.length-1]:null;
+
   $("discardPile").innerHTML=top===null?"–":
     '<span class="discard-value">'+cardText(top)+'</span>';
 
-  $("drawPile").classList.toggle("disabled",phase!=="play"||drawn!==null);
-  $("discardPile").classList.toggle("disabled",phase!=="play"||drawn!==null);
+  $("drawPile").classList.toggle(
+    "disabled",phase!=="play"||drawn!==null
+  );
+
+  $("discardPile").classList.toggle(
+    "disabled",phase!=="play"||drawn!==null
+  );
 
   $("drawnInfo").textContent=drawn!==null?
-    "Gezogene Karte: "+cardText(drawn)+" – wähle eine eigene Karte zum Tauschen oder wirf sie ab.":
-    "";
+    "Gezogene Karte: "+cardText(drawn)+" – wähle eine eigene Karte zum Tauschen oder wirf sie ab.":"";
 
-  $("discardDrawn").disabled=phase!=="play"||drawn===null||drawnSource!=="deck";
-  $("discardDrawn").textContent=drawn!==null?"Gezogene Karte abwerfen":"Karte abwerfen";
+  $("discardDrawn").disabled=
+    phase!=="play"||drawn===null||drawnSource!=="deck";
+
+  $("discardDrawn").textContent=
+    drawn!==null?"Gezogene Karte abwerfen":"Karte abwerfen";
 
   $("undo").disabled=history.length===0;
   $("pass").disabled=true;
@@ -508,10 +891,8 @@ function setupReveal(player,index){
   saveState();
   players[player].open[index]=true;
 
-  const count=players[player].open.filter(Boolean).length;
   const revealedThisPlayer=players[player].open.filter(Boolean).length;
 
-  // Jede Person deckt genau zwei Karten auf
   if(revealedThisPlayer>=2){
     if(player===0){
       setupPlayer=1;
@@ -526,15 +907,21 @@ function setupReveal(player,index){
     message="Noch eine Karte aufdecken.";
     info="Du hast "+revealedThisPlayer+" von 2 Karten aufgedeckt.";
   }
+
   render();
 }
 
 function startPlaying(){
-  const sum0=players[0].cards.reduce((s,v,i)=>s+(players[0].open[i]?v:0),0);
-  const sum1=players[1].cards.reduce((s,v,i)=>s+(players[1].open[i]?v:0),0);
+  const sum0=players[0].cards.reduce(
+    (s,v,i)=>s+(players[0].open[i]?v:0),0
+  );
 
-  // Spieler mit höherer Summe beginnt
+  const sum1=players[1].cards.reduce(
+    (s,v,i)=>s+(players[1].open[i]?v:0),0
+  );
+
   current=sum0>sum1?0:sum1>sum0?1:Math.random()<0.5?0:1;
+
   phase="play";
   message="Spieler "+(current+1)+" beginnt!";
   info="Ziehe eine Karte vom Nachzieh- oder Ablagestapel.";
@@ -542,25 +929,33 @@ function startPlaying(){
 
 function drawFromDeck(){
   if(phase!=="play"||drawn!==null||gameFinished)return;
+
   if(!deck.length){
     if(discard.length<=1){
       message="Keine Karten mehr im Nachziehstapel!";
+      render();
       return;
     }
+
     const top=discard.pop();
     deck=discard.splice(0);
+
     for(let i=deck.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
       [deck[i],deck[j]]=[deck[j],deck[i]];
     }
+
     discard=[top];
   }
 
   saveState();
+
   drawn=deck.pop();
   drawnSource="deck";
+
   message="Gezogene Karte: "+cardText(drawn);
   info="Tausche sie gegen eine eigene Karte oder wirf sie ab.";
+
   render();
 }
 
@@ -568,31 +963,31 @@ function drawFromDiscard(){
   if(phase!=="play"||drawn!==null||!discard.length)return;
 
   saveState();
+
   drawn=discard.pop();
   drawnSource="discard";
+
   message="Ablagekarte "+cardText(drawn)+" genommen.";
   info="Wähle eine deiner Karten zum Austauschen.";
+
   render();
 }
 
 function selectCard(player,index){
   if(phase!=="play"||current!==player||drawn===null)return;
+
   const p=players[player];
+
   if(p.removed[index])return;
 
   saveState();
 
   const oldValue=p.cards[index];
-  if(drawnSource==="deck" && oldValue===drawn){
-    // Identische Karte kann getauscht werden, ist aber kein Fehler
-  }
 
   p.cards[index]=drawn;
   p.open[index]=true;
 
-  if(drawnSource==="deck" || drawnSource==="discard"){
-    discard.push(oldValue);
-  }
+  discard.push(oldValue);
 
   drawn=null;
   drawnSource=null;
@@ -606,11 +1001,11 @@ function discardDrawn(){
   if(phase!=="play"||drawn===null||drawnSource!=="deck")return;
 
   saveState();
+
   discard.push(drawn);
   drawn=null;
   drawnSource=null;
 
-  // Nach dem Abwerfen muss eine verdeckte Karte aufgedeckt werden
   const hidden=players[current].open
     .map((v,i)=>!v&&!players[current].removed[i]?i:-1)
     .filter(i=>i!==-1);
@@ -624,6 +1019,7 @@ function discardDrawn(){
   phase="reveal";
   message="Decke eine deiner verdeckten Karten auf.";
   info="Wähle eine Karte aus deinem Feld.";
+
   render();
 }
 
@@ -632,8 +1028,11 @@ function revealAfterDiscard(player,index){
   if(players[player].open[index]||players[player].removed[index])return;
 
   saveState();
+
   players[player].open[index]=true;
+
   checkColumns(player);
+
   phase="play";
   finishTurn();
 }
@@ -673,49 +1072,53 @@ function finishTurn(){
     lastTurn=1-justPlayed;
     current=lastTurn;
     phase="play";
+
     message="Spieler "+(current+1)+" hat noch den letzten Zug!";
     info="Danach wird die Runde gewertet.";
+
     render();
     return;
   }
 
   current=1-current;
   phase="play";
+
   message="Spieler "+(current+1)+" ist am Zug.";
   info="Ziehe eine Karte oder nimm die oberste Ablagekarte.";
+
   render();
 }
 
 function calculateScore(player){
   const p=players[player];
+
   return p.cards.reduce((sum,value,i)=>{
     return sum+(p.removed[i]?0:value);
   },0);
 }
 
 function finishRound(){
-  // Verdeckte Karten werden für die Endwertung aufgedeckt
   for(let player=0;player<2;player++){
-    players[player].open=players[player].open.map((v,i)=>
-      v||players[player].removed[i]
-    );
+    players[player].open=Array(12).fill(true);
   }
 
   let s0=calculateScore(0);
   let s1=calculateScore(1);
 
-  // Wer die Runde beendet, muss wirklich den niedrigsten Wert haben
   if(finisher===0 && s0>s1 && s0>0)s0*=2;
   if(finisher===1 && s1>s0 && s1>0)s1*=2;
 
   roundScores=[s0,s1];
+
   totals[0]+=s0;
   totals[1]+=s1;
+
   phase="between";
   drawn=null;
   drawnSource=null;
 
-  const winnerRound=s0<s1?"Spieler 1":s1<s0?"Spieler 2":"Unentschieden";
+  const winnerRound=
+    s0<s1?"Spieler 1":s1<s0?"Spieler 2":"Unentschieden";
 
   const over=totals[0]>=100||totals[1]>=100;
   gameFinished=over;
@@ -736,8 +1139,10 @@ function finishRound(){
   }
 
   if(over){
-    const overall=totals[0]<totals[1]?"SPIELER 1 GEWINNT!":
+    const overall=
+      totals[0]<totals[1]?"SPIELER 1 GEWINNT!":
       totals[1]<totals[0]?"SPIELER 2 GEWINNT!":"UNENTSCHIEDEN!";
+
     result+="<br><strong>"+overall+"</strong>";
   }else{
     result+="<br><strong>"+winnerRound+" hat diese Runde gewonnen.</strong>";
@@ -746,11 +1151,13 @@ function finishRound(){
   $("result").innerHTML=result;
   $("result").classList.add("show");
   $("nextRound").style.display=over?"none":"inline-block";
+
   render();
 }
 
 function nextRound(){
   if(phase!=="between"||gameFinished)return;
+
   roundNumber++;
   newRound();
 }
@@ -770,25 +1177,10 @@ $("restart").addEventListener("click",()=>{
   }
 });
 
-// Extra Behandlung für das Aufdecken nach dem Abwerfen
-const originalRenderHand=renderHand;
-renderHand=function(player){
-  const target=$("hand"+(player+1));
-  target.innerHTML="";
-  for(let i=0;i<12;i++){
-    const el=cardElement(player,i,player===1);
-    if(phase==="reveal"&&current===player&&
-       !players[player].open[i]&&!players[player].removed[i]){
-      el.disabled=false;
-      el.addEventListener("click",()=>revealAfterDiscard(player,i));
-    }
-    target.appendChild(el);
-  }
-};
-
 totals=[0,0];
 roundNumber=1;
 newRound();
+
 </script>
 </body>
 </html>
