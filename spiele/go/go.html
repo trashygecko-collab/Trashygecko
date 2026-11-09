@@ -1,0 +1,483 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>NEON GO – Thomas Voigt</title>
+<style>
+:root {
+  --bg:#080711;
+  --panel:#171326;
+  --cyan:#42e8ff;
+  --violet:#8529a0;
+  --violetLight:#b34bc9;
+  --gold:#ffd166;
+  --text:#f5efff;
+  --muted:#9990aa;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;padding:12px;min-height:100vh;
+  background:radial-gradient(ellipse at top,#211632,#080711 70%);
+  color:var(--text);font-family:Arial,sans-serif;text-align:center;
+}
+h1{
+  margin:9px 0 3px;font-size:clamp(30px,6vw,44px);
+  letter-spacing:5px;color:var(--cyan);
+  text-shadow:0 0 8px var(--cyan),0 0 24px #008cff;
+}
+.subtitle{color:var(--violetLight);font-size:12px;letter-spacing:4px;margin-bottom:17px}
+.game{
+  width:min(100%,620px);margin:auto;padding:13px;
+  background:rgba(23,19,38,.96);border:1px solid #55416d;
+  border-radius:18px;box-shadow:0 0 30px #140e2c;
+}
+.players{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.player{
+  padding:10px 16px;border:1px solid #393052;border-radius:10px;
+  background:#0c0a17;color:#82788e;font-size:14px;font-weight:bold;
+}
+.player.active.white{color:var(--cyan);border-color:var(--cyan);box-shadow:0 0 12px #42e8ff55}
+.player.active.black{color:var(--violetLight);border-color:var(--violet);box-shadow:0 0 12px #8529a055}
+#status{min-height:42px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:bold;font-size:14px;padding:8px 0}
+#info{font-size:12px;color:var(--muted);min-height:19px;margin-bottom:8px}
+.board-wrap{
+  width:100%;max-width:540px;margin:auto;padding:5px;
+  background:#b68b52;border:3px solid #e0b978;border-radius:5px;
+  box-shadow:0 0 20px #42e8ff22;
+}
+svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.gridline{stroke:#51391f;stroke-width:1.5}
+.star{fill:#51391f}
+.hit{fill:transparent;cursor:pointer}
+.stone{stroke-width:1.3;pointer-events:none}
+.stone.black{fill:#171321;stroke:#090711;filter:drop-shadow(0 1px 2px #000)}
+.stone.white{fill:#f4f1ff;stroke:#bcb5cf;filter:drop-shadow(0 1px 2px #000)}
+.last-dot{fill:var(--gold);stroke:#fff;stroke-width:1;pointer-events:none}
+.captured{
+  display:flex;justify-content:space-between;gap:10px;
+  margin-top:12px;
+}
+.capture-box{
+  flex:1;padding:9px;background:#0c0a17;border:1px solid #393052;
+  border-radius:9px;font-size:12px;color:var(--muted);
+}
+.capture-box strong{display:block;font-size:21px;margin-top:4px}
+.white-text{color:var(--cyan)}
+.black-text{color:var(--violetLight)}
+.controls{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:14px}
+button.control{
+  padding:11px 15px;border-radius:9px;background:#211a35;
+  border:1px solid var(--cyan);color:var(--cyan);
+  font-size:13px;font-weight:bold;cursor:pointer;
+}
+button.control:hover{background:#26334a;box-shadow:0 0 12px #42e8ff55}
+button.control:disabled{opacity:.35;cursor:not-allowed}
+.rules{
+  margin-top:15px;padding:12px;background:#0c0a17;
+  border:1px solid #393052;border-radius:10px;
+  text-align:left;color:#b8aecb;font-size:12px;line-height:1.7;
+}
+.rules strong{color:var(--violetLight);letter-spacing:1px}
+#result{
+  display:none;margin-top:13px;padding:13px;
+  border:1px solid var(--gold);border-radius:10px;
+  color:var(--gold);background:#211a25;line-height:1.7;
+}
+#result.show{display:block}
+.footer{margin:17px 0 5px;color:#786d8c;font-size:11px;letter-spacing:1px}
+@media(max-width:400px){
+  body{padding:7px}
+  .game{padding:8px}
+  .player{padding:9px 12px;font-size:12px}
+  button.control{padding:10px 12px}
+}
+</style>
+</head>
+<body>
+
+<h1>NEON GO</h1>
+<div class="subtitle">THE ANCIENT STRATEGY GAME</div>
+
+<div class="game">
+  <div class="players">
+    <div class="player black active" id="blackPlayer">● SCHWARZ</div>
+    <div class="player white" id="whitePlayer">● WEISS</div>
+  </div>
+
+  <div id="status">Schwarz beginnt!</div>
+  <div id="info">Setze deinen ersten Stein auf eine Kreuzung.</div>
+
+  <div class="board-wrap">
+    <svg id="board" viewBox="0 0 450 450" aria-label="Go Spielfeld 9 mal 9"></svg>
+  </div>
+
+  <div class="captured">
+    <div class="capture-box">
+      GEFANGENE STEINE SCHWARZ
+      <strong class="black-text" id="blackCaptured">0</strong>
+    </div>
+    <div class="capture-box">
+      GEFANGENE STEINE WEISS
+      <strong class="white-text" id="whiteCaptured">0</strong>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="control" id="pass">⏭ Passen</button>
+    <button class="control" id="undo">↶ Zug zurück</button>
+    <button class="control" id="restart">⟳ Neues Spiel</button>
+  </div>
+
+  <div id="result"></div>
+
+  <div class="rules">
+    <strong>SPIELREGELN</strong><br>
+    1. Schwarz beginnt, danach wird abwechselnd gesetzt.<br>
+    2. Steine kommen auf die Kreuzungen der Linien.<br>
+    3. Eine Steingruppe braucht mindestens eine freie Nachbarkreuzung (Freiheit).<br>
+    4. Hat eine gegnerische Gruppe keine Freiheit mehr, wird sie gefangen genommen.<br>
+    5. Eigene Gruppen dürfen nicht ohne Freiheit gesetzt werden.<br>
+    6. Die gleiche Stellung darf nicht sofort wiederholt werden (Ko-Regel).<br>
+    7. Zwei Pässe hintereinander beenden die Partie.<br>
+    8. Das größere Gebiet gewinnt. Weiß erhält zusätzlich 6,5 Punkte Ausgleich.
+  </div>
+</div>
+
+<div class="footer">NEON GO · 9×9 · MADE BY THOMAS VOIGT</div>
+
+<script>
+"use strict";
+
+const N=9;
+const PAD=25;
+const STEP=50;
+
+let board;
+let turn;
+let captured;
+let history;
+let positionKeys;
+let consecutivePasses;
+let gameOver;
+let lastMove;
+
+const svg=document.getElementById("board");
+const statusEl=document.getElementById("status");
+const infoEl=document.getElementById("info");
+
+function pos(r,c){return {x:PAD+c*STEP,y:PAD+r*STEP};}
+function other(color){return color==="B"?"W":"B";}
+function name(color){return color==="B"?"Schwarz":"Weiß";}
+
+function keyOf(b){return b.map(row=>row.join("")).join("");}
+
+function inside(r,c){return r>=0&&r<N&&c>=0&&c<N;}
+
+function neighbors(r,c){
+  return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]
+    .filter(([rr,cc])=>inside(rr,cc));
+}
+
+function getGroup(b,r,c){
+  const color=b[r][c];
+  if(!color)return {stones:[],liberties:new Set()};
+
+  const stones=[];
+  const liberties=new Set();
+  const visited=new Set();
+  const stack=[[r,c]];
+
+  while(stack.length){
+    const [rr,cc]=stack.pop();
+    const id=rr+","+cc;
+    if(visited.has(id))continue;
+    visited.add(id);
+    stones.push([rr,cc]);
+
+    for(const [nr,nc] of neighbors(rr,cc)){
+      if(b[nr][nc]===null){
+        liberties.add(nr+","+nc);
+      }else if(b[nr][nc]===color&&!visited.has(nr+","+nc)){
+        stack.push([nr,nc]);
+      }
+    }
+  }
+  return {stones,liberties};
+}
+
+function copyBoard(b){return b.map(row=>[...row]);}
+
+function saveHistory(){
+  history.push({
+    board:copyBoard(board),
+    turn,
+    captured:{...captured},
+    positionKeys:[...positionKeys],
+    consecutivePasses,
+    gameOver,
+    lastMove:lastMove?{...lastMove}:null
+  });
+}
+
+function restoreHistory(){
+  if(!history.length)return;
+  const s=history.pop();
+  board=s.board;
+  turn=s.turn;
+  captured=s.captured;
+  positionKeys=s.positionKeys;
+  consecutivePasses=s.consecutivePasses;
+  gameOver=s.gameOver;
+  lastMove=s.lastMove;
+  document.getElementById("result").classList.remove("show");
+  statusEl.textContent=name(turn)+" ist am Zug.";
+  render();
+}
+
+function legalMove(r,c){
+  if(board[r][c]!==null)return false;
+
+  const next=copyBoard(board);
+  next[r][c]=turn;
+  let taken=0;
+
+  // Gegnerische Gruppen ohne Freiheit entfernen
+  for(const [nr,nc] of neighbors(r,c)){
+    if(next[nr][nc]===other(turn)){
+      const group=getGroup(next,nr,nc);
+      if(group.liberties.size===0){
+        for(const [gr,gc] of group.stones){
+          next[gr][gc]=null;
+          taken++;
+        }
+      }
+    }
+  }
+
+  // Selbstmordzug verhindern
+  if(getGroup(next,r,c).liberties.size===0)return false;
+
+  // Superko: keine bereits aufgetretene Stellung
+  const key=keyOf(next);
+  if(positionKeys.includes(key))return false;
+
+  return true;
+}
+
+function playMove(r,c){
+  if(gameOver)return;
+
+  if(!legalMove(r,c)){
+    statusEl.textContent="Dieser Zug ist nicht erlaubt!";
+    return;
+  }
+
+  saveHistory();
+
+  board[r][c]=turn;
+  let taken=0;
+
+  for(const [nr,nc] of neighbors(r,c)){
+    if(board[nr][nc]===other(turn)){
+      const group=getGroup(board,nr,nc);
+      if(group.liberties.size===0){
+        for(const [gr,gc] of group.stones){
+          board[gr][gc]=null;
+          taken++;
+        }
+      }
+    }
+  }
+
+  captured[turn]+=taken;
+  lastMove={r,c};
+  consecutivePasses=0;
+  positionKeys.push(keyOf(board));
+
+  const oldTurn=turn;
+  turn=other(turn);
+
+  statusEl.textContent=name(turn)+" ist am Zug.";
+  if(taken>0){
+    infoEl.textContent=taken+" gegnerische Steine gefangen!";
+  }else{
+    infoEl.textContent=name(oldTurn)+" hat einen Stein gesetzt.";
+  }
+
+  render();
+}
+
+function passTurn(){
+  if(gameOver)return;
+
+  saveHistory();
+  consecutivePasses++;
+  lastMove=null;
+
+  const passing=turn;
+  turn=other(turn);
+
+  if(consecutivePasses>=2){
+    gameOver=true;
+    render();
+    finishGame();
+    return;
+  }
+
+  statusEl.textContent=name(passing)+" passt. "+name(turn)+" ist am Zug.";
+  infoEl.textContent="Ein weiterer Pass beendet die Partie.";
+  render();
+}
+
+function calculateScore(){
+  const visited=Array.from({length:N},()=>Array(N).fill(false));
+  let black=0,white=0,neutral=0;
+
+  // Steine zählen
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(board[r][c]==="B")black++;
+    if(board[r][c]==="W")white++;
+  }
+
+  // Leere Gebiete bestimmen
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(board[r][c]!==null||visited[r][c])continue;
+
+    const stack=[[r,c]];
+    const region=[];
+    const borders=new Set();
+    visited[r][c]=true;
+
+    while(stack.length){
+      const [rr,cc]=stack.pop();
+      region.push([rr,cc]);
+
+      for(const [nr,nc] of neighbors(rr,cc)){
+        if(board[nr][nc]===null&&!visited[nr][nc]){
+          visited[nr][nc]=true;
+          stack.push([nr,nc]);
+        }else if(board[nr][nc]!==null){
+          borders.add(board[nr][nc]);
+        }
+      }
+    }
+
+    if(borders.size===1){
+      const owner=[...borders][0];
+      if(owner==="B")black+=region.length;
+      else white+=region.length;
+    }else{
+      neutral+=region.length;
+    }
+  }
+
+  const whiteTotal=white+6.5;
+  return {black,white,whiteTotal,neutral};
+}
+
+function finishGame(){
+  const score=calculateScore();
+  const winner=score.black>score.whiteTotal?"Schwarz":"Weiß";
+  const result=document.getElementById("result");
+
+  result.innerHTML=`
+    <strong>PARTIE BEENDET!</strong><br>
+    Schwarz: ${score.black} Punkte<br>
+    Weiß: ${score.white} + 6,5 Ausgleich = ${score.whiteTotal}<br>
+    Neutrale Felder: ${score.neutral}<br><br>
+    <strong>${winner} gewinnt!</strong>
+  `;
+  result.classList.add("show");
+
+  statusEl.textContent="Spiel beendet – "+winner+" gewinnt!";
+  infoEl.textContent="Die Partie wurde nach zwei Pässen ausgewertet.";
+  render();
+}
+
+function render(){
+  let html=`
+    <rect x="0" y="0" width="450" height="450" fill="#b68b52"/>
+  `;
+
+  // Gitterlinien
+  for(let i=0;i<N;i++){
+    const a=pos(i,0),b=pos(i,N-1);
+    const c=pos(0,i),d=pos(N-1,i);
+    html+=`
+      <line class="gridline" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>
+      <line class="gridline" x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}"/>
+    `;
+  }
+
+  // Traditionelle Sternpunkte
+  for(const r of [2,4,6])for(const c of [2,4,6]){
+    const p=pos(r,c);
+    html+=`<circle class="star" cx="${p.x}" cy="${p.y}" r="3"/>`;
+  }
+
+  // Steine
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const p=pos(r,c);
+    const color=board[r][c];
+
+    if(color){
+      html+=`<circle class="stone ${color==="B"?"black":"white"}" cx="${p.x}" cy="${p.y}" r="19"/>`;
+    }
+
+    if(lastMove&&lastMove.r===r&&lastMove.c===c){
+      html+=`<circle class="last-dot" cx="${p.x}" cy="${p.y}" r="4"/>`;
+    }
+
+    html+=`<circle class="hit" cx="${p.x}" cy="${p.y}" r="23" data-r="${r}" data-c="${c}"/>`;
+  }
+
+  svg.innerHTML=html;
+
+  svg.querySelectorAll(".hit").forEach(el=>{
+    el.addEventListener("click",()=>{
+      playMove(Number(el.dataset.r),Number(el.dataset.c));
+    });
+  });
+
+  document.getElementById("blackPlayer").classList.toggle(
+    "active",turn==="B"&&!gameOver
+  );
+  document.getElementById("whitePlayer").classList.toggle(
+    "active",turn==="W"&&!gameOver
+  );
+
+  document.getElementById("blackCaptured").textContent=captured.B;
+  document.getElementById("whiteCaptured").textContent=captured.W;
+
+  document.getElementById("undo").disabled=history.length===0;
+  document.getElementById("pass").disabled=gameOver;
+}
+
+function restart(){
+  board=Array.from({length:N},()=>Array(N).fill(null));
+  turn="B";
+  captured={B:0,W:0};
+  history=[];
+  positionKeys=[keyOf(board)];
+  consecutivePasses=0;
+  gameOver=false;
+  lastMove=null;
+
+  statusEl.textContent="Schwarz beginnt!";
+  infoEl.textContent="Setze deinen ersten Stein auf eine Kreuzung.";
+  document.getElementById("result").classList.remove("show");
+  render();
+}
+
+document.getElementById("pass").addEventListener("click",passTurn);
+document.getElementById("undo").addEventListener("click",restoreHistory);
+document.getElementById("restart").addEventListener("click",()=>{
+  if(confirm("Möchtest du wirklich eine neue Partie beginnen?"))restart();
+});
+
+restart();
+</script>
+</body>
+</html>
