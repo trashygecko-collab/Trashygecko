@@ -5,474 +5,435 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Super Pimmelchen — Retro Arcade Edition (20×11)</title>
   <style>
-    :root {
-      --ink: #24142f;
-      --panel: #fff0bd;
-      --accent: #f32d83;
-      --accent-yellow: #f8c94e;
-    }
-    [hidden]{display:none !important}
+:root {
+  color-scheme: dark;
+  --cyan: #00eaff;
+  --pink: #ff35c8;
+  --text: #e8faff;
+  --muted: #91b5bf;
+  --black: #000;
+}
 
-    html {
-      min-height: 100%;
-      overflow-x: hidden;
-      overflow-y: auto;
-    }
+[hidden] { display: none !important; }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      min-height: 100dvh;
-      height: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      overflow-x: hidden;
-      overflow-y: auto;
-      padding: 16px;
-      box-sizing: border-box;
-      color: var(--ink);
-      background-color: #30b9b2;
-      background-image:
-        radial-gradient(#ffffff80 1.5px, transparent 1.5px),
-        linear-gradient(135deg, #20aaa8 0%, #52cfbd 45%, #f2b846 100%);
-      background-size: 14px 14px, auto;
-      font-family: 'Trebuchet MS', Arial, sans-serif;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
+html {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+}
 
-    .cabinet {
-      width: min(100%, 960px);
-      flex: 0 0 auto;
-      margin: auto;
-      padding: 24px;
-      border: 4px solid #24142f;
-      border-radius: 20px;
-      background: #fff0bd;
-      box-shadow: 8px 10px 0 #24142f, 0 20px 50px rgba(0, 0, 0, 0.35);
-      transform: rotate(-0.1deg);
-      touch-action: manipulation;
-    }
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px;
+  box-sizing: border-box;
+  color: var(--text);
+  background: var(--black);
+  font-family: Arial, sans-serif;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
-    .brand-title {
-      font-family: 'Courier New', monospace;
-      color: #f32d83;
-      -webkit-text-stroke: 1.5px #24142f;
-      text-shadow: 3px 3px 0 #24142f, 5px 5px 0 #f29a32;
-    }
+.cabinet {
+  width: min(100%, 960px);
+  flex: 0 0 auto;
+  margin: auto;
+  padding: 12px;
+  background: #000;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  touch-action: manipulation;
+}
 
-    .hud-box {
-      border: 3px solid #24142f;
-      border-radius: 10px;
-      background: #f8c94e;
-      box-shadow: 3px 4px 0 #24142f;
-      transform: rotate(-0.4deg);
-    }
+.cabinet > header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+  text-align: center;
+}
 
-    .hud-label {
-      color: #56375b;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-    }
+.brand-title {
+  margin: 0;
+  color: var(--cyan);
+  font-family: monospace;
+  font-size: clamp(22px, 4vw, 32px);
+  letter-spacing: .06em;
+  text-shadow: 0 0 10px #00eaff55;
+}
 
-    .hud-value {
-      font-family: 'Courier New', monospace;
-      color: #f32d83;
-      -webkit-text-stroke: 0.5px #24142f;
-      text-shadow: 2px 2px #fff0bd;
-    }
+.cabinet > section {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
 
-    .screen-wrapper {
-      position: relative;
-      width: 100%;
-      max-width: 800px;
-      margin: 0 auto;
-      border: 5px solid #24142f;
-      border-radius: 12px;
-      background: #29bbb6;
-      box-shadow: 6px 7px 0 #f07836;
-      overflow: hidden;
-    }
+.hud-box {
+  min-width: 0;
+  padding: 7px 3px;
+  text-align: center;
+  background: #050505;
+  border: 1px solid var(--cyan);
+  border-radius: 5px;
+  box-shadow: none;
+  transform: none;
+}
 
-    canvas {
-      display: block;
-      width: 100%;
-      height: auto;
-      outline: none;
-      touch-action: none;
-    }
+.hud-label {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
 
-    .game-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      width: 100%;
-      max-width: 800px;
-      margin: 14px auto 0;
-    }
+.hud-value {
+  color: var(--pink);
+  font-family: monospace;
+  font-size: clamp(14px, 2.8vw, 20px);
+  font-weight: bold;
+  text-shadow: none;
+}
 
-    .cabinet:fullscreen {
-      box-sizing: border-box;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      max-width: none;
-      margin: 0;
-      padding: 4px 6px;
-      border: 0;
-      border-radius: 0;
-      transform: none;
-      box-shadow: none;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: #fff0bd;
-    }
+.game-area {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
 
-    .cabinet:fullscreen > header,
-    .cabinet:fullscreen #keyboard-help {
-      display: none !important;
-    }
+.screen-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid #008c9b;
+  border-radius: 3px;
+  box-shadow: none;
+}
 
-    .cabinet:fullscreen .game-area {
-      flex: 1 1 0;
-      min-height: 0;
-      min-width: 0;
-      width: 100%;
-      max-width: none;
-      display: flex;
-      flex-direction: column;
-    }
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  outline: none;
+  touch-action: none;
+}
 
-    .cabinet:fullscreen .screen-wrapper {
-      flex: 1 1 0;
-      min-height: 0;
-      min-width: 0;
-      width: 100%;
-      height: 100%;
-      max-width: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto;
-    }
+#level-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin: 14px auto 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--cyan);
+}
 
-    .cabinet:fullscreen canvas {
-      display: block;
-      width: 100%;
-      height: auto;
-      max-width: 100%;
-      max-height: 100%;
-      aspect-ratio: 20 / 11;
-      object-fit: contain;
-      flex: 0 1 auto;
-    }
+#level-picker label {
+  color: var(--cyan);
+  font-weight: 900;
+}
 
-    .cabinet:fullscreen .game-actions {
-      max-width: none;
-      margin-top: 8px;
-    }
+#level-picker select {
+  padding: 8px 10px;
+  color: var(--cyan);
+  background: #050505;
+  border: 1px solid var(--cyan);
+  border-radius: 4px;
+  font-weight: bold;
+}
 
-    .cabinet:fullscreen > header,
-    .cabinet:fullscreen > section,
-    .cabinet:fullscreen > #level-picker,
-    .cabinet:fullscreen > .mt-4 {
-      flex-shrink: 0;
-    }
+.arcade-btn {
+  padding: 8px 12px;
+  color: var(--cyan);
+  background: #050505;
+  border: 1px solid var(--cyan);
+  border-radius: 5px;
+  box-shadow: none;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 
-    @media (max-height: 650px) {
-      .cabinet:fullscreen { padding: 6px 12px; }
-      .cabinet:fullscreen > header { margin-bottom: 6px; }
-      .cabinet:fullscreen > section { margin-bottom: 8px; }
-      .cabinet:fullscreen .game-actions { margin-top: 5px; }
-      .cabinet:fullscreen .mt-4 { margin-top: 6px; }
-    }
+.arcade-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
 
-    .arcade-btn {
-      border: 3px solid #24142f;
-      border-radius: 8px;
-      background: #f8c94e;
-      color: #24142f;
-      box-shadow: 3px 4px 0 #24142f;
-      font-weight: 700;
-      transition: all 0.05s ease;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
+#touch-controls { display: none; }
 
-    .arcade-btn:active {
-      transform: translate(2px, 2px);
-      box-shadow: 1px 2px 0 #24142f;
-    }
+.touch-device #touch-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: min(100%, 300px);
+  margin: 14px auto 0;
+  padding: 0;
+  gap: 16px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
 
-    kbd {
-      padding: 3px 7px;
-      border: 2px solid #24142f;
-      border-radius: 6px;
-      background: #fff0bd;
-      color: #24142f;
-      box-shadow: 2px 2px 0 #24142f;
-      font-family: monospace;
-      font-weight: bold;
-    }
+#touch-controls button {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
 
-    .flex{display:flex}.grid{display:grid}.hidden{display:none}.block{display:block}
-    .flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}
-    .justify-between{justify-content:space-between}.justify-center{justify-content:center}
-    .text-center{text-align:center}.text-left{text-align:left}.mx-auto{margin-left:auto;margin-right:auto}
-    .w-full{width:100%}.w-56{width:14rem}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}
-    .gap-2{gap:.5rem}.gap-3{gap:.75rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}
-    .mb-4{margin-bottom:1rem}.mt-1{margin-top:.25rem}.mt-4{margin-top:1rem}.mt-6{margin-top:1.5rem}
-    .p-1\.5{padding:.375rem}.p-2{padding:.5rem}.p-3{padding:.75rem}.px-3{padding-left:.75rem;padding-right:.75rem}
-    .px-4{padding-left:1rem;padding-right:1rem}.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}
-    .py-2{padding-top:.5rem;padding-bottom:.5rem}.pt-4{padding-top:1rem}
-    .text-2xl{font-size:1.5rem;line-height:2rem}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}
-    .text-base{font-size:1rem}.text-lg{font-size:1.125rem}
-    .font-bold{font-weight:700}.font-black{font-weight:900}.font-bold strong{font-weight:900}
-    .tracking-wide{letter-spacing:.025em}.tracking-wider{letter-spacing:.05em}.uppercase{text-transform:uppercase}
-    .rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.border-2{border-width:2px;border-style:solid}
-    .border-t-2{border-top:2px solid}.border-dashed{border-style:dashed}.text-gray-600{color:#4b5563}
-    .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-    .col-span-3{grid-column:span 3 / span 3}
-    .bg-white{background:#fff}.text-\[\#24142f\]{color:#24142f}.text-\[\#56375b\]{color:#56375b}
-    .text-\[\#f32d83\]{color:#f32d83}.bg-\[\#f8c94e\]{background:#f8c94e}
-    .bg-\[\#fff0bd\]{background:#fff0bd}.bg-\[\#fff5d7\]{background:#fff5d7}
-    .border-\[\#24142f\]{border-color:#24142f}.border-\[\#24142f40\]{border-color:#24142f40}
-    .shadow-\[2px_2px_0_\#24142f\]{box-shadow:2px 2px 0 #24142f}
-    @media(min-width:640px){.sm\:flex-row{flex-direction:row}.sm\:text-left{text-align:left}.sm\:gap-3{gap:.75rem}.sm\:text-3xl{font-size:1.875rem;line-height:2.25rem}.sm\:text-xl{font-size:1.25rem;line-height:1.75rem}.sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.sm\:hidden{display:none}}
-    @media(min-width:768px){.md\:flex-row{flex-direction:row}.md\:text-left{text-align:left}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.touch-device #btn-fire {
+  width: 120px;
+  min-height: 52px;
+  padding: 6px 10px;
+  color: var(--pink);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.15;
+  background: #050505;
+  border: 1px solid var(--pink);
+  box-shadow: none;
+}
 
-    .game-area{position:relative;width:100%;max-width:800px;margin:0 auto}
-    .cabinet:fullscreen .game-area{
-      flex:1 1 0;
-      min-height:0;
-      min-width:0;
-      width:100%;
-      max-width:none;
-      display:flex;
-      flex-direction:column;
-    }
+.touch-device #touch-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 150px;
+}
 
-    /* ---- Touch-Steuerung ---- */
-    #touch-controls{display:none}
+.touch-device #touch-dpad > :nth-child(1),
+.touch-device #touch-dpad > :nth-child(3) { display: none; }
 
-    /* Grundlayout: Feuer links (waagerecht), Richtungstasten rechts (Kreuz) */
-    .touch-device #touch-controls{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      width:300px;
-      max-width:100%;
-      margin:14px auto 0;
-      padding:0;
-      gap:16px;
-      border:0;
-      background:transparent;
-      box-shadow:none;
-      backdrop-filter:none;
-      box-sizing:border-box;
-    }
+.touch-device #touch-dpad > :nth-child(2) { grid-column: 2; grid-row: 1; }
+.touch-device #touch-dpad > :nth-child(4) { grid-column: 1; grid-row: 2; }
+.touch-device #touch-dpad > :nth-child(5) { grid-column: 2; grid-row: 2; }
+.touch-device #touch-dpad > :nth-child(6) { grid-column: 3; grid-row: 2; }
 
-    .touch-device #touch-controls button{
-      touch-action:none;
-      -webkit-tap-highlight-color:transparent;
-      user-select:none;
-    }
+.touch-device #touch-dpad button {
+  min-height: 48px;
+  padding: 0;
+  color: var(--cyan);
+  font-size: 18px;
+  background: #050505;
+  border: 1px solid var(--cyan);
+  box-shadow: none;
+}
 
-    /* Feuerknopf: waagerecht, links */
-    .touch-device #touch-controls #btn-fire{
-      width:120px;
-      min-height:52px;
-      padding:6px 10px;
-      font-size:11px;
-      font-weight:900;
-      line-height:1.15;
-      white-space:normal;
-      overflow-wrap:break-word;
-      background:rgba(248,201,78,.78);
-      box-shadow:2px 2px 0 rgba(36,20,47,.65);
-    }
+/* Querformat: Steuerung liegt über dem Spielfeld */
+@media (orientation: landscape) and (pointer: coarse),
+       (orientation: landscape) and (hover: none) {
+  .touch-device #touch-controls {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 max(12px, env(safe-area-inset-right))
+             max(12px, env(safe-area-inset-bottom))
+             max(12px, env(safe-area-inset-left));
+    gap: 16px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    pointer-events: none;
+    box-sizing: border-box;
+  }
 
-    /* Richtungskreuz: 3x2-Grid rechts */
-    .touch-device #touch-dpad{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      grid-template-rows:repeat(2,minmax(0,1fr));
-      gap:8px;
-      width:150px;
-    }
-    .touch-device #touch-dpad > :nth-child(1),
-    .touch-device #touch-dpad > :nth-child(3){display:none}
-    .touch-device #touch-dpad > :nth-child(2){grid-column:2;grid-row:1}
-    .touch-device #touch-dpad > :nth-child(4){grid-column:1;grid-row:2}
-    .touch-device #touch-dpad > :nth-child(5){grid-column:2;grid-row:2}
-    .touch-device #touch-dpad > :nth-child(6){grid-column:3;grid-row:2}
+  .touch-device #touch-controls #btn-fire,
+  .touch-device #touch-controls #touch-dpad {
+    pointer-events: auto;
+  }
 
-    .touch-device #touch-dpad button{
-      min-height:48px;
-      padding:0;
-      font-size:18px;
-      background:rgba(248,201,78,.78);
-      box-shadow:2px 2px 0 rgba(36,20,47,.65);
-    }
+  .touch-device #btn-fire {
+    width: 130px;
+    min-height: 46px;
+  }
 
-    /* Landscape auf Touch-Geräten: Controls schweben über dem Spielfeld
-       – Feuer unten links, Richtungstasten unten rechts */
-    @media (orientation:landscape) and (pointer:coarse),
-           (orientation:landscape) and (hover:none){
-      .touch-device #touch-controls{
-        position:absolute;
-        z-index:5;
-        left:0;
-        right:0;
-        bottom:0;
-        width:100%;
-        max-width:none;
-        margin:0;
-        padding:0 max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-        gap:16px;
-        background:transparent;
-        border:0;
-        box-shadow:none;
-        backdrop-filter:none;
-        pointer-events:none;
-        box-sizing:border-box;
-      }
-      .touch-device #touch-controls #btn-fire,
-      .touch-device #touch-controls #touch-dpad{
-        pointer-events:auto;
-      }
-      .touch-device #touch-controls #btn-fire{
-        width:130px;
-        min-height:46px;
-        font-size:11px;
-        background:rgba(248,201,78,.72);
-        box-shadow:2px 2px 0 rgba(36,20,47,.6);
-      }
-      .touch-device #touch-controls #touch-dpad{
-        width:162px;
-      }
-      .touch-device #touch-controls #touch-dpad button{
-        min-height:44px;
-        font-size:18px;
-        background:rgba(248,201,78,.72);
-        box-shadow:2px 2px 0 rgba(36,20,47,.6);
-      }
-    }
+  .touch-device #touch-dpad { width: 162px; }
 
-    /* Mobiles Vollbild: mehr Platz für das eigentliche Spielfeld */
-    @media (pointer:coarse) {
-      .cabinet:fullscreen {
-        padding: max(4px, env(safe-area-inset-top))
-                 max(6px, env(safe-area-inset-right))
-                 max(4px, env(safe-area-inset-bottom))
-                 max(6px, env(safe-area-inset-left));
-      }
+  .touch-device #touch-dpad button {
+    min-height: 44px;
+  }
+}
 
-      .touch-device .cabinet:fullscreen > section {
-        flex: 0 0 auto;
-        gap: 3px;
-        margin: 0 0 4px;
-      }
+/* Vollbild */
+.cabinet:fullscreen {
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 4px 6px;
+  background: #000;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-      .touch-device .cabinet:fullscreen .hud-box {
-        padding: 3px 1px;
-        border-width: 2px;
-        border-radius: 6px;
-        box-shadow: 1px 2px 0 #24142f;
-        transform: none;
-      }
+.cabinet:fullscreen > header { display: none !important; }
 
-      .touch-device .cabinet:fullscreen .hud-label {
-        font-size: 8px;
-        letter-spacing: 0.04em;
-      }
+.cabinet:fullscreen > section,
+.cabinet:fullscreen > #level-picker {
+  flex-shrink: 0;
+}
 
-      .touch-device .cabinet:fullscreen .hud-value {
-        font-size: clamp(13px, 3.5vh, 18px) !important;
-        line-height: 1.05;
-      }
+.cabinet:fullscreen .game-area {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+}
 
-      .touch-device .cabinet:fullscreen .game-area {
-        flex: 1 1 0;
-        min-height: 0;
-        min-width: 0;
-      }
+.cabinet:fullscreen .screen-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-      .touch-device .cabinet:fullscreen .screen-wrapper {
-        flex: 1 1 0;
-        min-height: 0;
-        min-width: 0;
-        height: 100%;
-        border-width: 3px;
-        border-radius: 7px;
-        box-shadow: 2px 3px 0 #f07836;
-      }
+.cabinet:fullscreen canvas {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 20 / 11;
+  object-fit: contain;
+  flex: 0 1 auto;
+}
 
-      /* Touch-Tasten über dem Spielfeld: Feuer unten links, Dpad unten rechts.
-         Kein graues Kästchen, Tasten halbtransparent. */
-      .touch-device .cabinet:fullscreen #touch-controls {
-        position: absolute;
-        z-index: 5;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100%;
-        max-width: none;
-        margin: 0;
-        padding: 0 8px 8px;
-        gap: 12px;
-        background: transparent;
-        border: 0;
-        box-shadow: none;
-        backdrop-filter: none;
-        pointer-events: none;
-        box-sizing: border-box;
-      }
+.cabinet:fullscreen #level-picker {
+  margin-top: 6px;
+}
 
-      .touch-device .cabinet:fullscreen #touch-controls #btn-fire,
-      .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
-        pointer-events: auto;
-      }
+@media (pointer: coarse) {
+  .cabinet:fullscreen {
+    padding: max(4px, env(safe-area-inset-top))
+             max(6px, env(safe-area-inset-right))
+             max(4px, env(safe-area-inset-bottom))
+             max(6px, env(safe-area-inset-left));
+  }
 
-      .touch-device .cabinet:fullscreen #touch-controls #btn-fire {
-        width: 130px;
-        min-height: 46px;
-        padding: 5px 8px;
-        font-size: 11px;
-        background: rgba(248,201,78,.72);
-        box-shadow: 2px 2px 0 rgba(36,20,47,.6);
-      }
+  .touch-device .cabinet:fullscreen > section {
+    flex: 0 0 auto;
+    gap: 3px;
+    margin: 0 0 4px;
+  }
 
-      .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
-        width: 168px;
-        gap: 6px;
-      }
+  .touch-device .cabinet:fullscreen .hud-box {
+    padding: 3px 1px;
+    border-width: 1px;
+    border-radius: 4px;
+    box-shadow: none;
+    transform: none;
+  }
 
-      .touch-device .cabinet:fullscreen #touch-controls #touch-dpad button {
-        min-height: 42px;
-        padding: 0;
-        font-size: 17px;
-        background: rgba(248,201,78,.72);
-        box-shadow: 2px 2px 0 rgba(36,20,47,.6);
-      }
-    }
+  .touch-device .cabinet:fullscreen .hud-label {
+    font-size: 8px;
+    letter-spacing: .04em;
+  }
 
-    /* Auf Handys nach Möglichkeit automatisch ins Querformat wechseln. */
-    @media (orientation:landscape) and (pointer:coarse),
-           (orientation:landscape) and (hover:none) {
-      .touch-device .cabinet:fullscreen .game-area {
-        width: 100%;
-      }
-    }
+  .touch-device .cabinet:fullscreen .hud-value {
+    font-size: clamp(13px, 3.5vh, 18px);
+    line-height: 1.05;
+  }
 
-    /* Normales Scrollen bleibt außerhalb des Vollbilds ausdrücklich erlaubt. */
-    html, body { overscroll-behavior-y: auto; }
-  </style>
+  .touch-device .cabinet:fullscreen .game-area {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .touch-device .cabinet:fullscreen .screen-wrapper {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .touch-device .cabinet:fullscreen #touch-controls {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 8px 8px;
+    gap: 12px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    pointer-events: none;
+    box-sizing: border-box;
+  }
+
+  .touch-device .cabinet:fullscreen #touch-controls #btn-fire,
+  .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
+    pointer-events: auto;
+  }
+
+  .touch-device .cabinet:fullscreen #touch-controls #btn-fire {
+    width: 130px;
+    min-height: 46px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
+    width: 168px;
+    gap: 6px;
+  }
+
+  .touch-device .cabinet:fullscreen #touch-controls #touch-dpad button {
+    min-height: 42px;
+    font-size: 17px;
+  }
+}
+
+@media (max-height: 650px) {
+  .cabinet:fullscreen { padding: 4px 8px; }
+  .cabinet:fullscreen > section { margin-bottom: 4px; }
+  .cabinet:fullscreen #level-picker { margin-top: 5px; }
+}
+</style>
 </head>
 <body>
 
@@ -511,16 +472,14 @@
         <canvas id="game" width="560" height="308" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
       </div>
 
-      <div id="touch-controls">
-        <button class="arcade-btn" id="btn-fire" type="button">SPERM SCHIESSEN</button>
-        <div id="touch-dpad">
-          <div></div>
-          <button class="arcade-btn" data-dir="up" type="button">▲</button>
-          <div></div>
-          <button class="arcade-btn" data-dir="left" type="button">◀</button>
-          <button class="arcade-btn" data-dir="down" type="button">▼</button>
-          <button class="arcade-btn" data-dir="right" type="button">▶</button>
-        </div>
+      <div id="touch-controls" class="grid-cols-3 gap-2 w-56 mx-auto">
+        <div></div>
+        <button class="arcade-btn py-2 text-lg" data-dir="up" type="button">▲</button>
+        <div></div>
+        <button class="arcade-btn py-2 text-lg" data-dir="left" type="button">◀</button>
+        <button class="arcade-btn py-2 text-lg" data-dir="down" type="button">▼</button>
+        <button class="arcade-btn py-2 text-lg" data-dir="right" type="button">▶</button>
+        <button class="arcade-btn col-span-3 py-2 text-xs font-black mt-1" id="btn-fire" type="button">SPERM SCHIESSEN</button>
       </div>
     </div>
 
@@ -534,15 +493,6 @@
       <button id="fullscreen-button" class="arcade-btn px-4 py-2 font-black" type="button">⛶ VOLLBILD</button>
     </div>
 
-    <div id="keyboard-help" class="flex flex-col sm:flex-row justify-center items-center gap-3 mt-4 text-xs font-bold text-[#56375b]">
-      <div class="flex flex-wrap gap-1.5 items-center justify-center">
-        <kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
-        <span class="mx-1">|</span>
-        <kbd>Leertaste</kbd> Puck
-        <span class="mx-1">|</span>
-        <kbd>Enter</kbd> Start
-      </div>
-    </div>
   </main>
 
   <script>
@@ -721,11 +671,7 @@
     ui.startButton.addEventListener('click', () => start());
 
     const palettes = [
-      { floor: '#43c6bd', wall: '#ff9b38', trim: '#ffd34f', dot: '#f52d83', ink: '#24142f', cream: '#fff0bd' },
-      { floor: '#f5c94e', wall: '#8749d8', trim: '#35c6bd', dot: '#f22d83', ink: '#24142f', cream: '#fff4ca' },
-      { floor: '#fa813d', wall: '#25aaa9', trim: '#f6d34e', dot: '#8749d8', ink: '#24142f', cream: '#fff0bd' },
-      { floor: '#a978dc', wall: '#f34a88', trim: '#f6c747', dot: '#32bdb5', ink: '#24142f', cream: '#fff0bd' },
-      { floor: '#f2a53c', wall: '#33bbb6', trim: '#8547cf', dot: '#f42c83', ink: '#24142f', cream: '#fff0bd' }
+      { floor: '#020406', wall: '#06242b', trim: '#00eaff', dot: '#ff35c8', ink: '#087c88', cream: '#d9fbff' }
     ];
 
     const LEVEL_1_MAP = [
@@ -2389,7 +2335,7 @@
       if (ui.picker) ui.picker.hidden = state === 'playing';
 
       if (state === 'title' || state === 'gameover' || state === 'won' || message) {
-        ctx.fillStyle = '#24142fcd';
+        ctx.fillStyle = 'rgba(0,0,0,0.88)';
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.textAlign = 'center';
         ctx.font = '700 22px "Press Start 2P", cursive, sans-serif';
@@ -2397,9 +2343,9 @@
         ctx.lineWidth = 4;
         ctx.strokeStyle = '#24142f';
         ctx.strokeText(titleText, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
-        ctx.fillStyle = '#ffd34f';
+        ctx.fillStyle = '#00eaff';
         ctx.fillText(titleText, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
-        ctx.fillStyle = '#fff0bd';
+        ctx.fillStyle = '#d9fbff';
         ctx.font = '700 12px "Fredoka", sans-serif';
         const subText = (state === 'gameover' || state === 'won')
           ? 'DRÜCKE ENTER / LEERTASTE FÜR NEUSTART'
