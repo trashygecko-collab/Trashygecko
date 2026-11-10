@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Super Pimmelchen — Retro Arcade Edition (20×11)</title>
   <style>
     :root {
@@ -271,6 +271,99 @@
       .touch-device #touch-controls #btn-fire{
         min-height:40px;
         font-size:12px;
+      }
+    }
+
+    /* Mobiles Vollbild: mehr Platz für das eigentliche Spielfeld */
+    @media (pointer:coarse) {
+      .cabinet:fullscreen {
+        padding: max(4px, env(safe-area-inset-top))
+                 max(6px, env(safe-area-inset-right))
+                 max(4px, env(safe-area-inset-bottom))
+                 max(6px, env(safe-area-inset-left));
+      }
+
+      /* Die große Überschrift und die Tastaturhilfe kosten im Vollbild nur Spielfläche. */
+      .touch-device .cabinet:fullscreen > header,
+      .touch-device .cabinet:fullscreen > .mt-4:last-child {
+        display: none !important;
+      }
+
+      .touch-device .cabinet:fullscreen > section {
+        flex: 0 0 auto;
+        gap: 4px;
+        margin-bottom: 5px;
+      }
+
+      .touch-device .cabinet:fullscreen .hud-box {
+        padding: 3px 1px;
+        border-width: 2px;
+        border-radius: 6px;
+        box-shadow: 1px 2px 0 #24142f;
+        transform: none;
+      }
+
+      .touch-device .cabinet:fullscreen .hud-label {
+        font-size: 8px;
+        letter-spacing: 0.04em;
+      }
+
+      .touch-device .cabinet:fullscreen .hud-value {
+        font-size: clamp(13px, 3.5vh, 18px) !important;
+        line-height: 1.05;
+      }
+
+      .touch-device .cabinet:fullscreen .game-area {
+        flex: 1 1 0;
+        min-height: 0;
+        min-width: 0;
+      }
+
+      .touch-device .cabinet:fullscreen .screen-wrapper {
+        flex: 1 1 0;
+        min-height: 0;
+        min-width: 0;
+        height: 100%;
+        border-width: 3px;
+        border-radius: 7px;
+        box-shadow: 2px 3px 0 #f07836;
+      }
+
+      /* Die Touch-Tasten liegen über dem Spielfeld und verkleinern es nicht. */
+      .touch-device .cabinet:fullscreen #touch-controls {
+        position: absolute;
+        z-index: 5;
+        right: max(8px, env(safe-area-inset-right));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        width: 174px;
+        margin: 0;
+        padding: 5px;
+        gap: 4px;
+        background: rgba(36,20,47,.28);
+        border: 1px solid rgba(255,255,255,.4);
+        backdrop-filter: blur(2px);
+      }
+
+      .touch-device .cabinet:fullscreen #touch-controls button {
+        min-height: 40px;
+        padding: 3px;
+        font-size: 17px;
+        background: rgba(248,201,78,.82);
+        box-shadow: 2px 2px 0 rgba(36,20,47,.75);
+      }
+
+      .touch-device .cabinet:fullscreen #touch-controls #btn-fire {
+        min-height: 34px;
+        font-size: 11px;
+      }
+    }
+
+    /* Auf Handys nach Möglichkeit automatisch ins Querformat wechseln.
+       Falls der Browser das nicht erlaubt, kann das Gerät manuell gedreht werden. */
+    @media (orientation:landscape) and (pointer:coarse),
+           (orientation:landscape) and (hover:none) {
+      .touch-device .cabinet:fullscreen .game-area {
+        width: 100%;
       }
     }
 
@@ -2239,13 +2332,27 @@
     window.addEventListener('blur', stopMove);
 
     const fullscreenButton = document.querySelector('#fullscreen-button');
+    const cabinet = document.querySelector('.cabinet');
     if (fullscreenButton) {
       fullscreenButton.addEventListener('click', async () => {
         try {
           if (document.fullscreenElement) {
             await document.exitFullscreen();
-          } else if (document.querySelector('.cabinet').requestFullscreen) {
-            await document.querySelector('.cabinet').requestFullscreen();
+            if (screen.orientation && screen.orientation.unlock) {
+              screen.orientation.unlock();
+            }
+          } else if (cabinet.requestFullscreen) {
+            await cabinet.requestFullscreen();
+
+            // Das Spielfeld ist im Querformat deutlich größer.
+            // Die Sperre wird nur versucht; nicht jeder Browser unterstützt sie.
+            if (isTouch && screen.orientation && screen.orientation.lock) {
+              try {
+                await screen.orientation.lock('landscape');
+              } catch (orientationError) {
+                console.info('Automatisches Querformat wird vom Browser nicht unterstützt.');
+              }
+            }
           } else {
             fullscreenButton.textContent = 'Vollbild nicht verfügbar';
           }
@@ -2255,7 +2362,11 @@
         }
       });
       document.addEventListener('fullscreenchange', () => {
-        fullscreenButton.textContent = document.fullscreenElement ? '⤢ FENSTER' : '⛶ VOLLBILD';
+        const isFullscreen = !!document.fullscreenElement;
+        fullscreenButton.textContent = isFullscreen ? '⤢ FENSTER' : '⛶ VOLLBILD';
+        if (!isFullscreen && isTouch && screen.orientation && screen.orientation.unlock) {
+          screen.orientation.unlock();
+        }
         stopMove();
       });
     }
