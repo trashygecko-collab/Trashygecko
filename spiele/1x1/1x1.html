@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1x1</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse at top, #101b35 0%, #080b16 55%, #03050a 100%);
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 480px;
+    padding: 22px;
+    border: 1px solid #164e75;
+    border-radius: 20px;
+    background: rgba(5, 10, 24, 0.96);
+    box-shadow:
+        0 0 15px #0077ff33,
+        0 0 40px #00c8ff18,
+        inset 0 0 25px #001c3822;
+}
+
+h1 {
+    margin: 0 0 5px;
+    text-align: center;
+    font-size: 43px;
+    letter-spacing: 5px;
+    color: #00f0ff;
+    text-shadow:
+        0 0 8px #00dfff,
+        0 0 20px #008cff,
+        0 0 35px #0066ff;
+}
+
+.subtitle {
+    text-align: center;
+    color: #8298b9;
+    font-size: 12px;
+    letter-spacing: 3px;
+    margin-bottom: 22px;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.stat {
+    flex: 1;
+    text-align: center;
+    padding: 10px 5px;
+    border: 1px solid #17436c;
+    border-radius: 10px;
+    background: #091629;
+    color: #8eb5d9;
+    font-size: 12px;
+}
+
+.stat strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 20px;
+    color: #00edff;
+    text-shadow: 0 0 9px #00bfff;
+}
+
+.progress {
+    height: 7px;
+    background: #14243a;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 22px;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 10%;
+    background: linear-gradient(90deg, #0077ff, #00f0ff);
+    box-shadow: 0 0 12px #00cfff;
+    transition: width 0.3s;
+}
+
+.question-panel {
+    text-align: center;
+    padding: 22px 10px;
+    border: 1px solid #17486c;
+    border-radius: 15px;
+    background: linear-gradient(145deg, #0b1d35, #080e1c);
+    box-shadow: inset 0 0 20px #0077ff12;
+}
+
+.operation {
+    color: #ff42df;
+    font-size: 12px;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px #ff00c8;
+}
+
+.question {
+    font-size: clamp(42px, 11vw, 58px);
+    font-weight: bold;
+    color: #fff;
+    text-shadow:
+        0 0 8px #00dfff,
+        0 0 22px #008cff;
+}
+
+.answer-label {
+    color: #8199b8;
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin-top: 22px;
+    margin-bottom: 8px;
+}
+
+.display {
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #007c9b;
+    border-radius: 10px;
+    background: #020b16;
+    color: #00f0ff;
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    box-shadow: inset 0 0 15px #00aaff22;
+    overflow: hidden;
+}
+
+.display.correct {
+    color: #43ff91;
+    border-color: #24db79;
+    box-shadow: 0 0 15px #00ff6655;
+}
+
+.display.wrong {
+    color: #ff5278;
+    border-color: #ff315d;
+    box-shadow: 0 0 15px #ff174455;
+}
+
+.feedback {
+    min-height: 28px;
+    margin: 12px 0 4px;
+    color: #8da8c8;
+    text-align: center;
+    font-size: 13px;
+}
+
+.feedback.good {
+    color: #43ff91;
+    text-shadow: 0 0 8px #00ff66;
+}
+
+.feedback.bad {
+    color: #ff7190;
+}
+
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 9px;
+    margin-top: 15px;
+}
+
+.key {
+    height: 62px;
+    border: 1px solid #17547b;
+    border-radius: 11px;
+    background: linear-gradient(145deg, #10243d, #081323);
+    color: #e5faff;
+    font-size: 25px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #06101e, 0 0 8px #0077ff22;
+    transition: 0.12s;
+}
+
+.key:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 12px #00cfff;
+}
+
+.key:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.key.action {
+    color: #ff65df;
+    border-color: #823c91;
+    font-size: 17px;
+}
+
+.key.zero {
+    grid-column: span 1;
+}
+
+.submit {
+    width: 100%;
+    height: 58px;
+    margin-top: 13px;
+    border: 1px solid #00eaff;
+    border-radius: 11px;
+    background: linear-gradient(90deg, #0054a8, #007caa);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-shadow: 0 0 8px #fff;
+    box-shadow: 0 0 15px #00aaff55;
+}
+
+.submit:active {
+    transform: scale(0.98);
+    box-shadow: 0 0 22px #00cfff;
+}
+
+.submit:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.end-screen {
+    display: none;
+    text-align: center;
+    padding: 30px 10px 15px;
+}
+
+.end-screen h2 {
+    color: #00f0ff;
+    font-size: 32px;
+    text-shadow: 0 0 15px #008cff;
+}
+
+.final-score {
+    font-size: 65px;
+    font-weight: bold;
+    color: #43ff91;
+    text-shadow: 0 0 20px #00ff80;
+    margin: 20px 0;
+}
+
+.final-text {
+    color: #b4c7df;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.restart {
+    width: 100%;
+    padding: 17px;
+    border: 1px solid #ff42df;
+    border-radius: 11px;
+    background: #23102b;
+    color: #ff72e6;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 15px #ff00c833;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 20px;
+    color: #506783;
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+@media (max-width: 380px) {
+    body {
+        padding: 8px;
+    }
+
+    .game {
+        padding: 15px;
+    }
+
+    .key {
+        height: 55px;
+    }
+
+    .question-panel {
+        padding: 18px 8px;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+}
+
+@media (max-height: 720px) {
+    body {
+        align-items: flex-start;
+    }
+
+    .game {
+        padding: 15px;
+    }
+
+    .subtitle {
+        margin-bottom: 14px;
+    }
+
+    .question-panel {
+        padding: 14px 8px;
+    }
+
+    .answer-label {
+        margin-top: 12px;
+    }
+
+    .key {
+        height: 51px;
+    }
+
+    .footer {
+        margin-top: 12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+    <h1>1x1</h1>
+    <div class="subtitle">DAS NEON-MATHESPIEL</div>
+
+    <div class="stats">
+        <div class="stat">
+            FRAGE
+            <strong id="questionCount">1 / 10</strong>
+        </div>
+
+        <div class="stat">
+            RICHTIG
+            <strong id="score">0</strong>
+        </div>
+    </div>
+
+    <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="question-panel" id="questionPanel">
+
+        <div class="operation" id="operation">MULTIPLIZIEREN</div>
+
+        <div class="question" id="question">7 × 8</div>
+
+        <div class="answer-label">DEINE ANTWORT</div>
+
+        <div class="display" id="display">?</div>
+
+    </div>
+
+    <div class="feedback" id="feedback">
+        Tippe unten deine Antwort ein.
+    </div>
+
+    <div class="keypad" id="keypad">
+
+        <button class="key" onclick="addNumber('7')">7</button>
+        <button class="key" onclick="addNumber('8')">8</button>
+        <button class="key" onclick="addNumber('9')">9</button>
+        <button class="key action" onclick="clearAnswer()">C</button>
+
+        <button class="key" onclick="addNumber('4')">4</button>
+        <button class="key" onclick="addNumber('5')">5</button>
+        <button class="key" onclick="addNumber('6')">6</button>
+        <button class="key action" onclick="deleteNumber()">⌫</button>
+
+        <button class="key" onclick="addNumber('1')">1</button>
+        <button class="key" onclick="addNumber('2')">2</button>
+        <button class="key" onclick="addNumber('3')">3</button>
+        <button class="key" onclick="addNumber('0')">0</button>
+
+    </div>
+
+    <button class="submit" id="submitButton" onclick="checkAnswer()">
+        ANTWORT
+    </button>
+
+    <div class="end-screen" id="endScreen">
+        <h2>RUNDE BEENDET!</h2>
+
+        <div class="final-score" id="finalScore">0 / 10</div>
+
+        <div class="final-text" id="finalText"></div>
+
+        <button class="restart" onclick="startGame()">
+            NOCH EINE RUNDE
+        </button>
+    </div>
+
+    <div class="footer">1x1 · MATHETRAINING · MADE BY THOMAS</div>
+
+</div>
+
+<script>
+let questionNumber = 0;
+let score = 0;
+let correctAnswer = 0;
+let answer = "";
+let answered = false;
+
+const totalQuestions = 10;
+
+function randomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function createQuestion() {
+
+    const operation = randomNumber(1, 4);
+
+    let a, b, symbol, name;
+
+    if (operation === 1) {
+        // PLUS: Ergebnis maximal 1000
+
+        a = randomNumber(1, 999);
+        b = randomNumber(1, 1000 - a);
+
+        correctAnswer = a + b;
+        symbol = "+";
+        name = "ADDIEREN";
+    }
+
+    else if (operation === 2) {
+        // MINUS: Keine negativen Ergebnisse
+
+        a = randomNumber(2, 1000);
+        b = randomNumber(1, a - 1);
+
+        correctAnswer = a - b;
+        symbol = "−";
+        name = "SUBTRAHIEREN";
+    }
+
+    else if (operation === 3) {
+        // MAL: Kleines Einmaleins bis 12
+
+        a = randomNumber(1, 12);
+        b = randomNumber(1, 12);
+
+        correctAnswer = a * b;
+        symbol = "×";
+        name = "MULTIPLIZIEREN";
+    }
+
+    else {
+        // GETEILT: Nur ganze Ergebnisse bis 12
+
+        b = randomNumber(1, 12);
+        const result = randomNumber(1, 12);
+        a = b * result;
+
+        correctAnswer = result;
+        symbol = "÷";
+        name = "DIVIDIEREN";
+    }
+
+    document.getElementById("operation").textContent = name;
+    document.getElementById("question").textContent =
+        a + " " + symbol + " " + b;
+
+    answer = "";
+    answered = false;
+
+    updateDisplay();
+
+    document.getElementById("feedback").textContent =
+        "Tippe unten deine Antwort ein.";
+
+    document.getElementById("feedback").className = "feedback";
+
+    document.getElementById("submitButton").disabled = false;
+
+    document.querySelectorAll(".key").forEach(button => {
+        button.disabled = false;
+    });
+
+    document.getElementById("questionCount").textContent =
+        (questionNumber + 1) + " / " + totalQuestions;
+
+    document.getElementById("progressBar").style.width =
+        ((questionNumber + 1) / totalQuestions * 100) + "%";
+}
+
+function updateDisplay() {
+    const display = document.getElementById("display");
+
+    display.textContent = answer === "" ? "?" : answer;
+}
+
+function addNumber(number) {
+
+    if (answered || answer.length >= 4) return;
+
+    answer += number;
+    updateDisplay();
+}
+
+function clearAnswer() {
+
+    if (answered) return;
+
+    answer = "";
+    updateDisplay();
+}
+
+function deleteNumber() {
+
+    if (answered) return;
+
+    answer = answer.slice(0, -1);
+    updateDisplay();
+}
+
+function checkAnswer() {
+
+    if (answered) return;
+
+    if (answer === "") {
+        document.getElementById("feedback").textContent =
+            "Bitte gib zuerst eine Zahl ein.";
+        return;
+    }
+
+    answered = true;
+
+    const userAnswer = Number(answer);
+    const display = document.getElementById("display");
+    const feedback = document.getElementById("feedback");
+
+    if (userAnswer === correctAnswer) {
+
+        score++;
+
+        display.className = "display correct";
+        feedback.className = "feedback good";
+        feedback.textContent = "✓ RICHTIG! Sehr gut!";
+    }
+
+    else {
+
+        display.className = "display wrong";
+        feedback.className = "feedback bad";
+
+        feedback.textContent =
+            "✗ Leider falsch! Richtig ist: " + correctAnswer;
+    }
+
+    document.getElementById("score").textContent = score;
+
+    document.getElementById("submitButton").disabled = true;
+
+    document.querySelectorAll(".key").forEach(button => {
+        button.disabled = true;
+    });
+
+    setTimeout(() => {
+
+        questionNumber++;
+
+        if (questionNumber >= totalQuestions) {
+            finishGame();
+        } else {
+            display.className = "display";
+            createQuestion();
+        }
+
+    }, 1200);
+}
+
+function finishGame() {
+
+    document.getElementById("questionPanel").style.display = "none";
+    document.getElementById("keypad").style.display = "none";
+    document.getElementById("submitButton").style.display = "none";
+    document.getElementById("feedback").style.display = "none";
+
+    document.getElementById("endScreen").style.display = "block";
+
+    document.getElementById("finalScore").textContent =
+        score + " / " + totalQuestions;
+
+    let message;
+
+    if (score === 10) {
+        message = "Fantastisch! Zehn von zehn richtig. Besser geht es nicht!";
+    }
+    else if (score >= 8) {
+        message = "Super gemacht! Du hast die meisten Aufgaben richtig gelöst.";
+    }
+    else if (score >= 6) {
+        message = "Gut gemacht! Ein bisschen Übung und du wirst noch besser.";
+    }
+    else if (score >= 4) {
+        message = "Da geht noch was! Versuch es gleich noch einmal.";
+    }
+    else {
+        message = "Übung macht den Meister. Gib nicht auf!";
+    }
+
+    document.getElementById("finalText").textContent = message;
+}
+
+function startGame() {
+
+    questionNumber = 0;
+    score = 0;
+    answer = "";
+    answered = false;
+
+    document.getElementById("score").textContent = "0";
+
+    document.getElementById("questionPanel").style.display = "block";
+    document.getElementById("keypad").style.display = "grid";
+    document.getElementById("submitButton").style.display = "block";
+    document.getElementById("feedback").style.display = "block";
+    document.getElementById("endScreen").style.display = "none";
+
+    document.getElementById("progressBar").style.width = "10%";
+
+    createQuestion();
+}
+
+// Auch die PC-Tastatur funktioniert.
+document.addEventListener("keydown", function(event) {
+
+    if (event.key >= "0" && event.key <= "9") {
+        addNumber(event.key);
+    }
+
+    else if (event.key === "Backspace") {
+        deleteNumber();
+    }
+
+    else if (event.key === "Escape") {
+        clearAnswer();
+    }
+
+    else if (event.key === "Enter") {
+        checkAnswer();
+    }
+});
+
+startGame();
+</script>
+
+</body>
+</html>
