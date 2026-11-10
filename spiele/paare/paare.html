@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paare finden</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at top, #101b35, #080b16 60%, #03050a);
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.game {
+    width: 100%;
+    max-width: 510px;
+    padding: 20px;
+    background: rgba(5, 10, 24, .97);
+    border: 1px solid #164e75;
+    border-radius: 20px;
+    box-shadow: 0 0 18px #0077ff33, 0 0 40px #00c8ff18;
+}
+
+h1 {
+    margin: 0;
+    text-align: center;
+    font-size: clamp(29px, 8vw, 43px);
+    letter-spacing: 3px;
+    color: #00f0ff;
+    text-shadow: 0 0 8px #00dfff, 0 0 22px #008cff;
+}
+
+.subtitle {
+    margin: 5px 0 22px;
+    text-align: center;
+    color: #8298b9;
+    font-size: 11px;
+    letter-spacing: 3px;
+}
+
+h2 {
+    margin: 12px 0 18px;
+    text-align: center;
+    color: #00eaff;
+    font-size: 19px;
+    text-shadow: 0 0 10px #008cff;
+}
+
+.intro {
+    text-align: center;
+    font-size: 13px;
+    color: #8da8c8;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+/* MENÜS */
+
+.menu-buttons {
+    display: grid;
+    gap: 13px;
+}
+
+.menu-button,
+.level-button {
+    width: 100%;
+    padding: 20px 15px;
+    border: 1px solid #17608a;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #10243d, #081323);
+    color: white;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 0 10px #0077ff22;
+}
+
+.menu-button:active,
+.level-button:active {
+    transform: scale(.98);
+    box-shadow: 0 0 18px #00dfff77;
+}
+
+.menu-title {
+    display: block;
+    margin-bottom: 8px;
+    color: #00edff;
+    font-size: 21px;
+    font-weight: bold;
+}
+
+.menu-button:nth-child(2) .menu-title {
+    color: #ff55dc;
+}
+
+.menu-description {
+    display: block;
+    color: #a0b5d0;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+#levelScreen,
+#gameScreen,
+#endScreen {
+    display: none;
+}
+
+.levels {
+    display: grid;
+    gap: 12px;
+}
+
+.level-button {
+    padding: 17px 12px;
+}
+
+.level-title {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 19px;
+    font-weight: bold;
+    color: #00edff;
+}
+
+.level-button:nth-child(2) .level-title {
+    color: #ff55dc;
+}
+
+.level-button:nth-child(3) .level-title {
+    color: #ffc857;
+}
+
+.level-description {
+    display: block;
+    color: #a0b5d0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.back {
+    width: 100%;
+    margin-top: 14px;
+    padding: 13px;
+    border: 1px solid #465b76;
+    border-radius: 10px;
+    background: #101c30;
+    color: #a9c3df;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* SPIELANZEIGE */
+
+.stats {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.stat {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    border: 1px solid #17436c;
+    border-radius: 10px;
+    background: #091629;
+    color: #8eb5d9;
+    font-size: 10px;
+}
+
+.stat strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 19px;
+    color: #00edff;
+    text-shadow: 0 0 9px #00bfff;
+}
+
+.progress {
+    height: 7px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    background: #14243a;
+    border-radius: 10px;
+}
+
+.progress-bar {
+    width: 10%;
+    height: 100%;
+    background: linear-gradient(90deg, #0077ff, #00f0ff);
+    box-shadow: 0 0 12px #00cfff;
+    transition: width .3s;
+}
+
+.game-info {
+    margin-bottom: 12px;
+    text-align: center;
+    color: #91aaca;
+    font-size: 12px;
+}
+
+/* SPIELFELD */
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.tile {
+    min-width: 0;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #17608a;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #10243d, #081323);
+    color: #00edff;
+    font-size: clamp(17px, 5.5vw, 25px);
+    font-weight: bold;
+    text-shadow: 0 0 8px #00bfff;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #06101e, 0 0 9px #0077ff22;
+    transition: background .15s, border .15s, box-shadow .15s;
+}
+
+.tile:active:not(:disabled) {
+    transform: scale(.95);
+}
+
+.tile.selected {
+    border: 2px solid #00f0ff;
+    background: #07334c;
+    color: white;
+    box-shadow: 0 0 12px #00dfff, inset 0 0 12px #00dfff33;
+}
+
+.tile.found {
+    border: 2px solid #31ff90;
+    background: #073522;
+    color: #5affaa;
+    text-shadow: 0 0 10px #00ff80;
+    box-shadow: 0 0 12px #00ff7755;
+    cursor: default;
+}
+
+.tile.wrong {
+    border: 2px solid #ff386d;
+    background: #451022;
+    color: #ff7797;
+    text-shadow: 0 0 10px #ff1744;
+    box-shadow: 0 0 13px #ff174477;
+}
+
+.tile:disabled {
+    opacity: 1;
+}
+
+/* RÜCKMELDUNG */
+
+.feedback {
+    min-height: 42px;
+    margin: 12px 0 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: #8da8c8;
+    font-size: 13px;
+}
+
+.feedback.good {
+    color: #43ff91;
+    text-shadow: 0 0 8px #00ff66;
+}
+
+.feedback.bad {
+    color: #ff7190;
+}
+
+.feedback.complete {
+    color: #00edff;
+    text-shadow: 0 0 9px #008cff;
+}
+
+/* ENDE */
+
+.end-screen {
+    padding: 15px 5px;
+    text-align: center;
+}
+
+.end-screen h2 {
+    color: #00f0ff;
+    font-size: 26px;
+}
+
+.final-score {
+    margin: 20px 0;
+    color: #43ff91;
+    font-size: 57px;
+    font-weight: bold;
+    text-shadow: 0 0 20px #00ff80;
+}
+
+.final-text {
+    margin-bottom: 24px;
+    color: #b4c7df;
+    font-size: 15px;
+    line-height: 1.7;
+    white-space: pre-line;
+}
+
+.restart,
+.change-level {
+    width: 100%;
+    padding: 16px;
+    border-radius: 11px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.restart {
+    border: 1px solid #00eaff;
+    background: #09243a;
+    color: #00edff;
+    box-shadow: 0 0 15px #00aaff33;
+}
+
+.change-level {
+    margin-top: 10px;
+    border: 1px solid #823c91;
+    background: #23102b;
+    color: #ff72e6;
+}
+
+.footer {
+    margin-top: 18px;
+    color: #506783;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+@media (max-width: 380px) {
+    body {
+        padding: 7px;
+    }
+
+    .game {
+        padding: 13px;
+    }
+
+    .board {
+        gap: 6px;
+    }
+
+    .tile {
+        border-radius: 7px;
+    }
+}
+
+@media (max-height: 650px) {
+    body {
+        align-items: flex-start;
+    }
+
+    .game {
+        padding: 14px;
+    }
+
+    .subtitle {
+        margin-bottom: 12px;
+    }
+
+    .board {
+        gap: 5px;
+    }
+
+    .tile {
+        max-height: 65px;
+    }
+
+    .footer {
+        margin-top: 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+    <h1>PAARE FINDEN</h1>
+    <div class="subtitle">DAS NEON-SUCHSPIEL</div>
+
+    <!-- AUSWAHL -->
+
+    <div id="startScreen">
+
+        <h2>WAS MÖCHTEST DU SUCHEN?</h2>
+
+        <div class="intro">
+            Finde die gleichen Zahlen oder Buchstaben
+            auf dem Spielfeld.
+        </div>
+
+        <div class="menu-buttons">
+
+            <button class="menu-button" onclick="selectMode('numbers')">
+                <span class="menu-title">123 · ZAHLEN</span>
+                <span class="menu-description">
+                    25 Felder mit zufälligen Zahlen
+                    zwischen 1 und 99.
+                </span>
+            </button>
+
+            <button class="menu-button" onclick="selectMode('letters')">
+                <span class="menu-title">ABC · BUCHSTABEN</span>
+                <span class="menu-description">
+                    25 Felder mit zufälligen Buchstaben
+                    von A bis Z.
+                </span>
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- SCHWIERIGKEIT -->
+
+    <div id="levelScreen">
+
+        <h2>SCHWIERIGKEIT WÄHLEN</h2>
+
+        <div class="intro" id="levelIntro"></div>
+
+        <div class="levels">
+
+            <button class="level-button" onclick="startGame(1)">
+                <span class="level-title">STUFE 1 · LEICHT</span>
+                <span class="level-description">
+                    1 doppeltes Paar finden
+                </span>
+            </button>
+
+            <button class="level-button" onclick="startGame(2)">
+                <span class="level-title">STUFE 2 · NORMAL</span>
+                <span class="level-description">
+                    2 verschiedene Paare finden
+                </span>
+            </button>
+
+            <button class="level-button" onclick="startGame(3)">
+                <span class="level-title">STUFE 3 · SCHWER</span>
+                <span class="level-description">
+                    3 verschiedene Paare finden
+                </span>
+            </button>
+
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← ZURÜCK
+        </button>
+
+    </div>
+
+    <!-- SPIEL -->
+
+    <div id="gameScreen">
+
+        <div class="stats">
+
+            <div class="stat">
+                LEVEL
+                <strong id="levelCount">1 / 10</strong>
+            </div>
+
+            <div class="stat">
+                GEFUNDEN
+                <strong id="foundCount">0 / 1</strong>
+            </div>
+
+            <div class="stat">
+                FEHLER
+                <strong id="mistakeCount">0</strong>
+            </div>
+
+        </div>
+
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="game-info" id="gameInfo">
+            Finde das gleiche Zeichen zweimal!
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="feedback" id="feedback">
+            Tippe zwei gleiche Felder an.
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← SPIEL ABBRECHEN
+        </button>
+
+    </div>
+
+    <!-- ENDE -->
+
+    <div id="endScreen" class="end-screen">
+
+        <h2>ALLE LEVEL GESCHAFFT!</h2>
+
+        <div class="final-score" id="finalScore">10 / 10</div>
+
+        <div class="final-text" id="finalText"></div>
+
+        <button class="restart" onclick="startGame(currentDifficulty)">
+            NOCH EINE RUNDE
+        </button>
+
+        <button class="change-level" onclick="showLevelScreen()">
+            SCHWIERIGKEIT ÄNDERN
+        </button>
+
+        <button class="back" onclick="showStartScreen()">
+            ZURÜCK ZUR AUSWAHL
+        </button>
+
+    </div>
+
+    <div class="footer">
+        PAARE FINDEN · MADE BY THOMAS
+    </div>
+
+</div>
+
+<script>
+
+let currentMode = "numbers";
+let currentDifficulty = 1;
+let currentLevel = 1;
+
+let pairCount = 1;
+let foundPairs = 0;
+let mistakes = 0;
+
+let boardValues = [];
+let selected = [];
+let matched = [];
+
+let locked = false;
+let playing = false;
+let gameTimer = null;
+
+const TOTAL_LEVELS = 10;
+
+// ZUFALL
+
+function randomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffle(array) {
+    const result = [...array];
+
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = randomNumber(0, i);
+
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
+}
+
+// MENÜ
+
+function selectMode(mode) {
+
+    currentMode = mode;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "block";
+
+    document.getElementById("levelIntro").textContent =
+        mode === "numbers"
+        ? "25 Felder mit zufälligen Zahlen von 1 bis 99. Finde die doppelten Zahlen."
+        : "25 Felder mit zufälligen Buchstaben von A bis Z. Finde die doppelten Buchstaben.";
+}
+
+function showStartScreen() {
+
+    playing = false;
+    locked = true;
+
+    if (gameTimer) {
+        clearTimeout(gameTimer);
+        gameTimer = null;
+    }
+
+    document.getElementById("startScreen").style.display = "block";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+}
+
+function showLevelScreen() {
+
+    if (gameTimer) {
+        clearTimeout(gameTimer);
+        gameTimer = null;
+    }
+
+    playing = false;
+    locked = true;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "block";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+}
+
+// SPIELSTART
+
+function startGame(difficulty) {
+
+    currentDifficulty = difficulty;
+    currentLevel = 1;
+    mistakes = 0;
+
+    pairCount = difficulty;
+
+    playing = true;
+    locked = false;
+
+    if (gameTimer) {
+        clearTimeout(gameTimer);
+        gameTimer = null;
+    }
+
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    createLevel();
+}
+
+// NEUES LEVEL
+
+function createLevel() {
+
+    foundPairs = 0;
+    selected = [];
+    matched = [];
+    locked = false;
+
+    createBoard();
+    renderBoard();
+    updateStats();
+
+    const info = document.getElementById("gameInfo");
+
+    const type = currentMode === "numbers" ? "Zahlen" : "Buchstaben";
+
+    info.textContent =
+        "Finde " + pairCount + " " +
+        (pairCount === 1 ? "Paar" : "Paare") +
+        " aus den " + type + "!";
+
+    const feedback = document.getElementById("feedback");
+
+    feedback.textContent = "Tippe zwei gleiche Felder an.";
+    feedback.className = "feedback";
+}
+
+// FELDER GENERIEREN
+
+function createBoard() {
+
+    let uniqueValues = [];
+
+    const amount = 25 - pairCount;
+
+    if (currentMode === "numbers") {
+
+        while (uniqueValues.length < amount) {
+
+            const number = randomNumber(1, 99);
+
+            if (!uniqueValues.includes(number)) {
+                uniqueValues.push(number);
+            }
+        }
+
+    } else {
+
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+        uniqueValues = shuffle(alphabet).slice(0, amount);
+    }
+
+    // Für jedes gesuchte Paar wird ein Zeichen
+    // ein zweites Mal hinzugefügt.
+
+    const duplicates = shuffle(uniqueValues).slice(0, pairCount);
+
+    boardValues = shuffle([
+        ...uniqueValues,
+        ...duplicates
+    ]);
+
+    // Kontrolle: genau 25 Felder
+
+    matched = new Array(25).fill(false);
+}
+
+// SPIELFELD ZEIGEN
+
+function renderBoard(wrongTiles = []) {
+
+    const board = document.getElementById("board");
+
+    board.innerHTML = "";
+
+    boardValues.forEach((value, index) => {
+
+        const button = document.createElement("button");
+
+        button.className = "tile";
+        button.textContent = value;
+
+        if (selected.includes(index)) {
+            button.classList.add("selected");
+        }
+
+        if (matched[index]) {
+            button.classList.add("found");
+        }
+
+        if (wrongTiles.includes(index)) {
+            button.classList.add("wrong");
+        }
+
+        button.disabled =
+            matched[index] || locked || wrongTiles.includes(index);
+
+        button.setAttribute(
+            "aria-label",
+            "Feld " + (index + 1) + ": " + value
+        );
+
+        button.onclick = () => chooseTile(index);
+
+        board.appendChild(button);
+    });
+}
+
+// FELD AUSWÄHLEN
+
+function chooseTile(index) {
+
+    if (!playing || locked || matched[index]) return;
+
+    if (selected.includes(index)) return;
+
+    selected.push(index);
+
+    renderBoard();
+
+    if (selected.length === 2) {
+        checkPair();
+    }
+}
+
+// PAAR PRÜFEN
+
+function checkPair() {
+
+    const first = selected[0];
+    const second = selected[1];
+
+    const feedback = document.getElementById("feedback");
+
+    if (boardValues[first] === boardValues[second]) {
+
+        // RICHTIG
+
+        matched[first] = true;
+        matched[second] = true;
+
+        foundPairs++;
+
+        selected = [];
+
+        feedback.textContent = "✓ RICHTIG! Paar gefunden!";
+        feedback.className = "feedback good";
+
+        renderBoard();
+        updateStats();
+
+        if (foundPairs >= pairCount) {
+            levelComplete();
+        }
+
+    } else {
+
+        // FALSCH
+
+        mistakes++;
+
+        locked = true;
+
+        feedback.textContent = "✗ Das sind zwei verschiedene Zeichen!";
+        feedback.className = "feedback bad";
+
+        renderBoard([first, second]);
+        updateStats();
+
+        gameTimer = setTimeout(() => {
+
+            selected = [];
+            locked = false;
+            gameTimer = null;
+
+            renderBoard();
+
+            feedback.textContent = "Versuche es noch einmal.";
+            feedback.className = "feedback";
+
+        }, 650);
+    }
+}
+
+// LEVEL GESCHAFFT
+
+function levelComplete() {
+
+    playing = false;
+    locked = true;
+
+    const feedback = document.getElementById("feedback");
+
+    feedback.textContent = "★ LEVEL " + currentLevel + " GESCHAFFT!";
+    feedback.className = "feedback complete";
+
+    if (currentLevel < TOTAL_LEVELS) {
+
+        gameTimer = setTimeout(() => {
+
+            currentLevel++;
+
+            playing = true;
+
+            createLevel();
+
+            gameTimer = null;
+
+        }, 1100);
+
+    } else {
+
+        gameTimer = setTimeout(() => {
+
+            finishGame();
+
+            gameTimer = null;
+
+        }, 1100);
+    }
+}
+
+// ANZEIGEN AKTUALISIEREN
+
+function updateStats() {
+
+    document.getElementById("levelCount").textContent =
+        currentLevel + " / " + TOTAL_LEVELS;
+
+    document.getElementById("foundCount").textContent =
+        foundPairs + " / " + pairCount;
+
+    document.getElementById("mistakeCount").textContent =
+        mistakes;
+
+    document.getElementById("progressBar").style.width =
+        (currentLevel / TOTAL_LEVELS * 100) + "%";
+}
+
+// SPIELENDE
+
+function finishGame() {
+
+    playing = false;
+    locked = true;
+
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "block";
+
+    document.getElementById("finalScore").textContent =
+        TOTAL_LEVELS + " / " + TOTAL_LEVELS;
+
+    let message;
+
+    if (mistakes === 0) {
+
+        message = "Unglaublich! Alle Paare ohne einen einzigen Fehler gefunden!";
+
+    } else if (mistakes <= 5) {
+
+        message = "Sehr gut! Du hast eine richtig starke Runde gespielt.";
+
+    } else if (mistakes <= 12) {
+
+        message = "Gut gemacht! Deine Augen werden immer besser.";
+
+    } else {
+
+        message = "Geschafft! Mit etwas Übung findest du die Paare noch schneller.";
+    }
+
+    message += "\n\n";
+
+    message += currentMode === "numbers"
+        ? "Spielart: Zahlen"
+        : "Spielart: Buchstaben";
+
+    message += "\nSchwierigkeit: " +
+        ["", "Leicht", "Normal", "Schwer"][currentDifficulty];
+
+    message += "\nGefundene Paare: " +
+        (TOTAL_LEVELS * pairCount);
+
+    message += "\nFehlversuche: " + mistakes;
+
+    document.getElementById("finalText").textContent = message;
+}
+
+</script>
+
+</body>
+</html>
