@@ -11,45 +11,40 @@
   --pink: #ff35c8;
   --text: #e8faff;
   --muted: #91b5bf;
-  --black: #000;
 }
 
 [hidden] { display: none !important; }
 
-html {
+* { box-sizing: border-box; }
+
+html, body {
   min-height: 100%;
+  margin: 0;
+  padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  background: #000;
+  color: var(--text);
+  font-family: Arial, sans-serif;
   overscroll-behavior-y: auto;
 }
 
 body {
-  margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 10px;
-  box-sizing: border-box;
-  color: var(--text);
-  background: var(--black);
-  font-family: Arial, sans-serif;
+  justify-content: center;
+  align-items: flex-start;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .cabinet {
   width: min(100%, 960px);
-  flex: 0 0 auto;
   margin: auto;
   padding: 12px;
   background: #000;
   border: 0;
-  border-radius: 0;
   box-shadow: none;
   transform: none;
   touch-action: manipulation;
@@ -58,9 +53,8 @@ body {
 .cabinet > header {
   display: flex;
   justify-content: center;
-  align-items: center;
-  margin-bottom: 16px;
   text-align: center;
+  margin-bottom: 16px;
 }
 
 .brand-title {
@@ -76,7 +70,7 @@ body {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
 }
 
 .hud-box {
@@ -86,8 +80,6 @@ body {
   background: #050505;
   border: 1px solid var(--cyan);
   border-radius: 5px;
-  box-shadow: none;
-  transform: none;
 }
 
 .hud-label {
@@ -102,7 +94,6 @@ body {
   font-family: monospace;
   font-size: clamp(14px, 2.8vw, 20px);
   font-weight: bold;
-  text-shadow: none;
 }
 
 .game-area {
@@ -110,6 +101,7 @@ body {
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
+  min-width: 0;
 }
 
 .screen-wrapper {
@@ -120,14 +112,14 @@ body {
   overflow: hidden;
   background: #000;
   border: 1px solid #008c9b;
-  border-radius: 3px;
-  box-shadow: none;
+  border-radius: 2px;
 }
 
 canvas {
   display: block;
   width: 100%;
   height: auto;
+  max-width: 100%;
   outline: none;
   touch-action: none;
 }
@@ -143,7 +135,6 @@ canvas {
   padding: 0;
   background: transparent;
   border: 0;
-  border-radius: 0;
   color: var(--cyan);
 }
 
@@ -176,19 +167,38 @@ canvas {
 
 .arcade-btn:active {
   transform: translateY(1px);
-  box-shadow: none;
 }
 
+/* Vollbild-Verlassen-Taste */
+#exit-fullscreen-button {
+  display: none;
+}
+
+.cabinet:fullscreen > #exit-fullscreen-button {
+  display: block;
+  align-self: flex-end;
+  margin: 3px 8px 6px;
+  padding: 7px 10px;
+  color: var(--pink);
+  background: #050505;
+  border: 1px solid var(--pink);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Touch-Steuerung */
 #touch-controls { display: none; }
 
 .touch-device #touch-controls {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  width: min(100%, 300px);
-  margin: 14px auto 0;
+  align-items: center;
+  width: 100%;
+  margin: 12px auto 0;
   padding: 0;
-  gap: 16px;
+  gap: 8px;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -196,113 +206,156 @@ canvas {
 
 #touch-controls button {
   touch-action: none;
-  -webkit-tap-highlight-color: transparent;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .touch-device #btn-fire {
-  width: 120px;
-  min-height: 52px;
-  padding: 6px 10px;
+  flex: 0 0 108px;
+  width: 108px;
+  min-height: 48px;
+  padding: 5px;
   color: var(--pink);
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1.15;
   background: #050505;
   border: 1px solid var(--pink);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
   box-shadow: none;
 }
 
+/* Echtes Richtungskreuz */
 .touch-device #touch-dpad {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  width: 150px;
-}
-
-.touch-device #touch-dpad > :nth-child(1),
-.touch-device #touch-dpad > :nth-child(3) { display: none; }
-
-.touch-device #touch-dpad > :nth-child(2) { grid-column: 2; grid-row: 1; }
-.touch-device #touch-dpad > :nth-child(4) { grid-column: 1; grid-row: 2; }
-.touch-device #touch-dpad > :nth-child(5) { grid-column: 2; grid-row: 2; }
-.touch-device #touch-dpad > :nth-child(6) { grid-column: 3; grid-row: 2; }
-
-.touch-device #touch-dpad button {
-  min-height: 48px;
-  padding: 0;
-  color: var(--cyan);
-  font-size: 18px;
-  background: #050505;
-  border: 1px solid var(--cyan);
+  grid-template-areas:
+    ". up ."
+    "left . right"
+    ". down .";
+  grid-template-columns: repeat(3, 42px);
+  grid-template-rows: repeat(3, 42px);
+  gap: 4px;
+  width: max-content;
+  margin-left: auto;
+  background: transparent;
+  border: 0;
   box-shadow: none;
 }
 
-/* Querformat: Steuerung liegt über dem Spielfeld */
+.touch-device #touch-dpad [data-dir="up"] { grid-area: up; }
+.touch-device #touch-dpad [data-dir="left"] { grid-area: left; }
+.touch-device #touch-dpad [data-dir="right"] { grid-area: right; }
+.touch-device #touch-dpad [data-dir="down"] { grid-area: down; }
+
+.touch-device #touch-dpad button {
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  color: var(--cyan);
+  background: #050505;
+  border: 1px solid var(--cyan);
+  border-radius: 5px;
+  box-shadow: none;
+  font-size: 18px;
+}
+
+/*
+  QUERFORMAT:
+  Feuer links außerhalb des Spielfelds,
+  Spielfeld in der Mitte,
+  Richtungskreuz rechts außerhalb.
+*/
 @media (orientation: landscape) and (pointer: coarse),
        (orientation: landscape) and (hover: none) {
-  .touch-device #touch-controls {
-    position: absolute;
-    z-index: 5;
-    left: 0;
-    right: 0;
-    bottom: 0;
+
+  .touch-device .game-area {
+    display: grid;
+    grid-template-columns:
+      clamp(76px, 12vw, 112px)
+      minmax(0, 1fr)
+      clamp(132px, 18vw, 166px);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    column-gap: 4px;
     width: 100%;
     max-width: none;
     margin: 0;
-    padding: 0 max(12px, env(safe-area-inset-right))
-             max(12px, env(safe-area-inset-bottom))
-             max(12px, env(safe-area-inset-left));
-    gap: 16px;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    pointer-events: none;
-    box-sizing: border-box;
+    padding: 0;
   }
 
-  .touch-device #touch-controls #btn-fire,
-  .touch-device #touch-controls #touch-dpad {
-    pointer-events: auto;
+  .touch-device .game-area > .screen-wrapper {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    max-width: none;
+    max-height: 100%;
+    height: auto;
+    aspect-ratio: 20 / 11;
+    margin: 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .touch-device #btn-fire {
-    width: 130px;
-    min-height: 46px;
+  .touch-device .game-area > #touch-controls {
+    display: contents !important;
   }
 
-  .touch-device #touch-dpad { width: 162px; }
+  .touch-device .game-area #btn-fire {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: center;
+    align-self: center;
+    width: 100%;
+    max-width: 106px;
+    min-height: 54px;
+    margin: 0;
+  }
 
-  .touch-device #touch-dpad button {
-    min-height: 44px;
+  .touch-device .game-area #touch-dpad {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: center;
+    align-self: center;
+    margin: 0;
+  }
+
+  .touch-device .game-area canvas {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
   }
 }
 
-/* Vollbild */
+/* Vollbild-Grundlayout */
 .cabinet:fullscreen {
-  box-sizing: border-box;
   width: 100vw;
   height: 100vh;
   height: 100dvh;
   max-width: none;
   margin: 0;
-  padding: 4px 6px;
-  background: #000;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  transform: none;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   overflow: hidden;
+  background: #000;
+  border: 0;
+  box-shadow: none;
+  transform: none;
 }
 
-.cabinet:fullscreen > header { display: none !important; }
+.cabinet:fullscreen > header {
+  display: none !important;
+}
 
-.cabinet:fullscreen > section,
-.cabinet:fullscreen > #level-picker {
-  flex-shrink: 0;
+.cabinet:fullscreen > section {
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 4px 8px;
 }
 
 .cabinet:fullscreen .game-area {
@@ -311,21 +364,15 @@ canvas {
   min-width: 0;
   width: 100%;
   max-width: none;
-  display: flex;
-  flex-direction: column;
+  margin: 0;
 }
 
 .cabinet:fullscreen .screen-wrapper {
-  flex: 1 1 0;
-  min-height: 0;
-  min-width: 0;
   width: 100%;
-  height: 100%;
-  max-width: none;
+  max-width: 800px;
+  max-height: 100%;
+  height: auto;
   margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .cabinet:fullscreen canvas {
@@ -335,227 +382,31 @@ canvas {
   max-height: 100%;
   aspect-ratio: 20 / 11;
   object-fit: contain;
-  flex: 0 1 auto;
 }
 
-.cabinet:fullscreen #level-picker {
-  margin-top: 6px;
-}
-
+/* Handy-Vollbild */
 @media (pointer: coarse) {
-  .cabinet:fullscreen {
-    padding: max(4px, env(safe-area-inset-top))
-             max(6px, env(safe-area-inset-right))
-             max(4px, env(safe-area-inset-bottom))
-             max(6px, env(safe-area-inset-left));
-  }
-
-  .touch-device .cabinet:fullscreen > section {
-    flex: 0 0 auto;
+  .cabinet:fullscreen > section {
     gap: 3px;
     margin: 0 0 4px;
+    padding: 3px 5px;
   }
 
-  .touch-device .cabinet:fullscreen .hud-box {
+  .cabinet:fullscreen .hud-box {
     padding: 3px 1px;
-    border-width: 1px;
     border-radius: 4px;
-    box-shadow: none;
-    transform: none;
   }
 
-  .touch-device .cabinet:fullscreen .hud-label {
+  .cabinet:fullscreen .hud-label {
     font-size: 8px;
     letter-spacing: .04em;
   }
 
-  .touch-device .cabinet:fullscreen .hud-value {
+  .cabinet:fullscreen .hud-value {
     font-size: clamp(13px, 3.5vh, 18px);
     line-height: 1.05;
   }
-
-  .touch-device .cabinet:fullscreen .game-area {
-    flex: 1 1 0;
-    min-height: 0;
-    min-width: 0;
-  }
-
-  .touch-device .cabinet:fullscreen .screen-wrapper {
-    flex: 1 1 0;
-    min-height: 0;
-    min-width: 0;
-    height: 100%;
-  }
-
-  .touch-device .cabinet:fullscreen #touch-controls {
-    position: absolute;
-    z-index: 5;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 0 8px 8px;
-    gap: 12px;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    pointer-events: none;
-    box-sizing: border-box;
-  }
-
-  .touch-device .cabinet:fullscreen #touch-controls #btn-fire,
-  .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
-    pointer-events: auto;
-  }
-
-  .touch-device .cabinet:fullscreen #touch-controls #btn-fire {
-    width: 130px;
-    min-height: 46px;
-    padding: 5px 8px;
-    font-size: 11px;
-  }
-
-  .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
-    width: 168px;
-    gap: 6px;
-  }
-
-  .touch-device .cabinet:fullscreen #touch-controls #touch-dpad button {
-    min-height: 42px;
-    font-size: 17px;
-  }
 }
-
-@media (max-height: 650px) {
-  .cabinet:fullscreen { padding: 4px 8px; }
-  .cabinet:fullscreen > section { margin-bottom: 4px; }
-  .cabinet:fullscreen #level-picker { margin-top: 5px; }
-}
-
-/* KORREKTUR: RICHTIGES TOUCH-KREUZ UND VOLL BILDTASTE */
-#exit-fullscreen-button {
-  display: none;
-}
-
-.cabinet:fullscreen #exit-fullscreen-button {
-  display: block;
-  position: absolute;
-  z-index: 20;
-  top: 7px;
-  right: 7px;
-  padding: 7px 10px;
-  color: #00eaff;
-  background: rgba(0,0,0,.92);
-  border: 1px solid #00eaff;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-html.touch-device #touch-controls {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  width: 100% !important;
-  max-width: none !important;
-  margin: 12px auto 0 !important;
-  padding: 0 4px !important;
-  gap: 8px !important;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  box-sizing: border-box !important;
-}
-
-html.touch-device #touch-controls #btn-fire {
-  flex: 0 0 110px !important;
-  width: 110px !important;
-  min-height: 46px !important;
-  margin: 0 auto 0 0 !important;
-  color: #ff35c8 !important;
-  background: #050505 !important;
-  border: 1px solid #ff35c8 !important;
-  box-shadow: none !important;
-}
-
-html.touch-device #touch-dpad {
-  flex: 0 0 auto !important;
-  display: grid !important;
-  grid-template-areas:
-    ". up ."
-    "left . right"
-    ". down ." !important;
-  grid-template-columns: repeat(3, 42px) !important;
-  grid-template-rows: repeat(3, 42px) !important;
-  gap: 4px !important;
-  width: auto !important;
-  margin: 0 0 0 auto !important;
-}
-
-html.touch-device #touch-dpad > button[data-dir="up"] {
-  display: block !important;
-  grid-area: up !important;
-}
-
-html.touch-device #touch-dpad > button[data-dir="left"] {
-  display: block !important;
-  grid-area: left !important;
-}
-
-html.touch-device #touch-dpad > button[data-dir="right"] {
-  display: block !important;
-  grid-area: right !important;
-}
-
-html.touch-device #touch-dpad > button[data-dir="down"] {
-  display: block !important;
-  grid-area: down !important;
-}
-
-html.touch-device #touch-dpad button {
-  width: 42px !important;
-  min-width: 42px !important;
-  min-height: 42px !important;
-  padding: 0 !important;
-  color: #00eaff !important;
-  background: #050505 !important;
-  border: 1px solid #00eaff !important;
-  border-radius: 5px !important;
-  box-shadow: none !important;
-  font-size: 18px !important;
-}
-
-/* Querformat und Vollbild: Feuer links, Richtungskreuz rechts */
-@media (orientation: landscape) and (pointer: coarse),
-       (orientation: landscape) and (hover: none) {
-  html.touch-device .cabinet:fullscreen .game-area {
-    position: relative;
-  }
-
-  html.touch-device .cabinet:fullscreen #touch-controls {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 6px !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 10px 8px !important;
-    pointer-events: none !important;
-  }
-
-  html.touch-device .cabinet:fullscreen #btn-fire,
-  html.touch-device .cabinet:fullscreen #touch-dpad {
-    pointer-events: auto !important;
-  }
-}
-
-html.touch-device .cabinet:fullscreen #touch-controls {
-  display: flex !important;
-}
-
 </style>
 </head>
 <body>
@@ -566,6 +417,7 @@ html.touch-device .cabinet:fullscreen #touch-controls {
         <h1 class="brand-title text-2xl sm:text-3xl tracking-wider">SUPER PIMMELCHEN</h1>
       </div>
     </header>
+    <button id="exit-fullscreen-button" type="button">✕ VOLLBILD VERLASSEN</button>
 
     <section class="grid gap-2 sm:gap-3 mb-4" style="grid-template-columns:repeat(5,minmax(0,1fr))">
       <div class="hud-box p-2 text-center">
@@ -595,15 +447,15 @@ html.touch-device .cabinet:fullscreen #touch-controls {
         <canvas id="game" width="560" height="308" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
       </div>
 
-      <div id="touch-controls" class="grid-cols-3 gap-2 w-56 mx-auto">
-        <div></div>
-        <button class="arcade-btn py-2 text-lg" data-dir="up" type="button">▲</button>
-        <div></div>
-        <button class="arcade-btn py-2 text-lg" data-dir="left" type="button">◀</button>
-        <button class="arcade-btn py-2 text-lg" data-dir="down" type="button">▼</button>
-        <button class="arcade-btn py-2 text-lg" data-dir="right" type="button">▶</button>
-        <button class="arcade-btn col-span-3 py-2 text-xs font-black mt-1" id="btn-fire" type="button">SPERM SCHIESSEN</button>
-      </div>
+      <div id="touch-controls">
+  <button class="arcade-btn" id="btn-fire" type="button">SPERM SCHIESSEN</button>
+  <div id="touch-dpad">
+    <button class="arcade-btn" data-dir="up" type="button">▲</button>
+    <button class="arcade-btn" data-dir="left" type="button">◀</button>
+    <button class="arcade-btn" data-dir="right" type="button">▶</button>
+    <button class="arcade-btn" data-dir="down" type="button">▼</button>
+  </div>
+</div>
     </div>
 
     <div id="level-picker" class="flex flex-wrap items-center justify-center gap-3 mt-4 p-3 rounded-xl border-2 border-[#24142f] bg-[#fff0bd]">
