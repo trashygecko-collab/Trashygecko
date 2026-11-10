@@ -132,8 +132,6 @@
       background: #fff0bd;
     }
 
-    /* Im Vollbild bekommt das Spielfeld den gesamten freien Platz.
-       Das Canvas bleibt immer im originalen Seitenverhältnis 20:11. */
     .cabinet:fullscreen > header,
     .cabinet:fullscreen #keyboard-help {
       display: none !important;
@@ -259,70 +257,110 @@
       flex-direction:column;
     }
 
+    /* ---- Touch-Steuerung ---- */
     #touch-controls{display:none}
 
+    /* Grundlayout: Feuer links (waagerecht), Richtungstasten rechts (Kreuz) */
     .touch-device #touch-controls{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      grid-template-rows:repeat(3,minmax(0,1fr));
-      gap:8px;
-      width:270px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      width:300px;
+      max-width:100%;
       margin:14px auto 0;
       padding:0;
+      gap:16px;
       border:0;
-      border-radius:0;
       background:transparent;
       box-shadow:none;
       backdrop-filter:none;
       box-sizing:border-box;
     }
+
     .touch-device #touch-controls button{
-      min-height:48px;
       touch-action:none;
       -webkit-tap-highlight-color:transparent;
       user-select:none;
     }
-    .touch-device #touch-controls > :nth-child(1),
-    .touch-device #touch-controls > :nth-child(3){display:none}
-    .touch-device #touch-controls > :nth-child(2){grid-column:3;grid-row:1}
-    .touch-device #touch-controls > :nth-child(4){grid-column:2;grid-row:2}
-    .touch-device #touch-controls > :nth-child(5){grid-column:3;grid-row:2}
-    .touch-device #touch-controls > :nth-child(6){grid-column:4;grid-row:2}
+
+    /* Feuerknopf: waagerecht, links */
     .touch-device #touch-controls #btn-fire{
-      grid-column:1;
-      grid-row:1 / 4;
-      align-self:stretch;
+      width:120px;
+      min-height:52px;
+      padding:6px 10px;
+      font-size:11px;
+      font-weight:900;
+      line-height:1.15;
       white-space:normal;
-      line-height:1.2;
-      padding:5px;
+      overflow-wrap:break-word;
+      background:rgba(248,201,78,.78);
+      box-shadow:2px 2px 0 rgba(36,20,47,.65);
     }
 
-    /* Landscape auf Touch-Geräten: Controls schweben über dem Spielfeld */
-    @media (orientation:landscape) and (pointer:coarse), (orientation:landscape) and (hover:none){
+    /* Richtungskreuz: 3x2-Grid rechts */
+    .touch-device #touch-dpad{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      grid-template-rows:repeat(2,minmax(0,1fr));
+      gap:8px;
+      width:150px;
+    }
+    .touch-device #touch-dpad > :nth-child(1),
+    .touch-device #touch-dpad > :nth-child(3){display:none}
+    .touch-device #touch-dpad > :nth-child(2){grid-column:2;grid-row:1}
+    .touch-device #touch-dpad > :nth-child(4){grid-column:1;grid-row:2}
+    .touch-device #touch-dpad > :nth-child(5){grid-column:2;grid-row:2}
+    .touch-device #touch-dpad > :nth-child(6){grid-column:3;grid-row:2}
+
+    .touch-device #touch-dpad button{
+      min-height:48px;
+      padding:0;
+      font-size:18px;
+      background:rgba(248,201,78,.78);
+      box-shadow:2px 2px 0 rgba(36,20,47,.65);
+    }
+
+    /* Landscape auf Touch-Geräten: Controls schweben über dem Spielfeld
+       – Feuer unten links, Richtungstasten unten rechts */
+    @media (orientation:landscape) and (pointer:coarse),
+           (orientation:landscape) and (hover:none){
       .touch-device #touch-controls{
         position:absolute;
         z-index:5;
-        right:max(12px, env(safe-area-inset-right));
-        bottom:max(12px, env(safe-area-inset-bottom));
-        width:250px;
+        left:0;
+        right:0;
+        bottom:0;
+        width:100%;
+        max-width:none;
         margin:0;
-        padding:0;
-        gap:5px;
+        padding:0 max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+        gap:16px;
         background:transparent;
         border:0;
         box-shadow:none;
         backdrop-filter:none;
+        pointer-events:none;
+        box-sizing:border-box;
       }
-      .touch-device #touch-controls button{
-        min-height:44px;
-        padding:4px;
-        font-size:18px;
-        background:rgba(248,201,78,.78);
-        box-shadow:2px 2px 0 rgba(36,20,47,.75);
+      .touch-device #touch-controls #btn-fire,
+      .touch-device #touch-controls #touch-dpad{
+        pointer-events:auto;
       }
       .touch-device #touch-controls #btn-fire{
-        min-height:40px;
-        font-size:12px;
+        width:130px;
+        min-height:46px;
+        font-size:11px;
+        background:rgba(248,201,78,.72);
+        box-shadow:2px 2px 0 rgba(36,20,47,.6);
+      }
+      .touch-device #touch-controls #touch-dpad{
+        width:162px;
+      }
+      .touch-device #touch-controls #touch-dpad button{
+        min-height:44px;
+        font-size:18px;
+        background:rgba(248,201,78,.72);
+        box-shadow:2px 2px 0 rgba(36,20,47,.6);
       }
     }
 
@@ -375,37 +413,56 @@
         box-shadow: 2px 3px 0 #f07836;
       }
 
-      /* Die Touch-Tasten liegen über dem Spielfeld und verkleinern es nicht. */
+      /* Touch-Tasten über dem Spielfeld: Feuer unten links, Dpad unten rechts.
+         Kein graues Kästchen, Tasten halbtransparent. */
       .touch-device .cabinet:fullscreen #touch-controls {
         position: absolute;
         z-index: 5;
-        right: max(8px, env(safe-area-inset-right));
-        bottom: max(8px, env(safe-area-inset-bottom));
-        width: 174px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
         margin: 0;
-        padding: 5px;
-        gap: 4px;
-        background: rgba(36,20,47,.28);
-        border: 1px solid rgba(255,255,255,.4);
-        backdrop-filter: blur(2px);
+        padding: 0 8px 8px;
+        gap: 12px;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        backdrop-filter: none;
+        pointer-events: none;
+        box-sizing: border-box;
       }
 
-      .touch-device .cabinet:fullscreen #touch-controls button {
-        min-height: 40px;
-        padding: 3px;
-        font-size: 17px;
-        background: rgba(248,201,78,.82);
-        box-shadow: 2px 2px 0 rgba(36,20,47,.75);
+      .touch-device .cabinet:fullscreen #touch-controls #btn-fire,
+      .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
+        pointer-events: auto;
       }
 
       .touch-device .cabinet:fullscreen #touch-controls #btn-fire {
-        min-height: 34px;
+        width: 130px;
+        min-height: 46px;
+        padding: 5px 8px;
         font-size: 11px;
+        background: rgba(248,201,78,.72);
+        box-shadow: 2px 2px 0 rgba(36,20,47,.6);
+      }
+
+      .touch-device .cabinet:fullscreen #touch-controls #touch-dpad {
+        width: 168px;
+        gap: 6px;
+      }
+
+      .touch-device .cabinet:fullscreen #touch-controls #touch-dpad button {
+        min-height: 42px;
+        padding: 0;
+        font-size: 17px;
+        background: rgba(248,201,78,.72);
+        box-shadow: 2px 2px 0 rgba(36,20,47,.6);
       }
     }
 
-    /* Auf Handys nach Möglichkeit automatisch ins Querformat wechseln.
-       Falls der Browser das nicht erlaubt, kann das Gerät manuell gedreht werden. */
+    /* Auf Handys nach Möglichkeit automatisch ins Querformat wechseln. */
     @media (orientation:landscape) and (pointer:coarse),
            (orientation:landscape) and (hover:none) {
       .touch-device .cabinet:fullscreen .game-area {
@@ -454,14 +511,16 @@
         <canvas id="game" width="560" height="308" tabindex="0" aria-label="Spielfeld 20x11"></canvas>
       </div>
 
-      <div id="touch-controls" class="grid-cols-3 gap-2 w-56 mx-auto">
-        <div></div>
-        <button class="arcade-btn py-2 text-lg" data-dir="up" type="button">▲</button>
-        <div></div>
-        <button class="arcade-btn py-2 text-lg" data-dir="left" type="button">◀</button>
-        <button class="arcade-btn py-2 text-lg" data-dir="down" type="button">▼</button>
-        <button class="arcade-btn py-2 text-lg" data-dir="right" type="button">▶</button>
-        <button class="arcade-btn col-span-3 py-2 text-xs font-black mt-1" id="btn-fire" type="button">SPERM SCHIESSEN</button>
+      <div id="touch-controls">
+        <button class="arcade-btn" id="btn-fire" type="button">SPERM SCHIESSEN</button>
+        <div id="touch-dpad">
+          <div></div>
+          <button class="arcade-btn" data-dir="up" type="button">▲</button>
+          <div></div>
+          <button class="arcade-btn" data-dir="left" type="button">◀</button>
+          <button class="arcade-btn" data-dir="down" type="button">▼</button>
+          <button class="arcade-btn" data-dir="right" type="button">▶</button>
+        </div>
       </div>
     </div>
 
