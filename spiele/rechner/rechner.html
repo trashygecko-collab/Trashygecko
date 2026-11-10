@@ -1,0 +1,275 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Taschenrechner</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #050509;
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calculator {
+  width: min(94vw, 390px);
+  padding: 22px;
+  background: #0b0b14;
+  border: 2px solid #00eaff;
+  border-radius: 22px;
+  box-shadow: 0 0 18px #00eaff55,
+              inset 0 0 15px #00eaff18;
+}
+
+h1 {
+  text-align: center;
+  color: #00eaff;
+  font-size: 23px;
+  letter-spacing: 3px;
+  text-shadow: 0 0 12px #00eaff;
+  margin: 0 0 20px;
+}
+
+.display {
+  width: 100%;
+  min-height: 95px;
+  background: #030308;
+  border: 2px solid #a000ff;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  box-shadow: 0 0 13px #a000ff55;
+  overflow: hidden;
+}
+
+.previous {
+  color: #aaa;
+  font-size: 17px;
+  min-height: 20px;
+}
+
+.current {
+  color: #00ffae;
+  font-size: clamp(28px, 8vw, 38px);
+  font-weight: bold;
+  text-shadow: 0 0 12px #00ffae;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 11px;
+}
+
+button {
+  height: 65px;
+  border: 1px solid #00eaff;
+  border-radius: 12px;
+  background: #101522;
+  color: #00eaff;
+  font-size: 25px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 8px #00eaff33;
+  transition: .12s;
+  touch-action: manipulation;
+}
+
+button:active {
+  transform: scale(.94);
+  background: #12313b;
+  box-shadow: 0 0 18px #00eaff;
+}
+
+.operator {
+  color: #ff39d4;
+  border-color: #ff39d4;
+  box-shadow: 0 0 8px #ff39d444;
+}
+
+.clear {
+  color: #ff405c;
+  border-color: #ff405c;
+}
+
+.equal {
+  background: #073d32;
+  color: #00ffae;
+  border-color: #00ffae;
+  box-shadow: 0 0 12px #00ffae66;
+}
+
+.zero {
+  grid-column: span 2;
+}
+
+@media (max-height: 600px) {
+  .calculator { padding: 12px; }
+  h1 { margin-bottom: 10px; }
+  .display { min-height: 65px; margin-bottom: 10px; }
+  .buttons { gap: 7px; }
+  button { height: 48px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="calculator">
+  <h1>NEON CALCULATOR</h1>
+
+  <div class="display">
+    <div class="previous" id="previous"></div>
+    <div class="current" id="current">0</div>
+  </div>
+
+  <div class="buttons">
+    <button class="clear" onclick="clearAll()">C</button>
+    <button class="operator" onclick="backspace()">⌫</button>
+    <button class="operator" onclick="chooseOperator('/')">÷</button>
+    <button class="operator" onclick="chooseOperator('*')">×</button>
+
+    <button onclick="number('7')">7</button>
+    <button onclick="number('8')">8</button>
+    <button onclick="number('9')">9</button>
+    <button class="operator" onclick="chooseOperator('-')">−</button>
+
+    <button onclick="number('4')">4</button>
+    <button onclick="number('5')">5</button>
+    <button onclick="number('6')">6</button>
+    <button class="operator" onclick="chooseOperator('+')">+</button>
+
+    <button onclick="number('1')">1</button>
+    <button onclick="number('2')">2</button>
+    <button onclick="number('3')">3</button>
+    <button class="equal" onclick="calculate()" style="grid-row: span 2;">=</button>
+
+    <button class="zero" onclick="number('0')">0</button>
+    <button onclick="number(',')">,</button>
+  </div>
+</div>
+
+<script>
+let current = '0';
+let previous = '';
+let operator = null;
+let resetNext = false;
+
+const currentDisplay = document.getElementById('current');
+const previousDisplay = document.getElementById('previous');
+
+function updateDisplay() {
+  currentDisplay.textContent = current;
+  previousDisplay.textContent =
+    previous ? previous + ' ' + getSymbol(operator) : '';
+}
+
+function getSymbol(op) {
+  return {'+':'+', '-':'−', '*':'×', '/':'÷'}[op] || '';
+}
+
+function number(value) {
+  if (resetNext) {
+    current = '0';
+    resetNext = false;
+  }
+
+  if (value === ',') {
+    if (!current.includes(',')) current += ',';
+    return updateDisplay();
+  }
+
+  if (current === '0') current = value;
+  else current += value;
+
+  updateDisplay();
+}
+
+function chooseOperator(op) {
+  if (operator && !resetNext) calculate();
+
+  previous = current;
+  operator = op;
+  resetNext = true;
+  updateDisplay();
+}
+
+function calculate() {
+  if (!operator || !previous) return;
+
+  const a = parseFloat(previous.replace(',', '.'));
+  const b = parseFloat(current.replace(',', '.'));
+
+  if (operator === '/' && b === 0) {
+    current = 'Fehler';
+  } else {
+    let result;
+
+    switch (operator) {
+      case '+': result = a + b; break;
+      case '-': result = a - b; break;
+      case '*': result = a * b; break;
+      case '/': result = a / b; break;
+    }
+
+    current = String(Number(result.toFixed(10))).replace('.', ',');
+  }
+
+  previous = '';
+  operator = null;
+  resetNext = true;
+  updateDisplay();
+}
+
+function clearAll() {
+  current = '0';
+  previous = '';
+  operator = null;
+  resetNext = false;
+  updateDisplay();
+}
+
+function backspace() {
+  if (resetNext) return;
+  current = current.length > 1 ? current.slice(0, -1) : '0';
+  if (current === '-') current = '0';
+  updateDisplay();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') number(e.key);
+  else if (e.key === ',' || e.key === '.') number(',');
+  else if (e.key === '+') chooseOperator('+');
+  else if (e.key === '-') chooseOperator('-');
+  else if (e.key === '*') chooseOperator('*');
+  else if (e.key === '/') {
+    e.preventDefault();
+    chooseOperator('/');
+  }
+  else if (e.key === 'Enter' || e.key === '=') calculate();
+  else if (e.key === 'Backspace') backspace();
+  else if (e.key === 'Escape') clearAll();
+});
+</script>
+
+</body>
+</html>
