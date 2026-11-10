@@ -433,6 +433,129 @@ canvas {
   .cabinet:fullscreen > section { margin-bottom: 4px; }
   .cabinet:fullscreen #level-picker { margin-top: 5px; }
 }
+
+/* KORREKTUR: RICHTIGES TOUCH-KREUZ UND VOLL BILDTASTE */
+#exit-fullscreen-button {
+  display: none;
+}
+
+.cabinet:fullscreen #exit-fullscreen-button {
+  display: block;
+  position: absolute;
+  z-index: 20;
+  top: 7px;
+  right: 7px;
+  padding: 7px 10px;
+  color: #00eaff;
+  background: rgba(0,0,0,.92);
+  border: 1px solid #00eaff;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+html.touch-device #touch-controls {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 12px auto 0 !important;
+  padding: 0 4px !important;
+  gap: 8px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+html.touch-device #touch-controls #btn-fire {
+  flex: 0 0 110px !important;
+  width: 110px !important;
+  min-height: 46px !important;
+  margin: 0 auto 0 0 !important;
+  color: #ff35c8 !important;
+  background: #050505 !important;
+  border: 1px solid #ff35c8 !important;
+  box-shadow: none !important;
+}
+
+html.touch-device #touch-dpad {
+  flex: 0 0 auto !important;
+  display: grid !important;
+  grid-template-areas:
+    ". up ."
+    "left . right"
+    ". down ." !important;
+  grid-template-columns: repeat(3, 42px) !important;
+  grid-template-rows: repeat(3, 42px) !important;
+  gap: 4px !important;
+  width: auto !important;
+  margin: 0 0 0 auto !important;
+}
+
+html.touch-device #touch-dpad > button[data-dir="up"] {
+  display: block !important;
+  grid-area: up !important;
+}
+
+html.touch-device #touch-dpad > button[data-dir="left"] {
+  display: block !important;
+  grid-area: left !important;
+}
+
+html.touch-device #touch-dpad > button[data-dir="right"] {
+  display: block !important;
+  grid-area: right !important;
+}
+
+html.touch-device #touch-dpad > button[data-dir="down"] {
+  display: block !important;
+  grid-area: down !important;
+}
+
+html.touch-device #touch-dpad button {
+  width: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  color: #00eaff !important;
+  background: #050505 !important;
+  border: 1px solid #00eaff !important;
+  border-radius: 5px !important;
+  box-shadow: none !important;
+  font-size: 18px !important;
+}
+
+/* Querformat und Vollbild: Feuer links, Richtungskreuz rechts */
+@media (orientation: landscape) and (pointer: coarse),
+       (orientation: landscape) and (hover: none) {
+  html.touch-device .cabinet:fullscreen .game-area {
+    position: relative;
+  }
+
+  html.touch-device .cabinet:fullscreen #touch-controls {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 6px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 10px 8px !important;
+    pointer-events: none !important;
+  }
+
+  html.touch-device .cabinet:fullscreen #btn-fire,
+  html.touch-device .cabinet:fullscreen #touch-dpad {
+    pointer-events: auto !important;
+  }
+}
+
+html.touch-device .cabinet:fullscreen #touch-controls {
+  display: flex !important;
+}
+
 </style>
 </head>
 <body>
@@ -2380,6 +2503,16 @@ canvas {
     });
     window.addEventListener('blur', stopMove);
 
+    const exitFullscreenButton = document.querySelector('#exit-fullscreen-button');
+    if (exitFullscreenButton) {
+      exitFullscreenButton.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+        } catch (error) {
+          console.warn('Vollbild konnte nicht beendet werden:', error);
+        }
+      });
+    }
     const fullscreenButton = document.querySelector('#fullscreen-button');
     const cabinet = document.querySelector('.cabinet');
     if (fullscreenButton) {
