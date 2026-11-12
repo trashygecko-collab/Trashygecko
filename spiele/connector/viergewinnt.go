@@ -8,16 +8,16 @@ import (
 )
 
 type VierGewinntGame struct {
-	ID      string     `json:"id"`
-	RedID   string     `json:"redId"`
-	RedName string     `json:"redName"`
-	BlueID  string     `json:"blueId"`
-	BlueName string    `json:"blueName"`
-	Grid    [][]string `json:"grid"` // 6 rows, 7 cols; "" for empty, "red" or "blue"
-	Current string     `json:"current"` // "red" or "blue"
-	Status  string     `json:"status"` // "invited", "active", "declined", "finished"
-	Winner  string     `json:"winner,omitempty"` // "red", "blue", or "draw"
-	Winning [][]int    `json:"winning,omitempty"` // winning cell coordinates [[r,c],...]
+	ID       string     `json:"id"`
+	RedID    string     `json:"redId"`
+	RedName  string     `json:"redName"`
+	BlueID   string     `json:"blueId"`
+	BlueName string     `json:"blueName"`
+	Grid     [][]string `json:"grid"`              // 6 rows, 7 cols; "" for empty, "red" or "blue"
+	Current  string     `json:"current"`           // "red" or "blue"
+	Status   string     `json:"status"`            // "invited", "active", "declined", "finished"
+	Winner   string     `json:"winner,omitempty"`  // "red", "blue", or "draw"
+	Winning  [][]int    `json:"winning,omitempty"` // winning cell coordinates [[r,c],...]
 }
 
 // checkVierGewinntWin checks if placing a disc at (r, c) leads to 4 in a row.
@@ -79,7 +79,7 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		game := room.VierGewinnt
+		game := cloneVierGewinnt(room.VierGewinnt)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
 		return
@@ -126,7 +126,7 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Dieser Spieler ist nicht verfügbar.", http.StatusBadRequest)
 			return
 		}
-		if room.VierGewinnt != nil && (room.VierGewinnt.Status == "invited" || room.VierGewinnt.Status == "active") {
+		if room.VierGewinnt != nil && !room.gameSlotFree(room.VierGewinnt.Status, room.VierGewinnt.RedID, room.VierGewinnt.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Vier-gewinnt-Partie oder Einladung.", http.StatusConflict)
 			return
@@ -261,7 +261,8 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := room.VierGewinnt
+	room.LastActive = time.Now()
+	result := cloneVierGewinnt(room.VierGewinnt)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})
 }

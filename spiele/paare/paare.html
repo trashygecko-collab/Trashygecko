@@ -144,7 +144,7 @@ input::placeholder{color:#8293a4}
   <h2>Dein Spiel</h2>
   <div class="intro">Finde die gleichen Zeichen auf dem Spielfeld.<br>Du hast 25 Felder und kannst bis zu 12 Paare suchen.</div>
 
-  <div class="section">
+  <div class="section" id="kindSection">
     <span class="section-label">SPIELART</span>
     <div class="choice-grid">
       <button class="choice active" data-kind="numbers" onclick="chooseKind('numbers')">123<small>Zahlen</small></button>
@@ -153,51 +153,17 @@ input::placeholder{color:#8293a4}
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="pairSection">
     <span class="section-label">ANZAHL DER PAARE</span>
     <div class="pair-grid" id="pairChoices"></div>
   </div>
 
-  <div class="section">
-    <span class="section-label">SPIELMODUS</span>
-    <div class="choice-grid two">
-      <button class="choice active" id="soloChoice" onclick="chooseMode('solo')">EINZELSPIELER<small>Allein spielen</small></button>
-      <button class="choice" id="multiChoice" onclick="chooseMode('multi')">2 SPIELER ONLINE<small>Über den Connector</small></button>
-    </div>
-  </div>
+  <button class="primary" id="soloStartButton" onclick="startSolo()">SPIEL STARTEN</button>
 
-  <div id="soloStart">
-    <button class="primary" onclick="startSolo()">SPIEL STARTEN</button>
+  <div id="onlineWaiting" class="hidden">
+    <div class="status" id="onlineStatus">Verbinde mit dem Connector …</div>
+    <button class="secondary" onclick="backToMenu()">ZURÜCK ZUM CONNECTOR</button>
   </div>
-
-  <div id="multiStart" class="hidden">
-    <div class="section">
-      <label class="section-label" for="playerName">DEIN SPIELERNAME</label>
-      <input id="playerName" maxlength="24" placeholder="Dein Name">
-    </div>
-    <button class="primary" onclick="createRoom()">SPIELRAUM ERSTELLEN</button>
-    <div class="section">
-      <label class="section-label" for="joinCode">ODER SPIELRAUM-CODE EINGEBEN</label>
-      <input id="joinCode" maxlength="7" placeholder="TG-XXXX" autocomplete="off">
-      <button class="secondary" onclick="joinRoom()">SPIELRAUM BEITRETEN</button>
-    </div>
-    <div id="connectionStatus" class="status">Noch nicht verbunden.</div>
-  </div>
-</section>
-
-<!-- LOBBY -->
-<section id="lobbyScreen" class="screen">
-  <h2>Spielraum</h2>
-  <div class="note">Gib deinem Mitspieler diesen Code.</div>
-  <div class="room-code" id="roomCodeDisplay">TG-----</div>
-  <div class="players">
-    <div class="player-box"><strong id="myNameDisplay">Du</strong><span>Spieler 1</span></div>
-    <div class="player-box"><strong id="opponentNameDisplay">Warte ...</strong><span>Spieler 2</span></div>
-  </div>
-  <div id="lobbyStatus" class="status">Warte auf den zweiten Spieler ...</div>
-  <button class="primary" id="startOnlineButton" onclick="hostStartMatch()" disabled>GEMEINSAM STARTEN</button>
-  <button class="secondary" onclick="leaveRoom()">ZURÜCK</button>
-  <div class="note">Der Spielstart wird für beide Spieler gemeinsam ausgelöst.</div>
 </section>
 
 <!-- SPIEL -->
@@ -235,6 +201,13 @@ input::placeholder{color:#8293a4}
 
 const API = "/api";
 const TOTAL_CELLS = 25;
+
+// Über den Connector geöffnet (?room=TG-XXXX&name=...&id=...) läuft das Spiel
+// immer zu zweit. Ohne diese Parameter bleibt es reines Einzelspieler-Spiel.
+const urlParams = new URLSearchParams(location.search);
+const onlineRoom = (urlParams.get("room")||"").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(onlineRoom);
+const onlinePlayerName = (urlParams.get("name")||"").trim().slice(0,24) || "Spieler";
 const SYMBOLS = ["★","☆","♣","♠","♥","♦","●","■","▲","◆","✚","✿","☀","☂","♫","☯","☘","✦","✧","⬟","⬢","☕","⚙","✈","♬","❖"];
 let kind = "numbers";
 let pairCount = 1;
@@ -255,12 +228,12 @@ let playerId = "";
 let playerName = "Spieler";
 let opponentId = "";
 let opponentName = "";
-let isHost = false;
 let heartbeatInterval = null;
 let pollInterval = null;
-let processedMessages = new Set();
-let opponentDone = null;
 let myDone = null;
+let onlineGame = null;
+let seenGameId = "";
+let resultShown = false;
 let gameSettings = {kind:"numbers",pairs:1};
 let pendingStartAt = 0;
 
@@ -315,13 +288,6 @@ function chooseKind(value){
   kind=value;
   document.querySelectorAll("[data-kind]").forEach(b=>b.classList.toggle("active",b.dataset.kind===value));
 }
-function chooseMode(value){
-  mode=value;
-  $("soloChoice").classList.toggle("active",value==="solo");
-  $("multiChoice").classList.toggle("active",value==="multi");
-  $("soloStart").classList.toggle("hidden",value!=="solo");
-  $("multiStart").classList.toggle("hidden",value!=="multi");
-}
 function buildPairChoices(){
   const box=$("pairChoices");
   box.innerHTML="";
@@ -352,139 +318,63 @@ async function postPresence(){
   const r=await apiFetch("/presence",{method:"POST",body:JSON.stringify({room:roomCode,id:playerId,name:playerName})});
   if(!r.ok)throw new Error("Spielerstatus konnte nicht gesendet werden ("+r.status+").");
 }
-async function createRoom(){
-  playerName=($("playerName").value.trim()||"Spieler").slice(0,24);
-  playerId=getPlayerId();
-  $("connectionStatus").textContent="Verbinde mit dem Connector ...";
-  try{
-    let response=await apiFetch("/rooms",{method:"POST",body:JSON.stringify({id:playerId,name:playerName})});
-    if(!response.ok)response=await apiFetch("/rooms",{method:"POST"});
-    if(!response.ok)throw new Error("Spielraum konnte nicht erstellt werden.");
-    const data=await response.json();
-    if(!data.code)throw new Error("Der Connector hat keinen Raumcode geliefert.");
-    roomCode=data.code.toUpperCase();
-    isHost=true;
-    await enterRoom();
-  }catch(e){
-    $("connectionStatus").textContent="Verbindung fehlgeschlagen: "+e.message;
-  }
+// Der Spielstand kommt vom Connector, die Partie wird dort eingeladen.
+async function fetchOnlineGame(){
+  const r=await apiFetch("/paare?room="+encodeURIComponent(roomCode)+"&id="+encodeURIComponent(playerId));
+  if(!r.ok)throw new Error("Spielstand nicht erreichbar ("+r.status+").");
+  return (await r.json()).game;
 }
-async function joinRoom(){
-  playerName=($("playerName").value.trim()||"Spieler").slice(0,24);
-  playerId=getPlayerId();
-  roomCode=$("joinCode").value.trim().toUpperCase();
-  if(!/^TG-[A-F0-9]{4}$/.test(roomCode)){
-    $("connectionStatus").textContent="Bitte einen gültigen Code im Format TG-XXXX eingeben.";
-    return;
-  }
-  isHost=false;
-  try{
-    const r=await apiFetch("/rooms");
-    if(!r.ok)throw new Error("Räume konnten nicht geladen werden.");
-    const rooms=await r.json();
-    if(!rooms.some(x=>String(x.code).toUpperCase()===roomCode))throw new Error("Dieser Spielraum wurde nicht gefunden.");
-    await enterRoom();
-  }catch(e){
-    $("connectionStatus").textContent=e.message;
-  }
+async function onlineAction(action,payload={}){
+  const r=await apiFetch("/paare?room="+encodeURIComponent(roomCode)+"&action="+encodeURIComponent(action),{
+    method:"POST",
+    body:JSON.stringify({id:playerId,...payload})
+  });
+  if(!r.ok)throw new Error((await r.text()).trim()||"Aktion fehlgeschlagen.");
+  return (await r.json()).game;
 }
-async function enterRoom(){
-  try{
-    await postPresence();
-    $("roomCodeDisplay").textContent=roomCode;
-    $("myNameDisplay").textContent=playerName;
-    $("opponentNameDisplay").textContent="Warte ...";
-    $("lobbyStatus").textContent=isHost?"Warte auf deinen Mitspieler ...":"Du bist beigetreten. Warte auf den Spielstart.";
-    $("startOnlineButton").disabled=true;
-    showScreen("lobbyScreen");
-    stopConnectorLoops();
-    heartbeatInterval=setInterval(()=>postPresence().catch(()=>{}),7000);
-    pollInterval=setInterval(pollConnector,700);
-    await pollConnector();
-  }catch(e){
-    $("connectionStatus").textContent=e.message;
-  }
-}
-async function getPlayers(){
-  const r=await apiFetch("/players?room="+encodeURIComponent(roomCode));
-  if(!r.ok)throw new Error("Spielerliste nicht erreichbar.");
-  return await r.json();
-}
-async function pollConnector(){
+async function pollOnline(){
   if(!roomCode||!playerId)return;
   try{
-    const players=await getPlayers();
-    const others=players.filter(p=>p.id!==playerId);
-    if(others.length){
-      opponentId=others[0].id;
-      opponentName=others[0].name||"Mitspieler";
-      $("opponentNameDisplay").textContent=opponentName;
-      $("lobbyStatus").textContent=isHost?"Dein Mitspieler ist da. Du kannst starten.":"Mitspieler verbunden. Warte auf den Start.";
-      if(isHost)$("startOnlineButton").disabled=false;
-    }else{
-      opponentId="";
-      opponentName="";
-      $("opponentNameDisplay").textContent="Warte ...";
-      $("lobbyStatus").textContent="Warte auf den zweiten Spieler ...";
-      $("startOnlineButton").disabled=true;
+    const game=await fetchOnlineGame();
+    if(!game)return;
+    onlineGame=game;
+    const iAmRed=game.redId===playerId;
+    opponentId=iAmRed?game.blueId:game.redId;
+    opponentName=iAmRed?game.blueName:game.redName;
+    if($("onlineStatus")){
+      $("onlineStatus").textContent=game.status==="invited"
+        ? "Warte auf die Annahme der Einladung …"
+        : "Spiel startet gleich …";
     }
-    const r=await apiFetch("/messages?room="+encodeURIComponent(roomCode)+"&id="+encodeURIComponent(playerId));
-    if(!r.ok)return;
-    const messages=await r.json();
-    for(const m of messages){
-      const key=m.id||[m.fromId,m.created,m.text].join("|");
-      if(processedMessages.has(key))continue;
-      processedMessages.add(key);
-      if(processedMessages.size>500)processedMessages.clear();
-      if(m.id===playerId||m.fromId===playerId)continue;
-      handleGameMessage(m);
+    if(game.status==="active"&&game.id!==seenGameId){
+      seenGameId=game.id;
+      launchMatch(game.id,{kind:game.kind,pairs:game.pairs},Date.now()+1500);
+    }
+    if(game.status==="finished"){
+      if(myDone)showOnlineResult();
+      else if(game.redDone||game.blueDone){
+        $("opponentStatus").classList.remove("hidden");
+        $("opponentStatus").textContent=(opponentName||"Dein Mitspieler")+" ist fertig. Spiel deine Runde zu Ende.";
+      }
     }
   }catch(e){
-    if($("lobbyStatus"))$("lobbyStatus").textContent="Verbindung wird wiederhergestellt ...";
+    if($("onlineStatus"))$("onlineStatus").textContent="Verbindung wird wiederhergestellt …";
   }
 }
-async function sendGameMessage(payload,toId=""){
-  const text=JSON.stringify({app:"paare-finden",...payload});
-  const r=await apiFetch("/messages?room="+encodeURIComponent(roomCode),{
-    method:"POST",
-    body:JSON.stringify({id:playerId,toId,name:playerName,text})
-  });
-  if(!r.ok)throw new Error("Nachricht konnte nicht übertragen werden ("+r.status+").");
-}
-function hostStartMatch(){
-  if(!isHost||!opponentId)return;
-  gameSettings={kind,pairs:pairCount};
-  matchId="PF-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
-  const startAt=Date.now()+3000;
-  sendGameMessage({type:"start",matchId,settings:gameSettings,startAt}).then(()=>{
-    launchMatch(matchId,gameSettings,startAt);
-  }).catch(e=>alert(e.message));
-}
-function handleGameMessage(message){
-  let data;
-  try{data=JSON.parse(message.text)}catch{return}
-  if(data.app!=="paare-finden")return;
-  if(data.type==="start"&&mode==="multi"&&$("lobbyScreen").classList.contains("active")){
-    matchId=data.matchId;
-    gameSettings=data.settings;
-    kind=gameSettings.kind;
-    pairCount=gameSettings.pairs;
-    launchMatch(matchId,gameSettings,data.startAt);
-  }
-  if(data.matchId!==matchId)return;
-  if(data.type==="done"){
-    opponentDone={time:data.time,name:message.name||opponentName};
-    updateOpponentStatus();
-    maybeShowWinner();
-  }
-  if(data.type==="restart"&&mode==="multi"){
-    // A restart is a fresh match requested by the host.
-    if(!isHost&&data.settings){
-      matchId=data.matchId;
-      gameSettings=data.settings;
-      launchMatch(matchId,gameSettings,data.startAt);
-    }
-  }
+function startOnline(){
+  mode="multi";
+  roomCode=onlineRoom;
+  playerName=onlinePlayerName;
+  playerId=urlParams.get("id")||getPlayerId();
+  if($("kindSection"))$("kindSection").classList.add("hidden");
+  if($("pairSection"))$("pairSection").classList.add("hidden");
+  if($("soloStartButton"))$("soloStartButton").classList.add("hidden");
+  $("onlineWaiting").classList.remove("hidden");
+  // Ohne Presence fliegt man nach 20 Sekunden aus dem Spielraum des Connectors.
+  heartbeatInterval=setInterval(()=>postPresence().catch(()=>{}),5000);
+  postPresence().catch(()=>{});
+  pollInterval=setInterval(pollOnline,700);
+  pollOnline();
 }
 function startSolo() {
   mode = "solo";
@@ -502,14 +392,15 @@ function launchMatch(id,settings,startAt){
   kind=settings.kind;
   pairCount=settings.pairs;
   mistakes=0;found=0;selected=[];matched=[];
-  myDone=null;opponentDone=null;
+  myDone=null;
   locked=true;playing=true;
+  resultShown=false;
   createBoard();
   renderBoard();
   updateStats();
   $("feedback").textContent="Bereit machen ...";
   $("opponentStatus").classList.toggle("hidden",mode!=="multi");
-  $("opponentStatus").textContent="Dein Mitspieler spielt ebenfalls.";
+  $("opponentStatus").textContent="Gegen "+(opponentName||"deinen Mitspieler")+": gleiche Zeichen, andere Anordnung.";
   showScreen("gameScreen");
   pendingStartAt=startAt;
   const wait=Math.max(0,startAt-Date.now());
@@ -526,23 +417,26 @@ function launchMatch(id,settings,startAt){
 }
 function createBoard(){
   const count=25-pairCount;
-  let unique=[];
+  let pool;
   if(kind==="numbers"){
-    const pool=Array.from({length:99},(_,i)=>String(i+1));
-    unique=shuffle(pool).slice(0,count);
+    pool=Array.from({length:99},(_,i)=>String(i+1));
   }else if(kind==="letters"){
-    unique=shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")).slice(0,count);
+    pool="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   }else{
-    unique=shuffle(SYMBOLS).slice(0,count);
+    pool=[...SYMBOLS];
   }
-  const duplicates=shuffle(unique).slice(0,pairCount);
-  let values=[...unique,...duplicates];
+  let unique,duplicates;
   if(mode==="multi"){
-    // Beide Spieler bekommen dieselben Zeichen, aber eine andere Anordnung.
-    values=seededShuffle(values,matchId+"|"+playerId);
+    // Beide Spieler bekommen exakt dieselben Zeichen, nur anders angeordnet.
+    // Ohne diesen festen Seed hätte jeder Spieler eine andere Zeichenauswahl.
+    unique=seededShuffle(pool,matchId+"|pool").slice(0,count);
+    duplicates=seededShuffle(unique,matchId+"|pairs").slice(0,pairCount);
   }else{
-    values=shuffle(values);
+    unique=shuffle(pool).slice(0,count);
+    duplicates=shuffle(unique).slice(0,pairCount);
   }
+  let values=[...unique,...duplicates];
+  values=mode==="multi"?seededShuffle(values,matchId+"|"+playerId):shuffle(values);
   boardValues=values;
   matched=new Array(TOTAL_CELLS).fill(false);
 }
@@ -611,40 +505,42 @@ async function finishRound(){
   renderBoard();
   if(mode==="multi"){
     try{
-      await sendGameMessage({type:"done",matchId,time:myDone.time,mistakes});
+      await onlineAction("done",{time:myDone.time,mistakes:myDone.mistakes});
     }catch(e){
       $("feedback").textContent="Fertig – Ergebnis konnte nicht gesendet werden.";
     }
     $("opponentStatus").classList.remove("hidden");
     $("opponentStatus").textContent="Du bist fertig. Warte auf "+(opponentName||"deinen Mitspieler")+" ...";
-    maybeShowWinner();
+    await pollOnline();
   }else{
     showSoloResult();
   }
 }
-function updateOpponentStatus(){
-  if(opponentDone){
-    $("opponentStatus").textContent=opponentDone.name+" hat "+formatTime(opponentDone.time)+" gebraucht.";
-  }
-}
-function maybeShowWinner(){
-  if(!myDone||!opponentDone)return;
-  const myTime=myDone.time;
-  const theirTime=opponentDone.time;
+// Ergebnis aus dem Spielstand des Connectors: der Server kennt beide Zeiten.
+function showOnlineResult(){
+  if(!onlineGame||!myDone||onlineGame.status!=="finished"||resultShown)return;
+  const iAmRed=onlineGame.redId===playerId;
+  const mine=(iAmRed?onlineGame.redDone:onlineGame.blueDone)||myDone;
+  const theirs=iAmRed?onlineGame.blueDone:onlineGame.redDone;
+  const theirName=opponentName||"Mitspieler";
   let title,text;
-  if(myTime<theirTime){
-    title="DU HAST GEWONNEN!";
-    text="Deine Zeit: "+formatTime(myTime)+"\n"+opponentDone.name+": "+formatTime(theirTime);
-  }else if(myTime>theirTime){
-    title=opponentDone.name.toUpperCase()+" GEWINNT!";
-    text="Deine Zeit: "+formatTime(myTime)+"\n"+opponentDone.name+": "+formatTime(theirTime);
-  }else{
+  if(!theirs){
+    title="GESCHAFFT!";
+    text="Du warst zuerst fertig.\nDeine Zeit: "+formatTime(mine.time);
+  }else if(onlineGame.winner==="draw"){
     title="UNENTSCHIEDEN!";
-    text="Beide Spieler waren gleich schnell: "+formatTime(myTime);
+    text="Beide Spieler waren gleich schnell: "+formatTime(mine.time);
+  }else if((onlineGame.winner==="red")===iAmRed){
+    title="DU HAST GEWONNEN!";
+    text="Deine Zeit: "+formatTime(mine.time)+"\n"+theirName+": "+formatTime(theirs.time);
+  }else{
+    title=theirName.toUpperCase()+" GEWINNT!";
+    text="Deine Zeit: "+formatTime(mine.time)+"\n"+theirName+": "+formatTime(theirs.time);
   }
+  resultShown=true;
   $("resultTitle").textContent=title;
-  $("resultTime").textContent=formatTime(myTime);
-  $("resultText").textContent=text+"\n\nDeine Fehler: "+myDone.mistakes;
+  $("resultTime").textContent=formatTime(mine.time);
+  $("resultText").textContent=text+"\n\nDeine Fehler: "+mine.mistakes;
   showScreen("resultScreen");
 }
 function showSoloResult(){
@@ -659,19 +555,15 @@ function stopRoundTimers(){
 }
 function restartGame(){
   if(mode==="multi"){
-    if(!isHost){
-      $("resultText").textContent="Bitte den Spielleiter um einen Neustart.";
-      return;
-    }
-    if(!opponentId){
-      alert("Dein Mitspieler ist nicht mehr verbunden.");
-      return;
-    }
-    matchId="PF-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
-    const startAt=Date.now()+3000;
-    sendGameMessage({type:"restart",matchId,settings:gameSettings,startAt}).then(()=>{
-      launchMatch(matchId,gameSettings,startAt);
-    }).catch(e=>alert(e.message));
+    if(!roomCode)return;
+    onlineAction("reset").then(game=>{
+      if(!game)return;
+      seenGameId=game.id;
+      launchMatch(game.id,{kind:game.kind,pairs:game.pairs},Date.now()+1200);
+    }).catch(e=>{
+      // Eine neue Runde gibt es erst, wenn beide fertig sind.
+      alert(e.message);
+    });
   }else{
     launchMatch("solo-"+Date.now(),{kind,pairs:pairCount},Date.now()+300);
   }
@@ -680,27 +572,25 @@ function stopConnectorLoops(){
   if(heartbeatInterval){clearInterval(heartbeatInterval);heartbeatInterval=null}
   if(pollInterval){clearInterval(pollInterval);pollInterval=null}
 }
-function leaveRoom(){
-  stopConnectorLoops();
-  stopRoundTimers();
-  roomCode="";opponentId="";opponentDone=null;myDone=null;
-  playing=false;
-  showScreen("setupScreen");
-}
 function backToMenu(){
   stopRoundTimers();
+  stopConnectorLoops();
   if(mode==="multi"){
-    leaveRoom();
-  }else{
-    playing=false;
-    showScreen("setupScreen");
+    location.href=roomCode?"/connector?room="+encodeURIComponent(roomCode):"/connector";
+    return;
   }
+  playing=false;
+  showScreen("setupScreen");
 }
 window.addEventListener("beforeunload",()=>{
   stopConnectorLoops();
   stopRoundTimers();
 });
 buildPairChoices();
+
+if(ONLINE){
+  startOnline();
+}
 </script>
 </body>
 </html>

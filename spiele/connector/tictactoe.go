@@ -41,7 +41,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		game := room.TicTacToe
+		game := cloneTicTacToe(room.TicTacToe)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
 		return
@@ -88,7 +88,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Dieser Spieler ist nicht verfügbar.", http.StatusBadRequest)
 			return
 		}
-		if room.TicTacToe != nil && (room.TicTacToe.Status == "invited" || room.TicTacToe.Status == "active") {
+		if room.TicTacToe != nil && !room.gameSlotFree(room.TicTacToe.Status, room.TicTacToe.XID, room.TicTacToe.OID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Tic-Tac-Toe-Partie oder Einladung.", http.StatusConflict)
 			return
@@ -178,7 +178,8 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := room.TicTacToe
+	room.LastActive = time.Now()
+	result := cloneTicTacToe(room.TicTacToe)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})
 }

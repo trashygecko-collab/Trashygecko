@@ -20,6 +20,7 @@ input,select{background:#10121b;color:white;max-width:100%;min-width:0}
 #addresses p{overflow-wrap:anywhere;margin:7px 0}
 #chat{height:230px;overflow:auto;background:#10121b;padding:10px;border-radius:8px}
 .msg{padding:6px 0;border-bottom:1px solid #30364a;overflow-wrap:anywhere}
+.msg-system{color:#8fb7ad;font-style:italic;text-align:center;border-bottom:none;padding:4px 0;font-size:13px}
 small{color:#9da8bd}
 .code{font-size:28px;color:#4df5c2;font-weight:bold}
 .room{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#10121b;border:1px solid #394158;border-radius:9px;padding:12px;margin:9px 0}
@@ -106,6 +107,11 @@ small{color:#9da8bd}
 .mute-popover{margin-top:4px;padding:6px;background:#252b40;border:1px solid #4df5c2;border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
 .mute-popover button{padding:4px 8px;font-size:12px;border-radius:4px}
 .mute-list-tag{color:#ffd36a;font-size:12px;margin-top:4px}
+.players-head{color:#4df5c2;font-weight:bold;font-size:14px;margin:14px 0 6px}
+.game-player{color:#eee;font-weight:normal;text-align:left;width:100%;background:#10121b}
+.game-player:hover{filter:brightness(1.3)}
+.game-player:disabled{opacity:.55;cursor:default}
+.open-game{margin-top:8px}
 </style>
 </head>
 <body>
@@ -123,17 +129,8 @@ small{color:#9da8bd}
 <section>
 <h2>Dein Spielername</h2>
 <input id="player" placeholder="Dein Name" maxlength="24">
-</section>
-
-<section>
-<h2>Spielraum erstellen</h2>
-<button onclick="createRoom()">Neuen Spielraum erstellen</button>
-<p id="created"></p>
-</section>
-
-<section>
-<h2>Offene Spielräume</h2>
-<div id="rooms"><div class="empty">Spielräume werden gesucht …</div></div>
+<button onclick="joinSingleRoom()">Raum betreten</button>
+<p class="empty">Es gibt genau einen Raum – alle treffen sich dort. Wer am Rechner sitzt, auf dem der Connector läuft, ist der Admin.</p>
 </section>
 
 <input id="room" type="hidden">
@@ -161,7 +158,8 @@ small{color:#9da8bd}
 </main>
 
 <script>
-let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null;
+let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null, selectedMenuSender=null;
+let currentPlayersList=[];
 try {
  sessionID=sessionStorage.getItem("tg-player-id")||"";
  if(!sessionID){
@@ -170,6 +168,21 @@ try {
  }
 } catch(e) {
  sessionID=String(Date.now())+Math.random();
+}
+
+const nameField=document.getElementById("player");
+try{
+ const savedName=sessionStorage.getItem("tg-player-name");
+ if(savedName)nameField.value=savedName;
+}catch(e){}
+nameField.addEventListener("input",()=>{
+ try{ sessionStorage.setItem("tg-player-name",nameField.value.trim()); }catch(e){}
+});
+
+function setRoomStatus(text){
+ const el=document.getElementById("roomstatus");
+ el.textContent=text||"";
+ el.hidden=!text;
 }
 
 function playerName(){
@@ -218,58 +231,41 @@ async function copyAddress(){
  }
 }
 
-async function refreshRooms(){
- try{
-  const list=await fetch("/api/rooms").then(r=>{
-   if(!r.ok)throw Error();
-   return r.json();
-  });
-  const box=document.getElementById("rooms");
-  box.innerHTML="";
-  if(!list.length){
-   box.innerHTML='<div class="empty">Noch keine offenen Spielräume. Erstelle einfach einen neuen!</div>';
-   return;
-  }
-  list.forEach(room=>{
-    const row=document.createElement("div");
-    row.className="room";
-    const info=document.createElement("div");
-    info.className="room-info";
-    const title=document.createElement("div");
-    title.className="room-code";
-    title.textContent=room.name || room.code;
-    const meta=document.createElement("div");
-    meta.className="room-meta";
-    const statusPart = room.status ? room.status + (room.game ? " ("+room.game+")" : "") + " • " : "";
-    meta.textContent = statusPart + room.players + " Spieler · Erstellt um " + room.created + " Uhr";
-    info.append(title,meta);
-    const btn=document.createElement("button");
-    btn.textContent=activeRoom===room.code?"Verbunden":"Beitreten";
-    btn.disabled=activeRoom===room.code;
-    btn.onclick=()=>{document.getElementById("room").value=room.code;join();};
-    row.append(info,btn);
-    box.appendChild(row);
-  });
- }catch(e){
-  document.getElementById("rooms").textContent="Raumliste momentan nicht erreichbar.";
+/* Es gibt genau einen Raum: Name eintragen und drin sein. */
+async function joinSingleRoom(){
+ const input=document.getElementById("player");
+ const name=input.value.trim();
+ if(!name){
+  setRoomStatus("Bitte gib zuerst deinen Namen ein.");
+  input.focus();
+  return;
  }
-}
-
-async function createRoom(){
  try{
   const r=await fetch("/api/rooms",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({id:sessionID,name:playerName()})
-  }).then(x=>x.json());
-  const displayName = r.name || r.code;
-  document.getElementById("created").innerHTML='<span class="code">'+displayName+'</span>';
-  document.getElementById("room").value=r.code;
-  await join(displayName);
-  refreshRooms();
+   body:JSON.stringify({id:sessionID,name})
+  });
+  if(!r.ok)throw Error("Connector nicht erreichbar.");
+  const room=await r.json();
+  document.getElementById("room").value=room.code;
+  await join(room.name);
  }catch(e){
-  document.getElementById("created").textContent="Spielraum konnte nicht erstellt werden.";
+  setRoomStatus(e.message);
  }
+}
+
+function updateChatPlayer(){
+ const el=document.getElementById("chatplayer");
+ if(el)el.textContent=playerName()+(isRoomOwner?" · Admin":"");
+}
+
+// Nach dem Betreten gleich beim Chat landen – auf dem Handy wirkt das wie
+// "ich bin jetzt drin". Hochscrollen bleibt jederzeit möglich.
+function scrollToChat(){
+ const box=document.getElementById("chatbox");
+ if(!box||box.hidden)return;
+ setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
 
 async function join(roomDisplayName){
@@ -282,21 +278,24 @@ async function join(roomDisplayName){
   });
   if(!p.ok)throw Error(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen.");
   activeRoom=code;
-  document.getElementById("roomstatus").textContent="Verbunden mit "+(roomDisplayName||code);
+  playersSignature="";
+  lastChatSignature="";
+  setRoomStatus("Verbunden · "+(roomDisplayName||("Raum "+code)));
   document.getElementById("chatbox").hidden=false;
-  document.getElementById("chatplayer").textContent=playerName();
+  updateChatPlayer();
   await refresh();
-  refreshRooms();
   await refreshPlayers();
+  updateChatPlayer();
   loadMutes();
+  scrollToChat();
  }catch(e){
-  document.getElementById("roomstatus").textContent=e.message;
+  setRoomStatus(e.message);
  }
 }
 
 async function heartbeat(){
  if(!activeRoom)return;
- document.getElementById("chatplayer").textContent=playerName();
+ updateChatPlayer();
  try{
   await fetch("/api/presence",{
    method:"POST",headers:{"Content-Type":"application/json"},
@@ -305,15 +304,20 @@ async function heartbeat(){
  }catch(e){}
 }
 
+let playersBusy=false;
 async function refreshPlayers(){
- if(!activeRoom)return;
+ if(!activeRoom||playersBusy)return;
+ playersBusy=true;
  try{
   const res=await fetch("/api/players?room="+encodeURIComponent(activeRoom));
+  if(!res.ok)return;
   const ownerHeader=res.headers.get("X-Room-Owner");
   if(ownerHeader){
    isRoomOwner = (ownerHeader === sessionID);
   }
+  updateChatPlayer();
   const list=await res.json();
+  currentPlayersList=list;
   const sel=document.getElementById("recipient"),old=sel.value;
   sel.innerHTML='<option value="">An alle</option>';
   list.forEach(p=>{
@@ -324,8 +328,13 @@ async function refreshPlayers(){
    sel.appendChild(o);
   });
   if([...sel.options].some(o=>o.value===old))sel.value=old;
+  // Spieler stehen sofort beim Betreten des Raums im Chat.
+  renderGamePicker(list);
   await refreshGames(list);
- }catch(e){}
+ }catch(e){
+ }finally{
+  playersBusy=false;
+ }
 }
 
 async function mutePlayer(targetId, minutes){
@@ -367,22 +376,40 @@ async function loadMutes(){
  }catch(e){}
 }
 
-let tttLaunched=false;
 let currentTTTGame=null;
-let vgLaunched=false;
 let currentVGGame=null;
-let dameLaunched=false;
 let currentDameGame=null;
-let selectedGamePlayer=null;
+let currentPaareGame=null;
+let currentMaenGame=null;
 
 const SUPPORTED_GAMES = [
  { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/tictac/tictactoe.html", api: "/api/tictactoe" },
  { id: "viergewinnt", name: "Vier gewinnt", path: "/spiele/viergewinnt/viergewinnt.html", api: "/api/viergewinnt" },
- { id: "dame", name: "Dame", path: "/spiele/dame/dame.html", api: "/api/dame" }
+ { id: "dame", name: "Dame", path: "/spiele/dame/dame.html", api: "/api/dame" },
+ { id: "paare", name: "Paare finden", path: "/spiele/paare/paare.html", api: "/api/paare" },
+ { id: "menschaerger", name: "Mensch ärgere dich nicht", path: "/spiele/menschaerger/menschaerger.html", api: "/api/menschaerger" }
 ];
 
-function tttStatus(text){
- document.getElementById("game-status").textContent=text;
+function tttStatus(text, gameId){
+ const box=document.getElementById("game-status");
+ box.textContent=text;
+ if(!gameId)return;
+ const def=SUPPORTED_GAMES.find(g=>g.id===gameId);
+ if(!def)return;
+ const open=document.createElement("button");
+ open.type="button";
+ open.className="open-game";
+ open.textContent="Spiel öffnen";
+ open.onclick=()=>openGame(def.path);
+ box.appendChild(open);
+}
+
+function openGame(path){
+ // id mitsenden: die Spielseite läuft im selben Tab, hat aber ihren eigenen
+ // sessionStorage-Zugriff und muss denselben Spieler wiedererkennen.
+ location.href=path+"?room="+encodeURIComponent(activeRoom)+
+  "&name="+encodeURIComponent(playerName())+
+  "&id="+encodeURIComponent(sessionID);
 }
 
 async function gameApiAction(gameId, action, data={}){
@@ -412,29 +439,33 @@ async function dameAction(action,data={}){
  return gameApiAction("dame", action, data);
 }
 
-async function inviteGame(gameId, player){
+async function inviteGame(gameId, player, extra={}){
  const gameDef = SUPPORTED_GAMES.find(g=>g.id===gameId);
  if(!gameDef) return;
- if(await gameApiAction(gameId, "invite", {toId: player.id})){
-  selectedGamePlayer = null;
+ if(await gameApiAction(gameId, "invite", {toId: player.id, ...extra})){
   tttStatus("Einladung zu "+gameDef.name+" an "+player.name+" wurde im Chat gesendet. Wir warten auf die Antwort …");
   await refreshPlayers();
   await refresh();
  }
 }
 
-async function inviteTicTacToe(player){
- return inviteGame("tictactoe", player);
-}
-
-async function inviteVierGewinnt(player){
- return inviteGame("viergewinnt", player);
-}
-
+// refreshGames fragt alle drei Spielstände ab. Ein Fehler in einem Spiel darf
+// die anderen nicht blockieren.
 async function refreshGames(players){
  await refreshTicTacToe(players);
  await refreshVierGewinnt(players);
  await refreshDame(players);
+ await refreshPaare(players);
+ await refreshMaen(players);
+}
+
+// Aktueller Spielstand des jeweiligen Spiels, für die Einladungen im Chat.
+function gameStateFor(gameId){
+ if(gameId==="dame")return currentDameGame;
+ if(gameId==="viergewinnt")return currentVGGame;
+ if(gameId==="paare")return currentPaareGame;
+ if(gameId==="menschaerger")return currentMaenGame;
+ return currentTTTGame;
 }
 
 async function refreshDame(players){
@@ -451,11 +482,7 @@ async function refreshDame(players){
 
  if(game && game.status==="active"){
   if(game.redId===sessionID || game.blueId===sessionID){
-   tttStatus("Die Einladung zu Dame wurde angenommen. Das Spiel wird geöffnet …");
-   if(!dameLaunched){
-    dameLaunched=true;
-    location.href="/spiele/dame/dame.html?room="+encodeURIComponent(activeRoom)+"&name="+encodeURIComponent(playerName());
-   }
+   tttStatus("Dame läuft gegen "+(game.redId===sessionID?game.blueName:game.redName)+".", "dame");
   }else{
    tttStatus(game.redName+" spielt gerade Dame gegen "+game.blueName+".");
   }
@@ -472,85 +499,240 @@ async function refreshDame(players){
  }
 }
 
+async function refreshPaare(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/paare?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+
+ currentPaareGame=game;
+
+ if(game && game.status==="active"){
+  if(game.redId===sessionID || game.blueId===sessionID){
+   tttStatus("Paare finden läuft gegen "+(game.redId===sessionID?game.blueName:game.redName)+".", "paare");
+  }else{
+   tttStatus(game.redName+" spielt gerade Paare finden gegen "+game.blueName+".");
+  }
+  return;
+ }
+
+ if(game && game.status==="invited"){
+  if(game.redId===sessionID){
+   tttStatus("Deine Einladung an "+game.blueName+" zu Paare finden steht im Chat. Wir warten auf die Antwort …");
+  }else if(game.blueId===sessionID){
+   tttStatus(game.redName+" hat dich zu Paare finden eingeladen. Du kannst direkt im Chat antworten.");
+  }
+  return;
+ }
+
+ if(game && game.status==="finished"){
+  tttStatus("Die letzte Runde Paare finden ist beendet. Du kannst neu einladen.");
+ }
+}
+
+// Mensch ärgere dich nicht spielt mit 2-4 Sitzen. Der Gastgeber lädt nacheinander
+// weitere Spieler ein und startet, sobald genug bereit sind.
+async function refreshMaen(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/menschaerger?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentMaenGame=game;
+ if(!game)return;
+
+ const seats=game.players.map(p=>p.name+(p.ready?"":" (wartet)")).join(", ");
+ const ready=game.players.filter(p=>p.ready).length;
+
+ if(game.status==="active"){
+  tttStatus((game.players.some(p=>p.id===sessionID)?"Du spielst mit: ":"Mensch ärgere dich nicht läuft: ")+seats+".", "menschaerger");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const winner=game.players.find(p=>p.id===game.winner);
+  tttStatus(winner?winner.name+" hat gewonnen.":"Die Partie ist beendet.");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Mensch ärgere dich nicht: "+seats+" – "+ready+"/"+game.maxPlayers+" bereit.");
+  // Jeder am Tisch kann sich hier bereit melden – annehmen ist nicht der
+  // einzige Weg, und wer schon sitzt, kommt so auch wieder auf bereit.
+  const me=game.players.find(p=>p.id===sessionID);
+  if(me){
+   addStatusButton(me.ready?"Nicht mehr bereit":"Ich bin bereit", async()=>{
+    if(await gameApiAction("menschaerger", "ready")){
+     await refreshMaen(players);
+    }
+   });
+  }
+  if(game.hostId===sessionID && ready>=2){
+   addStatusButton("Spiel starten", async()=>{
+    if(await gameApiAction("menschaerger", "start")){
+     openGame(gamePath("menschaerger"));
+    }
+   });
+  }
+ }
+}
+
+let selectedGame="tictactoe";
+let selectedPairs=8;
+let selectedSeats=4;
+let playersSignature="";
+
+function gameName(id){
+ const def=SUPPORTED_GAMES.find(g=>g.id===id);
+ return def?def.name:"Spiel";
+}
+
+function gamePath(id){
+ const def=SUPPORTED_GAMES.find(g=>g.id===id);
+ return def?def.path:"/connector";
+}
+
+// Zusätzlicher Knopf unter dem Spielstatus (z. B. "Spiel starten").
+function addStatusButton(label, handler){
+ const box=document.getElementById("game-status");
+ const button=document.createElement("button");
+ button.type="button";
+ button.className="open-game";
+ button.textContent=label;
+ button.onclick=handler;
+ box.appendChild(button);
+}
+
+// Zeigt alle Spieler des Raums. Ein Klick auf einen Spieler lädt ihn sofort
+// zum oben gewählten Spiel ein.
 function renderGamePicker(players){
  const box=document.getElementById("gameplayers");
- box.innerHTML="";
- const others=players.filter(p=>p.id!==sessionID);
+ if(!box)return;
 
+ // Nur neu zeichnen, wenn sich die Spielerliste wirklich verändert hat, sonst
+ // springt die Spielauswahl bei jedem Poll zurück.
+ const signature=isRoomOwner+"|"+players.map(p=>p.id+":"+p.name).join(",");
+ if(signature===playersSignature){
+  const currentSelect=document.getElementById("game-choice");
+  if(currentSelect)currentSelect.value=selectedGame;
+  return;
+ }
+ playersSignature=signature;
+
+ box.innerHTML="";
+
+ const head=document.createElement("div");
+ head.className="players-head";
+ head.textContent="Spieler im Raum ("+players.length+")";
+ box.appendChild(head);
+
+ const controls=document.createElement("div");
+ controls.className="game-invite-controls";
+ const label=document.createElement("label");
+ label.htmlFor="game-choice";
+ label.textContent="Spiel:";
+ const select=document.createElement("select");
+ select.id="game-choice";
+ select.setAttribute("aria-label","Spiel auswählen");
+ SUPPORTED_GAMES.forEach(g=>{
+  const opt=document.createElement("option");
+  opt.value=g.id;
+  opt.textContent=g.name;
+  select.appendChild(opt);
+ });
+ select.value=selectedGame;
+ select.onchange=()=>{
+  selectedGame=select.value;
+  playersSignature="";
+  renderGamePicker(currentPlayersList);
+ };
+ controls.append(label,select);
+
+ // Bei Paare finden wird die Anzahl der Paare gleich mit eingeladen.
+ if(selectedGame==="paare"){
+  const pairsLabel=document.createElement("label");
+  pairsLabel.htmlFor="pair-choice";
+  pairsLabel.textContent="Paare:";
+  const pairsSelect=document.createElement("select");
+  pairsSelect.id="pair-choice";
+  pairsSelect.setAttribute("aria-label","Anzahl der Paare");
+  for(let i=1;i<=12;i++){
+   const opt=document.createElement("option");
+   opt.value=String(i);
+   opt.textContent=String(i);
+   pairsSelect.appendChild(opt);
+  }
+  pairsSelect.value=String(selectedPairs);
+  pairsSelect.onchange=()=>{ selectedPairs=Number(pairsSelect.value)||8; };
+  controls.append(pairsLabel,pairsSelect);
+ }
+
+ // Bei Mensch ärgere dich nicht zählt, wie viele Sitze der Tisch hat.
+ if(selectedGame==="menschaerger"){
+  const seatsLabel=document.createElement("label");
+  seatsLabel.htmlFor="seat-choice";
+  seatsLabel.textContent="Spieler:";
+  const seatsSelect=document.createElement("select");
+  seatsSelect.id="seat-choice";
+  seatsSelect.setAttribute("aria-label","Anzahl der Spieler");
+  [2,3,4].forEach(count=>{
+   const opt=document.createElement("option");
+   opt.value=String(count);
+   opt.textContent=count+" Spieler";
+   seatsSelect.appendChild(opt);
+  });
+  seatsSelect.value=String(selectedSeats);
+  seatsSelect.onchange=()=>{ selectedSeats=Number(seatsSelect.value)||4; };
+  controls.append(seatsLabel,seatsSelect);
+ }
+ box.appendChild(controls);
+
+ players.forEach(p=>{
+  const isSelf=p.id===sessionID;
+  const row=document.createElement("button");
+  row.type="button";
+  row.className="game-player";
+  const name=document.createElement("span");
+  name.textContent=p.name+(isSelf?" (Du)":"")+(isSelf&&isRoomOwner?" · Besitzer":"");
+  const hint=document.createElement("small");
+  hint.textContent=isSelf?"":"Mit "+gameName(selectedGame)+" einladen";
+  row.append(name,hint);
+  if(isSelf){
+   row.disabled=true;
+  }else{
+   row.title="Klicken, um "+p.name+" zu "+gameName(selectedGame)+" einzuladen";
+   row.onclick=async()=>{
+    if(row.disabled)return;
+    row.disabled=true;
+    try{
+     const extra=selectedGame==="paare"?{pairs:selectedPairs}
+      :selectedGame==="menschaerger"?{maxPlayers:selectedSeats}
+      :{};
+     await inviteGame(selectedGame, p, extra);
+    }finally{
+     row.disabled=false;
+    }
+   };
+  }
+  box.appendChild(row);
+ });
+
+ const others=players.filter(p=>p.id!==sessionID);
  if(!others.length){
-  selectedGamePlayer=null;
   const empty=document.createElement("div");
   empty.className="empty";
   empty.textContent="Warte, bis ein weiterer Spieler dem Spielraum beitritt.";
   box.appendChild(empty);
-  return;
- }
-
- if(selectedGamePlayer && !others.some(p=>p.id===selectedGamePlayer.id)){
-  selectedGamePlayer=null;
- }
-
- others.forEach(p=>{
-  const row=document.createElement("div");
-  row.className="game-player";
-  const name=document.createElement("span");
-  name.textContent=p.name;
-  const button=document.createElement("button");
-  button.textContent=selectedGamePlayer && selectedGamePlayer.id===p.id?"Ausgewählt":"Spieler auswählen";
-  button.onclick=()=>{
-   selectedGamePlayer=p;
-   renderGamePicker(players);
-  };
-  row.append(name,button);
-  box.appendChild(row);
- });
-
- if(selectedGamePlayer){
-  const controls=document.createElement("div");
-  controls.className="game-invite-controls";
-
-  const select=document.createElement("select");
-  select.setAttribute("aria-label","Spiel auswählen");
-  SUPPORTED_GAMES.forEach(g=>{
-   const opt=document.createElement("option");
-   opt.value=g.id;
-   opt.textContent=g.name;
-   select.appendChild(opt);
-  });
-
-  const invite=document.createElement("button");
-  invite.textContent="Einladung senden";
-  invite.onclick=async()=>{
-   await inviteGame(select.value, selectedGamePlayer);
-  };
-
-  controls.append(select,invite);
-  box.appendChild(controls);
  }
 }
 
-async function inviteTicTacToe(player){
- if(await tttAction("invite",{toId:player.id})){
-  selectedGamePlayer=null;
-  tttStatus("Einladung an "+player.name+" wurde im Chat gesendet. Wir warten auf die Antwort …");
-  await refreshPlayers();
-  await refresh();
- }
-}
-
-async function inviteVierGewinnt(player){
- if(await vgAction("invite",{toId:player.id})){
-  selectedGamePlayer=null;
-  tttStatus("Einladung zu Vier gewinnt an "+player.name+" wurde im Chat gesendet. Wir warten auf die Antwort …");
-  await refreshPlayers();
-  await refresh();
- }
-}
-
-async function refreshGames(players){
- await refreshTicTacToe(players);
- await refreshVierGewinnt(players);
-}
 
 async function refreshVierGewinnt(players){
  let game=null;
@@ -566,11 +748,7 @@ async function refreshVierGewinnt(players){
 
  if(game && game.status==="active"){
   if(game.redId===sessionID || game.blueId===sessionID){
-   tttStatus("Die Einladung zu Vier gewinnt wurde angenommen. Das Spiel wird geöffnet …");
-   if(!vgLaunched){
-    vgLaunched=true;
-    location.href="/spiele/viergewinnt/viergewinnt.html?room="+encodeURIComponent(activeRoom)+"&name="+encodeURIComponent(playerName());
-   }
+   tttStatus("Vier gewinnt läuft gegen "+(game.redId===sessionID?game.blueName:game.redName)+".", "viergewinnt");
   }else{
    tttStatus(game.redName+" spielt gerade Vier gewinnt gegen "+game.blueName+".");
   }
@@ -602,11 +780,7 @@ async function refreshTicTacToe(players){
 
  if(game && game.status==="active"){
   if(game.xId===sessionID || game.oId===sessionID){
-   tttStatus("Die Einladung wurde angenommen. Tic Tac Toe wird geöffnet …");
-   if(!tttLaunched){
-    tttLaunched=true;
-    location.href="/spiele/tictac/tictactoe.html?room="+encodeURIComponent(activeRoom)+"&name="+encodeURIComponent(playerName());
-   }
+   tttStatus("Tic Tac Toe läuft gegen "+(game.xId===sessionID?game.oName:game.xName)+".", "tictactoe");
   }else{
    tttStatus(game.xName+" spielt gerade gegen "+game.oName+".");
   }
@@ -638,21 +812,40 @@ async function refreshTicTacToe(players){
   tttStatus("Wähle einen Spieler aus und anschließend das gewünschte Spiel.");
  }
 
- renderGamePicker(players);
 }
+let chatBusy=false;
+let lastChatSignature="";
+
 async function refresh(){
- if(!activeRoom)return;
+ if(!activeRoom||chatBusy)return;
+ chatBusy=true;
  try{
   const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
   if(!r.ok){
-   document.getElementById("roomstatus").textContent="Verbindung verloren";
+   setRoomStatus("Verbindung verloren");
    return;
   }
   const msgs=await r.json(),box=document.getElementById("chat");
+  // Nur neu zeichnen, wenn sich wirklich etwas geändert hat. Sonst klappt das
+  // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
+  const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId].join("|")).join("`")
+   +"#"+isRoomOwner+"#"+selectedMuteSender
+   +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
+  if(signature===lastChatSignature)return;
+  lastChatSignature=signature;
+  const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
   box.innerHTML="";
   msgs.forEach(m=>{
    const d=document.createElement("div");
    d.className="msg";
+
+   // Systemmeldungen wie "Anna betritt die Spielwiese" laufen ohne Absender.
+   if(m.system){
+    d.className="msg msg-system";
+    d.textContent=m.text;
+    box.appendChild(d);
+    return;
+   }
 
    if(m.gameInvite){
     d.className="msg game-invite";
@@ -665,10 +858,12 @@ async function refresh(){
     sm.textContent="  "+m.time;
     d.append(title,gameText,sm);
 
-    const game = (m.game==="dame") ? currentDameGame : (m.game==="viergewinnt") ? currentVGGame : currentTTTGame;
+    const game = gameStateFor(m.game);
     if(game && game.id===m.gameId){
-     const isInvitee = (m.game==="tictactoe") ? (m.toId===sessionID) : (game.blueId===sessionID);
-     const isInviter = (m.game==="tictactoe") ? (game.xId===sessionID) : (game.redId===sessionID);
+     // Die Einladungsnachricht selbst trägt Empfänger und Absender – das gilt
+     // für alle Spiele, auch für die mit mehreren Sitzen.
+     const isInvitee = m.toId===sessionID;
+     const isInviter = m.senderId===sessionID;
      if(game.status==="invited" && isInvitee){
       const actions=document.createElement("div");
       actions.className="game-invite-actions";
@@ -677,10 +872,7 @@ async function refresh(){
       accept.textContent="Einladung annehmen";
       accept.onclick=async()=>{
        if(await gameApiAction(m.game, "accept")){
-        if(m.game==="dame") dameLaunched=true;
-        else if(m.game==="viergewinnt") vgLaunched=true;
-        else tttLaunched=true;
-        location.href=gameDef.path+"?room="+encodeURIComponent(activeRoom)+"&name="+encodeURIComponent(playerName());
+        openGame(gameDef.path);
        }
       };
 
@@ -763,8 +955,11 @@ async function refresh(){
 
    box.appendChild(d);
   });
-  box.scrollTop=box.scrollHeight;
- }catch(e){}
+  if(atBottom)box.scrollTop=box.scrollHeight;
+ }catch(e){
+ }finally{
+  chatBusy=false;
+ }
 }
 async function send(){
  const field=document.getElementById("message"),text=field.value.trim();
@@ -784,17 +979,24 @@ document.getElementById("message").addEventListener("keydown",e=>{
 });
 
 loadStatus();
-refreshRooms();
-setInterval(refreshRooms,3000);
 setInterval(heartbeat,5000);
 setInterval(refresh,1000);
 setInterval(refreshPlayers,3000);
 setInterval(loadMutes,3000);
 
+document.getElementById("player").addEventListener("keydown",e=>{
+ if(e.key==="Enter")joinSingleRoom();
+});
+
 const params=new URLSearchParams(location.search);
 if(params.get("room")){
  document.getElementById("room").value=params.get("room");
- join();
+ // Zurück aus einem Spiel: mit gespeichertem Namen direkt hinein.
+ if(nameField.value.trim()){
+  join();
+ }else{
+  setRoomStatus("Bitte gib deinen Namen ein und tritt dem Raum bei.");
+ }
 }
 </script>
 </body>

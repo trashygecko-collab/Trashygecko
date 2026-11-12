@@ -352,13 +352,19 @@ let onlineGame = null;
 let onlineOpponent = 'Gegner';
 let onlineName = (onlineParams.get('name') || 'Spieler').trim().slice(0,24);
 if(onlineRoom){
-  try{
-    onlineID = sessionStorage.getItem('tg-player-id') || '';
-    if(!onlineID){
-      onlineID = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
-      sessionStorage.setItem('tg-player-id', onlineID);
-    }
-  }catch(e){ onlineID = String(Date.now()) + Math.random(); }
+  // Der Connector schickt die Spieler-ID in der URL mit. Sonst gilt die des
+  // Tabs, sonst wird eine neue erzeugt – ohne ID gäbe es kein Presence und
+  // der Spieler würde nach 20 Sekunden aus dem Raum fallen.
+  onlineID = (onlineParams.get('id') || '').trim();
+  if(!onlineID){
+    try{
+      onlineID = sessionStorage.getItem('tg-player-id') || '';
+      if(!onlineID){
+        onlineID = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+        sessionStorage.setItem('tg-player-id', onlineID);
+      }
+    }catch(e){ onlineID = String(Date.now()) + Math.random(); }
+  }
 }
 
 
@@ -715,10 +721,14 @@ if(onlineRoom){
   const lb = document.getElementById("leaveBtn");
   if (lb) lb.style.display = "inline-block";
   document.querySelector('.hint').textContent='ONLINE-MULTIPLAYER · '+onlineRoom+' · '+(onlineID?'Verbunden':'Spielerkennung fehlt');
-  multiplayerHeartbeat();
   setInterval(multiplayerHeartbeat,5000);
-  refreshMultiplayer();
   setInterval(refreshMultiplayer,700);
+  // Erst den Spieler im Raum anmelden, dann den Spielstand holen – sonst
+  // antwortet der erste Abruf mit "nicht im Raum".
+  (async () => {
+    await multiplayerHeartbeat();
+    await refreshMultiplayer();
+  })();
 }
 
 })();

@@ -2,12 +2,75 @@ package main
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
+
+// mainRoomCode ist der eine Raum, den der Connector anbietet.
+var mainRoomCode string
+
+// ensureMainRoom legt diesen Raum an. Es gibt bewusst nur einen: der Spieler
+// am Server-PC ist Admin, alle anderen kommen in denselben Raum.
+func ensureMainRoom() {
+	mu.Lock()
+	defer mu.Unlock()
+	if mainRoomCode != "" && rooms[mainRoomCode] != nil {
+		return
+	}
+	code := randomCode()
+	for rooms[code] != nil {
+		code = randomCode()
+	}
+	mainRoomCode = code
+	rooms[code] = &Room{
+		Code:       code,
+		Created:    time.Now(),
+		LastActive: time.Now(),
+		Players:    map[string]Player{},
+		Messages:   []Message{},
+		Mutes:      map[string]time.Time{},
+		MsgTimes:   map[string][]time.Time{},
+	}
+}
+
+// roomTitle bildet den Raumnamen aus dem Spielernamen: "Anna" -> "Annas Abenteuerland".
+func roomTitle(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "Abenteuerland"
+	}
+	// Bei Namen auf s, x, z oder ß klingt ein zweites s falsch: "Klaus' Abenteuerland".
+	last := name[len(name)-1:]
+	if last == "s" || last == "x" || last == "z" || last == "ß" {
+		return name + "' Abenteuerland"
+	}
+	return name + "s Abenteuerland"
+}
+
+// isServerMachine meldet, ob die Anfrage von diesem PC kommt. Nur dort läuft der
+// Connector – also sitzt dort der Host, der automatisch Admin ist.
+func isServerMachine(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, local := range localIPv4s() {
+		if local == ip.String() {
+			return true
+		}
+	}
+	return false
+}
 
 // roomsHandler handles GET (list rooms) and POST (create room).
 func roomsHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,11 +90,15 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 				game = "Vier gewinnt"
 			} else if room.Dame != nil && (room.Dame.Status == "active" || room.Dame.Status == "invited") {
 				game = "Dame"
+			} else if room.Paare != nil && (room.Paare.Status == "active" || room.Paare.Status == "invited") {
+				game = "Paare finden"
+			} else if room.Menschaerger != nil && (room.Menschaerger.Status == "active" || room.Menschaerger.Status == "invited") {
+				game = "Mensch ärgere dich nicht"
 			}
-			list = append(list, RoomInfo{Code: code, Players: len(room.Players), Created: room.Created.Format("15:04"), Owner: room.OwnerName, Status: status, Game: game, Name: room.Name})
+			list = append(list, RoomInfo{Code: code, Players: len(room.Players), Created: room.Created.Format("15:04"), CreatedAt: room.Created, Owner: room.OwnerName, Status: status, Game: game, Name: room.Name})
 		}
 		mu.Unlock()
-		sort.Slice(list, func(i, j int) bool { return list[i].Created < list[j].Created })
+		sort.Slice(list, func(i, j int) bool { return list[i].CreatedAt.Before(list[j].CreatedAt) })
 		jsonResponse(w, list)
 		return
 	}
@@ -42,51 +109,29 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 			Name string `json:"name"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&input)
+		input.ID = strings.TrimSpace(input.ID)
 		pName := strings.TrimSpace(input.Name)
 		if pName == "" {
 			pName = "Spieler"
 		}
-		if len(pName) > 24 {
-			pName = pName[:24]
-		}
+		pName = limitName(pName)
 
+		ensureMainRoom()
 		mu.Lock()
-		code := randomCode()
-		for rooms[code] != nil {
-			code = randomCode()
+		room := rooms[mainRoomCode]
+		if room == nil {
+			mu.Unlock()
+			http.Error(w, "Spielraum nicht verfügbar", http.StatusServiceUnavailable)
+			return
 		}
-
-		// Calculate room name with numbering: Spielername Raum, Spielername2 Raum, etc.
-		baseName := pName + " Raum"
-		targetName := baseName
-		counter := 2
-		// Check for duplicate names among active rooms
-		nameExists := func(n string) bool {
-			for _, rm := range rooms {
-				if strings.EqualFold(rm.Name, n) {
-					return true
-				}
-			}
-			return false
-		}
-		for nameExists(targetName) {
-			targetName = pName + strconv.Itoa(counter) + " Raum"
-			counter++
-		}
-
-		rooms[code] = &Room{
-			Code:      code,
-			OwnerID:   strings.TrimSpace(input.ID),
-			OwnerName: pName,
-			Name:      targetName,
-			Created:   time.Now(),
-			Players:   map[string]Player{},
-			Messages:  []Message{},
-			Mutes:     map[string]time.Time{},
-			MsgTimes:  map[string][]time.Time{},
+		code := room.Code
+		displayName := room.Name
+		if displayName == "" {
+			// Nur für die Anzeige – der Name wird beim Beitreten gesetzt.
+			displayName = roomTitle(pName)
 		}
 		mu.Unlock()
-		jsonResponse(w, map[string]string{"code": code, "name": targetName})
+		jsonResponse(w, map[string]string{"code": code, "name": displayName})
 		return
 	}
 
@@ -118,9 +163,7 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	if input.Name == "" {
 		input.Name = "Spieler"
 	}
-	if len(input.Name) > 24 {
-		input.Name = input.Name[:24]
-	}
+	input.Name = limitName(input.Name)
 
 	mu.Lock()
 	room := rooms[input.Room]
@@ -129,17 +172,34 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
 		return
 	}
-	room.cleanPlayers()
-	// Assign owner if not set
-	if room.OwnerID == "" {
-		room.OwnerID = input.ID
-		room.OwnerName = input.Name
-		if room.Name == "" {
-			room.Name = input.Name + " Raum"
+	// Ein Spieler gehört immer nur zu genau einem Spielraum.
+	for otherCode, other := range rooms {
+		if otherCode == input.Room {
+			continue
+		}
+		if _, ok := other.Players[input.ID]; ok {
+			delete(other.Players, input.ID)
+			other.cleanPlayers()
+			other.LastActive = time.Now()
 		}
 	}
-	// Ensure player is only in one room: others will be auto-removed when they join another via presence.
+	room.cleanPlayers()
+	// Admin ist der Spieler am Server-PC. Seine Anfrage kommt von einer lokalen
+	// Adresse, egal ob über localhost oder die LAN-IP aufgerufen wird.
+	if room.OwnerID == "" || (room.OwnerID != input.ID && isServerMachine(r)) {
+		room.OwnerID = input.ID
+		room.OwnerName = input.Name
+		room.Name = roomTitle(input.Name)
+	}
+	if _, known := room.Players[input.ID]; !known {
+		room.addMessage(Message{
+			Text:   input.Name + " betritt die Spielwiese",
+			Time:   time.Now().Format("15:04:05"),
+			System: true,
+		})
+	}
 	room.Players[input.ID] = Player{Name: input.Name, Last: time.Now()}
+	room.LastActive = time.Now()
 	mu.Unlock()
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // messages handles GET (fetch) and POST (send) chat messages.
@@ -56,10 +57,8 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		if input.Name == "" {
 			input.Name = "Spieler"
 		}
-		if len(input.Name) > 24 {
-			input.Name = input.Name[:24]
-		}
-		if input.Text == "" || len(input.Text) > 1000 {
+		input.Name = limitName(input.Name)
+		if input.Text == "" || utf8.RuneCountInString(input.Text) > 1000 {
 			http.Error(w, "Nachricht leer oder zu lang", http.StatusBadRequest)
 			return
 		}
@@ -128,6 +127,7 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			ToName:   recipientName,
 			Whisper:  input.ToID != "",
 		})
+		room.LastActive = now
 		mu.Unlock()
 		w.WriteHeader(http.StatusNoContent)
 		return

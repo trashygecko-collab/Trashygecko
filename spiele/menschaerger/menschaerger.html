@@ -117,31 +117,32 @@ h1{
   flex:1;color:#bbb;font-size:12px;
   text-align:center;min-height:16px;
 }
+/* Kein Rahmen, kein Schatten, keine Rundung – jeder Pixel gehört dem Spiel. */
 .board-wrap{
   position:relative;
-  width:min(100%,720px);
+  width:min(100%,820px);
   aspect-ratio:1;
   background:#000;
-  border:2px solid #292929;
-  border-radius:12px;
   overflow:hidden;
-  box-shadow:0 0 18px #42e8ff22;
 }
 #board{display:block;width:100%;height:100%;touch-action:manipulation}
 .board-cross{fill:#101317;stroke:#555d69;stroke-width:2}
-.base{fill:#080a0e;stroke-width:3}
-.base-slot{stroke-width:3}
-.track{fill:#e5e9ef;stroke:#aab3c0;stroke-width:2}
-.track.safe{stroke:#fff;stroke-width:3}
-.lane{stroke:#fff;stroke-width:2}
+/* Parkplätze: schwarz, ohne Kasten drumherum. */
+.base-slot{fill:#000;stroke:#2a3240;stroke-width:2}
+/* Spielfelder: schwarzer Kreis mit hellem Rand – blendet nicht und die
+   Figuren bleiben gut sichtbar. */
+.track{fill:#050505;stroke:#dfe5ee;stroke-width:3.5}
+.track.safe{stroke-width:4}
+.lane{stroke-width:4}
+/* Figuren ohne Leuchten und ohne hellen Ring – der machte sie aussenrum zu
+   grell. Nur wer ziehen darf, bekommt Rand und Glühen. */
 .token{
-  stroke:#fff;stroke-width:2;
+  stroke:#141414;stroke-width:2;
   cursor:pointer;
-  filter:drop-shadow(0 2px 3px #000);
 }
 .token.legal{
-  stroke:#fff;stroke-width:4;
-  filter:drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor);
+  stroke:#fff;stroke-width:3;
+  filter:drop-shadow(0 0 6px currentColor);
   animation:tokenPulse .7s ease-in-out infinite alternate;
 }
 @keyframes tokenPulse{from{opacity:1}to{opacity:.62}}
@@ -171,6 +172,10 @@ h1{
   box-shadow:0 0 4px #0008;
   transform:translate(-50%,-50%);
 }
+.die-question{
+  font-size:32px;font-weight:bold;line-height:1;
+  color:var(--pip-color,#fff);text-shadow:0 0 8px #0006;
+}
 .players-status{
   width:100%;display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;
@@ -188,6 +193,11 @@ h1{
   font-size:20px;text-shadow:0 0 12px #ffbb33;
 }
 .new-game{background:#281329;color:var(--pink);border-color:var(--pink)}
+/* Das Brett holt sich den Seitenabstand der Seite zurück und nutzt die volle
+   Displaybreite – auf dem Handy zählt jeder Millimeter. */
+@media(max-width:820px){
+  .board-wrap{width:calc(100% + 24px);margin-left:-12px;margin-right:-12px}
+}
 @media(max-width:520px){
   body{padding:6px}
   .app{gap:8px}
@@ -195,13 +205,16 @@ h1{
   .player-settings{grid-template-columns:1fr 1fr}
   .players-status{gap:4px}
   .player-card{font-size:10px;padding:7px 2px}
+  .board-wrap{width:calc(100% + 12px);margin-left:-6px;margin-right:-6px}
   .die{width:58px;height:58px}
+  .die-question{font-size:27px}
 }
 @media(max-width:360px){
   h1{letter-spacing:1px}
   .top-info{justify-content:center}
   .message{flex-basis:100%}
   .die{width:52px;height:52px}
+  .die-question{font-size:24px}
 }
 </style>
 </head>
@@ -209,7 +222,6 @@ h1{
 <main class="app">
 <header>
   <h1>MENSCH ÄRGERE DICH NICHT</h1>
-  <div class="subtitle">NEON BOARD GAME · 2–4 SPIELER</div>
 </header>
 
 <section class="panel setup" id="setup">
@@ -244,8 +256,9 @@ h1{
     <div class="die" id="die" role="button" aria-label="Würfeln" title="Zum Würfeln anklicken"></div>
   </div>
 
-  <button class="action new-game" id="newGame">NEUES SPIEL</button>
   <div class="players-status" id="playersStatus"></div>
+  <button class="action new-game" id="newGame">NEUES SPIEL</button>
+  <button class="action new-game" id="leaveBtn" hidden>ZUM CONNECTOR</button>
   <div class="winner" id="winner"></div>
 </section>
 </main>
@@ -253,6 +266,20 @@ h1{
 <script>
 (() => {
 "use strict";
+
+/* Über den Connector geöffnet (?room=TG-XXXX&name=...&id=...) wird am Tisch
+   gespielt. Ohne diese Parameter bleibt alles lokales Spiel. */
+const onlineParams=new URLSearchParams(location.search);
+const onlineRoom=(onlineParams.get("room")||"").trim().toUpperCase();
+const ONLINE=/^TG-[A-F0-9]{4}$/.test(onlineRoom);
+const onlineName=(onlineParams.get("name")||"").trim()||"Spieler";
+let onlineID=(onlineParams.get("id")||"").trim();
+if(ONLINE&&!onlineID){
+  try{onlineID=sessionStorage.getItem("tg-player-id")||"";}catch(e){}
+}
+if(ONLINE&&!onlineID)onlineID="tg-"+Math.random().toString(36).slice(2)+Date.now();
+let onlineGame=null;
+let onlineBusy=false;
 
 const COLORS = {
   red:{name:"Rot",hex:"#ed3434",dark:"#8e111b"},
@@ -262,8 +289,9 @@ const COLORS = {
 };
 
 const ORDER=["red","green","yellow","blue"];
-const CELL=64;
-const MARGIN=48;
+/* Das Brett nutzt die volle Fläche – auf dem Handy zählt jeder Pixel. */
+const MARGIN=0;
+const CELL=(800-2*MARGIN)/11;
 
 /* 40 Rundfelder: vier Abschnitte mit jeweils zehn Feldern. */
 const TRACK=[
@@ -284,18 +312,16 @@ const HOME_LANES={
   red:[[9,5],[8,5],[7,5],[6,5]]
 };
 
-/* Vier Warteplätze in jeder Ecke, passend zur Lage auf dem Spielbrett. */
-const HOME_SLOTS={
-  yellow:[[96,96],[192,96],[96,192],[192,192]],
-  green:[[608,96],[704,96],[608,192],[704,192]],
-  blue:[[96,608],[192,608],[96,704],[192,704]],
-  red:[[608,608],[704,608],[608,704],[704,704]]
-};
-
-const BASE_BOXES={
-  yellow:{x:16,y:16},green:{x:528,y:16},
-  blue:{x:16,y:528},red:{x:528,y:528}
-};
+/* Basen: 4×4 Felder in jeder Ecke, direkt am Spielfeld ausgerichtet. */
+const BASE_ORIGIN={yellow:[0,0],green:[7,0],blue:[0,7],red:[7,7]};
+const BASE_BOXES={};
+/* Vier Warteplätze je Ecke – nur die Kreise, ohne farbige Umrandung. */
+const HOME_SLOTS={};
+Object.entries(BASE_ORIGIN).forEach(([color,[gx,gy]])=>{
+  BASE_BOXES[color]={x:MARGIN+gx*CELL,y:MARGIN+gy*CELL};
+  HOME_SLOTS[color]=[[1.25,1.25],[2.75,1.25],[1.25,2.75],[2.75,2.75]]
+    .map(([sx,sy])=>[BASE_BOXES[color].x+sx*CELL,BASE_BOXES[color].y+sy*CELL]);
+});
 
 const boardDrawing=document.getElementById("boardDrawing");
 const tokensGroup=document.getElementById("tokens");
@@ -313,6 +339,8 @@ let chosenColors=["red","yellow"];
 let players=[];
 let currentPlayer=0;
 let diceValue=null;
+/* Zuletzt gewürfelte Zahl – der Würfel zeigt sie weiter, statt leer zu werden. */
+let lastDie=null;
 let rolling=false;
 let gameOver=false;
 let canMove=false;
@@ -335,15 +363,10 @@ function cellCenter(col,row){
 }
 
 function addBase(color){
-  const box=BASE_BOXES[color];
-  const c=COLORS[color];
-  boardDrawing.appendChild(svgElement("rect",{
-    x:box.x,y:box.y,width:256,height:256,rx:17,
-    class:"base",stroke:c.hex
-  }));
+  /* Kein Kasten drumherum, nur die vier schwarzen Parkplätze. */
   HOME_SLOTS[color].forEach(([cx,cy])=>{
     boardDrawing.appendChild(svgElement("circle",{
-      cx,cy,r:25,class:"base-slot",fill:"#111318",stroke:c.hex
+      cx,cy,r:CELL*.36,class:"base-slot"
     }));
   });
 }
@@ -368,13 +391,13 @@ function drawBoard(){
     const [cx,cy]=cellCenter(x,y);
     const startColor=Object.keys(START_INDEX).find(color=>START_INDEX[color]===index);
     boardDrawing.appendChild(svgElement("circle",{
-      cx,cy,r:22,class:"track"+(startColor?" safe":""),
-      fill:startColor?COLORS[startColor].hex:"#e5e9ef",
-      stroke:startColor?"#fff":"#aab3c0"
+      cx,cy,r:CELL*.34,class:"track"+(startColor?" safe":""),
+      fill:"#050505",
+      stroke:startColor?COLORS[startColor].hex:"#dfe5ee"
     }));
     if(startColor){
       boardDrawing.appendChild(svgElement("circle",{
-        cx,cy,r:6,fill:COLORS[startColor].dark
+        cx,cy,r:CELL*.10,fill:COLORS[startColor].hex
       }));
     }
   });
@@ -383,15 +406,15 @@ function drawBoard(){
     lane.forEach(([x,y],index)=>{
       const [cx,cy]=cellCenter(x,y);
       boardDrawing.appendChild(svgElement("circle",{
-        cx,cy,r:22,class:"lane",fill:COLORS[color].hex,
-        stroke:"#fff",opacity:index===3?1:.86
+        cx,cy,r:CELL*.34,class:"lane",fill:"#050505",
+        stroke:COLORS[color].hex,opacity:index===3?1:.86
       }));
     });
   });
 
   /* Neutrales Mittelfeld – kein vierfarbiges Quadrat. */
   boardDrawing.appendChild(svgElement("circle",{
-    cx:400,cy:400,r:23,fill:"#050505",stroke:"#aab3c0","stroke-width":2
+    cx:400,cy:400,r:CELL*.36,fill:"#050505",stroke:"#dfe5ee","stroke-width":3.5
   }));
 }
 
@@ -475,6 +498,7 @@ function startGame(){
   gameArea.style.display="flex";
   winnerElement.textContent="";
   dieElement.style.pointerEvents="auto";
+  lastDie=null;
   drawBoard();
   updateAll();
   showDie(null);
@@ -490,6 +514,11 @@ function playerPosition(player,pieceIndex){
     const index=(START_INDEX[player.color]+progress)%40;
     const [x,y]=TRACK[index];
     return {home:false,coords:cellCenter(x,y),trackIndex:index};
+  }
+  /* Im Ziel (44) steht die Figur in der Brettmitte. Ohne diesen Fall würde
+     lane[4] gelesen und das Zeichnen abstürzen. */
+  if(progress>=44){
+    return {home:false,coords:[400,400],lane:true};
   }
   const lane=HOME_LANES[player.color];
   const [x,y]=lane[progress-40];
@@ -520,12 +549,13 @@ function legalMoves(){
         (START_INDEX[player.color]+other)%40===target
       );
       if(occupied)return;
-    }else{
+    }else if(destination<=43){
       const occupied=player.pieces.some((other,otherIndex)=>
         otherIndex!==pieceIndex&&other===destination
       );
       if(occupied)return;
     }
+    /* Im Ziel (44) dürfen mehrere Figuren stehen – sonst ist ein Sieg unmöglich. */
     result.push(pieceIndex);
   });
   return result;
@@ -561,7 +591,7 @@ function renderTokens(){
 
       const isLegal=pIndex===currentPlayer&&legal.includes(pieceIndex);
       const circle=svgElement("circle",{
-        cx,cy,r:16,fill:COLORS[player.color].hex,
+        cx,cy,r:CELL*.25,fill:COLORS[player.color].hex,
         class:"token"+(isLegal?" legal":""),
         style:isLegal?"color:"+COLORS[player.color].hex:"",
         "data-player":pIndex,"data-piece":pieceIndex
@@ -612,7 +642,7 @@ function updateTurn(){
   dieElement.style.setProperty("--die-color",color.hex);
   dieElement.style.setProperty("--die-glow",color.hex);
   dieElement.style.setProperty("--pip-color",player.color==="yellow"?"#171717":"#fff");
-  const canRoll=!gameOver&&!turnLocked&&!rolling&&!canMove;
+  const canRoll=!gameOver&&!turnLocked&&!rolling&&!canMove&&(!ONLINE||(myTurnOnline()&&diceValue===null));
   dieElement.style.cursor=canRoll?"pointer":"default";
   dieElement.style.pointerEvents=canRoll?"auto":"none";
 }
@@ -623,10 +653,10 @@ function updateAll(){
   renderPlayerCards();
 }
 
-function showDie(value){
+/* Zeichnet nur die Punkte, ohne den letzten Wurf zu merken. Das nutzt die
+   Würfel-Animation, damit dort keine Zufallszahl hängen bleibt. */
+function renderPips(value){
   dieElement.innerHTML="";
-  dieElement.classList.remove("rolling");
-  if(value===null)return;
   const positions={
     1:[4],2:[0,8],3:[0,4,8],
     4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]
@@ -643,6 +673,23 @@ function showDie(value){
     pip.style.top=coords[index][1]+"%";
     dieElement.appendChild(pip);
   });
+}
+
+/* Der Würfel zeigt ab dem ersten Wurf immer die gewürfelte Zahl und davor ein
+   Fragezeichen – nie eine leere Fläche. */
+function showDie(value){
+  dieElement.classList.remove("rolling");
+  if(value!==null&&value!==undefined&&value>0)lastDie=value;
+  const shown=lastDie;
+  if(!shown||shown<1||shown>6){
+    dieElement.innerHTML="";
+    const question=document.createElement("span");
+    question.className="die-question";
+    question.textContent="?";
+    dieElement.appendChild(question);
+    return;
+  }
+  renderPips(shown);
 }
 
 function lockAndAdvance(text){
@@ -666,7 +713,7 @@ function rollDice(){
 
   let count=0;
   rollTimer=setInterval(()=>{
-    showDie(Math.floor(Math.random()*6)+1);
+    renderPips(Math.floor(Math.random()*6)+1);
     dieElement.classList.add("rolling");
     count++;
     if(count>=12){
@@ -777,18 +824,168 @@ function nextPlayer(){
   updateAll();
 }
 
+/* ---------- Online über den Connector ---------- */
+function myTurnOnline(){
+  return !!(onlineGame&&onlineGame.players&&onlineGame.players[onlineGame.current]&&onlineGame.players[onlineGame.current].id===onlineID);
+}
+async function postPresence(){
+  if(!onlineRoom||!onlineID)return;
+  await fetch("/api/presence",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
+  });
+}
+async function fetchOnlineGame(){
+  const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store"});
+  if(!r.ok)throw new Error("Spielstand nicht erreichbar ("+r.status+").");
+  return (await r.json()).game;
+}
+async function onlineAction(action,payload={}){
+  const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&action="+encodeURIComponent(action),{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:onlineID,...payload})
+  });
+  if(!r.ok)throw new Error((await r.text()).trim()||"Aktion fehlgeschlagen.");
+  return (await r.json()).game;
+}
+function onlineMessage(){
+  if(!onlineGame)return "Verbinde mit dem Connector …";
+  if(onlineGame.status==="invited")return "Warte auf den Spielstart …";
+  if(onlineGame.status==="finished"){
+    const winner=onlineGame.players.find(p=>p.id===onlineGame.winner);
+    return winner?winner.name+" gewinnt!":"Spiel beendet.";
+  }
+  const current=onlineGame.players[onlineGame.current];
+  if(!current)return "";
+  if(current.id===onlineID){
+    return onlineGame.dice>0?"Wähle eine deiner Figuren!":"Du bist dran – würfle!";
+  }
+  return current.name+(onlineGame.dice>0?" wählt eine Figur …":" ist am Zug …");
+}
+function applyOnlineState(game){
+  onlineGame=game||null;
+  if(!game||(game.status!=="active"&&game.status!=="finished")){
+    players=[];
+    currentPlayer=0;
+    diceValue=null;
+    turnDisplay.textContent="Warte auf den Spielstart …";
+    message.textContent=onlineMessage();
+    playersStatus.innerHTML="";
+    tokensGroup.innerHTML="";
+    showDie(null);
+    return;
+  }
+  players=game.players.map(p=>({color:p.color,name:p.name,pieces:p.pieces.slice()}));
+  currentPlayer=game.current;
+  diceValue=game.dice||null;
+  gameOver=game.status==="finished";
+  turnLocked=false;
+  rolling=false;
+  extraRoll=!!game.extraRoll;
+  canMove=!gameOver&&diceValue!==null&&legalMoves().length>0;
+  const winner=game.players.find(p=>p.id===game.winner);
+  winnerElement.textContent=gameOver&&winner?"🏆 "+winner.name+" GEWINNT! 🏆":"";
+  updateAll();
+  // Auch ohne offenen Wurf zeigt der Würfel die zuletzt gewürfelte Zahl.
+  showDie(game.lastDice||game.dice||null);
+  message.textContent=game.note||onlineMessage();
+}
+async function pollOnline(){
+  if(!onlineRoom||!onlineID||onlineBusy)return;
+  try{
+    const game=await fetchOnlineGame();
+    if(!onlineBusy)applyOnlineState(game);
+  }catch(e){
+    message.textContent="Verbindung zum Connector verloren …";
+  }
+}
+async function rollDiceOnline(){
+  if(onlineBusy||!myTurnOnline()||diceValue!==null)return;
+  onlineBusy=true;
+  let frames=0;
+  const spin=setInterval(()=>{
+    renderPips(Math.floor(Math.random()*6)+1);
+    dieElement.classList.add("rolling");
+    if(++frames>=8)clearInterval(spin);
+  },70);
+  try{
+    const game=await onlineAction("roll");
+    clearInterval(spin);
+    dieElement.classList.remove("rolling");
+    applyOnlineState(game);
+  }catch(e){
+    clearInterval(spin);
+    dieElement.classList.remove("rolling");
+    message.textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+async function movePieceOnline(pieceIndex){
+  if(onlineBusy||!myTurnOnline()||!canMove)return;
+  onlineBusy=true;
+  try{
+    const game=await onlineAction("move",{piece:pieceIndex});
+    if(game)applyOnlineState(game);
+  }catch(e){
+    message.textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+function startOnlineTable(){
+  setup.style.display="none";
+  gameArea.style.display="flex";
+  const leave=document.getElementById("leaveBtn");
+  if(leave){
+    leave.hidden=false;
+    leave.addEventListener("click",()=>{
+      location.href="/connector?room="+encodeURIComponent(onlineRoom);
+    });
+  }
+  lastDie=null;
+  message.textContent="Verbinde mit dem Connector …";
+  postPresence().catch(()=>{});
+  setInterval(()=>postPresence().catch(()=>{}),5000);
+  pollOnline();
+  setInterval(pollOnline,700);
+}
+
 tokensGroup.addEventListener("click",event=>{
   const token=event.target.closest(".token");
   if(!token)return;
   const playerIndex=Number(token.dataset.player);
   const pieceIndex=Number(token.dataset.piece);
   if(playerIndex!==currentPlayer)return;
+  if(ONLINE){
+    movePieceOnline(pieceIndex);
+    return;
+  }
   movePiece(pieceIndex);
 });
 
-dieElement.addEventListener("click",rollDice);
+dieElement.addEventListener("click",()=>{
+  if(ONLINE){
+    rollDiceOnline();
+    return;
+  }
+  rollDice();
+});
 document.getElementById("startGame").addEventListener("click",startGame);
 document.getElementById("newGame").addEventListener("click",()=>{
+  if(ONLINE){
+    if(!onlineGame||onlineGame.status!=="finished"){
+      message.textContent="Die laufende Partie läuft noch.";
+      return;
+    }
+    if(onlineGame.hostId!==onlineID){
+      message.textContent="Der Gastgeber startet eine neue Runde.";
+      return;
+    }
+    onlineAction("reset").then(game=>{if(game)applyOnlineState(game);})
+      .catch(e=>{message.textContent=e.message;});
+    return;
+  }
   clearTimers();
   rolling=false;
   turnLocked=false;
@@ -800,6 +997,10 @@ document.getElementById("newGame").addEventListener("click",()=>{
 
 renderSetup();
 drawBoard();
+
+if(ONLINE){
+  startOnlineTable();
+}
 })();
 </script>
 </body>
