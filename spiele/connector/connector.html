@@ -107,6 +107,34 @@ small{color:#9da8bd}
 .mute-popover{margin-top:4px;padding:6px;background:#252b40;border:1px solid #4df5c2;border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
 .mute-popover button{padding:4px 8px;font-size:12px;border-radius:4px}
 .mute-list-tag{color:#ffd36a;font-size:12px;margin-top:4px}
+/* Geklickte Sprüche im Chat: lieb rosa, witzig grün, böse rot. */
+.msg.t-love{border-left:3px solid #ff8be4;padding-left:8px}
+.msg.t-joke{border-left:3px solid #7dffb0;padding-left:8px}
+.msg.t-evil{border-left:3px solid #ff7b7b;padding-left:8px}
+.tone-love{color:#ff8be4}
+.tone-joke{color:#7dffb0}
+.tone-evil{color:#ff7b7b}
+/* Auswahl nach Klick auf einen Namen */
+.tone-picker{
+ position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
+ z-index:40;width:min(440px,94vw);
+ background:#141026;border:1px solid #4df5c2;border-radius:12px;
+ padding:12px;box-shadow:0 10px 30px #000a;
+}
+.tone-head{font-size:15px;margin-bottom:9px;color:#dfe6f5}
+.tone-head strong{color:#4df5c2}
+.tone-buttons{display:grid;gap:7px;grid-template-columns:1fr}
+.tone-btn{
+ padding:12px;border-radius:8px;font-size:15px;font-weight:bold;
+ background:#10121b;border:2px solid #59647c;color:#dfe6f5;cursor:pointer;
+}
+.tone-btn.love{border-color:#ff8be4;color:#ff8be4}
+.tone-btn.joke{border-color:#7dffb0;color:#7dffb0}
+.tone-btn.evil{border-color:#ff7b7b;color:#ff7b7b}
+.tone-btn:hover{filter:brightness(1.25)}
+.tone-mute{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:#aab3c7;flex-wrap:wrap}
+.tone-mute button{padding:5px 8px;font-size:12px;border-radius:5px}
+.tone-close{margin-top:9px;width:100%;padding:9px;border-radius:7px;background:#252b40;border:1px solid #59647c;color:#dfe6f5;font-size:14px;cursor:pointer}
 .players-head{color:#4df5c2;font-weight:bold;font-size:14px;margin:14px 0 6px}
 .game-player{color:#eee;font-weight:normal;text-align:left;width:100%;background:#10121b}
 .game-player:hover{filter:brightness(1.3)}
@@ -152,6 +180,21 @@ small{color:#9da8bd}
 <button onclick="send()">Senden</button>
 </div>
 </div>
+<div id="tonePicker" class="tone-picker" hidden>
+<div class="tone-head">Was schickst du <strong id="toneTarget">…</strong>?</div>
+<div class="tone-buttons">
+<button type="button" class="tone-btn love" data-tone="love">Ganz lieb</button>
+<button type="button" class="tone-btn joke" data-tone="joke">Ganz witzig</button>
+<button type="button" class="tone-btn evil" data-tone="evil">Ganz böse</button>
+</div>
+<div id="toneMute" class="tone-mute" hidden>
+<span>Stummschalten:</span>
+<button type="button" id="toneMute1">1 Min</button>
+<button type="button" id="toneMute2">2 Min</button>
+<button type="button" id="toneMute3">3 Min</button>
+</div>
+<button type="button" id="toneClose" class="tone-close">Abbrechen</button>
+</div>
 <h2 class="games-head">Spiel auswählen</h2>
 <div id="game-status" class="empty">Wähle einen Spieler aus und lade ihn zu einem Spiel ein.</div>
 <div id="gameplayers"></div>
@@ -160,6 +203,7 @@ small{color:#9da8bd}
 <section><small>TrashyGecko Connector · Lokales Netzwerk · Keine Internetverbindung nötig</small></section>
 </main>
 
+<script src="/spiele/netz.js"></script>
 <script>
 let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null, selectedMenuSender=null;
 let currentPlayersList=[];
@@ -211,7 +255,8 @@ async function loadStatus(){
     qr.hidden=false;
    }
    const hint=document.getElementById("qrhint");
-   if(hint)hint.textContent="Mit der Handykamera scannen. Das Handy muss im selben WLAN sein.";
+   if(hint)hint.textContent="Mit der Handykamera scannen. Das Handy muss im selben WLAN sein. "+
+    "Lädt das Handy die Seite nicht, dem Connector im Windows-Firewall-Dialog „Zugriff zulassen“ geben.";
   }else{
    address="http://localhost:"+s.port+"/connector";
    box.textContent="Keine passende Netzwerkadresse gefunden.";
@@ -281,6 +326,9 @@ async function join(roomDisplayName){
   });
   if(!p.ok)throw Error(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen.");
   activeRoom=code;
+  // Merken, damit ein neu geladener Tab (Handy im Hintergrund) direkt wieder
+  // im Raum landet, statt den Namen erneut zu verlangen.
+  try{ sessionStorage.setItem("tg-room",code); }catch(e){}
   playersSignature="";
   lastChatSignature="";
   setRoomStatus("Verbunden · "+(roomDisplayName||("Raum "+code)));
@@ -292,8 +340,26 @@ async function join(roomDisplayName){
   loadMutes();
   scrollToChat();
  }catch(e){
+  try{ sessionStorage.removeItem("tg-room"); }catch(err){}
   setRoomStatus(e.message);
  }
+}
+
+// Nach einem Neuladen direkt wieder hinein – die Handys laden den Tab im
+// Hintergrund neu, sobald der Speicher knapp wird.
+async function restoreRoom(){
+ // Ein Raum in der Adresse hat Vorrang: so kommt man aus einem verlassenen
+ // Spiel direkt wieder im richtigen Raum an.
+ if(new URLSearchParams(location.search).get("room"))return;
+ let code="";
+ try{ code=sessionStorage.getItem("tg-room")||""; }catch(e){}
+ if(!code)return;
+ if(!document.getElementById("player").value.trim())return;
+ document.getElementById("room").value=code;
+ await join();
+ // Der Connector wurde neu gestartet und hat einen neuen Raum: dann frisch
+ // betreten, statt mit einer toten Kennung stehen zu bleiben.
+ if(!activeRoom)await joinSingleRoom();
 }
 
 // Wer wirklich etwas tut (klickt, tippt, scrollt), meldet das beim nächsten
@@ -405,6 +471,11 @@ let currentKniffelGame=null;
 let currentSchachGame=null;
 let currentGoGame=null;
 let currentBackgammonGame=null;
+let currentMauMauGame=null;
+let currentUnoGame=null;
+let currentSchwimmenGame=null;
+let currentArschlochGame=null;
+let currentEinsxeinsGame=null;
 
 const SUPPORTED_GAMES = [
  { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/tictac/tictactoe.html", api: "/api/tictactoe" },
@@ -423,7 +494,12 @@ const SUPPORTED_GAMES = [
  { id: "kniffel", name: "Kniffel", path: "/spiele/kniffel/kniffel.html", api: "/api/kniffel" },
  { id: "schach", name: "Schach", path: "/spiele/schach/schach.html", api: "/api/schach" },
  { id: "go", name: "Go", path: "/spiele/go/go.html", api: "/api/go" },
- { id: "backgammon", name: "Backgammon", path: "/spiele/backgammon/backgammon.html", api: "/api/backgammon" }
+ { id: "backgammon", name: "Backgammon", path: "/spiele/backgammon/backgammon.html", api: "/api/backgammon" },
+ { id: "maumau", name: "Mau Mau", path: "/spiele/maumau/maumau.html", api: "/api/maumau" },
+ { id: "uno", name: "UNO", path: "/spiele/uno/uno.html", api: "/api/uno" },
+ { id: "schwimmen", name: "31 Schwimmen", path: "/spiele/schwimmen/schwimmen.html", api: "/api/schwimmen" },
+ { id: "arschloch", name: "Arschloch", path: "/spiele/arschloch/arschloch.html", api: "/api/arschloch" },
+ { id: "einsxeins", name: "1×1-Rennen", path: "/spiele/1x1/1x1.html", api: "/api/einsxeins" }
 ];
 
 function tttStatus(text, gameId){
@@ -478,12 +554,13 @@ async function dameAction(action,data={}){
 async function inviteGame(gameId, player, extra={}){
  const gameDef = SUPPORTED_GAMES.find(g=>g.id===gameId);
  if(!gameDef) return;
- // Kniffel ist ein Tisch für bis zu sechs Spieler: Der Klick eröffnet die
- // Runde, die anderen steigen über die Spielkarte ein.
- const action=gameId==="kniffel"?"create":"invite";
+ // Kniffel und Mau Mau sind Tische für mehrere Spieler: Der Klick eröffnet
+ // die Runde, die anderen steigen über die Spielkarte ein.
+ 	const tableGame=gameId==="kniffel"||gameId==="maumau"||gameId==="uno"||gameId==="schwimmen"||gameId==="arschloch"||gameId==="einsxeins";
+ const action=tableGame?"create":"invite";
  if(await gameApiAction(gameId, action, {toId: player.id, ...extra})){
-  tttStatus(gameId==="kniffel"
-   ? "Kniffel-Runde eröffnet – mitspielen über die Spielkarte im Chat."
+  tttStatus(tableGame
+   ? gameDef.name+"-Runde eröffnet – mitspielen über die Spielkarte im Chat."
    : "Einladung zu "+gameDef.name+" an "+player.name+" wurde im Chat gesendet. Wir warten auf die Antwort …");
   await refreshPlayers();
   await refresh();
@@ -510,6 +587,11 @@ async function refreshGames(players){
  await refreshSchach(players);
  await refreshGo(players);
  await refreshBackgammon(players);
+ await refreshMauMau(players);
+ await refreshUno(players);
+ await refreshSchwimmen(players);
+ await refreshArschloch(players);
+ await refreshEinsxeins(players);
 }
 
 // Aktueller Spielstand des jeweiligen Spiels, für die Einladungen im Chat.
@@ -530,6 +612,11 @@ function gameStateFor(gameId){
  if(gameId==="schach")return currentSchachGame;
  if(gameId==="go")return currentGoGame;
  if(gameId==="backgammon")return currentBackgammonGame;
+ if(gameId==="maumau")return currentMauMauGame;
+ if(gameId==="uno")return currentUnoGame;
+ if(gameId==="schwimmen")return currentSchwimmenGame;
+ if(gameId==="arschloch")return currentArschlochGame;
+ if(gameId==="einsxeins")return currentEinsxeinsGame;
  return currentTTTGame;
 }
 
@@ -798,6 +885,237 @@ async function refreshKniffel(players){
 
  if(game.status==="finished"){
   tttStatus("Kniffel beendet – "+game.winner+" gewinnt.", "kniffel");
+ }
+}
+
+// Mau Mau: bis zu sieben Spieler am selben Tisch.
+async function refreshMauMau(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/maumau?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentMauMauGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Mau Mau: "+names+" – "+game.seats.length+" von 7 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("maumau")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("maumau", "join")){
+     openGame(gamePath("maumau"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.seats[game.current];
+  tttStatus("Mau Mau läuft – "+names+", "+(dran?dran.name:"jemand")+" ist am Zug.", "maumau");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("maumau")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Mau Mau beendet – "+game.winner+" gewinnt.", "maumau");
+ }
+}
+
+// UNO: bis zu vier Spieler am selben Tisch.
+async function refreshUno(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/uno?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentUnoGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("UNO: "+names+" – "+game.seats.length+" von 4 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("uno")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("uno", "join")){
+     openGame(gamePath("uno"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.seats[game.current];
+  tttStatus("UNO läuft – "+names+", "+(dran?dran.name:"jemand")+" ist am Zug.", "uno");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("uno")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("UNO beendet – "+game.winner+" gewinnt.", "uno");
+ }
+}
+
+// 31 Schwimmen: bis zu neun Spieler, jeder mit drei Leben.
+async function refreshSchwimmen(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/schwimmen?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSchwimmenGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("31: "+names+" – "+game.seats.length+" von 9 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("schwimmen")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("schwimmen", "join")){
+     openGame(gamePath("schwimmen"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.seats[game.current];
+  if(game.phase==="between"){
+   tttStatus("31 – Runde "+game.round+" beendet, die Auswertung liegt am Tisch.");
+  }else{
+   tttStatus("31 läuft – Runde "+game.round+", "+(dran?dran.name:"jemand")+" ist am Zug.", "schwimmen");
+  }
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("schwimmen")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("31 beendet – "+game.winner+" gewinnt.", "schwimmen");
+ }
+}
+
+// Arschloch: bis zu neun Spieler, Karten ablegen und Plätze sammeln.
+async function refreshArschloch(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/arschloch?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentArschlochGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Arschloch: "+names+" – "+game.seats.length+" von 9 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("arschloch")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("arschloch", "join")){
+     openGame(gamePath("arschloch"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.phase==="between"){
+  tttStatus("Arschloch – Runde "+game.round+" beendet, die Platzierungen liegen am Tisch.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("arschloch")));
+  }
+  return;
+ }
+
+ const dran=game.seats[game.current];
+ tttStatus("Arschloch läuft – Runde "+game.round+", "+(dran?dran.name:"jemand")+" ist am Zug.", "arschloch");
+ if(me){
+  addStatusButton("Spiel öffnen", ()=>openGame(gamePath("arschloch")));
+ }
+}
+
+// 1×1-Rennen: alle lösen dieselben acht Aufgaben, wer mehr richtig hat
+// gewinnt, bei Gleichstand entscheidet die Zeit.
+async function refreshEinsxeins(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/einsxeins?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentEinsxeinsGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("1×1-Rennen: "+names+" – "+game.seats.length+" von 7 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("einsxeins", "join")){
+     openGame(gamePath("einsxeins"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("1×1-Rennen beendet"+(game.winner?" – "+game.winner+" gewinnt.":"."), "einsxeins");
+  if(me) addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
+  return;
+ }
+
+ const art=game.mode==="equations"?"Gleichungen":"Grundrechenarten";
+ const fertig=game.seats.filter(p=>p.done).length;
+ tttStatus("1×1-Rennen läuft ("+art+", Stufe "+game.level+") – "+fertig+" von "+game.seats.length+" fertig.", "einsxeins");
+ if(me){
+  addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
  }
 }
 
@@ -1398,7 +1716,7 @@ async function refresh(){
   const msgs=await r.json(),box=document.getElementById("chat");
   // Nur neu zeichnen, wenn sich wirklich etwas geändert hat. Sonst klappt das
   // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
-  const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId].join("|")).join("`")
+  const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId,m.tone||""].join("|")).join("`")
    +"#"+isRoomOwner+"#"+selectedMuteSender
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
@@ -1471,20 +1789,20 @@ async function refresh(){
     }
    }else{
     const nameWrapper=document.createElement("span");
-    if(isRoomOwner && m.senderId && m.senderId!==sessionID){
+    // Ein Klick auf einen fremden Namen öffnet lieb / witzig / böse.
+    if(m.senderId && m.senderId!==sessionID && !m.whisper){
      const nameBtn=document.createElement("button");
      nameBtn.type="button";
      nameBtn.className="chat-name-btn";
-     nameBtn.textContent=m.whisper ? (m.senderId===sessionID?"Du → "+m.toName:m.name+" → Du") : m.name;
-     nameBtn.title="Klicken zum Stummschalten";
+     nameBtn.textContent=m.name;
+     nameBtn.title="Klicken: lieb, witzig oder böse";
      nameBtn.onclick=(e)=>{
       e.stopPropagation();
-      selectedMuteSender = (selectedMuteSender===m.senderId ? null : m.senderId);
-      refresh();
+      openTonePicker(m.senderId, m.name);
      };
      nameWrapper.appendChild(nameBtn);
      const colon=document.createElement("span");
-     colon.textContent=(m.whisper ? " (Flüstern): " : ": ");
+     colon.textContent=": ";
      nameWrapper.appendChild(colon);
     }else{
      const b=document.createElement("b");
@@ -1500,6 +1818,11 @@ async function refresh(){
     }
     const t=document.createElement("span");
     t.textContent=m.text;
+    if(m.tone){
+     // Geklickte Sprüche sind eingefärbt: lieb rosa, witzig grün, böse rot.
+     t.className="tone-"+m.tone;
+     d.classList.add("t-"+m.tone);
+    }
     const sm=document.createElement("small");
     sm.textContent="  "+m.time;
     d.append(nameWrapper,t,sm);
@@ -1531,6 +1854,43 @@ async function refresh(){
   chatBusy=false;
  }
 }
+// Sprüche-Auswahl: ein Klick auf einen Namen im Chat.
+let toneTargetId=null;
+function openTonePicker(id,name){
+ toneTargetId=id;
+ document.getElementById("toneTarget").textContent=name;
+ document.getElementById("toneMute").hidden=!isRoomOwner;
+ const picker=document.getElementById("tonePicker");
+ picker.hidden=false;
+ picker.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function closeTonePicker(){
+ document.getElementById("tonePicker").hidden=true;
+ toneTargetId=null;
+}
+document.getElementById("toneClose").onclick=closeTonePicker;
+[1,2,3].forEach(min=>{
+ document.getElementById("toneMute"+min).onclick=()=>{
+  if(toneTargetId)mutePlayer(toneTargetId,min);
+  closeTonePicker();
+ };
+});
+document.querySelectorAll("#tonePicker .tone-btn").forEach(btn=>{
+ btn.onclick=async()=>{
+  if(!toneTargetId)return;
+  const response=await fetch("/api/tone?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,targetId:toneTargetId,kind:btn.dataset.tone})
+  });
+  if(response.ok){
+   closeTonePicker();
+   refresh();
+  }else{
+   setRoomStatus((await response.text()).trim()||"Das hat nicht geklappt.");
+  }
+ };
+});
+
 async function send(){
  const field=document.getElementById("message"),text=field.value.trim();
  if(!text||!activeRoom)return;
@@ -1549,6 +1909,7 @@ document.getElementById("message").addEventListener("keydown",e=>{
 });
 
 loadStatus();
+restoreRoom();
 setInterval(heartbeat,5000);
 setInterval(refresh,1000);
 setInterval(refreshPlayers,3000);

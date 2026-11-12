@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrashyGecko – Mau Mau</title>
+
+<style>
+:root {
+  --bg: #101114;
+  --panel: #202126;
+  --panel2: #292b30;
+  --text: #e0e0e3;
+  --muted: #999ba3;
+  --border: #41434a;
+  --red: #d87579;
+  --silver: #c5c8ce;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+}
+
+button, select, input { font: inherit; }
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px 16px;
+  background: #303238;
+  color: var(--text);
+}
+
+button:hover:not(:disabled) {
+  background: #41444c;
+}
+
+button:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+header {
+  text-align: center;
+  padding: 18px 10px 12px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 25px;
+  letter-spacing: 3px;
+}
+
+header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+main {
+  max-width: 900px;
+  margin: auto;
+  padding: 10px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid #303238;
+  border-radius: 13px;
+  padding: 13px;
+  margin-bottom: 12px;
+}
+
+.hidden { display: none !important; }
+
+#setup {
+  max-width: 420px;
+  margin: 35px auto;
+}
+
+#setup h2 {
+  text-align: center;
+}
+
+#setup label {
+  display: block;
+  margin: 15px 0 6px;
+  color: var(--muted);
+}
+
+#setup input, #setup select {
+  width: 100%;
+  padding: 12px;
+  background: var(--panel2);
+  color: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+#nameFields {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.primary {
+  background: #344b68;
+  border-color: #526b8d;
+}
+
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 8px;
+}
+
+.player {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px;
+  text-align: center;
+  min-width: 0;
+}
+
+.player.active {
+  border: 2px solid var(--player-color);
+  background: #33353c;
+}
+
+.player-name {
+  color: var(--player-color);
+  font-weight: bold;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.player-count {
+  font-size: 23px;
+  font-weight: bold;
+  margin: 5px 0 1px;
+}
+
+.player small {
+  color: var(--muted);
+}
+
+.player .ready-tag {
+  color: #8fe6a3;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+#turnInfo {
+  text-align: center;
+  font-weight: bold;
+  padding: 10px;
+  color: var(--active-color);
+}
+
+#turnBanner {
+  text-align: center;
+  font-weight: bold;
+  font-size: 20px;
+  letter-spacing: 1px;
+  padding: 10px;
+  margin: 2px 0 8px;
+  border-radius: 9px;
+  background: #2b2d35;
+  color: var(--muted);
+}
+
+#turnBanner.you {
+  background: #24413a;
+  color: #6dffc2;
+  border: 1px solid #4df5c2;
+  font-size: 22px;
+}
+
+#table {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 34px;
+  padding: 16px 0 6px;
+}
+
+.pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.pile-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+/* Der Nachziehstapel liegt sichtbar als Stapel auf dem Tisch. */
+#drawPile {
+  box-shadow: 4px 4px 0 #1a2434, 8px 8px 0 #141b26, 0 3px 7px #0007;
+}
+
+/* Die Ablage hat einen festen Rahmen: Die Karte liegt sichtbar auf dem Tisch,
+   auch wenn gerade keine da ist. */
+#discardPile {
+  width: 104px;
+  height: 138px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #3c404b;
+  background: #16181e;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+#discardPile .card {
+  width: 88px;
+  height: 124px;
+  transform: rotate(-4deg);
+}
+
+#discardPile[data-suit-color="red"] { border-color: #a95257; }
+#discardPile[data-suit-color="black"] { border-color: #7c8494; }
+
+#discardPile.highlight {
+  border-style: solid;
+  border-color: #4df5c2;
+  box-shadow: 0 0 0 3px #4df5c233;
+}
+
+/* Zeigt groß, welche Farbe gerade liegt – und ob sie gewünscht wurde. */
+.suit-badge {
+  margin-top: 9px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #3c404b;
+  background: #1a1d24;
+  color: var(--silver);
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.suit-badge.red {
+  color: #ff8b8b;
+  border-color: #7d4a4f;
+}
+
+.suit-badge.wish {
+  background: #253024;
+  border-color: #8fe6a3;
+  color: #b6ffc8;
+  box-shadow: 0 0 12px #8fe6a355;
+}
+
+.card {
+  width: 76px;
+  height: 108px;
+  border-radius: 9px;
+  /* Helle Karten sind auf dem dunklen Tisch lesbar. */
+  background: #f7f3e8;
+  border: 1px solid #cfc7b5;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 3px 8px #0008;
+  color: #17181c;
+  user-select: none;
+}
+
+.card.red {
+  color: #c0392b;
+}
+
+.card .symbol {
+  text-align: center;
+  font-size: 34px;
+  font-weight: bold;
+}
+
+.card .corner {
+  font-size: 19px;
+  font-weight: bold;
+}
+
+.card .bottom {
+  text-align: right;
+}
+
+.back {
+  background: #263650;
+  border: 2px solid #526b8d;
+  align-items: center;
+  justify-content: center;
+  color: #aabbd4;
+  font-size: 28px;
+  box-shadow: 4px 4px 0 #1a2434, 8px 8px 0 #141b26, 0 3px 8px #0007;
+}
+
+#handTitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+#hand {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px 4px 16px;
+  justify-content: flex-start;
+  scrollbar-width: thin;
+}
+
+.hand-card {
+  flex: 0 0 86px;
+  width: 86px;
+  height: 128px;
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s;
+}
+
+.hand-card .corner { font-size: 22px; }
+.hand-card .symbol { font-size: 40px; }
+
+.hand-card:hover:not(.disabled) {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 18px #000a;
+}
+
+.hand-card.disabled {
+  opacity: .5;
+  filter: saturate(.7);
+  cursor: default;
+}
+
+/* Was jetzt gelegt werden darf, ist grün umrandet. */
+.hand-card.playable {
+  border: 2px solid #4df5c2;
+  box-shadow: 0 0 0 3px #4df5c233, 0 4px 10px #0009;
+}
+
+#controls {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+#message {
+  text-align: center;
+  color: #d2bd83;
+  min-height: 25px;
+  padding: 7px;
+  font-size: 14px;
+}
+
+#suitChoice {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.suit-button {
+  width: 55px;
+  height: 50px;
+  font-size: 25px;
+}
+
+#passScreen, #endScreen, #lobby {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #101114f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.dialog h2 { margin-top: 0; }
+
+#lobbyList {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+  text-align: left;
+}
+
+.lobby-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.lobby-row .ok { color: #8fe6a3; font-weight: bold; }
+.lobby-row .wait { color: var(--muted); }
+
+#lobbyButtons {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#lobbyHint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0 0;
+  min-height: 18px;
+}
+
+#rules {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  header { padding-top: 13px; }
+  header h1 { font-size: 21px; }
+  main { padding: 7px; }
+  .panel { padding: 10px; }
+  #table { gap: 24px; }
+  .card { width: 70px; height: 100px; }
+  #discardPile { width: 92px; height: 124px; }
+  #discardPile .card { width: 80px; height: 112px; }
+  .hand-card { flex-basis: 74px; width: 74px; height: 112px; }
+  .hand-card .corner { font-size: 19px; }
+  .hand-card .symbol { font-size: 34px; }
+  #controls button { padding: 11px 12px; }
+  #turnBanner { font-size: 18px; }
+  .suit-badge { font-size: 12px; padding: 5px 10px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>TRASHYGECKO</h1>
+  <p>MAU MAU</p>
+</header>
+
+<main>
+
+<section id="setup" class="panel">
+  <h2>Neues Spiel</h2>
+
+  <label for="playerCount">Anzahl Spieler</label>
+  <select id="playerCount">
+    <option value="2">2 Spieler</option>
+    <option value="3">3 Spieler</option>
+    <option value="4" selected>4 Spieler</option>
+    <option value="5">5 Spieler</option>
+    <option value="6">6 Spieler</option>
+    <option value="7">7 Spieler</option>
+  </select>
+
+  <div id="nameFields"></div>
+
+  <button class="primary" style="width:100%;margin-top:18px"
+    onclick="startGame()">Spiel starten</button>
+</section>
+
+<section id="game" class="hidden">
+
+  <div class="panel">
+    <div id="players" class="players"></div>
+    <div id="turnBanner"></div>
+    <div id="turnInfo"></div>
+  </div>
+
+  <div class="panel">
+    <div id="table">
+      <div class="pile">
+        <span class="pile-label">Nachziehstapel</span>
+        <div id="drawPile" class="card back">?</div>
+        <div id="drawCount" style="color:var(--muted);font-size:12px;margin-top:5px"></div>
+      </div>
+
+      <div class="pile">
+        <span class="pile-label">Ablagestapel</span>
+        <div id="discardPile"></div>
+        <div id="suitBadge" class="suit-badge hidden"></div>
+      </div>
+    </div>
+    <div id="message"></div>
+    <div id="suitChoice" class="hidden">
+      <button class="suit-button" onclick="pickSuit('♥')">♥</button>
+      <button class="suit-button" onclick="pickSuit('♦')">♦</button>
+      <button class="suit-button" onclick="pickSuit('♠')">♠</button>
+      <button class="suit-button" onclick="pickSuit('♣')">♣</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div id="handTitle">DEINE KARTEN</div>
+    <div id="hand"></div>
+
+    <div id="controls">
+      <button class="primary" id="drawButton" onclick="pressDraw()">Karte ziehen</button>
+      <button id="keepButton" class="hidden" onclick="pressKeep()">Behalten</button>
+      <button id="mauButton" class="hidden" onclick="pressMau()">MAU!</button>
+      <button id="catchButton" class="hidden" onclick="pressCatch()">Erwischt!</button>
+    </div>
+  </div>
+
+  <div id="rules">
+    Gleiche Farbe oder gleicher Wert ablegen.<br>
+    7 = Zwei Karten ziehen · 8 = Aussetzen · Bube = Wunschfarbe<br>
+    Letzte Karte: MAU! · Wer nicht MAU sagt, wird erwischt.<br>
+    <span id="rulesFoot">Letzte Karte ablegen: gewonnen.</span>
+  </div>
+
+</section>
+</main>
+
+<div id="lobby" class="hidden">
+  <div class="dialog">
+    <h2>Mau-Mau-Runde</h2>
+    <div id="lobbyList"></div>
+    <div id="lobbyButtons">
+      <button class="primary hidden" id="joinButton">Mitspielen</button>
+      <button id="readyButton">BEREIT</button>
+      <button class="primary" id="startButton">Runde starten</button>
+    </div>
+    <p id="lobbyHint"></p>
+  </div>
+</div>
+
+<div id="passScreen" class="hidden">
+  <div class="dialog">
+    <h2 id="passTitle">Spielerwechsel</h2>
+    <p>Bitte das Gerät an den nächsten Spieler weitergeben.</p>
+    <button class="primary" onclick="showHand()">Ich bin bereit</button>
+  </div>
+</div>
+
+<div id="endScreen" class="hidden">
+  <div class="dialog">
+    <h2>🏆 GEWONNEN!</h2>
+    <h1 id="winnerName"></h1>
+    <p>Hat Mau Mau gewonnen!</p>
+    <button class="primary" onclick="newGame()">Neues Spiel</button>
+  </div>
+</div>
+
+<script src="/spiele/netz.js"></script>
+<script>
+const suits = ["♥","♦","♠","♣"];
+const values = ["7","8","9","10","B","D","K","A"];
+const colors = [
+  "#65B8E8","#D58BC7","#82BD91",
+  "#E3B66D","#A69BE4","#E58D70","#78C4BD"
+];
+
+const $ = id => document.getElementById(id);
+
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/maumau";
+
+let G = null;            // Spielstand vom Server (nur online)
+let onlineBusy = false;
+
+// ---- Lokales Spiel (mehrere Spieler an einem Gerät) ----
+let players = [];
+let deck = [];
+let discard = [];
+let current = 0;
+let activeSuit = "";
+let drawn = false;
+let drawnCard = null;
+let choosingSuit = false;
+let mauSaid = new Set();
+let pendingMau = -1;
+let gameOver = false;
+let wishedSuit = "";
+let message = "";
+
+function setMessage(text){
+  message = text;
+  $("message").textContent = text;
+}
+
+function makeNames() {
+  if (ONLINE) return;
+  const count = Number($("playerCount").value);
+  $("nameFields").innerHTML = "";
+
+  for (let i=0; i<count; i++) {
+    const input = document.createElement("input");
+    input.placeholder = "Spieler " + (i+1);
+    input.value = i === 0 ? "Thomas" : "Spieler " + (i+1);
+    input.id = "name" + i;
+    $("nameFields").appendChild(input);
+  }
+}
+
+$("playerCount").addEventListener("change", makeNames);
+
+function createDeck() {
+  let cards = [];
+
+  for (const suit of suits) {
+    for (const value of values) {
+      cards.push({suit, value});
+    }
+  }
+
+  for (let i=cards.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [cards[i],cards[j]] = [cards[j],cards[i]];
+  }
+
+  return cards;
+}
+
+function startGame() {
+  const count = Number($("playerCount").value);
+
+  players = [];
+  for (let i=0; i<count; i++) {
+    players.push({
+      name: $("name"+i).value.trim() || "Spieler "+(i+1),
+      color: colors[i],
+      hand: []
+    });
+  }
+
+  deck = createDeck();
+  discard = [];
+  current = 0;
+  activeSuit = "";
+  drawn = false;
+  drawnCard = null;
+  choosingSuit = false;
+  mauSaid = new Set();
+  pendingMau = -1;
+  gameOver = false;
+
+  players.forEach(p => {
+    for (let i=0; i<5; i++) p.hand.push(deck.pop());
+  });
+
+  let first = deck.pop();
+
+  while (first.value === "7" || first.value === "8" || first.value === "B") {
+    deck.unshift(first);
+    first = deck.pop();
+  }
+
+  discard.push(first);
+  activeSuit = first.suit;
+
+  $("setup").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  $("endScreen").classList.add("hidden");
+
+  nextPlayerScreen();
+}
+
+function nextPlayer() {
+  current = (current + 1) % players.length;
+}
+
+function nextPlayerScreen() {
+  if (gameOver) return;
+
+  drawn = false;
+  drawnCard = null;
+  choosingSuit = false;
+
+  $("suitChoice").classList.add("hidden");
+  $("keepButton").classList.add("hidden");
+
+  if (ONLINE) {
+    render();
+    return;
+  }
+
+  render();
+  $("passTitle").textContent = players[current].name + " ist dran";
+  $("passScreen").classList.remove("hidden");
+}
+
+function showHand() {
+  $("passScreen").classList.add("hidden");
+  render();
+}
+
+function cardPlayable(card) {
+  const top = discard[discard.length-1];
+
+  return card.suit === activeSuit ||
+         card.value === top.value ||
+         card.value === "B";
+}
+
+function drawCard() {
+  if (gameOver || drawn || choosingSuit) return;
+
+  const p = players[current];
+
+  if (deck.length === 0) {
+    if (discard.length <= 1) {
+      setMessage("Keine Karten mehr zum Ziehen!");
+      return;
+    }
+
+    const top = discard.pop();
+    deck = discard;
+    discard = [top];
+
+    for (let i=deck.length-1; i>0; i--) {
+      const j=Math.floor(Math.random()*(i+1));
+      [deck[i],deck[j]]=[deck[j],deck[i]];
+    }
+  }
+
+  const card = deck.pop();
+  p.hand.push(card);
+  drawn = true;
+  drawnCard = card;
+
+  if (cardPlayable(card)) {
+    setMessage("Du kannst die gezogene Karte spielen oder behalten.");
+    $("keepButton").classList.remove("hidden");
+  } else {
+    setMessage("Karte gezogen. Dein Zug ist beendet.");
+    render();
+    setTimeout(() => {
+      if (drawn) endTurn();
+    }, 700);
+  }
+
+  render();
+}
+
+function finishDraw() {
+  if (!drawn || gameOver) return;
+  endTurn();
+}
+
+function playCard(index) {
+  if (gameOver || choosingSuit) return;
+
+  const p = players[current];
+  const card = p.hand[index];
+
+  if (!card) return;
+
+  if (drawn && card !== drawnCard) {
+    setMessage("Nach dem Ziehen kannst du nur die gezogene Karte spielen.");
+    return;
+  }
+
+  if (!cardPlayable(card)) {
+    setMessage("Diese Karte kannst du nicht ablegen.");
+    return;
+  }
+
+  if (pendingMau !== -1 && pendingMau !== current) {
+    return;
+  }
+
+  p.hand.splice(index,1);
+  discard.push(card);
+  drawn = false;
+  drawnCard = null;
+  $("keepButton").classList.add("hidden");
+
+  if (p.hand.length === 0) {
+    winGame();
+    return;
+  }
+
+  if (p.hand.length === 1) {
+    pendingMau = current;
+    setMessage("Nur noch eine Karte! MAU sagen!");
+    render();
+    return;
+  }
+
+  applyCardEffect(card);
+}
+
+function applyCardEffect(card) {
+  wishedSuit = "";
+  if (card.value === "B") {
+    choosingSuit = true;
+    $("suitChoice").classList.remove("hidden");
+    setMessage("Wähle deine Wunschfarbe!");
+    render();
+    return;
+  }
+
+  activeSuit = card.suit;
+
+  if (card.value === "7") {
+    nextPlayer();
+    players[current].hand.push(deck.pop() || {suit:"♥",value:"7"});
+    players[current].hand.push(deck.pop() || {suit:"♦",value:"7"});
+    setMessage(players[current].name + " muss zwei Karten ziehen und aussetzen.");
+    nextPlayer();
+    nextPlayerScreen();
+    return;
+  }
+
+  if (card.value === "8") {
+    nextPlayer();
+    setMessage(players[current].name + " setzt aus!");
+    nextPlayer();
+    nextPlayerScreen();
+    return;
+  }
+
+  endTurn();
+}
+
+function chooseSuit(suit) {
+  if (!choosingSuit) return;
+
+  activeSuit = suit;
+  wishedSuit = suit;
+  choosingSuit = false;
+  $("suitChoice").classList.add("hidden");
+  setMessage("Wunschfarbe: " + suit);
+  endTurn();
+}
+
+function sayMau() {
+  if (pendingMau !== current || players[current].hand.length !== 1) return;
+
+  mauSaid.add(current);
+  pendingMau = -1;
+  setMessage(players[current].name + " hat MAU gesagt!");
+  endTurn();
+}
+
+function catchMau() {
+  if (pendingMau === -1 || mauSaid.has(pendingMau)) return;
+
+  const offender = pendingMau;
+  players[offender].hand.push(
+    {suit:"♥",value:"7"},
+    {suit:"♣",value:"9"}
+  );
+
+  setMessage(players[offender].name + " bekommt zwei Strafkarten!");
+  pendingMau = -1;
+  endTurn();
+}
+
+function endTurn() {
+  if (gameOver) return;
+
+  if (pendingMau !== -1) {
+    return;
+  }
+
+  drawn = false;
+  drawnCard = null;
+  choosingSuit = false;
+
+  nextPlayer();
+  nextPlayerScreen();
+}
+
+function winGame() {
+  gameOver = true;
+  $("winnerName").textContent = players[current].name;
+  $("endScreen").classList.remove("hidden");
+}
+
+function renderCard(card, small=false) {
+  const red = card.suit === "♥" || card.suit === "♦";
+
+  const el = document.createElement("div");
+  el.className = "card" + (red ? " red" : "");
+  if (small) el.classList.add("hand-card");
+
+  const corner = document.createElement("div");
+  corner.className = "corner";
+  corner.textContent = card.value + card.suit;
+
+  const symbol = document.createElement("div");
+  symbol.className = "symbol";
+  symbol.textContent = card.suit;
+
+  const bottom = document.createElement("div");
+  bottom.className = "corner bottom";
+  bottom.textContent = card.value;
+
+  el.append(corner,symbol,bottom);
+  return el;
+}
+
+// stand() vereinheitlicht lokales Spiel und Serverstand, damit es nur eine
+// Anzeige gibt.
+function stand(){
+  if (ONLINE && G) {
+    return {
+      seats: G.seats.map(s => ({name:s.name, count:s.count, ready:s.ready})),
+      hand: G.hand || [],
+      playable: G.playable || [],
+      top: G.top || null,
+      deckCount: G.deckCount || 0,
+      current: G.current,
+      mySeat: G.you,
+      wished: G.wished || "",
+      drawn: G.drawn || null,
+      pendingMau: G.pendingMau,
+      phase: G.phase,
+      status: G.status,
+      note: G.note || "",
+      winner: G.winner || "",
+      mustChooseSuit: !!G.mustChooseSuit,
+      ready: [] 
+    };
+  }
+
+  if (!players.length) return null;
+
+  const mine = players[current];
+  return {
+    seats: players.map(p => ({name:p.name, count:p.hand.length, ready:false})),
+    hand: mine.hand,
+    playable: mine.hand.map(card =>
+      cardPlayable(card) &&
+      (!drawn || card === drawnCard) &&
+      (pendingMau === -1 || pendingMau === current)
+    ),
+    top: discard[discard.length-1] || null,
+    deckCount: deck.length,
+    current,
+    mySeat: current,
+    wished: wishedSuit,
+    drawn: drawn ? drawnCard : null,
+    pendingMau,
+    phase: gameOver ? "finished" : (choosingSuit ? "chooseSuit" : "playing"),
+    status: gameOver ? "finished" : "active",
+    note: message,
+    winner: gameOver ? players[current].name : "",
+    mustChooseSuit: choosingSuit
+  };
+}
+
+function render() {
+  const s = stand();
+  if (!s) return;
+
+  $("players").innerHTML = "";
+
+  s.seats.forEach((p, i) => {
+    const box = document.createElement("div");
+    box.className = "player" + (i === s.current ? " active" : "");
+    box.style.setProperty("--player-color", colors[i % colors.length]);
+
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = p.name;
+
+    const number = document.createElement("div");
+    number.className = "player-count";
+    number.textContent = p.count;
+
+    const label = document.createElement("small");
+    label.textContent = "Karten";
+
+    box.append(name, number, label);
+
+    if (p.ready) {
+      const tag = document.createElement("div");
+      tag.className = "ready-tag";
+      tag.textContent = "BEREIT";
+      box.appendChild(tag);
+    }
+
+    $("players").appendChild(box);
+  });
+
+  const dranName = s.seats[s.current] ? s.seats[s.current].name : "jemand";
+  const ichDran = s.mySeat === s.current && s.status === "active";
+
+  $("turnBanner").textContent = s.status === "finished"
+    ? "SPIEL BEENDET"
+    : (ichDran ? "DU BIST DRAN" : dranName.toUpperCase() + " IST DRAN");
+  $("turnBanner").classList.toggle("you", ichDran);
+
+  $("turnInfo").textContent = s.status === "finished"
+    ? (s.winner ? s.winner + " gewinnt!" : "")
+    : dranName + " ist am Zug";
+  $("turnInfo").style.setProperty("--active-color", colors[s.current % colors.length]);
+
+  $("drawCount").textContent = s.deckCount + " Karten";
+
+  const ablage = $("discardPile");
+  ablage.innerHTML = "";
+  if (s.top) {
+    ablage.appendChild(renderCard(s.top));
+    ablage.dataset.suitColor = (s.top.suit === "♥" || s.top.suit === "♦") ? "red" : "black";
+  }
+  // Ist der Tisch dran, bekommt die Ablage einen grünen Rahmen.
+  ablage.classList.toggle("highlight", ichDran);
+
+  // Farbe der Ablage – und ob jemand eine Farbe gewünscht hat.
+  const farbe = s.wished || (s.top ? s.top.suit : "");
+  const farbName = {"♥":"HERZ","♦":"KARO","♠":"PIK","♣":"KREUZ"}[farbe] || "";
+  const badge = $("suitBadge");
+  badge.textContent = farbe ? (s.wished ? "WUNSCH " : "FARBE ") + farbe + " " + farbName : "";
+  badge.classList.toggle("wish", !!s.wished);
+  badge.classList.toggle("red", farbe === "♥" || farbe === "♦");
+  badge.classList.toggle("hidden", !farbe);
+
+  $("hand").innerHTML = "";
+
+  s.hand.forEach((card, i) => {
+    const el = renderCard(card, true);
+    if (s.playable[i]) el.classList.add("playable");
+    if (!s.playable[i]) el.classList.add("disabled");
+    el.addEventListener("click", () => pressCard(i));
+    $("hand").appendChild(el);
+  });
+
+  $("handTitle").textContent = ONLINE
+    ? "DEINE KARTEN"
+    : "KARTEN VON " + dranName.toUpperCase();
+
+  $("mauButton").classList.toggle(
+    "hidden",
+    !(s.pendingMau === s.mySeat && s.status === "active")
+  );
+
+  $("catchButton").classList.toggle(
+    "hidden",
+    !(s.pendingMau >= 0 && s.pendingMau !== s.mySeat && s.status === "active")
+  );
+
+  $("drawButton").disabled = !(ichDran && s.phase === "playing" && !s.drawn);
+  $("keepButton").classList.toggle("hidden", !(ichDran && s.drawn));
+
+  $("suitChoice").classList.toggle(
+    "hidden",
+    !(s.mustChooseSuit && s.mySeat === s.current)
+  );
+
+  if (s.note) setMessage(s.note);
+
+  if (s.status === "finished") {
+    $("winnerName").textContent = s.winner || "Niemand";
+    $("endScreen").classList.remove("hidden");
+    $("rulesFoot").textContent = ONLINE ? "Neue Runde über „Neues Spiel“." : "Letzte Karte ablegen: gewonnen.";
+  }
+}
+
+function newGame() {
+  $("endScreen").classList.add("hidden");
+
+  if (ONLINE) {
+    mauAction("reset");
+    return;
+  }
+
+  $("game").classList.add("hidden");
+  $("setup").classList.remove("hidden");
+  makeNames();
+}
+
+// ---- Knöpfe: lokal oder online ----
+function pressDraw(){
+  if (ONLINE) { mauAction("draw"); return; }
+  drawCard();
+}
+
+function pressKeep(){
+  if (ONLINE) { mauAction("keep"); return; }
+  finishDraw();
+}
+
+function pressCard(index){
+  if (ONLINE) { mauAction("play", {index}); return; }
+  playCard(index);
+}
+
+function pickSuit(suit){
+  if (ONLINE) { mauAction("suit", {suit}); return; }
+  chooseSuit(suit);
+}
+
+function pressMau(){
+  if (ONLINE) { mauAction("mau"); return; }
+  sayMau();
+}
+
+function pressCatch(){
+  if (ONLINE) { mauAction("catch"); return; }
+  catchMau();
+}
+
+// ---- Online-Anbindung ----
+function seatNameOf(seat){
+  return G && G.seats[seat] ? G.seats[seat].name : "Spieler " + (seat+1);
+}
+
+async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
+  }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
+
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
+  }
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+
+function applyOnlineState(view){
+  if (!view) return;
+  G = view;
+  renderLobby();
+  if (G.status === "invited") {
+    $("lobby").classList.remove("hidden");
+    $("game").classList.add("hidden");
+    return;
+  }
+  $("lobby").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  render();
+}
+
+// stateSeq hält fest, welche Antwort die neueste ist: Eine Abfrage, die vor
+// einem Klick gestartet wurde, darf dessen Ergebnis nicht wieder überschreiben.
+let stateSeq = 0;
+
+async function refreshOnline(){
+  if (onlineBusy) return;
+  const mySeq = ++stateSeq;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+    if (mySeq < stateSeq) return;
+    applyOnlineState(data.game);
+  }catch(e){
+    $("lobbyHint").textContent = "Verbindung wackelt – die Seite versucht es weiter …";
+  }
+}
+
+async function mauAction(action, payload){
+  if (onlineBusy) return;
+  onlineBusy = true;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID, ...(payload || {})})
+    });
+    stateSeq++;
+    applyOnlineState(data.game);
+  }catch(e){
+    $("lobbyHint").textContent = e.message;
+    $("message").textContent = e.message;
+  }finally{
+    onlineBusy = false;
+  }
+}
+
+function renderLobby(){
+  if (!ONLINE || !G) return;
+
+  const list = $("lobbyList");
+  list.innerHTML = (G.seats || []).map(seat => {
+    const ich = seat.id === PLAYER_ID;
+    const host = seat.id === G.hostId;
+    const status = seat.ready
+      ? '<span class="ok">BEREIT</span>'
+      : '<span class="wait">wartet</span>';
+    return '<div class="lobby-row"><span>' + escapeHtml(seat.name) +
+      (ich ? " (du)" : "") + (host ? " · Gastgeber" : "") +
+      "</span>" + status + "</div>";
+  }).join("");
+
+  const ichDabei = G.you >= 0;
+  const ichHost = ichDabei && (G.seats[G.you].id === G.hostId);
+  const ichBereit = ichDabei && G.seats[G.you].ready;
+
+  $("joinButton").classList.toggle("hidden", ichDabei);
+  $("readyButton").classList.toggle("hidden", !ichDabei);
+  $("readyButton").textContent = ichBereit ? "DOCH NICHT BEREIT" : "BEREIT";
+  $("startButton").classList.toggle("hidden", !ichHost);
+
+  const bereit = (G.seats || []).filter(s => s.ready).length;
+  $("lobbyHint").textContent = G.note ||
+    (bereit + " von " + (G.seats || []).length + " bereit · " + (G.seats || []).length + " von 7 Plätzen belegt.");
+}
+
+function escapeHtml(text){
+  return String(text).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+if (ONLINE) {
+  $("setup").classList.add("hidden");
+  $("passScreen").classList.add("hidden");
+  $("joinButton").onclick = () => mauAction("join");
+  $("readyButton").onclick = () => mauAction("ready");
+  $("startButton").onclick = () => mauAction("start");
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.textContent="Spiel verlassen";
+  back.style.marginLeft = "8px";
+  back.onclick = () => tgVerlassen();
+  $("controls").appendChild(back);
+
+  // Ohne Lebenszeichen fliegt man nach 90 Sekunden aus dem Spielraum.
+  let actedSincePing = false;
+  ["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+    document.addEventListener(evt, () => { actedSincePing = true; }, {passive:true});
+  });
+
+  async function postPresence(){
+    let name = params.get("name") || "Spieler";
+    if (G && G.you >= 0) name = G.seats[G.you].name;
+    const active = actedSincePing;
+    actedSincePing = false;
+    try{
+      await fetch("/api/presence", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({room:ROOM, id:PLAYER_ID, name, active})
+      });
+    }catch(e){}
+  }
+
+  $("handTitle").textContent = "VERBINDE MIT DEM SPIELRAUM …";
+  postPresence().then(refreshOnline);
+  setInterval(postPresence, 5000);
+  setInterval(refreshOnline, 1500);
+} else {
+  makeNames();
+}
+</script>
+
+</body>
+</html>

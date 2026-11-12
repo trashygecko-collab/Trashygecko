@@ -260,6 +260,7 @@ h1 {
 
 </div>
 
+<script src="/spiele/netz.js"></script>
 <script>
 const board = document.getElementById("board");
 const lines = document.getElementById("lines");
@@ -707,11 +708,34 @@ function applyOnlineState(game) {
   }
 }
 
-async function onlineFetch(url, options) {
-  const response = await fetch(url, options);
+async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
+  }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
+
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
+  }
   if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
   return response.json();
 }
+
 
 async function refreshOnline() {
   if (onlineBusy) return;
@@ -790,9 +814,9 @@ if (ONLINE) {
   back.type = "button";
   back.className = "reset";
   back.id = "leaveBtn";
-  back.textContent = "Zum Connector";
+  back.textContent="Spiel verlassen";
   back.style.marginTop = "12px";
-  back.onclick = () => { location.href = "/connector?room=" + encodeURIComponent(ROOM); };
+  back.onclick = () => tgVerlassen();
   document.getElementById("resetBtn").after(back);
 
   refreshOnline();

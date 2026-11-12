@@ -256,6 +256,7 @@ button.action.pink {
 <main class="game">
 
   <h1>REVERSI</h1>
+  <button type="button" data-tg-verlassen hidden onclick="tgVerlassen()" style="margin:6px auto 0;padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:13px;cursor:pointer;opacity:.75">Spiel verlassen</button>
   <div class="subtitle">NEON EDITION · 2 SPIELER · 8 × 8</div>
 
   <section class="topline">
@@ -302,6 +303,7 @@ button.action.pink {
 
 </main>
 
+<script src="/spiele/netz.js"></script>
 <script>
 (() => {
 
@@ -630,75 +632,39 @@ button.action.pink {
     statusEl.textContent = game.note || (onlineTurnName()+' ist am Zug.');
   }
 
-  async function onlineFetch(url,options){
-    const response = await fetch(url,options);
-    if(!response.ok) throw Error((await response.text()).trim() || 'Die Aktion ist fehlgeschlagen.');
-    return response.json();
+  async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
   }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
 
-  async function refreshOnline(){
-    if(onlineBusy) return;
-    try{
-      const data = await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&id='+encodeURIComponent(PLAYER_ID));
-      applyOnlineState(data.game);
-    }catch(e){}
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
   }
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
 
-  async function reversiAction(action,payload){
-    if(onlineBusy) return;
-    onlineBusy = true;
-    try{
-      const data = await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&action='+action,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({id:PLAYER_ID,...payload})
-      });
-      applyOnlineState(data.game);
-    }catch(e){
-      statusEl.textContent = e.message;
-    }finally{
-      onlineBusy = false;
-    }
-  }
-
-  function playOnline(r,c){
-    if(finished) return;
-
-    if(!flipsFor(r,c,turn).length){
-      statusEl.textContent = 'Dort ist kein gültiger Zug möglich. Wähle ein markiertes Feld.';
-      return;
-    }
-
-    reversiAction('move',{r,c});
-  }
-
-  if(ONLINE){
-    board = Array.from({length:8},()=>Array(8).fill(0));
-    board[3][3] = -1;
-    board[3][4] = 1;
-    board[4][3] = 1;
-    board[4][4] = -1;
-    turn = 1;
-    lastMove = null;
-    finished = false;
-    statusEl.textContent = 'Verbinde mit dem Spielraum …';
-    render();
-
-    const back = document.createElement('button');
-    back.type = 'button';
-    back.id = 'leaveBtn';
-    back.className = restartBtn.className;
-    back.textContent = 'Zum Connector';
-    back.style.marginLeft = '8px';
-    back.onclick = () => { location.href = '/connector?room='+encodeURIComponent(ROOM); };
-    restartBtn.after(back);
-
-    refreshOnline();
-    setInterval(refreshOnline,1500);
-  } else {
-    newGame();
-  }
-
+// Ohne diese Zeile blieb das Brett beim Öffnen leer – gezeichnet wurde erst
+// nach einem Klick auf "Neu starten".
+if (!ONLINE) {
+  newGame();
+}
 })();
 </script>
 

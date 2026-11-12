@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrashyGecko – 31 Schwimmen</title>
+<style>
+:root {
+  --bg:#101114;
+  --panel:#1c1e23;
+  --card:#f7f3e8;
+  --border:#41444b;
+  --text:#eeeeee;
+  --muted:#a0a3aa;
+  --gold:#d5b66b;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+  min-height:100vh;
+}
+header {
+  text-align:center;
+  padding:20px 10px 13px;
+  border-bottom:1px solid #292b30;
+}
+header h1 {
+  margin:0;
+  letter-spacing:5px;
+  font-size:clamp(24px,5vw,36px);
+}
+header small {
+  color:var(--muted);
+  letter-spacing:3px;
+}
+main {
+  width:min(1100px,96%);
+  margin:auto;
+  padding:14px 0 35px;
+}
+.panel {
+  background:var(--panel);
+  border:1px solid #30333a;
+  border-radius:12px;
+  padding:16px;
+  margin:12px 0;
+}
+h2 { margin-top:0; }
+button,input,select { font:inherit; }
+button {
+  border:1px solid #555962;
+  background:#30333a;
+  color:white;
+  border-radius:8px;
+  padding:10px 15px;
+  cursor:pointer;
+}
+button:hover:not(:disabled) { background:#454953; }
+button:disabled { opacity:.35; cursor:not-allowed; }
+.primary {
+  background:#655532;
+  border-color:#a58c4e;
+}
+.hidden { display:none !important; }
+
+#setup {
+  max-width:520px;
+  margin:28px auto;
+}
+#setup input, #setup select {
+  width:100%;
+  padding:11px;
+  margin:6px 0 13px;
+  border-radius:7px;
+  border:1px solid #454952;
+  background:#111317;
+  color:white;
+}
+
+#players {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(115px,1fr));
+  gap:9px;
+}
+.player {
+  background:#22252b;
+  border:2px solid var(--player-color);
+  border-radius:9px;
+  padding:10px 6px;
+  text-align:center;
+  min-width:0;
+}
+.player.active {
+  background:#373b44;
+  box-shadow:0 0 0 2px var(--player-color);
+}
+.player strong { display:block; margin-bottom:5px; overflow-wrap:anywhere; }
+.player small { color:#c4c6cb; }
+.player .lives { color:var(--gold); letter-spacing:2px; margin-top:3px; }
+.player .ready-tag { color:#8fe6a3; font-size:12px; font-weight:bold; margin-top:4px; }
+
+#turnBanner {
+  text-align:center;
+  font-weight:bold;
+  font-size:20px;
+  letter-spacing:1px;
+  padding:10px;
+  margin-top:12px;
+  border-radius:9px;
+  background:#2b2d35;
+  color:var(--muted);
+}
+#turnBanner.you {
+  background:#24413a;
+  color:#6dffc2;
+  border:1px solid #4df5c2;
+  font-size:22px;
+}
+#turnBanner.knock {
+  box-shadow:inset 0 0 0 1px #d5b66b;
+  color:#f0d56c;
+}
+
+#table {
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  gap:34px;
+  flex-wrap:wrap;
+  padding:14px 0 4px;
+}
+.pile {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  min-width:120px;
+}
+.pile-label {
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:1px;
+  margin-bottom:9px;
+}
+.card {
+  width:84px;
+  height:120px;
+  border-radius:12px;
+  background:var(--card);
+  border:2px solid #cfc7b5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  position:relative;
+  box-shadow:0 3px 8px #0008;
+  user-select:none;
+  font-weight:bold;
+  color:#17181c;
+}
+.card.red { color:#c0392b; }
+.card.black { color:#17181c; }
+.card .rank { font-size:36px; line-height:1.05; }
+.card .suit { font-size:26px; }
+.card .corner { position:absolute; top:5px; left:7px; font-size:13px; }
+.card.back {
+  background:repeating-linear-gradient(45deg,#263650,#263650 7px,#32445f 7px,#32445f 14px);
+  border:3px solid #526b8d;
+  box-shadow:4px 4px 0 #1a2434, 8px 8px 0 #141b26, 0 3px 8px #0007;
+}
+.card.back:after {
+  content:"31";
+  font-size:22px;
+  font-weight:900;
+  color:#eeeeee;
+  background:#252830;
+  padding:4px 10px;
+  border-radius:16px;
+  transform:rotate(-35deg);
+}
+
+#centerCards, #hand {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:6px 2px;
+}
+.selectable { cursor:pointer; transition:transform .12s,box-shadow .12s; }
+.selectable:hover { transform:translateY(-6px); }
+.selected {
+  transform:translateY(-9px);
+  box-shadow:0 0 0 3px var(--gold), 0 8px 16px #000a;
+}
+#hand .card { width:84px; height:120px; }
+
+#status {
+  text-align:center;
+  color:#dddddd;
+  min-height:24px;
+  margin:8px;
+  font-weight:bold;
+}
+#score {
+  color:var(--gold);
+  text-align:center;
+  font-size:17px;
+  margin:6px;
+  font-weight:bold;
+}
+.controls {
+  display:flex;
+  justify-content:center;
+  gap:9px;
+  flex-wrap:wrap;
+  margin:12px 0;
+}
+.info {
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+#result {
+  text-align:center;
+  font-size:16px;
+  line-height:1.7;
+}
+#result .line { min-height:6px; }
+
+/* Rundenauswertung: alle Karten offen, damit die Wertung nachvollziehbar ist. */
+.reveal { display:grid; gap:8px; margin-bottom:14px; }
+.reveal-head {
+  text-align:center;
+  color:var(--gold);
+  font-size:13px;
+  letter-spacing:1px;
+  font-weight:bold;
+  margin-bottom:4px;
+}
+.reveal-row {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  background:#22252b;
+  border:1px solid #34383f;
+  border-radius:10px;
+  padding:8px 11px;
+}
+.reveal-row.loser {
+  border-color:#8a4b4b;
+  background:#2a2124;
+}
+.reveal-name {
+  flex:1 1 120px;
+  min-width:110px;
+  font-weight:bold;
+  overflow-wrap:anywhere;
+}
+.reveal-name small {
+  display:block;
+  color:var(--muted);
+  font-weight:normal;
+  font-size:12px;
+  letter-spacing:1px;
+}
+.reveal-cards { display:flex; gap:6px; }
+.reveal-score {
+  font-weight:bold;
+  color:var(--gold);
+  min-width:48px;
+  text-align:right;
+  font-size:17px;
+}
+.reveal-tag {
+  color:#ff9a9a;
+  font-size:12px;
+  font-weight:bold;
+}
+
+.feuer-tag {
+  color:#ffcf7a;
+  font-size:12px;
+  font-weight:bold;
+  letter-spacing:1px;
+}
+
+.card.mini {
+  width:46px;
+  height:66px;
+  border-radius:8px;
+  border-width:2px;
+  box-shadow:none;
+  padding:1px;
+}
+.card.mini .rank { font-size:20px; }
+.card.mini .suit { font-size:14px; }
+.card.mini .corner { display:none; }
+
+#turnScreen, #lobby {
+  position:fixed;
+  inset:0;
+  z-index:10;
+  background:#090a0def;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  overflow:auto;
+}
+.turn-box {
+  width:min(430px,100%);
+  background:#202329;
+  border:1px solid #555a64;
+  border-radius:14px;
+  padding:24px;
+  text-align:center;
+}
+.turn-box p { color:#c4c6cc; line-height:1.5; }
+
+#lobbyList {
+  display:grid;
+  gap:7px;
+  margin:14px 0;
+  text-align:left;
+}
+.lobby-row {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  background:#262a31;
+  border:1px solid #3c414a;
+  border-radius:8px;
+  padding:9px 11px;
+  font-size:14px;
+  overflow-wrap:anywhere;
+}
+.lobby-row .ok { color:#8fe6a3; font-weight:bold; }
+.lobby-row .wait { color:var(--muted); }
+#lobbyButtons { display:grid; gap:8px; margin-top:6px; }
+#lobbyHint { color:var(--muted); font-size:13px; margin:8px 0 0; min-height:18px; }
+
+@media(max-width:600px) {
+  main { width:96%; padding-top:8px; }
+  .panel { padding:12px; }
+  #table { gap:20px; }
+  .card { width:70px; height:100px; }
+  .card .rank { font-size:30px; }
+  .card .suit { font-size:22px; }
+  #hand {
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    justify-content:flex-start;
+    padding:12px 4px 16px;
+  }
+  #hand .card { width:70px; height:100px; flex:0 0 auto; }
+  #turnBanner { font-size:18px; }
+  #lobby, #turnScreen { align-items:flex-start; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TRASHYGECKO</h1>
+  <small>31 · SCHWIMMEN</small>
+</header>
+
+<main>
+  <section id="setup" class="panel">
+    <h2>Neues Spiel</h2>
+    <label for="playerCount">Spieleranzahl</label>
+    <select id="playerCount" onchange="makeNames()">
+      <option value="2">2 Spieler</option>
+      <option value="3" selected>3 Spieler</option>
+      <option value="4">4 Spieler</option>
+      <option value="5">5 Spieler</option>
+      <option value="6">6 Spieler</option>
+      <option value="7">7 Spieler</option>
+      <option value="8">8 Spieler</option>
+      <option value="9">9 Spieler</option>
+    </select>
+    <div id="nameFields"></div>
+    <button class="primary" onclick="startGame()">Spiel starten</button>
+    <p class="info">Jeder Spieler beginnt mit drei Leben. Wer alle verliert, scheidet aus.
+      Drei Asse sind <strong>Feuer</strong> – alle anderen verlieren sofort ein Leben.</p>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="panel">
+      <div id="players"></div>
+      <div id="turnBanner"></div>
+    </div>
+
+    <div class="panel">
+      <div id="status"></div>
+      <div id="table">
+        <div class="pile">
+          <div class="pile-label">NACHZIEHSTAPEL</div>
+          <div class="card back"></div>
+        </div>
+        <div class="pile">
+          <div class="pile-label">TISCHKARTEN</div>
+          <div id="centerCards"></div>
+        </div>
+      </div>
+      <div id="score"></div>
+      <div class="controls" id="controls">
+        <button id="swapOne" onclick="pressSwap()">Eine tauschen</button>
+        <button id="swapAll" onclick="pressSwapAll()">Alle drei tauschen</button>
+        <button id="pass" onclick="pressPass()">Schieben</button>
+        <button id="knock" class="primary" onclick="pressKnock()">Klopfen</button>
+      </div>
+      <p class="info" style="text-align:center">
+        Wähle zuerst eine deiner Karten und danach eine Tischkarte.
+        Mit „Alle drei tauschen“ werden alle Karten auf einmal gewechselt.
+      </p>
+    </div>
+
+    <div class="panel">
+      <div id="reveal" class="reveal hidden"></div>
+      <div id="result"></div>
+      <div class="controls">
+        <button id="nextRound" class="primary hidden" onclick="pressNextRound()">Nächste Runde</button>
+        <button id="newGameButton" onclick="pressNewGame()">Neues Spiel</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 id="handTitle">Deine Handkarten</h2>
+      <div id="hand"></div>
+    </div>
+  </section>
+</main>
+
+<div id="lobby" class="hidden">
+  <div class="turn-box">
+    <h2>Runde 31</h2>
+    <div id="lobbyList"></div>
+    <div id="lobbyButtons">
+      <button class="primary hidden" id="joinButton">Mitspielen</button>
+      <button id="readyButton">BEREIT</button>
+      <button class="primary" id="startButton">Runde starten</button>
+    </div>
+    <p id="lobbyHint"></p>
+  </div>
+</div>
+
+<div id="turnScreen" class="hidden">
+  <div class="turn-box">
+    <h2 id="turnTitle">Spielerwechsel</h2>
+    <p id="turnText"></p>
+    <button class="primary" onclick="continueTurn()">Karten ansehen</button>
+  </div>
+</div>
+
+<script src="/spiele/netz.js"></script>
+<script>
+const SUITS = ["♥","♦","♠","♣"];
+const VALUES = ["7","8","9","10","B","D","K","A"];
+const PLAYER_COLORS = [
+  "#d66b64","#65a4dc","#79b879",
+  "#c3a1dc","#d5a45f","#55b9ae",
+  "#d47ca8","#9a9bd5","#a4b36b"
+];
+
+const $ = id => document.getElementById(id);
+
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/schwimmen";
+
+let G = null;
+let onlineBusy = false;
+let stateSeq = 0;
+
+// ---- Lokales Spiel an einem Gerät ----
+let players = [];
+let deck = [];
+let tableCards = [];
+let current = 0;
+let direction = 1;
+let passes = 0;
+let finalTurns = -1;
+let roundOver = false;
+let gameOver = false;
+let resultLines = [];
+let message = "";
+
+// Auswahl der Karten (in beiden Modi nur Anzeige)
+let selectedHand = -1;
+let selectedTable = -1;
+
+function setMessage(text){
+  message = text;
+  $("status").textContent = text;
+}
+
+function makeNames() {
+  if (ONLINE) return;
+  const count = Number($("playerCount").value);
+  let html = "";
+  for (let i=0;i<count;i++) {
+    html += '<label for="name'+i+'">Spieler '+(i+1)+'</label>' +
+      '<input id="name'+i+'" maxlength="18" value="Spieler '+(i+1)+'" placeholder="Name">';
+  }
+  $("nameFields").innerHTML = html;
+}
+
+function shuffle(a) {
+  for (let i=a.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function makeDeck() {
+  const cards=[];
+  for (const suit of SUITS)
+    for (const value of VALUES)
+      cards.push({suit,value});
+  return shuffle(cards);
+}
+
+function startGame() {
+  const count=Number($("playerCount").value);
+  players=[];
+  for (let i=0;i<count;i++) {
+    const name=$("name"+i).value.trim();
+    players.push({
+      name:name || "Spieler "+(i+1),
+      lives:3,
+      hand:[],
+      color:PLAYER_COLORS[i],
+      out:false
+    });
+  }
+  current=0;
+  direction=1;
+  $("setup").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  prepareRound();
+}
+
+function prepareRound() {
+  deck=makeDeck();
+  tableCards=[];
+  selectedHand=-1;
+  selectedTable=-1;
+  passes=0;
+  finalTurns=-1;
+  roundOver=false;
+  gameOver=false;
+  resultLines=[];
+
+  players.forEach(p=>p.hand=[]);
+  const active=players.filter(p=>!p.out);
+
+  for (let n=0;n<3;n++)
+    active.forEach(p=>p.hand.push(deck.pop()));
+
+  for (let n=0;n<3;n++)
+    tableCards.push(deck.pop());
+
+  if (!players[current] || players[current].out)
+    current=nextActive(current);
+
+  setMessage(players[current].name+" beginnt.");
+  render();
+  showTurnScreen();
+}
+
+function nextActive(from) {
+  let index=from;
+  for (let i=0;i<players.length;i++) {
+    index=(index+direction+players.length)%players.length;
+    if (!players[index].out) return index;
+  }
+  return from;
+}
+
+function activeCount() {
+  return players.filter(p=>!p.out).length;
+}
+
+function cardPoints(card) {
+  if (card.value==="A") return 11;
+  if (["K","D","B"].includes(card.value)) return 10;
+  return Number(card.value);
+}
+
+function handPoints(hand) {
+  const sameThree=hand.length===3 && hand.every(c=>c.value===hand[0].value);
+  if (sameThree) return 30.5;
+
+  let best=0;
+  for (const suit of SUITS) {
+    const total=hand.filter(c=>c.suit===suit).reduce((sum,c)=>sum+cardPoints(c),0);
+    best=Math.max(best,total);
+  }
+  return best;
+}
+
+function scoreText(score) {
+  return Number.isInteger(score) ? String(score) : "30½";
+}
+
+// Drei Asse = „Feuer“: Alle anderen verlieren sofort ein Leben.
+function isFeuer(hand) {
+  return hand.length===3 && hand.every(c=>c.value==="A");
+}
+
+function feuerRound(seat) {
+  roundOver=true;
+  selectedHand=-1;
+  selectedTable=-1;
+
+  const name=players[seat].name;
+  const others=players.filter((p,i)=>!p.out && i!==seat);
+  others.forEach(p=>{
+    p.lives--;
+    if (p.lives<=0) p.out=true;
+  });
+
+  resultLines=[name+" hat Feuer – drei Asse!","Alle anderen verlieren ein Leben.",
+    "Verloren: "+others.map(p=>p.name).join(", ")];
+
+  const stillIn=players.filter(p=>!p.out);
+  if (stillIn.length===1) {
+    gameOver=true;
+    resultLines.push("🏆 "+stillIn[0].name+" gewinnt das Spiel!");
+    setMessage(stillIn[0].name+" gewinnt das Spiel!");
+  } else if (stillIn.length===0) {
+    gameOver=true;
+    resultLines.push("Kein Spieler ist mehr im Spiel.");
+    setMessage("Kein Spieler ist mehr im Spiel.");
+  } else {
+    resultLines.push("Die nächste Runde kann beginnen.");
+    setMessage(name+" hat Feuer – alle anderen verlieren ein Leben.");
+  }
+
+  $("turnScreen").classList.add("hidden");
+  render();
+}
+
+function cardElement(card) {
+  const el=document.createElement("div");
+  el.className="card "+(["♥","♦"].includes(card.suit)?"red":"black");
+  const corner=document.createElement("span");
+  corner.className="corner";
+  corner.textContent=card.value+card.suit;
+  const rank=document.createElement("span");
+  rank.className="rank";
+  rank.textContent=card.value;
+  const suit=document.createElement("span");
+  suit.className="suit";
+  suit.textContent=card.suit;
+  el.append(corner,rank,suit);
+  return el;
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+// ---- Lokale Aktionen (nur ohne Online-Modus) ----
+function swapOne() {
+  if (roundOver||selectedHand<0||selectedTable<0) return;
+  if (isFeuer(players[current].hand)) { feuerRound(current); return; }
+  const player=players[current];
+  [player.hand[selectedHand],tableCards[selectedTable]]=
+    [tableCards[selectedTable],player.hand[selectedHand]];
+
+  selectedHand=-1;
+  selectedTable=-1;
+  passes=0;
+
+  if (isFeuer(player.hand)) { feuerRound(current); return; }
+  if (handPoints(player.hand)===31) {
+    finishRound(player.name+" hat 31 Punkte erreicht!");
+    return;
+  }
+  endTurn();
+}
+
+function swapAll() {
+  if (roundOver) return;
+  if (isFeuer(players[current].hand)) { feuerRound(current); return; }
+  const player=players[current];
+  const oldHand=player.hand;
+  player.hand=tableCards;
+  tableCards=oldHand;
+  selectedHand=-1;
+  selectedTable=-1;
+  passes=0;
+
+  if (isFeuer(player.hand)) { feuerRound(current); return; }
+  if (handPoints(player.hand)===31) {
+    finishRound(player.name+" hat 31 Punkte erreicht!");
+    return;
+  }
+  endTurn();
+}
+
+function passTurn() {
+  if (roundOver) return;
+  if (isFeuer(players[current].hand)) { feuerRound(current); return; }
+  passes++;
+  selectedHand=-1;
+  selectedTable=-1;
+
+  if (passes>=activeCount()) {
+    tableCards=[];
+    for (let i=0;i<3;i++) tableCards.push(deck.pop());
+    passes=0;
+  }
+  endTurn();
+}
+
+function knock() {
+  if (roundOver||finalTurns!==-1) return;
+  if (isFeuer(players[current].hand)) { feuerRound(current); return; }
+  finalTurns=activeCount()-1;
+  selectedHand=-1;
+  selectedTable=-1;
+  setMessage(players[current].name+" klopft – letzter Durchgang!");
+  endTurn(true);
+}
+
+function endTurn(knocked=false) {
+  if (roundOver) return;
+
+  if (finalTurns>=0 && !knocked) {
+    finalTurns--;
+    if (finalTurns<=0) {
+      finishRound("Die Klopfrunde ist beendet.");
+      return;
+    }
+  }
+
+  current=nextActive(current);
+  render();
+  showTurnScreen();
+}
+
+function showTurnScreen() {
+  if (roundOver || ONLINE) return;
+  const p=players[current];
+  $("turnTitle").textContent = finalTurns>=0 ? "Letzter Durchgang" : "Spielerwechsel";
+  $("turnText").textContent = "Bitte gib das Gerät an "+p.name+
+    " weiter. Erst dann die Karten ansehen.";
+  $("turnScreen").classList.remove("hidden");
+}
+
+function continueTurn() {
+  $("turnScreen").classList.add("hidden");
+  render();
+}
+
+function finishRound(reason) {
+  roundOver=true;
+  selectedHand=-1;
+  selectedTable=-1;
+
+  let lowest=Infinity;
+  players.filter(p=>!p.out).forEach(p=>{
+    lowest=Math.min(lowest,handPoints(p.hand));
+  });
+
+  const losers=players.filter(p=>!p.out && handPoints(p.hand)===lowest);
+
+  losers.forEach(p=>{
+    p.lives--;
+    if (p.lives<=0) p.out=true;
+  });
+
+  const stillIn=players.filter(p=>!p.out);
+  resultLines=[reason,"Niedrigste Punktzahl: "+scoreText(lowest),
+    "Verloren: "+losers.map(p=>p.name).join(", ")];
+
+  players.forEach(p=>{
+    resultLines.push(p.name+": "+
+      (p.out?"ausgeschieden":p.lives+" Leben übrig")+
+      " – "+scoreText(handPoints(p.hand))+" Punkte");
+  });
+
+  if (stillIn.length===1) {
+    gameOver=true;
+    resultLines.push("🏆 "+stillIn[0].name+" gewinnt das Spiel!");
+    setMessage(stillIn[0].name+" gewinnt das Spiel!");
+  } else if (stillIn.length===0) {
+    gameOver=true;
+    resultLines.push("Kein Spieler ist mehr im Spiel.");
+    setMessage("Kein Spieler ist mehr im Spiel.");
+  } else {
+    resultLines.push("Die nächste Runde kann beginnen.");
+    const verb=losers.length>1?"verlieren":"verliert";
+    setMessage("Runde beendet – "+losers.map(p=>p.name).join(", ")+" "+verb+" ein Leben.");
+  }
+
+  $("turnScreen").classList.add("hidden");
+  render();
+}
+
+function nextRound() {
+  if (!roundOver||gameOver) return;
+  current=nextActive(current);
+  prepareRound();
+}
+
+// ---- Gemeinsame Anzeige ----
+function stand(){
+  if (ONLINE && G) {
+    return {
+      seats: G.seats.map(s=>({name:s.name,count:s.count,lives:s.lives,out:s.out,ready:s.ready,score:s.score,shown:s.shown,cards:s.cards||[]})),
+      hand: G.hand || [],
+      table: G.table || [],
+      current: G.current,
+      mySeat: G.you,
+      myTurn: !!G.myTurn,
+      phase: G.phase,
+      status: G.status,
+      note: G.note || "",
+      result: G.result || [],
+      winner: G.winner || "",
+      score: G.score,
+      finalTurns: G.finalTurns,
+      deckCount: G.deckCount || 0
+    };
+  }
+
+  if (!players.length) return null;
+  const mine=players[current];
+  return {
+    seats: players.map(p=>({name:p.name,count:p.hand.length,lives:p.lives,out:p.out,ready:false,
+      score:handPoints(p.hand),shown:roundOver||p.out,cards:p.hand.slice()})),
+    hand: mine.hand,
+    table: tableCards,
+    current,
+    mySeat: current,
+    myTurn: !roundOver && !gameOver,
+    phase: gameOver?"finished":(roundOver?"between":"playing"),
+    status: gameOver?"finished":"active",
+    note: message,
+    result: resultLines,
+    winner: gameOver&&players[current]?players[current].name:"",
+    score: handPoints(mine.hand),
+    finalTurns,
+    deckCount: deck.length
+  };
+}
+
+function render(){
+  const s=stand();
+  if (!s) return;
+
+  // Spielerleiste
+  $("players").innerHTML="";
+  s.seats.forEach((p,i)=>{
+    const div=document.createElement("div");
+    div.className="player"+(i===s.current&&!p.out&&s.status==="active"?" active":"");
+    div.style.setProperty("--player-color",PLAYER_COLORS[i%PLAYER_COLORS.length]);
+    const strong=document.createElement("strong");
+    strong.textContent=p.name;
+    const small=document.createElement("small");
+    small.textContent=p.out?"Ausgeschieden":p.count+" Karten"+(p.shown&&!p.out?" · "+scoreText(p.score):"");
+    const lives=document.createElement("div");
+    lives.className="lives";
+    lives.textContent=p.out?"✕":"♥ ".repeat(p.lives).trim();
+    div.append(strong,small,lives);
+    if (p.ready && s.status==="invited") {
+      const tag=document.createElement("div");
+      tag.className="ready-tag";
+      tag.textContent="BEREIT";
+      div.appendChild(tag);
+    }
+    $("players").appendChild(div);
+  });
+
+  const dran=s.seats[s.current]?s.seats[s.current].name:"jemand";
+  const ichDran=s.myTurn && s.mySeat===s.current;
+  const klopfrunde=s.finalTurns>=0;
+
+  const wertung = s.phase==="between";
+
+  $("turnBanner").textContent = s.status==="finished" ? "SPIEL BEENDET"
+    : wertung ? "RUNDE BEENDET – WERTUNG"
+    : (klopfrunde && ichDran ? "LETZTER DURCHGANG – DU BIST DRAN"
+      : klopfrunde ? "LETZTER DURCHGANG – "+dran.toUpperCase()+" IST DRAN"
+      : ichDran ? "DU BIST DRAN" : dran.toUpperCase()+" IST DRAN");
+  $("turnBanner").classList.toggle("you",ichDran&&!wertung&&s.status==="active");
+  $("turnBanner").classList.toggle("knock",klopfrunde&&s.status==="active"&&!wertung);
+
+  $("status").textContent = (s.status==="finished"||wertung)
+    ? (s.note || "")
+    : dran+" ist am Zug";
+
+  // Tischkarten
+  $("centerCards").innerHTML="";
+  s.table.forEach((card,i)=>{
+    const el=cardElement(card);
+    if (ichDran && s.phase==="playing") {
+      el.classList.add("selectable");
+      if (selectedTable===i) el.classList.add("selected");
+      el.addEventListener("click",()=>{
+        selectedTable = selectedTable===i ? -1 : i;
+        render();
+      });
+    }
+    $("centerCards").appendChild(el);
+  });
+
+  // Eigene Karten
+  $("hand").innerHTML="";
+  s.hand.forEach((card,i)=>{
+    const el=cardElement(card);
+    if (ichDran && s.phase==="playing") {
+      el.classList.add("selectable");
+      if (selectedHand===i) el.classList.add("selected");
+      el.addEventListener("click",()=>{
+        selectedHand = selectedHand===i ? -1 : i;
+        render();
+      });
+    }
+    $("hand").appendChild(el);
+  });
+
+  $("handTitle").textContent = ONLINE ? "DEINE HANDKARTEN" : "KARTEN VON "+dran.toUpperCase();
+  $("score").textContent = s.status==="finished" ? "" : "Deine Punkte: "+scoreText(s.score)+" / 31";
+
+  const darfTauschen = ichDran && s.phase==="playing";
+  $("swapOne").disabled = !(darfTauschen && selectedHand>=0 && selectedTable>=0);
+  $("swapAll").disabled = !darfTauschen;
+  $("pass").disabled = !darfTauschen;
+  $("knock").disabled = !(darfTauschen && s.finalTurns<0);
+
+  // Rundenauswertung mit allen Karten – nur wenn die Runde vorbei ist.
+  const reveal=$("reveal");
+  reveal.innerHTML="";
+  const aufdecken = s.phase==="between" || s.status==="finished";
+  reveal.classList.toggle("hidden", !aufdecken || !s.seats.length);
+
+  if (aufdecken && s.seats.length) {
+    const head=document.createElement("div");
+    head.className="reveal-head";
+    head.textContent = s.status==="finished" ? "AUFGEDECKT – ENDSTAND" : "AUFGEDECKT – WERTUNG DER RUNDE";
+    reveal.appendChild(head);
+
+    let lowest=Infinity;
+    s.seats.forEach(p=>{ if (!p.out) lowest=Math.min(lowest,p.score); });
+
+    s.seats.forEach(p=>{
+      const verliert = !p.out && p.score===lowest;
+      const row=document.createElement("div");
+      row.className="reveal-row"+(verliert?" loser":"");
+
+      const name=document.createElement("div");
+      name.className="reveal-name";
+      name.textContent=p.name;
+      const sub=document.createElement("small");
+      sub.textContent = p.out ? "ausgeschieden" : ("♥ ".repeat(Math.max(p.lives,0))+" "+p.lives+" Leben").trim();
+      name.appendChild(sub);
+
+      const cards=document.createElement("div");
+      cards.className="reveal-cards";
+      (p.cards||[]).forEach(card=>{
+        const el=cardElement(card);
+        el.classList.add("mini");
+        cards.appendChild(el);
+      });
+      if (!(p.cards||[]).length) {
+        const none=document.createElement("small");
+        none.textContent="keine Karten";
+        cards.appendChild(none);
+      }
+
+      const score=document.createElement("div");
+      score.className="reveal-score";
+      score.textContent=scoreText(p.score);
+
+      row.append(name,cards,score);
+      if (verliert) {
+        const tag=document.createElement("div");
+        tag.className="reveal-tag";
+        tag.textContent="−1 ♥";
+        row.appendChild(tag);
+      }
+      if (isFeuer(p.cards||[])) {
+        const feuer=document.createElement("div");
+        feuer.className="feuer-tag";
+        feuer.textContent="🔥 FEUER";
+        row.appendChild(feuer);
+      }
+      reveal.appendChild(row);
+    });
+  }
+
+  // Auswertung
+  const result=$("result");
+  result.innerHTML="";
+  (s.result||[]).forEach(line=>{
+    const div=document.createElement("div");
+    div.className="line";
+    div.textContent=line;
+    result.appendChild(div);
+  });
+
+  $("nextRound").classList.toggle("hidden", !(s.phase==="between"&&s.status==="active"));
+  $("newGameButton").classList.toggle("hidden", ONLINE && s.status!=="finished");
+}
+
+// ---- Knöpfe ----
+function pressSwap(){
+  if (ONLINE) {
+    if (selectedHand<0||selectedTable<0) return;
+    const handIndex=selectedHand, tableIndex=selectedTable;
+    selectedHand=-1; selectedTable=-1;
+    schwimmAction("swap",{handIndex,tableIndex});
+    return;
+  }
+  swapOne();
+}
+function pressSwapAll(){
+  if (ONLINE) { selectedHand=-1; selectedTable=-1; schwimmAction("swapall"); return; }
+  swapAll();
+}
+function pressPass(){
+  if (ONLINE) { selectedHand=-1; selectedTable=-1; schwimmAction("pass"); return; }
+  passTurn();
+}
+function pressKnock(){
+  if (ONLINE) { selectedHand=-1; selectedTable=-1; schwimmAction("knock"); return; }
+  knock();
+}
+function pressNextRound(){
+  if (ONLINE) { schwimmAction("next"); return; }
+  nextRound();
+}
+function pressNewGame(){
+  if (ONLINE) { schwimmAction("reset"); return; }
+  $("game").classList.add("hidden");
+  $("setup").classList.remove("hidden");
+  $("turnScreen").classList.add("hidden");
+  makeNames();
+}
+
+// ---- Online-Anbindung ----
+async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
+  }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
+
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
+  }
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+
+async function refreshOnline(){
+  if (onlineBusy) return;
+  const mySeq=++stateSeq;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(PLAYER_ID));
+    if (mySeq<stateSeq) return;
+    if (!data.game) return;
+    G=data.game;
+    renderLobby();
+    if (G.status==="invited") {
+      $("lobby").classList.remove("hidden");
+      $("game").classList.add("hidden");
+      return;
+    }
+    $("lobby").classList.add("hidden");
+    $("game").classList.remove("hidden");
+    render();
+  }catch(e){
+    $("lobbyHint").textContent="Verbindung wackelt – die Seite versucht es weiter …";
+  }
+}
+
+async function schwimmAction(action,payload){
+  if (onlineBusy) return;
+  onlineBusy=true;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID, ...(payload||{})})
+    });
+    stateSeq++;
+    G=data.game;
+    renderLobby();
+    $("lobby").classList.add("hidden");
+    $("game").classList.remove("hidden");
+    render();
+  }catch(e){
+    $("lobbyHint").textContent=e.message;
+    $("status").textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+
+function renderLobby(){
+  if (!ONLINE||!G) return;
+
+  $("lobbyList").innerHTML=(G.seats||[]).map(seat=>{
+    const ich=seat.id===PLAYER_ID;
+    const host=seat.id===G.hostId;
+    const status=seat.ready?'<span class="ok">BEREIT</span>':'<span class="wait">wartet</span>';
+    return '<div class="lobby-row"><span>'+escapeHTML(seat.name)+
+      (ich?" (du)":"")+(host?" · Gastgeber":"")+
+      "</span>"+status+"</div>";
+  }).join("");
+
+  const ichDabei=G.you>=0;
+  const ichHost=ichDabei&&(G.seats[G.you].id===G.hostId);
+  const ichBereit=ichDabei&&G.seats[G.you].ready;
+
+  $("joinButton").classList.toggle("hidden",ichDabei);
+  $("readyButton").classList.toggle("hidden",!ichDabei);
+  $("readyButton").textContent=ichBereit?"DOCH NICHT BEREIT":"BEREIT";
+  $("startButton").classList.toggle("hidden",!ichHost);
+
+  const bereit=(G.seats||[]).filter(s=>s.ready).length;
+  $("lobbyHint").textContent=G.note||
+    (bereit+" von "+(G.seats||[]).length+" bereit · "+(G.seats||[]).length+" von 9 Plätzen belegt.");
+}
+
+if (ONLINE) {
+  $("setup").classList.add("hidden");
+  $("turnScreen").classList.add("hidden");
+  $("joinButton").onclick=()=>schwimmAction("join");
+  $("readyButton").onclick=()=>schwimmAction("ready");
+  $("startButton").onclick=()=>schwimmAction("start");
+
+  const back=document.createElement("button");
+  back.type="button";
+  back.textContent="Spiel verlassen";
+  back.onclick = () => tgVerlassen();
+  $("controls").appendChild(back);
+
+  let actedSincePing=false;
+  ["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+    document.addEventListener(evt,()=>{ actedSincePing=true; },{passive:true});
+  });
+
+  async function postPresence(){
+    let name=params.get("name")||"Spieler";
+    if (G&&G.you>=0) name=G.seats[G.you].name;
+    const active=actedSincePing;
+    actedSincePing=false;
+    try{
+      await fetch("/api/presence",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active})
+      });
+    }catch(e){}
+  }
+
+  $("handTitle").textContent="VERBINDE MIT DEM SPIELRAUM …";
+  postPresence().then(refreshOnline);
+  setInterval(postPresence,5000);
+  setInterval(refreshOnline,1500);
+} else {
+  makeNames();
+}
+</script>
+</body>
+</html>

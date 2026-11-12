@@ -14,9 +14,10 @@ import (
 const maxNameLen = 24
 
 // presenceTimeout bestimmt, wie lange ein Spieler ohne Lebenszeichen im Raum
-// bleibt. Handys sperren den Bildschirm oder wechseln kurz die App – mit 20
-// Sekunden flogen Spieler dabei aus dem Raum und ihre Partie wurde weggeworfen.
-const presenceTimeout = 90 * time.Second
+// bleibt. Handys sperren den Bildschirm, wechseln kurz die App oder verlieren
+// im WLAN ein paar Pakete – mit zu kurzer Frist flogen Spieler dabei aus dem
+// Raum und ihre Partie wurde weggeworfen.
+const presenceTimeout = 150 * time.Second
 
 // emptyRoomGameGrace: Sind alle Geräte weg, bleiben Einladungen und Partien
 // noch so lange liegen und gehen erst danach verloren.
@@ -35,9 +36,11 @@ type Message struct {
 	ToName     string `json:"toName,omitempty"`
 	Whisper    bool   `json:"whisper"`
 	GameInvite bool   `json:"gameInvite,omitempty"`
-	Game       string `json:"game,omitempty"`
-	GameID     string `json:"gameId,omitempty"`
-	System     bool   `json:"system,omitempty"`
+	// Tone färbt eine Nachricht ein: love (rosa), joke (grün), evil (rot).
+	Tone   string `json:"tone,omitempty"`
+	Game   string `json:"game,omitempty"`
+	GameID string `json:"gameId,omitempty"`
+	System bool   `json:"system,omitempty"`
 }
 
 type Player struct {
@@ -91,6 +94,11 @@ type Room struct {
 	Schach       *ChessGame
 	Go           *GoGame
 	Backgammon   *BackgammonGame
+	MauMau       *MauMauGame
+	Uno          *UnoGame
+	Schwimmen    *SchwimmenGame
+	Arschloch    *ArschlochGame
+	Rechen       *RechenGame
 	Mutes        map[string]time.Time   // playerID -> unmute time
 	MsgTimes     map[string][]time.Time // for spam protection
 }
@@ -207,6 +215,21 @@ func (r *Room) cleanPlayers() {
 		if present == 0 {
 			r.Kniffel = nil
 		}
+	}
+	if r.MauMau != nil && r.MauMau.allGone(r) {
+		r.MauMau = nil
+	}
+	if r.Uno != nil && r.Uno.allGone(r) {
+		r.Uno = nil
+	}
+	if r.Schwimmen != nil && r.Schwimmen.allGone(r) {
+		r.Schwimmen = nil
+	}
+	if r.Arschloch != nil && r.Arschloch.allGone(r) {
+		r.Arschloch = nil
+	}
+	if r.Rechen != nil && r.Rechen.allGone(r) {
+		r.Rechen = nil
 	}
 	// clean old timestamps for spam
 	for id, ts := range r.MsgTimes {
@@ -487,5 +510,8 @@ func startRoomJanitor() {
 
 func jsonResponse(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
+	// Spielstände dürfen nie aus dem Zwischenspeicher kommen: Bei wackligem
+	// WLAN liefert ein Browser sonst einen alten Zug statt des neuen.
+	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(v)
 }

@@ -151,6 +151,7 @@ func main() {
 	mux.HandleFunc("/api/players", playersHandler)
 	mux.HandleFunc("/api/qr", qrCode)
 	mux.HandleFunc("/api/messages", messages)
+	mux.HandleFunc("/api/tone", toneHandler)
 	mux.HandleFunc("/api/moderation", moderationHandler)
 	mux.HandleFunc("/api/tictactoe", ticTacToeHandler)
 	mux.HandleFunc("/api/viergewinnt", vierGewinntHandler)
@@ -169,7 +170,25 @@ func main() {
 	mux.HandleFunc("/api/schach", chessHandler)
 	mux.HandleFunc("/api/go", goHandler)
 	mux.HandleFunc("/api/backgammon", backgammonHandler)
-	mux.Handle("/", http.FileServer(http.Dir(home)))
+	mux.HandleFunc("/api/maumau", maumauHandler)
+	mux.HandleFunc("/api/uno", unoHandler)
+	mux.HandleFunc("/api/schwimmen", schwimmenHandler)
+	mux.HandleFunc("/api/arschloch", arschlochHandler)
+	mux.HandleFunc("/api/einsxeins", einsxeinsHandler)
+	mux.HandleFunc("/api/leave", leaveGameHandler)
+	mux.HandleFunc("/api/imspiel", imSpielHandler)
+	// Spielseiten und Skripte ändern sich zwischen den Runden. Der Browser darf
+	// sie behalten, muss aber vor jedem Öffnen nachfragen – sonst läuft nach
+	// einer Änderung noch der alte netz.js-Stand und der Verlassen-Knopf fehlt.
+	frisch := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, ".html") || strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".css") {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
+			h.ServeHTTP(w, r)
+		})
+	}
+	mux.Handle("/", frisch(http.FileServer(http.Dir(home))))
 
 	ensureMainRoom()
 	startRoomJanitor()
@@ -185,5 +204,10 @@ func main() {
 
 	log.Printf("TrashyGecko Connector startet: %s", addr)
 	log.Printf("Homepage: %s", home)
+	// Ohne spiele-Ordner läuft der Chat, aber jede Spielseite wäre ein 404 –
+	// das ist beim Kopieren der schnellste Weg in die Verzweiflung.
+	if info, statErr := os.Stat(filepath.Join(home, "spiele")); statErr != nil || !info.IsDir() {
+		log.Printf("WARNUNG: %s enthält keinen spiele-Ordner – die Spielseiten werden nicht gefunden.", home)
+	}
 	log.Fatal(http.ListenAndServe(":"+port, withActivity(mux)))
 }

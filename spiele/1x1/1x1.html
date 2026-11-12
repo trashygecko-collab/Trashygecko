@@ -469,6 +469,125 @@ h2 {
         margin-top: 10px;
     }
 }
+/* --- Online-Rennen im Connector ------------------------------------- */
+
+body.online         /* Der Verlassen-Knopf gehört nur in den Online-Betrieb. */
+        body:not(.online) [data-tg-verlassen] {
+            display: none;
+        }
+
+        .nur-lokal { display: none !important; }
+
+.stat.zeit { display: none; }
+
+body.online .stat.zeit { display: block; }
+
+#onlineLobby {
+    display: none;
+    text-align: center;
+}
+
+#onlineLobby h2 {
+    margin-bottom: 6px;
+    color: #00edff;
+    text-shadow: 0 0 12px #00bfff;
+    font-size: 22px;
+    letter-spacing: .06em;
+}
+
+.online-meta {
+    margin: 6px 0 14px;
+    color: #8eb5d9;
+    font-size: 12px;
+    letter-spacing: .08em;
+}
+
+.online-seats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.online-seat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #17436c;
+    background: #091629;
+    font-size: 14px;
+}
+
+.online-seat.bereit { border-color: #54ff9f; }
+
+.online-seat strong {
+    color: #ffd166;
+    font-size: 12px;
+    letter-spacing: .06em;
+}
+
+.online-settings {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 12px 0;
+    font-size: 12px;
+    color: #8eb5d9;
+}
+
+.online-settings select {
+    display: block;
+    margin-top: 4px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #17436c;
+    background: #091629;
+    color: #eaf6ff;
+    font: inherit;
+}
+
+.ol-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: .08em;
+    cursor: pointer;
+    color: #04121b;
+    background: linear-gradient(135deg, #00edff, #ff4fd8);
+}
+
+.ol-btn.zweit {
+    color: #eaf6ff;
+    background: rgba(255, 255, 255, .1);
+    border: 1px solid #17436c;
+}
+
+.ol-btn[hidden] { display: none; }
+
+.online-stand {
+    margin: -8px 0 14px;
+    color: #8eb5d9;
+    font-size: 12px;
+    text-align: center;
+    letter-spacing: .04em;
+}
+
+.online-stand .fertig { color: #54ff9f; }
+
+.online-rank {
+    text-align: left;
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+.online-rank .sieger { color: #ffd166; }
 </style>
 </head>
 
@@ -491,7 +610,7 @@ h2 {
                 <span class="menu-title">＋ − × ÷ GRUNDRECHENARTEN</span>
                 <span class="menu-description">
                     Plus, Minus, Mal und Geteilt.<br>
-                    Zehn Aufgaben pro Runde.
+                    Acht Aufgaben pro Runde.
                 </span>
             </button>
 
@@ -548,7 +667,7 @@ h2 {
 
             <div class="stat">
                 FRAGE
-                <strong id="questionCount">1 / 10</strong>
+                <strong id="questionCount">1 / 8</strong>
             </div>
 
             <div class="stat">
@@ -556,11 +675,25 @@ h2 {
                 <strong id="score">0</strong>
             </div>
 
+            <div class="stat zeit">
+                ZEIT
+                <strong id="onlineClock">0,0 s</strong>
+            </div>
+
+        </div>
+
+        <div style="text-align:center;margin:0 0 4px">
+            <button type="button" data-tg-verlassen hidden onclick="tgVerlassen()"
+                style="padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:13px;cursor:pointer;opacity:.75">
+                Spiel verlassen
+            </button>
         </div>
 
         <div class="progress">
             <div class="progress-bar" id="progressBar"></div>
         </div>
+
+        <div class="online-stand" id="onlineStand"></div>
 
         <div class="question-panel">
 
@@ -601,7 +734,7 @@ h2 {
             ANTWORT
         </button>
 
-        <button class="back" onclick="showStartScreen()">
+        <button class="back nur-lokal" onclick="showStartScreen()">
             ← SPIEL ABBRECHEN
         </button>
 
@@ -613,21 +746,63 @@ h2 {
 
         <h2>RUNDE BEENDET!</h2>
 
-        <div class="final-score" id="finalScore">0 / 10</div>
+        <div class="final-score" id="finalScore">0 / 8</div>
 
         <div class="final-text" id="finalText"></div>
 
-        <button class="restart" onclick="startGame(currentLevel)">
+        <button class="restart nur-lokal" onclick="startGame(currentLevel)">
             NOCH EINE RUNDE
         </button>
 
-        <button class="change-level" onclick="showLevelScreen()">
+        <button class="change-level nur-lokal" onclick="showLevelScreen()">
             SCHWIERIGKEIT ÄNDERN
         </button>
 
-        <button class="back" onclick="showStartScreen()">
+        <button class="back nur-lokal" onclick="showStartScreen()">
             ZURÜCK ZUR AUSWAHL
         </button>
+
+        <div id="onlineEndButtons" style="display:none">
+            <button class="ol-btn" id="onlineAgain" hidden>NOCH EINE RUNDE</button>
+            <button class="ol-btn zweit" id="onlineBack">ZUM CONNECTOR</button>
+        </div>
+
+    </div>
+
+    <!-- ONLINE-LOBBY (Connector) -->
+
+    <div id="onlineLobby">
+
+        <h2>1×1-RENNEN</h2>
+
+        <div class="online-meta" id="onlineMeta"></div>
+
+        <div class="intro" id="onlineNote"></div>
+
+        <div class="online-seats" id="onlineSeats"></div>
+
+        <div class="online-settings" id="onlineSettings">
+            <label>
+                SPIELART
+                <select id="onlineMode">
+                    <option value="arithmetic">Grundrechenarten</option>
+                    <option value="equations">Gleichungen</option>
+                </select>
+            </label>
+            <label>
+                STUFE
+                <select id="onlineLevel">
+                    <option value="1">Leicht</option>
+                    <option value="2">Mittel</option>
+                    <option value="3">Schwer</option>
+                </select>
+            </label>
+        </div>
+
+        <button class="ol-btn" id="onlineJoin">MITSPIELEN</button>
+        <button class="ol-btn" id="onlineReady" hidden>BEREIT</button>
+        <button class="ol-btn" id="onlineStart" hidden>RUNDE STARTEN</button>
+        <button class="ol-btn zweit" id="onlineLeave">SPIEL VERLASSEN</button>
 
     </div>
 
@@ -636,6 +811,8 @@ h2 {
     </div>
 
 </div>
+
+<script src="/spiele/netz.js"></script>
 
 <script>
 
@@ -648,7 +825,7 @@ let answer = "";
 let answered = false;
 let playing = false;
 
-const totalQuestions = 10;
+const totalQuestions = 8;
 
 function randomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -674,13 +851,13 @@ function selectMode(mode) {
             "Vier Rechenarten, drei Schwierigkeitsstufen. Alle Aufgaben bleiben reine Rechenaufgaben.";
 
         document.getElementById("desc1").textContent =
-            "+ und − bis 100 · × und ÷ bis 5";
+            "+ und − bis 10 · × und ÷ bis 5 × 5";
 
         document.getElementById("desc2").textContent =
-            "+ und − bis 500 · × und ÷ bis 10";
+            "+ und − bis 100 · × und ÷ bis 10 × 10";
 
         document.getElementById("desc3").textContent =
-            "+ und − bis 1000 · × und ÷ bis 12";
+            "+ und − bis 1000 · × und ÷ bis 20 × 20";
 
     } else {
 
@@ -690,13 +867,13 @@ function selectMode(mode) {
             "Finde den Wert der gesuchten Variablen. Jede Stufe baut auf der vorherigen auf.";
 
         document.getElementById("desc1").textContent =
-            "Eine Variable berechnen. Beispiel: a = 3 + 3 − 2";
+            "Eine Variable, Ergebnis bis 10 · × bis 10 × 10, ÷ nur durch 10";
 
         document.getElementById("desc2").textContent =
-            "Zwei Variablen verknüpfen. Beispiel: a = 5 · b = 2 × a";
+            "Zwei Variablen, Ergebnis bis 100 · × bis 10 × 10, ÷ nur durch 10";
 
         document.getElementById("desc3").textContent =
-            "Drei Variablen verknüpfen. Beispiel: a = 1 · b = 2 × a · c = a + 2 × b";
+            "Drei Variablen, Ergebnis bis 500 · × bis 10 × 10, ÷ nur durch 10";
     }
 }
 
@@ -783,10 +960,12 @@ function createQuestion() {
 
 function createArithmeticQuestion() {
 
+    // + und − wachsen bis 10 / 100 / 1000,
+    // × und ÷ bleiben bei 5×5 / 10×10 / 20×20.
     const settings = [
-        { maximum: 100, factor: 5 },
-        { maximum: 500, factor: 10 },
-        { maximum: 1000, factor: 12 }
+        { maxAdd: 10, maxMul: 5 },
+        { maxAdd: 100, maxMul: 10 },
+        { maxAdd: 1000, maxMul: 20 }
     ];
 
     const limit = settings[currentLevel - 1];
@@ -797,8 +976,8 @@ function createArithmeticQuestion() {
 
     if (operation === 1) {
 
-        a = randomNumber(1, limit.maximum - 1);
-        b = randomNumber(1, limit.maximum - a);
+        a = randomNumber(1, limit.maxAdd - 1);
+        b = randomNumber(1, limit.maxAdd - a);
 
         correctAnswer = a + b;
         symbol = "+";
@@ -806,7 +985,7 @@ function createArithmeticQuestion() {
 
     } else if (operation === 2) {
 
-        a = randomNumber(2, limit.maximum);
+        a = randomNumber(2, limit.maxAdd);
         b = randomNumber(1, a - 1);
 
         correctAnswer = a - b;
@@ -815,8 +994,8 @@ function createArithmeticQuestion() {
 
     } else if (operation === 3) {
 
-        a = randomNumber(1, limit.factor);
-        b = randomNumber(1, limit.factor);
+        a = randomNumber(1, limit.maxMul);
+        b = randomNumber(1, limit.maxMul);
 
         correctAnswer = a * b;
         symbol = "×";
@@ -824,9 +1003,9 @@ function createArithmeticQuestion() {
 
     } else {
 
-        b = randomNumber(1, limit.factor);
+        b = randomNumber(1, limit.maxMul);
 
-        const result = randomNumber(1, limit.factor);
+        const result = randomNumber(1, limit.maxMul);
 
         a = b * result;
 
@@ -869,8 +1048,8 @@ function createEasyEquation() {
 
         // a = x + y - z
 
-        x = randomNumber(2, 30);
-        y = randomNumber(2, 30);
+        x = randomNumber(1, 5);
+        y = randomNumber(1, 5);
         z = randomNumber(0, x + y - 1);
 
         result = x + y - z;
@@ -879,10 +1058,10 @@ function createEasyEquation() {
 
     } else if (type === 2) {
 
-        // a = x * y
+        // a = x * y (Ergebnis bis 10)
 
         x = randomNumber(1, 5);
-        y = randomNumber(1, 5);
+        y = randomNumber(1, Math.max(1, Math.floor(10 / x)));
 
         result = x * y;
 
@@ -890,10 +1069,10 @@ function createEasyEquation() {
 
     } else if (type === 3) {
 
-        // a = x / y
+        // a = x / y (Teiler bis 10, Ergebnis bis 10)
 
         y = randomNumber(1, 5);
-        z = randomNumber(1, 5);
+        z = randomNumber(1, 10);
 
         x = y * z;
 
@@ -903,11 +1082,11 @@ function createEasyEquation() {
 
     } else {
 
-        // a = x + y + z
+        // a = x + y + z (Ergebnis bis 10)
 
-        x = randomNumber(1, 20);
-        y = randomNumber(1, 20);
-        z = randomNumber(1, 20);
+        x = randomNumber(1, 3);
+        y = randomNumber(1, 3);
+        z = randomNumber(1, 3);
 
         result = x + y + z;
 
@@ -935,18 +1114,18 @@ function createMediumEquation() {
 
     if (type === 1) {
 
-        a = randomNumber(1, 50);
+        a = randomNumber(1, 10);
 
-        const factor = randomNumber(2, 6);
+        const factor = randomNumber(2, 10);
 
         b = factor * a;
         expression = `${factor} × a`;
 
     } else if (type === 2) {
 
-        a = randomNumber(1, 100);
+        a = randomNumber(1, 90);
 
-        const addition = randomNumber(1, 50);
+        const addition = randomNumber(1, 100 - a);
 
         b = a + addition;
         expression = `a + ${addition}`;
@@ -962,11 +1141,11 @@ function createMediumEquation() {
 
     } else {
 
-        const divisor = randomNumber(2, 6);
+        const divisor = randomNumber(2, 10);
 
-        a = divisor * randomNumber(1, 20);
+        b = randomNumber(1, Math.floor(100 / divisor));
 
-        b = a / divisor;
+        a = divisor * b;
         expression = `a ÷ ${divisor}`;
     }
 
@@ -986,41 +1165,34 @@ function createMediumEquation() {
 
 function createHardEquation() {
 
-    const a = randomNumber(1, 12);
-    const factor = randomNumber(2, 5);
+    const a = randomNumber(1, 10);
+    const factor = randomNumber(2, 10);
     const b = factor * a;
 
     let c, expression;
 
-    const type = randomNumber(1, 4);
+    const type = randomNumber(1, 3);
 
     if (type === 1) {
 
-        const multiplier = randomNumber(2, 4);
-
-        c = a + multiplier * b;
-        expression = `a + ${multiplier} × b`;
-
-    } else if (type === 2) {
-
-        const multiplier = randomNumber(2, 4);
+        const multiplier = randomNumber(2, 10);
 
         c = b + multiplier * a;
         expression = `b + ${multiplier} × a`;
 
-    } else if (type === 3) {
+    } else if (type === 2) {
 
-        const multiplier = randomNumber(2, 4);
+        const extra = randomNumber(5, 300);
 
-        c = b * multiplier - a;
-        expression = `b × ${multiplier} − a`;
+        c = b + a + extra;
+        expression = `a + b + ${extra}`;
 
     } else {
 
-        const addition = randomNumber(2, 20);
+        const extra = randomNumber(5, 200);
 
-        c = a + b + addition;
-        expression = `a + b + ${addition}`;
+        c = b - a + extra;
+        expression = `b − a + ${extra}`;
     }
 
     correctAnswer = c;
@@ -1091,6 +1263,11 @@ function checkAnswer() {
         return;
     }
 
+    if (ONLINE) {
+        sendAnswer();
+        return;
+    }
+
     answered = true;
 
     const userAnswer = Number(answer);
@@ -1154,13 +1331,13 @@ function finishGame() {
 
     let message;
 
-    if (score === 10) {
-        message = "Fantastisch! Zehn von zehn richtig!";
-    } else if (score >= 8) {
-        message = "Super gemacht! Das war eine starke Runde.";
+    if (score === totalQuestions) {
+        message = "Fantastisch! Acht von acht richtig!";
     } else if (score >= 6) {
-        message = "Gut gemacht! Du bist auf einem guten Weg.";
+        message = "Super gemacht! Das war eine starke Runde.";
     } else if (score >= 4) {
+        message = "Gut gemacht! Du bist auf einem guten Weg.";
+    } else if (score >= 2) {
         message = "Da geht noch was! Versuch es gleich noch einmal.";
     } else {
         message = "Übung macht den Meister. Gib nicht auf!";
@@ -1194,6 +1371,330 @@ document.addEventListener("keydown", function(event) {
         checkAnswer();
     }
 });
+
+// ========================================
+// ONLINE: 1×1-RENNEN IM CONNECTOR
+// Alle bekommen dieselben acht Aufgaben. Wer mehr richtig hat, gewinnt;
+// bei Gleichstand entscheidet die Zeit.
+// ========================================
+
+const urlParams = new URLSearchParams(location.search);
+const ROOM = urlParams.get("room") || "";
+const PLAYER_ID = urlParams.get("id") || "";
+const ONLINE = !!(ROOM && PLAYER_ID);
+
+let onlineGame = null;
+let onlineBusy = false;
+let onlineAnswering = false;
+let onlineFehlerZeit = 0;
+let raceStart = 0;
+let raceRound = -1;
+let raceClock = null;
+let raceSignatur = "";
+
+function zeitText(ms) {
+    if (!ms || ms <= 0) return "0,0 s";
+    const sek = ms / 1000;
+    if (sek < 60) return sek.toFixed(1).replace(".", ",") + " s";
+    const min = Math.floor(sek / 60);
+    const rest = (sek - min * 60).toFixed(1).replace(".", ",");
+    return min + ":" + (rest.length < 4 ? "0" + rest : rest);
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function screens(ids) {
+    ["startScreen", "levelScreen", "gameScreen", "endScreen", "onlineLobby"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = ids.indexOf(id) >= 0 ? "block" : "none";
+    });
+}
+
+async function onlineRejoin() {
+    try {
+        await fetch("/api/presence", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room: ROOM, id: PLAYER_ID, name: urlParams.get("name") || "Spieler" })
+        });
+    } catch (e) {}
+}
+
+async function onlineFetch(url, options) {
+    let res = await fetch(url, options);
+    if (res.status === 403) {
+        await onlineRejoin();
+        res = await fetch(url, options);
+    }
+    if (!res.ok) throw new Error((await res.text()).trim() || "Das hat nicht geklappt.");
+    return res.json();
+}
+
+async function onlineAction(action, extra) {
+    if (onlineBusy) return null;
+    onlineBusy = true;
+    try {
+        const data = await onlineFetch("/api/einsxeins?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.assign({ id: PLAYER_ID }, extra || {}))
+        });
+        if (data && data.game !== undefined) applyOnline(data.game);
+        return data;
+    } catch (e) {
+        const note = document.getElementById("onlineNote");
+        if (note) {
+            note.textContent = e.message;
+            onlineFehlerZeit = Date.now();
+        }
+        return null;
+    } finally {
+        onlineBusy = false;
+    }
+}
+
+function onlineSettings() {
+    onlineAction("settings", {
+        mode: document.getElementById("onlineMode").value,
+        level: Number(document.getElementById("onlineLevel").value)
+    });
+}
+
+async function refreshOnline() {
+    if (!ONLINE || onlineBusy) return;
+    try {
+        const data = await onlineFetch("/api/einsxeins?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+        applyOnline(data.game);
+    } catch (e) {
+        // Verbindung wackelt – der nächste Takt versucht es wieder.
+    }
+}
+
+function applyOnline(view) {
+    onlineGame = view;
+    if (!view) { showOnlineLobby(null); return; }
+    if (view.status === "invited") { showOnlineLobby(view); return; }
+    if (view.status === "active") {
+        if (view.you < 0) { showOnlineLobby(view); return; }
+        if (view.done) { renderWaiting(view); return; }
+        // Nur bei einer neuen Aufgabe neu zeichnen – sonst würde der Takt alle
+        // 1,5 Sekunden die schon getippte Antwort wegwischen.
+        const signatur = [view.round, view.index, view.count, view.mode, view.level].join("|");
+        if (signatur !== raceSignatur) {
+            raceSignatur = signatur;
+            renderRace(view);
+        } else {
+            document.getElementById("score").textContent = view.correct;
+            renderStand(view);
+        }
+        return;
+    }
+    renderResult(view);
+}
+
+function showOnlineLobby(view) {
+    screens(["onlineLobby"]);
+    playing = false;
+    raceSignatur = "";
+
+    const note = document.getElementById("onlineNote");
+    const stand = document.getElementById("onlineSeats");
+    const join = document.getElementById("onlineJoin");
+    const ready = document.getElementById("onlineReady");
+    const start = document.getElementById("onlineStart");
+    const settings = document.getElementById("onlineSettings");
+    const meta = document.getElementById("onlineMeta");
+
+    if (!view) {
+        meta.textContent = "KEINE RUNDE";
+        note.textContent = "Im Connector bei einer Spielkarte „1×1-Rennen“ einsteigen.";
+        stand.innerHTML = "";
+        join.hidden = true;
+        ready.hidden = true;
+        start.hidden = true;
+        settings.style.display = "none";
+        return;
+    }
+
+    meta.textContent =
+        (view.mode === "equations" ? "GLEICHUNGEN" : "GRUNDRECHENARTEN") + " · " +
+        ["LEICHT", "MITTEL", "SCHWER"][view.level - 1] + " · " +
+        view.seats.length + " von 7 Plätzen · " + view.count + " Aufgaben";
+
+    // Eine Fehlermeldung soll nicht im nächsten Takt verschwinden.
+    if (Date.now() - onlineFehlerZeit > 4000) {
+        note.textContent = view.note || "";
+    }
+
+    stand.innerHTML = view.seats.map(s =>
+        '<div class="online-seat' + (s.ready ? " bereit" : "") + '">' +
+        "<span>" + escapeHtml(s.name) + (s.id === PLAYER_ID ? " (du)" : "") + "</span>" +
+        "<strong>" + (s.ready ? "BEREIT" : "wartet") + "</strong></div>"
+    ).join("");
+
+    const me = view.seats.find(s => s.id === PLAYER_ID);
+    join.hidden = !!me;
+    ready.hidden = !me;
+    ready.textContent = me && me.ready ? "DOCH NICHT BEREIT" : "BEREIT";
+    start.hidden = !view.isHost;
+    const alleBereit = view.seats.length >= 2 && view.seats.every(s => s.ready);
+    start.disabled = !alleBereit;
+    start.title = view.seats.length < 2
+        ? "Für ein Rennen braucht es mindestens zwei Spieler."
+        : (alleBereit ? "Los geht's" : "Erst müssen alle Spieler BEREIT drücken.");
+
+    settings.style.display = view.isHost ? "flex" : "none";
+    document.getElementById("onlineMode").value = view.mode;
+    document.getElementById("onlineLevel").value = String(view.level);
+}
+
+function renderRace(view) {
+    screens(["gameScreen"]);
+    playing = true;
+    answered = false;
+    answer = "";
+    onlineAnswering = false;
+
+    if (view.round !== raceRound) {
+        raceRound = view.round;
+        raceStart = Date.now() - (view.elapsedMs || 0);
+    }
+    startClock();
+
+    document.getElementById("operation").textContent =
+        "AUFGABE " + (view.index + 1) + " VON " + view.count + " · " +
+        (view.mode === "equations" ? "GLEICHUNGEN" : "GRUNDRECHENARTEN") + " · STUFE " + view.level;
+
+    const zeilen = view.lines || [];
+    document.getElementById("question").innerHTML = zeilen.map((zeile, i) =>
+        '<div class="equation-line' + (i === zeilen.length - 1 ? " target" : "") + '">' + escapeHtml(zeile) + "</div>"
+    ).join("");
+
+    document.getElementById("questionCount").textContent = (view.index + 1) + " / " + view.count;
+    document.getElementById("progressBar").style.width = (view.index / view.count * 100) + "%";
+    document.getElementById("score").textContent = view.correct;
+
+    updateDisplay();
+    document.getElementById("display").className = "display";
+    document.getElementById("feedback").className = "feedback";
+    document.getElementById("feedback").textContent = "Tippe unten deine Antwort ein.";
+    document.getElementById("submitButton").disabled = false;
+    document.querySelectorAll(".key").forEach(button => { button.disabled = false; });
+
+    renderStand(view);
+}
+
+function renderStand(view) {
+    const box = document.getElementById("onlineStand");
+    if (!box) return;
+    box.innerHTML = view.seats.map(s =>
+        '<span class="' + (s.done ? "fertig" : "") + '">' +
+        escapeHtml(s.name) + ": " + s.answered + "/" + view.count + (s.done ? " ✓" : "") + "</span>"
+    ).join(" · ");
+}
+
+function startClock() {
+    if (raceClock) return;
+    raceClock = setInterval(() => {
+        if (!onlineGame || onlineGame.status !== "active" || onlineGame.done || !raceStart) return;
+        const el = document.getElementById("onlineClock");
+        if (el) el.textContent = zeitText(Date.now() - raceStart);
+    }, 200);
+}
+
+function sendAnswer() {
+    if (!onlineGame || onlineAnswering) return;
+    if (answer === "") {
+        document.getElementById("feedback").textContent = "Bitte gib zuerst eine Zahl ein.";
+        return;
+    }
+
+    onlineAnswering = true;
+    answered = true;
+    const index = onlineGame.index;
+    const wert = Number(answer);
+
+    document.getElementById("submitButton").disabled = true;
+    document.querySelectorAll(".key").forEach(button => { button.disabled = true; });
+
+    onlineAction("answer", { index: index, value: wert }).then(data => {
+        if (!data || !data.game) {
+            answered = false;
+            onlineAnswering = false;
+            return;
+        }
+        const display = document.getElementById("display");
+        const feedback = document.getElementById("feedback");
+        display.className = "display " + (data.correct ? "correct" : "wrong");
+        feedback.className = "feedback " + (data.correct ? "good" : "bad");
+        feedback.textContent = data.correct
+            ? "✓ RICHTIG!"
+            : "✗ Falsch! Richtig ist: " + data.answer;
+        setTimeout(() => {
+            onlineAnswering = false;
+            applyOnline(data.game);
+        }, 1100);
+    });
+}
+
+function renderWaiting(view) {
+    screens(["endScreen"]);
+    playing = false;
+    const me = view.seats.find(s => s.id === PLAYER_ID) || { correct: view.correct, timeMs: 0 };
+    document.querySelector("#endScreen h2").textContent = "DU BIST DURCH!";
+    document.getElementById("finalScore").textContent =
+        view.correct + " / " + view.count + " · " + zeitText(me.timeMs);
+    document.getElementById("finalText").innerHTML = '<div class="online-rank">' +
+        "Warte auf die anderen …<br><br>" +
+        view.seats.map(s => escapeHtml(s.name) + ": " + s.answered + "/" + view.count +
+            (s.done ? " ✓ " + zeitText(s.timeMs) : "")).join("<br>") +
+        "</div>";
+    endButtons(view, false);
+}
+
+function renderResult(view) {
+    screens(["endScreen"]);
+    playing = false;
+    const me = view.seats.find(s => s.id === PLAYER_ID) || { correct: 0, timeMs: 0 };
+    document.querySelector("#endScreen h2").textContent = "RENNEN BEENDET!";
+    document.getElementById("finalScore").textContent =
+        me.correct + " / " + view.count + (me.timeMs ? " · " + zeitText(me.timeMs) : "");
+    document.getElementById("finalText").innerHTML = '<div class="online-rank">' +
+        (view.result || []).map((zeile, i) =>
+            '<div class="' + (i === 0 ? "sieger" : "") + '">' + escapeHtml(zeile) + "</div>"
+        ).join("") + "</div>";
+    endButtons(view, true);
+}
+
+function endButtons(view, fertig) {
+    document.getElementById("onlineEndButtons").style.display = "block";
+    document.getElementById("onlineAgain").hidden = !(fertig && view.isHost);
+}
+
+function leaveOnline() {
+    if (typeof tgVerlassen === "function") {
+        tgVerlassen();
+        return;
+    }
+    location.href = "/connector?room=" + encodeURIComponent(ROOM);
+}
+
+if (ONLINE) {
+    document.body.classList.add("online");
+    screens(["onlineLobby"]);
+
+    document.getElementById("onlineJoin").onclick = () => { onlineAction("join"); };
+    document.getElementById("onlineReady").onclick = () => { onlineAction("ready"); };
+    document.getElementById("onlineStart").onclick = () => { onlineAction("start"); };
+    document.getElementById("onlineMode").onchange = onlineSettings;
+    document.getElementById("onlineLevel").onchange = onlineSettings;
+    document.getElementById("onlineLeave").onclick = leaveOnline;
+    document.getElementById("onlineBack").onclick = leaveOnline;
+    document.getElementById("onlineAgain").onclick = () => { onlineAction("reset"); };
+
+    refreshOnline();
+    setInterval(refreshOnline, 1500);
+}
 
 </script>
 

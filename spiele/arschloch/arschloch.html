@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrashyGecko – Arschloch</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#1a1c21;--panel2:#22252b;--line:#383c45;--text:#e8e9ec;--muted:#a4a8b1;--red:#d85b60;--green:#86bd91;--gold:#c7a96b}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#20232a 0,#101114 55%);color:var(--text);font:16px/1.45 Arial,Helvetica,sans-serif;min-height:100vh}
+header{text-align:center;padding:20px 12px 12px}
+header h1{margin:0;font-size:clamp(25px,4vw,38px);letter-spacing:3px;color:#e5e6e9}
+header p{margin:3px 0 0;color:var(--muted);font-size:13px;letter-spacing:2px}
+main{width:min(1100px,96vw);margin:0 auto 28px}
+.panel{background:linear-gradient(145deg,#202329,#181a1f);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 8px 24px #0005}
+h2{font-size:18px;margin:0 0 12px;color:#dedfe3}
+button,select,input{font:inherit}
+button{border:1px solid #555b66;border-radius:8px;background:#30343c;color:#f1f2f4;padding:10px 15px;cursor:pointer;transition:.15s}
+button:hover:not(:disabled){background:#414752;border-color:#818895}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.primary{background:#526c59;border-color:#78917e;color:white}
+button.primary:hover:not(:disabled){background:#63836b}
+button.warn{background:#5b383b;border-color:#855458}
+button.small{padding:6px 10px;font-size:13px}
+input,select{background:#111318;color:var(--text);border:1px solid #4a4e58;border-radius:7px;padding:9px;min-width:0}
+label{color:var(--muted);font-size:14px}
+.setup-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.names{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:14px 0}
+.name-field{display:flex;flex-direction:column;gap:4px}
+.hidden{display:none!important}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.status{color:var(--gold);font-weight:bold}
+.info{color:var(--muted);font-size:14px}
+.seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:12px 0}
+.seat{background:#15171c;border:1px solid #353943;border-radius:9px;padding:10px;text-align:center}
+.seat.current{border-color:var(--gold);box-shadow:inset 0 0 0 1px #c7a96b44}
+.seat.out{opacity:.55}
+.seat .name{font-weight:bold}
+.seat .count{font-size:13px;color:var(--muted)}
+.badge{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:20px;background:#353941;color:#d5d7dc;font-size:11px}
+.table{min-height:150px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;background:#111318;border:1px dashed #454a55;border-radius:12px;padding:16px}
+.played-label{text-align:center;color:var(--muted);width:100%;font-size:13px}
+.card{width:62px;height:88px;border-radius:8px;background:#292d34;border:1px solid #626873;color:#f0f0f0;display:flex;flex-direction:column;justify-content:space-between;padding:6px 7px;box-shadow:0 3px 8px #0007;user-select:none}
+.card .rank{font-weight:bold;font-size:20px;line-height:1}
+.card .suit{font-size:21px;align-self:flex-end;line-height:1}
+.card.red{color:#e16b70}
+.card.black{color:#e4e6e9}
+.hand{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;min-height:100px;padding:12px 4px}
+.hand .card{cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
+.hand .card:hover{transform:translateY(-4px)}
+.hand .card.playable{border:2px solid var(--green);box-shadow:0 0 0 1px #86bd9144,0 3px 9px #0008}
+.hand .card.selected{transform:translateY(-12px);border:2px solid var(--gold);box-shadow:0 0 0 2px #c7a96b55}
+.hand .card.notplayable{opacity:.36;cursor:not-allowed}
+.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.helpbox{background:#171a1f;border-left:3px solid var(--gold);padding:10px 13px;border-radius:5px;color:#d6d8dd;font-size:14px}
+.legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--green)}
+.dot.gold{background:var(--gold)}
+.ranklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px}
+.rankitem{background:#15171c;border:1px solid #343842;border-radius:8px;padding:8px;font-size:14px}
+.rankitem strong{color:var(--gold)}
+/* Lobby für die Runde über den Connector */
+.lobby-row{display:flex;justify-content:space-between;gap:10px;background:#15171c;border:1px solid #353943;border-radius:8px;padding:9px 11px;font-size:14px;margin-bottom:6px;overflow-wrap:anywhere}
+.lobby-row .ok{color:var(--green);font-weight:bold}
+.lobby-row .wait{color:var(--muted)}
+#lobbyHint{color:var(--muted);font-size:13px;margin:10px 0 0;min-height:18px}
+footer{text-align:center;color:#777d87;font-size:12px;padding:12px}
+@media(max-width:600px){.panel{padding:12px}.card{width:52px;height:76px;padding:5px}.card .rank{font-size:17px}.card .suit{font-size:18px}.hand{gap:5px}.table{min-height:120px}}
+</style>
+</head>
+<body>
+<header><h1>TRASHYGECKO</h1>
+  <button type="button" data-tg-verlassen hidden onclick="tgVerlassen()" style="margin:6px auto 0;padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:13px;cursor:pointer;opacity:.75">Spiel verlassen</button><p>ARSCHLOCH · DAS KARTENSPIEL</p></header>
+<main>
+<section class="panel" id="setup">
+  <h2>Neue Spielrunde</h2>
+  <div class="setup-row">
+    <label for="playerCount">Spielerzahl</label>
+    <select id="playerCount">
+      <option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option>
+    </select>
+    <button class="small" id="makeNames">Namen einstellen</button>
+  </div>
+  <div class="names" id="nameFields"></div>
+  <p class="info">3–4 Spieler: ein Kartenspiel. 5–9 Spieler: zwei Kartenspiele. Es wird ohne Joker gespielt.</p>
+  <button class="primary" id="startGame">Spiel starten</button>
+</section>
+
+<section id="lobby" class="panel hidden">
+  <h2>Arschloch-Runde</h2>
+  <div id="lobbyList"></div>
+  <div class="actions" id="lobbyButtons">
+    <button class="primary hidden" id="joinButton">Mitspielen</button>
+    <button id="lobbyReady">BEREIT</button>
+    <button class="primary" id="startButton">Runde starten</button>
+  </div>
+  <p id="lobbyHint"></p>
+</section>
+
+<section id="game" class="hidden">
+  <div class="panel">
+    <div class="topline"><div><span class="status" id="roundLabel">Runde 1</span> <span class="info" id="deckLabel"></span></div><div class="info" id="turnLabel"></div></div>
+    <div class="seats" id="seats"></div>
+  </div>
+  <div class="panel">
+    <h2 id="tableTitle">Auf dem Tisch</h2>
+    <div class="table" id="tableCards"><div class="played-label">Noch keine Karten ausgespielt – der erste Spieler eröffnet.</div></div>
+    <div class="helpbox" id="ruleHelp">Du darfst eine beliebige Karte oder eine Kombination aus gleichen Karten ausspielen.</div>
+    <div class="actions">
+      <button class="primary" id="playButton" disabled>Ausgewählte Karten ausspielen</button>
+      <button id="passButton">Passen</button>
+      <button class="warn" id="newRoundButton" class="hidden">Nächste Runde</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="topline"><h2 id="handTitle">Deine Karten</h2><span class="info" id="handCount"></span></div>
+    <div class="hand" id="hand"></div>
+    <div class="legend"><span><i class="dot"></i>Spielbar</span><span><i class="dot gold"></i>Ausgewählt</span><span>Gedämpft = momentan nicht spielbar</span></div>
+    <div class="actions"><button class="small" id="readyButton">Karten anzeigen / Ich bin bereit</button></div>
+    <p class="info" style="text-align:center" id="privacyHint">Die Karten werden erst angezeigt, wenn der richtige Spieler bereit ist.</p>
+  </div>
+  <div class="panel">
+    <h2>Platzierungen dieser Runde</h2>
+    <div class="ranklist" id="rankList"></div>
+  </div>
+  <div class="panel">
+    <h2>So funktionieren die Regeln</h2>
+    <div class="info">
+      <p><b>Kartenwerte:</b> 2 ist die niedrigste Karte, danach 3 bis 10, Bube, Dame, König und Ass als höchste Karte.</p>
+      <p><b>Ausspielen:</b> Du darfst eine einzelne Karte, ein Paar, einen Drilling oder vier gleiche Karten legen. Auf dem Tisch musst du genau gleich viele Karten legen, aber mit höherem Wert. Beispiel: Auf zwei 8er darfst du zwei 9er oder höher legen – nicht nur eine einzelne hohe Karte.</p>
+      <p><b>Passen:</b> Du darfst passen. Für diesen Stich bist du dann raus. Wenn alle anderen aktiven Spieler gepasst haben, gewinnt der letzte Spieler, der Karten gelegt hat, den Stich und darf neu eröffnen.</p>
+      <p><b>Rundenende:</b> Wer zuerst alle Karten los ist, wird Präsident. Danach folgen Vizepräsident und die weiteren Plätze. Der letzte Spieler ist das Arschloch.</p>
+      <p><b>Kartentausch:</b> Ab 4 Spielern tauschen Präsident und Arschloch je zwei Karten; Vizepräsident und Vize-Arschloch je eine. Die niedrigen Plätze geben ihre höchsten Karten ab und erhalten die niedrigsten zurück. Bei 3 Spielern wird eine Karte zwischen Präsident und Arschloch getauscht. Der mittlere Platz bei ungerader Spielerzahl tauscht nicht.</p>
+      <p><b>Hinweis:</b> Arschloch hat viele regionale Varianten. Diese Version nutzt die oben erklärte Rangfolge und Tauschtabelle; Revolution, Bomben und Joker sind ausgeschaltet.</p>
+    </div>
+  </div>
+</section>
+</main>
+<footer>TrashyGecko · Kartenrunde · lokal spielbar, ohne Server und ohne externe Bibliotheken</footer>
+<script src="/spiele/netz.js"></script>
+<script>
+const SUITS=[{s:'♣',c:'black'},{s:'♠',c:'black'},{s:'♥',c:'red'},{s:'♦',c:'red'}];
+const VALUES=[['2',2],['3',3],['4',4],['5',5],['6',6],['7',7],['8',8],['9',9],['10',10],['B',11],['D',12],['K',13],['A',14]];
+let players=[],round=1,current=0,leader=null,trick=null,selected=[],revealed=false,finished=false,exchangeDone=false;
+let nextCardId=1;
+const $=id=>document.getElementById(id);
+function buildNameFields(){
+  const n=+$('playerCount').value, box=$('nameFields'), old=[...box.querySelectorAll('input')].map(x=>x.value);
+  box.innerHTML='';
+  for(let i=0;i<n;i++){
+    const wrap=document.createElement('div');wrap.className='name-field';
+    const label=document.createElement('label');label.textContent='Spieler '+(i+1);
+    const input=document.createElement('input');input.id='pname'+i;input.maxLength=18;input.value=old[i]||'Spieler '+(i+1);
+    wrap.append(label,input);box.append(wrap);
+  }
+}
+$('makeNames').addEventListener('click',buildNameFields);
+$('playerCount').addEventListener('change',buildNameFields);
+buildNameFields();
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function makeDeck(n){let d=[];for(let pack=0;pack<(n>=5?2:1);pack++)for(const [v,r] of VALUES)for(const suit of SUITS)d.push({id:nextCardId++,v,r,s:suit.s,c:suit.c});return shuffle(d);}
+function sortHand(p){p.hand.sort((a,b)=>a.r-b.r||SUITS.findIndex(x=>x.s===a.s)-SUITS.findIndex(x=>x.s===b.s));}
+function deal(){
+  const previousRanks=players.map(p=>p.rank);
+  const deck=makeDeck(players.length);players.forEach(p=>{p.hand=[];p.active=true;p.passed=false;});
+  let i=0;while(deck.length){players[i%players.length].hand.push(deck.pop());i++;}
+  players.forEach(sortHand);trick=null;selected=[];finished=false;revealed=false;
+  if(round>1)doExchange();
+  current=round>1?previousRanks.indexOf(players.length):-1;
+  if(current<0)current=Math.floor(Math.random()*players.length);
+  players.forEach(p=>{p.rank=null;});
+  leader=current;exchangeDone=false;
+  $('roundLabel').textContent='Runde '+round;
+  $('deckLabel').textContent=(players.length>=5?' · 2 Kartenspiele':' · 1 Kartenspiel');
+  $('newRoundButton').classList.add('hidden');
+  $('passButton').classList.remove('hidden');
+  $('playButton').disabled=true;
+  $('readyButton').classList.remove('hidden');
+  $('privacyHint').textContent='Die Karten werden erst angezeigt, wenn der richtige Spieler bereit ist.';
+  render();
+}
+function doExchange(){
+  const n=players.length, president=players.findIndex(p=>p.rank===1), asshole=players.findIndex(p=>p.rank===n);
+  if(president<0||asshole<0)return;
+  const amount=n===3?1:2;
+  exchangePair(president,asshole,amount);
+  if(n>=4){
+    const vice=players.findIndex(p=>p.rank===2), viceBad=players.findIndex(p=>p.rank===n-1);
+    if(vice>=0&&viceBad>=0)exchangePair(vice,viceBad,1);
+  }
+}
+function exchangePair(high,low,count){
+  const a=players[high],b=players[low];
+  for(let k=0;k<count;k++){
+    sortHand(a);sortHand(b);
+    if(!a.hand.length||!b.hand.length)break;
+    const lowCard=a.hand.shift();
+    const highCard=b.hand.pop();
+    a.hand.push(highCard);b.hand.push(lowCard);
+  }
+  sortHand(a);sortHand(b);
+}
+function rankName(r,n){
+  if(r===1)return 'Präsident';
+  if(r===2)return 'Vizepräsident';
+  if(r===n)return 'Arschloch';
+  if(r===n-1)return 'Vize-Arschloch';
+  return 'Bürger';
+}
+function start(){
+  if(ONLINE)return;
+  const n=+$('playerCount').value;players=[];
+  for(let i=0;i<n;i++)players.push({name:$('pname'+i).value.trim()||'Spieler '+(i+1),hand:[],active:true,passed:false,rank:null});
+  round=1;$('setup').classList.add('hidden');$('game').classList.remove('hidden');deal();
+}
+$('startGame').addEventListener('click',start);
+function valueGroups(hand){const m=new Map();hand.forEach((c,i)=>{if(!m.has(c.r))m.set(c.r,[]);m.get(c.r).push(i);});return m;}
+function neededCount(){return trick?trick.cards.length:0;}
+function playableIndices(p){
+  if(!p.active)return new Set();
+  const groups=valueGroups(p.hand), out=new Set();
+  if(!trick){p.hand.forEach((c,i)=>out.add(i));return out;}
+  const need=trick.cards.length;
+  for(const [r,idx] of groups)if(r>trick.rank&&idx.length>=need)idx.forEach(i=>out.add(i));
+  return out;
+}
+function selectedValid(){
+  if(!selected.length)return false;
+  const cards=selected.map(i=>players[current].hand[i]);if(cards.some(c=>!c))return false;
+  if(!cards.every(c=>c.r===cards[0].r))return false;
+  if(trick)return cards.length===trick.cards.length&&cards[0].r>trick.rank;
+  return cards.length<=4;
+}
+function toggleCard(i){
+  if(!revealed||finished)return;
+  const p=players[current],card=p.hand[i],playable=playableIndices(p);
+  if(!playable.has(i))return;
+  if(selected.includes(i))selected=selected.filter(x=>x!==i);
+  else{
+    if(selected.length&&p.hand[selected[0]].r!==card.r)return;
+    const max=trick?trick.cards.length:4;
+    if(selected.length>=max)return;
+    selected.push(i);
+  }
+  renderHand();
+  $('playButton').disabled=!selectedValid();
+}
+function cardNode(card,extra=''){
+  const el=document.createElement('div');
+  // Lokale Karten bringen ihre Farbe mit, die vom Server nur das Zeichen.
+  const color=card.c||(card.s==='♥'||card.s==='♦'?'red':'black');
+  el.className='card '+color+' '+extra;
+  const a=document.createElement('span');a.className='rank';a.textContent=card.v;
+  const b=document.createElement('span');b.className='suit';b.textContent=card.s;
+  el.append(a,b);return el;
+}
+function renderHand(){
+  const box=$('hand');box.innerHTML='';
+  if(!revealed||!players[current]){box.innerHTML='<span class="info">Karten verdeckt</span>';return;}
+  const p=players[current],playable=playableIndices(p);
+  p.hand.forEach((card,i)=>{
+    const cls=(playable.has(i)?'playable':'notplayable')+(selected.includes(i)?' selected':'');
+    const el=cardNode(card,cls);el.title=playable.has(i)?'Spielbare Karte':'Diese Karte passt momentan nicht';
+    el.addEventListener('click',()=>toggleCard(i));box.append(el);
+  });
+  $('handCount').textContent=p.hand.length+' Karten';
+  $('playButton').disabled=!selectedValid();
+}
+function render(){
+  const p=players[current];$('turnLabel').textContent=finished?'Runde beendet':'Am Zug: '+p.name;
+  $('handTitle').textContent='Karten von '+p.name;
+  $('seats').innerHTML='';
+  players.forEach((pl,i)=>{
+    const el=document.createElement('div');el.className='seat'+(i===current&&!finished?' current':'')+(!pl.active?' out':'');
+    el.innerHTML='<div class="name"></div><div class="count"></div><div class="badge"></div>';
+    el.querySelector('.name').textContent=pl.name;
+    el.querySelector('.count').textContent=pl.hand.length+' Karten';
+    el.querySelector('.badge').textContent=pl.rank?rankName(pl.rank,players.length):pl.passed?'Passt':'im Spiel';
+    $('seats').append(el);
+  });
+  $('tableCards').innerHTML='';
+  if(trick){
+    const label=document.createElement('div');label.className='played-label';label.textContent=players[trick.player].name+' hat '+trick.cards.length+' Karte(n) gelegt';$('tableCards').append(label);
+    trick.cards.forEach(c=>$('tableCards').append(cardNode(c)));
+    $('tableTitle').textContent='Aktueller Stich';
+  }else{
+    $('tableCards').innerHTML='<div class="played-label">Der Stich ist frei. Du darfst eröffnen.</div>';
+    $('tableTitle').textContent='Neuer Stich';
+  }
+  const help=$('ruleHelp');
+  if(finished)help.textContent='Alle Plätze sind verteilt. Starte die nächste Runde, um die Karten neu zu geben und den Kartentausch auszuführen.';
+  else if(!trick)help.textContent='Du eröffnest: Lege eine Karte oder 2, 3 oder 4 Karten gleichen Werts. Grün markiert sind Karten, die du ausspielen kannst.';
+  else help.textContent='Du musst genau '+trick.cards.length+' Karte(n) mit höherem Wert als '+trick.cards[0].v+' legen. Grün markierte Karten gehören zu einer passenden Kombination. Oder du passt.';
+  $('passButton').disabled=finished||!revealed;
+  $('readyButton').classList.toggle('hidden',revealed||finished);
+  $('privacyHint').textContent=finished?'':revealed?'Bitte Gerät an den nächsten Spieler weitergeben, wenn du fertig bist.':'Nur '+p.name+' sollte jetzt die Karten ansehen.';
+  $('newRoundButton').classList.toggle('hidden',!finished);
+  $('rankList').innerHTML='';
+  players.slice().sort((a,b)=>(a.rank||999)-(b.rank||999)).forEach(pl=>{
+    const d=document.createElement('div');d.className='rankitem';d.textContent=pl.rank?pl.rank+'. '+rankName(pl.rank,players.length)+' – '+pl.name:'Noch offen – '+pl.name;$('rankList').append(d);
+  });
+  renderHand();
+}
+$('readyButton').addEventListener('click',()=>{if(ONLINE)return;revealed=true;selected=[];render();});
+$('playButton').addEventListener('click',playSelected);
+$('passButton').addEventListener('click',pass);
+function nextActive(from){
+  for(let step=1;step<=players.length;step++){const i=(from+step)%players.length;if(players[i].active&&!players[i].passed)return i;}
+  return -1;
+}
+function finishTrick(){
+  const winner=trick.player;
+  trick=null;players.forEach(pl=>{if(pl.active)pl.passed=false;});
+  if(players[winner].active)current=winner;
+  else{const nxt=nextActive(winner);if(nxt<0){endRound();return;}current=nxt;}
+  revealed=false;selected=[];render();
+}
+function checkTrickEnd(){
+  if(!trick)return;
+  const canPlay=players.some((pl,i)=>pl.active&&!pl.passed&&i!==trick.player);
+  if(!canPlay)finishTrick();
+}
+function playSelected(){
+  if(ONLINE)return;
+  if(!selectedValid()||finished)return;
+  const p=players[current],cards=selected.map(i=>p.hand[i]).sort((a,b)=>a.r-b.r);
+  const indices=selected.slice().sort((a,b)=>b-a);
+  indices.forEach(i=>p.hand.splice(i,1));
+  trick={cards,rank:cards[0].r,player:current};
+  p.passed=true;
+  if(p.hand.length===0){p.active=false;p.rank=players.filter(x=>x.rank!==null).length+1;}
+  selected=[];revealed=false;
+  if(players.filter(x=>x.active).length===1){const last=players.find(x=>x.active);last.rank=players.length;last.active=false;endRound();return;}
+  current=nextActive(current);
+  if(current<0){finishTrick();return;}
+  checkTrickEnd();render();
+}
+function pass(){
+  if(ONLINE)return;
+  if(finished||!revealed)return;
+  if(!trick){$('ruleHelp').textContent='Du kannst beim Eröffnen nicht passen. Lege eine Karte oder eine Kombination.';return;}
+  players[current].passed=true;selected=[];revealed=false;
+  const nxt=nextActive(current);
+  if(nxt<0){finishTrick();return;}
+  current=nxt;checkTrickEnd();render();
+}
+function endRound(){
+  finished=true;revealed=false;selected=[];
+  const ranked=players.filter(p=>p.rank!==null).sort((a,b)=>a.rank-b.rank);
+  let next=ranked.length+1;
+  players.filter(p=>p.rank===null).forEach(p=>{p.rank=next++;});
+  players.forEach(p=>p.active=false);
+  $('turnLabel').textContent='Runde beendet';
+  $('ruleHelp').textContent='Die Runde ist vorbei! Die Platzierungen stehen fest. In der nächsten Runde werden die Karten nach Rang getauscht.';
+  render();
+}
+$('newRoundButton').addEventListener('click',()=>{if(ONLINE)return;round++;deal();});
+
+/* ================= Online über den Connector ================= */
+const params=new URLSearchParams(location.search);
+const ONLINE=params.has('room')&&params.has('id');
+const ROOM=params.get('room')||'';
+const PLAYER_ID=params.get('id')||'';
+const ONLINE_API='/api/arschloch';
+
+let G=null,onlineBusy=false,sel=[];
+
+// Nach einem Funkloch (WLAN weg, Handy gesperrt) ist das Lebenszeichen weg –
+// einmal neu anmelden und die Anfrage wiederholen.
+async function rejoinRoom(){
+  let name=params.get('name')||'Spieler';
+  if(G&&G.you>=0&&G.seats&&G.seats[G.you])name=G.seats[G.you].name;
+  try{
+    await fetch('/api/presence',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})});
+  }catch(e){}
+}
+
+async function onlineFetch(url,options){
+  let response=await fetch(url,options);
+  if(response.status===403){
+    const text=(await response.text()).trim();
+    if(!/beitreten/i.test(text))throw Error(text||'Die Aktion ist fehlgeschlagen.');
+    await rejoinRoom();
+    response=await fetch(url,options);
+  }
+  if(!response.ok)throw Error((await response.text()).trim()||'Die Aktion ist fehlgeschlagen.');
+  return response.json();
+}
+
+async function arschAction(action){
+  if(onlineBusy)return;
+  onlineBusy=true;
+  try{
+    const data=await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&action='+action,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:PLAYER_ID,cards:sel.slice()})
+    });
+    sel=[];
+    applyOnline(data.game);
+  }catch(e){
+    $('lobbyHint').textContent=e.message;
+    $('ruleHelp').textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+
+async function refreshOnline(){
+  if(onlineBusy)return;
+  try{
+    const data=await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&id='+encodeURIComponent(PLAYER_ID));
+    applyOnline(data.game);
+  }catch(e){
+    $('lobbyHint').textContent='Verbindung wackelt – die Seite versucht es weiter …';
+  }
+}
+
+function applyOnline(view){
+  if(!view){
+    $('lobby').classList.remove('hidden');
+    $('game').classList.add('hidden');
+    $('lobbyList').innerHTML='';
+    $('lobbyHint').textContent='Hier liegt noch keine Runde. Im Connector bei einer Spielkarte „Arschloch“ wählen.';
+    return;
+  }
+  G=view;
+  if(G.status==='invited'){
+    $('lobby').classList.remove('hidden');
+    $('game').classList.add('hidden');
+    renderLobbyOnline();
+    return;
+  }
+  $('lobby').classList.add('hidden');
+  $('game').classList.remove('hidden');
+  renderOnline();
+}
+
+function renderLobbyOnline(){
+  const box=$('lobbyList');
+  box.innerHTML=(G.seats||[]).map(seat=>{
+    const ich=seat.id===PLAYER_ID;
+    const host=seat.id===G.hostId;
+    const status=seat.ready?'<span class="ok">BEREIT</span>':'<span class="wait">wartet</span>';
+    return '<div class="lobby-row"><span>'+escapeHTML(seat.name)+
+      (ich?' (du)':'')+(host?' · Gastgeber':'')+'</span>'+status+'</div>';
+  }).join('');
+
+  const dabei=G.you>=0;
+  const host=dabei&&G.seats[G.you]&&G.seats[G.you].id===G.hostId;
+  const bereit=dabei&&G.seats[G.you].ready;
+  $('joinButton').classList.toggle('hidden',dabei||G.seats.length>=G.maxPlayers);
+  $('lobbyReady').classList.toggle('hidden',!dabei);
+  $('lobbyReady').textContent=bereit?'DOCH NICHT BEREIT':'BEREIT';
+  $('startButton').classList.toggle('hidden',!host);
+
+  const fertig=G.seats.filter(s=>s.ready).length;
+  $('lobbyHint').textContent=G.note||(fertig+' von '+G.seats.length+' bereit · '+G.seats.length+' von '+G.maxPlayers+' Plätzen belegt.');
+}
+
+function escapeHTML(text){
+  return String(text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function onlineSelectionValid(){
+  if(!G||G.phase!=='playing'||!sel.length)return false;
+  const ranks=sel.map(i=>G.hand[i]?G.hand[i].rank:0);
+  if(!ranks.every(r=>r===ranks[0]))return false;
+  if(G.need)return sel.length===G.need&&ranks[0]>G.trick[0].rank;
+  return sel.length<=4;
+}
+
+function onlineToggle(index){
+  if(!G||G.phase!=='playing'||G.you<0||!G.myTurn)return;
+  if(!(G.playable||[]).includes(index)){
+    $('ruleHelp').textContent='Diese Karte passt gerade nicht.';
+    return;
+  }
+  if(sel.includes(index)){
+    sel=sel.filter(x=>x!==index);
+  }else{
+    if(sel.length&&G.hand[sel[0]].rank!==G.hand[index].rank)return;
+    const max=G.need||4;
+    if(sel.length>=max)return;
+    sel.push(index);
+  }
+  renderOnline();
+}
+
+function renderOnlineHand(){
+  const box=$('hand');
+  box.innerHTML='';
+  $('handTitle').textContent='Deine Karten';
+  if(G.you<0){
+    box.innerHTML='<span class="info">Du sitzt nicht an diesem Tisch.</span>';
+    $('handCount').textContent='';
+    return;
+  }
+  $('handCount').textContent=G.hand.length+' Karten';
+  const playable=new Set(G.playable||[]);
+  G.hand.forEach((card,i)=>{
+    const cls=(playable.has(i)?'playable':'notplayable')+(sel.includes(i)?' selected':'');
+    const el=cardNode(card,cls);
+    el.title=playable.has(i)?'Karte auswählen':'Diese Karte passt momentan nicht';
+    el.addEventListener('click',()=>onlineToggle(i));
+    box.append(el);
+  });
+}
+
+function renderOnline(){
+  if(!G)return;
+  const finished=G.phase!=='playing';
+  const dran=G.seats[G.current];
+  const me=G.you>=0?G.seats[G.you]:null;
+
+  $('roundLabel').textContent='Runde '+G.round;
+  $('deckLabel').textContent=' · '+(G.seats.length>=5?'2 Kartenspiele':'1 Kartenspiel');
+  $('turnLabel').textContent=finished?'Runde beendet':(G.myTurn?'Du bist am Zug':'Am Zug: '+(dran?dran.name:'?'));
+
+  $('seats').innerHTML='';
+  G.seats.forEach((p,i)=>{
+    const el=document.createElement('div');
+    el.className='seat'+(i===G.current&&!finished?' current':'')+(p.active?'':' out');
+    el.innerHTML='<div class="name"></div><div class="count"></div><div class="badge"></div>';
+    el.querySelector('.name').textContent=p.name+(i===G.you?' (du)':'');
+    el.querySelector('.count').textContent=p.count+' Karten';
+    el.querySelector('.badge').textContent=p.rank>0
+      ?rankName(p.rank,G.seats.length)
+      :(finished?(p.active?'im Spiel':'fertig'):(p.passed?'Passt':'im Spiel'));
+    $('seats').append(el);
+  });
+
+  $('tableCards').innerHTML='';
+  if(G.trick&&G.trick.length){
+    const label=document.createElement('div');
+    label.className='played-label';
+    const wer=G.seats[G.trickSeat]?G.seats[G.trickSeat].name:'Jemand';
+    label.textContent=wer+' hat '+G.trick.length+' Karte(n) gelegt';
+    $('tableCards').append(label);
+    G.trick.forEach(c=>$('tableCards').append(cardNode(c)));
+    $('tableTitle').textContent='Aktueller Stich · '+G.trick[0].value+' ('+G.trick.length+' Karte'+(G.trick.length>1?'n':'')+')';
+  }else{
+    $('tableCards').innerHTML='<div class="played-label">Der Stich ist frei. Wer dran ist, darf eröffnen.</div>';
+    $('tableTitle').textContent='Neuer Stich';
+  }
+
+  const help=$('ruleHelp');
+  if(finished){
+    help.textContent=G.note||'Die Runde ist vorbei.';
+  }else if(G.myTurn&&!G.need){
+    help.textContent='Du eröffnest: eine Karte oder 2, 3, 4 Karten gleichen Werts.';
+  }else if(G.myTurn){
+    help.textContent='Lege genau '+G.need+' Karte(n) mit höherem Wert als '+G.trick[0].value+' – oder passe.';
+  }else if(G.need){
+    help.textContent='Warte auf '+(dran?dran.name:'den nächsten Spieler')+'. Am Tisch liegen '+G.need+' Karte(n) mit '+G.trick[0].value+'.';
+  }else{
+    help.textContent='Warte auf '+(dran?dran.name:'den nächsten Spieler')+'.';
+  }
+
+  renderOnlineHand();
+
+  $('playButton').disabled=!onlineSelectionValid();
+  $('passButton').disabled=finished||!G.myTurn||!G.need;
+  $('passButton').classList.remove('hidden');
+  $('readyButton').classList.add('hidden');
+  $('privacyHint').textContent=me?'':'';
+  $('newRoundButton').classList.toggle('hidden',!finished);
+  $('newRoundButton').textContent='Nächste Runde';
+
+  $('rankList').innerHTML='';
+  if(finished&&G.result&&G.result.length){
+    G.result.forEach(line=>{
+      const d=document.createElement('div');
+      d.className='rankitem';
+      d.textContent=line;
+      $('rankList').append(d);
+    });
+  }else{
+    G.seats.slice().sort((a,b)=>(a.rank||999)-(b.rank||999)).forEach(p=>{
+      const d=document.createElement('div');
+      d.className='rankitem';
+      d.textContent=p.rank?p.rank+'. '+rankName(p.rank,G.seats.length)+' – '+p.name:'Noch offen – '+p.name;
+      $('rankList').append(d);
+    });
+  }
+}
+
+if(ONLINE){
+  $('setup').classList.add('hidden');
+  $('game').classList.add('hidden');
+  $('lobby').classList.remove('hidden');
+
+  $('joinButton').onclick=()=>arschAction('join');
+  $('lobbyReady').onclick=()=>arschAction('ready');
+  $('startButton').onclick=()=>arschAction('start');
+  $('playButton').onclick=()=>{if(onlineSelectionValid())arschAction('play');};
+  $('passButton').onclick=()=>arschAction('pass');
+  $('newRoundButton').onclick=()=>arschAction('next');
+
+  let actedSincePing=false;
+  ['pointerdown','keydown','wheel','touchstart','scroll'].forEach(evt=>{
+    document.addEventListener(evt,()=>{actedSincePing=true;},{passive:true});
+  });
+
+  async function postPresence(){
+    let name=params.get('name')||'Spieler';
+    if(G&&G.you>=0&&G.seats&&G.seats[G.you])name=G.seats[G.you].name;
+    const active=actedSincePing;
+    actedSincePing=false;
+    try{
+      await fetch('/api/presence',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active})});
+    }catch(e){}
+  }
+
+  $('handTitle').textContent='VERBINDE MIT DEM SPIELRAUM …';
+  postPresence().then(refreshOnline);
+  setInterval(postPresence,5000);
+  setInterval(refreshOnline,1500);
+}
+</script>
+</body>
+</html>

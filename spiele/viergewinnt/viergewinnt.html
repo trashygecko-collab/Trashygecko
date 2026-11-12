@@ -122,16 +122,23 @@ h1 {
   transition:background .15s,box-shadow .15s;
 }
 
+/* Scheiben liegen flach im Loch: gleichmäßige Farbe, dunkler Rand und ein
+   Schatten nach unten. Kein Glanz oben und keine Leuchtkugel – das wirkte
+   wie ein hüpfender Ball. */
 .cell.red::before {
   background:var(--red);
-  box-shadow:0 0 7px var(--red),0 0 15px var(--red),inset 0 2px 5px #ffffff66;
-  animation:drop .25s ease-out;
+  box-shadow:inset 0 0 0 2px #00000055,inset 0 -3px 6px #00000070,0 1px 2px #000000aa;
 }
 
 .cell.blue::before {
   background:var(--blue);
-  box-shadow:0 0 7px var(--blue),0 0 15px var(--blue),inset 0 2px 5px #ffffff66;
-  animation:drop .25s ease-out;
+  box-shadow:inset 0 0 0 2px #00000055,inset 0 -3px 6px #00000070,0 1px 2px #000000aa;
+}
+
+/* Nur eine gerade gefallene Scheibe bewegt sich. Das Brett wird bei jedem
+   Abruf neu gezeichnet – ohne diese Bremse sprangen alle Scheiben mit. */
+.cell.fresh::before {
+  animation:drop .18s ease-out;
 }
 
 .cell.win {
@@ -152,9 +159,11 @@ h1 {
   cursor:default;
 }
 
+/* Kurz einsetzen statt aus großer Höhe herunterfallen: Die Scheibe gleitet
+   nur ein paar Pixel ins Loch und bleibt liegen. */
 @keyframes drop {
-  from { transform:translateY(-35px); opacity:.3; }
-  to { transform:translateY(0); opacity:1; }
+  from { transform:translateY(-6px) scale(.94); opacity:.45; }
+  to { transform:translateY(0) scale(1); opacity:1; }
 }
 
 @keyframes winning {
@@ -268,7 +277,7 @@ h1 {
 
   <div>
     <button class="leave-btn" id="leaveBtn" onclick="leaveGame()" style="display:none;">
-      ← Zurück zum Raum
+      Spiel verlassen
     </button>
   </div>
 
@@ -278,6 +287,7 @@ h1 {
 
 </div>
 
+<script src="/spiele/netz.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const onlineRoom = (params.get("room") || "").trim().toUpperCase();
@@ -302,6 +312,9 @@ const COLS = 7;
 const ROWS = 6;
 
 let grid;
+// lastGrid merkt sich die zuletzt gezeichnete Belegung, damit nur neue
+// Scheiben kurz einsetzen und nicht das ganze Brett bei jedem Neuzeichnen.
+let lastGrid = null;
 let current;
 let gameOver = false;
 let redWins = 0;
@@ -353,6 +366,9 @@ function drawBoard() {
 
       if (grid[r][c]) {
         cell.classList.add(grid[r][c]);
+        if (lastGrid && lastGrid[r] && lastGrid[r][c] !== grid[r][c]) {
+          cell.classList.add("fresh");
+        }
       }
 
       cell.onclick = () => playColumn(c);
@@ -360,6 +376,8 @@ function drawBoard() {
       board.appendChild(cell);
     }
   }
+
+  lastGrid = grid.map(row => row.slice());
 }
 
 async function playColumn(c) {
@@ -623,13 +641,7 @@ async function refreshMultiplayer() {
   } catch(e) {}
 }
 
-function leaveGame() {
-  if (onlineRoom) {
-    location.href = "/connector?room=" + encodeURIComponent(onlineRoom);
-  } else {
-    location.href = "/connector";
-  }
-}
+function leaveGame(){ tgVerlassen(); }
 
 if (onlineRoom) {
   document.getElementById("leaveBtn").style.display = "inline-block";

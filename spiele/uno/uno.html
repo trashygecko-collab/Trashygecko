@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrashyGecko – UNO</title>
+<style>
+:root {
+  --bg:#101114;
+  --panel:#1b1d22;
+  --card:#f7f3e8;
+  --border:#41444b;
+  --text:#eeeeee;
+  --muted:#a0a3aa;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+  min-height:100vh;
+}
+header {
+  text-align:center;
+  padding:20px 10px 12px;
+  border-bottom:1px solid #292b30;
+}
+header h1 {
+  margin:0;
+  letter-spacing:5px;
+  font-size:clamp(24px,5vw,36px);
+}
+header small {
+  color:var(--muted);
+  letter-spacing:3px;
+}
+main {
+  width:min(1100px,96%);
+  margin:auto;
+  padding:14px 0 35px;
+}
+.panel {
+  background:var(--panel);
+  border:1px solid #30333a;
+  border-radius:12px;
+  padding:16px;
+  margin:12px 0;
+}
+h2 { margin-top:0; }
+button,input,select { font:inherit; }
+button {
+  border:1px solid #555962;
+  background:#30333a;
+  color:white;
+  border-radius:8px;
+  padding:10px 16px;
+  cursor:pointer;
+}
+button:hover:not(:disabled) { background:#41454e; }
+button:disabled { opacity:.35; cursor:not-allowed; }
+.primary {
+  background:#46566b;
+  border-color:#71839c;
+}
+.hidden { display:none !important; }
+
+#setup {
+  max-width:540px;
+  margin:25px auto;
+}
+#setup input, #setup select {
+  width:100%;
+  padding:11px;
+  margin:5px 0 12px;
+  border-radius:7px;
+  border:1px solid #454952;
+  background:#111317;
+  color:white;
+}
+.player-input { margin-bottom:5px; }
+
+#players {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+}
+.player {
+  background:#22252b;
+  border:2px solid var(--player-color);
+  border-radius:9px;
+  padding:10px;
+  text-align:center;
+  min-width:0;
+}
+.player.active {
+  background:#343943;
+  box-shadow:0 0 0 2px var(--player-color);
+}
+.player strong { display:block; margin-bottom:5px; overflow-wrap:anywhere; }
+.player small { color:#c0c2c7; }
+.player .ready-tag {
+  color:#8fe6a3;
+  font-size:12px;
+  font-weight:bold;
+  margin-top:4px;
+}
+
+/* Wer nach dem aktuellen Spieler dran ist – auch nach einem Richtungswechsel. */
+.player .next-tag {
+  margin-top:5px;
+  font-size:11px;
+  letter-spacing:1px;
+  font-weight:bold;
+  color:#f0d56c;
+}
+
+#nextInfo {
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+  min-height:18px;
+  margin-top:6px;
+}
+
+#turnBanner {
+  text-align:center;
+  font-weight:bold;
+  font-size:20px;
+  letter-spacing:1px;
+  padding:10px;
+  margin:12px 0 0;
+  border-radius:9px;
+  background:#2b2d35;
+  color:var(--muted);
+}
+#turnBanner.you {
+  background:#24413a;
+  color:#6dffc2;
+  border:1px solid #4df5c2;
+  font-size:22px;
+}
+
+#table {
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  gap:36px;
+  flex-wrap:wrap;
+  padding:14px 0 6px;
+}
+.pile {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  min-width:110px;
+}
+.pile-label {
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:1px;
+  margin-bottom:9px;
+}
+.card {
+  width:84px;
+  height:120px;
+  border-radius:12px;
+  background:var(--card);
+  border:3px solid #555962;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  font-weight:bold;
+  box-shadow:0 3px 8px #0008;
+  user-select:none;
+  color:#1a1a1a;
+}
+.card .number { font-size:38px; line-height:1; }
+.card .symbol {
+  font-size:15px;
+  letter-spacing:.5px;
+  text-align:center;
+  padding:0 4px;
+  opacity:.85;
+}
+
+#deckCount { margin-top:9px; }
+.card .corner { position:absolute; top:5px; left:7px; font-size:12px; }
+.card.red { border-color:#e53935; color:#c62828; }
+.card.blue { border-color:#268be8; color:#1565c0; }
+.card.green { border-color:#43b765; color:#2e7d32; }
+.card.yellow { border-color:#e0bd32; color:#8a6d00; }
+.card.wild {
+  color:#fff;
+  background:conic-gradient(#e53935 0 25%,#268be8 0 50%,#43b765 0 75%,#e0bd32 0);
+  border-color:#888;
+  text-shadow:0 1px 3px #000a;
+}
+.card.back {
+  background:repeating-linear-gradient(45deg,#263650,#263650 7px,#32445f 7px,#32445f 14px);
+  border:3px solid #526b8d;
+  box-shadow:4px 4px 0 #1a2434, 8px 8px 0 #141b26, 0 3px 8px #0007;
+}
+.card.back:after {
+  content:"UNO";
+  font-size:19px;
+  font-weight:900;
+  color:#eeeeee;
+  background:#252830;
+  padding:5px;
+  border-radius:20px;
+  transform:rotate(-35deg);
+}
+
+/* Die Ablage hat einen festen Rahmen, damit die Karte sichtbar auf dem Tisch
+   liegt – auch wenn gerade keine da ist. */
+#topBox {
+  width:100px;
+  height:136px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px dashed #3c404b;
+  background:#16181e;
+}
+#topBox .card { transform:rotate(-4deg); }
+#topBox.highlight {
+  border-style:solid;
+  border-color:#4df5c2;
+  box-shadow:0 0 0 3px #4df5c233;
+}
+
+.color-badge {
+  margin-top:10px;
+  padding:6px 13px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:bold;
+  letter-spacing:1px;
+  border:1px solid #3c404b;
+  background:#1a1d24;
+  color:var(--silver,#c5c8ce);
+}
+.color-badge.red { background:#3a1d1f; border-color:#e53935; color:#ff9a9a; }
+.color-badge.blue { background:#152b3f; border-color:#268be8; color:#8cc6ff; }
+.color-badge.green { background:#17301f; border-color:#43b765; color:#8ff0ad; }
+.color-badge.yellow { background:#332b12; border-color:#e0bd32; color:#f6dd7c; }
+
+#status {
+  text-align:center;
+  color:#d1d3d8;
+  min-height:24px;
+  margin:10px 8px 4px;
+  font-weight:bold;
+}
+#message {
+  text-align:center;
+  font-size:17px;
+  padding:10px;
+  color:#f0d56c;
+  min-height:24px;
+}
+.controls {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin:10px 0;
+}
+#colorChoice {
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  margin:14px;
+}
+.color-btn {
+  width:54px;
+  height:54px;
+  border-radius:50%;
+  border:3px solid #aaa;
+}
+.color-btn.red { background:#e53935; }
+.color-btn.blue { background:#268be8; }
+.color-btn.green { background:#43b765; }
+.color-btn.yellow { background:#e0bd32; }
+
+#handPanel h2 { font-size:13px; color:var(--muted); letter-spacing:1px; text-align:center; }
+#hand {
+  display:flex;
+  gap:10px;
+  justify-content:flex-start;
+  align-items:center;
+  flex-wrap:wrap;
+  padding:6px 2px 10px;
+  min-height:130px;
+}
+.hand-card {
+  cursor:pointer;
+  transition:transform .12s,border-color .12s,box-shadow .12s;
+}
+.hand-card.playable {
+  box-shadow:0 0 0 3px #4df5c2cc, 0 4px 10px #0009;
+}
+.hand-card:hover:not(.unplayable) {
+  transform:translateY(-8px);
+}
+.hand-card.unplayable {
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+#turnScreen, #lobby {
+  position:fixed;
+  inset:0;
+  z-index:10;
+  background:#090a0deF;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  overflow:auto;
+}
+.turn-box {
+  width:min(430px,100%);
+  background:#202329;
+  border:1px solid #555a64;
+  border-radius:14px;
+  padding:24px;
+  text-align:center;
+}
+.turn-box h2 { margin-bottom:10px; }
+.turn-box p { color:#c4c6cc; line-height:1.5; }
+
+#lobbyList {
+  display:grid;
+  gap:7px;
+  margin:14px 0;
+  text-align:left;
+}
+.lobby-row {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  background:#262a31;
+  border:1px solid #3c414a;
+  border-radius:8px;
+  padding:9px 11px;
+  font-size:14px;
+  overflow-wrap:anywhere;
+}
+.lobby-row .ok { color:#8fe6a3; font-weight:bold; }
+.lobby-row .wait { color:var(--muted); }
+#lobbyButtons { display:grid; gap:8px; margin-top:6px; }
+#lobbyHint { color:var(--muted); font-size:13px; margin:8px 0 0; min-height:18px; }
+
+@media(max-width:600px) {
+  main { width:96%; padding-top:8px; }
+  .panel { padding:12px; }
+  #table { gap:18px; }
+  .card { width:70px; height:100px; }
+  .card .number { font-size:30px; }
+  .card .symbol { font-size:17px; }
+  #topBox { width:86px; height:116px; }
+  #hand {
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    overflow-x:auto;
+    padding:10px 4px 16px;
+  }
+  .hand-card { flex:0 0 auto; }
+  .hand-card { width:66px; height:94px; }
+  #turnBanner { font-size:18px; }
+  #lobby, #turnScreen { align-items:flex-start; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TRASHYGECKO</h1>
+  <small>UNO</small>
+</header>
+
+<main>
+  <section id="setup" class="panel">
+    <h2>Neues Spiel</h2>
+    <label for="playerCount">Spieleranzahl</label>
+    <select id="playerCount" onchange="makeNameFields()">
+      <option value="2">2 Spieler</option>
+      <option value="3">3 Spieler</option>
+      <option value="4" selected>4 Spieler</option>
+    </select>
+    <div id="nameFields"></div>
+    <button class="primary" onclick="startGame()">Spiel starten</button>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="panel">
+      <div id="players"></div>
+      <div id="turnBanner"></div>
+      <div id="nextInfo"></div>
+    </div>
+
+    <div class="panel">
+      <div id="status"></div>
+      <div id="table">
+        <div class="pile">
+          <div class="pile-label">NACHZIEHSTAPEL</div>
+          <div class="card back" id="drawPile"></div>
+          <div id="deckCount" class="pile-label"></div>
+        </div>
+        <div class="pile">
+          <div class="pile-label">ABLAGE</div>
+          <div id="topBox"></div>
+          <div id="colorBadge" class="color-badge hidden"></div>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <button onclick="pressDraw()" id="drawButton">Karte ziehen</button>
+        <button onclick="pressPass()" id="passButton" class="hidden">Passen</button>
+        <button onclick="pressUno()" id="unoButton">UNO!</button>
+        <button onclick="newGame()" id="newGameButton">Neues Spiel</button>
+      </div>
+
+      <div id="challengeRow" class="controls hidden">
+        <button class="primary" onclick="pressChallenge4()">+4 anzweifeln</button>
+        <button onclick="pressAccept4()">+4 akzeptieren</button>
+      </div>
+
+      <div id="colorChoice" class="hidden">
+        <button class="color-btn red" onclick="pressColor('red')" aria-label="Rot"></button>
+        <button class="color-btn blue" onclick="pressColor('blue')" aria-label="Blau"></button>
+        <button class="color-btn green" onclick="pressColor('green')" aria-label="Grün"></button>
+        <button class="color-btn yellow" onclick="pressColor('yellow')" aria-label="Gelb"></button>
+      </div>
+    </div>
+
+    <div class="panel" id="handPanel">
+      <h2 id="handTitle">DEINE KARTEN</h2>
+      <div id="hand"></div>
+      <div id="message"></div>
+    </div>
+  </section>
+</main>
+
+<div id="lobby" class="hidden">
+  <div class="turn-box">
+    <h2>UNO-Runde</h2>
+    <div id="lobbyList"></div>
+    <div id="lobbyButtons">
+      <button class="primary hidden" id="joinButton">Mitspielen</button>
+      <button id="readyButton">BEREIT</button>
+      <button class="primary" id="startButton">Runde starten</button>
+    </div>
+    <p id="lobbyHint"></p>
+  </div>
+</div>
+
+<div id="turnScreen" class="hidden">
+  <div class="turn-box">
+    <h2 id="turnTitle">Spielerwechsel</h2>
+    <p id="turnText">Gib das Gerät weiter.</p>
+    <div id="challengeControls" class="hidden controls">
+      <button class="primary" onclick="challengeFour()">+4 anzweifeln</button>
+      <button onclick="acceptFour()">+4 akzeptieren</button>
+    </div>
+    <button id="continueButton" class="primary" onclick="continueTurn()">Karten ansehen</button>
+  </div>
+</div>
+
+<script src="/spiele/netz.js"></script>
+<script>
+const COLORS = ["red","blue","green","yellow"];
+const COLOR_NAMES = { red:"Rot", blue:"Blau", green:"Grün", yellow:"Gelb" };
+const PLAYER_COLORS = ["#d66b64","#65a4dc","#79b879","#c3a1dc"];
+
+const $ = id => document.getElementById(id);
+
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/uno";
+
+let G = null;
+let onlineBusy = false;
+let stateSeq = 0;
+
+// ---- Lokales Spiel an einem Gerät ----
+let players = [];
+let deck = [];
+let discard = [];
+let current = 0;
+let direction = 1;
+let activeColor = "";
+let drawnCardIndex = -1;
+let mustChooseColor = false;
+let unoPending = -1;
+let challenge = null;
+let gameOver = false;
+let message = "";
+
+function setMessage(text){
+  message = text;
+  $("message").textContent = text;
+}
+
+function makeNameFields() {
+  if (ONLINE) return;
+  const count = Number($("playerCount").value);
+  let html = "";
+  for (let i=0;i<count;i++) {
+    html += '<div class="player-input"><label>Spieler '+(i+1)+'</label>' +
+      '<input id="name'+i+'" maxlength="18" placeholder="Spieler '+(i+1)+'" value="Spieler '+(i+1)+'"></div>';
+  }
+  $("nameFields").innerHTML = html;
+}
+
+function createDeck() {
+  const cards = [];
+  for (const color of COLORS) {
+    cards.push({color,value:"0",type:"number"});
+    for (let n=1;n<=9;n++) {
+      for (let i=0;i<2;i++)
+        cards.push({color,value:String(n),type:"number"});
+    }
+    for (const action of ["skip","reverse","draw2"]) {
+      for (let i=0;i<2;i++)
+        cards.push({color,value:action,type:"action"});
+    }
+  }
+  for (let i=0;i<4;i++) {
+    cards.push({color:"wild",value:"wild",type:"wild"});
+    cards.push({color:"wild",value:"wild4",type:"wild"});
+  }
+  return shuffle(cards);
+}
+
+function shuffle(array) {
+  for (let i=array.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [array[i],array[j]]=[array[j],array[i]];
+  }
+  return array;
+}
+
+function startGame() {
+  const count = Number($("playerCount").value);
+  players = [];
+  for (let i=0;i<count;i++) {
+    const name = $("name"+i).value.trim();
+    players.push({ name:name || "Spieler "+(i+1), hand:[], color:PLAYER_COLORS[i] });
+  }
+  deck = createDeck();
+  discard = [];
+  current = 0;
+  direction = 1;
+  activeColor = "";
+  drawnCardIndex = -1;
+  mustChooseColor = false;
+  unoPending = -1;
+  challenge = null;
+  gameOver = false;
+
+  for (let n=0;n<7;n++)
+    for (const player of players)
+      player.hand.push(deck.pop());
+
+  let first = deck.pop();
+  while (first.type !== "number") {
+    deck.unshift(first);
+    first = deck.pop();
+  }
+  discard.push(first);
+  activeColor = first.color;
+
+  $("setup").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  $("turnScreen").classList.remove("hidden");
+  setMessage(currentName()+" beginnt.");
+  showTurnScreen();
+  render();
+}
+
+function newGame() {
+  if (ONLINE) { unoAction("reset"); return; }
+  $("game").classList.add("hidden");
+  $("setup").classList.remove("hidden");
+  $("turnScreen").classList.add("hidden");
+  makeNameFields();
+}
+
+function cardLabel(card) {
+  if (card.value==="skip") return "⊘";
+  if (card.value==="reverse") return "⇄";
+  if (card.value==="draw2") return "+2";
+  if (card.value==="wild") return "★";
+  if (card.value==="wild4") return "+4";
+  return card.value;
+}
+
+function cardSymbol(card) {
+  if (card.value==="skip") return "AUS";
+  if (card.value==="reverse") return "DREH";
+  if (card.value==="draw2") return "ZIEH 2";
+  if (card.value==="wild") return "FARBE";
+  if (card.value==="wild4") return "FARBE +4";
+  return "";
+}
+
+function cardElement(card) {
+  const el = document.createElement("div");
+  el.className = "card " + (card.color==="wild" ? "wild" : card.color);
+  const corner = document.createElement("span");
+  corner.className = "corner";
+  corner.textContent = cardLabel(card);
+  const number = document.createElement("span");
+  number.className = "number";
+  number.textContent = cardLabel(card);
+  const symbol = document.createElement("span");
+  symbol.className = "symbol";
+  symbol.textContent = cardSymbol(card);
+  el.append(corner, number, symbol);
+  if (!symbol.textContent) el.classList.add("plain");
+  return el;
+}
+
+function currentName() {
+  if (ONLINE && G) return G.seats[G.current] ? G.seats[G.current].name : "jemand";
+  return players[current] ? players[current].name : "jemand";
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function canPlay(card) {
+  if (!discard.length) return true;
+  const top = discard[discard.length-1];
+  if (card.color==="wild") return true;
+  return card.color===activeColor || card.value===top.value;
+}
+
+function drawOne() {
+  if (deck.length===0) {
+    if (discard.length<=1) return null;
+    const top = discard.pop();
+    deck = shuffle(discard);
+    discard = [top];
+  }
+  return deck.pop() || null;
+}
+
+function drawCards(playerIndex,count) {
+  for (let i=0;i<count;i++) {
+    const card = drawOne();
+    if (card) players[playerIndex].hand.push(card);
+  }
+}
+
+function drawCard() {
+  if (gameOver || mustChooseColor || challenge || drawnCardIndex!==-1 || unoPending!==-1) return;
+
+  const card = drawOne();
+  if (!card) { endTurn(); return; }
+  players[current].hand.push(card);
+  drawnCardIndex = players[current].hand.length-1;
+  setMessage("Karte gezogen – du darfst sie spielen oder passen.");
+  render();
+}
+
+function passTurn() {
+  if (drawnCardIndex === -1 || gameOver) return;
+  drawnCardIndex = -1;
+  setMessage("");
+  endTurn();
+}
+
+function playCard(index) {
+  if (gameOver || mustChooseColor || challenge || unoPending!==-1) return;
+  if (drawnCardIndex!==-1 && drawnCardIndex!==index) return;
+
+  const player = players[current];
+  const card = player.hand[index];
+  if (!canPlay(card)) return;
+
+  const previousColor = activeColor;
+  player.hand.splice(index,1);
+  discard.push(card);
+  drawnCardIndex = -1;
+  setMessage("");
+
+  if (player.hand.length===0) {
+    gameOver = true;
+    render();
+    setMessage(player.name+" hat gewonnen!");
+    return;
+  }
+
+  if (card.color==="wild") {
+    mustChooseColor = true;
+    challenge = card.value==="wild4" ? { player:current, previousColor:previousColor } : null;
+    render();
+    return;
+  }
+
+  activeColor = card.color;
+  if (player.hand.length===1) {
+    unoPending = current;
+    render();
+    setMessage("Nur noch eine Karte! Drücke UNO!");
+    return;
+  }
+
+  applyEffect(card);
+}
+
+function chooseColor(color) {
+  if (!mustChooseColor) return;
+  activeColor = color;
+  mustChooseColor = false;
+
+  const top = discard[discard.length-1];
+  if (top.value==="wild4") {
+    showChallengeScreen(nextIndex(current));
+    return;
+  }
+
+  if (players[current].hand.length===1) {
+    unoPending = current;
+    render();
+    setMessage("Nur noch eine Karte! Drücke UNO!");
+    return;
+  }
+  endTurn();
+}
+
+function applyEffect(card) {
+  if (card.value==="reverse") {
+    direction *= -1;
+    advance(players.length===2 ? 2 : 1);
+  } else if (card.value==="skip") {
+    advance(2);
+  } else if (card.value==="draw2") {
+    const target = nextIndex(current);
+    drawCards(target,2);
+    advance(2);
+  } else {
+    endTurn();
+    return;
+  }
+  showTurnScreen();
+  render();
+}
+
+function nextIndex(from) {
+  return ((from+direction)%players.length + players.length) % players.length;
+}
+
+function advance(steps) {
+  for (let i=0;i<steps;i++) current=nextIndex(current);
+}
+
+function endTurn() {
+  if (gameOver) return;
+  advance(1);
+  drawnCardIndex = -1;
+  showTurnScreen();
+  render();
+}
+
+function callUno() {
+  if (unoPending!==current) return;
+  unoPending = -1;
+  setMessage("UNO!");
+  render();
+  endTurn();
+}
+
+function showTurnScreen() {
+  if (gameOver || ONLINE) return;
+  $("turnTitle").textContent = "Weiter geht's!";
+  $("turnText").textContent = "Bitte gib das Gerät an "+players[current].name+
+    " weiter. Erst dann die Karten ansehen.";
+  $("challengeControls").classList.add("hidden");
+  $("continueButton").classList.remove("hidden");
+  $("turnScreen").classList.remove("hidden");
+}
+
+function continueTurn() {
+  if (challenge) return;
+  $("turnScreen").classList.add("hidden");
+  render();
+}
+
+function showChallengeScreen(nextPlayer) {
+  current = nextPlayer;
+  $("turnTitle").textContent = "Farbwahl +4";
+  $("turnText").textContent = players[current].name+
+    ": Du kannst die +4-Karte anzweifeln oder akzeptieren.";
+  $("challengeControls").classList.remove("hidden");
+  $("continueButton").classList.add("hidden");
+  $("turnScreen").classList.remove("hidden");
+  render();
+}
+
+function acceptFour() {
+  if (!challenge) return;
+  drawCards(current,4);
+  challenge = null;
+  advance(1);
+  $("turnScreen").classList.add("hidden");
+  showTurnScreen();
+  render();
+}
+
+function challengeFour() {
+  if (!challenge) return;
+  const offender = challenge.player;
+  const hadMatchingColor = players[offender].hand.some(card => card.color===challenge.previousColor);
+
+  if (hadMatchingColor) {
+    drawCards(offender,4);
+    current = offender;
+    setMessage("Anzweifeln erfolgreich! "+players[offender].name+" zieht 4 Karten.");
+  } else {
+    drawCards(current,6);
+    setMessage("Anzweifeln fehlgeschlagen! Du ziehst 6 Karten.");
+    advance(1);
+  }
+  challenge = null;
+  $("turnScreen").classList.add("hidden");
+  showTurnScreen();
+  render();
+}
+
+// stand() vereinheitlicht lokales Spiel und Serverstand für die Anzeige.
+function stand(){
+  if (ONLINE && G) {
+    return {
+      seats: G.seats.map(s => ({name:s.name, count:s.count, ready:s.ready})),
+      hand: G.hand || [],
+      playable: G.playable || [],
+      top: G.top || null,
+      activeColor: G.activeColor,
+      deckCount: G.deckCount || 0,
+      current: G.current,
+      direction: G.direction,
+      mySeat: G.you,
+      drawn: G.drawn || null,
+      pendingUno: G.pendingUno,
+      phase: G.phase,
+      status: G.status,
+      winner: G.winner || "",
+      note: G.note || "",
+      mustChooseColor: !!G.mustChooseColor,
+      mustChallenge: !!G.mustChallenge
+    };
+  }
+
+  if (!players.length) return null;
+
+  const mine = players[current];
+  return {
+    seats: players.map(p => ({name:p.name, count:p.hand.length, ready:false})),
+    hand: mine.hand,
+    playable: mine.hand.map((card,i) =>
+      canPlay(card) && (drawnCardIndex===-1 || drawnCardIndex===i)
+    ),
+    top: discard[discard.length-1] || null,
+    activeColor,
+    deckCount: deck.length,
+    current,
+    direction,
+    mySeat: current,
+    drawn: drawnCardIndex!==-1 ? mine.hand[drawnCardIndex] : null,
+    pendingUno: unoPending,
+    phase: gameOver ? "finished" : (mustChooseColor ? "chooseColor" : (challenge ? "challenge" : "playing")),
+    status: gameOver ? "finished" : "active",
+    winner: gameOver ? mine.name : "",
+    note: message,
+    mustChooseColor,
+    mustChallenge: false
+  };
+}
+
+function render(){
+  const s = stand();
+  if (!s) return;
+
+  // Zugrichtung: 1 = im Uhrzeigersinn, -1 = andersherum.
+  const anzahl = s.seats.length;
+  const richtung = s.direction === -1 ? -1 : 1;
+  const naechster = anzahl ? ((s.current + richtung) % anzahl + anzahl) % anzahl : -1;
+
+  $("players").innerHTML = "";
+  s.seats.forEach((p, i) => {
+    const div = document.createElement("div");
+    div.className = "player" + (i === s.current ? " active" : "");
+    div.style.setProperty("--player-color", PLAYER_COLORS[i % PLAYER_COLORS.length]);
+    const name = document.createElement("strong");
+    name.textContent = p.name;
+    const small = document.createElement("small");
+    small.textContent = p.count + " Karten";
+    div.append(name, small);
+    if (p.ready) {
+      const tag = document.createElement("div");
+      tag.className = "ready-tag";
+      tag.textContent = "BEREIT";
+      div.appendChild(tag);
+    }
+    if (i === naechster && anzahl > 1 && s.status === "active") {
+      const tag = document.createElement("div");
+      tag.className = "next-tag";
+      tag.textContent = "NÄCHSTER " + (richtung > 0 ? "→" : "←");
+      div.appendChild(tag);
+    }
+    $("players").appendChild(div);
+  });
+
+  const dran = s.seats[s.current] ? s.seats[s.current].name : "jemand";
+  const ichDran = s.mySeat === s.current && s.status === "active";
+  $("turnBanner").textContent = s.status === "finished"
+    ? "SPIEL BEENDET"
+    : (ichDran ? "DU BIST DRAN" : dran.toUpperCase() + " IST DRAN");
+  $("turnBanner").classList.toggle("you", ichDran);
+
+  $("status").textContent = s.status === "finished"
+    ? (s.winner ? s.winner + " gewinnt!" : "")
+    : dran + " ist am Zug";
+
+  // Richtung und nächster Spieler immer sichtbar machen – nach einem
+  // Richtungswechsel ist sonst unklar, wer folgt.
+  if (s.status === "finished" || naechster < 0) {
+    $("nextInfo").textContent = "";
+  } else {
+    const naechsterName = s.seats[naechster] ? s.seats[naechster].name : "jemand";
+    $("nextInfo").textContent =
+      (richtung > 0 ? "↻ im Uhrzeigersinn" : "↺ gegen den Uhrzeigersinn") +
+      " · als Nächstes: " + naechsterName;
+  }
+
+  const topBox = $("topBox");
+  topBox.innerHTML = "";
+  if (s.top) topBox.appendChild(cardElement(s.top));
+  topBox.classList.toggle("highlight", ichDran);
+
+  $("deckCount").textContent = s.deckCount + " Karten";
+
+  const badge = $("colorBadge");
+  badge.textContent = s.activeColor ? "FARBE " + COLOR_NAMES[s.activeColor].toUpperCase() : "";
+  badge.className = "color-badge" + (s.activeColor ? " " + s.activeColor : " hidden");
+
+  $("hand").innerHTML = "";
+  s.hand.forEach((card, i) => {
+    const el = cardElement(card);
+    el.classList.add("hand-card");
+    if (s.playable[i]) el.classList.add("playable");
+    if (!s.playable[i]) el.classList.add("unplayable");
+    el.addEventListener("click", () => pressCard(i));
+    $("hand").appendChild(el);
+  });
+
+  $("handTitle").textContent = ONLINE ? "DEINE KARTEN" : "KARTEN VON " + dran.toUpperCase();
+
+  $("drawButton").disabled = !(ichDran && s.phase === "playing" && !s.drawn);
+  $("passButton").classList.toggle("hidden", !(ichDran && s.drawn));
+  $("unoButton").classList.toggle("hidden", !(s.pendingUno === s.mySeat && s.status === "active"));
+  $("unoButton").disabled = s.pendingUno !== s.mySeat;
+
+  $("colorChoice").classList.toggle("hidden", !(s.mustChooseColor && s.mySeat === s.current));
+  $("challengeRow").classList.toggle("hidden", !s.mustChallenge);
+
+  if (s.note) setMessage(s.note);
+
+  if (s.status === "finished") {
+    $("message").textContent = s.winner ? s.winner + " hat gewonnen!" : "Spiel beendet.";
+  }
+  // Online startet „Neues Spiel“ erst nach dem Spielende eine neue Lobby.
+  $("newGameButton").classList.toggle("hidden", ONLINE && s.status !== "finished");
+}
+
+// ---- Knöpfe: lokal oder online ----
+function pressCard(index){
+  if (ONLINE) { unoAction("play", {index}); return; }
+  playCard(index);
+}
+function pressDraw(){
+  if (ONLINE) { unoAction("draw"); return; }
+  drawCard();
+}
+function pressPass(){
+  if (ONLINE) { unoAction("pass"); return; }
+  passTurn();
+}
+function pressUno(){
+  if (ONLINE) { unoAction("uno"); return; }
+  callUno();
+}
+function pressColor(color){
+  if (ONLINE) { unoAction("color", {color}); return; }
+  chooseColor(color);
+}
+function pressChallenge4(){
+  if (ONLINE) { unoAction("challenge4"); return; }
+  challengeFour();
+}
+function pressAccept4(){
+  if (ONLINE) { unoAction("accept4"); return; }
+  acceptFour();
+}
+
+// ---- Online-Anbindung ----
+async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
+  }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
+
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
+  }
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+
+function applyOnlineState(view){
+  if (!view) return;
+  G = view;
+  renderLobby();
+  if (G.status === "invited") {
+    $("lobby").classList.remove("hidden");
+    $("game").classList.add("hidden");
+    return;
+  }
+  $("lobby").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  render();
+}
+
+async function refreshOnline(){
+  if (onlineBusy) return;
+  const mySeq = ++stateSeq;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+    if (mySeq < stateSeq) return;
+    applyOnlineState(data.game);
+  }catch(e){
+    $("lobbyHint").textContent = "Verbindung wackelt – die Seite versucht es weiter …";
+  }
+}
+
+async function unoAction(action, payload){
+  if (onlineBusy) return;
+  onlineBusy = true;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID, ...(payload || {})})
+    });
+    stateSeq++;
+    applyOnlineState(data.game);
+  }catch(e){
+    $("lobbyHint").textContent = e.message;
+    $("message").textContent = e.message;
+  }finally{
+    onlineBusy = false;
+  }
+}
+
+function renderLobby(){
+  if (!ONLINE || !G) return;
+
+  $("lobbyList").innerHTML = (G.seats || []).map(seat => {
+    const ich = seat.id === PLAYER_ID;
+    const host = seat.id === G.hostId;
+    const status = seat.ready
+      ? '<span class="ok">BEREIT</span>'
+      : '<span class="wait">wartet</span>';
+    return '<div class="lobby-row"><span>' + escapeHTML(seat.name) +
+      (ich ? " (du)" : "") + (host ? " · Gastgeber" : "") +
+      "</span>" + status + "</div>";
+  }).join("");
+
+  const ichDabei = G.you >= 0;
+  const ichHost = ichDabei && (G.seats[G.you].id === G.hostId);
+  const ichBereit = ichDabei && G.seats[G.you].ready;
+
+  $("joinButton").classList.toggle("hidden", ichDabei);
+  $("readyButton").classList.toggle("hidden", !ichDabei);
+  $("readyButton").textContent = ichBereit ? "DOCH NICHT BEREIT" : "BEREIT";
+  $("startButton").classList.toggle("hidden", !ichHost);
+
+  const bereit = (G.seats || []).filter(s => s.ready).length;
+  $("lobbyHint").textContent = G.note ||
+    (bereit + " von " + (G.seats || []).length + " bereit · " +
+     (G.seats || []).length + " von 4 Plätzen belegt.");
+}
+
+if (ONLINE) {
+  $("setup").classList.add("hidden");
+  $("turnScreen").classList.add("hidden");
+  $("joinButton").onclick = () => unoAction("join");
+  $("readyButton").onclick = () => unoAction("ready");
+  $("startButton").onclick = () => unoAction("start");
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.textContent="Spiel verlassen";
+  back.onclick = () => tgVerlassen();
+  $("controls").appendChild(back);
+
+  let actedSincePing = false;
+  ["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+    document.addEventListener(evt, () => { actedSincePing = true; }, {passive:true});
+  });
+
+  async function postPresence(){
+    let name = params.get("name") || "Spieler";
+    if (G && G.you >= 0) name = G.seats[G.you].name;
+    const active = actedSincePing;
+    actedSincePing = false;
+    try{
+      await fetch("/api/presence", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({room:ROOM, id:PLAYER_ID, name, active})
+      });
+    }catch(e){}
+  }
+
+  $("handTitle").textContent = "VERBINDE MIT DEM SPIELRAUM …";
+  postPresence().then(refreshOnline);
+  setInterval(postPresence, 5000);
+  setInterval(refreshOnline, 1500);
+} else {
+  makeNameFields();
+}
+</script>
+</body>
+</html>

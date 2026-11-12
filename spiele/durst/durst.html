@@ -656,6 +656,13 @@ const LEVELS = [
 ];
 
 const W=20,H=12,TILE=40,STEP=180,STONE_DELAY=1000,LEVEL_TIME=120;
+// Steine, die zusammenliegen, gehen schneller runter als ein einzelner.
+const GROUP_DELAY=150;
+const STONE_NEIGHBORS=[
+ [-1,-1],[0,-1],[1,-1],
+ [-1,0],        [1,0],
+ [-1,1],[0,1],[1,1]
+];
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
@@ -747,7 +754,7 @@ function parseLevel(i){
    }
 
    if(v===3){
-    stones[key(x,y)]={x,y,falling:false,readyAt:0};
+    stones[key(x,y)]={x,y,falling:false,readyAt:0,fast:false,restingSince:0};
     map[y][x]=0;
    }
   }
@@ -1109,44 +1116,39 @@ function moveEnemies(){
  }
 }
 
-function stoneTick(now){
- const stoneList=Object.values(stones).filter(Boolean);
+// Ein fallender Stein nimmt nur die Steine mit, die in genau diesem Moment
+// mit ihm zusammenliegen (auch diagonal). Alles, was später nur daneben
+// vorbeifliegt, bleibt unberührt – sonst zündet ein einzelner Stein beim
+// Vorbeifallen den halben Level an und alles stürzt gleichzeitig.
+function stoneCluster(start){
+ const seen=new Set([start]);
+ const queue=[start];
+ const group=[];
 
- // Zusammenhängende Steingruppen ermitteln (auch diagonal)
- const visited=new Set();
- const accelerated=new Set();
- const directions=[
-  [-1,-1],[0,-1],[1,-1],
-  [-1,0],        [1,0],
-  [-1,1],[0,1],[1,1]
- ];
+ while(queue.length){
+  const s=queue.shift();
+  group.push(s);
 
- for(const first of stoneList){
-  if(visited.has(first))continue;
+  for(const [dx,dy] of STONE_NEIGHBORS){
+   const neighbor=stones[key(s.x+dx,s.y+dy)];
 
-  const group=[];
-  const queue=[first];
-  visited.add(first);
-
-  while(queue.length){
-   const s=queue.shift();
-   group.push(s);
-
-   for(const [dx,dy] of directions){
-    const neighbor=stones[key(s.x+dx,s.y+dy)];
-
-    if(neighbor&&!visited.has(neighbor)){
-     visited.add(neighbor);
-     queue.push(neighbor);
-    }
+   if(neighbor&&!seen.has(neighbor)){
+    seen.add(neighbor);
+    queue.push(neighbor);
    }
   }
-
-  // Bewegt sich ein Stein, wird die ganze Gruppe beschleunigt
-  if(group.some(s=>s.falling||s.rolling)){
-   group.forEach(s=>accelerated.add(s));
-  }
  }
+
+ return group;
+}
+
+// Nur die Steine, die jetzt zusammenliegen, fallen gemeinsam schneller.
+function markStoneClusterFast(start){
+ for(const s of stoneCluster(start))s.fast=true;
+}
+
+function stoneTick(now){
+ const stoneList=Object.values(stones).filter(Boolean);
 
  // Von unten nach oben bearbeiten
  stoneList.sort((a,b)=>b.y-a.y);
@@ -1169,12 +1171,13 @@ function stoneTick(now){
    !enemyAt(s.x,s.y+1);
 
   let target=null;
-  const groupMoving=accelerated.has(s);
-  const groupDelay=150;
+  const groupMoving=!!s.fast;
+  const groupDelay=GROUP_DELAY;
 
   if(freeBelow){
    s.rollReadyAt=0;
    s.rolling=false;
+   s.restingSince=0;
 
    const fallDelay=groupMoving?groupDelay:STONE_DELAY;
 
@@ -1187,6 +1190,7 @@ function stoneTick(now){
 
     if(now>=s.readyAt){
      s.falling=true;
+     markStoneClusterFast(s);
      target={x:s.x,y:s.y+1};
     }
    }else{
@@ -1195,6 +1199,10 @@ function stoneTick(now){
   }else{
    s.falling=false;
    s.readyAt=0;
+
+   // Liegt der Stein länger ruhig, fällt er später wieder normal langsam.
+   if(!s.restingSince)s.restingSince=now;
+   if(now-s.restingSince>GROUP_DELAY*3)s.fast=false;
 
    let rollTarget=null;
 
@@ -1224,6 +1232,8 @@ function stoneTick(now){
      target=rollTarget;
      s.rollReadyAt=0;
      s.rolling=true;
+     s.restingSince=0;
+     markStoneClusterFast(s);
     }
    }else{
     s.rollReadyAt=0;
