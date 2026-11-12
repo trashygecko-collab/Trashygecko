@@ -1,583 +1,681 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#050609">
-<title>Kniffel – Neon Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080b24">
+<title>KNiffel – C64 Neon</title>
+
 <style>
-:root{
-  --bg:#050609;--panel:#0d111a;--panel2:#121a27;--line:#29384b;
-  --cyan:#42e8ff;--pink:#ff4fd8;--text:#f4f7fb;--muted:#9ba8b8;
-  --active:#42e8ff;--active-glow:#42e8ff66;
+:root {
+  --bg:#080b24;
+  --panel:#10183b;
+  --cyan:#42f5ff;
+  --pink:#ff4fd8;
+  --yellow:#ffe66d;
+  --green:#62ff9b;
+  --white:#f3f6ff;
 }
-*{box-sizing:border-box}
-html{min-height:100%;background:var(--bg)}
-body{margin:0;padding:12px;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
-button{font:inherit}
-.app{width:min(1240px,100%);margin:0 auto;display:flex;flex-direction:column;gap:13px}
-header{text-align:center;padding:5px 0 3px}
-h1{margin:0;color:var(--cyan);font-size:clamp(25px,4vw,40px);letter-spacing:2px;text-shadow:0 0 10px #42e8ff99,0 0 25px #42e8ff55}
-.subtitle{margin-top:5px;color:var(--pink);font-size:11px;letter-spacing:3px}
-.panel{background:linear-gradient(145deg,#101722,#090c12);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 8px 25px #0006}
-.section-title{color:var(--cyan);font-weight:bold;font-size:12px;letter-spacing:2px;text-align:center;margin:0 0 11px}
-.setup{width:min(560px,100%);margin:8px auto 0;display:flex;flex-direction:column;gap:17px}
-.count-options{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
-.count-button{width:52px;height:48px;border:1px solid #4a5a70;border-radius:10px;background:#151d2a;color:#fff;font-size:20px;font-weight:bold;cursor:pointer}
-.count-button.active{color:var(--cyan);border-color:var(--cyan);background:#102734;box-shadow:0 0 12px #42e8ff55}
-.color-preview{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
-.color-chip{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #344255;border-radius:99px;background:#101722;color:#dce5ef;font-size:12px}
-.color-dot{width:11px;height:11px;border-radius:50%;box-shadow:0 0 8px currentColor}
-.primary-button,.secondary-button{border:1px solid var(--cyan);border-radius:10px;background:#102b38;color:var(--cyan);font-weight:bold;letter-spacing:1px;padding:13px 18px;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
-.primary-button{width:100%;font-size:17px}
-.primary-button:hover,.secondary-button:hover{background:#163d4d;box-shadow:0 0 14px #42e8ff44}
-.primary-button:active,.secondary-button:active{transform:scale(.98)}
-button:disabled{opacity:.38;cursor:not-allowed;box-shadow:none!important;transform:none!important}
-.game{display:none;gap:12px}
-.game-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.turn-label{display:flex;align-items:center;gap:9px;padding:9px 13px;border:1px solid var(--active);border-radius:10px;background:#101722;box-shadow:0 0 13px var(--active-glow);font-weight:bold}
-.turn-dot{width:13px;height:13px;border-radius:50%;background:var(--active);box-shadow:0 0 9px var(--active)}
-.turn-meta{color:var(--muted);font-size:12px;text-align:right}
-.players-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:7px}
-.player-chip{min-width:0;background:#101722;border:1px solid #344255;border-radius:9px;padding:8px;text-align:center}
-.player-chip.current{border-color:var(--active);box-shadow:0 0 10px var(--active-glow)}
-.player-chip strong{display:block;font-size:12px;margin-bottom:4px}
-.player-chip span{font-size:11px;color:var(--muted)}
-.main-layout{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:12px;align-items:start}
-.dice-panel{display:flex;flex-direction:column;gap:13px}
-.dice-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.dice-heading .section-title{margin:0;text-align:left}
-.roll-counter{font-size:12px;color:var(--muted);white-space:nowrap}
-.dice-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.die{
-  width:100%;aspect-ratio:1;min-width:0;position:relative;display:grid;place-items:center;
-  padding:0;border:2px solid #667385;border-radius:13px;background:linear-gradient(145deg,#fff,#cbd3df);
-  box-shadow:0 4px 9px #0008,inset 0 1px 1px #fff;color:#111;cursor:pointer;touch-action:manipulation;
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  padding:14px;
+  background:
+    repeating-linear-gradient(0deg,#ffffff05 0 1px,transparent 1px 4px),
+    radial-gradient(ellipse at top,#26316d,#080b24 65%);
+  color:var(--white);
+  font-family:"Courier New",monospace;
 }
-.die:disabled{opacity:.45;filter:grayscale(.5)}
-.die.held{border:3px solid var(--cyan);background:linear-gradient(145deg,#e8fcff,#9adce8);box-shadow:0 0 11px #42e8ffbb,0 0 23px #42e8ff55,inset 0 1px 1px #fff;transform:translateY(-3px)}
-.die.held::after{content:"BEHALTEN";position:absolute;left:50%;bottom:-22px;transform:translateX(-50%);font-size:8px;letter-spacing:.6px;color:var(--cyan);font-weight:bold;white-space:nowrap}
-.pips{width:72%;height:72%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);align-items:center;justify-items:center}
-.pip{width:72%;height:72%;max-width:9px;max-height:9px;border-radius:50%;background:#10151d;box-shadow:inset 0 1px 1px #0008}
-.die.rolling{animation:dieShake .11s infinite alternate}
-@keyframes dieShake{from{transform:rotate(-7deg) scale(.96)}to{transform:rotate(7deg) scale(1.03)}}
-.dice-instruction{min-height:30px;color:var(--muted);font-size:12px;line-height:1.4;text-align:center}
-.roll-button{font-size:17px;min-height:54px}
-.roll-button small{display:block;margin-top:3px;font-size:10px;letter-spacing:1px;font-weight:normal;color:#b9eefa}
-.dice-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.secondary-button{padding:10px 8px;font-size:12px;letter-spacing:.3px;border-color:#718198;background:#151d2a;color:#e2eaf4}
-.rules-hint{border-top:1px solid #273447;padding-top:10px;color:#9ba8b8;font-size:11px;line-height:1.5}
-.score-panel{min-width:0}
-.score-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
-.score-head .section-title{margin:0;text-align:left}
-.score-owner{font-size:12px;color:var(--active);font-weight:bold}
-.desktop-score{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;table-layout:fixed}
-.desktop-score th,.desktop-score td{padding:5px 4px;text-align:center;border-bottom:1px solid #253142}
-.desktop-score th{color:#b9c6d6;font-size:10px;line-height:1.2;background:#131c29}
-.desktop-score th:first-child,.desktop-score td:first-child{text-align:left;width:31%;padding-left:9px}
-.desktop-score th:first-child{border-radius:7px 0 0 0}
-.desktop-score th:last-child{border-radius:0 7px 0 0}
-.desktop-score .active-col{background:#102430}
-.desktop-score .cat-name{color:#eef4fa;font-weight:bold}
-.desktop-score .group-row td{padding:7px 8px 4px;color:var(--pink);font-size:10px;font-weight:bold;letter-spacing:1px;text-align:left;background:#0b1018}
-.score-cell{width:100%;min-height:29px;padding:4px 2px;border:1px solid #38485d;border-radius:6px;background:#111a27;color:#dce7f2;font-weight:bold;cursor:pointer;font-variant-numeric:tabular-nums}
-.score-cell.available{border-color:var(--active);color:var(--cyan);background:#10232d}
-.score-cell.available:hover{box-shadow:0 0 9px var(--active-glow)}
-.score-cell.done{border-color:#2d655a;background:#10231f;color:#a1f4d3;cursor:default}
-.score-cell.zero{color:#f6a4b8;border-color:#714253;background:#26131b}
-.score-cell:disabled{opacity:1}
-.summary-row td{font-weight:bold;background:#111a27;color:#dce7f2}
-.summary-row.total td{color:var(--cyan);font-size:13px;border-bottom:0}
-.mobile-score{display:none}
-.mobile-category{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;margin:0 0 7px;border:1px solid #36465a;border-radius:9px;background:#111a27;color:#f0f5fa;text-align:left;cursor:pointer}
-.mobile-category:disabled{opacity:1;cursor:default}
-.mobile-category.available{border-color:var(--active);background:#10232d;box-shadow:inset 3px 0 var(--active)}
-.mobile-category.done{border-color:#2d655a;background:#10231f}
-.mobile-category .category-label{font-weight:bold;font-size:13px}
-.mobile-category .category-hint{display:block;color:var(--muted);font-size:10px;margin-top:3px}
-.mobile-category .category-points{font-size:17px;font-weight:bold;color:var(--cyan);min-width:40px;text-align:right}
-.mobile-category.zero .category-points{color:#f6a4b8}
-.mobile-group{margin:12px 0 7px;color:var(--pink);font-size:10px;font-weight:bold;letter-spacing:1.5px}
-.mobile-totals{margin-top:11px;padding:10px;border:1px solid #35465a;border-radius:9px;background:#101722;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.mobile-total{font-size:11px;color:var(--muted)}
-.mobile-total strong{display:block;color:#fff;font-size:15px;margin-top:3px}
-.mobile-total.final strong{color:var(--cyan);font-size:18px}
-.status-message{min-height:20px;text-align:center;color:var(--cyan);font-size:13px;font-weight:bold}
-.end-screen{display:none;text-align:center;padding:18px}
-.end-screen h2{margin:0 0 6px;color:#ffd66b;text-shadow:0 0 12px #ffc85777}
-.end-screen p{color:var(--muted);margin:5px 0 15px}
-.final-results{max-width:550px;margin:0 auto 16px;display:flex;flex-direction:column;gap:7px}
-.final-result{display:flex;justify-content:space-between;align-items:center;padding:10px 13px;border:1px solid #3a4b61;border-radius:9px;background:#111a27}
-.final-result.winner{border-color:#ffd66b;box-shadow:0 0 12px #ffd66b44}
-.final-result strong{color:#fff}
-.final-result span{font-weight:bold;color:var(--cyan);font-variant-numeric:tabular-nums}
-.footer-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
-.footer-actions button{width:auto;min-width:170px}
-.help{color:#98a6b7;font-size:11px;line-height:1.55}
-.help summary{color:var(--cyan);cursor:pointer;font-weight:bold}
-.help p{margin:8px 0 0}
-@media(max-width:760px){
-  body{padding:7px}
-  .app{gap:9px}
-  .panel{padding:10px}
-  .main-layout{grid-template-columns:1fr}
-  .dice-panel{gap:11px}
-  .dice-row{gap:9px}
-  .die{border-radius:11px}
-  .die.held::after{bottom:-17px;font-size:7px}
-  .desktop-score{display:none}
-  .mobile-score{display:block}
-  .score-panel{padding:11px}
-  .score-head{margin-bottom:9px}
-  .game-top{align-items:flex-start}
-  .turn-meta{padding-top:6px}
+.app { max-width:1200px; margin:auto; }
+header { text-align:center; padding:12px 5px 18px; }
+h1 {
+  margin:0;
+  font-size:clamp(30px,5vw,58px);
+  letter-spacing:5px;
+  color:var(--cyan);
+  text-shadow:0 0 8px var(--cyan),0 0 25px #00bfff;
 }
-@media(min-width:761px){
-  .dice-panel{position:sticky;top:10px}
+.subtitle {
+  margin-top:7px;
+  color:var(--pink);
+  letter-spacing:3px;
 }
-@media(max-width:390px){
-  body{padding:5px}
-  h1{letter-spacing:1px}
-  .panel{border-radius:11px}
-  .turn-label{font-size:13px;padding:8px 10px}
-  .dice-row{gap:6px}
-  .die{border-radius:9px}
-  .pip{max-width:7px;max-height:7px}
-  .players-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+.panel {
+  min-width:0;
+  padding:17px;
+  border:2px solid #344477;
+  border-radius:12px;
+  background:linear-gradient(145deg,#121c45,#0b1230);
+  box-shadow:0 0 18px #42f5ff35;
+}
+h2 { color:var(--pink); margin:0 0 14px; font-size:21px; }
+button,select { font-family:inherit; cursor:pointer; touch-action:manipulation; }
+.setup {
+  max-width:520px;
+  margin:25px auto;
+  text-align:center;
+}
+.setup label {
+  display:block;
+  margin:20px 0 10px;
+  color:var(--yellow);
+  font-weight:bold;
+  font-size:18px;
+}
+select {
+  width:100%;
+  min-height:58px;
+  padding:10px;
+  border:2px solid var(--cyan);
+  border-radius:9px;
+  background:#0b1435;
+  color:var(--cyan);
+  font-size:20px;
+  text-align:center;
+}
+.bigbtn {
+  min-height:60px;
+  padding:12px;
+  border:2px solid var(--cyan);
+  border-radius:10px;
+  background:#102b4b;
+  color:var(--cyan);
+  font:bold 17px "Courier New",monospace;
+  cursor:pointer;
+}
+.bigbtn.primary {
+  background:var(--cyan);
+  color:#061027;
+  box-shadow:0 0 18px #42f5ff66;
+}
+.bigbtn:disabled { opacity:.35; cursor:not-allowed; }
+.setup .bigbtn { width:100%; margin-top:20px; }
+.topbar {
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-bottom:13px;
+}
+.pill {
+  padding:9px 13px;
+  border:1px solid #344477;
+  border-radius:8px;
+  background:#0c1434;
+  color:var(--yellow);
+  font-weight:bold;
+}
+.players {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:8px;
+  margin-bottom:13px;
+}
+.player {
+  padding:10px 6px;
+  border:1px solid #344477;
+  border-radius:8px;
+  background:#0b1230;
+  text-align:center;
+  color:var(--muted,#a9b7df);
+  font-size:12px;
+}
+.player strong {
+  display:block;
+  margin-bottom:5px;
+  font-size:14px;
+}
+.player.active {
+  border:2px solid var(--green);
+  color:var(--green);
+  box-shadow:0 0 12px #62ff9b55;
+}
+.player .points { color:var(--yellow); font-size:17px; font-weight:bold; }
+.layout {
+  display:grid;
+  grid-template-columns:minmax(300px,.9fr) minmax(440px,1.1fr);
+  gap:14px;
+  align-items:start;
+}
+.rollinfo {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin:12px 0;
+  color:var(--yellow);
+  font-weight:bold;
+}
+.dice-area {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px;
+  margin:15px 0;
+}
+.die {
+  aspect-ratio:1;
+  min-width:0;
+  display:grid;
+  place-items:center;
+  border:2px solid var(--cyan);
+  border-radius:12px;
+  background:#e9faff;
+  color:#101735;
+  font-size:clamp(32px,6vw,58px);
+  font-weight:bold;
+  box-shadow:0 0 12px #42f5ff55;
+}
+.die.kept {
+  background:var(--yellow);
+  border-color:white;
+  box-shadow:0 0 17px #ffe66d99;
+  transform:translateY(-3px);
+}
+.hint {
+  min-height:40px;
+  color:#a9b7df;
+  text-align:center;
+  font-size:13px;
+  line-height:1.5;
+}
+.actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.status {
+  min-height:44px;
+  margin-top:12px;
+  padding:11px;
+  border:1px solid #344477;
+  border-radius:8px;
+  background:#080f2a;
+  color:var(--green);
+  text-align:center;
+  font-size:13px;
+  line-height:1.5;
+}
+.score-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+}
+.score-head h2 { margin:0; }
+.score-total { color:var(--yellow); font-weight:bold; }
+table {
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:14px;
+}
+th,td {
+  padding:8px 6px;
+  border-bottom:1px solid #29365f;
+  text-align:center;
+}
+th {
+  color:var(--cyan);
+  background:#0b1435;
+  font-size:12px;
+}
+th:first-child,td:first-child { text-align:left; }
+td:first-child { font-weight:bold; }
+tr.group td {
+  padding-top:12px;
+  color:var(--pink);
+  background:#0b1230;
+  font-size:11px;
+  letter-spacing:2px;
+}
+.scorebtn {
+  width:100%;
+  min-height:38px;
+  border:1px solid #3e5785;
+  border-radius:7px;
+  background:#111d43;
+  color:var(--yellow);
+  font:bold 15px "Courier New",monospace;
+}
+.scorebtn.ready { border-color:var(--green); color:var(--green); }
+.scorebtn.done { background:#142b2a; color:#a6e9c5; }
+.scorebtn:disabled { opacity:1; }
+tfoot td {
+  color:var(--yellow);
+  font-weight:bold;
+  border-top:1px solid var(--cyan);
+}
+.mobile-tabs { display:none; }
+.footer {
+  padding:15px 4px 4px;
+  color:#788bbd;
+  text-align:center;
+  font-size:11px;
+  letter-spacing:1px;
+}
+.hidden { display:none!important; }
+
+@media(max-width:760px) {
+  body { padding:8px; }
+  header { padding:7px 4px 10px; }
+  h1 { font-size:clamp(30px,9vw,43px); }
+  .topbar { gap:6px; }
+  .pill { padding:7px 9px; font-size:12px; }
+  .players { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+  .player { padding:8px 3px; font-size:11px; }
+  .player strong { font-size:12px; }
+  .player .points { font-size:15px; }
+  .layout { grid-template-columns:1fr; gap:10px; }
+  .panel { padding:13px; }
+  .mobile-tabs {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    margin-bottom:10px;
+  }
+  .tab {
+    min-height:58px;
+    border:2px solid var(--cyan);
+    border-radius:10px;
+    background:#10183b;
+    color:var(--cyan);
+    font:bold 16px "Courier New",monospace;
+  }
+  .tab.active { background:var(--cyan); color:#061027; }
+  .layout[data-view="dice"] .score-panel { display:none; }
+  .layout[data-view="score"] .dice-panel { display:none; }
+  .dice-area { gap:6px; }
+  .die { font-size:clamp(35px,10vw,54px); }
+  .bigbtn { min-height:64px; font-size:16px; }
+  table { font-size:14px; }
+  th,td { padding:9px 6px; }
+  .scorebtn { min-height:47px; font-size:16px; }
+}
+@media(max-width:760px) and (orientation:landscape) {
+  body { padding:5px; }
+  header { padding:2px 4px 6px; }
+  h1 { font-size:27px; }
+  .mobile-tabs { display:none; }
+  .players { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .layout { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:7px; }
+  .layout .dice-panel,.layout .score-panel { display:block!important; padding:8px; }
+  h2 { font-size:15px; margin-bottom:7px; }
+  .dice-area { gap:4px; margin:7px 0; }
+  .die { font-size:clamp(25px,6vh,38px); }
+  .bigbtn { min-height:43px; padding:6px; font-size:13px; }
+  .hint { font-size:10px; min-height:25px; }
+  .rollinfo { font-size:10px; margin:6px 0; }
+  .status { font-size:10px; min-height:28px; padding:5px; }
+  table { font-size:10px; }
+  th,td { padding:4px 3px; }
+  .scorebtn { min-height:27px; font-size:10px; }
 }
 </style>
 </head>
+
 <body>
-<main class="app">
-  <header>
-    <h1>KNIFFEL</h1>
-    <div class="subtitle">NEON DICE GAME · 2–6 SPIELER</div>
-  </header>
+<div class="app">
 
-  <section class="panel setup" id="setup">
-    <div>
-      <h2 class="section-title">WIE VIELE SPIELER?</h2>
-      <div class="count-options" id="countOptions">
-        <button class="count-button" data-count="2" type="button">2</button>
-        <button class="count-button active" data-count="3" type="button">3</button>
-        <button class="count-button" data-count="4" type="button">4</button>
-        <button class="count-button" data-count="5" type="button">5</button>
-        <button class="count-button" data-count="6" type="button">6</button>
+<header>
+  <h1>KNiffel</h1>
+  <div class="subtitle">★ C64 NEON EDITION ★</div>
+</header>
+
+<section class="panel setup" id="setup">
+  <h2>NEUES SPIEL</h2>
+  <label for="playerCount">WIE VIELE SPIELER?</label>
+  <select id="playerCount">
+    <option value="1">1 SPIELER</option>
+    <option value="2">2 SPIELER</option>
+    <option value="3">3 SPIELER</option>
+    <option value="4">4 SPIELER</option>
+    <option value="5">5 SPIELER</option>
+    <option value="6">6 SPIELER</option>
+  </select>
+  <button class="bigbtn primary" id="startBtn">SPIEL STARTEN</button>
+</section>
+
+<section id="game" class="hidden">
+
+  <div class="topbar">
+    <div class="pill" id="turnPill">SPIELER 1</div>
+    <div class="pill" id="roundPill">RUNDE 1 / 13</div>
+    <div class="pill" id="totalPill">PUNKTE: 0</div>
+  </div>
+
+  <div class="players" id="players"></div>
+
+  <nav class="mobile-tabs">
+    <button class="tab active" data-view="dice">🎲 WÜRFELN</button>
+    <button class="tab" data-view="score">📋 PUNKTE</button>
+  </nav>
+
+  <main class="layout" id="layout" data-view="dice">
+
+    <section class="panel dice-panel">
+      <h2 id="diceTitle">SPIELER 1 – WÜRFEL</h2>
+
+      <div class="rollinfo">
+        <span id="rollLabel">WÜRFE: 0 / 3</span>
+        <span id="keepLabel">GEHALTEN: 0</span>
       </div>
-    </div>
-    <div>
-      <h2 class="section-title">DIE SPIELER BEKOMMEN AUTOMATISCH FARBEN</h2>
-      <div class="color-preview" id="colorPreview"></div>
-    </div>
-    <button class="primary-button" id="startButton" type="button">SPIEL STARTEN</button>
-    <div class="help"><details><summary>Wie wird gespielt?</summary><p>Pro Runde darfst du bis zu dreimal würfeln. Tippe Würfel an, die du behalten möchtest. Beim nächsten Wurf bleiben sie liegen. Danach wählst du ein freies Feld auf deinem Kniffelzettel. Nach 13 Runden pro Spieler gewinnt die höchste Gesamtpunktzahl.</p></details></div>
-  </section>
 
-  <section class="game" id="game">
-    <div class="game-top">
-      <div class="turn-label" id="turnLabel"><span class="turn-dot"></span><span id="turnName">Spieler 1 ist am Zug</span></div>
-      <div class="turn-meta" id="turnMeta">Runde 1 von 13 · Wurf 0 von 3</div>
-    </div>
-    <div class="players-strip" id="playersStrip"></div>
+      <div class="dice-area" id="diceArea"></div>
 
-    <div class="main-layout">
-      <section class="panel dice-panel">
-        <div class="dice-heading">
-          <h2 class="section-title">DEINE WÜRFEL</h2>
-          <div class="roll-counter" id="rollCounter">0 / 3 Würfe</div>
-        </div>
-        <div class="dice-row" id="diceRow" aria-label="Fünf Würfel"></div>
-        <div class="dice-instruction" id="diceInstruction">Tippe auf WÜRFELN, um deinen ersten Wurf zu starten.</div>
-        <button class="primary-button roll-button" id="rollButton" type="button">WÜRFELN<small>NOCH 3 WÜRFE</small></button>
-        <div class="dice-actions">
-          <button class="secondary-button" id="clearHoldsButton" type="button" disabled>ALLE FREIGEBEN</button>
-          <button class="secondary-button" id="resetTurnButton" type="button" disabled>WURF NEU STARTEN</button>
-        </div>
-        <div class="rules-hint">Würfel antippen = behalten. Noch einmal antippen = wieder freigeben. Du kannst auch schon vor dem dritten Wurf ein Ergebnis eintragen.</div>
-      </section>
+      <div class="hint" id="hint">
+        Drücke WÜRFELN. Danach kannst du Würfel antippen und behalten.
+      </div>
 
-      <section class="panel score-panel">
-        <div class="score-head">
-          <h2 class="section-title">KNIFFELZETTEL</h2>
-          <div class="score-owner" id="scoreOwner">Spieler 1</div>
-        </div>
-        <div class="desktop-score-wrap" id="desktopScoreWrap"></div>
-        <div class="mobile-score" id="mobileScore"></div>
-      </section>
-    </div>
-    <div class="status-message" id="statusMessage" aria-live="polite"></div>
+      <div class="actions">
+        <button class="bigbtn primary" id="rollBtn">WÜRFELN</button>
+        <button class="bigbtn" id="finishBtn" disabled>RUNDE BEENDEN</button>
+      </div>
 
-    <section class="panel end-screen" id="endScreen">
-      <h2>SPIEL BEENDET!</h2>
-      <p>Das ist die endgültige Rangliste.</p>
-      <div class="final-results" id="finalResults"></div>
-      <div class="footer-actions">
-        <button class="primary-button" id="againButton" type="button">NOCH EINE RUNDE</button>
-        <button class="secondary-button" id="setupButton" type="button">SPIELER ÄNDERN</button>
+      <div class="status" id="status">
+        Viel Glück! Drei Würfe pro Runde.
       </div>
     </section>
 
-    <details class="help">
-      <summary>PUNKTEREGELN</summary>
-      <p><strong>Oben:</strong> Einser bis Sechser zählen jeweils die passenden Augen. Ab 63 Punkten gibt es 35 Bonuspunkte. <strong>Unten:</strong> Dreierpasch und Viererpasch zählen alle Augen; Full House 25; kleine Straße 30; große Straße 40; Kniffel 50; Chance zählt alle Augen. Ein weiterer Kniffel nach einer gewerteten 50 bringt zusätzlich 100 Kniffel-Bonuspunkte. In dieser Version darfst du das freie Punktefeld selbst wählen; die komplizierte Joker-Sonderregel ist nicht eingebaut.</p>
-    </details>
-  </section>
-</main>
+    <section class="panel score-panel">
+      <div class="score-head">
+        <h2 id="scoreTitle">PUNKTEBLATT</h2>
+        <div class="score-total" id="scoreTotal">0 P.</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>KATEGORIE</th>
+            <th>PUNKTE</th>
+            <th>EINTRAGEN</th>
+          </tr>
+        </thead>
+        <tbody id="scoreBody"></tbody>
+        <tfoot>
+          <tr>
+            <td>GESAMT</td>
+            <td id="grandTotal">0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+  </main>
+
+  <div class="footer">C64 STYLE · 1–6 SPIELER · 5 WÜRFEL · 13 KATEGORIEN</div>
+</section>
+
+<section class="panel hidden" id="result">
+  <h2>★ SPIEL BEENDET ★</h2>
+  <div id="ranking"></div>
+  <button class="bigbtn primary" id="newGameBtn" style="width:100%;margin-top:18px">
+    NEUES SPIEL
+  </button>
+</section>
+
+</div>
 
 <script>
-(() => {
 "use strict";
 
-const COLORS = [
-  {name:"Rot",hex:"#ff4d5e"},
-  {name:"Blau",hex:"#42a5ff"},
-  {name:"Grün",hex:"#35e58b"},
-  {name:"Gelb",hex:"#ffd447"},
-  {name:"Pink",hex:"#ff62d5"},
-  {name:"Türkis",hex:"#42e8ff"}
+const categories = [
+ {id:"ones",name:"Einser",group:"OBERER BLOCK",score:v=>sumFace(v,1)},
+ {id:"twos",name:"Zweier",score:v=>sumFace(v,2)},
+ {id:"threes",name:"Dreier",score:v=>sumFace(v,3)},
+ {id:"fours",name:"Vierer",score:v=>sumFace(v,4)},
+ {id:"fives",name:"Fünfer",score:v=>sumFace(v,5)},
+ {id:"sixes",name:"Sechser",score:v=>sumFace(v,6)},
+ {id:"three",name:"Dreierpasch",group:"UNTERER BLOCK",score:v=>sameAtLeast(v,3)?sum(v):0},
+ {id:"four",name:"Viererpasch",score:v=>sameAtLeast(v,4)?sum(v):0},
+ {id:"full",name:"Full House",score:v=>fullHouse(v)?25:0},
+ {id:"small",name:"Kleine Straße",score:v=>straight(v,4)?30:0},
+ {id:"large",name:"Große Straße",score:v=>straight(v,5)?40:0},
+ {id:"kniffel",name:"Kniffel",score:v=>sameAtLeast(v,5)?50:0},
+ {id:"chance",name:"Chance",score:v=>sum(v)}
 ];
-const CATEGORIES = [
-  {id:"ones",label:"Einser",group:"OBEN",hint:"Alle Einser zusammenzählen"},
-  {id:"twos",label:"Zweier",group:"OBEN",hint:"Alle Zweier zusammenzählen"},
-  {id:"threes",label:"Dreier",group:"OBEN",hint:"Alle Dreier zusammenzählen"},
-  {id:"fours",label:"Vierer",group:"OBEN",hint:"Alle Vierer zusammenzählen"},
-  {id:"fives",label:"Fünfer",group:"OBEN",hint:"Alle Fünfer zusammenzählen"},
-  {id:"sixes",label:"Sechser",group:"OBEN",hint:"Alle Sechser zusammenzählen"},
-  {id:"threeKind",label:"Dreierpasch",group:"UNTEN",hint:"Mindestens drei gleiche – alle Augen zählen"},
-  {id:"fourKind",label:"Viererpasch",group:"UNTEN",hint:"Mindestens vier gleiche – alle Augen zählen"},
-  {id:"fullHouse",label:"Full House",group:"UNTEN",hint:"Ein Paar und ein Drilling · 25 Punkte"},
-  {id:"smallStraight",label:"Kleine Straße",group:"UNTEN",hint:"Vier aufeinanderfolgende Zahlen · 30 Punkte"},
-  {id:"largeStraight",label:"Große Straße",group:"UNTEN",hint:"Fünf aufeinanderfolgende Zahlen · 40 Punkte"},
-  {id:"kniffel",label:"Kniffel",group:"UNTEN",hint:"Fünf gleiche Zahlen · 50 Punkte"},
-  {id:"chance",label:"Chance",group:"UNTEN",hint:"Alle Augen zusammenzählen"}
-];
-const DICE_PIPS = {
-  1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8],
-  5:[0,2,4,6,8], 6:[0,2,3,5,6,8]
-};
-const PIP_POSITIONS = Array.from({length:9},(_,index)=>index);
 
-const $ = id => document.getElementById(id);
-const setupEl=$("setup"), gameEl=$("game");
-const countOptions=$("countOptions"), colorPreview=$("colorPreview");
-const turnLabel=$("turnLabel"), turnName=$("turnName"), turnMeta=$("turnMeta");
-const playersStrip=$("playersStrip"), diceRow=$("diceRow"), diceInstruction=$("diceInstruction");
-const rollCounter=$("rollCounter"), rollButton=$("rollButton");
-const clearHoldsButton=$("clearHoldsButton"), resetTurnButton=$("resetTurnButton");
-const desktopScoreWrap=$("desktopScoreWrap"), mobileScore=$("mobileScore");
-const scoreOwner=$("scoreOwner"), statusMessage=$("statusMessage");
-const endScreen=$("endScreen"), finalResults=$("finalResults");
+const colors=["#42f5ff","#ff4fd8","#ffe66d","#62ff9b","#b18cff","#ff985e"];
+const $=id=>document.getElementById(id);
 
-let playerCount=3;
 let players=[];
 let currentPlayer=0;
 let dice=[0,0,0,0,0];
-let held=[false,false,false,false,false];
-let rollsUsed=0;
-let rolling=false;
-let turnTimer=null;
-let rollAnimationTimer=null;
-let gameFinished=false;
-let turnSerial=0;
+let kept=[false,false,false,false,false];
+let rolls=0;
+let finished=false;
 
-function makePlayer(index){
-  return {color:COLORS[index],scores:Object.fromEntries(CATEGORIES.map(c=>[c.id,null])),kniffelBonus:0};
+function sum(v){return v.reduce((a,b)=>a+b,0)}
+function sumFace(v,n){return v.filter(x=>x===n).length*n}
+function sameAtLeast(v,n){
+  return Math.max(...[1,2,3,4,5,6].map(n=>v.filter(x=>x===n).length))>=n;
 }
-function current(){return players[currentPlayer];}
-function categoryScore(id,values){
-  if(values.some(v=>v===0))return 0;
-  const counts=Array(7).fill(0);
-  values.forEach(v=>counts[v]++);
-  const sum=values.reduce((a,b)=>a+b,0);
-  const upper={ones:1,twos:2,threes:3,fours:4,fives:5,sixes:6};
-  if(upper[id])return counts[upper[id]]*upper[id];
-  if(id==="threeKind")return counts.some(n=>n>=3)?sum:0;
-  if(id==="fourKind")return counts.some(n=>n>=4)?sum:0;
-  if(id==="fullHouse")return (counts.includes(2)&&counts.includes(3))?25:0;
-  const unique=new Set(values);
-  const hasSequence=(sequence)=>sequence.every(n=>unique.has(n));
-  if(id==="smallStraight")return (hasSequence([1,2,3,4])||hasSequence([2,3,4,5])||hasSequence([3,4,5,6]))?30:0;
-  if(id==="largeStraight")return (hasSequence([1,2,3,4,5])||hasSequence([2,3,4,5,6]))?40:0;
-  if(id==="kniffel")return counts.some(n=>n===5)?50:0;
-  if(id==="chance")return sum;
-  return 0;
+function fullHouse(v){
+  const counts=[1,2,3,4,5,6]
+    .map(n=>v.filter(x=>x===n).length)
+    .filter(Boolean).sort();
+  return counts.join(",")==="2,3";
 }
-function isKniffel(values){return values.length===5&&values.every(v=>v!==0&&v===values[0]);}
-function upperSubtotal(player){return ["ones","twos","threes","fours","fives","sixes"].reduce((sum,id)=>sum+(player.scores[id]??0),0);}
-function upperBonus(player){return upperSubtotal(player)>=63?35:0;}
-function lowerSubtotal(player){return ["threeKind","fourKind","fullHouse","smallStraight","largeStraight","kniffel","chance"].reduce((sum,id)=>sum+(player.scores[id]??0),0);}
-function totalScore(player){return upperSubtotal(player)+upperBonus(player)+lowerSubtotal(player)+player.kniffelBonus;}
-function completedCount(player){return CATEGORIES.filter(c=>player.scores[c.id]!==null).length;}
-function allComplete(){return players.every(p=>completedCount(p)===CATEGORIES.length);}
-function previewScore(id){
-  if(rollsUsed===0||dice.some(v=>v===0))return "–";
-  const bonus=(id!=="kniffel"&&isKniffel(dice)&&current().scores.kniffel===50)?100:0;
-  return categoryScore(id,dice)+bonus;
-}
-function updatePreviewColors(){
-  const color=current().color.hex;
-  document.documentElement.style.setProperty("--active",color);
-  document.documentElement.style.setProperty("--active-glow",color+"66");
-  turnLabel.style.borderColor=color;
-  scoreOwner.style.color=color;
-}
-function renderSetup(){
-  countOptions.querySelectorAll("button").forEach(button=>{
-    button.classList.toggle("active",Number(button.dataset.count)===playerCount);
-  });
-  colorPreview.innerHTML="";
-  COLORS.slice(0,playerCount).forEach((color,index)=>{
-    const chip=document.createElement("div");chip.className="color-chip";
-    const dot=document.createElement("span");dot.className="color-dot";dot.style.background=color.hex;dot.style.color=color.hex;
-    const text=document.createElement("span");text.textContent="Spieler "+(index+1)+" · "+color.name;
-    chip.append(dot,text);colorPreview.appendChild(chip);
-  });
-}
-function startGame(){
-  stopTimers();
-  players=Array.from({length:playerCount},(_,i)=>makePlayer(i));
-  currentPlayer=0;dice=[0,0,0,0,0];held=[false,false,false,false,false];rollsUsed=0;
-  rolling=false;gameFinished=false;turnSerial++;
-  setupEl.style.display="none";gameEl.style.display="flex";endScreen.style.display="none";
-  statusMessage.textContent="";
-  renderAll();
-}
-function stopTimers(){
-  if(turnTimer!==null){clearTimeout(turnTimer);turnTimer=null;}
-  if(rollAnimationTimer!==null){clearInterval(rollAnimationTimer);rollAnimationTimer=null;}
-}
-function renderDie(value,index){
-  const button=document.createElement("button");
-  button.type="button";button.className="die"+(held[index]?" held":"");
-  button.setAttribute("aria-label",value?"Würfel "+(index+1)+", zeigt "+value+(held[index]?", wird behalten":"") : "Würfel "+(index+1));
-  button.disabled=rollsUsed===0||rollsUsed>=3||rolling||gameFinished;
-  const pipBox=document.createElement("span");pipBox.className="pips";
-  if(value){
-    const active=new Set(DICE_PIPS[value]);
-    PIP_POSITIONS.forEach(position=>{
-      const pip=document.createElement("span");pip.className="pip";
-      if(!active.has(position))pip.style.visibility="hidden";
-      pipBox.appendChild(pip);
-    });
+function straight(v,n){
+  const s=[...new Set(v)].sort();
+  let best=1,run=1;
+  for(let i=1;i<s.length;i++){
+    run=s[i]===s[i-1]+1?run+1:1;
+    best=Math.max(best,run);
   }
-  button.appendChild(pipBox);
-  button.addEventListener("click",()=>toggleHold(index));
-  return button;
+  return best>=n;
+}
+function playerTotal(player){
+  const upper=categories.slice(0,6)
+    .reduce((a,c)=>a+(player.scores[c.id]??0),0);
+  const lower=categories.slice(6)
+    .reduce((a,c)=>a+(player.scores[c.id]??0),0);
+  return upper+lower+(upper>=63?35:0)+player.kniffelBonus;
+}
+function upperTotal(player){
+  return categories.slice(0,6)
+    .reduce((a,c)=>a+(player.scores[c.id]??0),0);
+}
+function remaining(player){
+  return categories.filter(c=>player.scores[c.id]===null).length;
+}
+function current(){return players[currentPlayer]}
+function setStatus(text){$("status").textContent=text}
+
+function startGame(){
+  const count=Number($("playerCount").value);
+  players=Array.from({length:count},(_,i)=>({
+    name:"SPIELER "+(i+1),
+    color:colors[i],
+    scores:Object.fromEntries(categories.map(c=>[c.id,null])),
+    kniffelBonus:0
+  }));
+  currentPlayer=0;
+  finished=false;
+  resetTurn();
+  $("setup").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  setStatus("Das Spiel beginnt! Viel Glück!");
+  render();
+}
+function resetTurn(){
+  dice=[0,0,0,0,0];
+  kept=[false,false,false,false,false];
+  rolls=0;
+}
+function renderPlayers(){
+  const area=$("players");
+  area.innerHTML="";
+  players.forEach((p,i)=>{
+    const div=document.createElement("div");
+    div.className="player"+(i===currentPlayer&&!finished?" active":"");
+    div.style.borderColor=i===currentPlayer&&!finished?p.color:"";
+    const done=13-remaining(p);
+    div.innerHTML=
+      `<strong>${p.name}</strong>`+
+      `<div class="points">${playerTotal(p)} P.</div>`+
+      `<div>${done}/13 Felder</div>`;
+    area.appendChild(div);
+  });
 }
 function renderDice(){
-  diceRow.innerHTML="";
-  dice.forEach((value,index)=>diceRow.appendChild(renderDie(value,index)));
-  rollCounter.textContent=rollsUsed+" / 3 Würfe";
-  rollButton.disabled=rolling||gameFinished||rollsUsed>=3;
-  const remaining=3-rollsUsed;
-  rollButton.innerHTML=rollsUsed>=3?"WÜRFE AUFGEBRAUCHT<small>JETZT PUNKTE EINTRAGEN</small>":"WÜRFELN<small>NOCH "+remaining+" "+(remaining===1?"WURF":"WÜRFE")+" MÖGLICH</small>";
-  clearHoldsButton.disabled=rolling||rollsUsed===0||!held.some(Boolean);
-  resetTurnButton.disabled=rolling||rollsUsed===0;
-  if(rollsUsed===0)diceInstruction.textContent="Tippe auf WÜRFELN, um deinen ersten Wurf zu starten.";
-  else if(rollsUsed>=3)diceInstruction.textContent="Deine drei Würfe sind vorbei. Wähle jetzt ein freies Punktefeld.";
-  else diceInstruction.textContent="Tippe Würfel an, die beim nächsten Wurf liegen bleiben sollen.";
-}
-function toggleHold(index){
-  if(rollsUsed===0||rollsUsed>=3||rolling||gameFinished||dice[index]===0)return;
-  held[index]=!held[index];renderDice();
-}
-function rollDice(){
-  if(rolling||gameFinished||rollsUsed>=3)return;
-  if(turnTimer!==null){clearTimeout(turnTimer);turnTimer=null;}
-  rolling=true;renderDice();
-  diceRow.querySelectorAll(".die").forEach(d=>{if(!d.classList.contains("held"))d.classList.add("rolling");});
-  let ticks=0;
-  rollAnimationTimer=setInterval(()=>{
-    dice=dice.map((value,index)=>held[index]?value:Math.floor(Math.random()*6)+1);
-    renderDice();
-    diceRow.querySelectorAll(".die").forEach(d=>{if(!d.classList.contains("held"))d.classList.add("rolling");});
-    ticks++;
-    if(ticks>=7){
-      clearInterval(rollAnimationTimer);rollAnimationTimer=null;
-      dice=dice.map((value,index)=>held[index]?value:Math.floor(Math.random()*6)+1);
-      rollsUsed++;rolling=false;
-      renderAll();
-      statusMessage.textContent=rollsUsed===3?"Letzter Wurf! Jetzt ein Punktefeld auswählen.":"Wurf "+rollsUsed+" von 3 – Würfel zum Behalten antippen.";
-    }
-  },65);
-}
-function renderPlayersStrip(){
-  playersStrip.innerHTML="";
-  players.forEach((player,index)=>{
-    const chip=document.createElement("div");chip.className="player-chip"+(index===currentPlayer?" current":"");
-    if(index===currentPlayer){chip.style.borderColor=player.color.hex;chip.style.boxShadow="0 0 10px "+player.color.hex+"55";}
-    const name=document.createElement("strong");name.textContent="Spieler "+(index+1);name.style.color=player.color.hex;
-    const points=document.createElement("span");points.textContent=totalScore(player)+" Punkte · "+completedCount(player)+"/13";
-    chip.append(name,points);playersStrip.appendChild(chip);
+  const area=$("diceArea");
+  area.innerHTML="";
+  dice.forEach((value,i)=>{
+    const b=document.createElement("button");
+    b.className="die"+(kept[i]?" kept":"");
+    b.textContent=value?["","⚀","⚁","⚂","⚃","⚄","⚅"][value]:"–";
+    b.disabled=rolls===0||finished;
+    b.setAttribute("aria-label",`Würfel ${i+1}: ${value}`);
+    b.addEventListener("click",()=>{
+      kept[i]=!kept[i];
+      renderDice();
+    });
+    area.appendChild(b);
   });
+  $("rollLabel").textContent=`WÜRFE: ${rolls} / 3`;
+  $("keepLabel").textContent=`GEHALTEN: ${kept.filter(Boolean).length}`;
+  $("rollBtn").disabled=rolls>=3||finished;
+  $("finishBtn").disabled=rolls===0||finished;
+  $("hint").textContent=rolls===0
+    ?"Drücke WÜRFELN. Danach kannst du Würfel antippen und behalten."
+    :"Gelbe Würfel bleiben beim nächsten Wurf liegen. Erneutes Antippen gibt sie frei.";
 }
-function makeScoreButton(player,id,isCurrent){
-  const score=player.scores[id];
-  const button=document.createElement("button");button.type="button";button.className="score-cell";
-  if(score!==null){button.textContent=score;button.disabled=true;button.classList.add("done");if(score===0)button.classList.add("zero");}
-  else if(isCurrent){
-    const possible=previewScore(id);
-    button.textContent=possible;
-    button.disabled=rollsUsed===0||rolling||gameFinished;
-    if(!button.disabled)button.classList.add("available");
-    if(possible===0)button.classList.add("zero");
-    button.title="Dieses Feld mit "+possible+" Punkten eintragen";
-    button.addEventListener("click",()=>recordScore(id));
-  }else{button.textContent="–";button.disabled=true;}
-  return button;
-}
-function renderDesktopScore(){
-  const table=document.createElement("table");table.className="desktop-score";
-  const thead=document.createElement("thead");const headRow=document.createElement("tr");
-  const categoryHead=document.createElement("th");categoryHead.textContent="PUNKTE";headRow.appendChild(categoryHead);
-  players.forEach((player,index)=>{
-    const th=document.createElement("th");th.textContent="Spieler "+(index+1);
-    th.style.color=player.color.hex;
-    if(index===currentPlayer)th.classList.add("active-col");
-    headRow.appendChild(th);
-  });
-  thead.appendChild(headRow);table.appendChild(thead);
-  const tbody=document.createElement("tbody");
-  let previousGroup="";
-  CATEGORIES.forEach(category=>{
-    if(category.group!==previousGroup){
-      const groupRow=document.createElement("tr");groupRow.className="group-row";
-      const groupCell=document.createElement("td");groupCell.colSpan=players.length+1;groupCell.textContent=category.group==="OBEN"?"OBERER BLOCK":"UNTERER BLOCK";
-      groupRow.appendChild(groupCell);tbody.appendChild(groupRow);previousGroup=category.group;
+function renderScore(){
+  const p=current();
+  const body=$("scoreBody");
+  body.innerHTML="";
+  categories.forEach(c=>{
+    if(c.group){
+      const tr=document.createElement("tr");
+      tr.className="group";
+      const td=document.createElement("td");
+      td.colSpan=3;
+      td.textContent=c.group;
+      tr.appendChild(td);
+      body.appendChild(tr);
     }
     const tr=document.createElement("tr");
-    const label=document.createElement("td");label.className="cat-name";label.textContent=category.label;tr.appendChild(label);
-    players.forEach((player,index)=>{
-      const td=document.createElement("td");if(index===currentPlayer)td.classList.add("active-col");
-      td.appendChild(makeScoreButton(player,category.id,index===currentPlayer));tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
+    const name=document.createElement("td");
+    name.textContent=c.name;
+    tr.appendChild(name);
+    const points=document.createElement("td");
+    points.textContent=p.scores[c.id]===null?"—":p.scores[c.id];
+    tr.appendChild(points);
+    const cell=document.createElement("td");
+    const btn=document.createElement("button");
+    btn.className="scorebtn"+
+      (p.scores[c.id]!==null?" done":(rolls>0?" ready":""));
+    btn.textContent=p.scores[c.id]===null
+      ?(rolls>0?c.score(dice)+" P.":"—"):"✓";
+    btn.disabled=p.scores[c.id]!==null||rolls===0||finished;
+    btn.addEventListener("click",()=>enterScore(c));
+    cell.appendChild(btn);
+    tr.appendChild(cell);
+    body.appendChild(tr);
   });
-  const summaries=[
-    {label:"Oben",fn:upperSubtotal},
-    {label:"Bonus (ab 63: +35)",fn:upperBonus},
-    {label:"Unten",fn:lowerSubtotal},
-    {label:"Kniffel-Bonus",fn:p=>p.kniffelBonus},
-    {label:"GESAMT",fn:totalScore,total:true}
-  ];
-  summaries.forEach(item=>{
-    const tr=document.createElement("tr");tr.className="summary-row"+(item.total?" total":"");
-    const label=document.createElement("td");label.textContent=item.label;tr.appendChild(label);
-    players.forEach((player,index)=>{
-      const td=document.createElement("td");if(index===currentPlayer)td.classList.add("active-col");td.textContent=item.fn(player);tr.appendChild(td);
-    });tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);desktopScoreWrap.replaceChildren(table);
+  $("scoreTotal").textContent=playerTotal(p)+" P.";
+  $("grandTotal").textContent=playerTotal(p)+
+    (upperTotal(p)>=63?" (+35 Bonus)":"");
+  $("scoreTitle").textContent=p.name+" – PUNKTE";
 }
-function renderMobileScore(){
-  mobileScore.innerHTML="";
-  const player=current();
-  let group="";
-  CATEGORIES.forEach(category=>{
-    if(category.group!==group){
-      const heading=document.createElement("div");heading.className="mobile-group";heading.textContent=category.group==="OBEN"?"OBERER BLOCK":"UNTERER BLOCK";
-      mobileScore.appendChild(heading);group=category.group;
-    }
-    const score=player.scores[category.id];
-    const button=document.createElement("button");button.type="button";button.className="mobile-category";
-    const left=document.createElement("span");left.style.minWidth="0";
-    const label=document.createElement("span");label.className="category-label";label.textContent=category.label;
-    const hint=document.createElement("span");hint.className="category-hint";hint.textContent=category.hint;
-    left.append(label,hint);
-    const points=document.createElement("span");points.className="category-points";
-    if(score!==null){button.classList.add("done");if(score===0)button.classList.add("zero");points.textContent=score;button.disabled=true;}
-    else{
-      const possible=previewScore(category.id);points.textContent=possible;
-      button.disabled=rollsUsed===0||rolling||gameFinished;
-      if(!button.disabled)button.classList.add("available");
-      if(possible===0)button.classList.add("zero");
-      button.addEventListener("click",()=>recordScore(category.id));
-    }
-    button.append(left,points);mobileScore.appendChild(button);
-  });
-  const totals=document.createElement("div");totals.className="mobile-totals";
-  const items=[
-    ["Oberer Block",upperSubtotal(player)],
-    ["Bonus",upperBonus(player)],
-    ["Unterer Block",lowerSubtotal(player)],
-    ["Kniffel-Bonus",player.kniffelBonus],
-    ["Gesamt",totalScore(player),true]
-  ];
-  items.forEach(([label,value,isFinal])=>{
-    const item=document.createElement("div");item.className="mobile-total"+(isFinal?" final":"");
-    const strong=document.createElement("strong");strong.textContent=value;
-    item.append(document.createTextNode(label),strong);totals.appendChild(item);
-  });
-  mobileScore.appendChild(totals);
+function render(){
+  const p=current();
+  $("turnPill").textContent=p.name;
+  $("turnPill").style.color=p.color;
+  $("roundPill").textContent=`RUNDE ${14-remaining(p)} / 13`;
+  $("totalPill").textContent="PUNKTE: "+playerTotal(p);
+  $("diceTitle").textContent=p.name+" – WÜRFEL";
+  renderPlayers();
+  renderDice();
+  renderScore();
 }
-function updateHeader(){
-  const player=current();
-  turnName.textContent="Spieler "+(currentPlayer+1)+" ist am Zug";
-  turnMeta.textContent="Runde "+(Math.min(13,completedCount(player)+1))+" von 13 · Wurf "+rollsUsed+" von 3";
-  scoreOwner.textContent="Spieler "+(currentPlayer+1);
-  updatePreviewColors();
+function rollDice(){
+  if(rolls>=3||finished)return;
+  dice=dice.map((v,i)=>kept[i]?v:1+Math.floor(Math.random()*6));
+  rolls++;
+  render();
+  setStatus(rolls===3
+    ?"Dritter Wurf! Jetzt Punkte eintragen."
+    :`Wurf ${rolls} von 3. Behalte Würfel durch Antippen.`
+  );
 }
-function renderAll(){
-  if(!players.length)return;
-  updateHeader();renderPlayersStrip();renderDice();renderDesktopScore();renderMobileScore();
-}
-function recordScore(id){
-  if(gameFinished||rolling||rollsUsed===0||current().scores[id]!==null)return;
-  const player=current();
-  const extraKniffel=isKniffel(dice)&&player.scores.kniffel===50;
-  const score=categoryScore(id,dice);
-  player.scores[id]=score;
-  if(extraKniffel)player.kniffelBonus+=100;
-  const chosen=CATEGORIES.find(category=>category.id===id);
-  statusMessage.textContent="Spieler "+(currentPlayer+1)+": "+chosen.label+" = "+score+" Punkte"+(extraKniffel?" · +100 Kniffel-Bonus":"");
-  if(allComplete()){
-    finishGame();return;
+function enterScore(category){
+  const p=current();
+  if(p.scores[category.id]!==null||rolls===0||finished)return;
+  const points=category.score(dice);
+  p.scores[category.id]=points;
+
+  // Zusatzbonus für weitere Kniffel nach einem bereits gewerteten Kniffel.
+  if(category.id!=="kniffel" &&
+     p.scores.kniffel===50 &&
+     sameAtLeast(dice,5)){
+    p.kniffelBonus+=100;
   }
-  currentPlayer=(currentPlayer+1)%players.length;
-  dice=[0,0,0,0,0];held=[false,false,false,false,false];rollsUsed=0;rolling=false;
-  const thisTurn=++turnSerial;
-  renderAll();
-  statusMessage.textContent="Spieler "+(currentPlayer+1)+" ist dran!";
-  turnTimer=setTimeout(()=>{
-    if(thisTurn!==turnSerial||gameFinished)return;
-    statusMessage.textContent="";renderAll();turnTimer=null;
-  },750);
+
+  setStatus(`${p.name}: ${category.name} – ${points} Punkte.`);
+  resetTurn();
+
+  if(players.every(p=>remaining(p)===0)){
+    endGame();
+    return;
+  }
+
+  // Nächsten Spieler suchen, der noch Felder offen hat.
+  for(let step=1;step<=players.length;step++){
+    const next=(currentPlayer+step)%players.length;
+    if(remaining(players[next])>0){
+      currentPlayer=next;
+      break;
+    }
+  }
+
+  render();
+  setView("dice");
 }
-function finishGame(){
-  gameFinished=true;turnSerial++;stopTimers();
-  renderAll();rollButton.disabled=true;
-  const sorted=players.map((player,index)=>({player,index,score:totalScore(player)})).sort((a,b)=>b.score-a.score);
-  finalResults.innerHTML="";
-  sorted.forEach((entry,rank)=>{
-    const row=document.createElement("div");row.className="final-result"+(rank===0?" winner":"");
-    const name=document.createElement("strong");name.textContent=(rank===0?"🏆 ":(rank+1)+". ")+"Spieler "+(entry.index+1);name.style.color=entry.player.color.hex;
-    const score=document.createElement("span");score.textContent=entry.score+" Punkte";
-    row.append(name,score);finalResults.appendChild(row);
+function finishRound(){
+  if(rolls===0||finished)return;
+  const category=categories.find(c=>current().scores[c.id]===null);
+  if(category)enterScore(category);
+}
+function endGame(){
+  finished=true;
+  $("game").classList.add("hidden");
+  $("result").classList.remove("hidden");
+
+  const ranking=[...players].sort((a,b)=>playerTotal(b)-playerTotal(a));
+  $("ranking").innerHTML="";
+  ranking.forEach((p,i)=>{
+    const row=document.createElement("div");
+    row.style.cssText=
+      "display:flex;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid #344477;font-size:18px;color:"+p.color;
+    const name=document.createElement("strong");
+    name.textContent=(i+1)+". "+p.name;
+    const points=document.createElement("strong");
+    points.textContent=playerTotal(p)+" PUNKTE";
+    row.append(name,points);
+    $("ranking").appendChild(row);
   });
-  endScreen.style.display="block";
-  statusMessage.textContent="Alle Felder sind ausgefüllt – das Spiel ist vorbei!";
-  endScreen.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
-function resetCurrentTurn(){
-  if(rolling||gameFinished||rollsUsed===0)return;
-  if(!confirm("Diesen Zug wirklich zurücksetzen? Die bisherigen Würfe gehen verloren."))return;
-  dice=[0,0,0,0,0];held=[false,false,false,false,false];rollsUsed=0;
-  statusMessage.textContent="Der Zug wurde zurückgesetzt.";renderAll();
+function setView(view){
+  $("layout").dataset.view=view;
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.classList.toggle("active",b.dataset.view===view);
+  });
 }
-countOptions.addEventListener("click",event=>{
-  const button=event.target.closest("button[data-count]");if(!button)return;
-  playerCount=Number(button.dataset.count);renderSetup();
+
+$("startBtn").addEventListener("click",startGame);
+$("rollBtn").addEventListener("click",rollDice);
+$("finishBtn").addEventListener("click",finishRound);
+$("newGameBtn").addEventListener("click",()=>{
+  $("result").classList.add("hidden");
+  $("setup").classList.remove("hidden");
 });
-$("startButton").addEventListener("click",startGame);
-rollButton.addEventListener("click",rollDice);
-clearHoldsButton.addEventListener("click",()=>{held=held.map(()=>false);renderDice();});
-resetTurnButton.addEventListener("click",resetCurrentTurn);
-$("againButton").addEventListener("click",startGame);
-$("setupButton").addEventListener("click",()=>{
-  stopTimers();turnSerial++;players=[];gameFinished=false;gameEl.style.display="none";setupEl.style.display="flex";renderSetup();
+document.querySelectorAll(".tab").forEach(b=>{
+  b.addEventListener("click",()=>setView(b.dataset.view));
 });
-renderSetup();
-})();
 </script>
 </body>
 </html>

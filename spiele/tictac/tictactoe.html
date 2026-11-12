@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -225,6 +224,25 @@ h1 {
   filter: brightness(1.3);
 }
 
+.leave-btn {
+  display:inline-block;
+  margin-top:10px;
+  background:transparent;
+  border:1px solid #783d91;
+  border-radius:8px;
+  color:#35d8ff;
+  padding:8px 14px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+}
+.leave-btn:hover {
+  background:#201431;
+  color:#fff;
+  border-color:#ff39d6;
+}
+
 .hint {
   margin: 14px 0 0;
   color: #a99ab8;
@@ -288,6 +306,12 @@ h1 {
     ↻ NEUE RUNDE
   </button>
 
+  <div>
+    <button class="leave-btn" id="leaveBtn" onclick="leaveGame()" style="display:none;">
+      ← Zurück zum Raum
+    </button>
+  </div>
+
   <p class="hint">
     ZWEI SPIELER · EIN HANDY · ABWECHSELND SPIELEN
   </p>
@@ -317,7 +341,26 @@ const wins = [
 let board = Array(9).fill('');
 let current = 'X';
 let finished = false;
+
 let winningCombo = null;
+
+const onlineParams = new URLSearchParams(location.search);
+const onlineRoom = (onlineParams.get('room') || '').trim().toUpperCase();
+let onlineID = '';
+let onlineMark = '';
+let onlineGame = null;
+let onlineOpponent = 'Gegner';
+let onlineName = (onlineParams.get('name') || 'Spieler').trim().slice(0,24);
+if(onlineRoom){
+  try{
+    onlineID = sessionStorage.getItem('tg-player-id') || '';
+    if(!onlineID){
+      onlineID = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+      sessionStorage.setItem('tg-player-id', onlineID);
+    }
+  }catch(e){ onlineID = String(Date.now()) + Math.random(); }
+}
+
 
 function updateStatus() {
 
@@ -411,6 +454,8 @@ function drawWinLine(combo) {
 
 function play(index) {
 
+  if(onlineRoom){ multiplayerMove(index); return; }
+
   if(finished || board[index]) return;
 
   board[index] = current;
@@ -488,6 +533,8 @@ function play(index) {
 
 function newGame() {
 
+  if(onlineRoom){ multiplayerReset(); return; }
+
   board = Array(9).fill('');
   current = 'X';
   finished = false;
@@ -513,6 +560,130 @@ function newGame() {
 
 }
 
+
+async function multiplayerMove(index){
+  if(!onlineGame || onlineGame.status !== 'active' || onlineMark !== onlineGame.current) return;
+  try{
+    const response = await fetch('/api/tictactoe?room=' + encodeURIComponent(onlineRoom) + '&action=move', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:onlineID,index})
+    });
+    if(!response.ok){
+      const detail=(await response.text()).trim();
+      message.textContent=detail || 'Zug konnte nicht übertragen werden.';
+    }
+    await refreshMultiplayer();
+  }catch(e){ message.textContent='Verbindung zum Connector unterbrochen.'; }
+}
+
+async function multiplayerReset(){
+  if(!onlineGame || onlineGame.status !== 'finished') return;
+  try{
+    const response = await fetch('/api/tictactoe?room=' + encodeURIComponent(onlineRoom) + '&action=reset', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:onlineID})
+    });
+    if(!response.ok){
+      const detail=(await response.text()).trim();
+      message.textContent=detail || 'Neue Runde konnte nicht gestartet werden.';
+    }
+    await refreshMultiplayer();
+  }catch(e){ message.textContent='Verbindung zum Connector unterbrochen.'; }
+}
+
+function renderMultiplayer(game){
+  onlineGame=game;
+  onlineMark = game.xId===onlineID ? 'X' : game.oId===onlineID ? 'O' : '';
+  onlineOpponent = onlineMark==='X' ? game.oName : game.xName;
+  board = Array.isArray(game.board) ? game.board.slice() : Array(9).fill('');
+  current = game.current || 'X';
+  if(game.status==='finished' && game.winner && game.winner!=='draw') current=game.winner;
+  finished = game.status==='finished';
+  winningCombo = game.winner && game.winner!=='draw'
+    ? wins.find(combo=>combo.every(i=>board[i]===game.winner)) || null
+    : null;
+
+  cells.forEach((cell,index)=>{
+    const mark=board[index] || '';
+    cell.className='cell';
+    if(mark){
+      cell.classList.add(mark==='X'?'x':'o');
+      cell.innerHTML=`<span class="symbol">${mark==='X'?'✕':'○'}</span>`;
+      cell.setAttribute('aria-label',`Feld ${index+1}: ${mark==='X'?'Kreuz':'Kreis'}`);
+    }else{
+      cell.innerHTML='';
+      cell.setAttribute('aria-label',`Feld ${index+1}`);
+    }
+    if(winningCombo && winningCombo.includes(index)) cell.classList.add('win');
+    cell.disabled = game.status!=='active' || Boolean(mark) || current!==onlineMark;
+  });
+
+  if(game.status==='finished'){
+    if(game.winner==='draw'){
+      line.classList.remove('show');
+      status.className='status neutral';
+      status.textContent='Unentschieden!';
+      message.textContent='Keiner hat gewonnen – noch eine Runde?';
+    }else{
+      const wonByX=game.winner==='X';
+      const winnerName=wonByX?game.xName:game.oName;
+      status.className=`status ${wonByX?'pink':'blue'}`;
+      status.innerHTML=`<span>${winnerName} hat gewonnen!</span>`;
+      message.textContent=game.winner===onlineMark?'🎉 Du hast gewonnen! 🎉':`🎉 ${winnerName} gewinnt die Runde! 🎉`;
+      if(winningCombo) drawWinLine(winningCombo);
+    }
+    reset.disabled=false;
+    reset.textContent='↻ NOCHMAL SPIELEN';
+    return;
+  }
+
+  line.classList.remove('show');
+  reset.disabled=true;
+  reset.textContent='↻ RUNDE LÄUFT';
+  if(game.status!=='active'){
+    status.className='status neutral';
+    status.textContent=game.status==='declined'?'Einladung abgelehnt':'Warte auf den Spielstart …';
+    message.textContent='Bitte zum Connector zurückkehren.';
+    return;
+  }
+
+  const isX=current==='X';
+  status.className=`status ${isX?'pink':'blue'}`;
+  status.innerHTML=`<span class="mark">${isX?'✕':'○'}</span><span>${current===onlineMark?'Du bist dran!':onlineOpponent+' ist dran!'}</span>`;
+  message.textContent=current===onlineMark?'Du bist dran – wähle ein Feld.':'Warte auf den Zug deines Gegners.';
+}
+
+async function multiplayerHeartbeat(){
+  if(!onlineRoom || !onlineID) return;
+  try{
+    await fetch('/api/presence', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
+    });
+  }catch(e){}
+}
+async function refreshMultiplayer(){
+  try{
+    const response=await fetch('/api/tictactoe?room='+encodeURIComponent(onlineRoom)+'&id='+encodeURIComponent(onlineID),{cache:'no-store'});
+    if(!response.ok) throw Error('Spielraum nicht erreichbar.');
+    const data=await response.json();
+    if(!data.game){
+      status.className='status neutral';
+      status.textContent='Keine aktive Partie gefunden';
+      message.textContent='Bitte öffne Tic Tac Toe über eine Einladung im Connector.';
+      cells.forEach(cell=>cell.disabled=true);
+      reset.disabled=true;
+      return;
+    }
+    renderMultiplayer(data.game);
+  }catch(e){
+    status.className='status neutral';
+    status.textContent='Verbindung wird gesucht …';
+    message.textContent='Der Connector ist momentan nicht erreichbar.';
+  }
+}
+
 cells.forEach(cell => {
 
   cell.addEventListener('click', () => {
@@ -530,6 +701,25 @@ window.addEventListener('resize', () => {
   }
 
 });
+
+function leaveGame() {
+  if (onlineRoom) {
+    location.href = "/connector?room=" + encodeURIComponent(onlineRoom);
+  } else {
+    location.href = "/connector";
+  }
+}
+window.leaveGame = leaveGame;
+
+if(onlineRoom){
+  const lb = document.getElementById("leaveBtn");
+  if (lb) lb.style.display = "inline-block";
+  document.querySelector('.hint').textContent='ONLINE-MULTIPLAYER · '+onlineRoom+' · '+(onlineID?'Verbunden':'Spielerkennung fehlt');
+  multiplayerHeartbeat();
+  setInterval(multiplayerHeartbeat,5000);
+  refreshMultiplayer();
+  setInterval(refreshMultiplayer,700);
+}
 
 })();
 </script>

@@ -190,6 +190,25 @@ h1 {
   background:#48205e;
 }
 
+.leave-btn {
+  display:inline-block;
+  margin-top:10px;
+  background:transparent;
+  border:1px solid #69418b;
+  border-radius:8px;
+  color:#e5a2ff;
+  padding:8px 14px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+}
+.leave-btn:hover {
+  background:#24132f;
+  color:#fff;
+  border-color:#a855f7;
+}
+
 .hint {
   color:#82758f;
   font-size:13px;
@@ -243,17 +262,31 @@ h1 {
     Tippe auf eine Spalte. Dein Stein fällt nach unten!
   </div>
 
-  <button class="reset" id="resetBtn" onclick="newGame()">
+  <button class="reset" id="resetBtn" onclick="handleReset()">
     ↻ NEUES SPIEL
   </button>
 
-  <div class="hint">
+  <div>
+    <button class="leave-btn" id="leaveBtn" onclick="leaveGame()" style="display:none;">
+      ← Zurück zum Raum
+    </button>
+  </div>
+
+  <div class="hint" id="gameHint">
     Vier Steine in eine Reihe – waagerecht, senkrecht oder diagonal!
   </div>
 
 </div>
 
 <script>
+const params = new URLSearchParams(location.search);
+const onlineRoom = (params.get("room") || "").trim().toUpperCase();
+const onlineName = (params.get("name") || "").trim() || "Spieler";
+let onlineID = "";
+try {
+  onlineID = sessionStorage.getItem("tg-player-id") || "";
+} catch(e) {}
+
 const COLS = 7;
 const ROWS = 6;
 
@@ -262,8 +295,19 @@ let current;
 let gameOver = false;
 let redWins = 0;
 let blueWins = 0;
+let onlineGame = null;
+let onlineColor = "";
+let onlineOpponent = "";
 
 const board = document.getElementById("board");
+
+function handleReset() {
+  if (onlineRoom) {
+    multiplayerReset();
+  } else {
+    newGame();
+  }
+}
 
 function newGame() {
   grid = Array.from(
@@ -307,7 +351,29 @@ function drawBoard() {
   }
 }
 
-function playColumn(c) {
+async function playColumn(c) {
+  if (onlineRoom) {
+    if (gameOver || !onlineGame || onlineGame.status !== "active") return;
+    if (current !== onlineColor) return;
+    try {
+      const resp = await fetch("/api/viergewinnt?room=" + encodeURIComponent(onlineRoom) + "&action=move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: onlineID, column: c })
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        document.getElementById("message").textContent = txt || "Zug ungültig.";
+        return;
+      }
+      const data = await resp.json();
+      if (data.game) renderMultiplayer(data.game);
+    } catch(e) {
+      document.getElementById("message").textContent = "Verbindung zum Server verloren.";
+    }
+    return;
+  }
+
   if (gameOver) return;
 
   // Freie Position von unten suchen
@@ -420,10 +486,15 @@ function updateDisplay() {
   const turn = document.getElementById("turn");
 
   if (!gameOver) {
-    turn.textContent =
-      current === "red"
-        ? "Rot ist am Zug"
-        : "Blau ist am Zug";
+    if (onlineRoom) {
+      const isMyTurn = (current === onlineColor);
+      turn.textContent = isMyTurn ? "Du bist am Zug!" : (onlineOpponent ? onlineOpponent + " ist am Zug" : (current === "red" ? "Rot ist am Zug" : "Blau ist am Zug"));
+    } else {
+      turn.textContent =
+        current === "red"
+          ? "Rot ist am Zug"
+          : "Blau ist am Zug";
+    }
 
     turn.style.color =
       current === "red"
@@ -438,7 +509,128 @@ function updateDisplay() {
   document.getElementById("blueWins").textContent = blueWins;
 }
 
-newGame();
+function renderMultiplayer(game) {
+  onlineGame = game;
+  onlineColor = (game.redId === onlineID) ? "red" : (game.blueId === onlineID) ? "blue" : "";
+  onlineOpponent = (onlineColor === "red") ? game.blueName : game.redName;
+  current = game.current || "red";
+  gameOver = (game.status === "finished");
+
+  document.querySelector(".score.red").childNodes[0].textContent = (game.redName || "Rot") + ": ";
+  document.querySelector(".score.blue").childNodes[0].textContent = (game.blueName || "Blau") + ": ";
+
+  // update local grid representation
+  grid = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  if (Array.isArray(game.grid)) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (game.grid[r] && game.grid[r][c]) {
+          grid[r][c] = game.grid[r][c];
+        }
+      }
+    }
+  }
+
+  drawBoard();
+
+  if (game.status === "finished") {
+    if (game.winning && Array.isArray(game.winning)) {
+      game.winning.forEach(([r, c]) => {
+        if (board.children[r * COLS + c]) {
+          board.children[r * COLS + c].classList.add("win");
+        }
+      });
+    }
+
+    const resetBtn = document.getElementById("resetBtn");
+    resetBtn.disabled = false;
+    resetBtn.textContent = "↻ NOCHMAL SPIELEN";
+
+    if (game.winner === "draw") {
+      document.getElementById("message").textContent = "Unentschieden! Das war knapp.";
+    } else {
+      const winnerName = (game.winner === "red") ? game.redName : game.blueName;
+      if (game.winner === onlineColor) {
+        document.getElementById("message").textContent = "🎉 Du hast gewonnen! 🎉";
+      } else {
+        document.getElementById("message").textContent = "🎉 " + winnerName + " hat gewonnen! 🎉";
+      }
+    }
+    updateDisplay();
+    return;
+  }
+
+  const resetBtn = document.getElementById("resetBtn");
+  resetBtn.disabled = true;
+  resetBtn.textContent = "↻ RUNDE LÄUFT";
+
+  if (game.status !== "active") {
+    document.getElementById("message").textContent = "Warte auf Spielbeginn...";
+    return;
+  }
+
+  document.getElementById("message").textContent = (current === onlineColor)
+    ? "Du bist dran – tippe auf eine Spalte!"
+    : "Warte auf den Zug deines Gegners...";
+
+  updateDisplay();
+}
+
+async function multiplayerReset() {
+  if (!onlineGame || onlineGame.status !== "finished") return;
+  try {
+    const resp = await fetch("/api/viergewinnt?room=" + encodeURIComponent(onlineRoom) + "&action=reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: onlineID })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.game) renderMultiplayer(data.game);
+    }
+  } catch(e) {}
+}
+
+async function multiplayerHeartbeat() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    await fetch("/api/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room: onlineRoom, id: onlineID, name: onlineName })
+    });
+  } catch(e) {}
+}
+
+async function refreshMultiplayer() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    const resp = await fetch("/api/viergewinnt?room=" + encodeURIComponent(onlineRoom) + "&id=" + encodeURIComponent(onlineID), { cache: "no-store" });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.game) renderMultiplayer(data.game);
+  } catch(e) {}
+}
+
+function leaveGame() {
+  if (onlineRoom) {
+    location.href = "/connector?room=" + encodeURIComponent(onlineRoom);
+  } else {
+    location.href = "/connector";
+  }
+}
+
+if (onlineRoom) {
+  document.getElementById("leaveBtn").style.display = "inline-block";
+  document.getElementById("gameHint").textContent = "ONLINE-MULTIPLAYER · " + onlineRoom + " · " + (onlineID ? "Verbunden" : "Spielerkennung fehlt");
+  newGame();
+  multiplayerHeartbeat();
+  setInterval(multiplayerHeartbeat, 5000);
+  refreshMultiplayer();
+  setInterval(refreshMultiplayer, 700);
+} else {
+  newGame();
+}
 </script>
 
 </body>

@@ -1,962 +1,706 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paare finden</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#172536">
+<title>Paare finden – TrashyGecko</title>
 <style>
-* {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
+:root {
+  --bg:#172332;
+  --panel:#202f40;
+  --panel2:#26384b;
+  --tile:#34475b;
+  --tile-hover:#40566c;
+  --text:#edf2f5;
+  --muted:#aebdca;
+  --accent:#82c5d6;
+  --good:#8ac7a0;
+  --bad:#d88d91;
+  --border:#43596d;
 }
-
-body {
-    margin: 0;
-    min-height: 100vh;
-    padding: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(ellipse at top, #101b35, #080b16 60%, #03050a);
-    color: white;
-    font-family: Arial, sans-serif;
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0;min-height:100vh;padding:16px;
+  background:linear-gradient(145deg,#1d2b3a,#111c29);
+  color:var(--text);font-family:Arial,sans-serif;
 }
-
-.game {
-    width: 100%;
-    max-width: 510px;
-    padding: 20px;
-    background: rgba(5, 10, 24, .97);
-    border: 1px solid #164e75;
-    border-radius: 20px;
-    box-shadow: 0 0 18px #0077ff33, 0 0 40px #00c8ff18;
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{
+  outline:3px solid var(--accent);outline-offset:3px
 }
-
-h1 {
-    margin: 0;
-    text-align: center;
-    font-size: clamp(29px, 8vw, 43px);
-    letter-spacing: 3px;
-    color: #00f0ff;
-    text-shadow: 0 0 8px #00dfff, 0 0 22px #008cff;
+.app{
+  width:min(100%,760px);margin:0 auto;padding:22px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:18px;box-shadow:0 12px 35px #0003;
 }
-
-.subtitle {
-    margin: 5px 0 22px;
-    text-align: center;
-    color: #8298b9;
-    font-size: 11px;
-    letter-spacing: 3px;
+header{text-align:center;margin-bottom:22px}
+h1{margin:0;font-size:clamp(28px,6vw,42px);letter-spacing:1px;font-weight:800}
+.subtitle{margin-top:7px;color:var(--muted);font-size:12px;letter-spacing:2px}
+h2{font-size:20px;text-align:center;margin:10px 0 18px}
+h3{font-size:16px;margin:0 0 12px}
+.screen{display:none}
+.screen.active{display:block}
+.intro{text-align:center;color:var(--muted);line-height:1.55;margin-bottom:20px}
+.section{margin:18px 0}
+.section-label{display:block;font-size:13px;color:var(--muted);margin-bottom:9px}
+.choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.choice-grid.two{grid-template-columns:repeat(2,1fr)}
+.choice{
+  min-height:58px;padding:12px 8px;border-radius:11px;
+  border:1px solid var(--border);background:var(--panel2);
+  color:var(--text);font-weight:bold;
 }
-
-h2 {
-    margin: 12px 0 18px;
-    text-align: center;
-    color: #00eaff;
-    font-size: 19px;
-    text-shadow: 0 0 10px #008cff;
+.choice small{display:block;font-size:11px;font-weight:normal;color:var(--muted);margin-top:4px}
+.choice.active{border:2px solid var(--accent);background:#344c60;color:#fff}
+.pair-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pair-grid .choice{min-height:47px;font-size:18px}
+.primary,.secondary,.danger{
+  width:100%;padding:15px;border-radius:11px;font-weight:bold;
+  border:1px solid var(--border);margin-top:10px;
 }
-
-.intro {
-    text-align: center;
-    font-size: 13px;
-    color: #8da8c8;
-    line-height: 1.6;
-    margin-bottom: 20px;
+.primary{background:#426b7c;color:white;border-color:#719eae}
+.secondary{background:#34475b;color:var(--text)}
+.danger{background:#49343a;color:#f0c5c7}
+.primary:active,.secondary:active,.danger:active,.choice:active{transform:scale(.985)}
+input{
+  width:100%;padding:14px;border-radius:10px;
+  border:1px solid var(--border);background:#142131;color:white;
+  margin:6px 0 10px;
 }
-
-/* MENÜS */
-
-.menu-buttons {
-    display: grid;
-    gap: 13px;
+input::placeholder{color:#8293a4}
+.room-code{font-size:26px;letter-spacing:4px;text-align:center;font-weight:bold;color:var(--accent)}
+.note{font-size:12px;color:var(--muted);line-height:1.5;text-align:center}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.player-box{padding:12px;border:1px solid var(--border);border-radius:10px;background:#1a2938;text-align:center}
+.player-box strong{display:block;margin-bottom:5px}
+.player-box span{font-size:12px;color:var(--muted)}
+.status{padding:12px;border-radius:10px;background:#172536;color:var(--muted);text-align:center;font-size:13px;margin:12px 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{padding:10px 4px;text-align:center;background:#1a2938;border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:11px}
+.stat strong{display:block;font-size:20px;color:var(--text);margin-top:5px;font-variant-numeric:tabular-nums}
+.board{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px;width:100%;max-width:620px;margin:0 auto;
 }
-
-.menu-button,
-.level-button {
-    width: 100%;
-    padding: 20px 15px;
-    border: 1px solid #17608a;
-    border-radius: 13px;
-    background: linear-gradient(145deg, #10243d, #081323);
-    color: white;
-    cursor: pointer;
-    text-align: left;
-    box-shadow: 0 0 10px #0077ff22;
+.tile{
+  min-width:0;aspect-ratio:1/1;padding:2px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid #52687b;border-radius:10px;
+  background:var(--tile);color:#f1f4f6;
+  font-size:clamp(18px,5vw,32px);font-weight:bold;
+  box-shadow:0 3px 0 #101b27;
+  transition:background .12s,border-color .12s;
+  overflow:hidden;
 }
-
-.menu-button:active,
-.level-button:active {
-    transform: scale(.98);
-    box-shadow: 0 0 18px #00dfff77;
+.tile:active:not(:disabled){background:var(--tile-hover)}
+.tile.selected{background:#526a7e;border:2px solid #b6d5df}
+.tile.found{background:#355545;border:2px solid #79b88d;color:#d4f0dc;box-shadow:none}
+.tile.wrong{background:#684247;border:2px solid #d88d91;color:#ffe1e2}
+.tile:disabled{opacity:1;cursor:default}
+.feedback{
+  min-height:42px;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--muted);font-size:14px;margin:10px 0;
 }
-
-.menu-title {
-    display: block;
-    margin-bottom: 8px;
-    color: #00edff;
-    font-size: 21px;
-    font-weight: bold;
+.feedback.good{color:var(--good)}
+.feedback.bad{color:var(--bad)}
+.game-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.game-actions button{margin:0}
+.result{
+  text-align:center;padding:20px 5px;
 }
-
-.menu-button:nth-child(2) .menu-title {
-    color: #ff55dc;
+.result-time{font-size:clamp(38px,10vw,60px);font-weight:bold;margin:15px 0;color:var(--good);font-variant-numeric:tabular-nums}
+.result-text{line-height:1.7;color:var(--muted);white-space:pre-line}
+.footer{text-align:center;color:#8191a0;font-size:11px;margin-top:22px;letter-spacing:1px}
+.hidden{display:none!important}
+@media(max-width:420px){
+  body{padding:7px}
+  .app{padding:14px;border-radius:13px}
+  header{margin-bottom:16px}
+  .board{gap:6px}
+  .tile{border-radius:7px;font-size:clamp(17px,5.7vw,25px)}
+  .choice{min-height:52px}
 }
-
-.menu-description {
-    display: block;
-    color: #a0b5d0;
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-#levelScreen,
-#gameScreen,
-#endScreen {
-    display: none;
-}
-
-.levels {
-    display: grid;
-    gap: 12px;
-}
-
-.level-button {
-    padding: 17px 12px;
-}
-
-.level-title {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 19px;
-    font-weight: bold;
-    color: #00edff;
-}
-
-.level-button:nth-child(2) .level-title {
-    color: #ff55dc;
-}
-
-.level-button:nth-child(3) .level-title {
-    color: #ffc857;
-}
-
-.level-description {
-    display: block;
-    color: #a0b5d0;
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-.back {
-    width: 100%;
-    margin-top: 14px;
-    padding: 13px;
-    border: 1px solid #465b76;
-    border-radius: 10px;
-    background: #101c30;
-    color: #a9c3df;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-/* SPIELANZEIGE */
-
-.stats {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.stat {
-    flex: 1;
-    padding: 10px 4px;
-    text-align: center;
-    border: 1px solid #17436c;
-    border-radius: 10px;
-    background: #091629;
-    color: #8eb5d9;
-    font-size: 10px;
-}
-
-.stat strong {
-    display: block;
-    margin-top: 5px;
-    font-size: 19px;
-    color: #00edff;
-    text-shadow: 0 0 9px #00bfff;
-}
-
-.progress {
-    height: 7px;
-    margin-bottom: 16px;
-    overflow: hidden;
-    background: #14243a;
-    border-radius: 10px;
-}
-
-.progress-bar {
-    width: 10%;
-    height: 100%;
-    background: linear-gradient(90deg, #0077ff, #00f0ff);
-    box-shadow: 0 0 12px #00cfff;
-    transition: width .3s;
-}
-
-.game-info {
-    margin-bottom: 12px;
-    text-align: center;
-    color: #91aaca;
-    font-size: 12px;
-}
-
-/* SPIELFELD */
-
-.board {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-    width: 100%;
-}
-
-.tile {
-    min-width: 0;
-    aspect-ratio: 1 / 1;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #17608a;
-    border-radius: 10px;
-    background: linear-gradient(145deg, #10243d, #081323);
-    color: #00edff;
-    font-size: clamp(17px, 5.5vw, 25px);
-    font-weight: bold;
-    text-shadow: 0 0 8px #00bfff;
-    cursor: pointer;
-    box-shadow: 0 3px 0 #06101e, 0 0 9px #0077ff22;
-    transition: background .15s, border .15s, box-shadow .15s;
-}
-
-.tile:active:not(:disabled) {
-    transform: scale(.95);
-}
-
-.tile.selected {
-    border: 2px solid #00f0ff;
-    background: #07334c;
-    color: white;
-    box-shadow: 0 0 12px #00dfff, inset 0 0 12px #00dfff33;
-}
-
-.tile.found {
-    border: 2px solid #31ff90;
-    background: #073522;
-    color: #5affaa;
-    text-shadow: 0 0 10px #00ff80;
-    box-shadow: 0 0 12px #00ff7755;
-    cursor: default;
-}
-
-.tile.wrong {
-    border: 2px solid #ff386d;
-    background: #451022;
-    color: #ff7797;
-    text-shadow: 0 0 10px #ff1744;
-    box-shadow: 0 0 13px #ff174477;
-}
-
-.tile:disabled {
-    opacity: 1;
-}
-
-/* RÜCKMELDUNG */
-
-.feedback {
-    min-height: 42px;
-    margin: 12px 0 5px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: #8da8c8;
-    font-size: 13px;
-}
-
-.feedback.good {
-    color: #43ff91;
-    text-shadow: 0 0 8px #00ff66;
-}
-
-.feedback.bad {
-    color: #ff7190;
-}
-
-.feedback.complete {
-    color: #00edff;
-    text-shadow: 0 0 9px #008cff;
-}
-
-/* ENDE */
-
-.end-screen {
-    padding: 15px 5px;
-    text-align: center;
-}
-
-.end-screen h2 {
-    color: #00f0ff;
-    font-size: 26px;
-}
-
-.final-score {
-    margin: 20px 0;
-    color: #43ff91;
-    font-size: 57px;
-    font-weight: bold;
-    text-shadow: 0 0 20px #00ff80;
-}
-
-.final-text {
-    margin-bottom: 24px;
-    color: #b4c7df;
-    font-size: 15px;
-    line-height: 1.7;
-    white-space: pre-line;
-}
-
-.restart,
-.change-level {
-    width: 100%;
-    padding: 16px;
-    border-radius: 11px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.restart {
-    border: 1px solid #00eaff;
-    background: #09243a;
-    color: #00edff;
-    box-shadow: 0 0 15px #00aaff33;
-}
-
-.change-level {
-    margin-top: 10px;
-    border: 1px solid #823c91;
-    background: #23102b;
-    color: #ff72e6;
-}
-
-.footer {
-    margin-top: 18px;
-    color: #506783;
-    text-align: center;
-    font-size: 10px;
-    letter-spacing: 2px;
-}
-
-@media (max-width: 380px) {
-    body {
-        padding: 7px;
-    }
-
-    .game {
-        padding: 13px;
-    }
-
-    .board {
-        gap: 6px;
-    }
-
-    .tile {
-        border-radius: 7px;
-    }
-}
-
-@media (max-height: 650px) {
-    body {
-        align-items: flex-start;
-    }
-
-    .game {
-        padding: 14px;
-    }
-
-    .subtitle {
-        margin-bottom: 12px;
-    }
-
-    .board {
-        gap: 5px;
-    }
-
-    .tile {
-        max-height: 65px;
-    }
-
-    .footer {
-        margin-top: 10px;
-    }
+@media(orientation:landscape) and (max-height:600px){
+  body{padding:7px}
+  .app{padding:12px}
+  header{margin-bottom:10px}
+  .board{max-width:430px;gap:5px}
+  .tile{font-size:22px}
 }
 </style>
 </head>
-
 <body>
+<div class="app">
+<header>
+  <h1>PAARE FINDEN</h1>
+  <div class="subtitle">DAS RUHIGE SUCHSPIEL · TRASHYGECKO</div>
+</header>
 
-<div class="game">
+<!-- START -->
+<section id="setupScreen" class="screen active">
+  <h2>Dein Spiel</h2>
+  <div class="intro">Finde die gleichen Zeichen auf dem Spielfeld.<br>Du hast 25 Felder und kannst bis zu 12 Paare suchen.</div>
 
-    <h1>PAARE FINDEN</h1>
-    <div class="subtitle">DAS NEON-SUCHSPIEL</div>
-
-    <!-- AUSWAHL -->
-
-    <div id="startScreen">
-
-        <h2>WAS MÖCHTEST DU SUCHEN?</h2>
-
-        <div class="intro">
-            Finde die gleichen Zahlen oder Buchstaben
-            auf dem Spielfeld.
-        </div>
-
-        <div class="menu-buttons">
-
-            <button class="menu-button" onclick="selectMode('numbers')">
-                <span class="menu-title">123 · ZAHLEN</span>
-                <span class="menu-description">
-                    25 Felder mit zufälligen Zahlen
-                    zwischen 1 und 99.
-                </span>
-            </button>
-
-            <button class="menu-button" onclick="selectMode('letters')">
-                <span class="menu-title">ABC · BUCHSTABEN</span>
-                <span class="menu-description">
-                    25 Felder mit zufälligen Buchstaben
-                    von A bis Z.
-                </span>
-            </button>
-
-        </div>
-
+  <div class="section">
+    <span class="section-label">SPIELART</span>
+    <div class="choice-grid">
+      <button class="choice active" data-kind="numbers" onclick="chooseKind('numbers')">123<small>Zahlen</small></button>
+      <button class="choice" data-kind="letters" onclick="chooseKind('letters')">ABC<small>Buchstaben</small></button>
+      <button class="choice" data-kind="symbols" onclick="chooseKind('symbols')">★ ♣<small>Sonderzeichen</small></button>
     </div>
+  </div>
 
-    <!-- SCHWIERIGKEIT -->
+  <div class="section">
+    <span class="section-label">ANZAHL DER PAARE</span>
+    <div class="pair-grid" id="pairChoices"></div>
+  </div>
 
-    <div id="levelScreen">
-
-        <h2>SCHWIERIGKEIT WÄHLEN</h2>
-
-        <div class="intro" id="levelIntro"></div>
-
-        <div class="levels">
-
-            <button class="level-button" onclick="startGame(1)">
-                <span class="level-title">STUFE 1 · LEICHT</span>
-                <span class="level-description">
-                    1 doppeltes Paar finden
-                </span>
-            </button>
-
-            <button class="level-button" onclick="startGame(2)">
-                <span class="level-title">STUFE 2 · NORMAL</span>
-                <span class="level-description">
-                    2 verschiedene Paare finden
-                </span>
-            </button>
-
-            <button class="level-button" onclick="startGame(3)">
-                <span class="level-title">STUFE 3 · SCHWER</span>
-                <span class="level-description">
-                    3 verschiedene Paare finden
-                </span>
-            </button>
-
-        </div>
-
-        <button class="back" onclick="showStartScreen()">
-            ← ZURÜCK
-        </button>
-
+  <div class="section">
+    <span class="section-label">SPIELMODUS</span>
+    <div class="choice-grid two">
+      <button class="choice active" id="soloChoice" onclick="chooseMode('solo')">EINZELSPIELER<small>Allein spielen</small></button>
+      <button class="choice" id="multiChoice" onclick="chooseMode('multi')">2 SPIELER ONLINE<small>Über den Connector</small></button>
     </div>
+  </div>
 
-    <!-- SPIEL -->
+  <div id="soloStart">
+    <button class="primary" onclick="startSolo()">SPIEL STARTEN</button>
+  </div>
 
-    <div id="gameScreen">
-
-        <div class="stats">
-
-            <div class="stat">
-                LEVEL
-                <strong id="levelCount">1 / 10</strong>
-            </div>
-
-            <div class="stat">
-                GEFUNDEN
-                <strong id="foundCount">0 / 1</strong>
-            </div>
-
-            <div class="stat">
-                FEHLER
-                <strong id="mistakeCount">0</strong>
-            </div>
-
-        </div>
-
-        <div class="progress">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-
-        <div class="game-info" id="gameInfo">
-            Finde das gleiche Zeichen zweimal!
-        </div>
-
-        <div class="board" id="board"></div>
-
-        <div class="feedback" id="feedback">
-            Tippe zwei gleiche Felder an.
-        </div>
-
-        <button class="back" onclick="showStartScreen()">
-            ← SPIEL ABBRECHEN
-        </button>
-
+  <div id="multiStart" class="hidden">
+    <div class="section">
+      <label class="section-label" for="playerName">DEIN SPIELERNAME</label>
+      <input id="playerName" maxlength="24" placeholder="Dein Name">
     </div>
-
-    <!-- ENDE -->
-
-    <div id="endScreen" class="end-screen">
-
-        <h2>ALLE LEVEL GESCHAFFT!</h2>
-
-        <div class="final-score" id="finalScore">10 / 10</div>
-
-        <div class="final-text" id="finalText"></div>
-
-        <button class="restart" onclick="startGame(currentDifficulty)">
-            NOCH EINE RUNDE
-        </button>
-
-        <button class="change-level" onclick="showLevelScreen()">
-            SCHWIERIGKEIT ÄNDERN
-        </button>
-
-        <button class="back" onclick="showStartScreen()">
-            ZURÜCK ZUR AUSWAHL
-        </button>
-
+    <button class="primary" onclick="createRoom()">SPIELRAUM ERSTELLEN</button>
+    <div class="section">
+      <label class="section-label" for="joinCode">ODER SPIELRAUM-CODE EINGEBEN</label>
+      <input id="joinCode" maxlength="7" placeholder="TG-XXXX" autocomplete="off">
+      <button class="secondary" onclick="joinRoom()">SPIELRAUM BEITRETEN</button>
     </div>
+    <div id="connectionStatus" class="status">Noch nicht verbunden.</div>
+  </div>
+</section>
 
-    <div class="footer">
-        PAARE FINDEN · MADE BY THOMAS
-    </div>
+<!-- LOBBY -->
+<section id="lobbyScreen" class="screen">
+  <h2>Spielraum</h2>
+  <div class="note">Gib deinem Mitspieler diesen Code.</div>
+  <div class="room-code" id="roomCodeDisplay">TG-----</div>
+  <div class="players">
+    <div class="player-box"><strong id="myNameDisplay">Du</strong><span>Spieler 1</span></div>
+    <div class="player-box"><strong id="opponentNameDisplay">Warte ...</strong><span>Spieler 2</span></div>
+  </div>
+  <div id="lobbyStatus" class="status">Warte auf den zweiten Spieler ...</div>
+  <button class="primary" id="startOnlineButton" onclick="hostStartMatch()" disabled>GEMEINSAM STARTEN</button>
+  <button class="secondary" onclick="leaveRoom()">ZURÜCK</button>
+  <div class="note">Der Spielstart wird für beide Spieler gemeinsam ausgelöst.</div>
+</section>
 
+<!-- SPIEL -->
+<section id="gameScreen" class="screen">
+  <div class="stats">
+    <div class="stat">ZEIT<strong id="timerDisplay">00:00</strong></div>
+    <div class="stat">GEFUNDEN<strong id="foundDisplay">0 / 1</strong></div>
+    <div class="stat">FEHLER<strong id="mistakeDisplay">0</strong></div>
+  </div>
+  <div id="opponentStatus" class="status hidden"></div>
+  <div class="board" id="board"></div>
+  <div class="feedback" id="feedback">Tippe zwei Felder an.</div>
+  <div class="game-actions">
+    <button class="secondary" onclick="restartGame()">NEUSTART</button>
+    <button class="danger" onclick="backToMenu()">MENÜ</button>
+  </div>
+</section>
+
+<!-- ERGEBNIS -->
+<section id="resultScreen" class="screen">
+  <div class="result">
+    <h2 id="resultTitle">GESCHAFFT!</h2>
+    <div class="result-time" id="resultTime">00:00</div>
+    <div class="result-text" id="resultText"></div>
+  </div>
+  <button class="primary" onclick="restartGame()">NOCH EINE RUNDE</button>
+  <button class="secondary" onclick="backToMenu()">ZUR AUSWAHL</button>
+</section>
+
+<div class="footer">PAARE FINDEN · MADE BY THOMAS VOIGT</div>
 </div>
 
 <script>
+"use strict";
 
-let currentMode = "numbers";
-let currentDifficulty = 1;
-let currentLevel = 1;
-
+const API = "/api";
+const TOTAL_CELLS = 25;
+const SYMBOLS = ["★","☆","♣","♠","♥","♦","●","■","▲","◆","✚","✿","☀","☂","♫","☯","☘","✦","✧","⬟","⬢","☕","⚙","✈","♬","❖"];
+let kind = "numbers";
 let pairCount = 1;
-let foundPairs = 0;
-let mistakes = 0;
-
+let mode = "solo";
 let boardValues = [];
-let selected = [];
 let matched = [];
-
+let selected = [];
+let mistakes = 0;
+let found = 0;
 let locked = false;
 let playing = false;
-let gameTimer = null;
+let startedAt = 0;
+let timerInterval = null;
+let mismatchTimeout = null;
+let matchId = "";
+let roomCode = "";
+let playerId = "";
+let playerName = "Spieler";
+let opponentId = "";
+let opponentName = "";
+let isHost = false;
+let heartbeatInterval = null;
+let pollInterval = null;
+let processedMessages = new Set();
+let opponentDone = null;
+let myDone = null;
+let gameSettings = {kind:"numbers",pairs:1};
+let pendingStartAt = 0;
 
-const TOTAL_LEVELS = 10;
+const $ = id => document.getElementById(id);
 
-// ZUFALL
-
-function randomNumber(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
 }
-
+function formatTime(ms) {
+  const seconds = Math.max(0,Math.floor(ms/1000));
+  return String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
+}
+function elapsed() {
+  return startedAt ? Date.now()-startedAt : 0;
+}
+function randomInt(max) {
+  return Math.floor(Math.random()*max);
+}
 function shuffle(array) {
-    const result = [...array];
-
-    for (let i = result.length - 1; i > 0; i--) {
-        const j = randomNumber(0, i);
-
-        [result[i], result[j]] = [result[j], result[i]];
+  const a=[...array];
+  for(let i=a.length-1;i>0;i--){
+    const j=randomInt(i+1);
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function seededRandom(seedText) {
+  let h=2166136261;
+  for(let i=0;i<seedText.length;i++){
+    h^=seedText.charCodeAt(i);
+    h=Math.imul(h,16777619);
+  }
+  return function(){
+    h+=0x6D2B79F5;
+    let t=h;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+function seededShuffle(array,seedText){
+  const rand=seededRandom(seedText);
+  const a=[...array];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(rand()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function chooseKind(value){
+  kind=value;
+  document.querySelectorAll("[data-kind]").forEach(b=>b.classList.toggle("active",b.dataset.kind===value));
+}
+function chooseMode(value){
+  mode=value;
+  $("soloChoice").classList.toggle("active",value==="solo");
+  $("multiChoice").classList.toggle("active",value==="multi");
+  $("soloStart").classList.toggle("hidden",value!=="solo");
+  $("multiStart").classList.toggle("hidden",value!=="multi");
+}
+function buildPairChoices(){
+  const box=$("pairChoices");
+  box.innerHTML="";
+  for(let i=1;i<=12;i++){
+    const b=document.createElement("button");
+    b.className="choice"+(i===1?" active":"");
+    b.textContent=i;
+    b.onclick=()=>{
+      pairCount=i;
+      box.querySelectorAll("button").forEach((x,n)=>x.classList.toggle("active",n+1===i));
+    };
+    box.appendChild(b);
+  }
+}
+function getPlayerId(){
+  let id=sessionStorage.getItem("tg-player-id");
+  if(!id){
+    id=crypto.randomUUID?crypto.randomUUID():"tg-"+Math.random().toString(36).slice(2)+Date.now();
+    sessionStorage.setItem("tg-player-id",id);
+  }
+  return id;
+}
+function apiFetch(path,options={}){
+  return fetch(API+path,{...options,cache:"no-store",headers:{"Content-Type":"application/json",...(options.headers||{})}});
+}
+async function postPresence(){
+  if(!roomCode||!playerId)return;
+  const r=await apiFetch("/presence",{method:"POST",body:JSON.stringify({room:roomCode,id:playerId,name:playerName})});
+  if(!r.ok)throw new Error("Spielerstatus konnte nicht gesendet werden ("+r.status+").");
+}
+async function createRoom(){
+  playerName=($("playerName").value.trim()||"Spieler").slice(0,24);
+  playerId=getPlayerId();
+  $("connectionStatus").textContent="Verbinde mit dem Connector ...";
+  try{
+    let response=await apiFetch("/rooms",{method:"POST",body:JSON.stringify({id:playerId,name:playerName})});
+    if(!response.ok)response=await apiFetch("/rooms",{method:"POST"});
+    if(!response.ok)throw new Error("Spielraum konnte nicht erstellt werden.");
+    const data=await response.json();
+    if(!data.code)throw new Error("Der Connector hat keinen Raumcode geliefert.");
+    roomCode=data.code.toUpperCase();
+    isHost=true;
+    await enterRoom();
+  }catch(e){
+    $("connectionStatus").textContent="Verbindung fehlgeschlagen: "+e.message;
+  }
+}
+async function joinRoom(){
+  playerName=($("playerName").value.trim()||"Spieler").slice(0,24);
+  playerId=getPlayerId();
+  roomCode=$("joinCode").value.trim().toUpperCase();
+  if(!/^TG-[A-F0-9]{4}$/.test(roomCode)){
+    $("connectionStatus").textContent="Bitte einen gültigen Code im Format TG-XXXX eingeben.";
+    return;
+  }
+  isHost=false;
+  try{
+    const r=await apiFetch("/rooms");
+    if(!r.ok)throw new Error("Räume konnten nicht geladen werden.");
+    const rooms=await r.json();
+    if(!rooms.some(x=>String(x.code).toUpperCase()===roomCode))throw new Error("Dieser Spielraum wurde nicht gefunden.");
+    await enterRoom();
+  }catch(e){
+    $("connectionStatus").textContent=e.message;
+  }
+}
+async function enterRoom(){
+  try{
+    await postPresence();
+    $("roomCodeDisplay").textContent=roomCode;
+    $("myNameDisplay").textContent=playerName;
+    $("opponentNameDisplay").textContent="Warte ...";
+    $("lobbyStatus").textContent=isHost?"Warte auf deinen Mitspieler ...":"Du bist beigetreten. Warte auf den Spielstart.";
+    $("startOnlineButton").disabled=true;
+    showScreen("lobbyScreen");
+    stopConnectorLoops();
+    heartbeatInterval=setInterval(()=>postPresence().catch(()=>{}),7000);
+    pollInterval=setInterval(pollConnector,700);
+    await pollConnector();
+  }catch(e){
+    $("connectionStatus").textContent=e.message;
+  }
+}
+async function getPlayers(){
+  const r=await apiFetch("/players?room="+encodeURIComponent(roomCode));
+  if(!r.ok)throw new Error("Spielerliste nicht erreichbar.");
+  return await r.json();
+}
+async function pollConnector(){
+  if(!roomCode||!playerId)return;
+  try{
+    const players=await getPlayers();
+    const others=players.filter(p=>p.id!==playerId);
+    if(others.length){
+      opponentId=others[0].id;
+      opponentName=others[0].name||"Mitspieler";
+      $("opponentNameDisplay").textContent=opponentName;
+      $("lobbyStatus").textContent=isHost?"Dein Mitspieler ist da. Du kannst starten.":"Mitspieler verbunden. Warte auf den Start.";
+      if(isHost)$("startOnlineButton").disabled=false;
+    }else{
+      opponentId="";
+      opponentName="";
+      $("opponentNameDisplay").textContent="Warte ...";
+      $("lobbyStatus").textContent="Warte auf den zweiten Spieler ...";
+      $("startOnlineButton").disabled=true;
     }
-
-    return result;
-}
-
-// MENÜ
-
-function selectMode(mode) {
-
-    currentMode = mode;
-
-    document.getElementById("startScreen").style.display = "none";
-    document.getElementById("levelScreen").style.display = "block";
-
-    document.getElementById("levelIntro").textContent =
-        mode === "numbers"
-        ? "25 Felder mit zufälligen Zahlen von 1 bis 99. Finde die doppelten Zahlen."
-        : "25 Felder mit zufälligen Buchstaben von A bis Z. Finde die doppelten Buchstaben.";
-}
-
-function showStartScreen() {
-
-    playing = false;
-    locked = true;
-
-    if (gameTimer) {
-        clearTimeout(gameTimer);
-        gameTimer = null;
+    const r=await apiFetch("/messages?room="+encodeURIComponent(roomCode)+"&id="+encodeURIComponent(playerId));
+    if(!r.ok)return;
+    const messages=await r.json();
+    for(const m of messages){
+      const key=m.id||[m.fromId,m.created,m.text].join("|");
+      if(processedMessages.has(key))continue;
+      processedMessages.add(key);
+      if(processedMessages.size>500)processedMessages.clear();
+      if(m.id===playerId||m.fromId===playerId)continue;
+      handleGameMessage(m);
     }
-
-    document.getElementById("startScreen").style.display = "block";
-    document.getElementById("levelScreen").style.display = "none";
-    document.getElementById("gameScreen").style.display = "none";
-    document.getElementById("endScreen").style.display = "none";
+  }catch(e){
+    if($("lobbyStatus"))$("lobbyStatus").textContent="Verbindung wird wiederhergestellt ...";
+  }
 }
-
-function showLevelScreen() {
-
-    if (gameTimer) {
-        clearTimeout(gameTimer);
-        gameTimer = null;
+async function sendGameMessage(payload,toId=""){
+  const text=JSON.stringify({app:"paare-finden",...payload});
+  const r=await apiFetch("/messages?room="+encodeURIComponent(roomCode),{
+    method:"POST",
+    body:JSON.stringify({id:playerId,toId,name:playerName,text})
+  });
+  if(!r.ok)throw new Error("Nachricht konnte nicht übertragen werden ("+r.status+").");
+}
+function hostStartMatch(){
+  if(!isHost||!opponentId)return;
+  gameSettings={kind,pairs:pairCount};
+  matchId="PF-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+  const startAt=Date.now()+3000;
+  sendGameMessage({type:"start",matchId,settings:gameSettings,startAt}).then(()=>{
+    launchMatch(matchId,gameSettings,startAt);
+  }).catch(e=>alert(e.message));
+}
+function handleGameMessage(message){
+  let data;
+  try{data=JSON.parse(message.text)}catch{return}
+  if(data.app!=="paare-finden")return;
+  if(data.type==="start"&&mode==="multi"&&$("lobbyScreen").classList.contains("active")){
+    matchId=data.matchId;
+    gameSettings=data.settings;
+    kind=gameSettings.kind;
+    pairCount=gameSettings.pairs;
+    launchMatch(matchId,gameSettings,data.startAt);
+  }
+  if(data.matchId!==matchId)return;
+  if(data.type==="done"){
+    opponentDone={time:data.time,name:message.name||opponentName};
+    updateOpponentStatus();
+    maybeShowWinner();
+  }
+  if(data.type==="restart"&&mode==="multi"){
+    // A restart is a fresh match requested by the host.
+    if(!isHost&&data.settings){
+      matchId=data.matchId;
+      gameSettings=data.settings;
+      launchMatch(matchId,gameSettings,data.startAt);
     }
-
-    playing = false;
-    locked = true;
-
-    document.getElementById("startScreen").style.display = "none";
-    document.getElementById("levelScreen").style.display = "block";
-    document.getElementById("gameScreen").style.display = "none";
-    document.getElementById("endScreen").style.display = "none";
+  }
 }
-
-// SPIELSTART
-
-function startGame(difficulty) {
-
-    currentDifficulty = difficulty;
-    currentLevel = 1;
-    mistakes = 0;
-
-    pairCount = difficulty;
-
-    playing = true;
-    locked = false;
-
-    if (gameTimer) {
-        clearTimeout(gameTimer);
-        gameTimer = null;
-    }
-
-    document.getElementById("levelScreen").style.display = "none";
-    document.getElementById("endScreen").style.display = "none";
-    document.getElementById("gameScreen").style.display = "block";
-
-    createLevel();
+function startSolo() {
+  mode = "solo";
+  gameSettings = { kind: kind, pairs: pairCount };
+  launchMatch(
+    "solo-" + Date.now(),
+    gameSettings,
+    Date.now() + 300
+  );
 }
-
-// NEUES LEVEL
-
-function createLevel() {
-
-    foundPairs = 0;
-    selected = [];
-    matched = [];
-    locked = false;
-
-    createBoard();
+function launchMatch(id,settings,startAt){
+  stopRoundTimers();
+  matchId=id;
+  gameSettings=settings;
+  kind=settings.kind;
+  pairCount=settings.pairs;
+  mistakes=0;found=0;selected=[];matched=[];
+  myDone=null;opponentDone=null;
+  locked=true;playing=true;
+  createBoard();
+  renderBoard();
+  updateStats();
+  $("feedback").textContent="Bereit machen ...";
+  $("opponentStatus").classList.toggle("hidden",mode!=="multi");
+  $("opponentStatus").textContent="Dein Mitspieler spielt ebenfalls.";
+  showScreen("gameScreen");
+  pendingStartAt=startAt;
+  const wait=Math.max(0,startAt-Date.now());
+  setTimeout(()=>{
+    if(matchId!==id||!playing)return;
+    startedAt=startAt;
+    locked=false;
+    renderBoard(); // Karten jetzt freigeben!
+    $("feedback").textContent="Los! Finde alle Paare.";
+    timerInterval=setInterval(()=>{
+      $("timerDisplay").textContent=formatTime(elapsed())
+    },200);
+  },wait);
+}
+function createBoard(){
+  const count=25-pairCount;
+  let unique=[];
+  if(kind==="numbers"){
+    const pool=Array.from({length:99},(_,i)=>String(i+1));
+    unique=shuffle(pool).slice(0,count);
+  }else if(kind==="letters"){
+    unique=shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")).slice(0,count);
+  }else{
+    unique=shuffle(SYMBOLS).slice(0,count);
+  }
+  const duplicates=shuffle(unique).slice(0,pairCount);
+  let values=[...unique,...duplicates];
+  if(mode==="multi"){
+    // Beide Spieler bekommen dieselben Zeichen, aber eine andere Anordnung.
+    values=seededShuffle(values,matchId+"|"+playerId);
+  }else{
+    values=shuffle(values);
+  }
+  boardValues=values;
+  matched=new Array(TOTAL_CELLS).fill(false);
+}
+function renderBoard(wrong=[]){
+  const board=$("board");
+  board.innerHTML="";
+  boardValues.forEach((value,index)=>{
+    const b=document.createElement("button");
+    b.className="tile";
+    b.textContent=value;
+    b.setAttribute("aria-label","Feld "+(index+1)+": "+value);
+    if(selected.includes(index))b.classList.add("selected");
+    if(matched[index])b.classList.add("found");
+    if(wrong.includes(index))b.classList.add("wrong");
+    b.disabled=matched[index]||locked||wrong.includes(index)||myDone!==null;
+    b.onclick=()=>chooseTile(index);
+    board.appendChild(b);
+  });
+}
+function chooseTile(index){
+  if(!playing||locked||myDone!==null||matched[index]||selected.includes(index))return;
+  selected.push(index);
+  renderBoard();
+  if(selected.length===2)checkPair();
+}
+function checkPair(){
+  const [a,b]=selected;
+  if(boardValues[a]===boardValues[b]){
+    matched[a]=matched[b]=true;
+    found++;
+    selected=[];
+    $("feedback").textContent="Richtig! Paar gefunden.";
+    $("feedback").className="feedback good";
     renderBoard();
     updateStats();
-
-    const info = document.getElementById("gameInfo");
-
-    const type = currentMode === "numbers" ? "Zahlen" : "Buchstaben";
-
-    info.textContent =
-        "Finde " + pairCount + " " +
-        (pairCount === 1 ? "Paar" : "Paare") +
-        " aus den " + type + "!";
-
-    const feedback = document.getElementById("feedback");
-
-    feedback.textContent = "Tippe zwei gleiche Felder an.";
-    feedback.className = "feedback";
+    if(found===pairCount)finishRound();
+  }else{
+    mistakes++;
+    locked=true;
+    $("feedback").textContent="Das sind zwei verschiedene Zeichen.";
+    $("feedback").className="feedback bad";
+    renderBoard([a,b]);
+    updateStats();
+    mismatchTimeout=setTimeout(()=>{
+      selected=[];
+      locked=false;
+      mismatchTimeout=null;
+      renderBoard();
+      $("feedback").textContent="Versuche es weiter.";
+      $("feedback").className="feedback";
+    },800);
+  }
 }
-
-// FELDER GENERIEREN
-
-function createBoard() {
-
-    let uniqueValues = [];
-
-    const amount = 25 - pairCount;
-
-    if (currentMode === "numbers") {
-
-        while (uniqueValues.length < amount) {
-
-            const number = randomNumber(1, 99);
-
-            if (!uniqueValues.includes(number)) {
-                uniqueValues.push(number);
-            }
-        }
-
-    } else {
-
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
-        uniqueValues = shuffle(alphabet).slice(0, amount);
+function updateStats(){
+  $("foundDisplay").textContent=found+" / "+pairCount;
+  $("mistakeDisplay").textContent=mistakes;
+  $("timerDisplay").textContent=formatTime(elapsed());
+}
+async function finishRound(){
+  playing=false;
+  locked=true;
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null}
+  myDone={time:elapsed(),mistakes};
+  $("feedback").textContent="Alle Paare gefunden!";
+  $("feedback").className="feedback good";
+  renderBoard();
+  if(mode==="multi"){
+    try{
+      await sendGameMessage({type:"done",matchId,time:myDone.time,mistakes});
+    }catch(e){
+      $("feedback").textContent="Fertig – Ergebnis konnte nicht gesendet werden.";
     }
-
-    // Für jedes gesuchte Paar wird ein Zeichen
-    // ein zweites Mal hinzugefügt.
-
-    const duplicates = shuffle(uniqueValues).slice(0, pairCount);
-
-    boardValues = shuffle([
-        ...uniqueValues,
-        ...duplicates
-    ]);
-
-    // Kontrolle: genau 25 Felder
-
-    matched = new Array(25).fill(false);
+    $("opponentStatus").classList.remove("hidden");
+    $("opponentStatus").textContent="Du bist fertig. Warte auf "+(opponentName||"deinen Mitspieler")+" ...";
+    maybeShowWinner();
+  }else{
+    showSoloResult();
+  }
 }
-
-// SPIELFELD ZEIGEN
-
-function renderBoard(wrongTiles = []) {
-
-    const board = document.getElementById("board");
-
-    board.innerHTML = "";
-
-    boardValues.forEach((value, index) => {
-
-        const button = document.createElement("button");
-
-        button.className = "tile";
-        button.textContent = value;
-
-        if (selected.includes(index)) {
-            button.classList.add("selected");
-        }
-
-        if (matched[index]) {
-            button.classList.add("found");
-        }
-
-        if (wrongTiles.includes(index)) {
-            button.classList.add("wrong");
-        }
-
-        button.disabled =
-            matched[index] || locked || wrongTiles.includes(index);
-
-        button.setAttribute(
-            "aria-label",
-            "Feld " + (index + 1) + ": " + value
-        );
-
-        button.onclick = () => chooseTile(index);
-
-        board.appendChild(button);
-    });
+function updateOpponentStatus(){
+  if(opponentDone){
+    $("opponentStatus").textContent=opponentDone.name+" hat "+formatTime(opponentDone.time)+" gebraucht.";
+  }
 }
-
-// FELD AUSWÄHLEN
-
-function chooseTile(index) {
-
-    if (!playing || locked || matched[index]) return;
-
-    if (selected.includes(index)) return;
-
-    selected.push(index);
-
-    renderBoard();
-
-    if (selected.length === 2) {
-        checkPair();
+function maybeShowWinner(){
+  if(!myDone||!opponentDone)return;
+  const myTime=myDone.time;
+  const theirTime=opponentDone.time;
+  let title,text;
+  if(myTime<theirTime){
+    title="DU HAST GEWONNEN!";
+    text="Deine Zeit: "+formatTime(myTime)+"\n"+opponentDone.name+": "+formatTime(theirTime);
+  }else if(myTime>theirTime){
+    title=opponentDone.name.toUpperCase()+" GEWINNT!";
+    text="Deine Zeit: "+formatTime(myTime)+"\n"+opponentDone.name+": "+formatTime(theirTime);
+  }else{
+    title="UNENTSCHIEDEN!";
+    text="Beide Spieler waren gleich schnell: "+formatTime(myTime);
+  }
+  $("resultTitle").textContent=title;
+  $("resultTime").textContent=formatTime(myTime);
+  $("resultText").textContent=text+"\n\nDeine Fehler: "+myDone.mistakes;
+  showScreen("resultScreen");
+}
+function showSoloResult(){
+  $("resultTitle").textContent="GESCHAFFT!";
+  $("resultTime").textContent=formatTime(myDone.time);
+  $("resultText").textContent="Du hast alle "+pairCount+" Paare gefunden.\nFehlversuche: "+mistakes;
+  showScreen("resultScreen");
+}
+function stopRoundTimers(){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null}
+  if(mismatchTimeout){clearTimeout(mismatchTimeout);mismatchTimeout=null}
+}
+function restartGame(){
+  if(mode==="multi"){
+    if(!isHost){
+      $("resultText").textContent="Bitte den Spielleiter um einen Neustart.";
+      return;
     }
-}
-
-// PAAR PRÜFEN
-
-function checkPair() {
-
-    const first = selected[0];
-    const second = selected[1];
-
-    const feedback = document.getElementById("feedback");
-
-    if (boardValues[first] === boardValues[second]) {
-
-        // RICHTIG
-
-        matched[first] = true;
-        matched[second] = true;
-
-        foundPairs++;
-
-        selected = [];
-
-        feedback.textContent = "✓ RICHTIG! Paar gefunden!";
-        feedback.className = "feedback good";
-
-        renderBoard();
-        updateStats();
-
-        if (foundPairs >= pairCount) {
-            levelComplete();
-        }
-
-    } else {
-
-        // FALSCH
-
-        mistakes++;
-
-        locked = true;
-
-        feedback.textContent = "✗ Das sind zwei verschiedene Zeichen!";
-        feedback.className = "feedback bad";
-
-        renderBoard([first, second]);
-        updateStats();
-
-        gameTimer = setTimeout(() => {
-
-            selected = [];
-            locked = false;
-            gameTimer = null;
-
-            renderBoard();
-
-            feedback.textContent = "Versuche es noch einmal.";
-            feedback.className = "feedback";
-
-        }, 650);
+    if(!opponentId){
+      alert("Dein Mitspieler ist nicht mehr verbunden.");
+      return;
     }
+    matchId="PF-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+    const startAt=Date.now()+3000;
+    sendGameMessage({type:"restart",matchId,settings:gameSettings,startAt}).then(()=>{
+      launchMatch(matchId,gameSettings,startAt);
+    }).catch(e=>alert(e.message));
+  }else{
+    launchMatch("solo-"+Date.now(),{kind,pairs:pairCount},Date.now()+300);
+  }
 }
-
-// LEVEL GESCHAFFT
-
-function levelComplete() {
-
-    playing = false;
-    locked = true;
-
-    const feedback = document.getElementById("feedback");
-
-    feedback.textContent = "★ LEVEL " + currentLevel + " GESCHAFFT!";
-    feedback.className = "feedback complete";
-
-    if (currentLevel < TOTAL_LEVELS) {
-
-        gameTimer = setTimeout(() => {
-
-            currentLevel++;
-
-            playing = true;
-
-            createLevel();
-
-            gameTimer = null;
-
-        }, 1100);
-
-    } else {
-
-        gameTimer = setTimeout(() => {
-
-            finishGame();
-
-            gameTimer = null;
-
-        }, 1100);
-    }
+function stopConnectorLoops(){
+  if(heartbeatInterval){clearInterval(heartbeatInterval);heartbeatInterval=null}
+  if(pollInterval){clearInterval(pollInterval);pollInterval=null}
 }
-
-// ANZEIGEN AKTUALISIEREN
-
-function updateStats() {
-
-    document.getElementById("levelCount").textContent =
-        currentLevel + " / " + TOTAL_LEVELS;
-
-    document.getElementById("foundCount").textContent =
-        foundPairs + " / " + pairCount;
-
-    document.getElementById("mistakeCount").textContent =
-        mistakes;
-
-    document.getElementById("progressBar").style.width =
-        (currentLevel / TOTAL_LEVELS * 100) + "%";
+function leaveRoom(){
+  stopConnectorLoops();
+  stopRoundTimers();
+  roomCode="";opponentId="";opponentDone=null;myDone=null;
+  playing=false;
+  showScreen("setupScreen");
 }
-
-// SPIELENDE
-
-function finishGame() {
-
-    playing = false;
-    locked = true;
-
-    document.getElementById("gameScreen").style.display = "none";
-    document.getElementById("endScreen").style.display = "block";
-
-    document.getElementById("finalScore").textContent =
-        TOTAL_LEVELS + " / " + TOTAL_LEVELS;
-
-    let message;
-
-    if (mistakes === 0) {
-
-        message = "Unglaublich! Alle Paare ohne einen einzigen Fehler gefunden!";
-
-    } else if (mistakes <= 5) {
-
-        message = "Sehr gut! Du hast eine richtig starke Runde gespielt.";
-
-    } else if (mistakes <= 12) {
-
-        message = "Gut gemacht! Deine Augen werden immer besser.";
-
-    } else {
-
-        message = "Geschafft! Mit etwas Übung findest du die Paare noch schneller.";
-    }
-
-    message += "\n\n";
-
-    message += currentMode === "numbers"
-        ? "Spielart: Zahlen"
-        : "Spielart: Buchstaben";
-
-    message += "\nSchwierigkeit: " +
-        ["", "Leicht", "Normal", "Schwer"][currentDifficulty];
-
-    message += "\nGefundene Paare: " +
-        (TOTAL_LEVELS * pairCount);
-
-    message += "\nFehlversuche: " + mistakes;
-
-    document.getElementById("finalText").textContent = message;
+function backToMenu(){
+  stopRoundTimers();
+  if(mode==="multi"){
+    leaveRoom();
+  }else{
+    playing=false;
+    showScreen("setupScreen");
+  }
 }
-
+window.addEventListener("beforeunload",()=>{
+  stopConnectorLoops();
+  stopRoundTimers();
+});
+buildPairChoices();
 </script>
-
 </body>
 </html>

@@ -204,8 +204,26 @@ h1{
 .counter strong{color:var(--gold);font-size:18px}
 .bottom{
   display:flex;
-  justify-content:center;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
   margin-top:20px;
+}
+.leave-btn{
+  background:transparent;
+  border:1px solid #78418c;
+  border-radius:8px;
+  color:#bbaacb;
+  padding:8px 16px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+}
+.leave-btn:hover{
+  background:#241331;
+  color:white;
+  border-color:var(--purple);
 }
 .reset{
   padding:14px 28px;
@@ -272,6 +290,7 @@ h1{
 
   <div class="bottom">
     <button class="reset" id="restart">↻ NEUES SPIEL</button>
+    <button class="leave-btn" id="leaveBtn" onclick="leaveGame()" style="display:none;">← Zurück zum Raum</button>
   </div>
 
   <div class="rule">
@@ -281,6 +300,26 @@ h1{
 </main>
 
 <script>
+const params = new URLSearchParams(location.search);
+const onlineRoom = (params.get("room") || "").trim().toUpperCase();
+const onlineName = (params.get("name") || "").trim() || "Spieler";
+let onlineID = "";
+try {
+  onlineID = sessionStorage.getItem("tg-player-id") || "";
+} catch(e) {}
+
+let onlineGame = null;
+let onlineColor = "";
+let onlineOpponent = "";
+
+function leaveGame() {
+  if (onlineRoom) {
+    location.href = "/connector?room=" + encodeURIComponent(onlineRoom);
+  } else {
+    location.href = "/connector";
+  }
+}
+
 const boardEl=document.getElementById("board");
 
 let board=[];
@@ -431,6 +470,7 @@ function canSelect(r,c){
 }
 
 function selectPiece(r,c){
+  if(onlineRoom && onlineColor && current !== onlineColor) return;
   if(gameOver) return;
 
   if(!mustContinue && board[r][c] &&
@@ -519,6 +559,10 @@ function makeMove(move){
   }
 
   render();
+
+  if(onlineRoom){
+    syncMultiplayerMove();
+  }
 }
 
 function countPieces(color){
@@ -632,11 +676,113 @@ function restart(){
   gameOver=false;
   lastMove=null;
   render();
+
+  if(onlineRoom){
+    syncMultiplayerMove();
+  }
 }
 
 document.getElementById("restart").addEventListener("click",restart);
 
-restart();
+async function syncMultiplayerMove() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    let winColor = "";
+    if (gameOver) {
+      winColor = (current === "red" ? "blue" : "red");
+    }
+    await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&action=move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: onlineID,
+        board: board,
+        current: current,
+        winner: winColor
+      })
+    });
+  } catch(e) {}
+}
+
+function renderMultiplayer(game) {
+  onlineGame = game;
+  onlineColor = (game.redId === onlineID) ? "red" : (game.blueId === onlineID) ? "blue" : "";
+  onlineOpponent = (onlineColor === "red") ? game.blueName : game.redName;
+
+  document.querySelector("#redPlayer strong").textContent = game.redName || "ROT";
+  document.querySelector("#bluePlayer strong").textContent = game.blueName || "BLAU";
+
+  if (game.board && Array.isArray(game.board)) {
+    // only update if not mid-capture jump
+    if (!mustContinue) {
+      board = game.board;
+      current = game.current || "red";
+      if (game.winner) {
+        gameOver = true;
+        showWinner(game.winner);
+      } else {
+        gameOver = (game.status === "finished");
+      }
+    }
+  }
+
+  render();
+
+  const restartBtn = document.getElementById("restart");
+  if (game.status === "finished") {
+    restartBtn.disabled = false;
+    restartBtn.textContent = "↻ NOCHMAL SPIELEN";
+  } else {
+    restartBtn.disabled = (onlineColor !== "red" && onlineColor !== "blue");
+    restartBtn.textContent = "↻ NEUES SPIEL";
+  }
+
+  if (onlineRoom && onlineColor) {
+    const isMyTurn = (current === onlineColor);
+    const info = document.getElementById("info");
+    if (!gameOver) {
+      if (isMyTurn) {
+        info.textContent = "Du bist dran! Wähle einen deiner Spielsteine.";
+      } else {
+        info.textContent = (onlineOpponent || "Gegner") + " ist am Zug...";
+      }
+    }
+  }
+}
+
+async function multiplayerHeartbeat() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    await fetch("/api/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room: onlineRoom, id: onlineID, name: onlineName })
+    });
+  } catch(e) {}
+}
+
+async function refreshMultiplayer() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    const resp = await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&id=" + encodeURIComponent(onlineID), { cache: "no-store" });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.game) renderMultiplayer(data.game);
+  } catch(e) {}
+}
+
+if (onlineRoom) {
+  const lb = document.getElementById("leaveBtn");
+  if (lb) lb.style.display = "inline-block";
+  document.querySelector(".subtitle").textContent = "ONLINE-MULTIPLAYER · " + onlineRoom + " · " + (onlineID ? "Verbunden" : "Spielerkennung fehlt");
+  restart();
+  multiplayerHeartbeat();
+  setInterval(multiplayerHeartbeat, 5000);
+  refreshMultiplayer();
+  setInterval(refreshMultiplayer, 700);
+} else {
+  restart();
+}
 </script>
 </body>
 </html>
