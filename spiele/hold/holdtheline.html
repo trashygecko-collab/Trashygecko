@@ -272,6 +272,7 @@ function playerClass(player) {
 }
 
 function playerName(player) {
+  if (onlineNames.length === 2) return onlineNames[player];
   return player === 0 ? "Spieler 1" : "Spieler 2";
 }
 
@@ -431,6 +432,8 @@ function updateInfo() {
 }
 
 function handlePoint(index) {
+  if(ONLINE){ handlePointOnline(index); return; }
+
   if(gameOver) return;
 
   if(selected===null) {
@@ -486,6 +489,7 @@ function handlePoint(index) {
 }
 
 function undo() {
+  if(ONLINE) return;
   if(history.length===0) return;
 
   const previous=history.pop();
@@ -514,12 +518,146 @@ function restart() {
 document.getElementById("undo").addEventListener("click",undo);
 
 document.getElementById("restart").addEventListener("click",()=>{
+  if(ONLINE){ holdAction("reset",{}); return; }
   if(confirm("Möchtest du wirklich ein neues Spiel starten?")) {
     restart();
   }
 });
 
-restart();
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/hold";
+let onlineBusy = false;
+let onlineGame = null;
+let onlineNames = [];
+let onlineSignature = "";
+
+function applyOnlineState(game) {
+  if (!game) return;
+  onlineGame = game;
+  onlineNames = [game.redName, game.blueName];
+
+  lines = (game.lines || []).map(l => ({
+    a: l.a,
+    b: l.b,
+    player: l.color === "red" ? 0 : 1
+  }));
+  turn = game.current === "red" ? 0 : 1;
+  gameOver = game.status === "finished";
+
+  // Beim reinen Nachfragen bleibt der erste Klick ausgewählt.
+  const signature = lines.length + "|" + turn;
+  if(signature !== onlineSignature) selected = null;
+  onlineSignature = signature;
+
+  history = [];
+
+  drawBoard();
+
+  if (gameOver) {
+    const sieger = game.winner === "red" ? 0 : 1;
+    statusEl.textContent = "🏆 " + playerName(sieger) + " GEWINNT!";
+    infoEl.textContent = playerName(1 - sieger) + " hat keinen gültigen Zug mehr!";
+    return;
+  }
+
+  if (game.status === "invited") {
+    statusEl.textContent = "Warte auf die Antwort von " + game.blueName + " …";
+    return;
+  }
+
+  statusEl.textContent = game.note || (playerName(turn) + " ist am Zug.");
+  updateInfo();
+}
+
+async function onlineFetch(url, options) {
+  const response = await fetch(url, options);
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline() {
+  if (onlineBusy) return;
+  try {
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  } catch (e) {}
+}
+
+async function holdAction(action, payload) {
+  if (onlineBusy) return;
+  onlineBusy = true;
+  try {
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: PLAYER_ID, ...payload})
+    });
+    applyOnlineState(data.game);
+  } catch (e) {
+    statusEl.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+function handlePointOnline(index) {
+  if (gameOver || onlineBusy) return;
+
+  if (selected === null) {
+    selected = index;
+    statusEl.textContent = "Wähle jetzt den zweiten Punkt.";
+    drawBoard();
+    return;
+  }
+
+  if (selected === index) {
+    selected = null;
+    statusEl.textContent = playerName(turn) + " ist am Zug.";
+    drawBoard();
+    updateInfo();
+    return;
+  }
+
+  if (!canDraw(selected, index)) {
+    statusEl.textContent = "Diese Linie ist nicht erlaubt!";
+    return;
+  }
+
+  const a = selected;
+  selected = null;
+  holdAction("line", {a, b: index});
+}
+
+if (ONLINE) {
+  lines = [];
+  turn = 0;
+  selected = null;
+  history = [];
+  gameOver = false;
+  statusEl.textContent = "Verbinde mit dem Spielraum …";
+  drawBoard();
+  infoEl.textContent = "";
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.id = "leaveBtn";
+  back.className = document.getElementById("restart").className;
+  back.textContent = "Zum Connector";
+  back.style.marginLeft = "8px";
+  back.onclick = () => { location.href = "/connector?room=" + encodeURIComponent(ROOM); };
+  document.getElementById("restart").after(back);
+
+  document.getElementById("undo").disabled = true;
+
+  refreshOnline();
+  setInterval(refreshOnline, 1500);
+} else {
+  restart();
+}
 </script>
 </body>
 </html>

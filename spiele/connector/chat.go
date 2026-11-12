@@ -77,11 +77,15 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		// Update sender name if changed
-		if sender.Name != input.Name {
-			sender.Name = input.Name
+		// Update sender name if changed – aber nie auf einen Namen, den schon
+		// jemand anderes im Raum benutzt.
+		if name := room.uniqueName(input.Name, input.ID); sender.Name != name {
+			sender.Name = name
 			room.Players[input.ID] = sender
 		}
+		sender.LastAction = time.Now()
+		sender.AfkWarned = false
+		room.Players[input.ID] = sender
 		// Check mute status
 		if muted, remaining := room.isMuted(input.ID); muted {
 			mu.Unlock()

@@ -96,6 +96,7 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID       string `json:"id"`
 		ToID     string `json:"toId"`
+		Kind     string `json:"kind"`
 		Pairs    int    `json:"pairs"`
 		Time     int64  `json:"time"`
 		Mistakes int    `json:"mistakes"`
@@ -143,13 +144,19 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 		if pairs > 12 {
 			pairs = 12
 		}
+		// Der Einladende bestimmt, welche Zeichen auf dem Brett liegen.
+		// Ohne gültige Angabe wählt der Server zufällig.
+		kind := strings.ToLower(strings.TrimSpace(input.Kind))
+		if !paareKindValid(kind) {
+			kind = paareKinds[int(time.Now().UnixNano())%len(paareKinds)]
+		}
 		room.Paare = &PaareGame{
 			ID:       randomCode(),
 			RedID:    input.ID,
 			RedName:  player.Name,
 			BlueID:   input.ToID,
 			BlueName: target.Name,
-			Kind:     paareKinds[int(time.Now().UnixNano())%len(paareKinds)],
+			Kind:     kind,
 			Pairs:    pairs,
 			Status:   "invited",
 		}

@@ -379,6 +379,14 @@ function handlePointClick(index){
  setStatus('Dieser Stein kann mit dem ausgewählten Würfel nicht ziehen.');
 }
 function executeMove(move){
+ if(ONLINE){
+  bgAction('move',{
+   from:move.from==='bar'?-1:move.from,
+   to:move.to==='off'?-1:move.to,
+   die:move.die
+  });
+  return;
+ }
  state=applyMove(state,player,move);
  const dieIndex=dice.findIndex(d=>d.id===selectedDie);
  if(dieIndex>=0)dice[dieIndex].used=true;
@@ -403,6 +411,7 @@ function moveOff(){
  if(move)executeMove(move);
 }
 function roll(){
+ if(ONLINE){ if(!rolled&&!gameOver) bgAction('roll',{}); return; }
  if(rolled||rolling||gameOver)return;
  rolling=true;$('rollButton').disabled=true;$('rollButton').textContent='WÜRFEL ROLLT …';
  let ticks=0;
@@ -463,9 +472,131 @@ function startGame(){
 $('start').addEventListener('click',startGame);
 $('rollButton').addEventListener('click',roll);
 $('offButton').addEventListener('click',moveOff);
-$('newGame').addEventListener('click',()=>{if(passTimer){clearTimeout(passTimer);passTimer=null;}if(rollAnimation){clearInterval(rollAnimation);rollAnimation=null;}rolling=false;$('game').style.display='none';$('setup').style.display='grid';});
+$('newGame').addEventListener('click',()=>{if(passTimer){clearTimeout(passTimer);passTimer=null;}if(rollAnimation){clearInterval(rollAnimation);rollAnimation=null;}rolling=false;if(ONLINE){bgAction('reset',{});return;}$('game').style.display='none';$('setup').style.display='grid';});
 $('board').addEventListener('click',clickBoard);
 drawBoard();
+
+// ---- Online über den Connector ----
+const params=new URLSearchParams(location.search);
+const ONLINE=params.has('room')&&params.has('id');
+const ROOM=params.get('room')||'';
+const PLAYER_ID=params.get('id')||'';
+const ONLINE_API='/api/backgammon';
+let onlineBusy=false;
+let onlineGame=null;
+let onlineSignature='';
+
+function applyOnlineState(game){
+ if(!game)return;
+ onlineGame=game;
+
+ const sig=game.player+'|'+game.rolled+'|'+game.points.join(',')+'|'+game.bar.join(',')+'|'+game.off.join(',')+'|'+(game.dice||[]).map(d=>d.used?1:0).join('');
+ const keepSelection=sig===onlineSignature&&selectedFrom!==null;
+ onlineSignature=sig;
+
+ state={points:game.points.slice(),bar:game.bar.slice(),off:game.off.slice()};
+ player=game.player;
+ rolled=game.rolled;
+ rolling=false;
+ gameOver=game.status==='finished';
+ dice=(game.dice||[]).map(d=>({id:d.id,value:d.value,used:d.used}));
+ cache.clear();
+
+ $('setup').style.display='none';
+ $('game').style.display='grid';
+
+ if(!keepSelection)selectedFrom=null;
+
+ if(rolled&&!gameOver){
+  const opts=optimalMoves(state,player,dice.filter(d=>!d.used).map(d=>d.value));
+  const valid=[...new Set(opts.map(m=>m.die))];
+  const usable=dice.some(d=>d.id===selectedDie&&!d.used&&valid.includes(d.value));
+  if(!usable){
+   const chosen=valid[0];
+   selectedDie=chosen===undefined?null:(dice.find(d=>!d.used&&d.value===chosen)?.id??null);
+  }
+ }else if(!rolled){
+  selectedDie=null;
+  selectedFrom=null;
+ }
+
+ draw();
+
+ if(gameOver){
+  const sieger=game.winner==='red'?game.redName:game.blueName;
+  const art=game.multiplier===3?'Backgammon':game.multiplier===2?'Gammon':'Einfacher Sieg';
+  $('winner').style.display='block';
+  $('winner').textContent='🏆 '+sieger.toUpperCase()+' GEWINNT! 🏆\n'+art+' · '+game.multiplier+' Punkt'+(game.multiplier>1?'e':'');
+  $('rollNote').textContent='Partie beendet';
+  setStatus('Alle 15 Steine sind im Ziel.');
+  return;
+ }
+
+ $('winner').style.display='none';
+ $('rollNote').textContent=rolled?'Würfel liegen bereit.':'Würfle, um deinen Zug zu beginnen.';
+ if(game.status==='invited'){
+  setStatus('Warte auf die Antwort von '+game.blueName+' …');
+ }else{
+  setStatus(game.note||('Spieler '+(player+1)+' ist am Zug.'));
+ }
+}
+
+async function onlineFetch(url,options){
+ const response=await fetch(url,options);
+ if(!response.ok)throw Error((await response.text()).trim()||'Die Aktion ist fehlgeschlagen.');
+ return response.json();
+}
+
+async function refreshOnline(){
+ if(onlineBusy)return;
+ try{
+  const data=await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&id='+encodeURIComponent(PLAYER_ID));
+  applyOnlineState(data.game);
+ }catch(e){}
+}
+
+async function bgAction(action,payload){
+ if(onlineBusy)return;
+ onlineBusy=true;
+ try{
+  const data=await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&action='+action,{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({id:PLAYER_ID,...payload})
+  });
+  applyOnlineState(data.game);
+ }catch(e){
+  setStatus(e.message);
+ }finally{
+  onlineBusy=false;
+ }
+}
+
+if(ONLINE){
+ state=emptyState();
+ player=0;
+ dice=[];
+ selectedDie=null;
+ selectedFrom=null;
+ rolled=false;
+ gameOver=false;
+ $('setup').style.display='none';
+ $('game').style.display='grid';
+ $('winner').style.display='none';
+ setStatus('Verbinde mit dem Spielraum …');
+ drawBoard();
+ draw();
+
+ const back=document.createElement('button');
+ back.type='button';
+ back.id='leaveBtn';
+ back.className='btn';
+ back.textContent='Zum Connector';
+ back.onclick=()=>{ location.href='/connector?room='+encodeURIComponent(ROOM); };
+ $('newGame').after(back);
+
+ refreshOnline();
+ setInterval(refreshOnline,1500);
+}
 })();
 </script>
 </body>

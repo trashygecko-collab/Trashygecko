@@ -254,6 +254,10 @@ h1 {
     ↻ NEUES SPIEL
   </button>
 
+  <button class="reset" id="leaveBtn" hidden style="margin-top:10px">
+    ZUM CONNECTOR
+  </button>
+
 </div>
 
 <script>
@@ -269,11 +273,28 @@ let blueScore;
 let moves;
 let gameOver;
 
+/* Über den Connector geöffnet (?room=TG-XXXX&name=...&id=...) spielt man gegen
+   einen zweiten Spieler. Ohne diese Parameter bleibt alles lokal. */
+const onlineParams=new URLSearchParams(location.search);
+const onlineRoom=(onlineParams.get("room")||"").trim().toUpperCase();
+const ONLINE=/^TG-[A-F0-9]{4}$/.test(onlineRoom);
+const onlineName=(onlineParams.get("name")||"").trim()||"Spieler";
+let onlineID=(onlineParams.get("id")||"").trim();
+if(ONLINE&&!onlineID){
+  try{onlineID=sessionStorage.getItem("tg-player-id")||"";}catch(e){}
+}
+if(ONLINE&&!onlineID)onlineID="tg-"+Math.random().toString(36).slice(2)+Date.now();
+let onlineGame=null;
+let onlineBusy=false;
+let boardBuilt=false;
+
 const board = document.getElementById("board");
 const boxesLayer = document.getElementById("boxesLayer");
 const edgesLayer = document.getElementById("edgesLayer");
 
 function newGame() {
+  if (ONLINE) { resetOnline(); return; }
+
   horizontal = Array.from(
     {length:ROWS+1},
     () => Array(COLS).fill(null)
@@ -387,6 +408,7 @@ function isComplete(r,c) {
 
 function chooseEdge(type,r,c) {
   if (gameOver) return;
+  if (ONLINE) { chooseEdgeOnline(type,r,c); return; }
 
   if (type === "h") {
     if (horizontal[r][c] !== null) return;
@@ -504,7 +526,169 @@ function finishGame() {
     "↻ NOCHMAL SPIELEN";
 }
 
-newGame();
+/* ---------- Online über den Connector ---------- */
+function myTurnOnline(){
+  if(!onlineGame||onlineGame.status!=="active")return false;
+  if(onlineGame.current==="red")return onlineGame.redId===onlineID;
+  return onlineGame.blueId===onlineID;
+}
+async function postPresence(){
+  if(!onlineRoom||!onlineID)return;
+  await fetch("/api/presence",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
+  });
+}
+async function fetchOnlineGame(){
+  const r=await fetch("/api/kaesekaestche?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store"});
+  if(!r.ok)throw new Error("Spielstand nicht erreichbar ("+r.status+").");
+  return (await r.json()).game;
+}
+async function onlineAction(action,payload={}){
+  const r=await fetch("/api/kaesekaestche?room="+encodeURIComponent(onlineRoom)+"&action="+encodeURIComponent(action),{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:onlineID,...payload})
+  });
+  if(!r.ok)throw new Error((await r.text()).trim()||"Aktion fehlgeschlagen.");
+  return (await r.json()).game;
+}
+function emptyGrid(rows,cols){
+  return Array.from({length:rows},()=>Array(cols).fill(null));
+}
+function flatToGrid(flat,rows,cols){
+  const grid=[];
+  for(let r=0;r<rows;r++){
+    const line=[];
+    for(let c=0;c<cols;c++)line.push((flat&&flat[r*cols+c])||null);
+    grid.push(line);
+  }
+  return grid;
+}
+/* Überträgt den Serverstand aufs Brett. Gebaut wird nur einmal, danach werden
+   nur noch Linien und Kästchen umgefärbt. */
+function syncBoard(){
+  edgesLayer.querySelectorAll(".edge").forEach(btn=>{
+    const type=btn.dataset.type;
+    const r=Number(btn.dataset.row);
+    const c=Number(btn.dataset.col);
+    const owner=type==="h"?horizontal[r][c]:vertical[r][c];
+    btn.classList.remove("red","blue");
+    if(owner){
+      btn.classList.add(owner);
+      btn.disabled=true;
+    }else{
+      btn.disabled=false;
+    }
+  });
+  updateBoxes();
+}
+function applyOnlineState(game){
+  onlineGame=game||null;
+  const waiting=!game||(game.status!=="active"&&game.status!=="finished");
+
+  if(waiting){
+    horizontal=emptyGrid(ROWS+1,COLS);
+    vertical=emptyGrid(ROWS,COLS+1);
+    boxes=emptyGrid(ROWS,COLS);
+    redScore=0;
+    blueScore=0;
+    current="red";
+    gameOver=false;
+    if(!boardBuilt){drawBoard();boardBuilt=true;}
+    syncBoard();
+    document.getElementById("redScore").textContent="0";
+    document.getElementById("blueScore").textContent="0";
+    const turn=document.getElementById("turn");
+    turn.style.color="var(--white)";
+    turn.textContent=game&&game.status==="invited"?"Warte auf den Spielstart …":"Kästchen";
+    document.getElementById("message").textContent=game&&game.status==="invited"
+      ?"Warte auf den Spielstart …"
+      :"Verbinde mit dem Connector …";
+    return;
+  }
+
+  horizontal=flatToGrid(game.h,ROWS+1,COLS);
+  vertical=flatToGrid(game.v,ROWS,COLS+1);
+  boxes=flatToGrid(game.boxes,ROWS,COLS);
+  redScore=game.redScore;
+  blueScore=game.blueScore;
+  current=game.current;
+  gameOver=game.status==="finished";
+
+  if(!boardBuilt){drawBoard();boardBuilt=true;}
+  syncBoard();
+
+  if(gameOver){
+    finishGame();
+  }else{
+    updateDisplay();
+  }
+  document.getElementById("message").textContent=game.note||(myTurnOnline()
+    ?"Du bist am Zug – tippe eine Linie."
+    :"Der andere Spieler ist am Zug …");
+}
+async function chooseEdgeOnline(type,r,c){
+  if(onlineBusy||gameOver)return;
+  if((type==="h"?horizontal[r][c]:vertical[r][c]))return;
+  if(!myTurnOnline()){
+    document.getElementById("message").textContent="Du bist nicht am Zug.";
+    return;
+  }
+  onlineBusy=true;
+  try{
+    const game=await onlineAction("line",{dir:type,row:r,col:c});
+    if(game)applyOnlineState(game);
+  }catch(e){
+    document.getElementById("message").textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+async function resetOnline(){
+  if(onlineBusy)return;
+  if(!onlineGame||onlineGame.status!=="finished"){
+    document.getElementById("message").textContent="Eine neue Runde ist erst nach Spielende möglich.";
+    return;
+  }
+  onlineBusy=true;
+  try{
+    const game=await onlineAction("reset");
+    if(game)applyOnlineState(game);
+  }catch(e){
+    document.getElementById("message").textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+async function pollOnline(){
+  if(!onlineRoom||!onlineID||onlineBusy)return;
+  try{
+    const game=await fetchOnlineGame();
+    if(!onlineBusy)applyOnlineState(game);
+  }catch(e){
+    document.getElementById("message").textContent="Verbindung zum Connector verloren …";
+  }
+}
+function startOnlineTable(){
+  const leave=document.getElementById("leaveBtn");
+  if(leave){
+    leave.hidden=false;
+    leave.addEventListener("click",()=>{
+      location.href="/connector?room="+encodeURIComponent(onlineRoom);
+    });
+  }
+  document.getElementById("message").textContent="Verbinde mit dem Connector …";
+  postPresence().catch(()=>{});
+  setInterval(()=>postPresence().catch(()=>{}),5000);
+  pollOnline();
+  setInterval(pollOnline,800);
+}
+
+if (ONLINE) {
+  startOnlineTable();
+} else {
+  newGame();
+}
 </script>
 </body>
 </html>

@@ -112,6 +112,8 @@ small{color:#9da8bd}
 .game-player:hover{filter:brightness(1.3)}
 .game-player:disabled{opacity:.55;cursor:default}
 .open-game{margin-top:8px}
+/* Erst reden, dann spielen: die Spielauswahl steht unter dem Chat. */
+.games-head{margin-top:22px}
 </style>
 </head>
 <body>
@@ -141,8 +143,6 @@ small{color:#9da8bd}
 <div class="chat-player">Dein Spielername: <strong id="chatplayer">Spieler</strong></div>
 <div id="muteOverview" class="mute-list-tag" hidden></div>
 <div id="chat"></div>
-<div id="game-status" class="empty">Wähle einen Spieler aus und lade ihn zu einem Spiel ein.</div>
-<div id="gameplayers"></div>
 <div class="chat-compose">
 <select id="recipient" aria-label="Nachrichtenempfänger">
 <option value="">An alle</option>
@@ -152,6 +152,9 @@ small{color:#9da8bd}
 <button onclick="send()">Senden</button>
 </div>
 </div>
+<h2 class="games-head">Spiel auswählen</h2>
+<div id="game-status" class="empty">Wähle einen Spieler aus und lade ihn zu einem Spiel ein.</div>
+<div id="gameplayers"></div>
 </section>
 
 <section><small>TrashyGecko Connector · Lokales Netzwerk · Keine Internetverbindung nötig</small></section>
@@ -293,13 +296,22 @@ async function join(roomDisplayName){
  }
 }
 
+// Wer wirklich etwas tut (klickt, tippt, scrollt), meldet das beim nächsten
+// Lebenszeichen mit. Sonst gilt er nach einer Minute als kurz weg.
+let userActed=false;
+["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+ document.addEventListener(evt,()=>{ userActed=true; },{passive:true});
+});
+
 async function heartbeat(){
  if(!activeRoom)return;
  updateChatPlayer();
+ const active=userActed;
+ userActed=false;
  try{
   await fetch("/api/presence",{
    method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName()})
+   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),active})
   });
  }catch(e){}
 }
@@ -381,13 +393,37 @@ let currentVGGame=null;
 let currentDameGame=null;
 let currentPaareGame=null;
 let currentMaenGame=null;
+let currentKaeseGame=null;
+let currentSimGame=null;
+let currentKalahaGame=null;
+let currentStreichholzGame=null;
+let currentMuehleGame=null;
+let currentReversiGame=null;
+let currentHoldGame=null;
+let currentSkyjoGame=null;
+let currentKniffelGame=null;
+let currentSchachGame=null;
+let currentGoGame=null;
+let currentBackgammonGame=null;
 
 const SUPPORTED_GAMES = [
  { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/tictac/tictactoe.html", api: "/api/tictactoe" },
  { id: "viergewinnt", name: "Vier gewinnt", path: "/spiele/viergewinnt/viergewinnt.html", api: "/api/viergewinnt" },
  { id: "dame", name: "Dame", path: "/spiele/dame/dame.html", api: "/api/dame" },
  { id: "paare", name: "Paare finden", path: "/spiele/paare/paare.html", api: "/api/paare" },
- { id: "menschaerger", name: "Mensch ärgere dich nicht", path: "/spiele/menschaerger/menschaerger.html", api: "/api/menschaerger" }
+ { id: "menschaerger", name: "Mensch ärgere dich nicht", path: "/spiele/menschaerger/menschaerger.html", api: "/api/menschaerger" },
+ { id: "kaesekaestche", name: "Käsekästchen", path: "/spiele/kaesekaestche/kaesekaestche.html", api: "/api/kaesekaestche" },
+ { id: "sim", name: "Sim", path: "/spiele/sim/sim.html", api: "/api/sim" },
+ { id: "kalaha", name: "Kalaha", path: "/spiele/kalaha/kalaha.html", api: "/api/kalaha" },
+ { id: "streichholzspiel", name: "21 Streichhölzer", path: "/spiele/streichholzspiel/streichholzspiel.html", api: "/api/streichholz" },
+ { id: "muehle", name: "Mühle", path: "/spiele/muehle/muehle.html", api: "/api/muehle" },
+ { id: "reversi", name: "Reversi", path: "/spiele/reversi/reversi.html", api: "/api/reversi" },
+ { id: "hold", name: "Hold the Line", path: "/spiele/hold/holdtheline.html", api: "/api/hold" },
+ { id: "skyjo", name: "Skyjo", path: "/spiele/skyjo/skyjo.html", api: "/api/skyjo" },
+ { id: "kniffel", name: "Kniffel", path: "/spiele/kniffel/kniffel.html", api: "/api/kniffel" },
+ { id: "schach", name: "Schach", path: "/spiele/schach/schach.html", api: "/api/schach" },
+ { id: "go", name: "Go", path: "/spiele/go/go.html", api: "/api/go" },
+ { id: "backgammon", name: "Backgammon", path: "/spiele/backgammon/backgammon.html", api: "/api/backgammon" }
 ];
 
 function tttStatus(text, gameId){
@@ -442,8 +478,13 @@ async function dameAction(action,data={}){
 async function inviteGame(gameId, player, extra={}){
  const gameDef = SUPPORTED_GAMES.find(g=>g.id===gameId);
  if(!gameDef) return;
- if(await gameApiAction(gameId, "invite", {toId: player.id, ...extra})){
-  tttStatus("Einladung zu "+gameDef.name+" an "+player.name+" wurde im Chat gesendet. Wir warten auf die Antwort …");
+ // Kniffel ist ein Tisch für bis zu sechs Spieler: Der Klick eröffnet die
+ // Runde, die anderen steigen über die Spielkarte ein.
+ const action=gameId==="kniffel"?"create":"invite";
+ if(await gameApiAction(gameId, action, {toId: player.id, ...extra})){
+  tttStatus(gameId==="kniffel"
+   ? "Kniffel-Runde eröffnet – mitspielen über die Spielkarte im Chat."
+   : "Einladung zu "+gameDef.name+" an "+player.name+" wurde im Chat gesendet. Wir warten auf die Antwort …");
   await refreshPlayers();
   await refresh();
  }
@@ -457,6 +498,18 @@ async function refreshGames(players){
  await refreshDame(players);
  await refreshPaare(players);
  await refreshMaen(players);
+ await refreshKaese(players);
+ await refreshSim(players);
+ await refreshKalaha(players);
+ await refreshStreichholz(players);
+ await refreshMuehle(players);
+ await refreshReversi(players);
+ await refreshHold(players);
+ await refreshSkyjo(players);
+ await refreshKniffel(players);
+ await refreshSchach(players);
+ await refreshGo(players);
+ await refreshBackgammon(players);
 }
 
 // Aktueller Spielstand des jeweiligen Spiels, für die Einladungen im Chat.
@@ -465,6 +518,18 @@ function gameStateFor(gameId){
  if(gameId==="viergewinnt")return currentVGGame;
  if(gameId==="paare")return currentPaareGame;
  if(gameId==="menschaerger")return currentMaenGame;
+ if(gameId==="kaesekaestche")return currentKaeseGame;
+ if(gameId==="sim")return currentSimGame;
+ if(gameId==="kalaha")return currentKalahaGame;
+ if(gameId==="streichholzspiel")return currentStreichholzGame;
+ if(gameId==="muehle")return currentMuehleGame;
+ if(gameId==="reversi")return currentReversiGame;
+ if(gameId==="hold")return currentHoldGame;
+ if(gameId==="skyjo")return currentSkyjoGame;
+ if(gameId==="kniffel")return currentKniffelGame;
+ if(gameId==="schach")return currentSchachGame;
+ if(gameId==="go")return currentGoGame;
+ if(gameId==="backgammon")return currentBackgammonGame;
  return currentTTTGame;
 }
 
@@ -534,6 +599,494 @@ async function refreshPaare(players){
  }
 }
 
+// Kalaha: Steine verteilen, Becken füllen, Bonuszüge nutzen.
+async function refreshKalaha(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/kalaha?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentKalahaGame=game;
+ if(!game)return;
+
+ const name=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.redName+" "+game.pits[6]+" : "+game.pits[13]+" "+game.blueName;
+
+ if(game.status==="active"){
+  tttStatus("Kalaha läuft – "+standing+".", "kalaha");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner==="draw"?"Unentschieden":name(game.winner)+" hat gewonnen";
+  tttStatus("Kalaha beendet – "+standing+" · "+text+".", "kalaha");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Kalaha: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("kalaha", "accept")){
+     openGame(gamePath("kalaha"));
+    }
+   });
+  }
+ }
+}
+
+// Backgammon: 24 Punkte, Bar, Auswürfeln, Gammon und Backgammon.
+async function refreshBackgammon(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/backgammon?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentBackgammonGame=game;
+ if(!game)return;
+
+ const stand="Im Ziel: "+game.redName+" "+game.off[0]+"/15, "+game.blueName+" "+game.off[1]+"/15";
+
+ if(game.status==="active"){
+  const wer=game.player===0?game.redName:game.blueName;
+  const bar=game.bar[0]+game.bar[1]>0?" · auf der Bar: "+game.bar[0]+" / "+game.bar[1]:"";
+  tttStatus("Backgammon läuft – "+stand+", "+wer+" ist am Zug"+bar+".", "backgammon");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="red"?game.redName:game.blueName;
+  const art=game.multiplier===3?"Backgammon":game.multiplier===2?"Gammon":"einfacher Sieg";
+  tttStatus("Backgammon beendet – "+sieger+" gewinnt ("+art+", "+game.multiplier+" Punkte).", "backgammon");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Backgammon: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("backgammon", "accept")){
+     openGame(gamePath("backgammon"));
+    }
+   });
+  }
+ }
+}
+
+// Go: 9x9, zwei Pässe beenden die Partie, dann zählen Steine und Gebiete.
+async function refreshGo(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/go?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentGoGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  const wer=game.turn==="B"?game.redName:game.blueName;
+  const fangen="Schwarz fängt "+game.capturedB+", Weiß fängt "+game.capturedW;
+  tttStatus("Go läuft – "+game.redName+" (Schwarz) gegen "+game.blueName+" (Weiß), "+wer+" ist am Zug. "+fangen+".", "go");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="B"?game.redName:game.blueName;
+  tttStatus("Go beendet – Schwarz "+game.scoreBlack+" : "+game.scoreWhite+" Weiß (mit 6,5 Ausgleich), "+sieger+" gewinnt.", "go");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Go: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("go", "accept")){
+     openGame(gamePath("go"));
+    }
+   });
+  }
+ }
+}
+
+// Schach: Weiß gegen Schwarz, mit Rochade, En passant und Umwandlung.
+async function refreshSchach(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/schach?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSchachGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  const zug=game.state.turn==="w"?"Weiß":"Schwarz";
+  const wer=game.state.turn==="w"?game.redName:game.blueName;
+  tttStatus("Schach läuft – "+game.redName+" (Weiß) gegen "+game.blueName+" (Schwarz), "+wer+" ist am Zug.", "schach");
+  void zug;
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner?((game.winner==="w"?game.redName:game.blueName)+" gewinnt") : "Unentschieden (Patt)";
+  tttStatus("Schach beendet – "+text+".", "schach");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Schach: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("schach", "accept")){
+     openGame(gamePath("schach"));
+    }
+   });
+  }
+ }
+}
+
+// Kniffel: bis zu sechs Spieler am selben Tisch, 13 Kategorien.
+async function refreshKniffel(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/kniffel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentKniffelGame=game;
+ if(!game)return;
+
+ const names=game.players.map(p=>p.name).join(", ");
+ if(!names)return;
+
+ if(game.status==="invited"){
+  tttStatus("Kniffel: "+names+" – "+game.players.length+" von 6 Plätzen belegt.");
+  const me=game.players.some(p=>p.id===sessionID);
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("kniffel")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("kniffel", "join")){
+     openGame(gamePath("kniffel"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.players[game.current];
+  tttStatus("Kniffel läuft – "+names+", "+(dran?dran.name:"jemand")+" ist am Zug.", "kniffel");
+  if(game.players.some(p=>p.id===sessionID)){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("kniffel")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Kniffel beendet – "+game.winner+" gewinnt.", "kniffel");
+ }
+}
+
+// Skyjo: Karten tauschen, Spalten räumen, am Ende zählen die Punkte.
+async function refreshSkyjo(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/skyjo?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSkyjoGame=game;
+ if(!game)return;
+
+ const nameOf=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.redName+" "+game.totals[0]+" : "+game.totals[1]+" "+game.blueName;
+
+ if(game.status==="active" && game.phase!=="between"){
+  let zug;
+  if(game.phase==="setup"){
+   zug=(game.setupPlayer===0?game.redName:game.blueName)+" deckt seine Startkarten auf";
+  }else{
+   zug=nameOf(game.current===0?"red":"blue")+(" ist am Zug");
+  }
+  tttStatus("Skyjo läuft – Runde "+game.round+", "+standing+", "+zug+".", "skyjo");
+  return;
+ }
+
+ if(game.status==="active" && game.phase==="between"){
+  const sieger=game.roundWinner==="draw"?"unentschieden":nameOf(game.roundWinner)+" gewinnt";
+  tttStatus("Skyjo – Runde "+game.round+" beendet, "+sieger+" ("+game.roundScores[0]+" : "+game.roundScores[1]+").", "skyjo");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner==="draw"?"Unentschieden":nameOf(game.winner)+" hat gewonnen";
+  tttStatus("Skyjo beendet – "+standing+" · "+text+".", "skyjo");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Skyjo: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("skyjo", "accept")){
+     openGame(gamePath("skyjo"));
+    }
+   });
+  }
+ }
+}
+
+// Reversi: Steine umdrehen, aussetzen, am Ende zählen die Steine.
+async function refreshReversi(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/reversi?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentReversiGame=game;
+ if(!game)return;
+
+ let black=0,white=0;
+ (game.board||[]).forEach(row=>row.forEach(v=>{ if(v===1)black++; else if(v===-1)white++; }));
+ const standing=game.redName+" (Schwarz) "+black+" : "+white+" "+game.blueName+" (Weiß)";
+
+ if(game.status==="active"){
+  const zug=game.turn===1?game.redName:game.blueName;
+  tttStatus("Reversi läuft – "+standing+", "+zug+" ist am Zug.", "reversi");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner==="draw"?"Unentschieden":(game.winner==="black"?game.redName:game.blueName)+" hat gewonnen";
+  tttStatus("Reversi beendet – "+standing+" · "+text+".", "reversi");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Reversi: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("reversi", "accept")){
+     openGame(gamePath("reversi"));
+    }
+   });
+  }
+ }
+}
+
+// Hold the Line: Linien ziehen, wer keinen Zug mehr hat, verliert.
+async function refreshHold(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/hold?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentHoldGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  const zug=game.current==="red"?game.redName:game.blueName;
+  tttStatus("Hold the Line läuft – "+(game.lines||[]).length+" Linien, "+zug+" ist am Zug.", "hold");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="red"?game.redName:game.blueName;
+  tttStatus("Hold the Line beendet – "+sieger+" hat gewonnen.", "hold");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Hold the Line: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("hold", "accept")){
+     openGame(gamePath("hold"));
+    }
+   });
+  }
+ }
+}
+
+// Mühle: Steine setzen, ziehen und gegnerische Steine schlagen.
+async function refreshMuehle(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/muehle?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentMuehleGame=game;
+ if(!game)return;
+
+ const count=color=>game.state.filter(field=>field===color).length;
+ const nameOf=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.redName+" "+count("red")+" : "+count("blue")+" "+game.blueName;
+
+ if(game.status==="active"){
+  const zug=game.capturePending
+   ? nameOf(game.current)+" darf einen Stein schlagen"
+   : nameOf(game.current)+" ist am Zug";
+  tttStatus("Mühle läuft – "+standing+", "+zug+".", "muehle");
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Mühle beendet – "+standing+" · "+nameOf(game.winner)+" hat gewonnen.", "muehle");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Mühle: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("muehle", "accept")){
+     openGame(gamePath("muehle"));
+    }
+   });
+  }
+ }
+}
+
+// Streichhölzer: abwechselnd 1 bis 3 nehmen, wer das letzte nimmt, verliert.
+async function refreshStreichholz(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/streichholz?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentStreichholzGame=game;
+ if(!game)return;
+
+ const nameOf=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.remaining+" Hölzer übrig";
+
+ if(game.status==="active"){
+  tttStatus("Streichholzspiel läuft – "+standing+", "+nameOf(game.current)+" ist am Zug.", "streichholzspiel");
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Streichholzspiel beendet – "+nameOf(game.winner)+" gewinnt, "+nameOf(game.loser)+" nahm das letzte Holz.", "streichholzspiel");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Streichholzspiel: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("streichholzspiel", "accept")){
+     openGame(gamePath("streichholzspiel"));
+    }
+   });
+  }
+ }
+}
+
+// Sim: Wer mit seinen Linien ein Dreieck schließt, hat verloren.
+async function refreshSim(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/sim?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSimGame=game;
+ if(!game)return;
+
+ const name=color=>color==="red"?game.redName:game.blueName;
+
+ if(game.status==="active"){
+  tttStatus("Sim läuft: "+game.redName+" gegen "+game.blueName+" – "+game.edges.filter(e=>e).length+" von 15 Linien gesetzt.", "sim");
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Sim beendet: "+name(game.winner)+" gewinnt, "+name(game.loser)+" hat ein Dreieck gebaut.", "sim");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Sim: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("sim", "accept")){
+     openGame(gamePath("sim"));
+    }
+   });
+  }
+ }
+}
+
+// Käsekästchen: Linien ziehen, geschlossene Kästchen bringen einen weiteren Zug.
+async function refreshKaese(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/kaesekaestche?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentKaeseGame=game;
+ if(!game)return;
+
+ const standing=game.redName+" "+game.redScore+" : "+game.blueScore+" "+game.blueName;
+
+ if(game.status==="active"){
+  tttStatus("Käsekästchen läuft – "+standing+".", "kaesekaestche");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const winner=game.winner==="draw"
+   ?"Unentschieden"
+   :(game.winner===game.redId?game.redName:game.blueName)+" hat gewonnen";
+  tttStatus("Käsekästchen beendet – "+standing+" · "+winner+".", "kaesekaestche");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Käsekästchen: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("kaesekaestche", "accept")){
+     openGame(gamePath("kaesekaestche"));
+    }
+   });
+  }
+ }
+}
+
 // Mensch ärgere dich nicht spielt mit 2-4 Sitzen. Der Gastgeber lädt nacheinander
 // weitere Spieler ein und startet, sobald genug bereit sind.
 async function refreshMaen(players){
@@ -586,6 +1139,7 @@ async function refreshMaen(players){
 
 let selectedGame="tictactoe";
 let selectedPairs=8;
+let selectedKind="numbers";
 let selectedSeats=4;
 let playersSignature="";
 
@@ -672,6 +1226,22 @@ function renderGamePicker(players){
   pairsSelect.value=String(selectedPairs);
   pairsSelect.onchange=()=>{ selectedPairs=Number(pairsSelect.value)||8; };
   controls.append(pairsLabel,pairsSelect);
+
+  const kindLabel=document.createElement("label");
+  kindLabel.htmlFor="kind-choice";
+  kindLabel.textContent="Zeichen:";
+  const kindSelect=document.createElement("select");
+  kindSelect.id="kind-choice";
+  kindSelect.setAttribute("aria-label","Art der Zeichen");
+  [["numbers","Zahlen"],["letters","Buchstaben"],["symbols","Sonderzeichen"]].forEach(([value,text])=>{
+   const opt=document.createElement("option");
+   opt.value=value;
+   opt.textContent=text;
+   kindSelect.appendChild(opt);
+  });
+  kindSelect.value=selectedKind;
+  kindSelect.onchange=()=>{ selectedKind=kindSelect.value; };
+  controls.append(kindLabel,kindSelect);
  }
 
  // Bei Mensch ärgere dich nicht zählt, wie viele Sitze der Tisch hat.
@@ -712,7 +1282,7 @@ function renderGamePicker(players){
     if(row.disabled)return;
     row.disabled=true;
     try{
-     const extra=selectedGame==="paare"?{pairs:selectedPairs}
+     const extra=selectedGame==="paare"?{pairs:selectedPairs,kind:selectedKind}
       :selectedGame==="menschaerger"?{maxPlayers:selectedSeats}
       :{};
      await inviteGame(selectedGame, p, extra);

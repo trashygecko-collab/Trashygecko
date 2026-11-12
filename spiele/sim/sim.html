@@ -254,6 +254,7 @@ svg{
 
   <div class="bottom">
     <button class="reset" id="restart">↻ NEUES SPIEL</button>
+    <button class="reset" id="leaveBtn" hidden style="margin-left:10px">ZUM CONNECTOR</button>
   </div>
 
   <div class="rule">
@@ -279,6 +280,20 @@ let current = "red";
 let gameOver = false;
 let moveCount = 0;
 let winningEdges = [];
+
+/* Über den Connector geöffnet (?room=TG-XXXX&name=...&id=...) spielt man gegen
+   einen zweiten Spieler. Ohne diese Parameter bleibt alles lokal. */
+const onlineParams=new URLSearchParams(location.search);
+const onlineRoom=(onlineParams.get("room")||"").trim().toUpperCase();
+const ONLINE=/^TG-[A-F0-9]{4}$/.test(onlineRoom);
+const onlineName=(onlineParams.get("name")||"").trim()||"Spieler";
+let onlineID=(onlineParams.get("id")||"").trim();
+if(ONLINE&&!onlineID){
+  try{onlineID=sessionStorage.getItem("tg-player-id")||"";}catch(e){}
+}
+if(ONLINE&&!onlineID)onlineID="tg-"+Math.random().toString(36).slice(2)+Date.now();
+let onlineGame=null;
+let onlineBusy=false;
 
 for(let a=0;a<6;a++){
   for(let b=a+1;b<6;b++){
@@ -373,6 +388,7 @@ function findEdge(a,b){
 
 function selectEdge(index){
   if(gameOver || edges[index].color) return;
+  if(ONLINE){ selectEdgeOnline(index); return; }
 
   edges[index].color=current;
   moveCount++;
@@ -435,6 +451,7 @@ function showWinner(loser,winner){
 }
 
 document.getElementById("restart").addEventListener("click",()=>{
+  if(ONLINE){ restartOnline(); return; }
   edges.forEach(e=>e.color=null);
   current="red";
   gameOver=false;
@@ -446,9 +463,130 @@ document.getElementById("restart").addEventListener("click",()=>{
   updateDisplay();
 });
 
-drawBoard();
-updateCounter();
-updateDisplay();
+/* ---------- Online über den Connector ---------- */
+function myTurnOnline(){
+  if(!onlineGame||onlineGame.status!=="active")return false;
+  if(onlineGame.current==="red")return onlineGame.redId===onlineID;
+  return onlineGame.blueId===onlineID;
+}
+async function postPresence(){
+  if(!onlineRoom||!onlineID)return;
+  await fetch("/api/presence",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
+  });
+}
+async function fetchOnlineGame(){
+  const r=await fetch("/api/sim?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store"});
+  if(!r.ok)throw new Error("Spielstand nicht erreichbar ("+r.status+").");
+  return (await r.json()).game;
+}
+async function onlineAction(action,payload={}){
+  const r=await fetch("/api/sim?room="+encodeURIComponent(onlineRoom)+"&action="+encodeURIComponent(action),{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:onlineID,...payload})
+  });
+  if(!r.ok)throw new Error((await r.text()).trim()||"Aktion fehlgeschlagen.");
+  return (await r.json()).game;
+}
+function applyOnlineState(game){
+  onlineGame=game||null;
+  const waiting=!game||(game.status!=="active"&&game.status!=="finished");
+
+  if(waiting){
+    edges.forEach(e=>e.color=null);
+    current="red";
+    gameOver=false;
+    moveCount=0;
+    winningEdges=[];
+    drawBoard();
+    updateCounter();
+    document.getElementById("status").className="status";
+    document.getElementById("status").textContent=game&&game.status==="invited"?"WARTE AUF DEN SPIELSTART …":"SIM";
+    document.getElementById("info").textContent=game&&game.status==="invited"
+      ?"Warte auf den Spielstart …"
+      :"Verbinde mit dem Connector …";
+    return;
+  }
+
+  edges.forEach((edge,i)=>{ edge.color=(game.edges&&game.edges[i])||null; });
+  moveCount=edges.filter(edge=>edge.color).length;
+  current=game.current;
+  gameOver=game.status==="finished";
+  winningEdges=game.triangle||[];
+  drawBoard();
+  updateCounter();
+
+  if(gameOver){
+    showWinner(game.loser,game.winner);
+  }else{
+    updateDisplay();
+  }
+  if(game.note)document.getElementById("info").textContent=game.note;
+}
+async function selectEdgeOnline(index){
+  if(onlineBusy||gameOver)return;
+  if(!myTurnOnline()){
+    document.getElementById("info").textContent="Du bist nicht am Zug.";
+    return;
+  }
+  onlineBusy=true;
+  try{
+    const game=await onlineAction("line",{index});
+    if(game)applyOnlineState(game);
+  }catch(e){
+    document.getElementById("info").textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+async function restartOnline(){
+  if(onlineBusy)return;
+  if(!onlineGame||onlineGame.status!=="finished"){
+    document.getElementById("info").textContent="Eine neue Runde ist erst nach Spielende möglich.";
+    return;
+  }
+  onlineBusy=true;
+  try{
+    const game=await onlineAction("reset");
+    if(game)applyOnlineState(game);
+  }catch(e){
+    document.getElementById("info").textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+async function pollOnline(){
+  if(!onlineRoom||!onlineID||onlineBusy)return;
+  try{
+    const game=await fetchOnlineGame();
+    if(!onlineBusy)applyOnlineState(game);
+  }catch(e){
+    document.getElementById("info").textContent="Verbindung zum Connector verloren …";
+  }
+}
+function startOnlineTable(){
+  const leave=document.getElementById("leaveBtn");
+  if(leave){
+    leave.hidden=false;
+    leave.addEventListener("click",()=>{
+      location.href="/connector?room="+encodeURIComponent(onlineRoom);
+    });
+  }
+  document.getElementById("info").textContent="Verbinde mit dem Connector …";
+  postPresence().catch(()=>{});
+  setInterval(()=>postPresence().catch(()=>{}),5000);
+  pollOnline();
+  setInterval(pollOnline,800);
+}
+
+if(ONLINE){
+  startOnlineTable();
+}else{
+  drawBoard();
+  updateCounter();
+  updateDisplay();
+}
 </script>
 </body>
 </html>

@@ -511,6 +511,8 @@ button.action.pink {
 
   function play(r,c) {
 
+    if(ONLINE) { playOnline(r,c); return; }
+
     if(finished) return;
 
     const flips = flipsFor(r,c,turn);
@@ -536,6 +538,14 @@ button.action.pink {
 
   function pass() {
 
+    if(ONLINE) {
+
+      if(onlineBusy || finished || legalMoves(turn).length) return;
+
+      reversiAction('pass',{});
+      return;
+    }
+
     if(finished || legalMoves(turn).length) return;
 
     if(!legalMoves(-turn).length) {
@@ -552,6 +562,8 @@ button.action.pink {
   }
 
   function newGame() {
+
+    if(ONLINE) { reversiAction('reset',{}); return; }
 
     board = Array.from(
       {length:8},
@@ -576,7 +588,116 @@ button.action.pink {
   passBtn.addEventListener('click',pass);
   restartBtn.addEventListener('click',newGame);
 
-  newGame();
+  // ---- Online über den Connector ----
+  const params = new URLSearchParams(location.search);
+  const ONLINE = params.has('room') && params.has('id');
+  const ROOM = params.get('room') || '';
+  const PLAYER_ID = params.get('id') || '';
+  const ONLINE_API = '/api/reversi';
+  let onlineBusy = false;
+  let onlineGame = null;
+
+  function onlineTurnName(){
+    if(!onlineGame) return turn===1 ? 'Schwarz' : 'Weiß';
+    return turn===1 ? onlineGame.redName : onlineGame.blueName;
+  }
+
+  function applyOnlineState(game){
+
+    if(!game) return;
+
+    onlineGame = game;
+    board = (game.board||[]).map(row=>row.slice());
+    turn = game.turn;
+    lastMove = game.hasLast ? [game.lastR,game.lastC] : null;
+    finished = game.status === 'finished';
+
+    render();
+
+    if(finished){
+      const s = count();
+      statusEl.textContent = game.winner==='draw'
+        ? `Spiel beendet! Unentschieden – ${s.b} zu ${s.w}.`
+        : `Spiel beendet! ${game.winner==='black'?game.redName:game.blueName} gewinnt mit ${Math.max(s.b,s.w)} zu ${Math.min(s.b,s.w)} Steinen.`;
+      return;
+    }
+
+    if(game.status==='invited'){
+      statusEl.textContent = 'Warte auf die Antwort von '+game.blueName+' …';
+      return;
+    }
+
+    statusEl.textContent = game.note || (onlineTurnName()+' ist am Zug.');
+  }
+
+  async function onlineFetch(url,options){
+    const response = await fetch(url,options);
+    if(!response.ok) throw Error((await response.text()).trim() || 'Die Aktion ist fehlgeschlagen.');
+    return response.json();
+  }
+
+  async function refreshOnline(){
+    if(onlineBusy) return;
+    try{
+      const data = await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&id='+encodeURIComponent(PLAYER_ID));
+      applyOnlineState(data.game);
+    }catch(e){}
+  }
+
+  async function reversiAction(action,payload){
+    if(onlineBusy) return;
+    onlineBusy = true;
+    try{
+      const data = await onlineFetch(ONLINE_API+'?room='+encodeURIComponent(ROOM)+'&action='+action,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({id:PLAYER_ID,...payload})
+      });
+      applyOnlineState(data.game);
+    }catch(e){
+      statusEl.textContent = e.message;
+    }finally{
+      onlineBusy = false;
+    }
+  }
+
+  function playOnline(r,c){
+    if(finished) return;
+
+    if(!flipsFor(r,c,turn).length){
+      statusEl.textContent = 'Dort ist kein gültiger Zug möglich. Wähle ein markiertes Feld.';
+      return;
+    }
+
+    reversiAction('move',{r,c});
+  }
+
+  if(ONLINE){
+    board = Array.from({length:8},()=>Array(8).fill(0));
+    board[3][3] = -1;
+    board[3][4] = 1;
+    board[4][3] = 1;
+    board[4][4] = -1;
+    turn = 1;
+    lastMove = null;
+    finished = false;
+    statusEl.textContent = 'Verbinde mit dem Spielraum …';
+    render();
+
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.id = 'leaveBtn';
+    back.className = restartBtn.className;
+    back.textContent = 'Zum Connector';
+    back.style.marginLeft = '8px';
+    back.onclick = () => { location.href = '/connector?room='+encodeURIComponent(ROOM); };
+    restartBtn.after(back);
+
+    refreshOnline();
+    setInterval(refreshOnline,1500);
+  } else {
+    newGame();
+  }
 
 })();
 </script>

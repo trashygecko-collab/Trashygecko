@@ -255,6 +255,16 @@ tfoot td {
   letter-spacing:1px;
 }
 .hidden { display:none!important; }
+.lobby-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 4px;
+  border-bottom:1px solid #29365f;
+  font-size:16px;
+}
+.lobby-row strong { font-size:13px; letter-spacing:1px; }
 
 @media(max-width:760px) {
   body { padding:8px; }
@@ -323,7 +333,8 @@ tfoot td {
 </header>
 
 <section class="panel setup" id="setup">
-  <h2>NEUES SPIEL</h2>
+  <h2 id="setupTitle">NEUES SPIEL</h2>
+  <div id="kniffelLobby" class="hidden"></div>
   <label for="playerCount">WIE VIELE SPIELER?</label>
   <select id="playerCount">
     <option value="1">1 SPIELER</option>
@@ -333,7 +344,9 @@ tfoot td {
     <option value="5">5 SPIELER</option>
     <option value="6">6 SPIELER</option>
   </select>
+  <button class="bigbtn" id="readyBtn" type="button" style="display:none">BEREIT</button>
   <button class="bigbtn primary" id="startBtn">SPIEL STARTEN</button>
+  <div class="hint" id="lobbyHint" style="display:none">Mindestens 2 Spieler – und alle drücken BEREIT.</div>
 </section>
 
 <section id="game" class="hidden">
@@ -484,6 +497,7 @@ function current(){return players[currentPlayer]}
 function setStatus(text){$("status").textContent=text}
 
 function startGame(){
+  if(ONLINE){ kniffelAction("start",{}); return; }
   const count=Number($("playerCount").value);
   players=Array.from({length:count},(_,i)=>({
     name:"SPIELER "+(i+1),
@@ -593,6 +607,7 @@ function render(){
   renderScore();
 }
 function rollDice(){
+  if(ONLINE){ if(rolls<3&&!finished) kniffelAction("roll",{kept}); return; }
   if(rolls>=3||finished)return;
   dice=dice.map((v,i)=>kept[i]?v:1+Math.floor(Math.random()*6));
   rolls++;
@@ -603,6 +618,7 @@ function rollDice(){
   );
 }
 function enterScore(category){
+  if(ONLINE){ if(rolls>0&&!finished&&category) kniffelAction("score",{category:category.id}); return; }
   const p=current();
   if(p.scores[category.id]!==null||rolls===0||finished)return;
   const points=category.score(dice);
@@ -636,6 +652,7 @@ function enterScore(category){
   setView("dice");
 }
 function finishRound(){
+  if(ONLINE){ if(rolls>0&&!finished) kniffelAction("score",{category:""}); return; }
   if(rolls===0||finished)return;
   const category=categories.find(c=>current().scores[c.id]===null);
   if(category)enterScore(category);
@@ -667,15 +684,211 @@ function setView(view){
 }
 
 $("startBtn").addEventListener("click",startGame);
+$("readyBtn").addEventListener("click",()=>{
+ if(ONLINE){ kniffelAction("ready",{}); return; }
+});
 $("rollBtn").addEventListener("click",rollDice);
 $("finishBtn").addEventListener("click",finishRound);
 $("newGameBtn").addEventListener("click",()=>{
+  if(ONLINE){ kniffelAction("reset",{}); return; }
   $("result").classList.add("hidden");
   $("setup").classList.remove("hidden");
 });
 document.querySelectorAll(".tab").forEach(b=>{
   b.addEventListener("click",()=>setView(b.dataset.view));
 });
+
+// ---- Online über den Connector ----
+const params=new URLSearchParams(location.search);
+const ONLINE=params.has("room")&&params.has("id");
+const ROOM=params.get("room")||"";
+const PLAYER_ID=params.get("id")||"";
+const ONLINE_API="/api/kniffel";
+let onlineBusy=false;
+let onlineGame=null;
+
+function myTurn(){
+  if(!onlineGame||onlineGame.status!=="active") return false;
+  const p=onlineGame.players[onlineGame.current];
+  return !!p&&p.id===PLAYER_ID;
+}
+
+function applyOnlineState(game){
+  if(!game)return;
+  onlineGame=game;
+
+  players=game.players.map(p=>({
+    name:p.name,
+    color:p.color,
+    scores:p.scores,
+    kniffelBonus:p.kniffelBonus
+  }));
+  currentPlayer=game.current;
+  dice=(game.dice&&game.dice.length===5)?game.dice.slice():[0,0,0,0,0];
+  rolls=game.rolls;
+  if(rolls===0) kept=[false,false,false,false,false];
+
+  const label=document.querySelector('label[for="playerCount"]');
+  const select=$("playerCount");
+  const startBtn=$("startBtn");
+
+  if(game.status==="invited"){
+    $("setup").classList.remove("hidden");
+    $("game").classList.add("hidden");
+    $("result").classList.add("hidden");
+    finished=false;
+    select.style.display="none";
+    label.textContent="AM TISCH: "+game.players.length+" VON 6";
+
+    // Wer sitzt am Tisch und wer hat schon BEREIT gedrückt?
+    const lobby=$("kniffelLobby");
+    lobby.classList.remove("hidden");
+    lobby.innerHTML="";
+    game.players.forEach(p=>{
+      const row=document.createElement("div");
+      row.className="lobby-row";
+      const name=document.createElement("span");
+      name.textContent=p.name+(p.id===PLAYER_ID?" (Du)":"");
+      name.style.color=p.color;
+      const state=document.createElement("strong");
+      state.textContent=p.ready?"BEREIT":"WARTET";
+      state.style.color=p.ready?"#62ff9b":"#ffe66d";
+      row.append(name,state);
+      lobby.appendChild(row);
+    });
+
+    const me=game.players.find(p=>p.id===PLAYER_ID);
+    const readyBtn=$("readyBtn");
+    if(me){
+      readyBtn.style.display="";
+      readyBtn.textContent=me.ready?"DOCH NICHT BEREIT":"BEREIT";
+    }else{
+      readyBtn.style.display="none";
+    }
+
+    // Starten darf nur der Gastgeber – und erst, wenn alle bereit sind.
+    const allReady=game.players.length>=2&&game.players.every(p=>p.ready);
+    const hint=$("lobbyHint");
+    hint.style.display="";
+    if(game.hostId===PLAYER_ID){
+      startBtn.style.display="";
+      startBtn.disabled=!allReady;
+      startBtn.textContent=allReady?"SPIEL STARTEN":"ERST ALLE BEREIT";
+      hint.textContent=allReady
+        ?"Alle sind bereit – du kannst starten."
+        :"Mindestens 2 Spieler – und alle drücken BEREIT.";
+    }else{
+      startBtn.style.display="none";
+      hint.textContent="Der Gastgeber startet, sobald alle BEREIT gedrückt haben.";
+    }
+    if(game.note)setStatus(game.note);
+    return;
+  }
+
+  $("setup").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("kniffelLobby").classList.add("hidden");
+  $("readyBtn").style.display="none";
+  $("lobbyHint").style.display="none";
+
+  if(game.status==="finished"){
+    $("game").classList.add("hidden");
+    finished=true;
+    endGame();
+    return;
+  }
+
+  $("game").classList.remove("hidden");
+  finished=false;
+  render();
+
+  if(!myTurn()){
+    $("rollBtn").disabled=true;
+    $("finishBtn").disabled=true;
+    document.querySelectorAll(".scorebtn").forEach(b=>{ b.disabled=true; });
+    document.querySelectorAll(".die").forEach(b=>{ b.disabled=true; });
+    const p=onlineGame.players[onlineGame.current];
+    setStatus(p?("Warte auf "+p.name+" …"):"Warte …");
+  }else if(game.note){
+    setStatus(game.note);
+  }
+}
+
+async function onlineFetch(url,options){
+  const response=await fetch(url,options);
+  if(!response.ok)throw Error((await response.text()).trim()||"Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline(){
+  if(onlineBusy)return;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  }catch(e){
+    setStatus("Keine Verbindung zum Spielraum – bitte über den Connector neu betreten.");
+  }
+}
+
+async function kniffelAction(action,payload){
+  if(onlineBusy)return;
+  onlineBusy=true;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID,...payload})
+    });
+    applyOnlineState(data.game);
+  }catch(e){
+    setStatus(e.message);
+  }finally{
+    onlineBusy=false;
+  }
+}
+
+// Ohne Lebenszeichen fliegt man nach 90 Sekunden aus dem Spielraum.
+let actedSincePing=false;
+["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+  document.addEventListener(evt,()=>{ actedSincePing=true; },{passive:true});
+});
+
+async function postPresence(){
+  const me=onlineGame?onlineGame.players.find(p=>p.id===PLAYER_ID):null;
+  const active=actedSincePing;
+  actedSincePing=false;
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name:me?me.name:(params.get("name")||"Spieler"),active})
+    });
+  }catch(e){}
+}
+
+if(ONLINE){
+  players=[];
+  dice=[0,0,0,0,0];
+  kept=[false,false,false,false,false];
+  rolls=0;
+  setStatus("Verbinde mit dem Spielraum …");
+  $("setup").classList.remove("hidden");
+  $("game").classList.add("hidden");
+  $("result").classList.add("hidden");
+
+  const back=document.createElement("button");
+  back.type="button";
+  back.id="leaveBtn";
+  back.className="bigbtn";
+  back.textContent="ZUM CONNECTOR";
+  back.style.width="100%";
+  back.style.marginTop="10px";
+  back.onclick=()=>{ location.href="/connector?room="+encodeURIComponent(ROOM); };
+  $("startBtn").after(back);
+
+  // Erst den Platz im Raum sichern, dann den Spielstand holen.
+  postPresence().then(refreshOnline);
+  setInterval(postPresence,5000);
+  setInterval(refreshOnline,1500);
+}
 </script>
 </body>
 </html>

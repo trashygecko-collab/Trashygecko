@@ -92,6 +92,30 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 				game = "Dame"
 			} else if room.Paare != nil && (room.Paare.Status == "active" || room.Paare.Status == "invited") {
 				game = "Paare finden"
+			} else if room.Kaese != nil && (room.Kaese.Status == "active" || room.Kaese.Status == "invited") {
+				game = "Käsekästchen"
+			} else if room.Sim != nil && (room.Sim.Status == "active" || room.Sim.Status == "invited") {
+				game = "Sim"
+			} else if room.Kalaha != nil && (room.Kalaha.Status == "active" || room.Kalaha.Status == "invited") {
+				game = "Kalaha"
+			} else if room.Streichholz != nil && (room.Streichholz.Status == "active" || room.Streichholz.Status == "invited") {
+				game = "Streichholzspiel"
+			} else if room.Muehle != nil && (room.Muehle.Status == "active" || room.Muehle.Status == "invited") {
+				game = "Mühle"
+			} else if room.Reversi != nil && (room.Reversi.Status == "active" || room.Reversi.Status == "invited") {
+				game = "Reversi"
+			} else if room.Hold != nil && (room.Hold.Status == "active" || room.Hold.Status == "invited") {
+				game = "Hold the Line"
+			} else if room.Skyjo != nil && (room.Skyjo.Status == "active" || room.Skyjo.Status == "invited") {
+				game = "Skyjo"
+			} else if room.Kniffel != nil && (room.Kniffel.Status == "active" || room.Kniffel.Status == "invited") {
+				game = "Kniffel"
+			} else if room.Schach != nil && (room.Schach.Status == "active" || room.Schach.Status == "invited") {
+				game = "Schach"
+			} else if room.Go != nil && (room.Go.Status == "active" || room.Go.Status == "invited") {
+				game = "Go"
+			} else if room.Backgammon != nil && (room.Backgammon.Status == "active" || room.Backgammon.Status == "invited") {
+				game = "Backgammon"
 			} else if room.Menschaerger != nil && (room.Menschaerger.Status == "active" || room.Menschaerger.Status == "invited") {
 				game = "Mensch ärgere dich nicht"
 			}
@@ -148,6 +172,9 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		Room string `json:"room"`
 		ID   string `json:"id"`
 		Name string `json:"name"`
+		// Active meldet, ob der Spieler seit dem letzten Lebenszeichen etwas
+		// getan hat (Klick, Tastendruck). Ohne das zählt er als abwesend.
+		Active bool `json:"active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -184,21 +211,31 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	room.cleanPlayers()
+	// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder als der
+	// Admin ausgeben.
+	name := room.uniqueName(input.Name, input.ID)
 	// Admin ist der Spieler am Server-PC. Seine Anfrage kommt von einer lokalen
 	// Adresse, egal ob über localhost oder die LAN-IP aufgerufen wird.
 	if room.OwnerID == "" || (room.OwnerID != input.ID && isServerMachine(r)) {
 		room.OwnerID = input.ID
-		room.OwnerName = input.Name
-		room.Name = roomTitle(input.Name)
+		room.OwnerName = name
+		room.Name = roomTitle(name)
 	}
-	if _, known := room.Players[input.ID]; !known {
+	player, known := room.Players[input.ID]
+	if !known {
 		room.addMessage(Message{
-			Text:   input.Name + " betritt die Spielwiese",
+			Text:   name + " betritt die Spielwiese",
 			Time:   time.Now().Format("15:04:05"),
 			System: true,
 		})
 	}
-	room.Players[input.ID] = Player{Name: input.Name, Last: time.Now()}
+	player.Name = name
+	player.Last = time.Now()
+	if player.LastAction.IsZero() || input.Active {
+		player.LastAction = time.Now()
+		player.AfkWarned = false
+	}
+	room.Players[input.ID] = player
 	room.LastActive = time.Now()
 	mu.Unlock()
 	w.WriteHeader(http.StatusNoContent)

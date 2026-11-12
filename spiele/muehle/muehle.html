@@ -337,6 +337,7 @@ let gameOver = false;
 let capturePending = false;
 
 function newGame() {
+  if (ONLINE) { resetOnline(); return; }
   state = Array(24).fill(null);
   current = RED;
   placed = {red:0,blue:0};
@@ -466,6 +467,7 @@ function other(player) {
 }
 
 function clickPoint(index) {
+  if (ONLINE) { clickPointOnline(index); return; }
   if (gameOver) return;
 
   if (capturePending) {
@@ -669,7 +671,135 @@ function updateDisplay() {
   }
 }
 
-newGame();
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/muehle";
+let onlineBusy = false;
+let onlineGame = null;
+
+function applyOnlineState(game) {
+  if (!game) return;
+  onlineGame = game;
+
+  state = Array.isArray(game.state) ? game.state.slice() : Array(24).fill(null);
+  current = game.current;
+  placed = {red: game.placedRed, blue: game.placedBlue};
+  phase = game.phase;
+  capturePending = !!game.capturePending;
+  gameOver = game.status === "finished";
+
+  if (gameOver) {
+    finishGame(game.winner === BLUE ? BLUE : RED);
+    return;
+  }
+
+  renderBoard();
+  updateDisplay();
+
+  if (game.status === "invited") {
+    document.getElementById("message").textContent =
+      "Warte auf die Antwort von " + game.blueName + " …";
+  } else if (game.note) {
+    document.getElementById("message").textContent = game.note;
+  }
+}
+
+async function onlineFetch(url, options) {
+  const response = await fetch(url, options);
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline() {
+  if (onlineBusy) return;
+  try {
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  } catch (e) {}
+}
+
+async function muehleAction(action, payload) {
+  if (onlineBusy) return;
+  onlineBusy = true;
+  try {
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: PLAYER_ID, ...payload})
+    });
+    selected = null;
+    applyOnlineState(data.game);
+  } catch (e) {
+    document.getElementById("message").textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+async function resetOnline() {
+  await muehleAction("reset", {});
+}
+
+function clickPointOnline(index) {
+  if (onlineBusy || !onlineGame || onlineGame.status !== "active") return;
+
+  if (capturePending) {
+    muehleAction("capture", {index});
+    return;
+  }
+
+  if (phase === "placing") {
+    muehleAction("place", {index});
+    return;
+  }
+
+  if (state[index] === current) {
+    selected = index;
+    document.getElementById("message").textContent =
+      "Wähle jetzt einen freien Nachbarpunkt.";
+    renderBoard();
+    return;
+  }
+
+  if (selected === null) {
+    return;
+  }
+
+  if (state[index] !== null) return;
+
+  const from = selected;
+  muehleAction("move", {from, to: index});
+}
+
+if (ONLINE) {
+  // Eigener Zustand als Platzhalter, gleich kommt der echte vom Server.
+  state = Array(24).fill(null);
+  current = RED;
+  placed = {red: 0, blue: 0};
+  selected = null;
+  phase = "placing";
+  gameOver = false;
+  capturePending = false;
+  renderBoard();
+  updateDisplay();
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "reset";
+  back.id = "leaveBtn";
+  back.textContent = "Zum Connector";
+  back.style.marginTop = "12px";
+  back.onclick = () => { location.href = "/connector?room=" + encodeURIComponent(ROOM); };
+  document.getElementById("resetBtn").after(back);
+
+  refreshOnline();
+  setInterval(refreshOnline, 1500);
+} else {
+  newGame();
+}
 </script>
 </body>
 </html>

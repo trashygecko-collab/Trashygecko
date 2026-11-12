@@ -773,6 +773,11 @@ function moveNotation(move,piece,capturedPiece,promotionChoice) {
 }
 
 function makeMove(move,promotionChoice="Q") {
+  if(ONLINE){
+    schachAction("move",{from:move.from,to:move.to,promotion:promotionChoice});
+    return;
+  }
+
   const piece=state.board[move.from.r][move.from.c];
   const capturedPiece=move.enPassant?
     state.board[move.from.r][move.to.c]:
@@ -820,6 +825,7 @@ function makeMove(move,promotionChoice="Q") {
 }
 
 function undoMove() {
+  if(ONLINE) return;
   if(!history.length || pendingPromotion) return;
 
   const previous=history.pop();
@@ -850,10 +856,111 @@ function restartGame() {
 
 document.getElementById("undo").addEventListener("click",undoMove);
 document.getElementById("restart").addEventListener("click",()=>{
+  if(ONLINE){ schachAction("reset",{}); return; }
   if(confirm("Möchtest du wirklich eine neue Partie beginnen?")) restartGame();
 });
 
-restartGame();
+// ---- Online über den Connector ----
+const params=new URLSearchParams(location.search);
+const ONLINE=params.has("room")&&params.has("id");
+const ROOM=params.get("room")||"";
+const PLAYER_ID=params.get("id")||"";
+const ONLINE_API="/api/schach";
+let onlineBusy=false;
+let onlineGame=null;
+let onlineSignature="";
+
+function applyOnlineState(game){
+  if(!game)return;
+  onlineGame=game;
+
+  // Beim reinen Nachfragen darf die eigene Auswahl nicht verloren gehen.
+  const signature=(game.moves||[]).length+"|"+game.state.turn;
+  const keepSelection=signature===onlineSignature&&selected!==null;
+  onlineSignature=signature;
+
+  state=game.state;
+  if(!state.castling){
+    state.castling={wK:false,wQ:false,bK:false,bQ:false};
+  }
+
+  lastMove=(game.lastFrom&&game.lastTo)?{from:game.lastFrom,to:game.lastTo}:null;
+  captured={w:game.capturedW||[],b:game.capturedB||[]};
+  history=(game.moves||[]).map(n=>({notation:n}));
+
+  gameOver=game.status==="finished";
+  if(!keepSelection){
+    selected=null;
+    legalForSelected=[];
+  }
+
+  render();
+
+  if(game.status==="invited"){
+    setMessage("Warte auf die Antwort von "+game.blueName+" …");
+    return;
+  }
+
+  setMessage(game.note || ((state.turn==="w"?"Weiß":"Schwarz")+" ist am Zug."));
+}
+
+async function onlineFetch(url,options){
+  const response=await fetch(url,options);
+  if(!response.ok)throw Error((await response.text()).trim()||"Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline(){
+  if(onlineBusy)return;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  }catch(e){}
+}
+
+async function schachAction(action,payload){
+  if(onlineBusy)return;
+  onlineBusy=true;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID,...payload})
+    });
+    applyOnlineState(data.game);
+  }catch(e){
+    setMessage(e.message);
+  }finally{
+    onlineBusy=false;
+  }
+}
+
+if(ONLINE){
+  state=initialState();
+  selected=null;
+  legalForSelected=[];
+  history=[];
+  captured={w:[],b:[]};
+  lastMove=null;
+  gameOver=false;
+  setMessage("Verbinde mit dem Spielraum …");
+  render();
+
+  document.getElementById("undo").disabled=true;
+
+  const back=document.createElement("button");
+  back.type="button";
+  back.id="leaveBtn";
+  back.className=document.getElementById("restart").className;
+  back.textContent="Zum Connector";
+  back.style.marginLeft="8px";
+  back.onclick=()=>{ location.href="/connector?room="+encodeURIComponent(ROOM); };
+  document.getElementById("restart").after(back);
+
+  refreshOnline();
+  setInterval(refreshOnline,1500);
+} else {
+  restartGame();
+}
 </script>
 </body>
 </html>

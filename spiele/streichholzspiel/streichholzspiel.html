@@ -373,6 +373,7 @@ function updateDisplay(){
 }
 
 function take(amount){
+  if(ONLINE){ takeOnline(amount); return; }
   if(gameOver || amount > remaining) return;
 
   const firstIndex = remaining - amount;
@@ -401,6 +402,7 @@ takeButtons.forEach(button => {
 });
 
 document.getElementById("restart").addEventListener("click", () => {
+  if(ONLINE){ resetOnline(); return; }
   remaining = TOTAL;
   current = "red";
   gameOver = false;
@@ -411,6 +413,94 @@ document.getElementById("restart").addEventListener("click", () => {
 
 drawMatches();
 updateDisplay();
+
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/streichholz";
+let onlineBusy = false;
+let onlineGame = null;
+
+function showOnlineState(game){
+  if(!game) return;
+  onlineGame = game;
+  remaining = game.remaining;
+  takenBy = Array.isArray(game.taken) ? game.taken.slice() : Array(TOTAL).fill(null);
+  current = game.current;
+  gameOver = game.status === "finished";
+  drawMatches();
+  updateDisplay();
+
+  if(game.status === "invited"){
+    questionDisplay.textContent = "Warte auf die Antwort von " + game.blueName + " …";
+  }else if(game.note && gameOver){
+    questionDisplay.textContent = game.note;
+  }
+}
+
+async function onlineFetch(url, options){
+  const response = await fetch(url, options);
+  if(!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline(){
+  if(onlineBusy) return;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+    showOnlineState(data.game);
+  }catch(e){}
+}
+
+async function takeOnline(amount){
+  if(onlineBusy) return;
+  onlineBusy = true;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=take", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: PLAYER_ID, amount})
+    });
+    showOnlineState(data.game);
+  }catch(e){
+    questionDisplay.textContent = e.message;
+  }finally{
+    onlineBusy = false;
+  }
+}
+
+async function resetOnline(){
+  if(onlineBusy) return;
+  onlineBusy = true;
+  try{
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=reset", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: PLAYER_ID})
+    });
+    showOnlineState(data.game);
+  }catch(e){
+    questionDisplay.textContent = e.message;
+  }finally{
+    onlineBusy = false;
+  }
+}
+
+if(ONLINE){
+  const bottom = document.querySelector(".bottom");
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "reset";
+  back.id = "leaveBtn";
+  back.textContent = "Zum Connector";
+  back.onclick = () => { location.href = "/connector?room=" + encodeURIComponent(ROOM); };
+  bottom.appendChild(back);
+
+  refreshOnline();
+  setInterval(refreshOnline, 1500);
+}
 </script>
 </body>
 </html>

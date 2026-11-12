@@ -222,6 +222,7 @@ function saveHistory(){
 }
 
 function restoreHistory(){
+  if(ONLINE)return;
   if(!history.length)return;
   const s=history.pop();
   board=s.board;
@@ -267,6 +268,7 @@ function legalMove(r,c){
 }
 
 function playMove(r,c){
+  if(ONLINE){ goAction("play",{r,c}); return; }
   if(gameOver)return;
 
   if(!legalMove(r,c)){
@@ -310,6 +312,7 @@ function playMove(r,c){
 }
 
 function passTurn(){
+  if(ONLINE){ if(!gameOver) goAction("pass",{}); return; }
   if(gameOver)return;
 
   saveHistory();
@@ -474,10 +477,120 @@ function restart(){
 document.getElementById("pass").addEventListener("click",passTurn);
 document.getElementById("undo").addEventListener("click",restoreHistory);
 document.getElementById("restart").addEventListener("click",()=>{
+  if(ONLINE){ goAction("reset",{}); return; }
   if(confirm("Möchtest du wirklich eine neue Partie beginnen?"))restart();
 });
 
-restart();
+// ---- Online über den Connector ----
+const params=new URLSearchParams(location.search);
+const ONLINE=params.has("room")&&params.has("id");
+const ROOM=params.get("room")||"";
+const PLAYER_ID=params.get("id")||"";
+const ONLINE_API="/api/go";
+let onlineBusy=false;
+let onlineGame=null;
+
+function applyOnlineState(game){
+  if(!game)return;
+  onlineGame=game;
+
+  board=game.board;
+  turn=game.turn;
+  captured={B:game.capturedB||0,W:game.capturedW||0};
+  lastMove=game.lastMove||null;
+  history=[];
+  gameOver=game.status==="finished";
+
+  render();
+
+  const resultEl=document.getElementById("result");
+
+  if(game.status==="finished"){
+    const sieger=game.winner==="B"?game.redName:game.blueName;
+    resultEl.innerHTML=
+      "<strong>PARTIE BEENDET!</strong><br>"+
+      "Schwarz: "+game.scoreBlack+" Punkte<br>"+
+      "Weiß: "+game.whiteBase+" + 6,5 Ausgleich = "+game.scoreWhite+"<br>"+
+      "Neutrale Felder: "+game.neutral+"<br><br>"+
+      "<strong>"+sieger+" gewinnt!</strong>";
+    resultEl.classList.add("show");
+    statusEl.textContent="Spiel beendet – "+sieger+" gewinnt!";
+    infoEl.textContent="Die Partie wurde nach zwei Pässen ausgewertet.";
+    return;
+  }
+
+  resultEl.classList.remove("show");
+
+  if(game.status==="invited"){
+    statusEl.textContent="Warte auf die Antwort von "+game.blueName+" …";
+    return;
+  }
+
+  statusEl.textContent=game.note||((turn==="B"?"Schwarz":"Weiß")+" ist am Zug.");
+  infoEl.textContent=game.passes>0
+    ? "Ein weiterer Pass beendet die Partie."
+    : "Setze deinen Stein auf eine freie Kreuzung.";
+}
+
+async function onlineFetch(url,options){
+  const response=await fetch(url,options);
+  if(!response.ok)throw Error((await response.text()).trim()||"Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline(){
+  if(onlineBusy)return;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  }catch(e){}
+}
+
+async function goAction(action,payload){
+  if(onlineBusy)return;
+  onlineBusy=true;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID,...payload})
+    });
+    applyOnlineState(data.game);
+  }catch(e){
+    statusEl.textContent=e.message;
+  }finally{
+    onlineBusy=false;
+  }
+}
+
+if(ONLINE){
+  board=Array.from({length:N},()=>Array(N).fill(null));
+  turn="B";
+  captured={B:0,W:0};
+  history=[];
+  positionKeys=[];
+  consecutivePasses=0;
+  gameOver=false;
+  lastMove=null;
+  statusEl.textContent="Verbinde mit dem Spielraum …";
+  infoEl.textContent="";
+  render();
+
+  document.getElementById("undo").disabled=true;
+
+  const back=document.createElement("button");
+  back.type="button";
+  back.id="leaveBtn";
+  back.className=document.getElementById("restart").className;
+  back.textContent="Zum Connector";
+  back.style.marginLeft="8px";
+  back.onclick=()=>{ location.href="/connector?room="+encodeURIComponent(ROOM); };
+  document.getElementById("restart").after(back);
+
+  refreshOnline();
+  setInterval(refreshOnline,1500);
+} else {
+  restart();
+}
 </script>
 </body>
 </html>

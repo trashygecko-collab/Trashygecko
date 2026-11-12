@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -79,6 +82,28 @@ func freePort() string {
 	return port
 }
 
+// withActivity merkt sich, wer wirklich etwas tut: Jeder POST außer dem
+// automatischen Lebenszeichen zählt als Aktion (Chat, Spielzug, Einladung).
+// Die Kennung steht bei allen diesen Aufrufen im JSON-Feld "id".
+func withActivity(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/api/") &&
+			r.URL.Path != "/api/presence" {
+			body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+			if err == nil {
+				r.Body = io.NopCloser(bytes.NewReader(body))
+				var probe struct {
+					ID string `json:"id"`
+				}
+				if json.Unmarshal(body, &probe) == nil && probe.ID != "" {
+					noteActivity(r.URL.Query().Get("room"), probe.ID)
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -132,6 +157,18 @@ func main() {
 	mux.HandleFunc("/api/dame", dameHandler)
 	mux.HandleFunc("/api/paare", paareHandler)
 	mux.HandleFunc("/api/menschaerger", menschaergerHandler)
+	mux.HandleFunc("/api/kaesekaestche", kaesekaestcheHandler)
+	mux.HandleFunc("/api/sim", simHandler)
+	mux.HandleFunc("/api/kalaha", kalahaHandler)
+	mux.HandleFunc("/api/streichholz", streichholzHandler)
+	mux.HandleFunc("/api/muehle", muehleHandler)
+	mux.HandleFunc("/api/reversi", reversiHandler)
+	mux.HandleFunc("/api/hold", holdHandler)
+	mux.HandleFunc("/api/skyjo", skyjoHandler)
+	mux.HandleFunc("/api/kniffel", kniffelHandler)
+	mux.HandleFunc("/api/schach", chessHandler)
+	mux.HandleFunc("/api/go", goHandler)
+	mux.HandleFunc("/api/backgammon", backgammonHandler)
 	mux.Handle("/", http.FileServer(http.Dir(home)))
 
 	ensureMainRoom()
@@ -148,5 +185,5 @@ func main() {
 
 	log.Printf("TrashyGecko Connector startet: %s", addr)
 	log.Printf("Homepage: %s", home)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	log.Fatal(http.ListenAndServe(":"+port, withActivity(mux)))
 }
