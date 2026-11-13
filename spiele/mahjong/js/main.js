@@ -19,6 +19,7 @@ let gameRunning = false;
 let currentLevel = 1;
 let score = 0;
 let gameData = null;
+let levelWechselTimer = null;
 
 // --------------------------------------------------
 // HTML-ELEMENTE
@@ -74,6 +75,11 @@ function createGameInformation() {
 // ANZEIGEN
 // --------------------------------------------------
 
+// So viele Level gibt es (jede Form in board-layout.js ist eins).
+function hoechstesLevel() {
+    return Math.max(...Object.keys(BOARD_LAYOUTS).map(Number));
+}
+
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const rest = seconds % 60;
@@ -86,9 +92,12 @@ function formatTime(seconds) {
 }
 
 function updateStats() {
+    // Nach dem letzten Level gibt es kein "Level 16" in der Anzeige.
+    const angezeigtesLevel = Math.min(currentLevel, hoechstesLevel());
+
     setText(
         ["levelNumber", "level", "currentLevel", "levelDisplay"],
-        String(currentLevel).padStart(2, "0")
+        String(angezeigtesLevel).padStart(2, "0")
     );
 
     setText(
@@ -154,6 +163,12 @@ function stopGameTimer() {
 function startGame() {
     stopGameTimer();
 
+    // Ein noch laufender Wechsel ins nächste Level ist damit erledigt.
+    if (levelWechselTimer !== null) {
+        clearTimeout(levelWechselTimer);
+        levelWechselTimer = null;
+    }
+
     gameRunning = false;
     selectedTile = null;
     foundPairs = 0;
@@ -163,6 +178,14 @@ function startGame() {
 
     if (gameData) {
         currentLevel = gameData.currentLevel || 1;
+    }
+
+    // Nach dem letzten Level nicht in eine Form ohne Vorlage laufen.
+    if (!Number.isFinite(currentLevel) || currentLevel < 1) {
+        currentLevel = 1;
+    }
+    if (currentLevel > hoechstesLevel()) {
+        currentLevel = hoechstesLevel();
     }
 
     updateStats();
@@ -316,6 +339,8 @@ function finishGame() {
     );
 
     // Spielstand und Bestzeit speichern
+    let gespeichert = false;
+
     try {
         if (gameData) {
             saveLevelResult(gameData, currentLevel, gameSeconds);
@@ -333,11 +358,38 @@ function finishGame() {
             currentLevel = gameData.currentLevel;
 
             updateStats();
+
+            gespeichert = true;
         }
     } catch (error) {
         console.error("Spielstand konnte nicht gespeichert werden:", error);
-        setMessage("Gewonnen! Der Spielstand konnte aber nicht gespeichert werden.");
     }
+
+    if (!gespeichert) {
+        setMessage("Gewonnen! Der Spielstand konnte aber nicht gespeichert werden.");
+        return;
+    }
+
+    // Nach der Gewonnenanzeige geht es von allein ins nächste Level.
+    const hoechstes = hoechstesLevel();
+
+    if (currentLevel > hoechstes) {
+        setMessage(
+            `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}. ` +
+            `Alle ${hoechstes} Level geschafft!`
+        );
+        return;
+    }
+
+    setMessage(
+        `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)} · ` +
+        `Level ${currentLevel} startet gleich …`
+    );
+
+    levelWechselTimer = setTimeout(() => {
+        levelWechselTimer = null;
+        startGame();
+    }, 2600);
 }
 
 // --------------------------------------------------

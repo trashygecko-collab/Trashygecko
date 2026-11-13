@@ -146,7 +146,9 @@ function enableBoardMovement(viewport) {
             moved: false
         };
 
-        viewport.setPointerCapture(event.pointerId);
+        // Den Zeiger noch NICHT festhalten: Sonst landet der Klick beim
+        // Verschiebe-Bereich statt beim Stein, und kein Stein lässt sich
+        // mehr auswählen. Erst beim echten Ziehen wird er übernommen.
     });
 
     viewport.addEventListener("pointermove", event => {
@@ -156,7 +158,15 @@ function enableBoardMovement(viewport) {
         const dy = event.clientY - boardPointerStart.y;
 
         if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-            boardPointerStart.moved = true;
+            if (!boardPointerStart.moved) {
+                boardPointerStart.moved = true;
+
+                // Jetzt ziehen wir wirklich: Zeiger übernehmen, damit das
+                // Verschieben auch außerhalb des Bretts weiterläuft.
+                try {
+                    viewport.setPointerCapture(event.pointerId);
+                } catch (fehler) {}
+            }
         }
 
         if (boardPointerStart.moved) {

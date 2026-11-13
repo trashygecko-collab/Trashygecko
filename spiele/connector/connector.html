@@ -164,6 +164,17 @@ html:fullscreen body{padding:18px}
 /* Spieler, den man gerade einladen möchte, wird hervorgehoben. */
 .game-player.ziel{border-color:#4df5c2;box-shadow:0 0 12px #4df5c255}
 .chat-hint{margin:8px 0 0;font-size:12px;color:#8d97ad;line-height:1.4}
+/* Alle Spiele aus der Übersicht, direkt im Connector. */
+#solobox{padding:0;background:none;border:none;margin:10px 0 0}
+#solobox summary{font-size:16px;font-weight:bold;color:#4df5c2}
+.solo-gruppe{margin:12px 0 0}
+.solo-gruppe h3{margin:0 0 6px;font-size:12px;color:#8d97ad;font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.solo-raster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+@media(min-width:560px){.solo-raster{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.solo-link{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px;border:1px solid #59647c;border-radius:8px;background:#10121b;color:#4df5c2;text-decoration:none;font-size:13px;text-align:center;line-height:1.25}
+.solo-link:hover{border-color:#4df5c2;background:#17252a}
+.solo-hinweis{margin:12px 0 0;font-size:12px}
+.solo-hinweis a{color:#ffd36a}
 .chat-hint code{color:#ffd36a;background:#10121b;border-radius:4px;padding:1px 4px}
 .tone-btn:hover{filter:brightness(1.25)}
 .tone-mute{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:#aab3c7;flex-wrap:wrap}
@@ -174,6 +185,9 @@ html:fullscreen body{padding:18px}
 .game-player:hover{filter:brightness(1.3)}
 .game-player:disabled{opacity:.55;cursor:default}
 .open-game{margin-top:8px}
+/* Gemeinsame Malfläche öffnen. */
+.malen-zeile{margin:14px 0 0}
+.malen-zeile button{width:100%}
 /* Spielauswahl: oben das Spiel, darunter die Spieler, rechts daneben der Status. */
 .games-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:14px;align-items:start}
 @media (max-width:720px){.games-grid{grid-template-columns:1fr}}
@@ -192,6 +206,9 @@ html:fullscreen body{padding:18px}
  #addressbox summary{font-size:13px;color:#8d97ad;font-weight:normal;padding:2px 0}
  #addressbox summary::after{font-size:11px}
  #addressbox details p,#addressbox details button{font-size:13px}
+ #solobox{margin:6px 0 0}
+ #solobox summary{font-size:14px}
+ .solo-link{min-height:46px;font-size:12px}
  /* Ist der Name bekannt, bleibt hier nur eine schmale Knopfzeile. */
  #namebox .empty{display:none}
  #nameKnown{gap:6px;margin:0}
@@ -246,12 +263,22 @@ html:fullscreen body{padding:18px}
 <div class="games-grid">
 <div class="games-main">
 <div id="gameplayers"></div>
+<p class="malen-zeile"><button type="button" id="malenButton">🖌 Gemeinsam malen</button></p>
 </div>
 <aside class="games-side">
 <h3>Spielstatus</h3>
 <div id="game-status" class="empty">Wähle einen Spieler aus und lade ihn zu einem Spiel ein.</div>
 </aside>
 </div>
+</section>
+
+<!-- Alle Spiele aus der Spiele-Übersicht – alleine spielbar. -->
+<section id="solobox" hidden>
+<details>
+<summary>Alleine spielen</summary>
+<div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
+<p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
+</details>
 </section>
 
 <section id="chatbox" hidden>
@@ -475,6 +502,7 @@ async function join(roomDisplayName){
   lastChatSignature="";
   setRoomStatus("Verbunden · "+(roomDisplayName||("Raum "+code)));
   document.getElementById("gamesbox").hidden=false;
+  document.getElementById("solobox").hidden=false;
   document.getElementById("chatbox").hidden=false;
   zeigeNamen(true);
   await refresh();
@@ -2214,6 +2242,65 @@ async function pruefeSpielstart(){
  }catch(e){}
 }
 setInterval(pruefeSpielstart,2000);
+
+// Die Spiele-Liste kommt aus der Spiele-Übersicht selbst – so bleibt sie
+// automatisch aktuell, wenn dort ein Spiel dazukommt.
+async function ladeAlleinSpiele(){
+ const liste=document.getElementById("soloListe");
+ if(!liste||liste.dataset.geladen==="1")return;
+ liste.dataset.geladen="1";
+ try{
+  const r=await fetch("/spiele/spiele.html",{cache:"no-store"});
+  if(!r.ok)throw Error("Status "+r.status);
+  const doc=new DOMParser().parseFromString(await r.text(),"text/html");
+  const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
+  if(!gruppen.length)throw Error("keine Gruppen");
+  liste.innerHTML="";
+  gruppen.forEach(gruppe=>{
+   const kasten=document.createElement("div");
+   kasten.className="solo-gruppe";
+   const titel=document.createElement("h3");
+   titel.textContent=(gruppe.querySelector("h2")?.textContent||"Spiele").trim();
+   const raster=document.createElement("div");
+   raster.className="solo-raster";
+   [...gruppe.querySelectorAll("a[href]")]
+    .filter(eintrag=>!/editor/i.test(eintrag.getAttribute("href")||""))
+    .forEach(alt=>{
+    const link=document.createElement("a");
+    link.className="solo-link";
+    link.href="/spiele/"+alt.getAttribute("href");
+    link.target="_blank";
+    link.rel="noopener";
+    link.textContent=alt.textContent.trim();
+    raster.appendChild(link);
+   });
+   if(raster.children.length){
+    kasten.append(titel,raster);
+    liste.appendChild(kasten);
+   }
+  });
+ }catch(e){
+  liste.dataset.geladen="0";
+  liste.innerHTML="";
+  const p=document.createElement("p");
+  p.className="empty";
+  p.textContent="Die Spieleliste konnte nicht geladen werden.";
+  liste.appendChild(p);
+ }
+}
+
+const soloDetails=document.querySelector("#solobox details");
+if(soloDetails)soloDetails.addEventListener("toggle",()=>{ if(soloDetails.open)ladeAlleinSpiele(); });
+
+// Gemeinsame Malfläche in einem neuen Tab – der Raum bleibt offen.
+const malenButton=document.getElementById("malenButton");
+if(malenButton)malenButton.addEventListener("click",()=>{
+ if(!activeRoom||!sessionID)return;
+ const ziel="/spiele/malen/malen.html?room="+encodeURIComponent(activeRoom)
+  +"&name="+encodeURIComponent(playerName())
+  +"&id="+encodeURIComponent(sessionID);
+ window.open(ziel,"_blank","noopener");
+});
 
 loadStatus();
 restoreRoom();

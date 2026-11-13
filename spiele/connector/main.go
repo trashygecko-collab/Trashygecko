@@ -175,6 +175,7 @@ func main() {
 	mux.HandleFunc("/api/schwimmen", schwimmenHandler)
 	mux.HandleFunc("/api/arschloch", arschlochHandler)
 	mux.HandleFunc("/api/einsxeins", einsxeinsHandler)
+	mux.HandleFunc("/api/malen", malenHandler)
 	mux.HandleFunc("/api/leave", leaveGameHandler)
 	mux.HandleFunc("/api/imspiel", imSpielHandler)
 	// Spielseiten und Skripte ändern sich zwischen den Runden. Seiten werden

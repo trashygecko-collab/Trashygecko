@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#102b27">
+<title>Malen – TrashyGecko</title>
+<style>
+:root{
+  --table-dark:#102b27;
+  --table-light:#1b4038;
+  --gold:#d5b36a;
+  --ivory:#f5edda;
+  --muted:#b7c8bd;
+  --teal:#4df5c2;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--ivory);
+  font-family:Arial, Helvetica, sans-serif;
+  background:radial-gradient(ellipse at center,#244b40 0%,#102b27 75%);
+}
+button{font:inherit;cursor:pointer}
+.seite{
+  width:min(1000px,96%);
+  margin:0 auto;
+  padding:14px 14px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.kopf{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  padding-bottom:10px;
+  border-bottom:1px solid rgba(213,179,106,.4);
+}
+.kopf h1{
+  margin:0;
+  color:var(--gold);
+  font-size:clamp(18px,3vw,26px);
+  letter-spacing:3px;
+}
+.kopf p{margin:4px 0 0;font-size:12px;color:var(--muted);letter-spacing:1px}
+.kopf-knoepfe{display:flex;gap:8px;flex-wrap:wrap}
+.knopf{
+  padding:10px 14px;
+  color:var(--ivory);
+  background:linear-gradient(180deg,#315b4c,#1b4038);
+  border:1px solid var(--gold);
+  border-radius:7px;
+  font-size:12px;
+  font-weight:bold;
+  letter-spacing:1px;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+}
+.knopf:hover{background:#426e59}
+.werkzeug{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:10px 12px;
+  background:rgba(0,0,0,.17);
+  border:1px solid rgba(213,179,106,.2);
+  border-radius:12px;
+}
+.farben{display:flex;gap:7px;flex-wrap:wrap}
+.farbe{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  border:3px solid #3d4a45;
+  padding:0;
+  background:#fff;
+}
+.farbe.aktiv{border-color:var(--teal);box-shadow:0 0 10px #4df5c288}
+.hinweis{margin:0;font-size:12px;color:var(--muted)}
+.flaeche{
+  position:relative;
+  background:#fff;
+  border:2px solid rgba(213,179,106,.65);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:inset 0 0 0 1px #0002;
+}
+canvas{
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:1 / 1;
+  touch-action:none;
+  cursor:crosshair;
+  background:#fff;
+}
+.status{margin:0;font-size:12px;color:var(--muted);min-height:16px}
+</style>
+</head>
+<body>
+
+<div class="seite">
+
+  <header class="kopf">
+    <div>
+      <h1>MALEN</h1>
+      <p>GEMEINSAME FLÄCHE · EINFACH DRAUFLOS</p>
+    </div>
+    <div class="kopf-knoepfe">
+      <button type="button" id="resetButton" class="knopf" hidden>ZURÜCKSETZEN</button>
+      <a href="../spiele.html" id="backButton" class="knopf">◀ SPIELE</a>
+    </div>
+  </header>
+
+  <section class="werkzeug">
+    <div class="farben" id="farben"></div>
+    <p class="hinweis" id="malHinweis">Farbe wählen und loskritzeln.</p>
+  </section>
+
+  <section class="flaeche">
+    <canvas id="blatt" width="1200" height="1200"></canvas>
+  </section>
+
+  <p class="status" id="status">Bereit.</p>
+
+</div>
+
+<script>
+const MAL = 1200;
+
+const FARBEN = [
+  { wert:"#111111", titel:"Schwarz" },
+  { wert:"#e53935", titel:"Rot" },
+  { wert:"#fbc02d", titel:"Gelb" },
+  { wert:"#43a047", titel:"Grün" },
+  { wert:"#1e88e5", titel:"Blau" },
+  { wert:"#8e24aa", titel:"Lila" },
+  { wert:"#fb8c00", titel:"Orange" },
+  { wert:"#6d4c41", titel:"Braun" },
+  { wert:"#ffffff", titel:"Radierer" }
+];
+
+const parameter = new URLSearchParams(location.search);
+const raum = (parameter.get("room") || "").trim().toUpperCase();
+const spielerId = parameter.get("id") || "";
+const spielerName = parameter.get("name") || "";
+const zusammen = !!(raum && spielerId);
+
+const blatt = document.getElementById("blatt");
+const stift = blatt.getContext("2d");
+const statusFeld = document.getElementById("status");
+const resetKnopf = document.getElementById("resetButton");
+const hinweis = document.getElementById("malHinweis");
+
+let farbe = FARBEN[0].wert;
+let breite = 8;
+let zeichnet = false;
+let eigenerStrich = null;   // {color,width,points:[]}
+let malbar = [];            // eigene Striche, die schon gezeichnet sind
+let epoche = -1;            // Fassung der Fläche laut Server
+let stand = 0;              // so viele Striche kennen wir vom Server
+let istAdmin = !zusammen;
+
+// --------------------------------------------------
+// FARBEN
+// --------------------------------------------------
+
+function baueFarben(){
+  const box = document.getElementById("farben");
+  FARBEN.forEach(eintrag=>{
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "farbe";
+    knopf.style.background = eintrag.wert;
+    knopf.title = eintrag.titel;
+    knopf.setAttribute("aria-label", eintrag.titel);
+    if (eintrag.wert === farbe) knopf.classList.add("aktiv");
+    knopf.addEventListener("click", ()=>{
+      farbe = eintrag.wert;
+      box.querySelectorAll(".farbe").forEach(f=>f.classList.toggle("aktiv", f === knopf));
+      hinweis.textContent = eintrag.titel === "Radierer"
+        ? "Radierer: wische über die Fläche."
+        : "Farbe " + eintrag.titel + " – jetzt malen.";
+    });
+    box.appendChild(knopf);
+  });
+}
+
+// --------------------------------------------------
+// ZEICHNEN
+// --------------------------------------------------
+
+function strichZeichnen(strich){
+  const punkte = strich.points || [];
+  if (!punkte.length) return;
+  stift.strokeStyle = strich.color || "#111111";
+  stift.fillStyle = strich.color || "#111111";
+  stift.lineWidth = strich.width || 8;
+  stift.lineCap = "round";
+  stift.lineJoin = "round";
+  if (punkte.length === 1) {
+    stift.beginPath();
+    stift.arc(punkte[0][0], punkte[0][1], (strich.width || 8) / 2, 0, Math.PI * 2);
+    stift.fill();
+    return;
+  }
+  stift.beginPath();
+  stift.moveTo(punkte[0][0], punkte[0][1]);
+  for (let i = 1; i < punkte.length; i++) stift.lineTo(punkte[i][0], punkte[i][1]);
+  stift.stroke();
+}
+
+function flaecheLeeren(){
+  stift.fillStyle = "#ffffff";
+  stift.fillRect(0, 0, MAL, MAL);
+}
+
+function stelleAufDemBlatt(ereignis){
+  const rechteck = blatt.getBoundingClientRect();
+  return [
+    (ereignis.clientX - rechteck.left) * MAL / rechteck.width,
+    (ereignis.clientY - rechteck.top) * MAL / rechteck.height
+  ];
+}
+
+function punktAnhaengen(punkt){
+  const punkte = eigenerStrich.points;
+  const letzter = punkte[punkte.length - 1];
+  if (letzter && Math.abs(letzter[0] - punkt[0]) < 1.5 && Math.abs(letzter[1] - punkt[1]) < 1.5) return;
+  punkte.push(punkt);
+  // Nur das neue Stück zeichnen, nicht den ganzen Strich.
+  if (punkte.length === 1) {
+    strichZeichnen({ color: farbe, width: breite, points: punkte });
+  } else {
+    stift.strokeStyle = farbe;
+    stift.lineWidth = breite;
+    stift.lineCap = "round";
+    stift.lineJoin = "round";
+    stift.beginPath();
+    stift.moveTo(letzter[0], letzter[1]);
+    stift.lineTo(punkt[0], punkt[1]);
+    stift.stroke();
+  }
+}
+
+blatt.addEventListener("pointerdown", ereignis=>{
+  ereignis.preventDefault();
+  zeichnet = true;
+  eigenerStrich = { color: farbe, width: breite, points: [] };
+  // Faengt der Browser den Zeiger nicht, wird trotzdem gezeichnet.
+  try { blatt.setPointerCapture(ereignis.pointerId); } catch (fehler) {}
+  punktAnhaengen(stelleAufDemBlatt(ereignis));
+});
+
+blatt.addEventListener("pointermove", ereignis=>{
+  if (!zeichnet || !eigenerStrich) return;
+  punktAnhaengen(stelleAufDemBlatt(ereignis));
+});
+
+function strichBeenden(){
+  if (!zeichnet) return;
+  zeichnet = false;
+  const strich = eigenerStrich;
+  eigenerStrich = null;
+  if (!strich || !strich.points.length) return;
+  malbar.push(strich);
+  if (zusammen) strichSenden(strich);
+}
+
+blatt.addEventListener("pointerup", strichBeenden);
+blatt.addEventListener("pointercancel", strichBeenden);
+blatt.addEventListener("pointerleave", strichBeenden);
+
+// --------------------------------------------------
+// MIT DEM SERVER ABGLEICHEN
+// --------------------------------------------------
+
+async function strichSenden(strich){
+  try{
+    await fetch("/api/malen?room=" + encodeURIComponent(raum) + "&action=draw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: spielerId, strokes: [strich] })
+    });
+  }catch(fehler){
+    statusFeld.textContent = "Verbindung kurz weg – der Strich geht beim nächsten Versuch mit.";
+  }
+}
+
+async function abgleichen(){
+  if (!zusammen) return;
+  try{
+    const antwort = await fetch(
+      "/api/malen?room=" + encodeURIComponent(raum) +
+      "&id=" + encodeURIComponent(spielerId) +
+      "&epoch=" + epoche + "&since=" + stand,
+      { cache: "no-store" }
+    );
+    if (!antwort.ok) {
+      statusFeld.textContent = antwort.status === 404
+        ? "Dieser Raum existiert nicht mehr."
+        : "Kein Zugriff – bitte im Connector neu betreten.";
+      return;
+    }
+    const daten = await antwort.json();
+
+    if (daten.epoch !== epoche) {
+      // Jemand hat die Fläche geleert (oder wir sind neu dabei).
+      flaecheLeeren();
+      epoche = daten.epoch;
+      stand = 0;
+      (daten.strokes || []).forEach(strichZeichnen);
+      stand = daten.rev;
+    } else {
+      (daten.strokes || []).forEach(strichZeichnen);
+      stand = daten.rev;
+    }
+
+    if (daten.admin !== istAdmin) {
+      istAdmin = daten.admin;
+      resetKnopf.hidden = !istAdmin;
+    }
+    statusFeld.textContent = istAdmin
+      ? "Verbunden · als Admin darfst du die Fläche leeren."
+      : "Verbunden · alle malen auf derselben Fläche.";
+  }catch(fehler){
+    statusFeld.textContent = "Verbindung wird wiederhergestellt …";
+  }
+}
+
+async function flaecheZuruecksetzen(){
+  if (!zusammen) {
+    flaecheLeeren();
+    malbar = [];
+    stand = 0;
+    statusFeld.textContent = "Fläche geleert.";
+    return;
+  }
+  try{
+    const antwort = await fetch("/api/malen?room=" + encodeURIComponent(raum) + "&action=clear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: spielerId })
+    });
+    if (!antwort.ok) {
+      statusFeld.textContent = "Nur der Admin kann die Fläche leeren.";
+      return;
+    }
+    flaecheLeeren();
+    const daten = await antwort.json();
+    epoche = daten.epoch;
+    stand = 0;
+    statusFeld.textContent = "Fläche geleert – alle fangen neu an.";
+  }catch(fehler){
+    statusFeld.textContent = "Zurücksetzen hat nicht geklappt.";
+  }
+}
+
+// Präsenz halten, damit man im Connector nicht aus dem Raum fällt.
+async function lebenszeichen(){
+  if (!zusammen) return;
+  try{
+    await fetch("/api/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room: raum, id: spielerId, name: spielerName || "Maler" })
+    });
+  }catch(fehler){}
+}
+
+// --------------------------------------------------
+// START
+// --------------------------------------------------
+
+function starten(){
+  baueFarben();
+  flaecheLeeren();
+
+  const zurueck = document.getElementById("backButton");
+  zurueck.href = zusammen ? "/connector" : "../spiele.html";
+
+  resetKnopf.hidden = !istAdmin;
+  resetKnopf.addEventListener("click", flaecheZuruecksetzen);
+
+  if (zusammen) {
+    statusFeld.textContent = "Verbinde …";
+    lebenszeichen();
+    abgleichen();
+    setInterval(abgleichen, 600);
+    setInterval(lebenszeichen, 5000);
+  } else {
+    statusFeld.textContent = "Nur du – male einfach drauflos.";
+  }
+}
+
+starten();
+</script>
+
+</body>
+</html>

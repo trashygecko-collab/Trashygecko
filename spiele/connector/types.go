@@ -99,6 +99,7 @@ type Room struct {
 	Schwimmen    *SchwimmenGame
 	Arschloch    *ArschlochGame
 	Rechen       *RechenGame
+	Mal          *Malbrett              // gemeinsame Zeichenfläche
 	Mutes        map[string]time.Time   // playerID -> unmute time
 	MsgTimes     map[string][]time.Time // for spam protection
 }
