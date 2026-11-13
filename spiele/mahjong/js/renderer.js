@@ -507,6 +507,37 @@ function updateBoardView(board, selectedId = null, hinweisIds = [], onTileClick 
     });
 }
 
+// Laesst die beiden Steine eines Fehlgriffs kurz rot aufblinken.
+function blinkeFalscheSteine(ids, dauer = 700) {
+    if (!boardStage || !Array.isArray(ids)) return;
+
+    ids.forEach(id => {
+        const element = boardStage.querySelector(
+            `.mahjong-tile[data-tile-id="${id}"]`
+        );
+
+        if (!element) return;
+
+        element.classList.remove("falsch");
+
+        // Kurz neu zeichnen lassen, damit die Animation auch dann startet,
+        // wenn schnell hintereinander danebengegriffen wird.
+        void element.offsetWidth;
+
+        element.classList.add("falsch");
+    });
+
+    clearTimeout(blinkeFalscheSteine.timer);
+
+    blinkeFalscheSteine.timer = setTimeout(() => {
+        if (!boardStage) return;
+
+        boardStage.querySelectorAll(".mahjong-tile.falsch").forEach(element => {
+            element.classList.remove("falsch");
+        });
+    }, dauer);
+}
+
 function clearBoard() {
     const container = document.getElementById("board");
 

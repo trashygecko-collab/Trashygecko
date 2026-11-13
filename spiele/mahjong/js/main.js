@@ -299,7 +299,9 @@ function handleTileClick(tileId) {
 
     updateStats();
 
-    setMessage("Das sind keine gleichen Steine.");
+    blinkeFalscheSteine([firstTile.id, tile.id]);
+
+    setMessage(pechSpruch());
 }
 
 // --------------------------------------------------

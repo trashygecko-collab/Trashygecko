@@ -60,24 +60,6 @@ button {
     border-bottom: 1px solid rgba(201, 173, 125, 0.25);
 }
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.brand-icon {
-    color: var(--gold);
-    font-size: 17px;
-}
-
-.brand h1 {
-    margin: 0;
-    color: var(--gold);
-    font-size: 14px;
-    letter-spacing: 3px;
-}
-
 .level-display {
     padding: 5px 9px;
     background: rgba(255, 255, 255, 0.05);
@@ -260,19 +242,6 @@ button {
     }
 }
 
-.game-footer {
-    margin-top: auto;
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 15px 10px 5px;
-    color: var(--muted);
-    border-top: 1px solid rgba(201, 173, 125, 0.3);
-    font-size: 11px;
-    letter-spacing: 1.5px;
-}
-
 @media (max-width: 700px) {
     .game-container {
         width: 100%;
@@ -283,19 +252,6 @@ button {
     .topbar {
         gap: 8px;
         padding: 2px 0 8px;
-    }
-
-    .brand {
-        gap: 8px;
-    }
-
-    .brand-icon {
-        font-size: 30px;
-    }
-
-    .brand h1 {
-        font-size: 12px;
-        letter-spacing: 2px;
     }
 
     .level-display {
@@ -338,17 +294,7 @@ button {
         padding: 8px;
     }
 
-    .game-footer {
-        justify-content: center;
-        text-align: center;
-        font-size: 9px;
-    }
 }
-
-
-
-
-
 
 /* =====================================
    MAHJONG SPIELSTEINE
@@ -432,6 +378,75 @@ button {
     border-color: rgba(163, 108, 26, 0.55);
 }
 
+/* Fehlgriff: die beiden Steine blinken kurz rot auf */
+.mahjong-tile.falsch {
+    z-index: 5000;
+    border-color: #c0392b;
+    animation: stein-falsch-glow 0.7s ease-out;
+}
+
+.mahjong-tile.falsch::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+        circle at 50% 45%,
+        rgba(231, 76, 55, 0.6),
+        rgba(176, 38, 28, 0.85)
+    );
+
+    animation: stein-falsch-rot 0.7s ease-out;
+}
+
+@keyframes stein-falsch-glow {
+    0% {
+        box-shadow:
+            0 5px 0 #a58c5c,
+            0 0 0 0 rgba(231, 76, 55, 0);
+    }
+
+    20% {
+        box-shadow:
+            0 5px 0 #8f2f22,
+            0 0 0 4px rgba(231, 76, 55, 0.75),
+            0 0 30px rgba(231, 76, 55, 0.9);
+    }
+
+    60% {
+        box-shadow:
+            0 5px 0 #a3402f,
+            0 0 0 3px rgba(231, 76, 55, 0.45),
+            0 0 20px rgba(231, 76, 55, 0.55);
+    }
+
+    100% {
+        box-shadow:
+            0 5px 0 #a58c5c,
+            0 0 0 0 rgba(231, 76, 55, 0);
+    }
+}
+
+@keyframes stein-falsch-rot {
+    0% {
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 0.9;
+    }
+
+    60% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
 /* Noch nicht erreichbare Steine: dunkler mit tieferem Schatten */
 .mahjong-tile.blocked {
     filter: brightness(0.68) saturate(0.85);
@@ -471,7 +486,6 @@ button {
 
 }
 
-
 /* =====================================
    HANDY UND TABLET
 ===================================== */
@@ -490,20 +504,40 @@ button {
 }
 
 @media (max-width: 900px) {
+    /* Flache Kopfzeile: Das Spielfeld bekommt die Hoehe. */
+    .topbar {
+        gap: 4px;
+        padding: 0 0 4px;
+    }
+
+    .level-display {
+        min-height: 0;
+        padding: 3px 8px;
+    }
+
+    #levelNumber {
+        font-size: 13px;
+    }
+
+    .stats {
+        gap: 12px;
+    }
+
     .game-buttons {
-        gap: 8px;
+        gap: 6px;
     }
 
     .game-buttons button {
-        min-height: 40px;
-        padding: 8px 12px;
+        min-height: 34px;
+        padding: 4px 11px;
         font-size: 11px;
         letter-spacing: 0.5px;
         border-radius: 8px;
     }
 
     .status-line {
-        font-size: 13px;
+        font-size: 12px;
+        margin-bottom: 0;
     }
 
     .weiter-knopf {
@@ -530,15 +564,6 @@ button {
         padding: 2px 0 6px;
     }
 
-    .brand h1 {
-        font-size: 12px;
-        letter-spacing: 2px;
-    }
-
-    .brand-icon {
-        font-size: 15px;
-    }
-
     .stats {
         gap: 10px;
     }
@@ -555,9 +580,6 @@ button {
         padding: 6px;
     }
 
-    .game-footer {
-        display: none;
-    }
 }
 
 /* =====================================
@@ -676,6 +698,9 @@ button {
 @media (max-width: 900px) {
     .game-container {
         width: 100%;
+        gap: 5px;
+        padding-top: max(3px, env(safe-area-inset-top));
+        padding-bottom: max(2px, env(safe-area-inset-bottom));
         padding-left: max(1px, env(safe-area-inset-left));
         padding-right: max(1px, env(safe-area-inset-right));
     }
