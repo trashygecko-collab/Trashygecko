@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>NEON – Mensch ärgere dich nicht</title>
 <style>
 :root{
+  color-scheme:dark;
   --bg:#000;
   --panel:#090b10;
   --cyan:#42e8ff;
@@ -124,6 +126,15 @@ h1{
   aspect-ratio:1;
   background:#000;
   overflow:hidden;
+  /* Kontrast- und Dunkelmodi von Handy und PC sollen das Brett nicht
+     umfärben – sonst werden aus schwarzen Feldern graue Systemflächen. */
+  forced-color-adjust:none;
+  -webkit-forced-color-adjust:none;
+}
+/* Alte Browser ohne aspect-ratio: gleiche quadratische Fläche über Padding. */
+@supports not (aspect-ratio:1/1){
+  .board-wrap{height:0;padding-bottom:100%}
+  #board{position:absolute;left:0;top:0;width:100%;height:100%}
 }
 #board{display:block;width:100%;height:100%;touch-action:manipulation}
 .board-cross{fill:#101317;stroke:#555d69;stroke-width:2}
@@ -367,7 +378,8 @@ function addBase(color){
   /* Kein Kasten drumherum, nur die vier schwarzen Parkplätze. */
   HOME_SLOTS[color].forEach(([cx,cy])=>{
     boardDrawing.appendChild(svgElement("circle",{
-      cx,cy,r:CELL*.36,class:"base-slot"
+      cx,cy,r:CELL*.36,class:"base-slot",
+      fill:"#000",stroke:"#2a3240","stroke-width":2
     }));
   });
 }
@@ -378,11 +390,11 @@ function drawBoard(){
   /* Der Spielplan ist ein echtes Kreuz, nicht ein Quadrat mit vier Farbfeldern. */
   boardDrawing.appendChild(svgElement("rect",{
     x:MARGIN+4*CELL,y:MARGIN,width:3*CELL,height:11*CELL,
-    rx:7,class:"board-cross"
+    rx:7,class:"board-cross",fill:"#101317",stroke:"#555d69","stroke-width":2
   }));
   boardDrawing.appendChild(svgElement("rect",{
     x:MARGIN,y:MARGIN+4*CELL,width:11*CELL,height:3*CELL,
-    rx:7,class:"board-cross"
+    rx:7,class:"board-cross",fill:"#101317",stroke:"#555d69","stroke-width":2
   }));
 
   ["yellow","green","blue","red"].forEach(addBase);
@@ -394,7 +406,8 @@ function drawBoard(){
     boardDrawing.appendChild(svgElement("circle",{
       cx,cy,r:CELL*.34,class:"track"+(startColor?" safe":""),
       fill:"#050505",
-      stroke:startColor?COLORS[startColor].hex:"#dfe5ee"
+      stroke:startColor?COLORS[startColor].hex:"#dfe5ee",
+      "stroke-width":startColor?4:3.5
     }));
     if(startColor){
       boardDrawing.appendChild(svgElement("circle",{
@@ -408,7 +421,7 @@ function drawBoard(){
       const [cx,cy]=cellCenter(x,y);
       boardDrawing.appendChild(svgElement("circle",{
         cx,cy,r:CELL*.34,class:"lane",fill:"#050505",
-        stroke:COLORS[color].hex,opacity:index===3?1:.86
+        stroke:COLORS[color].hex,"stroke-width":4,opacity:index===3?1:.86
       }));
     });
   });

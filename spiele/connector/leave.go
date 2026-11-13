@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// leaveGameHandler nimmt einen Spieler aus der Partie, in der er gerade sitzt.
-// Bei Duellen ist das Spiel damit zu Ende und beide landen wieder im Raum.
-// Tischspiele laufen mit den übrigen Spielern weiter, solange mindestens zwei
-// übrig sind.
+// leaveGameHandler beendet die Partie, in der dieser Spieler sitzt – für alle.
+// Wer "Spiel verlassen" drückt, löst die Runde auf: die Mitspieler merken beim
+// nächsten Abgleich, dass sie in keiner Partie mehr sitzen, und landen wieder
+// im Raum.
 func leaveGameHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST erforderlich", http.StatusMethodNotAllowed)
@@ -113,61 +113,61 @@ func leaveGameHandler(w http.ResponseWriter, r *http.Request) {
 		merke(true, 0)
 	}
 
-	// --- Tischspiele: mit einer Person weniger weiter --------------------
+	// --- Tischspiele: verlassen beendet den ganzen Tisch ----------------
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.MauMau; g != nil {
-		if imSpiel, fertig, rest := maumauRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.MauMau = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := maumauRemoveSeat(g, id, name); imSpiel {
+			room.MauMau = nil
+			merke(true, 0)
 		}
 	}
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.Uno; g != nil {
-		if imSpiel, fertig, rest := unoRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.Uno = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := unoRemoveSeat(g, id, name); imSpiel {
+			room.Uno = nil
+			merke(true, 0)
 		}
 	}
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.Schwimmen; g != nil {
-		if imSpiel, fertig, rest := schwimmRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.Schwimmen = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := schwimmRemoveSeat(g, id, name); imSpiel {
+			room.Schwimmen = nil
+			merke(true, 0)
 		}
 	}
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.Kniffel; g != nil {
-		if imSpiel, fertig, rest := kniffelRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.Kniffel = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := kniffelRemoveSeat(g, id, name); imSpiel {
+			room.Kniffel = nil
+			merke(true, 0)
 		}
 	}
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.Arschloch; g != nil {
-		if imSpiel, fertig, rest := arschlochRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.Arschloch = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := arschlochRemoveSeat(g, id, name); imSpiel {
+			room.Arschloch = nil
+			merke(true, 0)
 		}
 	}
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.Menschaerger; g != nil {
-		if imSpiel, fertig, rest := maenRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.Menschaerger = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := maenRemoveSeat(g, id, name); imSpiel {
+			room.Menschaerger = nil
+			merke(true, 0)
 		}
 	}
+	// Wer das Spiel verlässt, beendet es für alle: die übrigen Spieler
+	// landen wieder im Raum, statt mit einem Platz weniger weiterzuspielen.
 	if g := room.Rechen; g != nil {
-		if imSpiel, fertig, rest := rechenRemoveSeat(g, id, name); imSpiel {
-			if fertig {
-				room.Rechen = nil
-			}
-			merke(fertig, rest)
+		if imSpiel, _, _ := rechenRemoveSeat(g, id, name); imSpiel {
+			room.Rechen = nil
+			merke(true, 0)
 		}
 	}
 
@@ -200,6 +200,7 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	imSpiel := false
+	aktiv := ""
 	if id != "" {
 		mu.Lock()
 		if room := rooms[code]; room != nil {
@@ -212,10 +213,148 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			room.cleanPlayers()
 			imSpiel = room.playerInGame(id)
+			aktiv = room.aktivesSpiel(id)
 		}
 		mu.Unlock()
 	}
-	jsonResponse(w, map[string]any{"ok": true, "inGame": imSpiel})
+	jsonResponse(w, map[string]any{"ok": true, "inGame": imSpiel, "aktiv": aktiv})
+}
+
+// aktivesSpiel liefert die Kennung der Partie, die gerade läuft und in der
+// dieser Spieler sitzt. Damit springt die Connector-Seite von selbst ins Spiel,
+// sobald eine Einladung angenommen oder ein Tisch gestartet wurde.
+func (r *Room) aktivesSpiel(id string) string {
+	zwei := func(name, status, a, b string) string {
+		if status == "active" && (a == id || b == id) {
+			return name
+		}
+		return ""
+	}
+	if g := r.TicTacToe; g != nil {
+		if s := zwei("tictactoe", g.Status, g.XID, g.OID); s != "" {
+			return s
+		}
+	}
+	if g := r.VierGewinnt; g != nil {
+		if s := zwei("viergewinnt", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Dame; g != nil {
+		if s := zwei("dame", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Paare; g != nil {
+		if s := zwei("paare", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Kaese; g != nil {
+		if s := zwei("kaesekaestche", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Sim; g != nil {
+		if s := zwei("sim", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Kalaha; g != nil {
+		if s := zwei("kalaha", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Streichholz; g != nil {
+		if s := zwei("streichholzspiel", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Muehle; g != nil {
+		if s := zwei("muehle", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Reversi; g != nil {
+		if s := zwei("reversi", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Hold; g != nil {
+		if s := zwei("hold", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Skyjo; g != nil {
+		if s := zwei("skyjo", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Schach; g != nil {
+		if s := zwei("schach", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Go; g != nil {
+		if s := zwei("go", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Backgammon; g != nil {
+		if s := zwei("backgammon", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.MauMau; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "maumau"
+			}
+		}
+	}
+	if g := r.Uno; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "uno"
+			}
+		}
+	}
+	if g := r.Schwimmen; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "schwimmen"
+			}
+		}
+	}
+	if g := r.Kniffel; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "kniffel"
+			}
+		}
+	}
+	if g := r.Arschloch; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "arschloch"
+			}
+		}
+	}
+	if g := r.Menschaerger; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "menschaerger"
+			}
+		}
+	}
+	if g := r.Rechen; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "einsxeins"
+			}
+		}
+	}
+	return ""
 }
 
 // playerInGame prüft alle Partien des Raums auf diesen Spieler.

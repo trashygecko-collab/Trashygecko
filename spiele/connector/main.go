@@ -177,12 +177,16 @@ func main() {
 	mux.HandleFunc("/api/einsxeins", einsxeinsHandler)
 	mux.HandleFunc("/api/leave", leaveGameHandler)
 	mux.HandleFunc("/api/imspiel", imSpielHandler)
-	// Spielseiten und Skripte ändern sich zwischen den Runden. Der Browser darf
-	// sie behalten, muss aber vor jedem Öffnen nachfragen – sonst läuft nach
-	// einer Änderung noch der alte netz.js-Stand und der Verlassen-Knopf fehlt.
+	// Spielseiten und Skripte ändern sich zwischen den Runden. Seiten werden
+	// gar nicht zwischengespeichert, Skripte müssen vor jedem Öffnen
+	// nachfragen – sonst spielt ein Gerät mit einem alten Brett weiter (graue
+	// Felder, roter Würfel), während der andere schon die neue Fassung hat.
 	frisch := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasSuffix(r.URL.Path, ".html") || strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".css") {
+			if strings.HasSuffix(r.URL.Path, ".html") {
+				w.Header().Set("Cache-Control", "no-store, must-revalidate")
+				w.Header().Set("Pragma", "no-cache")
+			} else if strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".css") {
 				w.Header().Set("Cache-Control", "no-cache")
 			}
 			h.ServeHTTP(w, r)

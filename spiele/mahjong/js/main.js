@@ -376,6 +376,83 @@ function initializeGame() {
         });
     }
 
+    // Zurück zur Spiele-Übersicht (Connector).
+    const backButton = getElement("backButton");
+
+    if (backButton) {
+        backButton.addEventListener("click", () => {
+            window.location.href = "../spiele.html";
+        });
+    }
+
+    // Vollbild an und aus – Optik wie die übrigen Knöpfe.
+    const fullscreenButton = getElement("fullscreenButton");
+
+    if (fullscreenButton) {
+        const imVollbild = () =>
+            !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+        const zeigeVollbild = () => {
+            fullscreenButton.textContent =
+                imVollbild() ? "⛶ VOLLBILD AUS" : "⛶ VOLLBILD";
+        };
+
+        fullscreenButton.addEventListener("click", () => {
+            try {
+                if (imVollbild()) {
+                    const beenden = document.exitFullscreen
+                        ? document.exitFullscreen()
+                        : (document.webkitExitFullscreen
+                            ? document.webkitExitFullscreen()
+                            : null);
+
+                    if (beenden && beenden.catch) beenden.catch(() => {});
+                } else {
+                    const ziel = document.documentElement;
+                    const start = ziel.requestFullscreen
+                        ? ziel.requestFullscreen()
+                        : (ziel.webkitRequestFullscreen
+                            ? ziel.webkitRequestFullscreen()
+                            : null);
+
+                    if (!start) {
+                        setMessage("Dieser Browser kann kein Vollbild.");
+                        return;
+                    }
+
+                    if (start.catch) {
+                        start.catch(() =>
+                            setMessage("Vollbild wurde vom Browser blockiert.")
+                        );
+                    }
+                }
+            } catch (error) {
+                setMessage("Vollbild ging nicht: " + error.message);
+            }
+
+            setTimeout(zeigeVollbild, 300);
+        });
+
+        document.addEventListener("fullscreenchange", zeigeVollbild);
+        document.addEventListener("webkitfullscreenchange", zeigeVollbild);
+    }
+
+    // Zurück auf Level 1 – der übrige Spielstand bleibt erhalten.
+    const resetLevelButton = getElement("resetLevelButton");
+
+    if (resetLevelButton) {
+        resetLevelButton.addEventListener("click", () => {
+            if (gameData) {
+                gameData.currentLevel = 1;
+                saveStorage(gameData);
+            }
+
+            currentLevel = 1;
+            startGame();
+            setMessage("Zurück auf Level 1 – der übrige Spielstand bleibt erhalten.");
+        });
+    }
+
     updateStats();
 
     startGame();

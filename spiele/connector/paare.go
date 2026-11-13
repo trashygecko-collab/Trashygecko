@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -39,6 +40,19 @@ func paareKindValid(kind string) bool {
 		}
 	}
 	return false
+}
+
+// paareKindName ist die deutsche Bezeichnung der Zeichenart (für Meldungen).
+func paareKindName(kind string) string {
+	switch kind {
+	case "numbers":
+		return "Zahlen"
+	case "letters":
+		return "Buchstaben"
+	case "symbols":
+		return "Sonderzeichen"
+	}
+	return kind
 }
 
 // paareWinner ermittelt den Sieger. Bei gleicher Zeit entscheiden die Fehler.
@@ -162,7 +176,7 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.addMessage(Message{
 			Name:       player.Name,
-			Text:       "lädt dich zu Paare finden ein.",
+			Text:       "lädt dich zu Paare finden ein (" + strconv.Itoa(pairs) + " Paare · " + paareKindName(kind) + ").",
 			Time:       time.Now().Format("15:04:05"),
 			SenderID:   input.ID,
 			ToID:       input.ToID,
