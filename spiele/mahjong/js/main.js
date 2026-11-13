@@ -125,9 +125,13 @@ function updateStats() {
         ["scoreDisplay"],
         `Punkte: ${score}`
     );
+
+    // Timer oder neue Aktion: die Anzeige ist wieder gold.
+    stoppePunkteBlitz();
 }
 
-function setMessage(message) {
+// rot = true faerbt die Zeile rot (Fehlgriff), sonst normale Farbe.
+function setMessage(message, rot = false) {
     const element = getElement(
         "gameStatus",
         "message",
@@ -137,6 +141,7 @@ function setMessage(message) {
 
     if (element) {
         element.textContent = message;
+        element.classList.toggle("fehler", rot);
     }
 }
 
@@ -200,6 +205,8 @@ function startGame() {
     leereGewonnenSpruch();
     leereGewonnenSymbol();
     zeigeWeiterKnopf("");
+    zeigeSiegel(false);
+    versteckeSiegEhrung();
 
     try {
         currentBoard = generateSolvableBoard(MAHJONG_SYMBOLS, currentLevel);
@@ -292,6 +299,7 @@ function handleTileClick(tileId) {
     }
 
     mistakes++;
+    score = Math.max(0, score - 100);
     selectedTile = null;
     hinweisTiles = [];
 
@@ -300,8 +308,40 @@ function handleTileClick(tileId) {
     updateStats();
 
     blinkeFalscheSteine([firstTile.id, tile.id]);
+    blinkePunkte();
 
-    setMessage(pechSpruch());
+    setMessage(pechSpruch() + " - 100 Punkte", true);
+}
+
+// Setzt die Punkteanzeige sofort wieder auf Gold.
+function stoppePunkteBlitz() {
+    clearTimeout(blinkePunkte.timer);
+
+    const anzeige = getElement("scoreDisplay");
+
+    if (anzeige) {
+        anzeige.classList.remove("punkte-fehler");
+    }
+}
+
+// Laesst die Punkteanzeige kurz rot aufleuchten (Fehlgriff).
+function blinkePunkte() {
+    const anzeige = getElement("scoreDisplay");
+
+    if (!anzeige) return;
+
+    anzeige.classList.remove("punkte-fehler");
+
+    // Kurz neu zeichnen lassen, damit die Animation neu startet.
+    void anzeige.offsetWidth;
+
+    anzeige.classList.add("punkte-fehler");
+
+    clearTimeout(blinkePunkte.timer);
+
+    blinkePunkte.timer = setTimeout(() => {
+        anzeige.classList.remove("punkte-fehler");
+    }, 750);
 }
 
 // --------------------------------------------------
@@ -344,6 +384,9 @@ function finishGame() {
 
     stopGameTimer();
 
+    // Level, das gerade geschafft wurde (currentLevel zaehlt gleich hoch).
+    const geschafftesLevel = currentLevel;
+
     const timeBonus = Math.max(0, 1000 - gameSeconds * 2);
     const mistakePenalty = mistakes * 25;
 
@@ -357,6 +400,9 @@ function finishGame() {
 
     zeigeGewonnenSpruch();
     zeigeGewonnenSymbol();
+    zeigeSiegel(true);
+    zeigeSiegWerte();
+    zeigeSiegEhrung(geschafftesLevel, score);
 
     // Spielstand und Bestzeit speichern
     let gespeichert = false;
@@ -429,6 +475,69 @@ function zeigeWeiterKnopf(beschriftung) {
     knopf.textContent = beschriftung;
     knopf.hidden = false;
     knopf.focus();
+}
+
+// --------------------------------------------------
+// SIEGEREHRUNG
+// --------------------------------------------------
+
+// Zeigt die goldene Tafel mit Level, Punkten und Spruch.
+function zeigeSiegEhrung(level, punkte) {
+    const tafel = getElement("siegEhrung");
+
+    if (!tafel) return;
+
+    const levelFeld = getElement("siegLevel");
+    const punkteFeld = getElement("siegPunkte");
+
+    if (levelFeld) {
+        levelFeld.textContent = Number.isFinite(level)
+            ? `Level ${level} geschafft`
+            : "";
+    }
+
+    if (punkteFeld) {
+        punkteFeld.textContent = Number(punkte).toLocaleString("de-DE");
+    }
+
+    tafel.hidden = false;
+}
+
+function versteckeSiegEhrung() {
+    const tafel = getElement("siegEhrung");
+
+    if (tafel) {
+        tafel.hidden = true;
+    }
+}
+
+// --------------------------------------------------
+// SIGNATUR IM SIEG-ZUSTAND
+// --------------------------------------------------
+
+// Goldene Zeile unter dem Weiter-Knopf - nur nach einem gewonnenen Level.
+function zeigeSiegel(anzeigen) {
+    const siegel = getElement("siegel");
+
+    if (siegel) {
+        siegel.hidden = !anzeigen;
+    }
+}
+
+// Zeit und Highscore in der Signatur-Zeile unter dem Weiter-Knopf.
+function zeigeSiegWerte() {
+    const werte = getElement("siegelWerte");
+
+    if (!werte) return;
+
+    const highscore =
+        gameData && Number.isFinite(gameData.highScore)
+            ? gameData.highScore
+            : score;
+
+    werte.textContent =
+        `ZEIT ${formatTime(gameSeconds)} · ` +
+        `HIGHSCORE ${highscore.toLocaleString("de-DE")}`;
 }
 
 // --------------------------------------------------

@@ -403,7 +403,7 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
 
         image.className = "tile-symbol";
         image.src =
-            `assets/stein (${parseInt(String(tile.symbolId).replace(/\D/g, ""), 10)}).png`;
+            `assets/stein (${parseInt(String(tile.symbolId).replace(/\D/g, ""), 10)}).webp`;
 
         image.alt = `Mahjong-Stein ${tile.symbolId}`;
         image.draggable = false;
