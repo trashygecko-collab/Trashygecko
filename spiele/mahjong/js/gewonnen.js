@@ -295,7 +295,10 @@ function gewonnenSpruch() {
 function zeigeGewonnenSpruch() {
     const feld = document.getElementById("gewonnenText");
 
-    if (feld) feld.textContent = gewonnenSpruch();
+    if (!feld) return;
+
+    feld.textContent = gewonnenSpruch();
+    feld.style.color = siegSpruchFarbe();
 }
 
 // Beim Start eines neuen Bretts wieder leeren

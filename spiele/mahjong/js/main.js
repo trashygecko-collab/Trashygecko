@@ -81,9 +81,46 @@ function createGameInformation() {
 // ANZEIGEN
 // --------------------------------------------------
 
-// So viele Level gibt es (jede Form in board-layout.js ist eins).
+// So viele Formen gibt es (jede Form in board-layout.js ist eine).
 function hoechstesLevel() {
     return Math.max(...Object.keys(BOARD_LAYOUTS).map(Number));
+}
+
+// Nach der letzten Form beginnt die naechste Runde mit Form 1 - dann in einer
+// anderen Steinfarbe. So laesst sich endlos weiterspielen.
+// Von hell nach dunkel - die letzte Runde ist Schwarz.
+const RUNDEN_FARBEN = [
+    "Elfenbein",
+    "Bernstein",
+    "Rosé",
+    "Jade",
+    "Azur",
+    "Amethyst",
+    "Schiefer",
+    "Schwarz",
+    "Tiefschwarz"
+];
+
+// Welche Form gehoert zu diesem Level?
+function formVon(level) {
+    return ((level - 1) % hoechstesLevel()) + 1;
+}
+
+// In welcher Runde liegt dieses Level?
+function rundeVon(level) {
+    return Math.floor((level - 1) / hoechstesLevel()) + 1;
+}
+
+// Name der Steinfarbe dieser Runde.
+function farbenName(runde) {
+    return RUNDEN_FARBEN[(runde - 1) % RUNDEN_FARBEN.length];
+}
+
+// Setzt die Steinfarbe fuer eine Runde (CSS: body[data-runde]).
+function setzeRundenFarbe(runde) {
+    const nummer = ((runde - 1) % RUNDEN_FARBEN.length) + 1;
+
+    document.body.dataset.runde = String(nummer);
 }
 
 function formatTime(seconds) {
@@ -98,12 +135,10 @@ function formatTime(seconds) {
 }
 
 function updateStats() {
-    // Nach dem letzten Level gibt es kein "Level 16" in der Anzeige.
-    const angezeigtesLevel = Math.min(currentLevel, hoechstesLevel());
-
+    // Level laufen endlos weiter - die Anzeige zeigt die volle Nummer.
     setText(
         ["levelNumber", "level", "currentLevel", "levelDisplay"],
-        String(angezeigtesLevel).padStart(2, "0")
+        String(currentLevel).padStart(2, "0")
     );
 
     setText(
@@ -130,8 +165,57 @@ function updateStats() {
     stoppePunkteBlitz();
 }
 
+// Gut lesbare Farben auf dem dunklen Feld - fuer den Spruch nach einem Paar.
+const SPRUCH_FARBEN = [
+    "#ffd166",
+    "#8fe3ab",
+    "#9ad4ff",
+    "#ffb3c7",
+    "#c9b6ff",
+    "#ffe6a8",
+    "#8ee8dc",
+    "#ffc49a"
+];
+
+let letzteSpruchFarbe = "";
+
+// Zufaellige Spruchfarbe, aber nie zweimal dieselbe hintereinander.
+function spruchFarbe() {
+    const auswahl = SPRUCH_FARBEN.filter(farbe => farbe !== letzteSpruchFarbe);
+    const farbe = auswahl[Math.floor(Math.random() * auswahl.length)];
+
+    letzteSpruchFarbe = farbe;
+
+    return farbe;
+}
+
+// Warme Farben fuer den Spruch auf der Siegtafel - nie zweimal dieselbe.
+const SIEG_SPRUCH_FARBEN = [
+    "#ffa94d",
+    "#ffd166",
+    "#ffb347",
+    "#ff9c6e",
+    "#ff8fa3",
+    "#f6c177"
+];
+
+let letzteSiegSpruchFarbe = "";
+
+function siegSpruchFarbe() {
+    const auswahl = SIEG_SPRUCH_FARBEN.filter(
+        farbe => farbe !== letzteSiegSpruchFarbe
+    );
+    const farbe = auswahl[Math.floor(Math.random() * auswahl.length)];
+
+    letzteSiegSpruchFarbe = farbe;
+
+    return farbe;
+}
+
 // rot = true faerbt die Zeile rot (Fehlgriff), sonst normale Farbe.
-function setMessage(message, rot = false) {
+// punkte: Zusatz wie "+ 100 Punkte" - bleibt grau (bzw. rot beim Fehlgriff),
+// damit der Spruch davor allein die Farbe traegt.
+function setMessage(message, rot = false, punkte = "") {
     const element = getElement(
         "gameStatus",
         "message",
@@ -139,9 +223,29 @@ function setMessage(message, rot = false) {
         "statusMessage"
     );
 
-    if (element) {
-        element.textContent = message;
-        element.classList.toggle("fehler", rot);
+    if (!element) return;
+
+    element.classList.toggle("fehler", rot);
+    element.textContent = "";
+
+    const text = document.createElement("span");
+
+    text.className = "status-text";
+    text.textContent = message;
+
+    if (!rot && punkte) {
+        text.style.color = spruchFarbe();
+    }
+
+    element.appendChild(text);
+
+    if (punkte) {
+        const zusatz = document.createElement("span");
+
+        zusatz.className = "status-punkte";
+        zusatz.textContent = " " + punkte;
+
+        element.appendChild(zusatz);
     }
 }
 
@@ -192,13 +296,12 @@ function startGame() {
         currentLevel = gameData.currentLevel || 1;
     }
 
-    // Nach dem letzten Level nicht in eine Form ohne Vorlage laufen.
     if (!Number.isFinite(currentLevel) || currentLevel < 1) {
         currentLevel = 1;
     }
-    if (currentLevel > hoechstesLevel()) {
-        currentLevel = hoechstesLevel();
-    }
+
+    // Jede Runde spielt dieselben Formen in einer anderen Steinfarbe.
+    setzeRundenFarbe(rundeVon(currentLevel));
 
     updateStats();
     setMessage("Spielbrett wird vorbereitet ...");
@@ -209,7 +312,10 @@ function startGame() {
     versteckeSiegEhrung();
 
     try {
-        currentBoard = generateSolvableBoard(MAHJONG_SYMBOLS, currentLevel);
+        currentBoard = generateSolvableBoard(
+            MAHJONG_SYMBOLS,
+            formVon(currentLevel)
+        );
 
         if (!Array.isArray(currentBoard) || currentBoard.length !== 144) {
             throw new Error("Das Spielbrett enthält nicht genau 144 Steine.");
@@ -292,11 +398,14 @@ function handleTileClick(tileId) {
         if (foundPairs === 72) {
             finishGame();
         } else {
-            setMessage(lobSpruch() + " +100 Punkte");
+            setMessage(lobSpruch(), false, "+100 Punkte");
         }
 
         return;
     }
+
+    // Nur solange Punkte da sind, wird gespottet und abgezogen.
+    const abzugMoeglich = score > 0;
 
     mistakes++;
     score = Math.max(0, score - 100);
@@ -308,9 +417,14 @@ function handleTileClick(tileId) {
     updateStats();
 
     blinkeFalscheSteine([firstTile.id, tile.id]);
-    blinkePunkte();
 
-    setMessage(pechSpruch() + " - 100 Punkte", true);
+    if (abzugMoeglich) {
+        blinkePunkte();
+        setMessage(pechSpruch(), true, "- 100 Punkte");
+    } else {
+        // Bei 0 Punkten gibt es nichts mehr zu holen - dann sachlich bleiben.
+        setMessage("Die 2 Steine passen nicht zusammen.");
+    }
 }
 
 // Setzt die Punkteanzeige sofort wieder auf Gold.
@@ -436,20 +550,9 @@ function finishGame() {
         return;
     }
 
-    // Nach dem Sieg wartet das Spiel auf "Weiter", damit die Meldung und der
-    // Spruch in Ruhe gelesen werden koennen.
-    const hoechstes = hoechstesLevel();
-
-    if (currentLevel > hoechstes) {
-        setMessage(
-            `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}. ` +
-            `Alle ${hoechstes} Level geschafft!`
-        );
-
-        zeigeWeiterKnopf("");
-        return;
-    }
-
+    // Nach dem Sieg wartet das Spiel auf "Weiter", damit Meldung und Spruch in
+    // Ruhe gelesen werden. Danach geht es endlos weiter: nach der letzten Form
+    // beginnt die naechste Runde in neuer Steinfarbe.
     setMessage(
         `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}`
     );
@@ -492,7 +595,7 @@ function zeigeSiegEhrung(level, punkte) {
 
     if (levelFeld) {
         levelFeld.textContent = Number.isFinite(level)
-            ? `Level ${level} geschafft`
+            ? `Level ${level} · Runde ${rundeVon(level)} · ${farbenName(rundeVon(level))}`
             : "";
     }
 
@@ -544,34 +647,83 @@ function zeigeSiegWerte() {
 // LEVEL-AUSWAHL
 // --------------------------------------------------
 
-function baueLevelAuswahl() {
+// Runde, die in der Level-Auswahl gerade angezeigt wird.
+let auswahlRunde = 1;
+
+function baueLevelAuswahl(runde = auswahlRunde) {
     const raster = getElement("levelGrid");
 
     if (!raster) return;
 
+    auswahlRunde = Math.max(1, runde);
+
     raster.innerHTML = "";
 
-    for (let level = 1; level <= hoechstesLevel(); level++) {
+    const formen = hoechstesLevel();
+    const start = (auswahlRunde - 1) * formen;
+
+    for (let form = 1; form <= formen; form++) {
+        const level = start + form;
         const feld = document.createElement("button");
 
         feld.type = "button";
         feld.className = "level-feld";
         feld.dataset.level = String(level);
         feld.textContent = String(level).padStart(2, "0");
+        feld.title = `Form ${form}`;
 
         feld.addEventListener("click", () => waehleLevel(level));
 
         raster.appendChild(feld);
     }
+
+    const anzeige = getElement("rundeAnzeige");
+
+    if (anzeige) {
+        anzeige.textContent =
+            `Runde ${auswahlRunde} · ${farbenName(auswahlRunde)}`;
+    }
+
+    baueFarbwahl();
+    markiereAktuellesLevel();
+}
+
+// Farbwahl am Ende der Level-Auswahl: jede Farbe ist eine Runde.
+function baueFarbwahl() {
+    const leiste = getElement("farbeLeiste");
+
+    if (!leiste) return;
+
+    leiste.innerHTML = "";
+
+    RUNDEN_FARBEN.forEach((name, index) => {
+        const runde = index + 1;
+        const abLevel = (runde - 1) * hoechstesLevel() + 1;
+
+        const feld = document.createElement("button");
+
+        feld.type = "button";
+        feld.className = "farbe-feld";
+        feld.dataset.farbe = String(runde);
+        feld.title = `Runde ${runde} · ${name} · ab Level ${abLevel}`;
+        feld.setAttribute(
+            "aria-label",
+            `Runde ${runde}, ${name}, ab Level ${abLevel}`
+        );
+
+        feld.classList.toggle("aktiv", runde === auswahlRunde);
+
+        feld.addEventListener("click", () => baueLevelAuswahl(runde));
+
+        leiste.appendChild(feld);
+    });
 }
 
 function markiereAktuellesLevel() {
-    const angezeigt = Math.min(currentLevel, hoechstesLevel());
-
     document.querySelectorAll(".level-feld").forEach(feld => {
         feld.classList.toggle(
             "aktuell",
-            Number(feld.dataset.level) === angezeigt
+            Number(feld.dataset.level) === currentLevel
         );
     });
 }
@@ -581,8 +733,7 @@ function oeffneLevelAuswahl() {
 
     if (!auswahl) return;
 
-    baueLevelAuswahl();
-    markiereAktuellesLevel();
+    baueLevelAuswahl(rundeVon(currentLevel));
 
     auswahl.hidden = false;
 
@@ -605,7 +756,8 @@ function schliesseLevelAuswahl() {
 }
 
 function waehleLevel(level) {
-    const ziel = Math.min(Math.max(1, level), hoechstesLevel());
+    // Level laufen endlos: nach Form 56 geht es in der naechsten Runde weiter.
+    const ziel = Math.max(1, Math.floor(level));
 
     if (gameData) {
         gameData.currentLevel = ziel;
@@ -748,22 +900,6 @@ function initializeGame() {
             schliesseLevelAuswahl();
         }
     });
-
-    // Zurück auf Level 1 – der übrige Spielstand bleibt erhalten.
-    const resetLevelButton = getElement("resetLevelButton");
-
-    if (resetLevelButton) {
-        resetLevelButton.addEventListener("click", () => {
-            if (gameData) {
-                gameData.currentLevel = 1;
-                saveStorage(gameData);
-            }
-
-            currentLevel = 1;
-            startGame();
-            setMessage("Zurück auf Level 1 – der übrige Spielstand bleibt erhalten.");
-        });
-    }
 
     updateStats();
 

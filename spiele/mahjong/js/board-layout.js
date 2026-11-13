@@ -1551,6 +1551,166 @@ function erweitereAuf144(layout) {
 }
 
 // --------------------------------------------------
+// EINFACHE FORMEN (Level 51-54)
+// --------------------------------------------------
+
+// Diese Formen bringen ihre Ebenen selbst mit, damit die Steinzahl exakt
+// aufgeht und keine Fuellsteine noetig sind.
+function createLayeredLayout({ id, level, rows, columns, layers }) {
+    const positions = layers.flat();
+
+    return {
+        id,
+        level,
+        columns,
+        rows,
+        tileCount: positions.length,
+        layers,
+        positions
+    };
+}
+
+// LEVEL 51 - WUERFEL: drei gleiche Ebenen uebereinander (8 x 6)
+const WUERFEL_LAYOUT = createLayeredLayout({
+    id: "trashygecko-mahjong-wuerfel",
+    level: 51,
+    rows: 6,
+    columns: 12,
+    layers: [0, 1, 2].map(z =>
+        Array.from({ length: 6 }, (_, i) => createRow(i, 2, 8, z)).flat()
+    )
+});
+
+// LEVEL 52 - RECHTECK: 12 x 8 flach, darueber 8 x 6
+const RECHTECK_LAYOUT = createLayeredLayout({
+    id: "trashygecko-mahjong-rechteck",
+    level: 52,
+    rows: 8,
+    columns: 12,
+    layers: [
+        Array.from({ length: 8 }, (_, i) => createRow(i, 0, 12, 0)).flat(),
+        Array.from({ length: 6 }, (_, i) => createRow(i + 1, 2, 8, 1)).flat()
+    ]
+});
+
+// LEVEL 53 - BALL: runde Grundflaeche mit einer kleineren inneren Ebene
+const BALL_LAYOUT = createLayeredLayout({
+    id: "trashygecko-mahjong-ball",
+    level: 53,
+    rows: 10,
+    columns: 12,
+    layers: [
+        [
+            createRow(0, 3, 6, 0),
+            createRow(1, 2, 8, 0),
+            createRow(2, 1, 10, 0),
+            createRow(3, 0, 12, 0),
+            createRow(4, 0, 12, 0),
+            createRow(5, 0, 12, 0),
+            createRow(6, 0, 12, 0),
+            createRow(7, 1, 10, 0),
+            createRow(8, 2, 8, 0),
+            createRow(9, 3, 6, 0)
+        ].flat(),
+        [
+            createRow(2, 3, 6, 1),
+            createRow(3, 2, 8, 1),
+            createRow(4, 1, 10, 1),
+            createRow(5, 1, 10, 1),
+            createRow(6, 2, 8, 1),
+            createRow(7, 3, 6, 1)
+        ].flat()
+    ]
+});
+
+// LEVEL 54 - PYRAMIDE: nach oben schmaler werdende Treppe
+const PYRAMIDE_LAYOUT = createLayeredLayout({
+    id: "trashygecko-mahjong-pyramide",
+    level: 54,
+    rows: 9,
+    columns: 12,
+    layers: [
+        [
+            createRow(0, 5, 2, 0),
+            createRow(1, 4, 4, 0),
+            createRow(2, 3, 6, 0),
+            createRow(3, 2, 8, 0),
+            createRow(4, 1, 10, 0),
+            createRow(5, 0, 12, 0),
+            createRow(6, 0, 12, 0),
+            createRow(7, 0, 12, 0),
+            createRow(8, 0, 12, 0)
+        ].flat(),
+        [
+            createRow(1, 5, 2, 1),
+            createRow(2, 4, 4, 1),
+            createRow(3, 3, 6, 1),
+            createRow(4, 2, 8, 1),
+            createRow(5, 1, 10, 1),
+            createRow(6, 0, 12, 1)
+        ].flat(),
+        [
+            createRow(2, 4, 4, 2),
+            createRow(3, 3, 6, 2),
+            createRow(4, 2, 8, 2),
+            createRow(5, 3, 6, 2)
+        ].flat()
+    ]
+});
+
+// LEVEL 55 - SAEULEN: zwoelf Tuermchen (2 x 2), je drei Ebenen hoch,
+// dazwischen eine Gasse - wie eine kleine Halle.
+const SAEULEN_X = [0, 3, 6, 9];
+const SAEULEN_Y = [0, 3, 6];
+
+function saeulenEbene(z) {
+    const steine = [];
+
+    SAEULEN_Y.forEach(y => {
+        SAEULEN_X.forEach(x => {
+            steine.push(createRow(y, x, 2, z));
+            steine.push(createRow(y + 1, x, 2, z));
+        });
+    });
+
+    return steine.flat();
+}
+
+const SAEULEN_LAYOUT = createLayeredLayout({
+    id: "trashygecko-mahjong-saeulen",
+    level: 55,
+    rows: 8,
+    columns: 11,
+    layers: [saeulenEbene(0), saeulenEbene(1), saeulenEbene(2)]
+});
+
+// LEVEL 56 - BRUECKE: zwei dicke Pfeiler, darueber ein Steg, der die Luecke
+// ueberspannt - in der Mitte liegen die Steine also ueber leerem Raum.
+function brueckenPfeiler(z) {
+    const steine = [];
+
+    for (let y = 0; y < 8; y++) {
+        steine.push(createRow(y, 0, 3, z));   // linker Pfeiler
+        steine.push(createRow(y, 9, 3, z));   // rechter Pfeiler
+    }
+
+    return steine.flat();
+}
+
+const BRUECKE_DECK = Array.from(
+    { length: 4 },
+    (_, i) => createRow(i + 2, 0, 12, 2)
+).flat();
+
+const BRUECKE_LAYOUT = createLayeredLayout({
+    id: "trashygecko-mahjong-bruecke",
+    level: 56,
+    rows: 8,
+    columns: 12,
+    layers: [brueckenPfeiler(0), brueckenPfeiler(1), BRUECKE_DECK]
+});
+
+// --------------------------------------------------
 // LEVELUEBERSICHT
 // --------------------------------------------------
 
@@ -1604,5 +1764,11 @@ const BOARD_LAYOUTS = {
     47: erweitereAuf144(POKAL_LAYOUT),
     48: erweitereAuf144(SEGELBOOT_LAYOUT),
     49: erweitereAuf144(MARIENKAEFER_LAYOUT),
-    50: erweitereAuf144(TORTE_LAYOUT)
+    50: erweitereAuf144(TORTE_LAYOUT),
+    51: erweitereAuf144(WUERFEL_LAYOUT),
+    52: erweitereAuf144(RECHTECK_LAYOUT),
+    53: erweitereAuf144(BALL_LAYOUT),
+    54: erweitereAuf144(PYRAMIDE_LAYOUT),
+    55: erweitereAuf144(SAEULEN_LAYOUT),
+    56: erweitereAuf144(BRUECKE_LAYOUT)
 };

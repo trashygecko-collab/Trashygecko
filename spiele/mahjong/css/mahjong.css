@@ -351,7 +351,9 @@ button {
 .board-stage {
     position: relative;
     flex-shrink: 0;
-    margin: 20px auto;
+    /* Kein Rand: sonst schneidet die Einpassung bei hohen Formen die
+       unterste Reihe ab. Die Lage kommt allein aus dem Transform. */
+    margin: 0;
 }
 
 .mahjong-tile {
@@ -364,19 +366,29 @@ button {
     align-items: center;
     justify-content: center;
 
-    color: #493b25;
+    /* Farben der Steine - Runde fuer Runde anders (siehe unten) */
+    --stein-hell: #fffdf1;
+    --stein-mitte: #f3e9d0;
+    --stein-dunkel: #dfd0ad;
+    --stein-rand: #c5ad78;
+    --stein-sockel: #a58c5c;
+    --stein-linie: rgba(166, 137, 79, 0.35);
+    --stein-sockel-dunkel: #6b5738;
+    --stein-text: #493b25;
+
+    color: var(--stein-text);
     background: linear-gradient(
         145deg,
-        #fffdf1 0%,
-        #f3e9d0 65%,
-        #dfd0ad 100%
+        var(--stein-hell) 0%,
+        var(--stein-mitte) 65%,
+        var(--stein-dunkel) 100%
     );
 
-    border: 2px solid #c5ad78;
+    border: 2px solid var(--stein-rand);
     border-radius: 8px;
 
     box-shadow:
-        0 5px 0 #a58c5c,
+        0 5px 0 var(--stein-sockel),
         0 7px 9px rgba(0, 0, 0, 0.35),
         inset 0 2px 3px rgba(255, 255, 255, 0.9);
 
@@ -391,7 +403,7 @@ button {
     content: "";
     position: absolute;
     inset: 5px;
-    border: 1px solid rgba(166, 137, 79, 0.35);
+    border: 1px solid var(--stein-linie);
     border-radius: 4px;
     pointer-events: none;
 }
@@ -401,7 +413,7 @@ button {
         filter: brightness(1.12);
         transform: translateY(-5px);
         box-shadow:
-            0 9px 0 #a58c5c,
+            0 9px 0 var(--stein-sockel),
             0 12px 14px rgba(0, 0, 0, 0.4);
     }
 }
@@ -500,7 +512,7 @@ button {
     filter: brightness(0.68) saturate(0.85);
     cursor: default;
     box-shadow:
-        0 7px 0 #6b5738,
+        0 7px 0 var(--stein-sockel-dunkel),
         0 10px 15px rgba(0, 0, 0, 0.62),
         inset 0 2px 3px rgba(255, 255, 255, 0.35);
 }
@@ -515,7 +527,7 @@ button {
     max-width: 100%;
     overflow: hidden;
 
-    color: #443c2e;
+    color: var(--stein-text);
     font-family: Georgia, serif;
     font-size: 22px;
     font-weight: bold;
@@ -528,9 +540,7 @@ button {
         overflow: auto;
     }
 
-    .board-stage {
-        margin: 15px;
-    }
+    /* Der Rand der Buehne wuerde die Einpassung verfaelschen - bleibt 0. */
 
 }
 
@@ -766,6 +776,30 @@ button {
    SIEGEREHRUNG
 ===================================== */
 
+/* Groessenstufen der Siegertafel - alles in dieser Datei (css/mahjong.css).
+   Reihenfolge: Breite der Tafel / .sieg-spruch / .sieg-titel / .sieg-punkte strong
+
+   Grundwerte (ohne Media-Query):
+       .sieg-ehrung       Breite max. 560 px
+       .sieg-titel        27 px
+       .sieg-spruch       19 px
+       .sieg-punkte strong 38 px
+
+   Handy bis 899 px:   @media (max-width: 900px)
+                       560 px / 18 px / 21 px / 31 px
+   Tablet 900-1199 px: @media (min-width: 900px) and (max-width: 1199px)
+                       660 px / 19 px / 27 px / 38 px
+   Desktop ab 1200 px: @media (min-width: 900px)
+                       780 px / 20 px / 29 px / 41 px
+   Flache Fenster:     @media (max-height: 520 px)  (gilt zusaetzlich, quer)
+                       .sieg-spruch 16 px, .sieg-titel 18 px,
+                       .sieg-punkte strong 24 px
+
+   Spruchfarbe: warme Palette aus main.js (siegSpruchFarbe: orange #ffa94d,
+   gold, amber, coral, rose, honey), Trennlinien ueber/unter dem Spruch ueber
+   .sieg-spruch::before / ::after.
+*/
+
 /* Im Sieg uebernimmt die Tafel - die kleine Statuszeile bleibt nur fuer
    Screenreader im Dokument. */
 .board-area.kompakt {
@@ -872,10 +906,39 @@ button {
 }
 
 .sieg-spruch {
-    max-width: 46ch;
-    color: var(--text);
-    font-size: 15px;
-    line-height: 1.5;
+    position: relative;
+    max-width: 40ch;
+    margin: 8px 0 6px;
+    padding: 16px 0;
+    color: #ffa94d;
+    font-size: 19px;
+    font-weight: 500;
+    line-height: 1.55;
+}
+
+/* Feine goldene Trennlinien ueber und unter dem Spruch */
+.sieg-spruch::before,
+.sieg-spruch::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: min(200px, 70%);
+    height: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+        90deg,
+        rgba(201, 173, 125, 0),
+        rgba(201, 173, 125, 0.9),
+        rgba(201, 173, 125, 0)
+    );
+}
+
+.sieg-spruch::before {
+    top: 0;
+}
+
+.sieg-spruch::after {
+    bottom: 0;
 }
 
 .sieg-spruch:empty {
@@ -917,7 +980,7 @@ button {
     }
 
     .sieg-spruch {
-        font-size: 14px;
+        font-size: 18px;
     }
 
     .sieg-ehrung .weiter-knopf {
@@ -947,7 +1010,233 @@ button {
     }
 
     .sieg-spruch {
-        font-size: 12px;
-        line-height: 1.35;
+        padding: 12px 0;
+        font-size: 16px;
+        line-height: 1.4;
+    }
+}
+
+/* Grosse Bildschirme: breitere Tafel, damit der Spruch nicht so oft umbricht */
+@media (min-width: 900px) {
+    .sieg-ehrung {
+        width: min(780px, 100%);
+        padding: 24px 30px 18px;
+    }
+
+    .sieg-spruch {
+        max-width: 58ch;
+        font-size: 20px;
+    }
+
+    .sieg-titel {
+        font-size: 29px;
+    }
+
+    .sieg-punkte strong {
+        font-size: 41px;
+    }
+}
+
+/* Tablets quer (900-1199 px): Tafel etwas schmaler, sonst wirkt sie zu breit */
+@media (min-width: 900px) and (max-width: 1199px) {
+    .sieg-ehrung {
+        width: min(660px, 100%);
+        padding: 20px 24px 16px;
+    }
+
+    .sieg-spruch {
+        max-width: 52ch;
+        font-size: 19px;
+    }
+
+    .sieg-titel {
+        font-size: 27px;
+    }
+
+    .sieg-punkte strong {
+        font-size: 38px;
+    }
+}
+
+
+/* =====================================
+   RUNDENFARBEN DER STEINE
+   Level 1-56 sind Runde 1, 57-112 Runde 2, usw. Jede Runde hat ihre eigene
+   Steinfarbe; die letzte ist Schwarz. Gesetzt wird sie in main.js als
+   body[data-runde] (1-8 im Wechsel).
+===================================== */
+
+/* Runde 2 - Bernstein */
+body[data-runde="2"] .mahjong-tile {
+    --stein-hell: #fff8e5;
+    --stein-mitte: #ffe7b4;
+    --stein-dunkel: #f2c877;
+    --stein-rand: #d3a04a;
+    --stein-sockel: #a8792a;
+    --stein-linie: rgba(158, 116, 45, 0.38);
+    --stein-sockel-dunkel: #6b501c;
+}
+
+/* Runde 3 - Rosé */
+body[data-runde="3"] .mahjong-tile {
+    --stein-hell: #fff4f4;
+    --stein-mitte: #ffdfdf;
+    --stein-dunkel: #f4c2c2;
+    --stein-rand: #d79a9a;
+    --stein-sockel: #b17474;
+    --stein-linie: rgba(170, 105, 105, 0.34);
+    --stein-sockel-dunkel: #6d4747;
+}
+
+/* Runde 4 - Jade */
+body[data-runde="4"] .mahjong-tile {
+    --stein-hell: #f0fbf4;
+    --stein-mitte: #d3efdf;
+    --stein-dunkel: #b0dfc6;
+    --stein-rand: #85bd9c;
+    --stein-sockel: #63957a;
+    --stein-linie: rgba(75, 135, 105, 0.34);
+    --stein-sockel-dunkel: #3f6552;
+}
+
+/* Runde 5 - Azur */
+body[data-runde="5"] .mahjong-tile {
+    --stein-hell: #f2f9ff;
+    --stein-mitte: #dbeafb;
+    --stein-dunkel: #b8d3ee;
+    --stein-rand: #8cadcf;
+    --stein-sockel: #62819e;
+    --stein-linie: rgba(85, 125, 160, 0.34);
+    --stein-sockel-dunkel: #3f5669;
+}
+
+/* Runde 6 - Amethyst */
+body[data-runde="6"] .mahjong-tile {
+    --stein-hell: #f7f3ff;
+    --stein-mitte: #e3d8f7;
+    --stein-dunkel: #c6b2e2;
+    --stein-rand: #9d86bf;
+    --stein-sockel: #776396;
+    --stein-linie: rgba(118, 95, 150, 0.34);
+    --stein-sockel-dunkel: #4b3f62;
+}
+
+/* Runde 7 - Schiefer (dunkel) */
+body[data-runde="7"] .mahjong-tile {
+    --stein-hell: #5b6575;
+    --stein-mitte: #49525f;
+    --stein-dunkel: #3a424e;
+    --stein-rand: #7f8a98;
+    --stein-sockel: #2a323c;
+    --stein-linie: rgba(205, 215, 230, 0.32);
+    --stein-sockel-dunkel: #181d24;
+    --stein-text: #eef1f6;
+}
+
+/* Runde 8 - Schwarz (dunkelste Farbe) */
+body[data-runde="8"] .mahjong-tile {
+    --stein-hell: #3d3d45;
+    --stein-mitte: #2b2b32;
+    --stein-dunkel: #202026;
+    --stein-rand: #6d6d79;
+    --stein-sockel: #141419;
+    --stein-linie: rgba(210, 210, 222, 0.3);
+    --stein-sockel-dunkel: #09090c;
+    --stein-text: #ecebe6;
+}
+
+/* Runde 9 - Tiefschwarz (richtiges Schwarz) */
+body[data-runde="9"] .mahjong-tile {
+    --stein-hell: #2e2e33;
+    --stein-mitte: #191919;
+    --stein-dunkel: #0d0d0f;
+    --stein-rand: #5e5e69;
+    --stein-sockel: #08080a;
+    --stein-linie: rgba(225, 225, 238, 0.34);
+    --stein-sockel-dunkel: #000000;
+    --stein-text: #f1f0ea;
+}
+
+/* Auf dunklen Steinen wuerde "noch dunkler" verschwinden - dort lieber
+   etwas zuruecknehmen und ueber die Deckkraft arbeiten. */
+body[data-runde="7"] .mahjong-tile.blocked,
+body[data-runde="8"] .mahjong-tile.blocked,
+body[data-runde="9"] .mahjong-tile.blocked {
+    filter: brightness(0.82) saturate(0.85);
+    opacity: 0.7;
+}
+
+.runde-anzeige {
+    display: block;
+    padding: 10px 12px 2px;
+    color: var(--gold);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+/* Farbwahl am Ende der Level-Auswahl */
+.farbe-leiste {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(201, 173, 125, 0.25);
+}
+
+.farbe-feld {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: linear-gradient(145deg, var(--farbe-hell), var(--farbe-dunkel));
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.55);
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.farbe-feld:hover,
+.farbe-feld:focus-visible {
+    transform: translateY(-2px);
+    outline: none;
+}
+
+.farbe-feld.aktiv {
+    border-color: var(--gold);
+    box-shadow:
+        0 0 0 2px rgba(201, 173, 125, 0.5),
+        inset 0 1px 2px rgba(255, 255, 255, 0.55);
+}
+
+.farbe-feld[data-farbe="1"] { --farbe-hell: #fffdf1; --farbe-dunkel: #dfd0ad; }
+.farbe-feld[data-farbe="2"] { --farbe-hell: #fff8e5; --farbe-dunkel: #f2c877; }
+.farbe-feld[data-farbe="3"] { --farbe-hell: #fff4f4; --farbe-dunkel: #f4c2c2; }
+.farbe-feld[data-farbe="4"] { --farbe-hell: #f0fbf4; --farbe-dunkel: #b0dfc6; }
+.farbe-feld[data-farbe="5"] { --farbe-hell: #f2f9ff; --farbe-dunkel: #b8d3ee; }
+.farbe-feld[data-farbe="6"] { --farbe-hell: #f7f3ff; --farbe-dunkel: #c6b2e2; }
+.farbe-feld[data-farbe="7"] { --farbe-hell: #5b6575; --farbe-dunkel: #2a323c; }
+.farbe-feld[data-farbe="8"] { --farbe-hell: #3d3d45; --farbe-dunkel: #141419; }
+.farbe-feld[data-farbe="9"] {
+    --farbe-hell: #2e2e33;
+    --farbe-dunkel: #08080a;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 900px) {
+    .runde-anzeige {
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .farbe-leiste {
+        gap: 8px;
+        padding: 10px 10px;
+    }
+
+    .farbe-feld {
+        width: 30px;
+        height: 30px;
     }
 }
