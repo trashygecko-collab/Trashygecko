@@ -22,6 +22,9 @@ let gameData = null;
 let levelWechselTimer = null;
 let hinweisTiles = [];
 
+// Einmal pro Level darf kostenlos gemischt werden, wenn kein Zug mehr geht.
+let mischenMoeglich = true;
+
 // Zeichnet das bestehende Brett neu, ohne alle Steine zu ersetzen.
 function aktualisiereBrett() {
     updateBoardView(currentBoard, selectedTile, hinweisTiles, handleTileClick);
@@ -116,6 +119,25 @@ function farbenName(runde) {
     return RUNDEN_FARBEN[(runde - 1) % RUNDEN_FARBEN.length];
 }
 
+// Letztes Level einer vollen Farbrunde? (Level 504, 1008, ...)
+// Kurzer Hinweis, wenn ein Level den Anfang einer neuen Farbrunde bildet.
+function rundeStartHinweis(level) {
+    const runde = rundeVon(level);
+
+    if (formVon(level) !== 1 || runde < 2) return "";
+
+    return 'Neue Runde ' + runde + ' – Steinfarbe ' + farbenName(runde) + '.';
+}
+
+function istRundenFinale(level) {
+    if (!Number.isFinite(level)) return false;
+
+    return (
+        formVon(level) === hoechstesLevel() &&
+        rundeVon(level) % RUNDEN_FARBEN.length === 0
+    );
+}
+
 // Setzt die Steinfarbe fuer eine Runde (CSS: body[data-runde]).
 function setzeRundenFarbe(runde) {
     const nummer = ((runde - 1) % RUNDEN_FARBEN.length) + 1;
@@ -160,9 +182,6 @@ function updateStats() {
         ["scoreDisplay"],
         `Punkte: ${score}`
     );
-
-    // Timer oder neue Aktion: die Anzeige ist wieder gold.
-    stoppePunkteBlitz();
 }
 
 // Gut lesbare Farben auf dem dunklen Feld - fuer den Spruch nach einem Paar.
@@ -304,12 +323,18 @@ function startGame() {
     setzeRundenFarbe(rundeVon(currentLevel));
 
     updateStats();
+
+    // Neues Level: die Anzeige startet wieder in Gold.
+    stoppePunkteBlitz();
+
     setMessage("Spielbrett wird vorbereitet ...");
     leereGewonnenSpruch();
     leereGewonnenSymbol();
     zeigeWeiterKnopf("");
     zeigeSiegel(false);
     versteckeSiegEhrung();
+    versteckeMischenKnopf();
+    mischenMoeglich = true;
 
     try {
         currentBoard = generateSolvableBoard(
@@ -326,7 +351,7 @@ function startGame() {
         renderBoard(currentBoard, null, handleTileClick);
 
         updateStats();
-        setMessage("Viel Spaß beim Spielen!");
+        setMessage(rundeStartHinweis(currentLevel) || "Viel Spaß beim Spielen!");
 
         startGameTimer();
 
@@ -399,6 +424,7 @@ function handleTileClick(tileId) {
             finishGame();
         } else {
             setMessage(lobSpruch(), false, "+100 Punkte");
+            pruefeFestgefahren();
         }
 
         return;
@@ -459,6 +485,103 @@ function blinkePunkte() {
 }
 
 // --------------------------------------------------
+// FESTGEFAHRENES BRETT
+// --------------------------------------------------
+
+// Gibt es überhaupt noch zwei freie Steine mit gleichem Motiv?
+function gibtEsNochEinPaar() {
+    const frei = getFreeTiles(currentBoard);
+    const gesehen = new Set();
+
+    for (const stein of frei) {
+        if (gesehen.has(stein.symbolId)) return true;
+
+        gesehen.add(stein.symbolId);
+    }
+
+    return false;
+}
+
+function zeigeMischenKnopf() {
+    const knopf = getElement("mischenButton");
+
+    if (knopf) knopf.hidden = false;
+}
+
+function versteckeMischenKnopf() {
+    const knopf = getElement("mischenButton");
+
+    if (knopf) knopf.hidden = true;
+}
+
+// Nach jedem Treffer prüfen, ob das Brett noch spielbar ist.
+function pruefeFestgefahren() {
+    if (!gameRunning) return;
+    if (gibtEsNochEinPaar()) return;
+
+    if (mischenMoeglich) {
+        zeigeMischenKnopf();
+        setMessage(
+            "Kein passendes Paar mehr frei – du darfst einmal kostenlos mischen."
+        );
+    } else {
+        versteckeMischenKnopf();
+        setMessage(
+            "Kein passendes Paar mehr frei. Mit NEU startest du das Level neu."
+        );
+    }
+}
+
+// Verteilt die Motive der restlichen Steine neu - nach einer Reihenfolge, die
+// garantiert wieder aufgeht. Die Form des Bretts bleibt unverändert.
+function mischeBrett() {
+    let order;
+
+    try {
+        order = findRemovalOrder(currentBoard);
+    } catch (error) {
+        console.error("Mischen fehlgeschlagen:", error);
+
+        versteckeMischenKnopf();
+        setMessage("Mischen ging nicht – starte das Level mit NEU neu.");
+
+        return;
+    }
+
+    const motive = [
+        ...new Set(
+            currentBoard
+                .filter(tile => !tile.removed)
+                .map(tile => tile.symbolId)
+        )
+    ];
+
+    if (order.length !== motive.length) {
+        versteckeMischenKnopf();
+        setMessage("Mischen ging nicht – starte das Level mit NEU neu.");
+
+        return;
+    }
+
+    const nachId = new Map(currentBoard.map(tile => [tile.id, tile]));
+
+    order.forEach((paar, index) => {
+        const symbolId = motive[index];
+
+        nachId.get(paar[0]).symbolId = symbolId;
+        nachId.get(paar[1]).symbolId = symbolId;
+    });
+
+    mischenMoeglich = false;
+    versteckeMischenKnopf();
+    selectedTile = null;
+    hinweisTiles = [];
+
+    aktualisiereBrett();
+    setMessage("Neu gemischt – das war das eine Gratis-Mischen in diesem Level.");
+}
+
+// --------------------------------------------------
 // HINWEIS
 // --------------------------------------------------
 
@@ -479,7 +602,17 @@ function showHint() {
 
                 aktualisiereBrett();
 
-                setMessage("Diese beiden Steine passen zusammen.");
+                // Ein Tipp kostet 50 Punkte - solange noch welche da sind.
+                // Der Spruch kommt wie beim Fehlgriff in Rot, nur milder.
+                if (score > 0) {
+                    score = Math.max(0, score - 50);
+
+                    updateStats();
+                    blinkePunkte();
+                    setMessage(pechSpruch(), true, "- 50 Punkte");
+                } else {
+                    setMessage("Diese beiden Steine passen zusammen.");
+                }
 
                 return;
             }
@@ -603,6 +736,13 @@ function zeigeSiegEhrung(level, punkte) {
         punkteFeld.textContent = Number(punkte).toLocaleString("de-DE");
     }
 
+    // Nach der letzten Farbe einer vollen Runde kommt die eigene Tafel dazu.
+    const rundenFeld = getElement("siegRunde");
+
+    if (rundenFeld) {
+        rundenFeld.hidden = !istRundenFinale(level);
+    }
+
     tafel.hidden = false;
 }
 
@@ -611,6 +751,12 @@ function versteckeSiegEhrung() {
 
     if (tafel) {
         tafel.hidden = true;
+    }
+
+    const rundenFeld = getElement("siegRunde");
+
+    if (rundenFeld) {
+        rundenFeld.hidden = true;
     }
 }
 
@@ -650,6 +796,27 @@ function zeigeSiegWerte() {
 // Runde, die in der Level-Auswahl gerade angezeigt wird.
 let auswahlRunde = 1;
 
+// Bestzeit eines Levels in Sekunden - null, wenn es noch nicht geschafft ist.
+function bestzeitVon(level) {
+    const zeiten = gameData ? gameData.bestTimes : null;
+    const wert = zeiten ? zeiten[level] : undefined;
+
+    return Number.isFinite(wert) ? wert : null;
+}
+
+// Wie viele Level dieser Runde sind schon geschafft?
+function geschafftInRunde(runde) {
+    const formen = hoechstesLevel();
+    const start = (runde - 1) * formen;
+    let anzahl = 0;
+
+    for (let form = 1; form <= formen; form++) {
+        if (bestzeitVon(start + form) !== null) anzahl++;
+    }
+
+    return anzahl;
+}
+
 function baueLevelAuswahl(runde = auswahlRunde) {
     const raster = getElement("levelGrid");
 
@@ -665,12 +832,32 @@ function baueLevelAuswahl(runde = auswahlRunde) {
     for (let form = 1; form <= formen; form++) {
         const level = start + form;
         const feld = document.createElement("button");
+        const bestzeit = bestzeitVon(level);
 
         feld.type = "button";
         feld.className = "level-feld";
         feld.dataset.level = String(level);
-        feld.textContent = String(level).padStart(2, "0");
-        feld.title = `Form ${form}`;
+
+        const nummer = document.createElement("span");
+
+        nummer.className = "level-feld-nummer";
+        nummer.textContent = String(level).padStart(2, "0");
+        feld.appendChild(nummer);
+
+        if (bestzeit !== null) {
+            const zeit = document.createElement("span");
+
+            zeit.className = "level-feld-zeit";
+            zeit.textContent = formatTime(bestzeit);
+            feld.appendChild(zeit);
+
+            feld.classList.add("geschafft");
+        }
+
+        feld.title =
+            bestzeit !== null
+                ? `Form ${form} · Bestzeit ${formatTime(bestzeit)}`
+                : `Form ${form}`;
 
         feld.addEventListener("click", () => waehleLevel(level));
 
@@ -681,7 +868,8 @@ function baueLevelAuswahl(runde = auswahlRunde) {
 
     if (anzeige) {
         anzeige.textContent =
-            `Runde ${auswahlRunde} · ${farbenName(auswahlRunde)}`;
+            `Runde ${auswahlRunde} · ${farbenName(auswahlRunde)} · ` +
+            `${geschafftInRunde(auswahlRunde)} von ${formen}`;
     }
 
     baueFarbwahl();
@@ -705,7 +893,11 @@ function baueFarbwahl() {
         feld.type = "button";
         feld.className = "farbe-feld";
         feld.dataset.farbe = String(runde);
-        feld.title = `Runde ${runde} · ${name} · ab Level ${abLevel}`;
+        const geschafft = geschafftInRunde(runde);
+
+        feld.title =
+            `Runde ${runde} · ${name} · ab Level ${abLevel} · ` +
+            `${geschafft} von ${hoechstesLevel()} geschafft`;
         feld.setAttribute(
             "aria-label",
             `Runde ${runde}, ${name}, ab Level ${abLevel}`
@@ -796,6 +988,12 @@ function initializeGame() {
 
     if (newGameButton) {
         newGameButton.addEventListener("click", startGame);
+    }
+
+    const mischenButton = getElement("mischenButton");
+
+    if (mischenButton) {
+        mischenButton.addEventListener("click", mischeBrett);
     }
 
     const continueButton = getElement("continueButton");

@@ -64,9 +64,11 @@ function generateBoard(symbolIds, level = 1) {
 // --------------------------------------------------
 
 function findRemovalOrder(originalBoard) {
+    // Bereits entfernte Steine bleiben entfernt - damit lässt sich auch eine
+    // Abbaureihenfolge für den Rest eines angefangenen Bretts finden.
     const board = originalBoard.map(tile => ({
         ...tile,
-        removed: false
+        removed: Boolean(tile.removed)
     }));
 
     const failedStates = new Set();
@@ -132,7 +134,7 @@ function findRemovalOrder(originalBoard) {
         return null;
     }
 
-    const solution = search(board.length);
+    const solution = search(board.filter(tile => !tile.removed).length);
 
     if (solution === null) {
         throw new Error(

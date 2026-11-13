@@ -31,7 +31,8 @@ Der Spielstand (Level, Punkte, Bestzeiten) liegt im `localStorage` des Browsers.
 | Zoomen | zwei Finger auseinander/zusammen oder Mausrad |
 | Gesamtansicht | Doppelklick / Doppeltipp auf eine freie Stelle |
 | Level wählen | auf `LV 37 ▾` tippen, dann ein Feld im Raster; unten eine Farbe antippen, um in deren Runde zu springen |
-| Tipp | Knopf `TIPP` markiert ein freies Paar |
+| Tipp | Knopf `TIPP` markiert ein freies Paar – kostet 50 Punkte |
+| Neu mischen (nur wenn kein Zug geht) | Knopf `NEU MISCHEN` – einmal pro Level gratis |
 | Neu mischen | Knopf `NEU` startet das aktuelle Level neu |
 | Vollbild | Knopf `⛶` |
 
@@ -57,6 +58,15 @@ Notch/Safe-Area bleibt zusätzlich frei).
   Farbe (warme Palette: Orange, Gold, Amber, Coral, Rosa, Honig, nie zweimal
   dieselbe hintereinander). Am Ende zählen ein Zeitbonus
   (1000 − 2 pro Sekunde) und ein Abzug von 25 Punkten je Fehlgriff.
+- **Tipp:** `TIPP` markiert ein freies Paar und kostet 50 Punkte – mit einem
+  Spruch aus `pech.txt` in Rot und `- 50 Punkte` dahinter, wie beim Fehlgriff.
+  Bei 0 Punkten bleibt es beim sachlichen Hinweis ohne Abzug.
+- **Kein Zug mehr möglich:** Nach jedem Paar prüft das Spiel, ob überhaupt noch
+  zwei freie Steine mit gleichem Motiv da sind. Wenn nicht, erscheint über dem
+  Brett der Knopf `NEU MISCHEN`. Einmal pro Level ist das gratis: die Form bleibt,
+  nur die Motive der restlichen Steine werden neu verteilt – wieder so, dass eine
+  Abbaureihenfolge garantiert existiert. Ist das Mischen verbraucht, hilft nur
+  noch `NEU` (Level neu starten).
 - Der Timer pausiert, wenn der Tab im Hintergrund ist.
 
 ## Formen 1–56
@@ -118,13 +128,19 @@ spielt, ergibt sich aus `((Level − 1) mod 56) + 1`, die Runde aus
 | 8 | Schwarz (dunkel) | 393 |
 | 9 | Tiefschwarz (richtiges Schwarz) | 449 |
 
-Nach Runde 9 beginnt es wieder mit Elfenbein (Runde 10 = Level 505). Die Farben
-sind zurückhaltend gewählt, damit die Motive gut lesbar bleiben; die letzten
-drei sind dunkel, dort wird die Schrift auf den Steinen hell (`--stein-text`)
-und die gesperrten Steine werden über Deckkraft statt über Helligkeit
-abgedunkelt. Die
-Kopfzeile zeigt nur die Levelnummer; welche Runde und Farbe läuft, steht in
-der Level-Auswahl über dem Raster.
+Nach Runde 9 beginnt es wieder mit Elfenbein (Runde 10 = Level 505). Das letzte
+Level einer vollen Farbrunde (504, 1008, …) zeigt auf der Siegtafel zusätzlich
+die Tafel „ALLE FARBEN DURCH" mit dem Hinweis, dass es wieder mit Elfenbein
+weitergeht.
+
+Bildet ein Level den Anfang einer neuen Runde (57, 113, …, 505), steht beim
+Start in der Statuszeile: „Neue Runde 10 – Steinfarbe Elfenbein."
+
+Die Farben sind zurückhaltend gewählt, damit die Motive gut lesbar bleiben;
+die letzten drei sind dunkel, dort wird die Schrift auf den Steinen hell
+(`--stein-text`) und die gesperrten Steine werden über Deckkraft statt über
+Helligkeit abgedunkelt. Die Kopfzeile zeigt nur die Levelnummer; welche Runde
+und Farbe läuft, steht in der Level-Auswahl über dem Raster.
 
 Die Farbe steckt in CSS-Variablen am Stein (`--stein-hell`, `--stein-mitte`,
 `--stein-rand`, `--stein-sockel`, `--stein-linie`, `--stein-text`), gesetzt wird
@@ -132,8 +148,10 @@ sie über `body[data-runde]` in `main.js`. Weitere Farben brauchen nur einen
 zusätzlichen Block in `css/mahjong.css` und einen Namen in `RUNDEN_FARBEN`.
 
 In der Level-Auswahl steht über dem Raster die gewählte Runde mit Farbname
-(„Runde 9 · Tiefschwarz"), darunter die 56 Formen dieser Runde mit ihren
-Level-Nummern; am Ende der Auswahl steht die Farbwahl – eine Farbe
+und Fortschritt („Runde 9 · Tiefschwarz · 12 von 56"), darunter die 56 Formen
+dieser Runde mit ihren Level-Nummern. Geschaffte Level tragen ein grünes
+Häkchen und darunter ihre Bestzeit (mm:ss); die Tooltips der Farbpunkte nennen
+den Fortschritt der jeweiligen Runde. Am Ende der Auswahl steht die Farbwahl – eine Farbe
 antippen springt an den Anfang dieser Runde (Level 1, 57, 113, …).
 
 ## Aufbau der Dateien
@@ -160,8 +178,10 @@ mahjong/
 
 - **144 Steine, garantiert lösbar:** `generator.js` baut das Brett so auf, dass
   eine vollständige Abräum-Reihenfolge existiert; `solver.js` kann das prüfen.
-  Unlösbare Stellungen entstehen dadurch nicht – deshalb gibt es keinen
-  Mischen-Knopf.
+  Unlösbare Stellungen entstehen dadurch nicht. Durch eigene Züge kann man sich
+  trotzdem festfahren; dafür gibt es das eine Gratis-Mischen pro Level, das die
+  restlichen Steine über `findRemovalOrder` neu verteilt (die Funktion arbeitet
+  auch auf einem angefangenen Brett).
 - **Formen:** Jede Form beschreibt nur Positionen (`x`, `y`, Ebene `z`). Höhere
   Ebenen liegen versetzt darüber, dadurch wirken die Steine dreidimensional.
   Neue Formen kommen als weiterer Eintrag in `BOARD_LAYOUTS` dazu.

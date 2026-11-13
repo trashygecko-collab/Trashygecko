@@ -163,6 +163,10 @@ function enableBoardMovement(viewport) {
     }
 
     viewport.addEventListener("pointerdown", event => {
+        // Neue Beruehrung: ein alter Sperrvermerk von einem Ziehen darf den
+        // naechsten Tipp nicht mehr schlucken.
+        boardSuppressClick = false;
+
         aktiveZeiger.set(event.pointerId, {
             x: event.clientX,
             y: event.clientY
@@ -256,6 +260,11 @@ function enableBoardMovement(viewport) {
         }
 
         if (boardPointerStart.moved) {
+            // Letzte Verschiebung merken: erst ab einer klaren Strecke gilt
+            // der Zeiger als Ziehen und schluckt den Klick nicht.
+            boardPointerStart.dx = dx;
+            boardPointerStart.dy = dy;
+
             boardOffsetX = boardPointerStart.offsetX + dx;
             boardOffsetY = boardPointerStart.offsetY + dy;
 
@@ -264,7 +273,16 @@ function enableBoardMovement(viewport) {
     });
 
     function beendeBewegung(warAmZoomen = false) {
-        if (boardPointerStart?.moved || warAmZoomen) {
+        // Ein paar Pixel Wackeln beim schnellen Tippen sind noch ein Tipp -
+        // erst ab dieser Strecke gilt es als Ziehen.
+        const ZIEH_ABSTAND = 12;
+
+        const gezogen =
+            !!boardPointerStart &&
+            (Math.abs(boardPointerStart.dx || 0) > ZIEH_ABSTAND ||
+                Math.abs(boardPointerStart.dy || 0) > ZIEH_ABSTAND);
+
+        if (gezogen || warAmZoomen) {
             boardSuppressClick = true;
 
             setTimeout(() => {
@@ -285,8 +303,42 @@ function enableBoardMovement(viewport) {
         }
 
         if (aktiveZeiger.size === 0) {
+            // Kurzer Tipp auf freie Flaeche? Dann auf Doppeltipp pruefen.
+            const warTipp =
+                !warAmZoomen &&
+                !(boardPointerStart && boardPointerStart.moved) &&
+                !(event.target.closest && event.target.closest(".mahjong-tile"));
+
             beendeBewegung(warAmZoomen);
+
+            if (warTipp) merkeTipp(event);
         }
+    }
+
+    // Echter Doppeltipp - der Browser meldet ihn nicht ueberall als dblclick.
+    const DOPPELTIPP_ZEIT = 320;
+    const DOPPELTIPP_ABSTAND = 28;
+
+    let letzterTipp = null;
+
+    function merkeTipp(event) {
+        const jetzt = Date.now();
+        const x = event.clientX;
+        const y = event.clientY;
+
+        if (
+            letzterTipp !== null &&
+            jetzt - letzterTipp.zeit <= DOPPELTIPP_ZEIT &&
+            Math.abs(x - letzterTipp.x) <= DOPPELTIPP_ABSTAND &&
+            Math.abs(y - letzterTipp.y) <= DOPPELTIPP_ABSTAND
+        ) {
+            letzterTipp = null;
+            resetBoardView();
+
+            return;
+        }
+
+        letzterTipp = { zeit: jetzt, x, y };
     }
 
     viewport.addEventListener("pointerup", zeigerWeg);
