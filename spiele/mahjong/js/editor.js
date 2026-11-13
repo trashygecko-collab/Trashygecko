@@ -114,8 +114,8 @@ export function validateEditorLayout(layout) {
         ids.add(tile.id);
     }
 
-    if (layout.length !== 114) {
-        errors.push(`Das Level hat ${layout.length} statt 114 Steine.`);
+    if (layout.length !== 144) {
+        errors.push(`Das Level hat ${layout.length} statt 144 Steine.`);
     }
 
     return {

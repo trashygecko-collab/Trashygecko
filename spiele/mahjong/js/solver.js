@@ -84,7 +84,7 @@ function findSolution(originalBoard) {
         return null;
     }
 
-    if (board.length !== 114) {
+    if (board.length !== 144) {
         return null;
     }
 

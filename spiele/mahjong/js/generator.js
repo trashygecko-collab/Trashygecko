@@ -21,16 +21,16 @@ function shuffle(array) {
 }
 
 // --------------------------------------------------
-// 57 MOTIVE
+// 72 MOTIVE
 // --------------------------------------------------
 
 function createSymbolSet(symbolIds) {
-    if (!Array.isArray(symbolIds) || symbolIds.length !== 57) {
-        throw new Error("Es werden genau 57 Motive benötigt.");
+    if (!Array.isArray(symbolIds) || symbolIds.length !== 72) {
+        throw new Error("Es werden genau 72 Motive benötigt.");
     }
 
-    if (new Set(symbolIds).size !== 57) {
-        throw new Error("Die 57 Motive müssen unterschiedlich sein.");
+    if (new Set(symbolIds).size !== 72) {
+        throw new Error("Die 72 Motive müssen unterschiedlich sein.");
     }
 
     return shuffle(symbolIds);
@@ -153,15 +153,15 @@ function generateSolvableBoard(symbolIds, level = 1) {
     const symbols = createSymbolSet(symbolIds);
     const board = createBoard(level);
 
-    if (board.length !== 114) {
+    if (board.length !== 144) {
         throw new Error(
-            `Level ${level} enthält ${board.length} statt 114 Positionen.`
+            `Level ${level} enthält ${board.length} statt 144 Positionen.`
         );
     }
 
     const removalOrder = findRemovalOrder(board);
 
-    if (removalOrder.length !== 57) {
+    if (removalOrder.length !== 72) {
         throw new Error("Die Abbaureihenfolge ist unvollständig.");
     }
 

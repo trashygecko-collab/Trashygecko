@@ -5,7 +5,7 @@
  */
 
 const MAHJONG_SYMBOLS = Array.from(
-    { length: 57 },
+    { length: 72 },
     (_, index) => `motiv-${String(index + 1).padStart(2, "0")}`
 );
 
@@ -20,6 +20,12 @@ let currentLevel = 1;
 let score = 0;
 let gameData = null;
 let levelWechselTimer = null;
+let hinweisTiles = [];
+
+// Zeichnet das bestehende Brett neu, ohne alle Steine zu ersetzen.
+function aktualisiereBrett() {
+    updateBoardView(currentBoard, selectedTile, hinweisTiles, handleTileClick);
+}
 
 // --------------------------------------------------
 // HTML-ELEMENTE
@@ -64,7 +70,7 @@ function createGameInformation() {
 
         scoreBox.id = "scoreDisplay";
         scoreBox.style.cssText =
-            "text-align:center;color:#d5b36a;font-size:18px;" +
+            "text-align:center;color:#c9ad7d;font-size:18px;" +
             "font-weight:bold;margin:8px auto;";
 
         board.parentElement.insertBefore(scoreBox, board);
@@ -102,12 +108,12 @@ function updateStats() {
 
     setText(
         ["remainingTiles"],
-        114 - foundPairs * 2
+        144 - foundPairs * 2
     );
 
     setText(
         ["remainingPairs", "pairs", "pairsDisplay"],
-        57 - foundPairs
+        72 - foundPairs
     );
 
     setText(
@@ -171,6 +177,7 @@ function startGame() {
 
     gameRunning = false;
     selectedTile = null;
+    hinweisTiles = [];
     foundPairs = 0;
     mistakes = 0;
     gameSeconds = 0;
@@ -190,12 +197,15 @@ function startGame() {
 
     updateStats();
     setMessage("Spielbrett wird vorbereitet ...");
+    leereGewonnenSpruch();
+    leereGewonnenSymbol();
+    zeigeWeiterKnopf("");
 
     try {
         currentBoard = generateSolvableBoard(MAHJONG_SYMBOLS, currentLevel);
 
-        if (!Array.isArray(currentBoard) || currentBoard.length !== 114) {
-            throw new Error("Das Spielbrett enthält nicht genau 114 Steine.");
+        if (!Array.isArray(currentBoard) || currentBoard.length !== 144) {
+            throw new Error("Das Spielbrett enthält nicht genau 144 Steine.");
         }
 
         gameRunning = true;
@@ -231,16 +241,18 @@ function handleTileClick(tileId) {
 
     if (selectedTile === null) {
         selectedTile = tileId;
+        hinweisTiles = [];
 
-        renderBoard(currentBoard, selectedTile, handleTileClick);
+        aktualisiereBrett();
 
         return;
     }
 
     if (selectedTile === tileId) {
         selectedTile = null;
+        hinweisTiles = [];
 
-        renderBoard(currentBoard, null, handleTileClick);
+        aktualisiereBrett();
 
         return;
     }
@@ -251,7 +263,10 @@ function handleTileClick(tileId) {
 
     if (!firstTile) {
         selectedTile = null;
-        renderBoard(currentBoard, null, handleTileClick);
+        hinweisTiles = [];
+
+        aktualisiereBrett();
+
         return;
     }
 
@@ -261,15 +276,16 @@ function handleTileClick(tileId) {
         foundPairs++;
         score += 100;
         selectedTile = null;
+        hinweisTiles = [];
 
-        renderBoard(currentBoard, null, handleTileClick);
+        aktualisiereBrett();
 
         updateStats();
 
-        if (foundPairs === 57) {
+        if (foundPairs === 72) {
             finishGame();
         } else {
-            setMessage("Paar gefunden! +100 Punkte");
+            setMessage(lobSpruch() + " +100 Punkte");
         }
 
         return;
@@ -277,8 +293,9 @@ function handleTileClick(tileId) {
 
     mistakes++;
     selectedTile = null;
+    hinweisTiles = [];
 
-    renderBoard(currentBoard, null, handleTileClick);
+    aktualisiereBrett();
 
     updateStats();
 
@@ -300,13 +317,11 @@ function showHint() {
                 freeTiles[i].symbolId ===
                 freeTiles[j].symbolId
             ) {
-                selectedTile = freeTiles[i].id;
+                // Beide Steine des Paares markieren - nicht nur einen.
+                selectedTile = null;
+                hinweisTiles = [freeTiles[i].id, freeTiles[j].id];
 
-                renderBoard(
-                    currentBoard,
-                    selectedTile,
-                    handleTileClick
-                );
+                aktualisiereBrett();
 
                 setMessage("Diese beiden Steine passen zusammen.");
 
@@ -337,6 +352,9 @@ function finishGame() {
     setMessage(
         `GEWONNEN! Glückwunsch! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}`
     );
+
+    zeigeGewonnenSpruch();
+    zeigeGewonnenSymbol();
 
     // Spielstand und Bestzeit speichern
     let gespeichert = false;
@@ -370,7 +388,8 @@ function finishGame() {
         return;
     }
 
-    // Nach der Gewonnenanzeige geht es von allein ins nächste Level.
+    // Nach dem Sieg wartet das Spiel auf "Weiter", damit die Meldung und der
+    // Spruch in Ruhe gelesen werden koennen.
     const hoechstes = hoechstesLevel();
 
     if (currentLevel > hoechstes) {
@@ -378,18 +397,120 @@ function finishGame() {
             `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}. ` +
             `Alle ${hoechstes} Level geschafft!`
         );
+
+        zeigeWeiterKnopf("");
         return;
     }
 
     setMessage(
-        `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)} · ` +
-        `Level ${currentLevel} startet gleich …`
+        `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}`
     );
 
-    levelWechselTimer = setTimeout(() => {
-        levelWechselTimer = null;
-        startGame();
-    }, 2600);
+    zeigeWeiterKnopf(`WEITER · LEVEL ${currentLevel}`);
+}
+
+// --------------------------------------------------
+// WEITER-KNOPF NACH DEM SIEG
+// --------------------------------------------------
+
+// Ohne Beschriftung wird der Knopf versteckt.
+function zeigeWeiterKnopf(beschriftung) {
+    const knopf = getElement("continueButton");
+
+    if (!knopf) return;
+
+    if (!beschriftung) {
+        knopf.hidden = true;
+        return;
+    }
+
+    knopf.textContent = beschriftung;
+    knopf.hidden = false;
+    knopf.focus();
+}
+
+// --------------------------------------------------
+// LEVEL-AUSWAHL
+// --------------------------------------------------
+
+function baueLevelAuswahl() {
+    const raster = getElement("levelGrid");
+
+    if (!raster) return;
+
+    raster.innerHTML = "";
+
+    for (let level = 1; level <= hoechstesLevel(); level++) {
+        const feld = document.createElement("button");
+
+        feld.type = "button";
+        feld.className = "level-feld";
+        feld.dataset.level = String(level);
+        feld.textContent = String(level).padStart(2, "0");
+
+        feld.addEventListener("click", () => waehleLevel(level));
+
+        raster.appendChild(feld);
+    }
+}
+
+function markiereAktuellesLevel() {
+    const angezeigt = Math.min(currentLevel, hoechstesLevel());
+
+    document.querySelectorAll(".level-feld").forEach(feld => {
+        feld.classList.toggle(
+            "aktuell",
+            Number(feld.dataset.level) === angezeigt
+        );
+    });
+}
+
+function oeffneLevelAuswahl() {
+    const auswahl = getElement("levelPicker");
+
+    if (!auswahl) return;
+
+    baueLevelAuswahl();
+    markiereAktuellesLevel();
+
+    auswahl.hidden = false;
+
+    const aktuell =
+        auswahl.querySelector(".level-feld.aktuell") ||
+        auswahl.querySelector(".level-feld");
+
+    if (aktuell) {
+        aktuell.focus();
+        aktuell.scrollIntoView({ block: "center" });
+    }
+}
+
+function schliesseLevelAuswahl() {
+    const auswahl = getElement("levelPicker");
+
+    if (!auswahl) return;
+
+    auswahl.hidden = true;
+}
+
+function waehleLevel(level) {
+    const ziel = Math.min(Math.max(1, level), hoechstesLevel());
+
+    if (gameData) {
+        gameData.currentLevel = ziel;
+
+        try {
+            saveStorage(gameData);
+        } catch (fehler) {}
+    }
+
+    currentLevel = ziel;
+    gameData.currentLevel = ziel;
+
+    schliesseLevelAuswahl();
+    startGame();
+
+    setMessage(`Level ${ziel} gestartet.`);
 }
 
 // --------------------------------------------------
@@ -414,18 +535,19 @@ function initializeGame() {
         newGameButton.addEventListener("click", startGame);
     }
 
+    const continueButton = getElement("continueButton");
+
+    if (continueButton) {
+        continueButton.addEventListener("click", () => {
+            continueButton.hidden = true;
+            startGame();
+        });
+    }
+
     const hintButton = getElement("hintButton");
 
     if (hintButton) {
         hintButton.addEventListener("click", showHint);
-    }
-
-    const shuffleButton = getElement("shuffleButton");
-
-    if (shuffleButton) {
-        shuffleButton.addEventListener("click", () => {
-            setMessage("Mischen ist noch nicht verfügbar.");
-        });
     }
 
     // Zurück zur Spiele-Übersicht (Connector).
@@ -489,6 +611,33 @@ function initializeGame() {
         document.addEventListener("webkitfullscreenchange", zeigeVollbild);
     }
 
+    // Level-Auswahl öffnen und schließen.
+    const levelButton = getElement("levelButton");
+    const levelPicker = getElement("levelPicker");
+    const levelPickerClose = getElement("levelPickerClose");
+
+    if (levelButton) {
+        levelButton.addEventListener("click", oeffneLevelAuswahl);
+    }
+
+    if (levelPickerClose) {
+        levelPickerClose.addEventListener("click", schliesseLevelAuswahl);
+    }
+
+    if (levelPicker) {
+        levelPicker.addEventListener("click", event => {
+            if (event.target === levelPicker) {
+                schliesseLevelAuswahl();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            schliesseLevelAuswahl();
+        }
+    });
+
     // Zurück auf Level 1 – der übrige Spielstand bleibt erhalten.
     const resetLevelButton = getElement("resetLevelButton");
 
@@ -513,6 +662,19 @@ function initializeGame() {
 // --------------------------------------------------
 // START
 // --------------------------------------------------
+
+// Auf dem Handy laeuft die Zeit sonst weiter, waehrend die App im
+// Hintergrund ist.
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        stopGameTimer();
+        return;
+    }
+
+    if (gameRunning) {
+        startGameTimer();
+    }
+});
 
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initializeGame);
