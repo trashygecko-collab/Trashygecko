@@ -1,10 +1,15 @@
 # T.Spiele – Android-App
 
-Ein kleiner Startbildschirm mit zwei Wegen, beide öffnen sich im Browser:
+Ein festlicher Startbildschirm mit zwei Wegen, beide öffnen sich im Browser:
 
 - **Connector öffnen** → `https://trashygecko.onrender.com/connector`
-  (Chat, Räume und alle Spiele)
-- **Meine Homepage** (unten) → `https://trashygecko-collab.github.io/Trashygecko/`
+  (Chat und alle Spiele)
+- **Meine Homepage** → `https://trashygecko-collab.github.io/Trashygecko/`
+
+Die Adressen stehen bewusst nicht auf dem Schirm, nur die zwei Knöpfe. Der
+Hintergrund ist tiefes Grün mit einem hellen Schein in der Mitte, die Schrift
+golden und in Serifen (wie eine Einladung), der Abstand zwischen den Knöpfen
+34 dp – die Luft darüber und darunter teilt sich im goldenen Schnitt (1 : 1,618).
 
 Dazu kommt **jeden Morgen um 7:30 ein Lob als Benachrichtigung** – ohne Server,
 der Wecker steckt im Gerät (auch nach einem Neustart wird er neu gestellt).
@@ -41,7 +46,9 @@ Alternativ per Kabel: `adb install -r T.Spiele.apk`
 stehen `STUNDE`/`MINUTE` und die Liste `LOBS`.
 
 **Andere Adressen:** in `src/de/trashygecko/tspiele/MainActivity.java` die
-Konstanten `CONNECTOR` und `HOMEPAGE` ändern, dann neu bauen.
+Konstanten `CONNECTOR` und `HOMEPAGE` ändern, dann neu bauen. Die Farben
+(`GOLD`, `ELFENBEIN`, `GRUEN_*`) und der Abstand (`PHI`, 34 dp) stehen oben
+in derselben Datei.
 
 **Anderes Symbol:** `werkzeuge/monster_icon.py` malen lassen
 (`python werkzeuge/monster_icon.py`) – es schreibt alle Größen nach `res/`.
@@ -62,7 +69,7 @@ App legen. Wer ihn verliert, muss die App vorher deinstallieren.
 ## Aufbau
 
     AndroidManifest.xml          eine Activity, Startmenü-Eintrag, Internet
-    src/…/MainActivity.java      Startbildschirm mit Connector und Homepage
+    src/…/MainActivity.java      Startbildschirm grün/gold, stellt den Wecker
     src/…/LobWecker.java         Morgen-Lob um 7:30 (Wecker + Anzeige)
     src/…/LobStart.java          stellt den Wecker nach Neustart wieder
     res/mipmap-*/ic_launcher.png    Symbol für Android bis 7

@@ -63,7 +63,7 @@ echo "== Ressourcen"
   --java "$BAU/gen" \
   --min-sdk-version "$MINDESTENS" \
   --target-sdk-version "$ZIEL" \
-  --version-code 3 --version-name 1.2 \
+  --version-code 4 --version-name 1.3 \
   "$BAU/res.zip"
 
 echo "== Java"
