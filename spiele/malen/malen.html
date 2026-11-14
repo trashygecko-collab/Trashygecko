@@ -171,6 +171,20 @@ canvas{
 .karte:hover{border-color:var(--teal)}
 .karte:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .status{margin:0;font-size:12px;color:var(--muted);min-height:16px}
+/* Wer malt gerade: je Person ein Punkt in ihrer Farbe. */
+.mitmaler{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mitmaler:empty{display:none}
+.mitmaler .person{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 10px;border-radius:20px;
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(213,179,106,.35);
+  font-size:12px;color:var(--ivory);
+}
+.mitmaler .punkt{width:11px;height:11px;border-radius:50%;flex:0 0 auto;box-shadow:inset 0 0 0 1px #0006}
+.mitmaler .person.dran{border-color:var(--teal);box-shadow:0 0 12px #4df5c255}
+.mitmaler .malt{font-size:11px;color:var(--teal)}
+.mitmaler .legende{font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -187,6 +201,8 @@ canvas{
       <a href="../spiele.html" id="backButton" class="knopf">◀ SPIELE</a>
     </div>
   </header>
+
+  <div class="mitmaler" id="mitmaler" aria-live="polite"></div>
 
   <section class="werkzeug">
     <div class="farben" id="farben"></div>
@@ -228,6 +244,16 @@ const FARBEN = [
   { wert:"#fb8c00", titel:"Orange" },
   { wert:"#6d4c41", titel:"Braun" }
 ];
+
+// Jede Person bekommt eine eigene Farbe. Sie hängt an der Kennung, damit
+// Handy und Rechner dieselbe Person gleich einfärben (und damit farbig bleibt).
+const PERSON_FARBEN = [
+  "#e53935", "#1e88e5", "#43a047", "#8e24aa", "#fb8c00",
+  "#00897b", "#c2185b", "#5e35b1", "#00acc1", "#6d4c41"
+];
+const personFarben = new Map();   // Kennung -> Farbe
+const mitmalerNamen = new Map();  // Kennung -> Name
+const mitmalerDrauf = new Map();  // Kennung -> Zeitpunkt des letzten Strichs
 
 const parameter = new URLSearchParams(location.search);
 const raum = (parameter.get("room") || "").trim().toUpperCase();
@@ -337,17 +363,80 @@ staerkeFeld.addEventListener("input", ()=>{
 // ZEICHNEN
 // --------------------------------------------------
 
-function strichZeichnen(strich){
-  const punkte = strich.points || [];
-  if (!punkte.length) return;
-  stift.strokeStyle = strich.color || "#111111";
-  stift.fillStyle = strich.color || "#111111";
-  stift.lineWidth = strich.width || 8;
-  stift.lineCap = "round";
-  stift.lineJoin = "round";
+// --------------------------------------------------
+// WER MAL'T WAS: eigene Farbe je Person
+// --------------------------------------------------
+
+function personFarbe(id){
+  if (!id) return "#102b27";
+  if (personFarben.has(id)) return personFarben.get(id);
+  let summe = 0;
+  for (let i = 0; i < id.length; i++) summe = (summe * 31 + id.charCodeAt(i)) % 100003;
+  const farbe = PERSON_FARBEN[summe % PERSON_FARBEN.length];
+  personFarben.set(id, farbe);
+  return farbe;
+}
+
+// Merkt sich, wer gerade einen Strich gemacht hat (für "malt" in der Liste).
+function personMalt(id){
+  if (!id || !zusammen) return;
+  mitmalerDrauf.set(id, Date.now());
+}
+
+// Zeile über dem Brett: wer im Raum ist und wer gerade malt.
+function mitmalerZeichnen(){
+  const box = document.getElementById("mitmaler");
+  if (!box || !zusammen) return;
+  const jetzt = Date.now();
+  box.innerHTML = "";
+  if (!mitmalerNamen.size) return;
+  mitmalerNamen.forEach((name, id)=>{
+    const person = document.createElement("span");
+    person.className = "person";
+    const malt = jetzt - (mitmalerDrauf.get(id) || 0) < 2500;
+    if (malt) person.classList.add("dran");
+    const punkt = document.createElement("i");
+    punkt.className = "punkt";
+    punkt.style.background = personFarbe(id);
+    const text = document.createElement("span");
+    text.textContent = name + (id === spielerId ? " (du)" : "");
+    person.append(punkt, text);
+    if (malt) {
+      const wort = document.createElement("span");
+      wort.className = "malt";
+      wort.textContent = "malt";
+      person.appendChild(wort);
+    }
+    box.appendChild(person);
+  });
+  const legende = document.createElement("span");
+  legende.className = "legende";
+  legende.textContent = "Der Saum um einen Strich zeigt, von wem er ist.";
+  box.appendChild(legende);
+}
+
+// Wer ist im Raum? Für die Namen über dem Brett.
+async function mitmalerHolen(){
+  if (!zusammen) return;
+  try{
+    const antwort = await fetch("/api/players?room=" + encodeURIComponent(raum), { cache: "no-store" });
+    if (!antwort.ok) return;
+    const liste = await antwort.json();
+    mitmalerNamen.clear();
+    (liste || []).forEach(person=>{
+      if (person && person.id) mitmalerNamen.set(person.id, person.name || "Maler");
+    });
+    if (!mitmalerNamen.has(spielerId)) mitmalerNamen.set(spielerId, spielerName || "Maler");
+    mitmalerZeichnen();
+  }catch(fehler){}
+}
+
+// Ein Strich als Linie (oder Punkt). Wird zweimal gebraucht: einmal als Saum
+// in der Farbe der Person, einmal in der eigentlichen Farbe.
+function strichPfad(punkte, breite){
   if (punkte.length === 1) {
     stift.beginPath();
-    stift.arc(punkte[0][0], punkte[0][1], (strich.width || 8) / 2, 0, Math.PI * 2);
+    stift.arc(punkte[0][0], punkte[0][1], breite / 2, 0, Math.PI * 2);
     stift.fill();
     return;
   }
@@ -355,6 +444,33 @@ function strichZeichnen(strich){
   stift.moveTo(punkte[0][0], punkte[0][1]);
   for (let i = 1; i < punkte.length; i++) stift.lineTo(punkte[i][0], punkte[i][1]);
   stift.stroke();
+}
+
+function strichZeichnen(strich){
+  const punkte = strich.points || [];
+  if (!punkte.length) return;
+  const strichFarbe = strich.color || "#111111";
+  const strichBreite = strich.width || 8;
+  stift.lineCap = "round";
+  stift.lineJoin = "round";
+
+  // Saum in der Farbe der Person – beim Radieren (weiß) nicht, sonst bliebe
+  // eine farbige Spur vom Wegwischen stehen.
+  const saum = (zusammen && strich.author && strichFarbe.toLowerCase() !== "#ffffff")
+    ? personFarbe(strich.author) : "";
+  if (saum) {
+    stift.globalAlpha = 0.5;
+    stift.strokeStyle = saum;
+    stift.fillStyle = saum;
+    stift.lineWidth = strichBreite + 4;
+    strichPfad(punkte, strichBreite + 4);
+    stift.globalAlpha = 1;
+  }
+
+  stift.strokeStyle = strichFarbe;
+  stift.fillStyle = strichFarbe;
+  stift.lineWidth = strichBreite;
+  strichPfad(punkte, strichBreite);
 }
 
 // --------------------------------------------------
@@ -498,7 +614,7 @@ function punktAnhaengen(punkt){
 
 function strichStarten(ereignis){
   zeichnet = true;
-  eigenerStrich = { color: stiftFarbe(), width: breite, points: [] };
+  eigenerStrich = { color: stiftFarbe(), width: breite, points: [], author: spielerId || "" };
   punktAnhaengen(aufDemBlatt(ereignis));
 }
 
@@ -509,7 +625,13 @@ function strichBeenden(){
   eigenerStrich = null;
   if (!strich || !strich.points.length) return;
   alleStriche.push(strich);
+  personMalt(spielerId);
   if (zusammen) strichSenden(strich);
+  // Neu zeichnen, damit der Saum in der eigenen Farbe gleich mitkommt.
+  if (zusammen) {
+    neuZeichnen();
+    mitmalerZeichnen();
+  }
 }
 
 // Angefangenen Strich wegwerfen (z. B. wenn der zweite Finger dazukommt).
@@ -717,6 +839,8 @@ async function abgleichen(){
         if (strich.author === spielerId) return;
         alleStriche.push(strich);
         strichZeichnen(strich);
+        personMalt(strich.author);
+        mitmalerZeichnen();
       });
       stand = daten.rev;
     }
@@ -793,8 +917,11 @@ function starten(){
     statusFeld.textContent = "Verbinde …";
     lebenszeichen();
     abgleichen();
+    mitmalerHolen();
     setInterval(abgleichen, 600);
     setInterval(lebenszeichen, 5000);
+    setInterval(mitmalerHolen, 5000);
+    setInterval(mitmalerZeichnen, 1000);
   } else {
     statusFeld.textContent = "Nur du – male einfach drauflos.";
   }

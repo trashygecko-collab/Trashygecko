@@ -48,6 +48,7 @@ var spielApi = map[string]string{
 	"schwimmen":        "schwimmen",
 	"arschloch":        "arschloch",
 	"einsxeins":        "einsxeins",
+	"malen":            "malen",
 }
 
 // spielAnzeige sind die Namen, wie sie im Chat stehen.
@@ -74,6 +75,7 @@ var spielAnzeige = map[string]string{
 	"schwimmen":        "31 Schwimmen",
 	"arschloch":        "Arschloch",
 	"einsxeins":        "1×1-Rennen",
+	"malen":            "Malen",
 }
 
 // Tischspiele: dort sitzen mehrere, die Runde wird beim Anbieten eröffnet.
@@ -84,6 +86,13 @@ var tischspiel = map[string]bool{
 	"schwimmen": true,
 	"arschloch": true,
 	"einsxeins": true,
+}
+
+// Gemeinsame Fläche: Malen hat kein Gegenüber und keinen Spielstand, der
+// geprüft werden müsste. Wer beitritt, malt auf demselben Brett mit – das
+// Angebot bleibt offen, damit nach und nach alle dazukommen können.
+var gemeinsam = map[string]bool{
+	"malen": true,
 }
 
 func spielName(id string) string {
@@ -250,7 +259,10 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		mu.Unlock()
 
 		api := spielApi[angebot.Game]
-		if tischspiel[angebot.Game] {
+		if gemeinsam[angebot.Game] {
+			// Nichts zu öffnen: die Fläche liegt schon auf dem Server, jeder
+			// Malt-Strich kommt dort an. Nur die Meldung im Chat fehlt noch.
+		} else if tischspiel[angebot.Game] {
 			if nr, text := spielAufruf(api, code, "join", map[string]any{"id": input.ID}); nr >= 300 {
 				http.Error(w, text, http.StatusConflict)
 				return
@@ -278,14 +290,18 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 
 		mu.Lock()
 		if room := rooms[code]; room != nil {
+			text := player.Name + " spielt jetzt " + angebot.GameName + " mit."
+			if gemeinsam[angebot.Game] {
+				text = player.Name + " malt jetzt mit."
+			}
 			room.addMessage(Message{
-				Text:   player.Name + " spielt jetzt " + angebot.GameName + " mit.",
+				Text:   text,
 				Time:   time.Now().Format("15:04:05"),
 				System: true,
 			})
 			// Spiele für zwei sind damit besetzt – das Angebot ist erledigt.
 			// An Tischen bleiben freie Plätze offen.
-			if !tischspiel[angebot.Game] && room.Angebot != nil && room.Angebot.ID == angebot.ID {
+			if !tischspiel[angebot.Game] && !gemeinsam[angebot.Game] && room.Angebot != nil && room.Angebot.ID == angebot.ID {
 				room.Angebot = nil
 			}
 		}

@@ -217,7 +217,9 @@ angebot.go          Offene Runde für den ganzen Raum (/api/angebot): bieten,
                     beim Anbieten eröffnet, bei Spielen für zwei entsteht sie
                     erst, wenn jemand beitritt. Die Spiel-Endpunkte werden
                     dabei von innen aufgerufen, damit dieselben Prüfungen
-                    gelten wie bei einem Klick im Spiel.
+                    gelten wie bei einem Klick im Spiel. Malen ist die
+                    Ausnahme: kein Gegner, das Angebot bleibt offen, jeder
+                    malt auf derselben Fläche mit.
 
 4.5 Daten und Fertiges
 
@@ -255,10 +257,14 @@ passende /api/...-Adresse des Connectors.
   kniffel\kniffel.html             Kniffel
   mahjong\mahjong.html             Mahjong-Solitaire (eigenes js/ und assets/)
   malen\malen.html                 Malen (4 Bildschirme groß, mit Zoom).
-                                   Im Connector steht Malen in der Spielauswahl
-                                   ("Spiel:"); "Malen öffnen" startet die
-                                   gemeinsame Fläche mit dem Raum, damit alle
-                                   dasselbe Bild sehen.
+                                   Im Connector wird Malen wie ein Spiel
+                                   angeboten; wer im Chat "Mitmalen" drückt,
+                                   malt auf derselben Fläche. Der Ersteller
+                                   öffnet sie mit "Fläche öffnen", "Malen
+                                   öffnen" geht auch ohne Angebot. Über dem
+                                   Brett steht, wer mitschreibt – jede Person
+                                   mit eigenem Farbpunkt, und um jeden Strich
+                                   liegt ein schmaler Saum in dieser Farbe.
   maumau\maumau.html               Mau-Mau
   menschaerger\menschaerger.html   Mensch ärgere dich nicht
   muehle\muehle.html               Mühle
@@ -345,6 +351,8 @@ Ohne eigenen Server (z. B. Render oder Docker):
 Der Bau-Kontext muss der Repo-Wurzelordner sein (dort liegen index.html und
 spiele/). Im Abbild liegt das Programm unter /app/connector, die Oberfläche
 daneben, die Webseite unter /app/webseite; die Ordner spiele/connector und
+spiele/connector-online werden nicht mitkopiert (dort liegt der Quelltext).
+
 Bei Render: "New" -> "Blueprint" -> Repository wählen, den Rest macht
 render.yaml. Ohne eigene Domain bekommt man dort eine Adresse wie
 https://trashygecko-connector.onrender.com – das genügt.
@@ -446,7 +454,40 @@ QR-Code zeigt falsche Adresse (online)
   Der Befehl lautet "/Admin Admin" (Leerzeichen, nicht Doppelpunkt).
 
 
-10. KURZ MERKEN
+10. DIE HANDY-APP "T.SPIELE"
+------------------------------------------------------------------------------
+
+Im Ordner apps	-spiele liegt eine winzige Android-App. Sie hat keine
+eigene Oberfläche und macht nur eines: beim Antippen des Symbols die
+Connector-Adresse im Browser öffnen und sich wieder schließen.
+Adresse: https://trashygecko.onrender.com/connector · Symbol: grünes Monster.
+
+  T.Spiele.apk                die fertige App (ca. 110 KB, signiert)
+  AndroidManifest.xml         Startmenü-Eintrag, Internet-Berechtigung
+  src\...\MainActivity.java   enthält die Adresse (Zeile ADRESSE)
+  werkzeuge\monster_icon.py   malt das Monster in allen Symbolgrößen
+  bauen.sh                    baut und signiert die App neu
+  schluessel.jks              Signaturschlüssel (Passwort tspiele123): behalten,
+                              sonst lässt sich keine neue Fassung darüberlegen
+
+Installieren: die APK aufs Handy laden – der Connector liefert sie mit aus:
+
+  http://<IP-des-PCs>:8765/apps/t-spiele/T.Spiele.apk
+  https://trashygecko.onrender.com/apps/t-spiele/T.Spiele.apk
+
+Datei antippen, "Installation aus dieser Quelle erlauben", fertig.
+Die App läuft ab Android 4.0 (API 14) und ist für Android 15 gebaut (Ziel API 34).
+
+Neu bauen, ohne Android Studio:
+
+  cd apps	-spiele
+  bash bauen.sh
+
+Beim ersten Mal lädt das Skript JDK 17 und die Android-Werkzeuge nach
+.werkzeuge (etwa 350 MB), danach dauert ein Bau wenige Sekunden.
+
+
+11. KURZ MERKEN
 ------------------------------------------------------------------------------
 
   Startet den Server:      spiele\connector\trashygecko-connector.exe
@@ -456,5 +497,7 @@ QR-Code zeigt falsche Adresse (online)
   Online aktualisieren:    spiele\connector-online  ->  python sync.py --linux
   Admin werden:            im Chat "/Admin Admin" eintippen
   Flüstern:                "/f Name: Text"
+  Handy-App installieren:  apps\t-spiele\T.Spiele.apk (oder über die Seite laden)
+  App neu bauen:           cd apps\t-spiele  ->  bash bauen.sh
 
 ==============================================================================

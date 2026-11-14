@@ -757,6 +757,14 @@ function openGame(path){
   "&v="+Date.now();
 }
 
+// Gemeinsame Malfläche im neuen Tab öffnen – der Chat bleibt daneben stehen.
+function openMalen(){
+ if(!activeRoom||!sessionID)return;
+ window.open("/spiele/malen/malen.html?room="+encodeURIComponent(activeRoom)
+  +"&name="+encodeURIComponent(playerName())
+  +"&id="+encodeURIComponent(sessionID),"_blank","noopener");
+}
+
 async function gameApiAction(gameId, action, data={}){
  const gameDef = SUPPORTED_GAMES.find(g=>g.id===gameId);
  if(!gameDef) return false;
@@ -1779,22 +1787,8 @@ function rundeInhalt(box,players){
  zeile.textContent="Im Raum: "+(wer||"niemand");
  box.appendChild(zeile);
 
- if(selectedGame==="malen"){
-  // Malen ist eine gemeinsame Fläche, keine Runde mit Einladung.
-  const start=document.createElement("button");
-  start.type="button";
-  start.className="runde-starten";
-  start.textContent="Malen öffnen";
-  start.onclick=()=>{
-   if(!activeRoom||!sessionID)return;
-   window.open("/spiele/malen/malen.html?room="+encodeURIComponent(activeRoom)
-    +"&name="+encodeURIComponent(playerName())
-    +"&id="+encodeURIComponent(sessionID),"_blank","noopener");
-  };
-  box.appendChild(start);
-  return;
- }
-
+ // Malen wird wie jedes andere Spiel angeboten. Wer beitritt, malt auf der
+ // gemeinsamen Fläche mit; die Karte im Chat öffnet das Brett.
  if(angebot){
   const karte=document.createElement("div");
   karte.className="runde-angebot";
@@ -1826,6 +1820,15 @@ function rundeInhalt(box,players){
   }
   karte.appendChild(knoepfe);
   box.appendChild(karte);
+  // Malen: der Ersteller öffnet das Brett von hier aus.
+  if(angebot.game==="malen"&&angebot.vonId===sessionID){
+   const flaeche=document.createElement("button");
+   flaeche.type="button";
+   flaeche.className="open-game";
+   flaeche.textContent="Fläche öffnen";
+   flaeche.onclick=()=>openMalen();
+   box.appendChild(flaeche);
+  }
   return;
  }
 
@@ -1840,6 +1843,16 @@ function rundeInhalt(box,players){
  tipp.className="runde-tipp";
  tipp.textContent="Alle im Raum sehen die Karte im Chat und treten mit „Mitspielen“ bei.";
  box.appendChild(tipp);
+
+ // Malen lässt sich zusätzlich ohne Angebot öffnen (gemeinsame Fläche).
+ if(selectedGame==="malen"){
+  const flaeche=document.createElement("button");
+  flaeche.type="button";
+  flaeche.className="open-game";
+  flaeche.textContent="Malen öffnen";
+  flaeche.onclick=()=>openMalen();
+  box.appendChild(flaeche);
+ }
 }
 
 // Offenes Angebot abfragen.
@@ -2102,7 +2115,8 @@ async function refresh(){
      actions.appendChild(zurueck);
     }else{
      const mit=document.createElement("button");
-     mit.textContent="Mitspielen";
+     // Malen ist eine gemeinsame Fläche – dort heißt der Beitritt „Mitmalen“.
+     mit.textContent=m.game==="malen"?"Mitmalen":"Mitspielen";
      mit.onclick=()=>beitreten(m.game);
      actions.appendChild(mit);
     }
