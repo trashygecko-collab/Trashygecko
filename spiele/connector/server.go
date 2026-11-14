@@ -69,6 +69,7 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/menschaerger", menschaergerHandler)
 	mux.HandleFunc("/api/kaesekaestche", kaesekaestcheHandler)
 	mux.HandleFunc("/api/sim", simHandler)
+	mux.HandleFunc("/api/tetris", tetrisHandler)
 	mux.HandleFunc("/api/kalaha", kalahaHandler)
 	mux.HandleFunc("/api/streichholz", streichholzHandler)
 	mux.HandleFunc("/api/muehle", muehleHandler)

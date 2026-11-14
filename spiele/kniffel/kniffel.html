@@ -163,6 +163,7 @@ select {
   grid-template-columns:1fr 1fr;
   gap:10px;
 }
+.actions #rollBtn { grid-column:1 / -1; }
 .status {
   min-height:44px;
   margin-top:12px;
@@ -343,6 +344,7 @@ tfoot td {
       <div class="actions">
         <button class="bigbtn primary" id="rollBtn">WÜRFELN</button>
         <button class="bigbtn" id="finishBtn" disabled>RUNDE BEENDEN</button>
+        <button class="bigbtn" id="strikeBtn" disabled>STREICHEN</button>
       </div>
 
       <div class="status" id="status">
@@ -513,6 +515,7 @@ function renderDice(){
   $("keepLabel").textContent=`GEHALTEN: ${kept.filter(Boolean).length}`;
   $("rollBtn").disabled=rolls>=3||finished;
   $("finishBtn").disabled=rolls===0||finished;
+  $("strikeBtn").disabled=rolls===0||finished;
 }
 function renderScore(){
   const p=current();
@@ -574,11 +577,18 @@ function rollDice(){
     :`Wurf ${rolls} von 3. Behalte Würfel durch Antippen.`
   );
 }
-function enterScore(category){
-  if(ONLINE){ if(rolls>0&&!finished&&category) kniffelAction("score",{category:category.id}); return; }
+function enterScore(category,festWert){
+  if(ONLINE){
+    if(rolls>0&&!finished&&category){
+      kniffelAction("score",typeof festWert==="number"
+        ?{category:category.id,value:festWert}
+        :{category:category.id});
+    }
+    return;
+  }
   const p=current();
   if(p.scores[category.id]!==null||rolls===0||finished)return;
-  const points=category.score(dice);
+  const points=typeof festWert==="number"?festWert:category.score(dice);
   p.scores[category.id]=points;
 
   // Zusatzbonus für weitere Kniffel nach einem bereits gewerteten Kniffel.
@@ -608,11 +618,37 @@ function enterScore(category){
   render();
   setView("dice");
 }
+// Streichen: das offene Feld, das am wenigsten Punkte bringt, auf 0 setzen.
+function strikeRound(){
+  if(ONLINE){ if(rolls>0&&!finished) kniffelAction("score",{category:"",value:0}); return; }
+  if(rolls===0||finished)return;
+  let schlechteste=null;
+  let wenigste=Infinity;
+  for(const c of categories){
+    if(current().scores[c.id]!==null)continue;
+    const punkte=c.score(dice);
+    if(punkte<wenigste){
+      wenigste=punkte;
+      schlechteste=c;
+    }
+  }
+  if(schlechteste)enterScore(schlechteste,0);
+}
 function finishRound(){
   if(ONLINE){ if(rolls>0&&!finished) kniffelAction("score",{category:""}); return; }
   if(rolls===0||finished)return;
-  const category=categories.find(c=>current().scores[c.id]===null);
-  if(category)enterScore(category);
+  // Ohne Auswahl landet der Wurf dort, wo er am meisten Punkte bringt.
+  let beste=null;
+  let bestePunkte=-1;
+  for(const c of categories){
+    if(current().scores[c.id]!==null)continue;
+    const punkte=c.score(dice);
+    if(punkte>bestePunkte){
+      bestePunkte=punkte;
+      beste=c;
+    }
+  }
+  if(beste)enterScore(beste);
 }
 function endGame(){
   finished=true;
@@ -646,6 +682,7 @@ $("readyBtn").addEventListener("click",()=>{
 });
 $("rollBtn").addEventListener("click",rollDice);
 $("finishBtn").addEventListener("click",finishRound);
+$("strikeBtn").addEventListener("click",strikeRound);
 $("newGameBtn").addEventListener("click",()=>{
   if(ONLINE){ kniffelAction("reset",{}); return; }
   $("result").classList.add("hidden");
@@ -762,6 +799,7 @@ function applyOnlineState(game){
   if(!myTurn()){
     $("rollBtn").disabled=true;
     $("finishBtn").disabled=true;
+    $("strikeBtn").disabled=true;
     document.querySelectorAll(".scorebtn").forEach(b=>{ b.disabled=true; });
     document.querySelectorAll(".die").forEach(b=>{ b.disabled=true; });
     const p=onlineGame.players[onlineGame.current];

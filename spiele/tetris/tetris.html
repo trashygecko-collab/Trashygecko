@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TrashyGecko – Tetris</title>
+<style>
+:root{
+  --bg:#08070f;
+  --text:#e9ecf5;
+  --muted:#8d97ad;
+  --cyan:#31e0ff;
+  --line:#2b2f47;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{
+  margin:0;
+  padding:8px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(ellipse at top,#1b1230 0%,#08070f 68%);
+  color:var(--text);
+  font:16px/1.4 Arial,Helvetica,sans-serif;
+}
+
+.spiel{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+.buehne{
+  display:flex;
+  justify-content:center;
+  width:100%;
+  max-width:min(40vh,420px);
+}
+
+.feld{
+  position:relative;
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+.feld canvas{
+  width:100%;
+  aspect-ratio:1/2;
+  display:block;
+  background:#070a11;
+  border:1px solid #3a3350;
+  border-radius:8px;
+  box-shadow:0 0 16px #31e0ff1a;
+  touch-action:none;
+}
+.kopf{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  width:100%;
+  gap:8px;
+  font-size:12px;
+  letter-spacing:1px;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+}
+.kopf .gegner{color:var(--text);font-weight:bold;overflow:hidden;text-overflow:ellipsis}
+.kopf .linien{margin-left:auto;color:var(--cyan)}
+
+.knoepfe{display:flex;gap:5px;width:100%}
+.knoepfe button{
+  flex:1 1 0;
+  min-width:0;
+  height:52px;
+  padding:0;
+  font-size:20px;
+  line-height:1;
+  color:var(--cyan);
+  background:rgba(20,18,34,.95);
+  border:1px solid #4b3f68;
+  border-radius:10px;
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.knoepfe button:active{border-color:var(--cyan);background:#1b2a33;box-shadow:0 0 14px #31e0ff44}
+
+.verlassen{
+  width:min(520px,100%);
+  margin-top:2px;
+  padding:13px 12px;
+  font-size:14px;
+  letter-spacing:2px;
+  color:#ff9ec7;
+  background:none;
+  border:1px solid #7c3a63;
+  border-radius:12px;
+  cursor:pointer;
+}
+.verlassen:active{background:#2a1122;color:#fff}
+
+.ende{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:10px;
+  border-radius:8px;
+  background:rgba(6,6,12,.88);
+  text-align:center;
+}
+.ende span{
+  font-size:15px;
+  font-weight:bold;
+  letter-spacing:2px;
+  line-height:1.35;
+}
+.ende .sieg{color:#4dff9e;text-shadow:0 0 14px #4dff9e66}
+.ende .nieder{color:#ff5c7a;text-shadow:0 0 14px #ff5c7a66}
+.ende button{
+  padding:11px 16px;
+  font-size:13px;
+  font-weight:bold;
+  letter-spacing:1px;
+  color:var(--cyan);
+  background:#141220;
+  border:1px solid #4b3f68;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+@media(max-width:360px){
+  .knoepfe button{height:48px;font-size:18px}
+  .kopf{font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<main class="spiel">
+  <div class="buehne">
+    <div class="feld">
+      <div class="kopf">
+        <span class="gegner" id="gegner" hidden></span>
+        <span class="linien" id="linien">0 LINIEN</span>
+      </div>
+      <canvas id="feld" width="240" height="480" aria-label="Tetris Spielfeld"></canvas>
+      <div class="knoepfe" id="knoepfe">
+        <button type="button" data-tat="links" aria-label="Nach links">←</button>
+        <button type="button" data-tat="linksdrehen" aria-label="Links drehen">↺</button>
+        <button type="button" data-tat="runter" aria-label="Runter">↓</button>
+        <button type="button" data-tat="rechtsdrehen" aria-label="Rechts drehen">↻</button>
+        <button type="button" data-tat="rechts" aria-label="Nach rechts">→</button>
+      </div>
+      <div class="ende" id="ende" hidden>
+        <span id="endeText" class="nieder"></span>
+        <button type="button" id="nochmal">NOCHMAL</button>
+      </div>
+    </div>
+  </div>
+  <button type="button" class="verlassen" id="verlassen">SPIEL VERLASSEN</button>
+</main>
+
+<script src="/spiele/netz.js"></script>
+<script>
+"use strict";
+
+const SPALTEN = 10;
+const ZEILEN = 20;
+const PX = 24;
+
+const LEER = 0;
+const MUELL = 8;
+
+const FORMEN = {
+  I: [[1,1,1,1]],
+  O: [[1,1],[1,1]],
+  T: [[0,1,0],[1,1,1]],
+  S: [[0,1,1],[1,1,0]],
+  Z: [[1,1,0],[0,1,1]],
+  J: [[1,0,0],[1,1,1]],
+  L: [[0,0,1],[1,1,1]]
+};
+const FARBE = { I: 1, O: 2, T: 3, S: 4, Z: 5, J: 6, L: 7 };
+const FARBEN = {
+  1: "#31e0ff",
+  2: "#ffd166",
+  3: "#b06cff",
+  4: "#4dff9e",
+  5: "#ff5c7a",
+  6: "#5b8cff",
+  7: "#ff8c42",
+  8: "#59647c"
+};
+// Geräumte Reihen -> Müll-Reihen beim Gegner.
+const MUELL_FUER_REIHEN = { 2: 1, 3: 2, 4: 4 };
+const ALLE_STEINE = ["I","O","T","S","Z","J","L"];
+
+/* ---------- Online (nur über den Connector) ---------- */
+const params = new URLSearchParams(location.search);
+const onlineRoom = (params.get("room") || "").trim().toUpperCase();
+const online = onlineRoom !== "";
+let onlineID = (params.get("id") || "").trim();
+if (!onlineID){
+  try {
+    onlineID = sessionStorage.getItem("tg-player-id") || "";
+    if (!onlineID){
+      onlineID = (crypto.randomUUID ? crypto.randomUUID() : "tg-" + Math.random().toString(36).slice(2) + Date.now());
+      sessionStorage.setItem("tg-player-id", onlineID);
+    }
+  } catch (e){
+    onlineID = "tg-" + Math.random().toString(36).slice(2) + Date.now();
+  }
+}
+let onlineStand = null;
+let onlineGegnerName = "";
+let onlineGegnerLinien = 0;
+let onlineLaeuft = false;
+let onlineEnde = false;
+
+/* ---------- Spielzustand ---------- */
+const canvas = document.getElementById("feld");
+const ctx = canvas.getContext("2d");
+const endeFeld = document.getElementById("ende");
+const endeText = document.getElementById("endeText");
+const linienFeld = document.getElementById("linien");
+const gegnerFeld = document.getElementById("gegner");
+
+let brett = Array.from({ length: ZEILEN }, () => Array(SPALTEN).fill(LEER));
+let form = null;
+let farbe = 0;
+let posX = 0;
+let posY = 0;
+let nummer = 0;
+let linien = 0;
+let timer = 0;
+let aktiv = false;
+let letzteZeit = 0;
+let zufall = Math.random;
+
+/* ---------- Gemeinsame Steinfolge (gleicher Seed auf beiden Geräten) ---------- */
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const folge = [];
+function steinBei(nr){
+  while (folge.length <= nr){
+    const beutel = ALLE_STEINE.slice();
+    for (let i = beutel.length - 1; i > 0; i--){
+      const j = Math.floor(zufall() * (i + 1));
+      const tausch = beutel[i];
+      beutel[i] = beutel[j];
+      beutel[j] = tausch;
+    }
+    for (const stein of beutel) folge.push(stein);
+  }
+  return folge[nr];
+}
+
+/* ---------- Regeln ---------- */
+function drehen(matrix, richtung){
+  const hoehe = matrix.length;
+  const breite = matrix[0].length;
+  const ergebnis = Array.from({ length: breite }, () => Array(hoehe).fill(0));
+  for (let y = 0; y < hoehe; y++){
+    for (let x = 0; x < breite; x++){
+      if (!matrix[y][x]) continue;
+      if (richtung > 0) ergebnis[x][hoehe - 1 - y] = 1;
+      else ergebnis[breite - 1 - x][y] = 1;
+    }
+  }
+  return ergebnis;
+}
+
+function passt(matrix, px, py){
+  for (let y = 0; y < matrix.length; y++){
+    for (let x = 0; x < matrix[y].length; x++){
+      if (!matrix[y][x]) continue;
+      const bx = px + x;
+      const by = py + y;
+      if (bx < 0 || bx >= SPALTEN || by >= ZEILEN) return false;
+      if (by >= 0 && brett[by][bx] !== LEER) return false;
+    }
+  }
+  return true;
+}
+
+function neuesStueck(){
+  const art = steinBei(nummer);
+  nummer += 1;
+  form = FORMEN[art].map(reihe => reihe.slice());
+  farbe = FARBE[art];
+  posX = Math.floor((SPALTEN - form[0].length) / 2);
+  posY = 0;
+  timer = 0;
+  if (!passt(form, posX, posY)){
+    form = null;
+    verliere();
+  }
+}
+
+function bewege(dx, dy){
+  if (!aktiv || !form) return false;
+  if (!passt(form, posX + dx, posY + dy)) return false;
+  posX += dx;
+  posY += dy;
+  return true;
+}
+
+function dreheSpieler(richtung){
+  if (!aktiv || !form) return;
+  const neu = drehen(form, richtung);
+  for (const versatz of [0, -1, 1, -2, 2]){
+    if (passt(neu, posX + versatz, posY)){
+      form = neu;
+      posX += versatz;
+      return;
+    }
+  }
+}
+
+function einrasten(){
+  for (let y = 0; y < form.length; y++){
+    for (let x = 0; x < form[y].length; x++){
+      if (!form[y][x]) continue;
+      const by = posY + y;
+      const bx = posX + x;
+      if (by >= 0) brett[by][bx] = farbe;
+    }
+  }
+  form = null;
+
+  let volle = 0;
+  const rest = [];
+  for (const reihe of brett){
+    if (reihe.every(wert => wert !== LEER)) volle += 1;
+    else rest.push(reihe);
+  }
+  if (volle){
+    while (rest.length < ZEILEN) rest.unshift(Array(SPALTEN).fill(LEER));
+    brett = rest;
+    linien += volle;
+    linienFeld.textContent = linien + (linien === 1 ? " LINIE" : " LINIEN");
+    muellSenden(volle);
+    synchronisiere({ lines: linien });
+  }
+  neuesStueck();
+}
+
+function schritt(){
+  if (!aktiv || !form) return;
+  if (bewege(0, 1)) return;
+  einrasten();
+}
+
+function intervall(){
+  const stufe = Math.floor(linien / 10);
+  return Math.max(90, 620 - stufe * 55);
+}
+
+/* ---------- Müll ---------- */
+function muellSenden(reihen){
+  const anzahl = MUELL_FUER_REIHEN[reihen] || 0;
+  if (!anzahl || !online) return;
+  // Der Server reicht die Reihen an den Gegner weiter.
+  synchronisiere({ garbage: anzahl });
+}
+
+function muellEmpfangen(anzahl){
+  const loch = Math.floor(Math.random() * SPALTEN);
+  for (let i = 0; i < anzahl; i++){
+    if (brett[0].some(wert => wert !== LEER)){
+      verliere();
+      return;
+    }
+    const reihe = Array(SPALTEN).fill(MUELL);
+    reihe[loch] = LEER;
+    brett.shift();
+    brett.push(reihe);
+  }
+  if (form && !passt(form, posX, posY)) verliere();
+}
+
+/* ---------- Ende ---------- */
+function verliere(){
+  if (!aktiv) return;
+  aktiv = false;
+  form = null;
+  if (online){
+    synchronisiere({ alive: false });
+    zeigeEnde("GAME OVER", "nieder");
+  } else {
+    zeigeEnde("GAME OVER", "nieder");
+  }
+  zeichne();
+}
+
+function zeigeEnde(text, art){
+  onlineEnde = true;
+  endeText.textContent = text;
+  endeText.className = art;
+  endeFeld.hidden = false;
+}
+
+/* ---------- Zeichnen ---------- */
+function zeichneBlock(x, y, farbwert){
+  ctx.fillStyle = FARBEN[farbwert] || "#59647c";
+  ctx.fillRect(x * PX + 1, y * PX + 1, PX - 2, PX - 2);
+  ctx.strokeStyle = "rgba(255,255,255,.20)";
+  ctx.strokeRect(x * PX + 1.5, y * PX + 1.5, PX - 3, PX - 3);
+}
+
+function zeichne(){
+  ctx.clearRect(0, 0, SPALTEN * PX, ZEILEN * PX);
+
+  ctx.strokeStyle = "rgba(120,135,175,.10)";
+  ctx.lineWidth = 1;
+  for (let x = 1; x < SPALTEN; x++){
+    ctx.beginPath();
+    ctx.moveTo(x * PX + 0.5, 0);
+    ctx.lineTo(x * PX + 0.5, ZEILEN * PX);
+    ctx.stroke();
+  }
+  for (let y = 1; y < ZEILEN; y++){
+    ctx.beginPath();
+    ctx.moveTo(0, y * PX + 0.5);
+    ctx.lineTo(SPALTEN * PX, y * PX + 0.5);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < ZEILEN; y++){
+    for (let x = 0; x < SPALTEN; x++){
+      if (brett[y][x] !== LEER) zeichneBlock(x, y, brett[y][x]);
+    }
+  }
+
+  if (form){
+    for (let y = 0; y < form.length; y++){
+      for (let x = 0; x < form[y].length; x++){
+        if (!form[y][x]) continue;
+        const by = posY + y;
+        if (by < 0) continue;
+        zeichneBlock(posX + x, by, farbe);
+      }
+    }
+  }
+}
+
+/* ---------- Schleife ---------- */
+function schleife(zeit){
+  if (!letzteZeit) letzteZeit = zeit;
+  const dt = Math.min(150, zeit - letzteZeit);
+  letzteZeit = zeit;
+
+  if (aktiv && form){
+    timer += dt;
+    if (timer >= intervall()){
+      timer = 0;
+      schritt();
+    }
+    zeichne();
+  }
+  requestAnimationFrame(schleife);
+}
+
+/* ---------- Start ---------- */
+function starteSpiel(seed){
+  const basis = Math.round(seed) || Math.floor(Math.random() * 2 ** 31);
+  zufall = mulberry32(basis);
+  folge.length = 0;
+  brett = Array.from({ length: ZEILEN }, () => Array(SPALTEN).fill(LEER));
+  nummer = 0;
+  linien = 0;
+  timer = 0;
+  letzteZeit = 0;
+  endeFeld.hidden = true;
+  onlineEnde = false;
+  linienFeld.textContent = "0 LINIEN";
+  aktiv = true;
+  neuesStueck();
+  zeichne();
+}
+
+/* ---------- Online-Abgleich ---------- */
+function synchronisiere(zusatz){
+  if (!online) return;
+  const daten = {
+    id: onlineID,
+    lines: linien,
+    alive: aktiv,
+    garbage: 0,
+    taken: 0,
+    ...zusatz
+  };
+  fetch("/api/tetris?room=" + encodeURIComponent(onlineRoom) + "&action=sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(daten)
+  }).catch(() => {});
+}
+
+function zeigeGegner(){
+  if (!online || !onlineGegnerName) {
+    gegnerFeld.hidden = true;
+    return;
+  }
+  gegnerFeld.hidden = false;
+  gegnerFeld.textContent = onlineGegnerName + " · " + onlineGegnerLinien +
+    (onlineGegnerLinien === 1 ? " LINIE" : " LINIEN");
+}
+
+async function holeStand(){
+  try {
+    const antwort = await fetch("/api/tetris?room=" + encodeURIComponent(onlineRoom) + "&id=" + encodeURIComponent(onlineID), { cache: "no-store" });
+    if (!antwort.ok) return;
+    const spiel = (await antwort.json()).game;
+    onlineStand = spiel;
+    if (!spiel) return;
+
+    const ichRot = spiel.redId === onlineID;
+    onlineGegnerName = ichRot ? spiel.blueName : spiel.redName;
+    onlineGegnerLinien = ichRot ? spiel.blueLines : spiel.redLines;
+    const meineLinien = ichRot ? spiel.redLines : spiel.blueLines;
+    const meinMuell = ichRot ? spiel.redGarbage : spiel.blueGarbage;
+    zeigeGegner();
+
+    if (spiel.status === "active"){
+      if (!onlineLaeuft){
+        onlineLaeuft = true;
+        starteSpiel(spiel.seed);
+      }
+      if (meinMuell > 0){
+        muellEmpfangen(meinMuell);
+        synchronisiere({ taken: meinMuell });
+      }
+      if (meineLinien > linien) {
+        linien = meineLinien;
+        linienFeld.textContent = linien + (linien === 1 ? " LINIE" : " LINIEN");
+      }
+    }
+
+    if (spiel.status === "finished"){
+      onlineLaeuft = false;
+      if (!onlineEnde){
+        const sieger = spiel.winner;
+        const ichSieger = (sieger === "red" && ichRot) || (sieger === "blue" && !ichRot);
+        if (sieger) zeigeEnde(ichSieger ? "GEWONNEN" : "GAME OVER", ichSieger ? "sieg" : "nieder");
+        else zeigeEnde("SPIEL BEENDET", "nieder");
+      }
+    }
+
+    if (spiel.status === "invited"){
+      onlineGegnerName = ichRot ? spiel.blueName : spiel.redName;
+      zeigeGegner();
+    }
+  } catch (e){ /* Netz weg – beim nächsten Takt erneut */ }
+}
+
+setInterval(() => {
+  if (!online) return;
+  holeStand();
+}, 500);
+
+/* ---------- Bedienung ---------- */
+const knoepfe = document.getElementById("knoepfe");
+
+function tat(tatName){
+  if (!aktiv || !form) return;
+  if (tatName === "links") bewege(-1, 0);
+  else if (tatName === "rechts") bewege(1, 0);
+  else if (tatName === "linksdrehen") dreheSpieler(-1);
+  else if (tatName === "rechtsdrehen") dreheSpieler(1);
+  else if (tatName === "runter") schritt();
+  zeichne();
+}
+
+knoepfe.addEventListener("pointerdown", ereignis => {
+  const knopf = ereignis.target.closest("button");
+  if (!knopf) return;
+  ereignis.preventDefault();
+  const wie = knopf.dataset.tat;
+  tat(wie);
+  if (wie === "runter"){
+    if (knopf._takt) clearInterval(knopf._takt);
+    knopf._takt = setInterval(() => {
+      if (!aktiv){ clearInterval(knopf._takt); knopf._takt = null; return; }
+      tat("runter");
+    }, 85);
+  }
+});
+
+function taktStoppen(){
+  knoepfe.querySelectorAll("button").forEach(knopf => {
+    if (knopf._takt){ clearInterval(knopf._takt); knopf._takt = null; }
+  });
+}
+knoepfe.addEventListener("pointerup", taktStoppen);
+knoepfe.addEventListener("pointerleave", taktStoppen);
+knoepfe.addEventListener("pointercancel", taktStoppen);
+
+// Ziehen auf dem Feld: waagerecht bewegen, kurzes Tippen links/rechts ebenso.
+let startX = null;
+let startY = null;
+let gezogen = 0;
+canvas.addEventListener("pointerdown", ereignis => {
+  if (!aktiv) return;
+  startX = ereignis.clientX;
+  startY = ereignis.clientY;
+  gezogen = 0;
+  try { canvas.setPointerCapture(ereignis.pointerId); } catch (e){}
+});
+canvas.addEventListener("pointermove", ereignis => {
+  if (startX === null || !aktiv) return;
+  const dx = ereignis.clientX - startX;
+  const weite = Math.max(14, canvas.clientWidth / SPALTEN);
+  while (Math.abs(dx - gezogen) >= weite){
+    const richtung = dx > gezogen ? 1 : -1;
+    if (bewege(richtung, 0)) gezogen += richtung * weite;
+    else break;
+  }
+  zeichne();
+});
+canvas.addEventListener("pointerup", ereignis => {
+  if (startX === null) return;
+  const dx = ereignis.clientX - startX;
+  const dy = ereignis.clientY - startY;
+  if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && aktiv){
+    const links = ereignis.clientX < canvas.getBoundingClientRect().left + canvas.clientWidth / 2;
+    bewege(links ? -1 : 1, 0);
+    zeichne();
+  }
+  startX = null;
+  startY = null;
+  gezogen = 0;
+});
+canvas.addEventListener("pointercancel", () => {
+  startX = null;
+  startY = null;
+  gezogen = 0;
+});
+
+document.getElementById("nochmal").addEventListener("click", async () => {
+  endeFeld.hidden = true;
+  if (online){
+    onlineEnde = false;
+    onlineLaeuft = false;
+    await fetch("/api/tetris?room=" + encodeURIComponent(onlineRoom) + "&action=reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: onlineID })
+    }).catch(() => {});
+    holeStand();
+    return;
+  }
+  starteSpiel();
+});
+
+document.getElementById("verlassen").addEventListener("click", () => {
+  if (online && typeof window.tgVerlassen === "function"){
+    window.tgVerlassen();
+    return;
+  }
+  location.href = "/spiele/spiele.html";
+});
+
+/* ---------- Los ---------- */
+zeichne();
+requestAnimationFrame(schleife);
+
+if (online){
+  holeStand();
+} else {
+  starteSpiel();
+}
+</script>
+
+</body>
+</html>

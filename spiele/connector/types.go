@@ -86,6 +86,7 @@ type Room struct {
 	Menschaerger *MenschaergerGame
 	Kaese        *KaeseGame
 	Sim          *SimGame
+	Tetris       *TetrisGame
 	Kalaha       *KalahaGame
 	Streichholz  *StreichholzGame
 	Muehle       *MuehleGame
@@ -190,6 +191,9 @@ func (r *Room) cleanPlayers() {
 	}
 	if r.Sim != nil && r.gameAbandoned(r.Sim.Status, r.Sim.RedID, r.Sim.BlueID) {
 		r.Sim = nil
+	}
+	if r.Tetris != nil && r.gameAbandoned(r.Tetris.Status, r.Tetris.RedID, r.Tetris.BlueID) {
+		r.Tetris = nil
 	}
 	if r.Kalaha != nil && r.gameAbandoned(r.Kalaha.Status, r.Kalaha.RedID, r.Kalaha.BlueID) {
 		r.Kalaha = nil

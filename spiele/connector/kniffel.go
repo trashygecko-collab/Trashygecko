@@ -287,7 +287,9 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID       string `json:"id"`
 		Category string `json:"category"`
-		Kept     []bool `json:"kept"`
+		// Value erzwingt einen festen Wert – beim Streichen 0.
+		Value *int   `json:"value"`
+		Kept  []bool `json:"kept"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -474,10 +476,21 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 
 		category := strings.ToLower(strings.TrimSpace(input.Category))
 		if category == "" {
+			// Ohne Auswahl: normalerweise das Feld mit den meisten Punkten,
+			// beim Streichen (Wert 0) das Feld, das am wenigsten bringt.
+			besterWert := -1
 			for _, c := range kniffelCategories {
-				if game.Players[seat].Scores[c] == nil {
+				if game.Players[seat].Scores[c] != nil {
+					continue
+				}
+				punkte := kniffelScoreFor(c, game.Dice)
+				nehmen := punkte > besterWert
+				if input.Value != nil {
+					nehmen = besterWert < 0 || punkte < besterWert
+				}
+				if nehmen {
+					besterWert = punkte
 					category = c
-					break
 				}
 			}
 		}
@@ -493,6 +506,9 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		points := kniffelScoreFor(category, game.Dice)
+		if input.Value != nil {
+			points = *input.Value
+		}
 		game.Players[seat].Scores[category] = &points
 
 		// Zusatzbonus für weitere Kniffel nach einem gewerteten Kniffel.

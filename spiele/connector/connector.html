@@ -9,11 +9,11 @@
 /* hidden muss immer gewinnen – sonst zeigen Regeln mit display:flex Dinge an,
    die eigentlich versteckt sind (z. B. das Stummschalten für Nicht-Admins). */
 [hidden]{display:none !important}
-body{margin:0;background:#10121b;color:#eee;font:16px Arial;padding:16px}
+body{margin:0;background:#10121b;color:#eee;font:16px Arial;padding:8px 1px}
 main{max-width:760px;margin:auto}
 h1{color:#4df5c2;text-align:center;font-size:clamp(22px,5vw,32px)}
 h2{font-size:20px;margin-top:0}
-section{background:#1c2030;border:1px solid #394158;border-radius:12px;padding:18px;margin:16px 0}
+section{background:#1c2030;border:1px solid #394158;border-radius:12px;padding:18px;margin:10px 0}
 button,input,select{padding:12px;border-radius:7px;border:1px solid #59647c;font-size:16px}
 button{background:#4df5c2;color:#10121b;font-weight:bold;cursor:pointer}
 button:hover{filter:brightness(1.1)}
@@ -36,7 +36,7 @@ small{color:#9da8bd}
 #qrcode{width:176px;height:176px;background:white;padding:8px;border-radius:8px;image-rendering:pixelated}
 #qrhint{color:#aab3c7;font-size:14px;max-width:240px}
 @media(max-width:430px){
- body{padding:9px}
+ body{padding:5px 1px}
  section{padding:13px}
  .room{align-items:flex-start;flex-direction:column}
  .room button{width:100%}
@@ -80,9 +80,9 @@ small{color:#9da8bd}
  min-width:88px;
 }
 @media(max-width:430px){
- body{padding:8px}
+ body{padding:4px 1px}
  section{padding:12px}
- #chat{height:260px}
+ #chat{height:300px}
  .chat-send-row{display:flex;flex-direction:row}
  .chat-send-row input{flex:1;min-width:0}
  .chat-send-row button{width:auto}
@@ -113,7 +113,7 @@ button.mini:hover{color:#fff;border-color:#4df5c2}
  h1{font-size:20px;padding-right:52px}
 }
 html:fullscreen,html:fullscreen body{overflow-y:auto;height:auto}
-html:fullscreen body{padding:18px}
+html:fullscreen body{padding:18px 1px}
 .game-player{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#10121b;border:1px solid #394158;border-radius:9px;padding:10px 12px;margin:8px 0}
 .game-player span{min-width:0;overflow-wrap:anywhere}
 .game-player button{flex:0 0 auto}
@@ -216,9 +216,9 @@ html:fullscreen body{padding:18px}
 .games-side #game-status{margin-top:0}
 /* --- Kleine Handys (etwa 6 Zoll): eine Spur kompakter, aber lesbar ------ */
 @media(max-width:600px){
- body{padding:8px 8px 12px}
+ body{padding:4px 1px 6px}
  h1{font-size:18px;margin:0 0 4px}
- section{padding:10px;margin:8px 0;border-radius:10px}
+ section{padding:10px;margin:5px 0;border-radius:10px}
  section h2{font-size:16px;margin:0 0 6px}
  /* Adresse und QR-Code nur noch eine schmale Zeile, kein eigener Kasten. */
  #addressbox{padding:0;margin:0 0 4px;background:none;border:none}
@@ -232,7 +232,7 @@ html:fullscreen body{padding:18px}
  .games-side{padding:8px 10px}
  #game-status{margin-top:6px}
  /* Chat: flacher, die Eingabe bleibt beim Lesen unten kleben. */
- #chat{height:230px;padding:8px;font-size:14px;line-height:1.35}
+ #chat{height:300px;padding:8px;font-size:14px;line-height:1.35}
  .chat-compose{position:sticky;bottom:0;background:#1c2030;padding-top:6px;gap:6px}
 }
 </style>
@@ -294,7 +294,6 @@ html:fullscreen body{padding:18px}
 </section>
 
 <section id="chatbox" hidden>
-<h2>Chat</h2>
 <div id="muteOverview" class="mute-list-tag" hidden></div>
 <div id="chat"></div>
 <div class="chat-compose">
@@ -689,6 +688,7 @@ let currentPaareGame=null;
 let currentMaenGame=null;
 let currentKaeseGame=null;
 let currentSimGame=null;
+let currentTetrisGame=null;
 let currentKalahaGame=null;
 let currentStreichholzGame=null;
 let currentMuehleGame=null;
@@ -713,6 +713,7 @@ const SUPPORTED_GAMES = [
  { id: "menschaerger", name: "Mensch ärgere dich nicht", path: "/spiele/menschaerger/menschaerger.html", api: "/api/menschaerger" },
  { id: "kaesekaestche", name: "Käsekästchen", path: "/spiele/kaesekaestche/kaesekaestche.html", api: "/api/kaesekaestche" },
  { id: "sim", name: "Sim", path: "/spiele/sim/sim.html", api: "/api/sim" },
+ { id: "tetris", name: "Tetris", path: "/spiele/tetris/tetris.html", api: "/api/tetris" },
  { id: "kalaha", name: "Kalaha", path: "/spiele/kalaha/kalaha.html", api: "/api/kalaha" },
  { id: "streichholzspiel", name: "21 Streichhölzer", path: "/spiele/streichholzspiel/streichholzspiel.html", api: "/api/streichholz" },
  { id: "muehle", name: "Mühle", path: "/spiele/muehle/muehle.html", api: "/api/muehle" },
@@ -805,6 +806,7 @@ async function refreshGames(players){
  await refreshMaen(players);
  await refreshKaese(players);
  await refreshSim(players);
+ await refreshTetris(players);
  await refreshKalaha(players);
  await refreshStreichholz(players);
  await refreshMuehle(players);
@@ -830,6 +832,7 @@ function gameStateFor(gameId){
  if(gameId==="menschaerger")return currentMaenGame;
  if(gameId==="kaesekaestche")return currentKaeseGame;
  if(gameId==="sim")return currentSimGame;
+ if(gameId==="tetris")return currentTetrisGame;
  if(gameId==="kalaha")return currentKalahaGame;
  if(gameId==="streichholzspiel")return currentStreichholzGame;
  if(gameId==="muehle")return currentMuehleGame;
@@ -1588,6 +1591,42 @@ async function refreshSim(players){
    addStatusButton("Einladung annehmen", async()=>{
     if(await gameApiAction("sim", "accept")){
      openGame(gamePath("sim"));
+    }
+   });
+  }
+ }
+}
+
+// Tetris: zwei Geräte gegeneinander, jeder auf seinem eigenen Feld.
+async function refreshTetris(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/tetris?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentTetrisGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  tttStatus("Tetris läuft: "+game.redName+" ("+game.redLines+" Linien) gegen "+game.blueName+" ("+game.blueLines+" Linien).", "tetris");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="red"?game.redName:game.winner==="blue"?game.blueName:"";
+  tttStatus(sieger?("Tetris beendet: "+sieger+" gewinnt."):"Tetris beendet.", "tetris");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Tetris: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("tetris", "accept")){
+     openGame(gamePath("tetris"));
     }
    });
   }
