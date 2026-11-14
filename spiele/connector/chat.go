@@ -54,9 +54,6 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		input.ToID = strings.TrimSpace(input.ToID)
 		input.Name = strings.TrimSpace(input.Name)
 		input.Text = strings.TrimSpace(input.Text)
-		if input.Name == "" {
-			input.Name = "Spieler"
-		}
 		input.Name = limitName(input.Name)
 		if input.Text == "" || utf8.RuneCountInString(input.Text) > 1000 {
 			http.Error(w, "Nachricht leer oder zu lang", http.StatusBadRequest)
@@ -76,6 +73,10 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			mu.Unlock()
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
+		}
+		// Ohne eigenen Namen bleibt der vergebene ("Boss", "Spieler1" …).
+		if input.Name == "" {
+			input.Name = sender.Name
 		}
 		// Update sender name if changed – aber nie auf einen Namen, den schon
 		// jemand anderes im Raum benutzt.

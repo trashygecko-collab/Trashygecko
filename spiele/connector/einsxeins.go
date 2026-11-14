@@ -22,6 +22,7 @@ const (
 type RechenTask struct {
 	Lines  []string `json:"lines"`
 	Answer int      `json:"-"`
+	Rule   string   `json:"-"` // nur für die Rückmeldung nach dem Antworten
 }
 
 type RechenPlayer struct {
@@ -173,15 +174,316 @@ func rechenEquation(level int) RechenTask {
 	}
 }
 
-func rechenNewTasks(mode string, level int) []RechenTask {
-	tasks := make([]RechenTask, 0, rechenTasks)
-	for i := 0; i < rechenTasks; i++ {
-		if mode == "equations" {
-			tasks = append(tasks, rechenEquation(level))
-		} else {
-			tasks = append(tasks, rechenArithmetic(level))
+// --- Zahlen merken und Zahlenketten ----------------------------------------
+
+func rechenModeGueltig(mode string) bool {
+	return mode == "arithmetic" || mode == "equations" || mode == "memory" || mode == "sequences"
+}
+
+// rechenTaskCount sagt, wie viele Aufgaben eine Runde hat.
+func rechenTaskCount(mode string) int {
+	if mode == "memory" || mode == "sequences" {
+		return 5
+	}
+	return rechenTasks
+}
+
+// rechenLevelNormal hält die Stufe im gültigen Bereich der Spielart.
+// Bei "memory" ist die Stufe die Zahl der Ziffern (5..10).
+func rechenLevelNormal(mode string, level int) int {
+	if mode == "memory" {
+		if level < 5 || level > 10 {
+			return 5
+		}
+		return level
+	}
+	if level < 1 || level > 3 {
+		return 1
+	}
+	return level
+}
+
+func rechenModeName(mode string) string {
+	switch mode {
+	case "equations":
+		return "Gleichungen"
+	case "memory":
+		return "Zahlen merken"
+	case "sequences":
+		return "Zahlenketten"
+	}
+	return "Grundrechenarten"
+}
+
+func rechenLevelName(mode string, level int) string {
+	if mode == "memory" {
+		return strconv.Itoa(rechenLevelNormal(mode, level)) + " Ziffern"
+	}
+	return []string{"Leicht", "Mittel", "Schwer"}[rechenLevelNormal(mode, level)-1]
+}
+
+// rechenMemory baut eine Zahl mit 5..10 Ziffern (erste Ziffer nie 0).
+func rechenMemory(ziffern int) RechenTask {
+	ziffern = rechenLevelNormal("memory", ziffern)
+
+	zahl := strconv.Itoa(rechenRand(1, 9))
+	for i := 1; i < ziffern; i++ {
+		zahl += strconv.Itoa(rechenRand(0, 9))
+	}
+
+	wert, err := strconv.Atoi(zahl)
+	if err != nil {
+		wert = 0
+	}
+
+	return RechenTask{Lines: []string{zahl}, Answer: wert}
+}
+
+// Zahlenketten: sechs Zahlen sind sichtbar, die siebte ist gesucht.
+
+const kettenGlieder = 6
+
+func rechenKetteSchritt(start int, art string, schritt int) ([]int, []string, bool) {
+	werte := []int{start}
+	schritte := make([]string, 0, kettenGlieder)
+
+	for i := 0; i < kettenGlieder; i++ {
+		wert := werte[len(werte)-1]
+
+		switch art {
+		case "+":
+			wert += schritt
+		case "−":
+			wert -= schritt
+		case "×":
+			wert *= schritt
+		default:
+			if wert%schritt != 0 {
+				return nil, nil, false
+			}
+			wert /= schritt
+		}
+
+		if wert < 1 {
+			return nil, nil, false
+		}
+
+		werte = append(werte, wert)
+		schritte = append(schritte, art+strconv.Itoa(schritt))
+	}
+
+	return werte, schritte, true
+}
+
+// rechenKetteEinfach: ein gleichbleibender Schritt bis maxSchritt, alle Werte
+// bis maxWert. Mal und Geteilt sind gewichtet und rechnen mit Faktor 2, weil
+// sechs Schritte sonst nicht in den Zahlenbereich passen.
+func rechenKetteEinfach(maxWert, maxSchritt, bisPlus, bisMinus, bisMal int) ([]int, []string) {
+	for versuch := 0; versuch < 400; versuch++ {
+		wurf := rechenRand(1, 100)
+
+		art := "÷"
+		if wurf <= bisPlus {
+			art = "+"
+		} else if wurf <= bisMinus {
+			art = "−"
+		} else if wurf <= bisMal {
+			art = "×"
+		}
+
+		var werte []int
+		var schritte []string
+		var ok bool
+
+		switch art {
+		case "+":
+			schritt := rechenRand(1, maxSchritt)
+			start := rechenRand(1, maxWert-kettenGlieder*schritt)
+			if start < 1 {
+				continue
+			}
+			werte, schritte, ok = rechenKetteSchritt(start, art, schritt)
+		case "−":
+			schritt := rechenRand(1, maxSchritt)
+			start := rechenRand(kettenGlieder*schritt+1, maxWert)
+			werte, schritte, ok = rechenKetteSchritt(start, art, schritt)
+		case "×":
+			start := 1
+			if maxWert > 100 {
+				start = rechenRand(1, 3)
+			}
+			werte, schritte, ok = rechenKetteSchritt(start, art, 2)
+		default:
+			start := 64
+			if maxWert > 100 {
+				start = 64 * rechenRand(1, 3)
+			}
+			werte, schritte, ok = rechenKetteSchritt(start, art, 2)
+		}
+
+		if !ok {
+			continue
+		}
+
+		groesster := 0
+		for _, w := range werte {
+			if w > groesster {
+				groesster = w
+			}
+		}
+
+		if groesster <= maxWert {
+			return werte, schritte
 		}
 	}
+
+	return []int{2, 4, 6, 8, 10, 12, 14},
+		[]string{"+2", "+2", "+2", "+2", "+2", "+2"}
+}
+
+// rechenKetteSchwer: zwei wechselnde Schritte, z. B. +1, dann ×2.
+func rechenKetteSchwer() ([]int, []string) {
+	for versuch := 0; versuch < 600; versuch++ {
+		arten := make([]string, 2)
+		werte := make([]int, 2)
+
+		for i := 0; i < 2; i++ {
+			art := []string{"+", "−", "×", "÷"}[rechenRand(0, 3)]
+			arten[i] = art
+			if art == "+" || art == "−" {
+				werte[i] = rechenRand(1, 10)
+			} else {
+				werte[i] = rechenRand(2, 5)
+			}
+		}
+
+		if arten[0] == arten[1] {
+			continue
+		}
+
+		zahl := rechenRand(1, 25)
+		reihe := []int{zahl}
+		schritte := make([]string, 0, kettenGlieder)
+		passt := true
+
+		for i := 0; i < kettenGlieder; i++ {
+			art := arten[i%2]
+			schritt := werte[i%2]
+
+			switch art {
+			case "+":
+				zahl += schritt
+			case "−":
+				zahl -= schritt
+			case "×":
+				zahl *= schritt
+			default:
+				if zahl%schritt != 0 {
+					passt = false
+				} else {
+					zahl /= schritt
+				}
+			}
+
+			if !passt || zahl < 1 || zahl > 999 {
+				passt = false
+				break
+			}
+
+			reihe = append(reihe, zahl)
+			schritte = append(schritte, art+strconv.Itoa(schritt))
+		}
+
+		if !passt {
+			continue
+		}
+
+		verschieden := map[int]bool{}
+		for _, w := range reihe {
+			verschieden[w] = true
+		}
+		if len(verschieden) < 5 {
+			continue
+		}
+
+		return reihe, schritte
+	}
+
+	return []int{5, 6, 12, 13, 26, 27, 54}, []string{"+1", "×2", "+1", "×2", "+1", "×2"}
+}
+
+func rechenSchrittName(schritt string) string {
+	zeichen := []rune(schritt)
+	if len(zeichen) < 2 {
+		return schritt
+	}
+	return string(zeichen[0]) + " " + string(zeichen[1:])
+}
+
+func rechenRegel(schritte []string) string {
+	if len(schritte) == 0 {
+		return ""
+	}
+
+	erster := schritte[0]
+	anderer := ""
+
+	for _, s := range schritte {
+		if s != erster {
+			anderer = s
+			break
+		}
+	}
+
+	if anderer == "" {
+		return "Regel: immer " + rechenSchrittName(erster)
+	}
+
+	return "Regel: " + rechenSchrittName(erster) + ", dann " + rechenSchrittName(anderer)
+}
+
+func rechenSequence(level int) RechenTask {
+	var reihe []int
+	var schritte []string
+
+	switch rechenLevelNormal("sequences", level) {
+	case 2:
+		reihe, schritte = rechenKetteEinfach(200, 10, 36, 72, 86)
+	case 3:
+		reihe, schritte = rechenKetteSchwer()
+	default:
+		reihe, schritte = rechenKetteEinfach(100, 5, 40, 80, 90)
+	}
+
+	teile := make([]string, 0, kettenGlieder)
+	for _, w := range reihe[:kettenGlieder] {
+		teile = append(teile, strconv.Itoa(w))
+	}
+
+	return RechenTask{
+		Lines:  []string{strings.Join(teile, ", ") + ", ?"},
+		Answer: reihe[len(reihe)-1],
+		Rule:   rechenRegel(schritte),
+	}
+}
+
+func rechenNewTasks(mode string, level int) []RechenTask {
+	anzahl := rechenTaskCount(mode)
+	tasks := make([]RechenTask, 0, anzahl)
+
+	for i := 0; i < anzahl; i++ {
+		switch mode {
+		case "equations":
+			tasks = append(tasks, rechenEquation(rechenLevelNormal(mode, level)))
+		case "memory":
+			tasks = append(tasks, rechenMemory(level))
+		case "sequences":
+			tasks = append(tasks, rechenSequence(level))
+		default:
+			tasks = append(tasks, rechenArithmetic(rechenLevelNormal(mode, level)))
+		}
+	}
+
 	return tasks
 }
 
@@ -296,7 +598,7 @@ func (g *RechenGame) viewFor(id string) RechenView {
 	// Zahl nennen, die auf alle wartet.
 	anzahl := len(g.Tasks)
 	if anzahl == 0 {
-		anzahl = rechenTasks
+		anzahl = rechenTaskCount(g.Mode)
 	}
 	view := RechenView{
 		ID:      g.ID,
@@ -447,12 +749,10 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		g := rechenNewGame(input.ID, player.Name)
-		if input.Mode == "equations" || input.Mode == "arithmetic" {
+		if rechenModeGueltig(input.Mode) {
 			g.Mode = input.Mode
 		}
-		if input.Level >= 1 && input.Level <= 3 {
-			g.Level = input.Level
-		}
+		g.Level = rechenLevelNormal(g.Mode, input.Level)
 		g.Note = player.Name + " eröffnet ein 1×1-Rennen – bis zu 7 Spieler, mitspielen über die Spielkarte."
 		room.Rechen = g
 		room.addMessage(Message{
@@ -509,12 +809,10 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 			fail("Nur der Gastgeber stellt die Aufgaben ein.", http.StatusForbidden)
 			return
 		}
-		if input.Mode == "equations" || input.Mode == "arithmetic" {
+		if rechenModeGueltig(input.Mode) {
 			game.Mode = input.Mode
 		}
-		if input.Level >= 1 && input.Level <= 3 {
-			game.Level = input.Level
-		}
+		game.Level = rechenLevelNormal(game.Mode, input.Level)
 
 	case "start":
 		if game == nil || game.Status != "invited" {
@@ -543,10 +841,10 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		for _, p := range game.Players {
 			p.Index, p.Correct, p.Done, p.Finished = 0, 0, false, time.Time{}
 		}
-		game.Note = "Los! Alle haben dieselben acht Aufgaben."
+		game.Note = fmt.Sprintf("Los! Alle haben dieselben %d Aufgaben.", len(game.Tasks))
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "startet das 1×1-Rennen.",
+			Text:     "startet das 1×1-Rennen – " + rechenModeName(game.Mode) + " · " + rechenLevelName(game.Mode, game.Level) + ".",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})
@@ -608,6 +906,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 			"game":    game.viewFor(input.ID),
 			"correct": richtig,
 			"answer":  task.Answer,
+			"rule":    task.Rule,
 		})
 		return
 

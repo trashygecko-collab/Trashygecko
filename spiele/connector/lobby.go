@@ -187,10 +187,10 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Spielraum oder Spielerkennung fehlt", http.StatusBadRequest)
 		return
 	}
-	if input.Name == "" {
-		input.Name = "Spieler"
-	}
 	input.Name = limitName(input.Name)
+	// Wer ohne eigenen Namen hereinkommt, bekommt einen: am Server-PC "Boss",
+	// alle anderen "Spieler1", "Spieler2", … – umbenennen geht jederzeit.
+	amServer := isServerMachine(r)
 
 	mu.Lock()
 	room := rooms[input.Room]
@@ -204,29 +204,59 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		if otherCode == input.Room {
 			continue
 		}
-		if _, ok := other.Players[input.ID]; ok {
+		if gewechselt, ok := other.Players[input.ID]; ok {
 			delete(other.Players, input.ID)
+			// Wer in einen anderen Raum wechselt, verlässt diesen hier.
+			other.addMessage(Message{
+				Name:     gewechselt.Name,
+				Text:     "verlässt den Raum.",
+				Time:     time.Now().Format("15:04:05"),
+				SenderID: input.ID,
+				Gone:     true,
+			})
 			other.cleanPlayers()
 			other.LastActive = time.Now()
 		}
 	}
 	room.cleanPlayers()
+	if input.Name == "" {
+		if amServer {
+			input.Name = "Boss"
+		} else {
+			input.Name = room.freierName("Spieler")
+		}
+	}
 	// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder als der
 	// Admin ausgeben.
 	name := room.uniqueName(input.Name, input.ID)
 	// Admin ist der Spieler am Server-PC. Seine Anfrage kommt von einer lokalen
 	// Adresse, egal ob über localhost oder die LAN-IP aufgerufen wird.
-	if room.OwnerID == "" || (room.OwnerID != input.ID && isServerMachine(r)) {
+	if room.OwnerID == "" || (room.OwnerID != input.ID && amServer) {
 		room.OwnerID = input.ID
 		room.OwnerName = name
 		room.Name = roomTitle(name)
 	}
 	player, known := room.Players[input.ID]
 	if !known {
+		// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.
+		text := "betritt den Raum."
+		if amServer {
+			text = "ist da!"
+		}
 		room.addMessage(Message{
-			Text:   name + " betritt die Spielwiese",
-			Time:   time.Now().Format("15:04:05"),
-			System: true,
+			Name:     name,
+			Text:     text,
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+	} else if player.Name != "" && player.Name != name {
+		// Umbenennen einmal im Chat bekanntgeben – mit dem alten Namen als
+		// Absender, damit die Zeile "Anna: heißt jetzt Alex." lesbar bleibt.
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "heißt jetzt " + name + ".",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
 		})
 	}
 	player.Name = name
@@ -237,8 +267,10 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	}
 	room.Players[input.ID] = player
 	room.LastActive = time.Now()
+	code := room.Code
 	mu.Unlock()
-	w.WriteHeader(http.StatusNoContent)
+	// Der vergebene Name geht zurück, damit die Seite ihn anzeigen kann.
+	jsonResponse(w, map[string]string{"name": name, "room": code})
 }
 
 // playersHandler returns list of players in a room and room meta (like ownerId).

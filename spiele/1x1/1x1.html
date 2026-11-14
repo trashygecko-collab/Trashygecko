@@ -33,6 +33,13 @@ body {
     box-shadow: 0 0 18px #0077ff33, 0 0 40px #00c8ff18;
 }
 
+a.back {
+    display: block;
+    box-sizing: border-box;
+    text-align: center;
+    text-decoration: none;
+}
+
 h1 {
     margin: 0;
     text-align: center;
@@ -102,6 +109,14 @@ h2 {
     color: #ff55dc;
 }
 
+.menu-button:nth-child(3) .menu-title {
+    color: #ffc857;
+}
+
+.menu-button:nth-child(4) .menu-title {
+    color: #43ff91;
+}
+
 .menu-description {
     display: block;
     color: #a0b5d0;
@@ -113,7 +128,9 @@ h2 {
 
 #levelScreen,
 #gameScreen,
-#endScreen {
+#endScreen,
+#zahlenScreen,
+#kettenScreen {
     display: none;
 }
 
@@ -306,6 +323,31 @@ h2 {
     color: #ff7190;
 }
 
+.merken-zahl {
+    font-size: clamp(20px, 6.4vw, 34px);
+    letter-spacing: .12em;
+    color: #00f0ff;
+    text-shadow: 0 0 10px #00dfff, 0 0 26px #008cff;
+    word-break: break-all;
+}
+
+.merken-frage {
+    color: #ff55dc;
+    text-shadow: 0 0 10px #ff00c8;
+}
+
+.kette {
+    font-size: clamp(17px, 4.9vw, 26px);
+    line-height: 1.6;
+    letter-spacing: .04em;
+    color: #eaf6ff;
+}
+
+.kette-frage {
+    color: #ff55dc;
+    text-shadow: 0 0 10px #ff00c8;
+}
+
 /* TASTEN */
 
 .keypad {
@@ -471,12 +513,14 @@ h2 {
 }
 /* --- Online-Rennen im Connector ------------------------------------- */
 
-body.online         /* Der Verlassen-Knopf gehört nur in den Online-Betrieb. */
-        body:not(.online) [data-tg-verlassen] {
-            display: none;
-        }
+/* Der Verlassen-Knopf gehört nur in den Online-Betrieb. */
+body:not(.online) [data-tg-verlassen] {
+    display: none;
+}
 
-        .nur-lokal { display: none !important; }
+body.online .nur-lokal {
+    display: none !important;
+}
 
 .stat.zeit { display: none; }
 
@@ -622,7 +666,27 @@ body.online .stat.zeit { display: block; }
                 </span>
             </button>
 
+            <button class="menu-button" onclick="selectNumbers()">
+                <span class="menu-title">123 ZAHLEN MERKEN</span>
+                <span class="menu-description">
+                    Zahl ansehen, merken und eintippen.<br>
+                    Fünf Zahlen pro Spiel.
+                </span>
+            </button>
+
+            <button class="menu-button" onclick="selectSequences()">
+                <span class="menu-title">→ ZAHLENKETTEN</span>
+                <span class="menu-description">
+                    Muster erkennen und die nächste Zahl finden.<br>
+                    Drei Stufen, fünf Ketten pro Spiel.
+                </span>
+            </button>
+
         </div>
+
+        <a class="back nur-lokal" href="../spiele.html">
+            ← ZU DEN SPIELEN
+        </a>
 
     </div>
 
@@ -649,6 +713,93 @@ body.online .stat.zeit { display: block; }
             <button class="level-button" onclick="startGame(3)">
                 <span class="level-title">STUFE 3 · SCHWER</span>
                 <span class="level-description" id="desc3"></span>
+            </button>
+
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← ZURÜCK
+        </button>
+
+    </div>
+
+    <!-- ZAHLEN MERKEN: ZIFFERNZAHL AUSWÄHLEN -->
+
+    <div id="zahlenScreen">
+
+        <h2>WIE VIELE ZIFFERN?</h2>
+
+        <div class="intro">
+            Merke dir die angezeigte Zahl und tippe sie danach ein.<br>
+            Ein Spiel besteht aus fünf Zahlen.
+        </div>
+
+        <div class="levels">
+
+            <button class="level-button" onclick="startNumbersGame(5)">
+                <span class="level-title">5 ZIFFERN</span>
+                <span class="level-description">Kurz und knackig.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(6)">
+                <span class="level-title">6 ZIFFERN</span>
+                <span class="level-description">Eine Ziffer mehr.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(7)">
+                <span class="level-title">7 ZIFFERN</span>
+                <span class="level-description">Jetzt wird es knifflig.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(8)">
+                <span class="level-title">8 ZIFFERN</span>
+                <span class="level-description">Volle Konzentration.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(9)">
+                <span class="level-title">9 ZIFFERN</span>
+                <span class="level-description">Für geübte Köpfe.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(10)">
+                <span class="level-title">10 ZIFFERN</span>
+                <span class="level-description">Meisterklasse.</span>
+            </button>
+
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← ZURÜCK
+        </button>
+
+    </div>
+
+    <!-- ZAHLENKETTEN: STUFE AUSWÄHLEN -->
+
+    <div id="kettenScreen">
+
+        <h2>ZAHLENKETTEN</h2>
+
+        <div class="intro">
+            Erkenne das Muster und tippe die nächste Zahl ein.<br>
+            Ein Spiel besteht aus fünf Ketten.
+        </div>
+
+        <div class="levels">
+
+            <button class="level-button" onclick="startSequenceGame(1)">
+                <span class="level-title">STUFE 1 · LEICHT</span>
+                <span class="level-description">Gleicher Schritt bis 5 · Zahlen bis 100</span>
+            </button>
+
+            <button class="level-button" onclick="startSequenceGame(2)">
+                <span class="level-title">STUFE 2 · MITTEL</span>
+                <span class="level-description">Gleicher Schritt bis 10 · Zahlen bis 200</span>
+            </button>
+
+            <button class="level-button" onclick="startSequenceGame(3)">
+                <span class="level-title">STUFE 3 · SCHWER</span>
+                <span class="level-description">Zwei wechselnde Schritte</span>
             </button>
 
         </div>
@@ -730,7 +881,7 @@ body.online .stat.zeit { display: block; }
 
         </div>
 
-        <button class="submit" id="submitButton" onclick="checkAnswer()">
+        <button class="submit" id="submitButton" onclick="submitAnswer()">
             ANTWORT
         </button>
 
@@ -750,11 +901,11 @@ body.online .stat.zeit { display: block; }
 
         <div class="final-text" id="finalText"></div>
 
-        <button class="restart nur-lokal" onclick="startGame(currentLevel)">
+        <button class="restart nur-lokal" onclick="nochEineRunde()">
             NOCH EINE RUNDE
         </button>
 
-        <button class="change-level nur-lokal" onclick="showLevelScreen()">
+        <button class="change-level nur-lokal" id="stufeButton" onclick="aendereStufe()">
             SCHWIERIGKEIT ÄNDERN
         </button>
 
@@ -787,6 +938,8 @@ body.online .stat.zeit { display: block; }
                 <select id="onlineMode">
                     <option value="arithmetic">Grundrechenarten</option>
                     <option value="equations">Gleichungen</option>
+                    <option value="memory">Zahlen merken</option>
+                    <option value="sequences">Zahlenketten</option>
                 </select>
             </label>
             <label>
@@ -825,7 +978,15 @@ let answer = "";
 let answered = false;
 let playing = false;
 
-const totalQuestions = 8;
+let totalQuestions = 8;
+
+// Zahlen merken
+let zahlenLaenge = 5;
+let merkenPhase = false;
+let merkenZahl = "";
+
+// Zahlenketten
+let ketteRegel = "";
 
 function randomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -887,6 +1048,8 @@ function showStartScreen() {
     document.getElementById("levelScreen").style.display = "none";
     document.getElementById("gameScreen").style.display = "none";
     document.getElementById("endScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
 }
 
 function showLevelScreen() {
@@ -897,6 +1060,84 @@ function showLevelScreen() {
     document.getElementById("levelScreen").style.display = "block";
     document.getElementById("gameScreen").style.display = "none";
     document.getElementById("endScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+}
+
+// ZAHLEN MERKEN
+
+function selectNumbers() {
+
+    playing = false;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "block";
+}
+
+// ZAHLENKETTEN
+
+function selectSequences() {
+
+    playing = false;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "block";
+}
+
+function startSequenceGame(stufe) {
+
+    currentMode = "sequences";
+    currentLevel = stufe;
+    totalQuestions = 5;
+    questionNumber = 0;
+    score = 0;
+    answer = "";
+    answered = false;
+    merkenPhase = false;
+    playing = true;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    document.getElementById("score").textContent = "0";
+
+    createQuestion();
+}
+
+function startNumbersGame(ziffern) {
+
+    currentMode = "numbers";
+    zahlenLaenge = ziffern;
+    totalQuestions = 5;
+    questionNumber = 0;
+    score = 0;
+    answer = "";
+    answered = false;
+    merkenPhase = false;
+    playing = true;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    document.getElementById("score").textContent = "0";
+
+    createQuestion();
 }
 
 // SPIELSTART
@@ -904,13 +1145,16 @@ function showLevelScreen() {
 function startGame(level) {
 
     currentLevel = level;
+    totalQuestions = 8;
     questionNumber = 0;
     score = 0;
     answer = "";
     answered = false;
+    merkenPhase = false;
     playing = true;
 
     document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
     document.getElementById("endScreen").style.display = "none";
     document.getElementById("gameScreen").style.display = "block";
 
@@ -923,7 +1167,11 @@ function startGame(level) {
 
 function createQuestion() {
 
-    if (currentMode === "arithmetic") {
+    if (currentMode === "numbers") {
+        createNumberQuestion();
+    } else if (currentMode === "sequences") {
+        createSequenceQuestion();
+    } else if (currentMode === "arithmetic") {
         createArithmeticQuestion();
     } else {
         createEquationQuestion();
@@ -935,9 +1183,6 @@ function createQuestion() {
     updateDisplay();
 
     document.getElementById("display").className = "display";
-
-    document.getElementById("feedback").textContent =
-        "Tippe unten deine Antwort ein.";
 
     document.getElementById("feedback").className = "feedback";
 
@@ -952,6 +1197,257 @@ function createQuestion() {
 
     document.getElementById("progressBar").style.width =
         ((questionNumber + 1) / totalQuestions * 100) + "%";
+
+    if (currentMode === "numbers") {
+
+        merkenPhase = true;
+
+        document.getElementById("display").style.display = "none";
+        document.querySelector(".answer-label").style.display = "none";
+
+        document.getElementById("feedback").textContent =
+            "Merke dir die Zahl und tippe dann auf FERTIG.";
+
+        document.getElementById("submitButton").textContent = "FERTIG";
+
+        document.querySelectorAll(".key").forEach(button => {
+            button.disabled = true;
+        });
+
+    } else {
+
+        merkenPhase = false;
+
+        document.getElementById("display").style.display = "";
+        document.querySelector(".answer-label").style.display = "";
+
+        document.getElementById("feedback").textContent =
+            "Tippe unten deine Antwort ein.";
+
+        document.getElementById("submitButton").textContent = "ANTWORT";
+    }
+}
+
+// ========================================
+// ZAHLEN MERKEN
+// ========================================
+
+function createNumberQuestion() {
+
+    let zahl = "";
+
+    for (let i = 0; i < zahlenLaenge; i++) {
+        zahl += (i === 0 ? randomNumber(1, 9) : randomNumber(0, 9));
+    }
+
+    merkenZahl = zahl;
+    correctAnswer = zahl;
+
+    document.getElementById("operation").textContent =
+        "MERKEN · " + zahlenLaenge + " ZIFFERN";
+
+    document.getElementById("question").innerHTML =
+        '<div class="merken-zahl">' + zahl + "</div>";
+}
+
+// ========================================
+// ZAHLENKETTEN
+// Sechs Zahlen sind sichtbar, die siebte ist gesucht.
+// ========================================
+
+const KETTEN_GLIEDER = 6;
+
+function ketteMitSchritt(start, art, schritt) {
+
+    const werte = [start];
+    const schritte = [];
+
+    for (let i = 0; i < KETTEN_GLIEDER; i++) {
+
+        let wert = werte[werte.length - 1];
+
+        if (art === "+") wert = wert + schritt;
+        else if (art === "−") wert = wert - schritt;
+        else if (art === "×") wert = wert * schritt;
+        else wert = wert / schritt;
+
+        if (!Number.isInteger(wert) || wert < 1) return null;
+
+        werte.push(wert);
+        schritte.push(art + schritt);
+    }
+
+    return { werte: werte, schritte: schritte };
+}
+
+// STUFE 1: ein Schritt bis 5, Zahlen bis 100
+
+function ketteLeicht() {
+
+    for (let versuch = 0; versuch < 300; versuch++) {
+
+        const wuerfel = randomNumber(1, 10);
+        const art = wuerfel <= 4 ? "+" : wuerfel <= 8 ? "−" : wuerfel === 9 ? "×" : "÷";
+        let start, schritt, kette;
+
+        if (art === "+") {
+
+            schritt = randomNumber(1, 5);
+            start = randomNumber(1, 100 - KETTEN_GLIEDER * schritt);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "−") {
+
+            schritt = randomNumber(1, 5);
+            start = randomNumber(KETTEN_GLIEDER * schritt + 1, 100);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "×") {
+
+            kette = ketteMitSchritt(1, art, 2);
+
+        } else {
+
+            kette = ketteMitSchritt(64, art, 2);
+        }
+
+        if (kette && Math.max.apply(null, kette.werte) <= 100) return kette;
+    }
+
+    return { werte: [2, 4, 6, 8, 10, 12, 14], schritte: ["+2", "+2", "+2", "+2", "+2", "+2"] };
+}
+
+// STUFE 2: ein Schritt bis 10, Zahlen bis 200
+
+function ketteMittel() {
+
+    for (let versuch = 0; versuch < 300; versuch++) {
+
+        const wuerfel = randomNumber(1, 100);
+        const art = wuerfel <= 36 ? "+" : wuerfel <= 72 ? "−" : wuerfel <= 86 ? "×" : "÷";
+        let start, schritt, kette;
+
+        if (art === "+") {
+
+            schritt = randomNumber(1, 10);
+            start = randomNumber(1, 200 - KETTEN_GLIEDER * schritt);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "−") {
+
+            schritt = randomNumber(1, 10);
+            start = randomNumber(KETTEN_GLIEDER * schritt + 1, 200);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "×") {
+
+            kette = ketteMitSchritt(randomNumber(1, 3), art, 2);
+
+        } else {
+
+            kette = ketteMitSchritt(64 * randomNumber(1, 3), art, 2);
+        }
+
+        if (kette && Math.max.apply(null, kette.werte) <= 200) return kette;
+    }
+
+    return { werte: [10, 20, 30, 40, 50, 60, 70], schritte: ["+10", "+10", "+10", "+10", "+10", "+10"] };
+}
+
+// STUFE 3: zwei wechselnde Schritte (z. B. +1, dann ×2)
+
+function ketteSchwer() {
+
+    for (let versuch = 0; versuch < 600; versuch++) {
+
+        const schritte = [];
+
+        for (let i = 0; i < 2; i++) {
+
+            const art = ["+", "−", "×", "÷"][randomNumber(0, 3)];
+            const wert = (art === "+" || art === "−")
+                ? randomNumber(1, 10)
+                : randomNumber(2, 5);
+
+            schritte.push({ art: art, wert: wert });
+        }
+
+        if (schritte[0].art === schritte[1].art) continue;
+
+        let wert = randomNumber(1, 25);
+        const werte = [wert];
+        const angewendet = [];
+        let passt = true;
+
+        for (let i = 0; i < KETTEN_GLIEDER; i++) {
+
+            const schritt = schritte[i % 2];
+
+            if (schritt.art === "+") wert = wert + schritt.wert;
+            else if (schritt.art === "−") wert = wert - schritt.wert;
+            else if (schritt.art === "×") wert = wert * schritt.wert;
+            else wert = wert / schritt.wert;
+
+            if (!Number.isInteger(wert) || wert < 1 || wert > 999) {
+                passt = false;
+                break;
+            }
+
+            werte.push(wert);
+            angewendet.push(schritt.art + schritt.wert);
+        }
+
+        if (passt && new Set(werte).size >= 5) return { werte: werte, schritte: angewendet };
+    }
+
+    return { werte: [5, 6, 12, 13, 26, 27, 54], schritte: ["+1", "×2", "+1", "×2", "+1", "×2"] };
+}
+
+function createSequenceQuestion() {
+
+    let kette;
+
+    if (currentLevel === 1) kette = ketteLeicht();
+    else if (currentLevel === 2) kette = ketteMittel();
+    else kette = ketteSchwer();
+
+    const werte = kette.werte;
+
+    correctAnswer = werte[werte.length - 1];
+    ketteRegel = regelText(kette.schritte);
+
+    const sichtbar = werte.slice(0, KETTEN_GLIEDER);
+
+    document.getElementById("operation").textContent =
+        "ZAHLENKETTE · " + ["LEICHT", "MITTEL", "SCHWER"][currentLevel - 1];
+
+    document.getElementById("question").innerHTML =
+        '<div class="kette">' + sichtbar.join(", ") +
+        ', <span class="kette-frage">?</span></div>';
+}
+
+// Regel fuer die Rueckmeldung: "immer + 2" oder "+ 1, dann × 2"
+
+function schrittName(schritt) {
+
+    const art = schritt.slice(0, 1);
+    const wert = schritt.slice(1);
+
+    if (art === "+") return "+ " + wert;
+    if (art === "−") return "− " + wert;
+    if (art === "×") return "× " + wert;
+
+    return "÷ " + wert;
+}
+
+function regelText(schritte) {
+
+    const erster = schritte[0];
+    const andere = schritte.filter(s => s !== erster);
+
+    if (!andere.length) return "Regel: immer " + schrittName(erster);
+
+    return "Regel: " + schrittName(erster) + ", dann " + schrittName(andere[0]);
 }
 
 // ========================================
@@ -1220,7 +1716,11 @@ function updateDisplay() {
 
 function addNumber(number) {
 
-    if (!playing || answered || answer.length >= 4) return;
+    if (!playing || answered || merkenPhase) return;
+
+    const maxZiffern = (currentMode === "numbers" || currentMode === "memory") ? zahlenLaenge : 4;
+
+    if (answer.length >= maxZiffern) return;
 
     if (answer === "0") {
         answer = number;
@@ -1251,6 +1751,41 @@ function deleteNumber() {
 // ANTWORT PRÜFEN
 // ========================================
 
+function submitAnswer() {
+
+    if (merkenPhase) {
+        merkenFertig();
+        return;
+    }
+
+    checkAnswer();
+}
+
+function merkenFertig() {
+
+    if (!playing || !merkenPhase) return;
+
+    merkenPhase = false;
+    answer = "";
+
+    updateDisplay();
+
+    document.getElementById("display").style.display = "";
+    document.querySelector(".answer-label").style.display = "";
+
+    document.getElementById("question").innerHTML =
+        '<div class="merken-frage">?</div>';
+
+    document.getElementById("feedback").textContent =
+        "Und? Wie lautete die Zahl?";
+
+    document.getElementById("submitButton").textContent = "ANTWORT";
+
+    document.querySelectorAll(".key").forEach(button => {
+        button.disabled = false;
+    });
+}
+
 function checkAnswer() {
 
     if (!playing || answered) return;
@@ -1275,7 +1810,11 @@ function checkAnswer() {
     const display = document.getElementById("display");
     const feedback = document.getElementById("feedback");
 
-    if (userAnswer === correctAnswer) {
+    const richtig = currentMode === "numbers"
+        ? answer === String(correctAnswer)
+        : userAnswer === correctAnswer;
+
+    if (richtig) {
 
         score++;
 
@@ -1288,8 +1827,9 @@ function checkAnswer() {
         display.className = "display wrong";
         feedback.className = "feedback bad";
 
-        feedback.textContent =
-            "✗ Falsch! Richtig ist: " + correctAnswer;
+        feedback.textContent = currentMode === "sequences"
+            ? "✗ Falsch! Richtig ist: " + correctAnswer + " · " + ketteRegel
+            : "✗ Falsch! Richtig ist: " + correctAnswer;
     }
 
     document.getElementById("score").textContent = score;
@@ -1331,22 +1871,68 @@ function finishGame() {
 
     let message;
 
+    const anteil = totalQuestions ? score / totalQuestions : 0;
+
     if (score === totalQuestions) {
-        message = "Fantastisch! Acht von acht richtig!";
-    } else if (score >= 6) {
+        message = "Fantastisch! " + score + " von " + totalQuestions + " richtig!";
+    } else if (anteil >= 0.75) {
         message = "Super gemacht! Das war eine starke Runde.";
-    } else if (score >= 4) {
+    } else if (anteil >= 0.5) {
         message = "Gut gemacht! Du bist auf einem guten Weg.";
-    } else if (score >= 2) {
+    } else if (anteil >= 0.25) {
         message = "Da geht noch was! Versuch es gleich noch einmal.";
     } else {
         message = "Übung macht den Meister. Gib nicht auf!";
     }
 
+    let modusText;
+
+    if (currentMode === "numbers") {
+
+        modusText = "Zahlen merken · " + zahlenLaenge + " Ziffern";
+
+    } else if (currentMode === "sequences") {
+
+        modusText = "Zahlenketten · " +
+            ["Leicht", "Mittel", "Schwer"][currentLevel - 1];
+
+    } else {
+
+        modusText = (currentMode === "arithmetic" ? "Grundrechenarten" : "Gleichungen") +
+            " · Schwierigkeitsstufe " + currentLevel;
+    }
+
     document.getElementById("finalText").textContent =
-        message + "\n\n" +
-        (currentMode === "arithmetic" ? "Grundrechenarten" : "Gleichungen") +
-        " · Schwierigkeitsstufe " + currentLevel;
+        message + "\n\n" + modusText;
+
+    document.getElementById("stufeButton").textContent =
+        currentMode === "numbers" ? "ZIFFERN ÄNDERN"
+            : currentMode === "sequences" ? "STUFE ÄNDERN"
+            : "SCHWIERIGKEIT ÄNDERN";
+}
+
+// NOCH EINE RUNDE / STUFE ÄNDERN
+
+function nochEineRunde() {
+
+    if (currentMode === "numbers") {
+        startNumbersGame(zahlenLaenge);
+    } else if (currentMode === "sequences") {
+        startSequenceGame(currentLevel);
+    } else {
+        startGame(currentLevel);
+    }
+}
+
+function aendereStufe() {
+
+    if (currentMode === "numbers") {
+        selectNumbers();
+    } else if (currentMode === "sequences") {
+        selectSequences();
+    } else {
+        showLevelScreen();
+    }
 }
 
 // PC-TASTATUR
@@ -1368,7 +1954,7 @@ document.addEventListener("keydown", function(event) {
     }
 
     else if (event.key === "Enter") {
-        checkAnswer();
+        submitAnswer();
     }
 });
 
@@ -1406,7 +1992,7 @@ function escapeHtml(s) {
 }
 
 function screens(ids) {
-    ["startScreen", "levelScreen", "gameScreen", "endScreen", "onlineLobby"].forEach(id => {
+    ["startScreen", "levelScreen", "zahlenScreen", "kettenScreen", "gameScreen", "endScreen", "onlineLobby"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = ids.indexOf(id) >= 0 ? "block" : "none";
     });
@@ -1517,8 +2103,8 @@ function showOnlineLobby(view) {
     }
 
     meta.textContent =
-        (view.mode === "equations" ? "GLEICHUNGEN" : "GRUNDRECHENARTEN") + " · " +
-        ["LEICHT", "MITTEL", "SCHWER"][view.level - 1] + " · " +
+        onlineModusText(view.mode) + " · " +
+        onlineStufeText(view.mode, view.level) + " · " +
         view.seats.length + " von 7 Plätzen · " + view.count + " Aufgaben";
 
     // Eine Fehlermeldung soll nicht im nächsten Takt verschwinden.
@@ -1545,7 +2131,46 @@ function showOnlineLobby(view) {
 
     settings.style.display = view.isHost ? "flex" : "none";
     document.getElementById("onlineMode").value = view.mode;
-    document.getElementById("onlineLevel").value = String(view.level);
+    onlineStufenFuellen(view.mode, view.level);
+}
+
+// Namen für Modus und Stufe im Rennen
+
+function onlineModusText(mode) {
+    if (mode === "equations") return "GLEICHUNGEN";
+    if (mode === "memory") return "ZAHLEN MERKEN";
+    if (mode === "sequences") return "ZAHLENKETTEN";
+    return "GRUNDRECHENARTEN";
+}
+
+function onlineStufeText(mode, level) {
+    if (mode === "memory") return level + " Ziffern";
+    return ["LEICHT", "MITTEL", "SCHWER"][level - 1] || "LEICHT";
+}
+
+// Ziffern 5..10 statt Stufen, sobald "Zahlen merken" gewählt ist.
+
+function onlineStufenFuellen(mode, level) {
+
+    const select = document.getElementById("onlineLevel");
+    if (!select) return;
+
+    const werte = mode === "memory"
+        ? [5, 6, 7, 8, 9, 10].map(z => [String(z), z + " Ziffern"])
+        : [["1", "Leicht"], ["2", "Mittel"], ["3", "Schwer"]];
+
+    const aktuell = level === undefined ? select.value : String(level);
+
+    select.innerHTML = "";
+
+    werte.forEach(([wert, text]) => {
+        const opt = document.createElement("option");
+        opt.value = wert;
+        opt.textContent = text;
+        select.appendChild(opt);
+    });
+
+    select.value = werte.some(([wert]) => wert === aktuell) ? aktuell : werte[0][0];
 }
 
 function renderRace(view) {
@@ -1563,12 +2188,22 @@ function renderRace(view) {
 
     document.getElementById("operation").textContent =
         "AUFGABE " + (view.index + 1) + " VON " + view.count + " · " +
-        (view.mode === "equations" ? "GLEICHUNGEN" : "GRUNDRECHENARTEN") + " · STUFE " + view.level;
+        onlineModusText(view.mode) + " · " + onlineStufeText(view.mode, view.level);
 
     const zeilen = view.lines || [];
-    document.getElementById("question").innerHTML = zeilen.map((zeile, i) =>
-        '<div class="equation-line' + (i === zeilen.length - 1 ? " target" : "") + '">' + escapeHtml(zeile) + "</div>"
-    ).join("");
+    const erinnerung = view.mode === "memory";
+
+    currentMode = erinnerung ? "memory" : "online";
+    zahlenLaenge = erinnerung ? String(zeilen[0] || "").length : 5;
+
+    if (erinnerung) {
+        document.getElementById("question").innerHTML =
+            '<div class="merken-zahl">' + escapeHtml(zeilen[0] || "") + "</div>";
+    } else {
+        document.getElementById("question").innerHTML = zeilen.map((zeile, i) =>
+            '<div class="equation-line' + (i === zeilen.length - 1 ? " target" : "") + '">' + escapeHtml(zeile) + "</div>"
+        ).join("");
+    }
 
     document.getElementById("questionCount").textContent = (view.index + 1) + " / " + view.count;
     document.getElementById("progressBar").style.width = (view.index / view.count * 100) + "%";
@@ -1577,9 +2212,27 @@ function renderRace(view) {
     updateDisplay();
     document.getElementById("display").className = "display";
     document.getElementById("feedback").className = "feedback";
-    document.getElementById("feedback").textContent = "Tippe unten deine Antwort ein.";
     document.getElementById("submitButton").disabled = false;
     document.querySelectorAll(".key").forEach(button => { button.disabled = false; });
+
+    merkenPhase = erinnerung;
+
+    if (erinnerung) {
+
+        document.getElementById("display").style.display = "none";
+        document.querySelector(".answer-label").style.display = "none";
+        document.getElementById("feedback").textContent =
+            "Merke dir die Zahl und tippe dann auf FERTIG.";
+        document.getElementById("submitButton").textContent = "FERTIG";
+        document.querySelectorAll(".key").forEach(button => { button.disabled = true; });
+
+    } else {
+
+        document.getElementById("display").style.display = "";
+        document.querySelector(".answer-label").style.display = "";
+        document.getElementById("feedback").textContent = "Tippe unten deine Antwort ein.";
+        document.getElementById("submitButton").textContent = "ANTWORT";
+    }
 
     renderStand(view);
 }
@@ -1629,7 +2282,7 @@ function sendAnswer() {
         feedback.className = "feedback " + (data.correct ? "good" : "bad");
         feedback.textContent = data.correct
             ? "✓ RICHTIG!"
-            : "✗ Falsch! Richtig ist: " + data.answer;
+            : "✗ Falsch! Richtig ist: " + data.answer + (data.rule ? " · " + data.rule : "");
         setTimeout(() => {
             onlineAnswering = false;
             applyOnline(data.game);
@@ -1686,7 +2339,10 @@ if (ONLINE) {
     document.getElementById("onlineJoin").onclick = () => { onlineAction("join"); };
     document.getElementById("onlineReady").onclick = () => { onlineAction("ready"); };
     document.getElementById("onlineStart").onclick = () => { onlineAction("start"); };
-    document.getElementById("onlineMode").onchange = onlineSettings;
+    document.getElementById("onlineMode").onchange = () => {
+        onlineStufenFuellen(document.getElementById("onlineMode").value);
+        onlineSettings();
+    };
     document.getElementById("onlineLevel").onchange = onlineSettings;
     document.getElementById("onlineLeave").onclick = leaveOnline;
     document.getElementById("onlineBack").onclick = leaveOnline;

@@ -41,6 +41,8 @@ type Message struct {
 	Game   string `json:"game,omitempty"`
 	GameID string `json:"gameId,omitempty"`
 	System bool   `json:"system,omitempty"`
+	// Gone markiert "verlässt den Raum" – der Name ist dann nicht anklickbar.
+	Gone bool `json:"gone,omitempty"`
 }
 
 type Player struct {
@@ -135,10 +137,13 @@ func (r *Room) cleanPlayers() {
 	for id, p := range r.Players {
 		if now.Sub(p.Last) > presenceTimeout {
 			delete(r.Players, id)
+			// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.
 			r.addMessage(Message{
-				Text:   p.Name + " verlässt die Räuberhöhle",
-				Time:   now.Format("15:04:05"),
-				System: true,
+				Name:     p.Name,
+				Text:     "verlässt den Raum.",
+				Time:     now.Format("15:04:05"),
+				SenderID: id,
+				Gone:     true,
 			})
 		}
 	}
@@ -270,6 +275,24 @@ func (r *Room) uniqueName(name, id string) string {
 			return candidate
 		}
 	}
+}
+
+// freierName findet den ersten freien Namen der Form "Spieler1", "Spieler2", …
+func (r *Room) freierName(basis string) string {
+	belegt := func(kandidat string) bool {
+		for _, p := range r.Players {
+			if strings.EqualFold(p.Name, kandidat) {
+				return true
+			}
+		}
+		return false
+	}
+	for i := 1; i < 100; i++ {
+		if kandidat := basis + strconv.Itoa(i); !belegt(kandidat) {
+			return kandidat
+		}
+	}
+	return basis
 }
 
 // warnIdle meldet Spieler, die seit über einer Minute nichts getan haben. Der

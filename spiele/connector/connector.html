@@ -249,7 +249,7 @@ html:fullscreen body{padding:18px}
 <button onclick="joinSingleRoom()">Raum betreten</button>
 <button type="button" id="nameChange" class="mini">Namen ändern</button>
 </div>
-<p class="empty">Es gibt genau einen Raum – alle treffen sich dort. Wer am Rechner sitzt, auf dem der Connector läuft, ist der Admin.</p>
+<p class="empty">Es gibt genau einen Raum – alle treffen sich dort. Wer am Rechner sitzt, auf dem der Connector läuft, ist der Admin und heißt ohne eigenen Namen „Boss“. Wer über die Adresse dazukommt, ist „Spieler1“, „Spieler2“ und so weiter. Umbenennen geht jederzeit über „Namen ändern“.</p>
 </section>
 
 <button type="button" id="fullscreenBtn" title="Vollbild ein/aus" aria-label="Vollbild"><span id="fsIcon">⛶</span><span id="fsWord">Vollbild</span></button>
@@ -407,8 +407,10 @@ function setRoomStatus(text){
  el.hidden=!text;
 }
 
+// Ohne eigenen Namen entscheidet der Server: "Boss" am Server-PC, sonst
+// "Spieler1", "Spieler2", …
 function playerName(){
- return document.getElementById("player").value.trim()||"Spieler";
+ return document.getElementById("player").value.trim();
 }
 
 async function loadStatus(){
@@ -495,6 +497,13 @@ async function join(roomDisplayName){
    body:JSON.stringify({room:code,id:sessionID,name:playerName()})
   });
   if(!p.ok)throw Error(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen.");
+  // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
+  // "Spieler1" …). Den zeigen wir an und behalten ihn.
+  const vergeben=await p.json().catch(()=>({}));
+  if(vergeben&&vergeben.name&&!nameField.value.trim()){
+   nameField.value=vergeben.name;
+   try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+  }
   activeRoom=code;
   // Merken, damit ein neu geladener Tab (Handy im Hintergrund) direkt wieder
   // im Raum landet, statt den Namen erneut zu verlangen.
@@ -1304,9 +1313,10 @@ async function refreshEinsxeins(players){
   return;
  }
 
- const art=game.mode==="equations"?"Gleichungen":"Grundrechenarten";
+ const art=game.mode==="equations"?"Gleichungen":game.mode==="memory"?"Zahlen merken":game.mode==="sequences"?"Zahlenketten":"Grundrechenarten";
+ const stufe=game.mode==="memory"?game.level+" Ziffern":"Stufe "+game.level;
  const fertig=game.seats.filter(p=>p.done).length;
- tttStatus("1×1-Rennen läuft ("+art+", Stufe "+game.level+") – "+fertig+" von "+game.seats.length+" fertig.", "einsxeins");
+ tttStatus("1×1-Rennen läuft ("+art+", "+stufe+") – "+fertig+" von "+game.seats.length+" fertig.", "einsxeins");
  if(me){
   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
  }
@@ -1989,7 +1999,7 @@ async function refresh(){
    const d=document.createElement("div");
    d.className="msg";
 
-   // Systemmeldungen wie "Anna betritt die Spielwiese" laufen ohne Absender.
+   // Systemmeldungen (z. B. "X verlässt die Räuberhöhle") laufen ohne Absender.
    if(m.system){
     d.className="msg msg-system";
     d.textContent=m.text;
@@ -2051,8 +2061,9 @@ async function refresh(){
     }
    }else{
     const nameWrapper=document.createElement("span");
-    // Ein Klick auf einen fremden Namen öffnet lieb / witzig / böse.
-    if(m.senderId && m.senderId!==sessionID && !m.whisper){
+    // Ein Klick auf einen fremden Namen öffnet lieb / witzig / böse –
+    // nicht bei "verlässt den Raum.", weil dort niemand mehr antwortet.
+    if(m.senderId && m.senderId!==sessionID && !m.whisper && !m.gone){
      const nameBtn=document.createElement("button");
      nameBtn.type="button";
      nameBtn.className="chat-name-btn";
