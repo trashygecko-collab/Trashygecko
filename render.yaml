@@ -1,0 +1,31 @@
+# Render-Blueprint für den TrashyGecko Connector.
+#
+# In Render: "New +" -> "Blueprint" -> Repository wählen. Render liest diese
+# Datei und legt den Dienst an; der Rest passiert beim Deploy.
+#
+# Der Dienst läuft als Docker-Container (siehe spiele/connector-online/Dockerfile).
+# Free-Plan: schläft nach 15 Minuten ohne Anfrage ein – solange jemand die
+# Seite offen hat, bleibt er wach.
+services:
+  - type: web
+    name: trashygecko-connector
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./spiele/connector-online/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/status
+    envVars:
+      # Die Webseite liegt im Abbild unter /app/webseite (siehe Dockerfile).
+      - key: SITE_DIR
+        value: /app/webseite
+
+    # Eigene Domain: Namen eintragen und die Rauten davor entfernen, dann
+    # Blueprint erneut anwenden. Render zeigt danach im Dashboard den nötigen
+    # DNS-Eintrag (CNAME) an, den man beim Domain-Anbieter setzt.
+    # Eine Unterdomain genügt, z. B.:
+    # domains:
+    #   - spiele.example.de
+    #
+    # Ohne eigene Domain läuft alles über die Adresse
+    # https://trashygecko-connector.onrender.com – dort nichts weiter zu tun.

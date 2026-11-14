@@ -1,0 +1,460 @@
+==============================================================================
+ TRASHYGECKO – DIE HOMEPAGE UND DER CONNECTOR
+ Anleitung: was welche Datei macht, wofür sie gebraucht wird und wie man
+ alles startet, ändert und ins Internet bringt.
+==============================================================================
+
+
+1. WAS IST DAS ÜBERHAUPT?
+------------------------------------------------------------------------------
+
+Die Homepage ist eine Sammlung von ganz normalen Webseiten: HTML-Dateien mit
+Bildern, CSS und etwas JavaScript. Sie braucht keinen Server – man kann sie
+lokal im Browser öffnen oder als Ordner hochladen.
+
+Ein Teil davon sind Spiele (Ordner "spiele"). Viele Spiele laufen allein im
+Browser. Ein paar Spiele kann man zu zweit spielen, und dafür gibt es den
+Connector: ein kleines Programm (Go), das auf einem Rechner läuft und die
+Spieleseiten ausliefert. Alle Geräte im selben Netz öffnen dann die Seite des
+Connectors, landen im selben Raum, können chatten und gegeneinander spielen.
+
+Es gibt zwei Fassungen des Connectors:
+
+  spiele\connector\          für den eigenen PC (Doppelklick, Browser geht auf)
+  spiele\connector-online\   für einen Server im Internet
+
+Beide benutzen denselben Spielcode. Der Online-Ordner bekommt die gemeinsamen
+Dateien per Kopierskript aus dem normalen Connector-Ordner.
+
+
+2. DER ORDNER "Homepage" VON OBEN
+------------------------------------------------------------------------------
+
+index.html            Startseite der Homepage
+main.css              Aussehen der normalen Seiten
+monofonto.ttf         Schriftart
+spiele\               alle Spiele (siehe Punkt 5)
+spiele\spiele.html    Übersicht aller Spiele (Kachel-Liste)
+spiele\netz.js        kleiner Helfer, den mehrere Spieleseiten benutzen
+
+Inhaltliche Seiten, jeweils mit eigener Startseite im Ordner:
+
+anbau\        Anbau/Garten (Anbau, Cannabis, Kräuter, Salat)
+bucher\       Buchbesprechungen
+cheats\       Cheats zu Computerspielen
+css\         CSS-Nachschlagewerk mit Beispielen
+filme\        Filme nach Genres
+gedichte\     eigene Gedichte
+html\         HTML-Nachschlagewerk mit Beispielen
+musik\        Musikrichtungen und Künstler
+rezepte\      Kochrezepte
+russisch\     Russisch-Lernseiten (mit eigener Bildschirmtastatur)
+script\       JavaScript-Beispiele
+seiten\       Link- und Themensammlung
+sprueche\     Sprüche
+tagebuch\     Tagebuch
+tipps\        Computer-Tipps
+weisheiten\   Weisheiten
+witze\        Witze
+youtube\      YouTube-Kanäle nach Themen
+
+Diese Ordner sind reine Webseiten: ändern heißt HTML-Datei bearbeiten,
+fertig. Kein Neustart, kein Bauen.
+
+
+3. DEN CONNECTOR LOKAL STARTEN
+------------------------------------------------------------------------------
+
+1. Ordner "spiele\connector" öffnen.
+2. "trashygecko-connector.exe" doppelklicken.
+3. Der Browser geht von selbst auf: http://localhost:8765/connector
+   (ist 8765 belegt, nimmt das Programm den nächsten freien Port bis 8785).
+   Die Seite betritt den Raum sofort von allein – ohne Klick und ohne Namen.
+   Der Rechner, auf dem der Connector läuft, heißt dabei "Boss" und ist
+   Admin; jedes andere Gerät bekommt "Spieler1", "Spieler2" und so weiter.
+4. Auf der Seite steht die Adresse für Mitspieler und ein QR-Code. Handy im
+   selben WLAN: Code scannen oder Adresse eintippen, z. B.
+   http://192.168.1.20:8765/connector
+5. Fragt Windows nach der Firewall, "Zugriff zulassen" anklicken – sonst
+   kommt das Handy nicht durch.
+
+Der Connector sucht die Homepage selbst: Er geht vom eigenen Ordner nach oben,
+bis er "spiele\connector" oder eine "index.html" findet. Deshalb darf der
+ganze Ordner verschoben oder umbenannt werden. Alternativ kann man einen
+Ordner als Argument mitgeben (Verknüpfung: "...\trashygecko-connector.exe"
+"C:\Pfad\zur\Homepage").
+
+Beenden: das schwarze Fenster schließen (oder Strg+C).
+
+Wichtig: Solange der Connector läuft, sind die Spiele nur über ihn erreichbar,
+wenn sie die Spiel-APIs benutzen. Die normalen Seiten funktionieren auch ohne
+ihn, wenn man die HTML-Dateien direkt öffnet.
+
+
+4. DIE DATEIEN IM CONNECTOR-ORDNER
+------------------------------------------------------------------------------
+
+4.1 Die Oberfläche
+
+connector.html
+  Die Seite, die man im Browser sieht: oben Adresse und QR-Code, dann drei
+  Knöpfe (Einzelspieler, Multiplayer, Namen ändern), darunter der Chat.
+  Wird vom Programm ausgeliefert, damit sie immer zur laufenden Fassung passt.
+  Hier ändert man Aussehen und Texte.
+
+  Die drei Knöpfe schalten zwischen drei Ansichten um (#soloPanel,
+  #multiPanel, #namePanel); genau eine ist sichtbar, der Chat bleibt immer
+  stehen:
+    Einzelspieler   alle Spiele aus spiele\spiele.html, alleine spielbar
+    Multiplayer     Spiel wählen und "Runde anbieten" – alle im Raum sehen
+                    die Karte im Chat und treten mit "Mitspielen" bei
+    Namen ändern    Namensfeld mit dem eigenen Namen daneben
+
+  Wichtige Stellen darin:
+    playerName()      liest den eigenen Namen aus dem Feld
+    join()            betritt den Raum (Server vergibt notfalls einen Namen)
+    joinSingleRoom()  betritt den einen Raum von allein – beim Laden der Seite
+    nameUebernehmen() übernimmt den Namen aus dem Feld (Enter oder Klick daneben)
+    setModus()        schaltet Einzelspieler / Multiplayer / Namen ändern um
+    renderGamePicker() zeichnet Spieleauswahl, Mitspieler und offenes Angebot
+    angebotAktion()   bietet eine Runde an, tritt bei oder zieht zurück
+    beitreten()       tritt dem offenen Angebot bei und öffnet das Spiel
+    send()            schickt eine Chat-Nachricht, versteht "/f Name: Text"
+    refresh()         holt Spieler und Chat und zeichnet die Liste
+    loadStatus()      holt Adresse + QR-Code vom Server
+
+4.2 Der Start
+
+main.go
+  Nur für den lokalen Betrieb: sucht die Homepage, sucht einen freien Port,
+  öffnet den Browser, startet den Server. Enthält außerdem die Erkennung, ob
+  eine Anfrage vom eigenen PC kommt (das ist der "Boss").
+
+server.go
+  Die gemeinsame Endpunkt-Liste: alle /api/...-Adressen, die Connector-Seite
+  und die Homepage als statische Dateien. Beide Fassungen (lokal und online)
+  rufen routes() auf. Ein neues Spiel bekommt hier seine Zeile – dann kennt es
+  auch die Online-Fassung, ohne dass dort etwas geändert werden muss.
+
+  Außerdem: withActivity (zählt echte Aktionen für die "weg"-Anzeige) und
+  randomCode (erzeugt Kennungen wie "TG-1F4A" für Räume und Partien).
+
+status.go
+  Liefert /api/status: welche Netzwerkadressen dieser PC hat, auf welchem Port
+  der Connector läuft und welche Adresse Mitspieler eintippen sollen.
+
+qr.go
+  Erzeugt den QR-Code für die Beitritts-Adresse (nur für Adressen dieses PCs).
+
+4.3 Räume, Spieler, Chat
+
+lobby.go
+  Der eine Raum, den es gibt (er wird beim Start angelegt), Betreten des
+  Raums (/api/presence), Spielerliste (/api/players), Raumliste (/api/rooms).
+  Hier entstehen die Namen: Wer ohne Namen kommt, wird am Server-PC "Boss",
+  sonst "Spieler1", "Spieler2", … Der Boss ist Admin. Außerdem stehen hier
+  die Beitrittsmeldungen im Chat ("Boss: ist da!", "Spieler1: betritt den
+  Raum.") – und danach eine Begrüßung als Flüstern von "Der Raum" an den
+  Neuen ("Hallo und herzlich willkommen!"), die nur er selbst liest.
+
+  bossErkennen ist der Haken, wer als Boss gilt: lokal der PC, auf dem der
+  Connector läuft; online der erste Besucher (siehe netz.go im Online-Ordner).
+
+types.go
+  Die Datenstrukturen: Room (Raum mit Spielern, Nachrichten, laufenden
+  Partien) und Player. Dazu die Hausmeisterei: cleanPlayers wirft Spieler
+  hinaus, die zu lange nichts geschickt haben (und schreibt "verlässt den
+  Raum." in den Chat), freierName vergibt Spieler1/2/…, uniqueName verhindert
+  doppelte Namen, limitName kürzt zu lange Namen. startRoomJanitor räumt im
+  Hintergrund auf.
+
+chat.go
+  Chat lesen und schreiben (/api/messages). Versteht zwei Befehle:
+    /f Name: Text    flüstern, nur der Genannte liest mit
+    /Admin Admin     sich selbst zum Admin machen (siehe Punkt 7)
+  Außerdem: Spam-Bremse (5 Nachrichten in 10 Sekunden) und Prüfung, ob der
+  Absender stummgeschaltet ist.
+
+moderation.go
+  Stummschalten für 1–3 Minuten (/api/moderation). Darf nur der Admin.
+
+leave.go
+  "Spiel verlassen": beendet die laufende Partie für alle (/api/leave).
+
+kindness.go
+  Die Sprüche hinter dem Namens-Klick im Chat: lieb, witzig, böse. "a" ist
+  der Absender, "b" der angeklickte Spieler; beide werden beim Senden ersetzt.
+
+4.4 Die Spiele auf dem Server
+  Jede Datei enthält Regelprüfung und Zug-Auswertung für ein Spiel. Die
+  passende Seite dazu liegt im jeweiligen Ordner unter spiele\ (Punkt 5).
+
+tictactoe.go        Tic-Tac-Toe, 3x3
+viergewinnt.go      Vier gewinnt, 7x6
+dame.go             Dame auf 8x8 (mit Mehrfachsprüngen)
+muehle.go           Mühle
+reversi.go          Reversi/Othello
+schach.go           Schach (inkl. Rochade, En-passant, Umwandlung)
+goboard.go          Go auf 9x9 mit Gebietszählung
+backgammon.go       Backgammon
+hold.go             Hold the Line (Linien ziehen, ohne zu berühren)
+sim.go              Sim (Dreieck vermeiden)
+kaesekaestche.go    Käsekästchen (Linien auf 5x6 Kästchen)
+kalaha.go           Kalaha
+streichholz.go      Streichholzspiel
+kniffel.go          Kniffel
+skyjo.go            Skyjo
+maumau.go           Mau-Mau
+uno.go              Uno
+schwimmen.go        Schwimmen
+arschloch.go        Arschloch
+menschaerger.go     Mensch ärgere dich nicht
+paare.go            Memory/Paare (Bestenliste nach Zeit und Fehlversuchen)
+einsxeins.go        1x1-Rennen: Kopfrechnen, Zahlen merken, Zahlenketten
+malen.go            Gemeinsame Malfläche (Striche liegen auf dem Server)
+angebot.go          Offene Runde für den ganzen Raum (/api/angebot): bieten,
+                    beitreten, zurückziehen. Für Tischspiele wird die Runde
+                    beim Anbieten eröffnet, bei Spielen für zwei entsteht sie
+                    erst, wenn jemand beitritt. Die Spiel-Endpunkte werden
+                    dabei von innen aufgerufen, damit dieselben Prüfungen
+                    gelten wie bei einem Klick im Spiel.
+
+4.5 Daten und Fertiges
+
+gewonnen.txt, pech.txt, lob.txt
+  Die Sprüche-Sammlungen (Gewonnen-, Pech- und Lob-Sprüche). Sie sind die
+  Quelle für die Sprüche in den Spielen (mahjong\js) und im Chat
+  (kindness.go). Format: eine Zeile pro Spruch.
+
+go.mod, go.sum
+  Sagt Go, welche Hilfspakete gebraucht werden (hier: go-qrcode für den
+  QR-Code). Nicht von Hand ändern.
+
+trashygecko-connector.exe
+  Das fertige Programm für Windows. Wird aus den .go-Dateien gebaut
+  (Punkt 8) und ist die Datei, die man doppelklickt.
+
+
+5. DIE SPIELESEITEN (Ordner spiele\*)
+------------------------------------------------------------------------------
+
+Jeder Ordner enthält die Seite des Spiels (meist eine HTML-Datei mit allem
+drin: Aussehen, Regeln, Zeichnen). Spiele mit Server-Verbindung fragen die
+passende /api/...-Adresse des Connectors.
+
+  1x1\1x1.html                     Einmaleins, Zahlen merken, Zahlenketten,
+                                   Rennen gegen Mitspieler
+  arschloch\arschloch.html         Arschloch
+  backgammon\backgammon.html       Backgammon
+  dame\dame.html                   Dame
+  durst\durst.html                 Trinkspiel (Bilder im Unterordner)
+  go\go.html                       Go
+  hold\holdtheline.html            Hold the Line
+  kaesekaestche\kaesekaestche.html Käsekästchen
+  kalaha\kalaha.html               Kalaha
+  kniffel\kniffel.html             Kniffel
+  mahjong\mahjong.html             Mahjong-Solitaire (eigenes js/ und assets/)
+  malen\malen.html                 Malen (4 Bildschirme groß, mit Zoom).
+                                   Im Connector steht Malen in der Spielauswahl
+                                   ("Spiel:"); "Malen öffnen" startet die
+                                   gemeinsame Fläche mit dem Raum, damit alle
+                                   dasselbe Bild sehen.
+  maumau\maumau.html               Mau-Mau
+  menschaerger\menschaerger.html   Mensch ärgere dich nicht
+  muehle\muehle.html               Mühle
+  paare\paare.html                 Memory/Paare
+  pimmel\spimmel.html              Spiel mit Leveleditor
+  rechner\rechner.html             Taschenrechner
+  reversi\reversi.html             Reversi
+  sanduhr\sanduhr.html             Sanduhr/Timer
+  schach\schach.html               Schach
+  schwimmen\schwimmen.html         Schwimmen
+  sim\sim.html                     Sim
+  skyjo\skyjo.html                 Skyjo
+  streichholzspiel\...html         Streichholzspiel
+  tictac\tictactoe.html            Tic-Tac-Toe
+  uno\uno.html                     Uno
+  viergewinnt\viergewinnt.html     Vier gewinnt
+  wuerfel\wuerfel.html             Würfel
+  zone\voigtzone.html              Zone/eigene Seite
+  spiele.html                      Übersicht mit allen Kacheln
+
+
+6. DIE ONLINE-FASSUNG (Ordner spiele\connector-online)
+------------------------------------------------------------------------------
+
+Gedacht für einen Server im Internet: kein Browser-Start, kein Port-Suchen,
+Adresse und QR-Code zeigen auf die öffentliche Seite.
+
+6.1 Was dort eigenständig ist (wird beim Kopieren nie überschrieben)
+
+main.go    Start ohne Schnickschnack: liest PORT, ADDR und SITE_DIR, startet
+           den Server.
+netz.go    publicURL() bestimmt die öffentliche Adresse (PUBLIC_URL oder aus
+           der Anfrage, inkl. X-Forwarded-Proto hinter einem Proxy).
+           Setzt außerdem die Boss-Regel: online ist Boss, wer den Raum als
+           Erster betritt.
+status.go  /api/status fürs Internet (öffentliche Adresse, online=true).
+qr.go      QR-Code zur öffentlichen Adresse.
+sync.py    Das Kopierskript (siehe 6.3).
+README.md  Kurzfassung für den Server.
+trashygecko-connector-online.exe          Windows-Fassung (zum Testen)
+trashygecko-connector-online-linux        die Datei für den Server
+
+6.2 Was kopiert wird
+
+Alle übrigen .go-Dateien, connector.html, go.mod und go.sum. Das sind genau
+die Dateien aus dem normalen Connector-Ordner; sie sind byte-gleich.
+
+6.3 Nach jeder Änderung am Connector
+
+  cd spiele\connector-online
+  python sync.py --linux
+
+Das kopiert die gemeinsamen Dateien, prüft mit "go vet" und baut beide
+Programmdateien. Meldet das Skript "alles schon aktuell", war nichts zu tun.
+Ohne "--linux" wird nur die Windows-Datei gebaut, mit "--nur-kopieren" wird
+nur kopiert.
+
+6.4 Auf den Server legen
+
+  /var/www/spiele/          die Webseite (index.html, spiele/, ...)
+  /var/www/spiele/server/   trashygecko-connector-online-linux + connector.html
+
+  SITE_DIR=/var/www/spiele PORT=8080 ./trashygecko-connector-online-linux
+
+Einstellungen (Umgebungsvariablen):
+
+  PORT         Port, auf dem gehört wird              Standard 8080
+  ADDR         Adresse zum Binden                     Standard alle
+  SITE_DIR     Ordner der Webseite                    Standard: neben dem Programm
+  PUBLIC_URL   öffentliche Adresse für Link und QR    Standard: aus der Anfrage
+
+Hinter nginx/Apache genügt ein Reverse Proxy auf http://127.0.0.1:8080.
+PUBLIC_URL setzen (z. B. https://spiele.example.de), damit QR-Code und
+Adressfeld sicher https zeigen.
+
+Ohne eigenen Server (z. B. Render oder Docker):
+
+  spiele\connector-online\Dockerfile   baut Programm + Webseite in ein Abbild
+  render.yaml (im Repo-Wurzelordner)    beschreibt den Dienst für Render
+
+  docker build -f spiele/connector-online/Dockerfile -t trashygecko-connector .
+  docker run -p 8080:8080 trashygecko-connector
+
+Der Bau-Kontext muss der Repo-Wurzelordner sein (dort liegen index.html und
+spiele/). Im Abbild liegt das Programm unter /app/connector, die Oberfläche
+daneben, die Webseite unter /app/webseite; die Ordner spiele/connector und
+Bei Render: "New" -> "Blueprint" -> Repository wählen, den Rest macht
+render.yaml. Ohne eigene Domain bekommt man dort eine Adresse wie
+https://trashygecko-connector.onrender.com – das genügt.
+
+Eine eigene Domain ist optional und wird NICHT in der Datei eingetragen,
+sondern im Render-Dashboard (Settings -> Custom Domains). Render zeigt dann
+einen CNAME, den man beim Domain-Anbieter setzt; bei Cloudflare-DNS muss der
+Eintrag auf "DNS only" (graue Wolke) stehen. Der Block "domains:" in
+render.yaml ist dafür vorbereitet, aber auskommentiert. Schritt für Schritt
+steht alles in spiele\connector-online\README.md.
+
+
+7. CHAT-BEFEHLE UND ADMIN
+------------------------------------------------------------------------------
+
+Im Nachrichtenfeld:
+
+  /f Anna: Hallo      flüstert an Anna (nur Anna und du lesen es)
+  /Admin Admin        macht dich zum Admin
+
+Der Admin darf:
+  - die Malfläche leeren (Knopf "ZURÜCKSETZEN" bei Malen)
+  - Spieler für 1–3 Minuten stummschalten (Namensklick → Stummschalten)
+
+Unabhängig vom Admin kann jeder, der mitspielt, mit "Spiel verlassen" die
+laufende Partie für alle beenden – die Mitspieler landen wieder im Raum.
+
+Lokal ist der Admin automatisch der PC, auf dem der Connector läuft.
+Online ist es der erste Besucher. Wer später dazukommt und Admin werden will,
+tippt "/Admin Admin" in den Chat. Der Befehl selbst erscheint nicht im Chat
+(sonst stünde das Passwort für alle sichtbar da); es steht dann nur
+"Name: ist jetzt Admin." dort.
+
+Das Passwort steht in chat.go in der Zeile
+  const adminPasswort = "Admin"
+Wer es ändern will, ändert dort den Text und baut neu (Punkt 8). Danach
+unbedingt beide Ordner aktualisieren und sync.py laufen lassen.
+
+
+8. ÄNDERN UND NEU BAUEN
+------------------------------------------------------------------------------
+
+Go installieren (https://go.dev, Version 1.27 oder neuer – so steht es in
+go.mod), dann:
+
+  cd spiele\connector
+  go build -o trashygecko-connector.exe .
+
+Prüfen, ob alles stimmt (findet Tippfehler und unbenutzte Variablen):
+
+  go vet ./...
+
+Formatieren (Go rückt Code einheitlich ein):
+
+  gofmt -w *.go
+
+Nach Änderungen am Connector:
+
+  1. cd spiele\connector          -> go build -o trashygecko-connector.exe .
+  2. cd ..\connector-online       -> python sync.py --linux
+  3. Beide Ordner in die GitHub-Kopie spiegeln, falls die gepflegt wird:
+     C:\Users\DarkP\Documents\GitHub\Homepage\spiele\...
+
+Wichtig: Homepage-Ordner und GitHub-Ordner werden byte-gleich gehalten
+(gleiche Dateien, gleicher Inhalt). Wer nur eine Seite ändert, hat später
+zwei verschiedene Fassungen.
+
+
+9. WENN ETWAS NICHT GEHT
+------------------------------------------------------------------------------
+
+Handy kommt nicht auf die Seite
+  - Gleiches WLAN? (Kein Gäste-WLAN, das Geräte trennt.)
+  - Windows-Firewall: dem Programm "Zugriff zulassen" geben.
+  - Adresse mit der richtigen IP eintippen (steht auf der Connector-Seite).
+
+"Spielraum nicht gefunden"
+  Der Connector wurde neu gestartet – der Raum hat eine neue Kennung. Seite
+  neu laden und neu beitreten.
+
+Spielseite zeigt 404
+  Dem Connector fehlt der spiele-Ordner. Er schreibt beim Start eine Warnung
+  ins Fenster: "enthält keinen spiele-Ordner". Dann stimmt der gefundene
+  Homepage-Ordner nicht (Argument mitgeben, siehe Punkt 3).
+
+Alte Seite trotz Änderung
+  Der Connector schickt HTML ohne Zwischenspeichern aus. Wenn trotzdem etwas
+  alt aussieht: mit Strg+F5 neu laden.
+
+Port belegt
+  Lokal sucht sich das Programm selbst den nächsten freien Port (8765–8785)
+  und zeigt ihn an. Online den Port über PORT ändern.
+
+QR-Code zeigt falsche Adresse (online)
+  PUBLIC_URL setzen, z. B. PUBLIC_URL=https://spiele.example.de – sonst rät
+  der Server die Adresse aus der Anfrage.
+
+"Falsches Passwort für /Admin."
+  Der Befehl lautet "/Admin Admin" (Leerzeichen, nicht Doppelpunkt).
+
+
+10. KURZ MERKEN
+------------------------------------------------------------------------------
+
+  Startet den Server:      spiele\connector\trashygecko-connector.exe
+  Seite im Browser:        http://localhost:8765/connector
+  Oberfläche ändern:       connector.html
+  Regeln/Server ändern:    die .go-Dateien, danach neu bauen
+  Online aktualisieren:    spiele\connector-online  ->  python sync.py --linux
+  Admin werden:            im Chat "/Admin Admin" eintippen
+  Flüstern:                "/f Name: Text"
+
+==============================================================================

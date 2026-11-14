@@ -102,6 +102,7 @@ type Room struct {
 	Arschloch    *ArschlochGame
 	Rechen       *RechenGame
 	Mal          *Malbrett              // gemeinsame Zeichenfläche
+	Angebot      *Angebot               // offene Runde für den ganzen Raum
 	Mutes        map[string]time.Time   // playerID -> unmute time
 	MsgTimes     map[string][]time.Time // for spam protection
 }
@@ -145,6 +146,12 @@ func (r *Room) cleanPlayers() {
 				SenderID: id,
 				Gone:     true,
 			})
+		}
+	}
+	// Ein Angebot, dessen Ersteller weg ist, kann niemand mehr annehmen.
+	if r.Angebot != nil {
+		if _, da := r.Players[r.Angebot.VonID]; !da {
+			r.Angebot = nil
 		}
 	}
 	if len(r.Players) == 0 {

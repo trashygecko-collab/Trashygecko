@@ -1,0 +1,2441 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrashyGecko Connector</title>
+<style>
+*{box-sizing:border-box}
+/* hidden muss immer gewinnen – sonst zeigen Regeln mit display:flex Dinge an,
+   die eigentlich versteckt sind (z. B. das Stummschalten für Nicht-Admins). */
+[hidden]{display:none !important}
+body{margin:0;background:#10121b;color:#eee;font:16px Arial;padding:16px}
+main{max-width:760px;margin:auto}
+h1{color:#4df5c2;text-align:center;font-size:clamp(22px,5vw,32px)}
+h2{font-size:20px;margin-top:0}
+section{background:#1c2030;border:1px solid #394158;border-radius:12px;padding:18px;margin:16px 0}
+button,input,select{padding:12px;border-radius:7px;border:1px solid #59647c;font-size:16px}
+button{background:#4df5c2;color:#10121b;font-weight:bold;cursor:pointer}
+button:hover{filter:brightness(1.1)}
+input,select{background:#10121b;color:white;max-width:100%;min-width:0}
+.line{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.line input{flex:1}
+#addresses p{overflow-wrap:anywhere;margin:7px 0}
+#chat{height:230px;overflow:auto;background:#10121b;padding:10px;border-radius:8px}
+.msg{padding:6px 0;border-bottom:1px solid #30364a;overflow-wrap:anywhere}
+.msg-system{color:#8fb7ad;font-style:italic;text-align:center;border-bottom:none;padding:4px 0;font-size:13px}
+small{color:#9da8bd}
+.code{font-size:28px;color:#4df5c2;font-weight:bold}
+.room{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#10121b;border:1px solid #394158;border-radius:9px;padding:12px;margin:9px 0}
+.room-info{min-width:0}
+.room-code{font-size:20px;font-weight:bold;color:#4df5c2}
+.room-meta{font-size:13px;color:#aab3c7;margin-top:5px}
+.empty{color:#aab3c7;padding:12px 0}
+#roomstatus{color:#4df5c2}
+#qrwrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+#qrcode{width:176px;height:176px;background:white;padding:8px;border-radius:8px;image-rendering:pixelated}
+#qrhint{color:#aab3c7;font-size:14px;max-width:240px}
+@media(max-width:430px){
+ body{padding:9px}
+ section{padding:13px}
+ .room{align-items:flex-start;flex-direction:column}
+ .room button{width:100%}
+}
+#chat{
+ height:300px;
+ min-height:180px;
+ overflow-y:auto;
+ background:#10121b;
+ padding:12px;
+ border:1px solid #30364a;
+ border-radius:9px;
+}
+.chat-compose{
+ display:flex;
+ flex-direction:column;
+ gap:9px;
+ margin-top:12px;
+}
+.chat-compose select{
+ width:100%;
+ padding:12px;
+ border-radius:7px;
+ border:1px solid #59647c;
+ background:#10121b;
+ color:white;
+ font-size:16px;
+}
+.chat-send-row{
+ display:flex;
+ gap:8px;
+ width:100%;
+}
+.chat-send-row input{
+ flex:1;
+ width:0;
+ min-width:0;
+}
+.chat-send-row button{
+ flex:0 0 auto;
+ min-width:88px;
+}
+@media(max-width:430px){
+ body{padding:8px}
+ section{padding:12px}
+ #chat{height:260px}
+ .chat-send-row{display:flex;flex-direction:row}
+ .chat-send-row input{flex:1;min-width:0}
+ .chat-send-row button{width:auto}
+}
+
+#game-status{line-height:1.45;margin-top:12px}
+/* Aufklappbarer Kopf der Bereiche (Lokale Verbindung). */
+details summary{cursor:pointer;font-size:20px;font-weight:bold;color:#fff;padding:2px 0;outline:none}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:" ▾";color:#4df5c2;font-size:14px}
+details[open] summary::after{content:" ▴"}
+details summary:hover{color:#4df5c2}
+details p{margin:10px 0 6px}
+/* Name bekannt: nur noch eine Zeile statt Eingabefeld. */
+.name-known{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
+.name-known strong{color:#4df5c2}
+button.mini{background:none;border:1px solid #59647c;color:#aab3c7;font-size:13px;padding:7px 11px;font-weight:normal}
+button.mini:hover{color:#fff;border-color:#4df5c2}
+/* Vollbild-Knopf: immer erreichbar, auch wenn weit gescrollt wurde. */
+#fullscreenBtn{position:fixed;right:12px;top:12px;z-index:60;font-size:13px;padding:9px 13px;background:#1c2030;color:#4df5c2;border:1px solid #4df5c2;font-weight:bold;opacity:.94}
+#fullscreenBtn #fsWord{margin-left:6px}
+/* Auf schmalen Geräten bleibt nur das Symbol, damit der Knopf oben rechts nicht
+   in die Überschrift hineinragt. */
+@media(max-width:700px){
+ #fullscreenBtn{padding:8px 11px;font-size:17px}
+ #fullscreenBtn #fsWord{display:none}
+ /* Platz für den Knopf freihalten, damit der Titel nicht darunter rutscht. */
+ h1{font-size:20px;padding-right:52px}
+}
+html:fullscreen,html:fullscreen body{overflow-y:auto;height:auto}
+html:fullscreen body{padding:18px}
+.game-player{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#10121b;border:1px solid #394158;border-radius:9px;padding:10px 12px;margin:8px 0}
+.game-player span{min-width:0;overflow-wrap:anywhere}
+.game-player button{flex:0 0 auto}
+.game-invite-controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.game-invite-controls select{flex:1;min-width:150px}
+.game-invite-controls button{flex:0 0 auto}
+/* Zusatzangaben zum Spiel (z. B. Paare finden): eigener, sichtbarer Kasten. */
+.game-extra-box{border:1px solid #4df5c2;border-radius:9px;padding:10px 12px;margin:10px 0;background:#192a2b;display:flex;flex-direction:column;gap:8px}
+.game-extra-box strong{color:#4df5c2;font-size:14px}
+.game-extra-row{display:flex;align-items:center;gap:8px}
+.game-extra-row label{flex:0 0 auto;color:#dfe6f5;font-size:14px}
+.game-extra-row select{flex:1 1 auto;min-width:0}
+.game-invite{border:1px solid #4df5c2;border-radius:9px;padding:12px;margin:10px 0;background:#192a2b}
+.game-invite strong{color:#4df5c2}
+.game-invite-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.game-invite-actions button{flex:1;min-width:110px}
+.chat-name-btn{background:none;border:none;padding:0;font:inherit;font-weight:bold;color:#4df5c2;cursor:pointer;text-decoration:none}
+.chat-name-btn:hover{text-decoration:underline;filter:brightness(1.2)}
+.mute-popover{margin-top:4px;padding:6px;background:#252b40;border:1px solid #4df5c2;border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
+.mute-popover button{padding:4px 8px;font-size:12px;border-radius:4px}
+.mute-list-tag{color:#ffd36a;font-size:12px;margin-top:4px}
+/* Geklickte Sprüche im Chat: lieb rosa, witzig grün, böse rot. */
+.msg.t-love{border-left:3px solid #ff8be4;padding-left:8px}
+.msg.t-joke{border-left:3px solid #7dffb0;padding-left:8px}
+.msg.t-evil{border-left:3px solid #ff7b7b;padding-left:8px}
+.tone-love{color:#ff8be4}
+.tone-joke{color:#7dffb0}
+.tone-evil{color:#ff7b7b}
+/* Auswahl nach Klick auf einen Namen */
+.tone-picker{
+ position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
+ z-index:40;width:min(440px,94vw);
+ background:#141026;border:1px solid #4df5c2;border-radius:12px;
+ padding:12px;box-shadow:0 10px 30px #000a;
+}
+.tone-head{font-size:15px;margin-bottom:9px;color:#dfe6f5}
+.tone-head strong{color:#4df5c2}
+.tone-buttons{display:grid;gap:7px;grid-template-columns:1fr}
+.tone-btn{
+ padding:12px;border-radius:8px;font-size:15px;font-weight:bold;
+ background:#10121b;border:2px solid #59647c;color:#dfe6f5;cursor:pointer;
+}
+.tone-btn.love{border-color:#ff8be4;color:#ff8be4}
+.tone-btn.joke{border-color:#7dffb0;color:#7dffb0}
+.tone-btn.evil{border-color:#ff7b7b;color:#ff7b7b}
+.tone-btn.whisper{border-color:#ffd36a;color:#ffd36a}
+.tone-btn.game{border-color:#4df5c2;color:#4df5c2}
+/* Spieler, den man gerade einladen möchte, wird hervorgehoben. */
+.game-player.ziel{border-color:#4df5c2;box-shadow:0 0 12px #4df5c255}
+/* Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern. */
+.modus-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.modus-btn{padding:11px 8px;border:1px solid #394158;background:#10121b;color:#aab3c7;border-radius:9px;font-size:13px;font-weight:bold;cursor:pointer}
+.modus-btn:hover{color:#fff;border-color:#4df5c2}
+.modus-btn[aria-selected="true"]{background:#17252a;border-color:#4df5c2;color:#4df5c2;box-shadow:0 0 10px #4df5c233}
+.modus-panel{margin-top:14px}
+.multi-titel{margin:16px 0 6px;font-size:12px;color:#8d97ad;font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.name-tipp{display:block;margin-top:8px;font-size:11px;color:#5b6579;line-height:1.4}
+.game-player.gewaehlt{border-color:#4df5c2;background:#17252a;box-shadow:0 0 12px #4df5c255}
+/* Multiplayer: offenes Angebot und Startknopf. */
+.runde-info{margin:12px 0 0;font-size:13px;color:#aab3c7}
+.runde-starten{width:100%;margin-top:12px}
+.runde-tipp{margin:8px 0 0;font-size:11px;color:#5b6579;line-height:1.4}
+.runde-angebot{margin-top:12px;padding:12px;border:1px solid #4df5c2;border-radius:10px;background:#17252a}
+.runde-angebot strong{display:block;color:#4df5c2;margin-bottom:4px}
+.runde-angebot small{display:block;font-size:12px;color:#aab3c7}
+.runde-knoepfe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.runde-knoepfe .los{flex:1 1 120px}
+.runde-knoepfe .sekundaer{flex:0 0 auto;background:none;border:1px solid #59647c;color:#aab3c7;font-weight:normal}
+.angebot-ende{display:block;margin-top:6px;font-size:11px;color:#7f8a9e}
+@media(max-width:420px){.modus-btn{font-size:12px;padding:10px 6px}}
+/* Alle Spiele aus der Übersicht, direkt im Connector. */
+.solo-gruppe{margin:12px 0 0}
+.solo-gruppe h3{margin:0 0 6px;font-size:12px;color:#8d97ad;font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.solo-raster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+@media(min-width:560px){.solo-raster{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.solo-link{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px;border:1px solid #59647c;border-radius:8px;background:#10121b;color:#4df5c2;text-decoration:none;font-size:13px;text-align:center;line-height:1.25}
+.solo-link:hover{border-color:#4df5c2;background:#17252a}
+.solo-hinweis{margin:12px 0 0;font-size:12px}
+.solo-hinweis a{color:#ffd36a}
+/* Ganz unten: leiser Hinweis, ohne eigene Karte. */
+.fusszeile{background:none;border:none;padding:0;margin:14px 0 0;text-align:center}
+.fusszeile small{font-size:11px;color:#5b6579;letter-spacing:.3px}
+.fusszeile code{color:#7f8a9e;background:none;border:1px solid #394158;border-radius:4px;padding:0 4px;font-size:11px}
+.tone-btn:hover{filter:brightness(1.25)}
+.tone-mute{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:#aab3c7;flex-wrap:wrap}
+.tone-mute button{padding:5px 8px;font-size:12px;border-radius:5px}
+.tone-close{margin-top:9px;width:100%;padding:9px;border-radius:7px;background:#252b40;border:1px solid #59647c;color:#dfe6f5;font-size:14px;cursor:pointer}
+.players-head{color:#4df5c2;font-weight:bold;font-size:14px;margin:14px 0 6px}
+.game-player{color:#eee;font-weight:normal;text-align:left;width:100%;background:#10121b}
+.game-player:hover{filter:brightness(1.3)}
+.game-player:disabled{opacity:.55;cursor:default}
+.open-game{margin-top:8px}
+/* Gemeinsame Malfläche öffnen. */
+/* Spielauswahl: oben das Spiel, darunter die Spieler, rechts daneben der Status. */
+.games-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:14px;align-items:start}
+@media (max-width:720px){.games-grid{grid-template-columns:1fr}}
+.games-main{min-width:0}
+.games-side{background:#10121b;border:1px solid #394158;border-radius:10px;padding:10px 12px}
+.games-side h3{margin:0 0 6px;font-size:14px;color:#4df5c2}
+.games-side #game-status{margin-top:0}
+/* --- Kleine Handys (etwa 6 Zoll): eine Spur kompakter, aber lesbar ------ */
+@media(max-width:600px){
+ body{padding:8px 8px 12px}
+ h1{font-size:18px;margin:0 0 4px}
+ section{padding:10px;margin:8px 0;border-radius:10px}
+ section h2{font-size:16px;margin:0 0 6px}
+ /* Adresse und QR-Code nur noch eine schmale Zeile, kein eigener Kasten. */
+ #addressbox{padding:0;margin:0 0 4px;background:none;border:none}
+ #addressbox summary{font-size:13px;color:#8d97ad;font-weight:normal;padding:2px 0}
+ #addressbox summary::after{font-size:11px}
+ #addressbox details p,#addressbox details button{font-size:13px}
+ .solo-link{min-height:46px;font-size:12px}
+ #nameKnown{gap:6px;margin:0}
+ /* Spielerzeilen und Statuskasten etwas flacher. */
+ .game-player{padding:8px 10px;margin:6px 0}
+ .games-side{padding:8px 10px}
+ #game-status{margin-top:6px}
+ /* Chat: flacher, die Eingabe bleibt beim Lesen unten kleben. */
+ #chat{height:230px;padding:8px;font-size:14px;line-height:1.35}
+ .chat-compose{position:sticky;bottom:0;background:#1c2030;padding-top:6px;gap:6px}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>TRASHYGECKO CONNECTOR</h1>
+
+<!-- Adresse und QR-Code nur bei Bedarf aufklappen. -->
+<section id="addressbox">
+<details>
+<summary>Lokale Verbindung &amp; QR-Code</summary>
+<p>Diese Adresse funktioniert für Geräte im selben WLAN oder LAN:</p>
+<div id="addresses">Adressen werden gesucht …</div>
+<button onclick="copyAddress()">Adresse kopieren</button>
+<div id="qrwrap"><img id="qrcode" alt="QR-Code für die lokale Verbindung" hidden><div id="qrhint">QR-Code wird vorbereitet …</div></div>
+</details>
+</section>
+
+
+
+<button type="button" id="fullscreenBtn" title="Vollbild ein/aus" aria-label="Vollbild"><span id="fsIcon">⛶</span><span id="fsWord">Vollbild</span></button>
+
+<input id="room" type="hidden">
+<p id="roomstatus" hidden></p>
+
+<!-- Spiel auswählen: oben das Spiel, darunter die Spieler, daneben der Status. -->
+
+
+<!-- Alle Spiele aus der Spiele-Übersicht – alleine spielbar. -->
+<!-- Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern. -->
+<section id="modusbox" hidden>
+<div class="modus-buttons" role="tablist">
+<button type="button" class="modus-btn" id="modusSolo" data-modus="solo" role="tab" aria-selected="false">Einzelspieler</button>
+<button type="button" class="modus-btn" id="modusMulti" data-modus="multi" role="tab" aria-selected="false">Multiplayer</button>
+<button type="button" class="modus-btn" id="modusName" data-modus="name" role="tab" aria-selected="false">Namen ändern</button>
+</div>
+
+<div id="soloPanel" class="modus-panel" hidden>
+<div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
+<p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
+</div>
+
+<div id="multiPanel" class="modus-panel" hidden>
+<div id="gameplayers"></div>
+<h3 class="multi-titel">Spielstatus</h3>
+<div id="game-status" class="empty">Spiel oben wählen, Mitspieler unten markieren, dann „Einladen“ drücken.</div>
+</div>
+
+<div id="namePanel" class="modus-panel" hidden>
+<div class="line" id="nameRow">
+<input id="player" placeholder="Dein Name" maxlength="24">
+</div>
+<div id="nameKnown" class="name-known">
+<strong id="eigenerName" title="So siehst du für die anderen aus">…</strong>
+<small class="name-tipp">Neuen Namen tippen, Enter übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
+</div>
+</div>
+</section>
+
+<section id="chatbox" hidden>
+<h2>Chat</h2>
+<div id="muteOverview" class="mute-list-tag" hidden></div>
+<div id="chat"></div>
+<div class="chat-compose">
+<div class="chat-send-row">
+<input id="message" placeholder="Nachricht an alle" maxlength="1000">
+<button onclick="send()">Senden</button>
+</div>
+</div>
+<div id="tonePicker" class="tone-picker" hidden>
+<div class="tone-head">Was schickst du <strong id="toneTarget">…</strong>?</div>
+<div class="tone-buttons">
+<button type="button" class="tone-btn love" data-tone="love">Ganz lieb</button>
+<button type="button" class="tone-btn joke" data-tone="joke">Ganz witzig</button>
+<button type="button" class="tone-btn evil" data-tone="evil">Ganz böse</button>
+<button type="button" id="toneWhisper" class="tone-btn whisper">Nur an diese Person schreiben</button>
+<button type="button" id="toneGame" class="tone-btn game">Runde anbieten</button>
+</div>
+<div id="toneMute" class="tone-mute" hidden>
+<span>Stummschalten:</span>
+<button type="button" id="toneMute1">1 Min</button>
+<button type="button" id="toneMute2">2 Min</button>
+<button type="button" id="toneMute3">3 Min</button>
+</div>
+<button type="button" id="toneClose" class="tone-close">Abbrechen</button>
+</div>
+</section>
+
+<section class="fusszeile"><small>Flüstern mit <code>/f Name: Text</code></small></section>
+</main>
+
+<script src="/spiele/netz.js"></script>
+<script>
+let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null, selectedMenuSender=null;
+let currentPlayersList=[];
+try {
+ sessionID=sessionStorage.getItem("tg-player-id")||"";
+ if(!sessionID){
+  sessionID=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random());
+  sessionStorage.setItem("tg-player-id",sessionID);
+ }
+} catch(e) {
+ sessionID=String(Date.now())+Math.random();
+}
+
+const nameField=document.getElementById("player");
+try{
+ const savedName=sessionStorage.getItem("tg-player-name");
+ if(savedName)nameField.value=savedName;
+}catch(e){}
+// Sobald ein Name bekannt ist, verschwindet das Eingabefeld und es bleibt nur
+// eine Zeile übrig – wie eine einmalige Namensabfrage.
+let nameFixiert=false;
+function zeigeNamen(fixiert){
+ if(fixiert!==undefined)nameFixiert=fixiert;
+ const wert=nameField.value.trim();
+ // Das Feld ist nur zu sehen, solange man den Namen wirklich ändern will.
+ document.getElementById("nameRow").hidden=nameFixiert&&!!wert;
+ document.getElementById("nameKnown").hidden=!wert;
+ // In der Namensansicht steht, wie man gerade heißt.
+ const eigener=document.getElementById("eigenerName");
+ if(eigener&&eigener.textContent!==wert)eigener.textContent=wert||"…";
+}
+nameField.addEventListener("input",()=>{
+ try{ sessionStorage.setItem("tg-player-name",nameField.value.trim()); }catch(e){}
+ if(nameFixiert)zeigeNamen();
+});
+zeigeNamen(!!nameField.value.trim());
+
+// Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern.
+let modus="multi", modusDavor="multi";
+function setModus(neu, mitFokus){
+ if(neu!=="solo"&&neu!=="multi"&&neu!=="name")neu="multi";
+ if(neu!=="name")modusDavor=neu;
+ modus=neu;
+ try{ sessionStorage.setItem("tg-modus",neu); }catch(e){}
+ document.querySelectorAll("#modusbox .modus-btn").forEach(btn=>{
+  btn.setAttribute("aria-selected",btn.dataset.modus===neu?"true":"false");
+ });
+ document.getElementById("soloPanel").hidden=neu!=="solo";
+ document.getElementById("multiPanel").hidden=neu!=="multi";
+ document.getElementById("namePanel").hidden=neu!=="name";
+ if(neu==="solo")ladeAlleinSpiele();
+ if(neu==="multi"&&currentPlayersList.length)renderGamePicker(currentPlayersList);
+ if(neu==="name"){
+  zeigeNamen(false);
+  if(mitFokus!==false){ nameField.focus(); nameField.select(); }
+ }
+}
+document.querySelectorAll("#modusbox .modus-btn").forEach(btn=>{
+ btn.onclick=()=>setModus(btn.dataset.modus);
+});
+
+// Vollbild an/aus. Die Seite bleibt im Vollbild scrollbar, Zoomen (Strg + +/-)
+// funktioniert weiter, weil weder Tasten noch Gesten abgefangen werden.
+const fullscreenBtn=document.getElementById("fullscreenBtn");
+function imVollbild(){
+ return !!(document.fullscreenElement||document.webkitFullscreenElement);
+}
+const fsWord=document.getElementById("fsWord");
+function zeigeVollbild(){
+ fsWord.textContent=imVollbild()?"Vollbild schließen":"Vollbild";
+}
+fullscreenBtn.addEventListener("click",()=>{
+ // Nicht auf das Promise warten: manche Browser antworten nie, dann wirkt der
+ // Knopf tot. Nach einer Sekunde wird ehrlich gemeldet, wenn nichts passiert.
+ const spaeter=(fn,ms)=>setTimeout(fn,ms);
+ try{
+  if(imVollbild()){
+   const p=document.exitFullscreen?document.exitFullscreen()
+    :(document.webkitExitFullscreen?document.webkitExitFullscreen():null);
+   if(p&&p.catch)p.catch(()=>{});
+   spaeter(zeigeVollbild,300);
+   return;
+  }
+  const ziel=document.documentElement;
+  const p=ziel.requestFullscreen?ziel.requestFullscreen()
+   :(ziel.webkitRequestFullscreen?ziel.webkitRequestFullscreen():null);
+  if(!p){
+   setRoomStatus("Dieser Browser kann kein Vollbild.");
+   return;
+  }
+  if(p.catch)p.catch(()=>setRoomStatus("Vollbild wurde vom Browser blockiert."));
+  spaeter(zeigeVollbild,300);
+  spaeter(()=>{
+   if(!imVollbild())setRoomStatus("Vollbild nicht möglich – der Browser hat es nicht geöffnet.");
+   zeigeVollbild();
+  },1000);
+ }catch(e){
+  setRoomStatus("Vollbild ging nicht: "+e.message);
+ }
+});
+document.addEventListener("fullscreenchange",zeigeVollbild);
+document.addEventListener("webkitfullscreenchange",zeigeVollbild);
+zeigeVollbild();
+
+function setRoomStatus(text){
+ const el=document.getElementById("roomstatus");
+ el.textContent=text||"";
+ el.hidden=!text;
+}
+
+// Ohne eigenen Namen entscheidet der Server: "Boss" am Server-PC, sonst
+// "Spieler1", "Spieler2", …
+function playerName(){
+ return document.getElementById("player").value.trim();
+}
+
+async function loadStatus(){
+ try{
+  const s=await fetch("/api/status").then(r=>r.json());
+  const chosen=s.ip||(s.ips&&s.ips[0])||"";
+  const box=document.getElementById("addresses");
+  box.innerHTML="";
+
+  // Lokal ist das die LAN-Adresse, online die öffentliche Adresse des Servers.
+  address=s.url||(chosen?"http://"+chosen+":"+s.port+"/connector":"");
+  if(address){
+   const p=document.createElement("p");
+   p.textContent=address;
+   box.appendChild(p);
+
+   const qr=document.getElementById("qrcode");
+   if(qr){
+    qr.src="/api/qr"+(chosen?"?ip="+encodeURIComponent(chosen):"");
+    qr.hidden=false;
+   }
+   const hint=document.getElementById("qrhint");
+   if(hint)hint.textContent=s.online
+    ? "Mit der Handykamera scannen – die Seite läuft im Internet."
+    : "Mit der Handykamera scannen. Das Handy muss im selben WLAN sein. "+
+      "Lädt das Handy die Seite nicht, dem Connector im Windows-Firewall-Dialog „Zugriff zulassen“ geben.";
+  }else{
+   address="http://localhost:"+s.port+"/connector";
+   box.textContent="Keine passende Netzwerkadresse gefunden.";
+   const hint=document.getElementById("qrhint");
+   if(hint)hint.textContent="Keine lokale Netzwerkadresse gefunden.";
+  }
+ }catch(e){
+  document.getElementById("addresses").textContent="Adressen konnten nicht geladen werden.";
+  const hint=document.getElementById("qrhint");
+  if(hint)hint.textContent="QR-Code konnte nicht geladen werden.";
+ }
+}
+
+async function copyAddress(){
+ try{
+  await navigator.clipboard.writeText(address);
+  alert("Adresse kopiert!");
+ }catch(e){
+  prompt("Adresse kopieren:",address);
+ }
+}
+
+/* Es gibt genau einen Raum: einmal betreten, drin bleiben. */
+// Namen übernehmen: der Server trägt ihn sofort ein und schreibt die
+// Chatzeile "alter Name: heißt jetzt neuer Name." Ist das Feld leer,
+// vergibt er wieder "Boss" bzw. "Spieler1", "Spieler2" …
+async function nameUebernehmen(){
+ if(!activeRoom||!sessionID)return;
+ try{
+  const p=await fetch("/api/presence",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName()})
+  });
+  const vergeben=await p.json().catch(()=>({}));
+  if(p.ok&&vergeben&&vergeben.name){
+   nameField.value=vergeben.name;
+   try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+  }
+ }catch(e){}
+ zeigeNamen(true);
+ setModus(modusDavor||"multi", false);
+ await refresh();
+ await refreshPlayers();
+}
+
+// Ohne Namen ist das kein Hindernis: der Server vergibt "Boss" (am Rechner,
+// auf dem der Connector läuft) bzw. "Spieler1", "Spieler2" …
+async function joinSingleRoom(){
+ const input=document.getElementById("player");
+ const name=input.value.trim();
+ try{
+  const r=await fetch("/api/rooms",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,name})
+  });
+  if(!r.ok)throw Error("Connector nicht erreichbar.");
+  const room=await r.json();
+  document.getElementById("room").value=room.code;
+  await join(room.name);
+ }catch(e){
+  setRoomStatus(e.message);
+ }
+}
+
+// Nach dem Betreten bei der Spielauswahl landen – auf dem Handy wirkt das wie
+// "ich bin jetzt drin", und der Chat steht direkt darunter.
+function scrollZuDenSpielen(){
+ const box=document.getElementById("modusbox");
+ if(!box||box.hidden)return;
+ setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),60);
+}
+
+async function join(roomDisplayName){
+ const code=document.getElementById("room").value.trim().toUpperCase();
+ if(!code)return;
+ try{
+  const p=await fetch("/api/presence",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:code,id:sessionID,name:playerName()})
+  });
+  if(!p.ok)throw Error(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen.");
+  // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
+  // "Spieler1" …). Den zeigen wir an und behalten ihn.
+  const vergeben=await p.json().catch(()=>({}));
+  if(vergeben&&vergeben.name&&!nameField.value.trim()){
+   nameField.value=vergeben.name;
+   try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+  }
+  activeRoom=code;
+  // Merken, damit ein neu geladener Tab (Handy im Hintergrund) direkt wieder
+  // im Raum landet, statt den Namen erneut zu verlangen.
+  try{ sessionStorage.setItem("tg-room",code); }catch(e){}
+  lastChatSignature="";
+  setRoomStatus("Verbunden · "+(roomDisplayName||("Raum "+code)));
+  document.getElementById("modusbox").hidden=false;
+  document.getElementById("chatbox").hidden=false;
+  zeigeNamen(true);
+  // Beim Wiederkommen die zuletzt benutzte Ansicht zeigen.
+  let startModus="multi";
+  try{ startModus=sessionStorage.getItem("tg-modus")||"multi"; }catch(e){}
+  setModus(startModus, false);
+  await refresh();
+  await refreshPlayers();
+  loadMutes();
+  scrollZuDenSpielen();
+ }catch(e){
+  try{ sessionStorage.removeItem("tg-room"); }catch(err){}
+  setRoomStatus(e.message);
+ }
+}
+
+// Nach einem Neuladen direkt wieder hinein – die Handys laden den Tab im
+// Hintergrund neu, sobald der Speicher knapp wird.
+async function restoreRoom(){
+ // Ein Raum in der Adresse hat Vorrang: so kommt man aus einem verlassenen
+ // Spiel direkt wieder im richtigen Raum an.
+ if(new URLSearchParams(location.search).get("room"))return;
+ let code="";
+ try{ code=sessionStorage.getItem("tg-room")||""; }catch(e){}
+ if(!code)return;
+ if(!document.getElementById("player").value.trim())return;
+ document.getElementById("room").value=code;
+ await join();
+ // Der Connector wurde neu gestartet und hat einen neuen Raum: dann frisch
+ // betreten, statt mit einer toten Kennung stehen zu bleiben.
+ if(!activeRoom)await joinSingleRoom();
+}
+
+// Wer wirklich etwas tut (klickt, tippt, scrollt), meldet das beim nächsten
+// Lebenszeichen mit. Sonst gilt er nach einer Minute als kurz weg.
+let userActed=false;
+["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+ document.addEventListener(evt,()=>{ userActed=true; },{passive:true});
+});
+
+async function heartbeat(){
+ if(!activeRoom)return;
+ const active=userActed;
+ userActed=false;
+ try{
+  await fetch("/api/presence",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),active})
+  });
+ }catch(e){}
+}
+
+let playersBusy=false;
+async function refreshPlayers(){
+ if(!activeRoom||playersBusy)return;
+ playersBusy=true;
+ try{
+  const res=await fetch("/api/players?room="+encodeURIComponent(activeRoom));
+  if(!res.ok)return;
+  const ownerHeader=res.headers.get("X-Room-Owner");
+  if(ownerHeader){
+   isRoomOwner = (ownerHeader === sessionID);
+  }
+  const list=await res.json();
+  currentPlayersList=list;
+  // Spieler stehen sofort beim Betreten des Raums im Chat.
+  renderGamePicker(list);
+  await refreshGames(list);
+  // Nach dem Abgleich der Spielstände noch einmal: erst jetzt steht fest, wer
+  // schon an einem Tisch sitzt.
+  renderGamePicker(list);
+  // Ein offenes Angebot ist wichtiger als der Zustand einer alten Partie.
+  if(angebot){
+   tttStatus(angebot.vonName+" bietet "+angebot.gameName+" an – im Chat „Mitspielen“ drücken.");
+  }
+ }catch(e){
+ }finally{
+  playersBusy=false;
+ }
+}
+
+async function mutePlayer(targetId, minutes){
+ if(!activeRoom || !isRoomOwner)return;
+ try{
+  const r=await fetch("/api/moderation",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:activeRoom,ownerId:sessionID,targetId,minutes})
+  });
+  if(r.ok){
+   selectedMuteSender=null;
+   await loadMutes();
+   await refresh();
+  }else{
+   const msg=await r.text();
+   alert(msg||"Stummschalten fehlgeschlagen.");
+  }
+ }catch(e){
+  alert("Fehler beim Stummschalten.");
+ }
+}
+
+async function loadMutes(){
+ if(!activeRoom)return;
+ const overview=document.getElementById("muteOverview");
+ if(!isRoomOwner){
+  if(overview)overview.hidden=true;
+  return;
+ }
+ try{
+  const list=await fetch("/api/moderation?room="+encodeURIComponent(activeRoom)).then(r=>r.json());
+  if(!list.length){
+   overview.hidden=true;
+   overview.textContent="";
+   return;
+  }
+  overview.hidden=false;
+  overview.textContent="Stummgeschaltet: " + list.map(m=>(m.name||"Spieler")+" ("+m.seconds+"s)").join(", ");
+ }catch(e){}
+}
+
+let currentTTTGame=null;
+let currentVGGame=null;
+let currentDameGame=null;
+let currentPaareGame=null;
+let currentMaenGame=null;
+let currentKaeseGame=null;
+let currentSimGame=null;
+let currentKalahaGame=null;
+let currentStreichholzGame=null;
+let currentMuehleGame=null;
+let currentReversiGame=null;
+let currentHoldGame=null;
+let currentSkyjoGame=null;
+let currentKniffelGame=null;
+let currentSchachGame=null;
+let currentGoGame=null;
+let currentBackgammonGame=null;
+let currentMauMauGame=null;
+let currentUnoGame=null;
+let currentSchwimmenGame=null;
+let currentArschlochGame=null;
+let currentEinsxeinsGame=null;
+
+const SUPPORTED_GAMES = [
+ { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/tictac/tictactoe.html", api: "/api/tictactoe" },
+ { id: "viergewinnt", name: "Vier gewinnt", path: "/spiele/viergewinnt/viergewinnt.html", api: "/api/viergewinnt" },
+ { id: "dame", name: "Dame", path: "/spiele/dame/dame.html", api: "/api/dame" },
+ { id: "paare", name: "Paare finden", path: "/spiele/paare/paare.html", api: "/api/paare" },
+ { id: "menschaerger", name: "Mensch ärgere dich nicht", path: "/spiele/menschaerger/menschaerger.html", api: "/api/menschaerger" },
+ { id: "kaesekaestche", name: "Käsekästchen", path: "/spiele/kaesekaestche/kaesekaestche.html", api: "/api/kaesekaestche" },
+ { id: "sim", name: "Sim", path: "/spiele/sim/sim.html", api: "/api/sim" },
+ { id: "kalaha", name: "Kalaha", path: "/spiele/kalaha/kalaha.html", api: "/api/kalaha" },
+ { id: "streichholzspiel", name: "21 Streichhölzer", path: "/spiele/streichholzspiel/streichholzspiel.html", api: "/api/streichholz" },
+ { id: "muehle", name: "Mühle", path: "/spiele/muehle/muehle.html", api: "/api/muehle" },
+ { id: "reversi", name: "Reversi", path: "/spiele/reversi/reversi.html", api: "/api/reversi" },
+ { id: "hold", name: "Hold the Line", path: "/spiele/hold/holdtheline.html", api: "/api/hold" },
+ { id: "skyjo", name: "Skyjo", path: "/spiele/skyjo/skyjo.html", api: "/api/skyjo" },
+ { id: "kniffel", name: "Kniffel", path: "/spiele/kniffel/kniffel.html", api: "/api/kniffel" },
+ { id: "schach", name: "Schach", path: "/spiele/schach/schach.html", api: "/api/schach" },
+ { id: "go", name: "Go", path: "/spiele/go/go.html", api: "/api/go" },
+ { id: "backgammon", name: "Backgammon", path: "/spiele/backgammon/backgammon.html", api: "/api/backgammon" },
+ { id: "maumau", name: "Mau Mau", path: "/spiele/maumau/maumau.html", api: "/api/maumau" },
+ { id: "uno", name: "UNO", path: "/spiele/uno/uno.html", api: "/api/uno" },
+ { id: "schwimmen", name: "31 Schwimmen", path: "/spiele/schwimmen/schwimmen.html", api: "/api/schwimmen" },
+ { id: "arschloch", name: "Arschloch", path: "/spiele/arschloch/arschloch.html", api: "/api/arschloch" },
+ { id: "einsxeins", name: "1×1-Rennen", path: "/spiele/1x1/1x1.html", api: "/api/einsxeins" },
+ // Malen braucht keine Einladung: alle im Raum landen auf derselben Fläche.
+ { id: "malen", name: "Malen", path: "/spiele/malen/malen.html", api: "" }
+];
+
+function tttStatus(text, gameId){
+ const box=document.getElementById("game-status");
+ box.textContent=text;
+ if(!gameId)return;
+ const def=SUPPORTED_GAMES.find(g=>g.id===gameId);
+ if(!def)return;
+ const open=document.createElement("button");
+ open.type="button";
+ open.className="open-game";
+ open.textContent="Spiel öffnen";
+ open.onclick=()=>openGame(def.path);
+ box.appendChild(open);
+}
+
+function openGame(path){
+ // id mitsenden: die Spielseite läuft im selben Tab, hat aber ihren eigenen
+ // sessionStorage-Zugriff und muss denselben Spieler wiedererkennen.
+ // v= ist ein Frische-Marker: damit kann kein Browser eine alte Spielseite
+ // aus dem Zwischenspeicher zeigen (anderes Brett, alter Würfel).
+ location.href=path+"?room="+encodeURIComponent(activeRoom)+
+  "&name="+encodeURIComponent(playerName())+
+  "&id="+encodeURIComponent(sessionID)+
+  "&v="+Date.now();
+}
+
+async function gameApiAction(gameId, action, data={}){
+ const gameDef = SUPPORTED_GAMES.find(g=>g.id===gameId);
+ if(!gameDef) return false;
+ const response = await fetch(gameDef.api+"?room="+encodeURIComponent(activeRoom)+"&action="+encodeURIComponent(action),{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({id:sessionID,...data})
+ });
+ if(!response.ok){
+  const detail=(await response.text()).trim();
+  tttStatus(detail||"Die Spielaktion ist fehlgeschlagen.");
+  return false;
+ }
+ return true;
+}
+
+async function tttAction(action,data={}){
+ return gameApiAction("tictactoe", action, data);
+}
+
+async function vgAction(action,data={}){
+ return gameApiAction("viergewinnt", action, data);
+}
+
+async function dameAction(action,data={}){
+ return gameApiAction("dame", action, data);
+}
+
+async function refreshGames(players){
+ await refreshTicTacToe(players);
+ await refreshVierGewinnt(players);
+ await refreshDame(players);
+ await refreshPaare(players);
+ await refreshMaen(players);
+ await refreshKaese(players);
+ await refreshSim(players);
+ await refreshKalaha(players);
+ await refreshStreichholz(players);
+ await refreshMuehle(players);
+ await refreshReversi(players);
+ await refreshHold(players);
+ await refreshSkyjo(players);
+ await refreshKniffel(players);
+ await refreshSchach(players);
+ await refreshGo(players);
+ await refreshBackgammon(players);
+ await refreshMauMau(players);
+ await refreshUno(players);
+ await refreshSchwimmen(players);
+ await refreshArschloch(players);
+ await refreshEinsxeins(players);
+}
+
+// Aktueller Spielstand des jeweiligen Spiels, für die Einladungen im Chat.
+function gameStateFor(gameId){
+ if(gameId==="dame")return currentDameGame;
+ if(gameId==="viergewinnt")return currentVGGame;
+ if(gameId==="paare")return currentPaareGame;
+ if(gameId==="menschaerger")return currentMaenGame;
+ if(gameId==="kaesekaestche")return currentKaeseGame;
+ if(gameId==="sim")return currentSimGame;
+ if(gameId==="kalaha")return currentKalahaGame;
+ if(gameId==="streichholzspiel")return currentStreichholzGame;
+ if(gameId==="muehle")return currentMuehleGame;
+ if(gameId==="reversi")return currentReversiGame;
+ if(gameId==="hold")return currentHoldGame;
+ if(gameId==="skyjo")return currentSkyjoGame;
+ if(gameId==="kniffel")return currentKniffelGame;
+ if(gameId==="schach")return currentSchachGame;
+ if(gameId==="go")return currentGoGame;
+ if(gameId==="backgammon")return currentBackgammonGame;
+ if(gameId==="maumau")return currentMauMauGame;
+ if(gameId==="uno")return currentUnoGame;
+ if(gameId==="schwimmen")return currentSchwimmenGame;
+ if(gameId==="arschloch")return currentArschlochGame;
+ if(gameId==="einsxeins")return currentEinsxeinsGame;
+ return currentTTTGame;
+}
+
+async function refreshDame(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/dame?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+
+ currentDameGame=game;
+
+ if(game && game.status==="active"){
+  if(game.redId===sessionID || game.blueId===sessionID){
+   tttStatus("Dame läuft gegen "+(game.redId===sessionID?game.blueName:game.redName)+".", "dame");
+  }else{
+   tttStatus(game.redName+" spielt gerade Dame gegen "+game.blueName+".");
+  }
+  return;
+ }
+
+ if(game && game.status==="invited"){
+  if(game.redId===sessionID){
+   tttStatus("Deine Einladung an "+game.blueName+" zu Dame steht im Chat. Wir warten auf die Antwort …");
+  }else if(game.blueId===sessionID){
+   tttStatus(game.redName+" hat dich zu Dame eingeladen. Du kannst direkt im Chat antworten.");
+  }
+  return;
+ }
+}
+
+async function refreshPaare(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/paare?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+
+ currentPaareGame=game;
+
+ if(game && game.status==="active"){
+  if(game.redId===sessionID || game.blueId===sessionID){
+   tttStatus("Paare finden läuft gegen "+(game.redId===sessionID?game.blueName:game.redName)+".", "paare");
+  }else{
+   tttStatus(game.redName+" spielt gerade Paare finden gegen "+game.blueName+".");
+  }
+  return;
+ }
+
+ if(game && game.status==="invited"){
+  if(game.redId===sessionID){
+   tttStatus("Deine Einladung an "+game.blueName+" zu Paare finden"+zusatzKurz("paare")+" steht im Chat. Wir warten auf die Antwort …");
+  }else if(game.blueId===sessionID){
+   tttStatus(game.redName+" hat dich zu Paare finden eingeladen. Du kannst direkt im Chat antworten.");
+  }
+  return;
+ }
+
+ if(game && game.status==="finished"){
+  tttStatus("Die letzte Runde Paare finden ist beendet. Du kannst neu einladen.");
+ }
+}
+
+// Kalaha: Steine verteilen, Becken füllen, Bonuszüge nutzen.
+async function refreshKalaha(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/kalaha?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentKalahaGame=game;
+ if(!game)return;
+
+ const name=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.redName+" "+game.pits[6]+" : "+game.pits[13]+" "+game.blueName;
+
+ if(game.status==="active"){
+  tttStatus("Kalaha läuft – "+standing+".", "kalaha");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner==="draw"?"Unentschieden":name(game.winner)+" hat gewonnen";
+  tttStatus("Kalaha beendet – "+standing+" · "+text+".", "kalaha");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Kalaha: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("kalaha", "accept")){
+     openGame(gamePath("kalaha"));
+    }
+   });
+  }
+ }
+}
+
+// Backgammon: 24 Punkte, Bar, Auswürfeln, Gammon und Backgammon.
+async function refreshBackgammon(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/backgammon?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentBackgammonGame=game;
+ if(!game)return;
+
+ const stand="Im Ziel: "+game.redName+" "+game.off[0]+"/15, "+game.blueName+" "+game.off[1]+"/15";
+
+ if(game.status==="active"){
+  const wer=game.player===0?game.redName:game.blueName;
+  const bar=game.bar[0]+game.bar[1]>0?" · auf der Bar: "+game.bar[0]+" / "+game.bar[1]:"";
+  tttStatus("Backgammon läuft – "+stand+", "+wer+" ist am Zug"+bar+".", "backgammon");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="red"?game.redName:game.blueName;
+  const art=game.multiplier===3?"Backgammon":game.multiplier===2?"Gammon":"einfacher Sieg";
+  tttStatus("Backgammon beendet – "+sieger+" gewinnt ("+art+", "+game.multiplier+" Punkte).", "backgammon");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Backgammon: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("backgammon", "accept")){
+     openGame(gamePath("backgammon"));
+    }
+   });
+  }
+ }
+}
+
+// Go: 9x9, zwei Pässe beenden die Partie, dann zählen Steine und Gebiete.
+async function refreshGo(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/go?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentGoGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  const wer=game.turn==="B"?game.redName:game.blueName;
+  const fangen="Schwarz fängt "+game.capturedB+", Weiß fängt "+game.capturedW;
+  tttStatus("Go läuft – "+game.redName+" (Schwarz) gegen "+game.blueName+" (Weiß), "+wer+" ist am Zug. "+fangen+".", "go");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="B"?game.redName:game.blueName;
+  tttStatus("Go beendet – Schwarz "+game.scoreBlack+" : "+game.scoreWhite+" Weiß (mit 6,5 Ausgleich), "+sieger+" gewinnt.", "go");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Go: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("go", "accept")){
+     openGame(gamePath("go"));
+    }
+   });
+  }
+ }
+}
+
+// Schach: Weiß gegen Schwarz, mit Rochade, En passant und Umwandlung.
+async function refreshSchach(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/schach?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSchachGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  const zug=game.state.turn==="w"?"Weiß":"Schwarz";
+  const wer=game.state.turn==="w"?game.redName:game.blueName;
+  tttStatus("Schach läuft – "+game.redName+" (Weiß) gegen "+game.blueName+" (Schwarz), "+wer+" ist am Zug.", "schach");
+  void zug;
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner?((game.winner==="w"?game.redName:game.blueName)+" gewinnt") : "Unentschieden (Patt)";
+  tttStatus("Schach beendet – "+text+".", "schach");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Schach: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("schach", "accept")){
+     openGame(gamePath("schach"));
+    }
+   });
+  }
+ }
+}
+
+// Kniffel: bis zu sechs Spieler am selben Tisch, 13 Kategorien.
+async function refreshKniffel(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/kniffel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentKniffelGame=game;
+ if(!game)return;
+
+ const names=game.players.map(p=>p.name).join(", ");
+ if(!names)return;
+
+ if(game.status==="invited"){
+  tttStatus("Kniffel: "+names+" – "+game.players.length+" von 6 Plätzen belegt.");
+  const me=game.players.some(p=>p.id===sessionID);
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("kniffel")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("kniffel", "join")){
+     openGame(gamePath("kniffel"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.players[game.current];
+  tttStatus("Kniffel läuft – "+names+", "+(dran?dran.name:"jemand")+" ist am Zug.", "kniffel");
+  if(game.players.some(p=>p.id===sessionID)){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("kniffel")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Kniffel beendet – "+game.winner+" gewinnt.", "kniffel");
+ }
+}
+
+// Mau Mau: bis zu sieben Spieler am selben Tisch.
+async function refreshMauMau(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/maumau?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentMauMauGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Mau Mau: "+names+" – "+game.seats.length+" von 7 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("maumau")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("maumau", "join")){
+     openGame(gamePath("maumau"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.seats[game.current];
+  tttStatus("Mau Mau läuft – "+names+", "+(dran?dran.name:"jemand")+" ist am Zug.", "maumau");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("maumau")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Mau Mau beendet – "+game.winner+" gewinnt.", "maumau");
+ }
+}
+
+// UNO: bis zu vier Spieler am selben Tisch.
+async function refreshUno(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/uno?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentUnoGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("UNO: "+names+" – "+game.seats.length+" von 4 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("uno")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("uno", "join")){
+     openGame(gamePath("uno"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.seats[game.current];
+  tttStatus("UNO läuft – "+names+", "+(dran?dran.name:"jemand")+" ist am Zug.", "uno");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("uno")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("UNO beendet – "+game.winner+" gewinnt.", "uno");
+ }
+}
+
+// 31 Schwimmen: bis zu neun Spieler, jeder mit drei Leben.
+async function refreshSchwimmen(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/schwimmen?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSchwimmenGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("31: "+names+" – "+game.seats.length+" von 9 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("schwimmen")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("schwimmen", "join")){
+     openGame(gamePath("schwimmen"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.seats[game.current];
+  if(game.phase==="between"){
+   tttStatus("31 – Runde "+game.round+" beendet, die Auswertung liegt am Tisch.");
+  }else{
+   tttStatus("31 läuft – Runde "+game.round+", "+(dran?dran.name:"jemand")+" ist am Zug.", "schwimmen");
+  }
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("schwimmen")));
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("31 beendet – "+game.winner+" gewinnt.", "schwimmen");
+ }
+}
+
+// Arschloch: bis zu neun Spieler, Karten ablegen und Plätze sammeln.
+async function refreshArschloch(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/arschloch?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentArschlochGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Arschloch: "+names+" – "+game.seats.length+" von 9 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("arschloch")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("arschloch", "join")){
+     openGame(gamePath("arschloch"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.phase==="between"){
+  tttStatus("Arschloch – Runde "+game.round+" beendet, die Platzierungen liegen am Tisch.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("arschloch")));
+  }
+  return;
+ }
+
+ const dran=game.seats[game.current];
+ tttStatus("Arschloch läuft – Runde "+game.round+", "+(dran?dran.name:"jemand")+" ist am Zug.", "arschloch");
+ if(me){
+  addStatusButton("Spiel öffnen", ()=>openGame(gamePath("arschloch")));
+ }
+}
+
+// 1×1-Rennen: alle lösen dieselben acht Aufgaben, wer mehr richtig hat
+// gewinnt, bei Gleichstand entscheidet die Zeit.
+async function refreshEinsxeins(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/einsxeins?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentEinsxeinsGame=game;
+ if(!game)return;
+
+ const names=game.seats.map(p=>p.name).join(", ");
+ if(!names)return;
+ const me=game.seats.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("1×1-Rennen: "+names+" – "+game.seats.length+" von 7 Plätzen belegt.");
+  if(me){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("einsxeins", "join")){
+     openGame(gamePath("einsxeins"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("1×1-Rennen beendet"+(game.winner?" – "+game.winner+" gewinnt.":"."), "einsxeins");
+  if(me) addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
+  return;
+ }
+
+ const art=game.mode==="equations"?"Gleichungen":game.mode==="memory"?"Zahlen merken":game.mode==="sequences"?"Zahlenketten":"Grundrechenarten";
+ const stufe=game.mode==="memory"?game.level+" Ziffern":"Stufe "+game.level;
+ const fertig=game.seats.filter(p=>p.done).length;
+ tttStatus("1×1-Rennen läuft ("+art+", "+stufe+") – "+fertig+" von "+game.seats.length+" fertig.", "einsxeins");
+ if(me){
+  addStatusButton("Spiel öffnen", ()=>openGame(gamePath("einsxeins")));
+ }
+}
+
+// Skyjo: Karten tauschen, Spalten räumen, am Ende zählen die Punkte.
+async function refreshSkyjo(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/skyjo?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSkyjoGame=game;
+ if(!game)return;
+
+ const nameOf=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.redName+" "+game.totals[0]+" : "+game.totals[1]+" "+game.blueName;
+
+ if(game.status==="active" && game.phase!=="between"){
+  let zug;
+  if(game.phase==="setup"){
+   zug=(game.setupPlayer===0?game.redName:game.blueName)+" deckt seine Startkarten auf";
+  }else{
+   zug=nameOf(game.current===0?"red":"blue")+(" ist am Zug");
+  }
+  tttStatus("Skyjo läuft – Runde "+game.round+", "+standing+", "+zug+".", "skyjo");
+  return;
+ }
+
+ if(game.status==="active" && game.phase==="between"){
+  const sieger=game.roundWinner==="draw"?"unentschieden":nameOf(game.roundWinner)+" gewinnt";
+  tttStatus("Skyjo – Runde "+game.round+" beendet, "+sieger+" ("+game.roundScores[0]+" : "+game.roundScores[1]+").", "skyjo");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner==="draw"?"Unentschieden":nameOf(game.winner)+" hat gewonnen";
+  tttStatus("Skyjo beendet – "+standing+" · "+text+".", "skyjo");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Skyjo: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("skyjo", "accept")){
+     openGame(gamePath("skyjo"));
+    }
+   });
+  }
+ }
+}
+
+// Reversi: Steine umdrehen, aussetzen, am Ende zählen die Steine.
+async function refreshReversi(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/reversi?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentReversiGame=game;
+ if(!game)return;
+
+ let black=0,white=0;
+ (game.board||[]).forEach(row=>row.forEach(v=>{ if(v===1)black++; else if(v===-1)white++; }));
+ const standing=game.redName+" (Schwarz) "+black+" : "+white+" "+game.blueName+" (Weiß)";
+
+ if(game.status==="active"){
+  const zug=game.turn===1?game.redName:game.blueName;
+  tttStatus("Reversi läuft – "+standing+", "+zug+" ist am Zug.", "reversi");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const text=game.winner==="draw"?"Unentschieden":(game.winner==="black"?game.redName:game.blueName)+" hat gewonnen";
+  tttStatus("Reversi beendet – "+standing+" · "+text+".", "reversi");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Reversi: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("reversi", "accept")){
+     openGame(gamePath("reversi"));
+    }
+   });
+  }
+ }
+}
+
+// Hold the Line: Linien ziehen, wer keinen Zug mehr hat, verliert.
+async function refreshHold(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/hold?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentHoldGame=game;
+ if(!game)return;
+
+ if(game.status==="active"){
+  const zug=game.current==="red"?game.redName:game.blueName;
+  tttStatus("Hold the Line läuft – "+(game.lines||[]).length+" Linien, "+zug+" ist am Zug.", "hold");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const sieger=game.winner==="red"?game.redName:game.blueName;
+  tttStatus("Hold the Line beendet – "+sieger+" hat gewonnen.", "hold");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Hold the Line: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("hold", "accept")){
+     openGame(gamePath("hold"));
+    }
+   });
+  }
+ }
+}
+
+// Mühle: Steine setzen, ziehen und gegnerische Steine schlagen.
+async function refreshMuehle(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/muehle?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentMuehleGame=game;
+ if(!game)return;
+
+ const count=color=>game.state.filter(field=>field===color).length;
+ const nameOf=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.redName+" "+count("red")+" : "+count("blue")+" "+game.blueName;
+
+ if(game.status==="active"){
+  const zug=game.capturePending
+   ? nameOf(game.current)+" darf einen Stein schlagen"
+   : nameOf(game.current)+" ist am Zug";
+  tttStatus("Mühle läuft – "+standing+", "+zug+".", "muehle");
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Mühle beendet – "+standing+" · "+nameOf(game.winner)+" hat gewonnen.", "muehle");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Mühle: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("muehle", "accept")){
+     openGame(gamePath("muehle"));
+    }
+   });
+  }
+ }
+}
+
+// Streichhölzer: abwechselnd 1 bis 3 nehmen, wer das letzte nimmt, verliert.
+async function refreshStreichholz(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/streichholz?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentStreichholzGame=game;
+ if(!game)return;
+
+ const nameOf=color=>color==="red"?game.redName:game.blueName;
+ const standing=game.remaining+" Hölzer übrig";
+
+ if(game.status==="active"){
+  tttStatus("Streichholzspiel läuft – "+standing+", "+nameOf(game.current)+" ist am Zug.", "streichholzspiel");
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Streichholzspiel beendet – "+nameOf(game.winner)+" gewinnt, "+nameOf(game.loser)+" nahm das letzte Holz.", "streichholzspiel");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Streichholzspiel: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("streichholzspiel", "accept")){
+     openGame(gamePath("streichholzspiel"));
+    }
+   });
+  }
+ }
+}
+
+// Sim: Wer mit seinen Linien ein Dreieck schließt, hat verloren.
+async function refreshSim(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/sim?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSimGame=game;
+ if(!game)return;
+
+ const name=color=>color==="red"?game.redName:game.blueName;
+
+ if(game.status==="active"){
+  tttStatus("Sim läuft: "+game.redName+" gegen "+game.blueName+" – "+game.edges.filter(e=>e).length+" von 15 Linien gesetzt.", "sim");
+  return;
+ }
+
+ if(game.status==="finished"){
+  tttStatus("Sim beendet: "+name(game.winner)+" gewinnt, "+name(game.loser)+" hat ein Dreieck gebaut.", "sim");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Sim: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("sim", "accept")){
+     openGame(gamePath("sim"));
+    }
+   });
+  }
+ }
+}
+
+// Käsekästchen: Linien ziehen, geschlossene Kästchen bringen einen weiteren Zug.
+async function refreshKaese(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/kaesekaestche?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentKaeseGame=game;
+ if(!game)return;
+
+ const standing=game.redName+" "+game.redScore+" : "+game.blueScore+" "+game.blueName;
+
+ if(game.status==="active"){
+  tttStatus("Käsekästchen läuft – "+standing+".", "kaesekaestche");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const winner=game.winner==="draw"
+   ?"Unentschieden"
+   :(game.winner===game.redId?game.redName:game.blueName)+" hat gewonnen";
+  tttStatus("Käsekästchen beendet – "+standing+" · "+winner+".", "kaesekaestche");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Käsekästchen: "+game.redName+" gegen "+game.blueName+" – warte auf die Antwort …");
+  if(game.blueId===sessionID){
+   addStatusButton("Einladung annehmen", async()=>{
+    if(await gameApiAction("kaesekaestche", "accept")){
+     openGame(gamePath("kaesekaestche"));
+    }
+   });
+  }
+ }
+}
+
+// Mensch ärgere dich nicht spielt mit 2-4 Sitzen. Der Gastgeber lädt nacheinander
+// weitere Spieler ein und startet, sobald genug bereit sind.
+async function refreshMaen(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/menschaerger?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentMaenGame=game;
+ if(!game)return;
+
+ const seats=game.players.map(p=>p.name+(p.ready?"":" (wartet)")).join(", ");
+ const ready=game.players.filter(p=>p.ready).length;
+
+ if(game.status==="active"){
+  tttStatus((game.players.some(p=>p.id===sessionID)?"Du spielst mit: ":"Mensch ärgere dich nicht läuft: ")+seats+".", "menschaerger");
+  return;
+ }
+
+ if(game.status==="finished"){
+  const winner=game.players.find(p=>p.id===game.winner);
+  tttStatus(winner?winner.name+" hat gewonnen.":"Die Partie ist beendet.");
+  return;
+ }
+
+ if(game.status==="invited"){
+  tttStatus("Mensch ärgere dich nicht: "+seats+" – "+ready+"/"+game.maxPlayers+" bereit.");
+  // Jeder am Tisch kann sich hier bereit melden – annehmen ist nicht der
+  // einzige Weg, und wer schon sitzt, kommt so auch wieder auf bereit.
+  const me=game.players.find(p=>p.id===sessionID);
+  if(me){
+   addStatusButton(me.ready?"Nicht mehr bereit":"Ich bin bereit", async()=>{
+    if(await gameApiAction("menschaerger", "ready")){
+     await refreshMaen(players);
+    }
+   });
+  }
+  if(game.hostId===sessionID && ready>=2){
+   addStatusButton("Spiel starten", async()=>{
+    if(await gameApiAction("menschaerger", "start")){
+     openGame(gamePath("menschaerger"));
+    }
+   });
+  }
+ }
+}
+
+let selectedGame="tictactoe";
+let selectedPairs=8;
+let selectedKind="numbers";
+// Kurzform der Zusatzangaben fuer Meldungen (nur Paare finden hat welche).
+function zusatzKurz(gameId){
+ if(gameId!=="paare")return "";
+ const art={numbers:"Zahlen",letters:"Buchstaben",symbols:"Sonderzeichen"}[selectedKind]||selectedKind;
+ return " ("+selectedPairs+" Paare · "+art+")";
+}
+let selectedSeats=4;
+
+function gameName(id){
+ const def=SUPPORTED_GAMES.find(g=>g.id===id);
+ return def?def.name:"Spiel";
+}
+
+function gamePath(id){
+ const def=SUPPORTED_GAMES.find(g=>g.id===id);
+ return def?def.path:"/connector";
+}
+
+// Zusätzlicher Knopf unter dem Spielstatus (z. B. "Spiel starten").
+function addStatusButton(label, handler){
+ const box=document.getElementById("game-status");
+ const button=document.createElement("button");
+ button.type="button";
+ button.className="open-game";
+ button.textContent=label;
+ button.onclick=handler;
+ box.appendChild(button);
+}
+
+// Zeigt alle Spieler des Raums. Ein Klick auf einen Spieler lädt ihn sofort
+// zum oben gewählten Spiel ein.
+//
+// Wichtig: Kopf, Auswahlfeld und Zusatzfelder werden nur einmal gebaut und
+// danach nur noch gepflegt. Vorher wurde der ganze Block bei jedem Takt neu
+// gezeichnet, wodurch die offene Spielliste alle paar Sekunden zuklappte.
+let pickerZusatz = "";
+// Offenes Rundangebot des Raums (kommt vom Server).
+let angebot = null;
+
+// Multiplayer: ein Spiel aussuchen und es dem ganzen Raum anbieten. Wer
+// mitspielen will, klickt im Chat auf "Mitspielen" – Einladungen an einzelne
+// Spieler gibt es nicht mehr.
+function renderGamePicker(players){
+ const box=document.getElementById("gameplayers");
+ if(!box)return;
+
+ let controls=box.querySelector(".game-invite-controls");
+ if(!controls){
+  controls=document.createElement("div");
+  controls.className="game-invite-controls";
+  const label=document.createElement("label");
+  label.htmlFor="game-choice";
+  label.textContent="Spiel:";
+  const select=document.createElement("select");
+  select.id="game-choice";
+  select.setAttribute("aria-label","Spiel auswählen");
+  SUPPORTED_GAMES.forEach(g=>{
+   const opt=document.createElement("option");
+   opt.value=g.id;
+   opt.textContent=g.name;
+   select.appendChild(opt);
+  });
+  select.onchange=()=>{
+   selectedGame=select.value;
+   renderGamePicker(currentPlayersList);
+  };
+  controls.append(label,select);
+  box.appendChild(controls);
+  pickerZusatz="";
+ }
+
+ const select=document.getElementById("game-choice");
+ if(select.value!==selectedGame)select.value=selectedGame;
+
+ // Zusatzfelder (Paare, Sitze) nur neu bauen, wenn sich das Spiel geändert hat.
+ if(pickerZusatz!==selectedGame){
+  pickerZusatz=selectedGame;
+  zusatzFelder(controls);
+ }
+
+ let inhalt=box.querySelector(".runde-inhalt");
+ if(!inhalt){
+  inhalt=document.createElement("div");
+  inhalt.className="runde-inhalt";
+  box.appendChild(inhalt);
+ }
+ // Neu zeichnen, wenn sich Spiel, Angebot oder die Spieler geändert haben.
+ const sig=[selectedGame,isRoomOwner,angebot?angebot.id+"|"+angebot.game+"|"+angebot.vonId:""]
+  .concat(players.map(p=>p.id+":"+p.name)).join("|");
+ if(inhalt.dataset.sig!==sig){
+  inhalt.dataset.sig=sig;
+  inhalt.innerHTML="";
+  rundeInhalt(inhalt,players);
+ }
+}
+
+// Inhalt unter der Spieleauswahl: wer im Raum ist, das offene Angebot und der
+// Knopf, mit dem man selbst eine Runde anbietet.
+function rundeInhalt(box,players){
+ const wer=players.map(p=>p.name+(p.id===sessionID?" (Du)":"")).join(", ");
+ const zeile=document.createElement("p");
+ zeile.className="runde-info";
+ zeile.textContent="Im Raum: "+(wer||"niemand");
+ box.appendChild(zeile);
+
+ if(selectedGame==="malen"){
+  // Malen ist eine gemeinsame Fläche, keine Runde mit Einladung.
+  const start=document.createElement("button");
+  start.type="button";
+  start.className="runde-starten";
+  start.textContent="Malen öffnen";
+  start.onclick=()=>{
+   if(!activeRoom||!sessionID)return;
+   window.open("/spiele/malen/malen.html?room="+encodeURIComponent(activeRoom)
+    +"&name="+encodeURIComponent(playerName())
+    +"&id="+encodeURIComponent(sessionID),"_blank","noopener");
+  };
+  box.appendChild(start);
+  return;
+ }
+
+ if(angebot){
+  const karte=document.createElement("div");
+  karte.className="runde-angebot";
+  const titel=document.createElement("strong");
+  titel.textContent=angebot.gameName;
+  const text=document.createElement("small");
+  const meins=angebot.vonId===sessionID;
+  text.textContent=meins
+   ? "Dein Angebot steht im Chat – alle können beitreten."
+   : angebot.vonName+" bietet an – tritt im Chat bei.";
+  karte.append(titel,text);
+
+  const knoepfe=document.createElement("div");
+  knoepfe.className="runde-knoepfe";
+  if(meins){
+   const zurueck=document.createElement("button");
+   zurueck.type="button";
+   zurueck.className="sekundaer";
+   zurueck.textContent="Angebot zurückziehen";
+   zurueck.onclick=()=>angebotAktion("zurueck",angebot.game);
+   knoepfe.appendChild(zurueck);
+  }else{
+   const mit=document.createElement("button");
+   mit.type="button";
+   mit.className="los";
+   mit.textContent="Mitspielen";
+   mit.onclick=()=>beitreten(angebot.game);
+   knoepfe.appendChild(mit);
+  }
+  karte.appendChild(knoepfe);
+  box.appendChild(karte);
+  return;
+ }
+
+ const los=document.createElement("button");
+ los.type="button";
+ los.className="runde-starten";
+ los.textContent="Runde anbieten";
+ los.onclick=()=>angebotAktion("bieten",selectedGame);
+ box.appendChild(los);
+
+ const tipp=document.createElement("p");
+ tipp.className="runde-tipp";
+ tipp.textContent="Alle im Raum sehen die Karte im Chat und treten mit „Mitspielen“ bei.";
+ box.appendChild(tipp);
+}
+
+// Offenes Angebot abfragen.
+async function ladeAngebot(){
+ if(!activeRoom)return;
+ try{
+  const r=await fetch("/api/angebot?room="+encodeURIComponent(activeRoom),{cache:"no-store"});
+  if(r.ok)angebot=await r.json();
+ }catch(e){}
+}
+
+// Bieten, beitreten oder zurückziehen.
+async function angebotAktion(action,spiel){
+ if(!activeRoom||!sessionID)return false;
+ try{
+  const r=await fetch("/api/angebot?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:sessionID,action,game:spiel||selectedGame},
+    (spiel||selectedGame)==="paare"?{pairs:selectedPairs,kind:selectedKind}:{},
+    (spiel||selectedGame)==="menschaerger"?{maxPlayers:selectedSeats}:{}))
+  });
+  if(!r.ok){
+   tttStatus((await r.text()).trim()||"Das hat nicht geklappt.");
+   return false;
+  }
+  await ladeAngebot();
+  await refresh();
+  await refreshPlayers();
+  renderGamePicker(currentPlayersList);
+  return true;
+ }catch(e){
+  tttStatus("Verbindung verloren.");
+  return false;
+ }
+}
+
+// Einem offenen Angebot beitreten und das Spiel öffnen.
+async function beitreten(spiel){
+ const def=SUPPORTED_GAMES.find(g=>g.id===spiel);
+ if(await angebotAktion("annehmen",spiel)){
+  if(def)openGame(def.path);
+ }
+}
+
+// Zusatzangaben zum gewählten Spiel.
+function zusatzFelder(controls){
+ controls.querySelectorAll(".game-extra").forEach(el=>el.remove());
+
+ // Bei Paare finden: Motiv und Anzahl der Paare gleich mit einladen.
+ if(selectedGame==="paare"){
+  const box=document.createElement("div");
+  box.className="game-extra game-extra-box";
+  const titel=document.createElement("strong");
+  titel.textContent="Paare finden einstellen";
+  box.appendChild(titel);
+
+  const paarZeile=document.createElement("div");
+  paarZeile.className="game-extra-row";
+  const pairsLabel=document.createElement("label");
+  pairsLabel.htmlFor="pair-choice";
+  pairsLabel.textContent="Anzahl";
+  const pairsSelect=document.createElement("select");
+  pairsSelect.id="pair-choice";
+  pairsSelect.setAttribute("aria-label","Anzahl der Paare");
+  for(let i=1;i<=12;i++){
+   const opt=document.createElement("option");
+   opt.value=String(i);
+   opt.textContent=(i===1?"1 Paar":i+" Paare");
+   pairsSelect.appendChild(opt);
+  }
+  pairsSelect.value=String(selectedPairs);
+  pairsSelect.onchange=()=>{ selectedPairs=Number(pairsSelect.value)||8; };
+  paarZeile.append(pairsLabel,pairsSelect);
+
+  const kindZeile=document.createElement("div");
+  kindZeile.className="game-extra-row";
+  const kindLabel=document.createElement("label");
+  kindLabel.htmlFor="kind-choice";
+  kindLabel.textContent="Was sammeln?";
+  const kindSelect=document.createElement("select");
+  kindSelect.id="kind-choice";
+  kindSelect.setAttribute("aria-label","Art der Zeichen");
+  [["numbers","Zahlen"],["letters","Buchstaben"],["symbols","Sonderzeichen"]].forEach(([value,text])=>{
+   const opt=document.createElement("option");
+   opt.value=value;
+   opt.textContent=text;
+   kindSelect.appendChild(opt);
+  });
+  kindSelect.value=selectedKind;
+  kindSelect.onchange=()=>{ selectedKind=kindSelect.value; };
+  kindZeile.append(kindLabel,kindSelect);
+
+  box.append(paarZeile,kindZeile);
+  controls.append(box);
+ }
+
+ // Bei Mensch ärgere dich nicht zählt, wie viele Sitze der Tisch hat.
+ if(selectedGame==="menschaerger"){
+  const seatsLabel=document.createElement("label");
+  seatsLabel.className="game-extra";
+  seatsLabel.htmlFor="seat-choice";
+  seatsLabel.textContent="Spieler:";
+  const seatsSelect=document.createElement("select");
+  seatsSelect.className="game-extra";
+  seatsSelect.id="seat-choice";
+  seatsSelect.setAttribute("aria-label","Anzahl der Spieler");
+  [2,3,4].forEach(count=>{
+   const opt=document.createElement("option");
+   opt.value=String(count);
+   opt.textContent=count+" Spieler";
+   seatsSelect.appendChild(opt);
+  });
+  seatsSelect.value=String(selectedSeats);
+  seatsSelect.onchange=()=>{ selectedSeats=Number(seatsSelect.value)||4; };
+  controls.append(seatsLabel,seatsSelect);
+ }
+}
+
+async function refreshVierGewinnt(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/viergewinnt?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+
+ currentVGGame=game;
+
+ if(game && game.status==="active"){
+  if(game.redId===sessionID || game.blueId===sessionID){
+   tttStatus("Vier gewinnt läuft gegen "+(game.redId===sessionID?game.blueName:game.redName)+".", "viergewinnt");
+  }else{
+   tttStatus(game.redName+" spielt gerade Vier gewinnt gegen "+game.blueName+".");
+  }
+  return;
+ }
+
+ if(game && game.status==="invited"){
+  if(game.redId===sessionID){
+   tttStatus("Deine Einladung an "+game.blueName+" zu Vier gewinnt steht im Chat. Wir warten auf die Antwort …");
+  }else if(game.blueId===sessionID){
+   tttStatus(game.redName+" hat dich zu Vier gewinnt eingeladen. Du kannst direkt im Chat antworten.");
+  }
+  return;
+ }
+}
+
+async function refreshTicTacToe(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/tictactoe?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  tttStatus("Tic Tac Toe konnte gerade nicht abgefragt werden.");
+  return;
+ }
+
+ currentTTTGame=game;
+
+ if(game && game.status==="active"){
+  if(game.xId===sessionID || game.oId===sessionID){
+   tttStatus("Tic Tac Toe läuft gegen "+(game.xId===sessionID?game.oName:game.xName)+".", "tictactoe");
+  }else{
+   tttStatus(game.xName+" spielt gerade gegen "+game.oName+".");
+  }
+  return;
+ }
+
+ if(game && game.status==="invited"){
+  if(game.xId===sessionID){
+   tttStatus("Deine Einladung an "+game.oName+" steht im Chat. Wir warten auf die Antwort …");
+  }else if(game.oId===sessionID){
+   tttStatus(game.xName+" hat dich zu Neon Tic Tac Toe eingeladen. Du kannst direkt im Chat antworten.");
+  }else{
+   tttStatus(game.xName+" hat "+game.oName+" zu Tic Tac Toe eingeladen.");
+  }
+  return;
+ }
+
+ if(game && game.status==="declined"){
+  if(game.xId===sessionID){
+   tttStatus(game.oName+" hat die Einladung abgelehnt. Du kannst jemand anderen auswählen.");
+  }else if(game.oId===sessionID){
+   tttStatus("Du hast die Einladung abgelehnt.");
+  }else{
+   tttStatus("Die letzte Spieleinladung wurde abgelehnt.");
+  }
+ }else if(game && game.status==="finished"){
+  tttStatus("Die letzte Tic-Tac-Toe-Runde ist beendet. Du kannst eine neue Partie starten.");
+ }else{
+  tttStatus("Noch keine offene Runde – Spiel wählen und „Runde anbieten“ drücken.");
+ }
+
+}
+let chatBusy=false;
+let lastChatSignature="";
+
+async function refresh(){
+ if(!activeRoom||chatBusy)return;
+ chatBusy=true;
+ try{
+  // Erst das offene Angebot holen: die Chat-Karte hängt davon ab.
+  await ladeAngebot();
+  const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!r.ok){
+   setRoomStatus("Verbindung verloren");
+   return;
+  }
+  const msgs=await r.json(),box=document.getElementById("chat");
+  // Nur neu zeichnen, wenn sich wirklich etwas geändert hat. Sonst klappt das
+  // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
+  const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId,m.tone||""].join("|")).join("`")
+   +"#"+isRoomOwner+"#"+selectedMuteSender+"#"+(angebot?angebot.id:"")
+   +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
+  if(signature===lastChatSignature)return;
+  lastChatSignature=signature;
+  const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
+  box.innerHTML="";
+  msgs.forEach(m=>{
+   const d=document.createElement("div");
+   d.className="msg";
+
+   // Systemmeldungen (z. B. "X verlässt die Räuberhöhle") laufen ohne Absender.
+   if(m.system){
+    d.className="msg msg-system";
+    d.textContent=m.text;
+    box.appendChild(d);
+    return;
+   }
+
+   // Offene Runde: das Angebot gilt dem ganzen Raum (kein Empfänger).
+   if(m.gameInvite && !m.toId){
+    d.className="msg game-invite";
+    const mine=m.senderId===sessionID;
+    const def=SUPPORTED_GAMES.find(g=>g.id===m.game)||{name:m.game||"Spiel",path:""};
+    const title=document.createElement("strong");
+    title.textContent=mine?"Dein Angebot: ":m.name+" bietet an: ";
+    const spielText=document.createElement("span");
+    spielText.textContent=def.name;
+    const sm=document.createElement("small");
+    sm.textContent="  "+m.time;
+    d.append(title,spielText,sm);
+    if(!angebot||angebot.id!==m.gameId){
+     const ende=document.createElement("small");
+     ende.className="angebot-ende";
+     ende.textContent="Angebot beendet.";
+     d.appendChild(ende);
+     box.appendChild(d);
+     return;
+    }
+    const actions=document.createElement("div");
+    actions.className="game-invite-actions";
+    if(mine){
+     const zurueck=document.createElement("button");
+     zurueck.textContent="Zurückziehen";
+     zurueck.onclick=()=>angebotAktion("zurueck",m.game);
+     actions.appendChild(zurueck);
+    }else{
+     const mit=document.createElement("button");
+     mit.textContent="Mitspielen";
+     mit.onclick=()=>beitreten(m.game);
+     actions.appendChild(mit);
+    }
+    d.appendChild(actions);
+    box.appendChild(d);
+    return;
+   }
+
+   if(m.gameInvite){
+    d.className="msg game-invite";
+    const title=document.createElement("strong");
+    title.textContent=m.senderId===sessionID?"Deine Spieleinladung: ":m.name+" lädt dich ein: ";
+    const gameDef = SUPPORTED_GAMES.find(g=>g.id===m.game) || { name: m.game||"Spiel", path: "/spiele/tictac/tictactoe.html" };
+    const gameText=document.createElement("span");
+    gameText.textContent=gameDef.name;
+    const sm=document.createElement("small");
+    sm.textContent="  "+m.time;
+    d.append(title,gameText,sm);
+
+    const game = gameStateFor(m.game);
+    if(game && game.id===m.gameId){
+     // Die Einladungsnachricht selbst trägt Empfänger und Absender – das gilt
+     // für alle Spiele, auch für die mit mehreren Sitzen.
+     const isInvitee = m.toId===sessionID;
+     const isInviter = m.senderId===sessionID;
+     if(game.status==="invited" && isInvitee){
+      const actions=document.createElement("div");
+      actions.className="game-invite-actions";
+
+      const accept=document.createElement("button");
+      accept.textContent="Einladung annehmen";
+      accept.onclick=async()=>{
+       if(await gameApiAction(m.game, "accept")){
+        openGame(gameDef.path);
+       }
+      };
+
+      const decline=document.createElement("button");
+      decline.textContent="Ablehnen";
+      decline.onclick=async()=>{
+       if(await gameApiAction(m.game, "decline")){
+        if(game) game.status="declined";
+        tttStatus("Du hast die Einladung abgelehnt.");
+        await refresh();
+        refreshPlayers();
+       }
+      };
+
+      actions.append(accept,decline);
+      d.appendChild(actions);
+     }else if(game.status==="declined"){
+      const result=document.createElement("div");
+      result.textContent=isInviter?"Einladung abgelehnt.":"Diese Einladung wurde abgelehnt.";
+      d.appendChild(result);
+     }else if(game.status==="active"){
+      const result=document.createElement("div");
+      result.textContent="Einladung angenommen. Das Spiel wird geöffnet.";
+      d.appendChild(result);
+     }
+    }
+   }else{
+    const nameWrapper=document.createElement("span");
+    // Ein Klick auf einen fremden Namen öffnet lieb / witzig / böse –
+    // nicht bei "verlässt den Raum.", weil dort niemand mehr antwortet.
+    if(m.senderId && m.senderId!==sessionID && !m.whisper && !m.gone){
+     const nameBtn=document.createElement("button");
+     nameBtn.type="button";
+     nameBtn.className="chat-name-btn";
+     nameBtn.textContent=m.name;
+     nameBtn.title="Klicken: lieb, witzig, böse oder flüstern";
+     nameBtn.onclick=(e)=>{
+      e.stopPropagation();
+      openTonePicker(m.senderId, m.name);
+     };
+     nameWrapper.appendChild(nameBtn);
+     const colon=document.createElement("span");
+     colon.textContent=": ";
+     nameWrapper.appendChild(colon);
+    }else{
+     const b=document.createElement("b");
+     if(m.whisper){
+      b.textContent=(m.senderId===sessionID?"Du → "+m.toName:m.name+" → Du")+" (Flüstern): ";
+     }else{
+      b.textContent=m.name+": ";
+     }
+     nameWrapper.appendChild(b);
+    }
+    if(m.whisper){
+     d.style.color="#ffd36a";
+    }
+    const t=document.createElement("span");
+    t.textContent=m.text;
+    if(m.tone){
+     // Geklickte Sprüche sind eingefärbt: lieb rosa, witzig grün, böse rot.
+     t.className="tone-"+m.tone;
+     d.classList.add("t-"+m.tone);
+    }
+    const sm=document.createElement("small");
+    sm.textContent="  "+m.time;
+    d.append(nameWrapper,t,sm);
+
+    if(isRoomOwner && selectedMuteSender===m.senderId){
+     const pop=document.createElement("div");
+     pop.className="mute-popover";
+     const lbl=document.createElement("span");
+     lbl.textContent="Stummschalten ("+m.name+"):";
+     const b1=document.createElement("button");
+     b1.textContent="1 Min";
+     b1.onclick=()=>mutePlayer(m.senderId, 1);
+     const b2=document.createElement("button");
+     b2.textContent="2 Min";
+     b2.onclick=()=>mutePlayer(m.senderId, 2);
+     const b3=document.createElement("button");
+     b3.textContent="3 Min";
+     b3.onclick=()=>mutePlayer(m.senderId, 3);
+     pop.append(lbl,b1,b2,b3);
+     d.appendChild(pop);
+    }
+   }
+
+   box.appendChild(d);
+  });
+  if(atBottom)box.scrollTop=box.scrollHeight;
+ }catch(e){
+ }finally{
+  chatBusy=false;
+ }
+}
+// Sprüche-Auswahl: ein Klick auf einen Namen im Chat.
+let toneTargetId=null;
+let toneTargetName="";
+function openTonePicker(id,name){
+ toneTargetId=id;
+ toneTargetName=name;
+ document.getElementById("toneTarget").textContent=name;
+ document.getElementById("toneWhisper").textContent="Flüstern: nur "+name+" liest mit";
+ document.getElementById("toneMute").hidden=!isRoomOwner;
+ const picker=document.getElementById("tonePicker");
+ picker.hidden=false;
+ picker.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function closeTonePicker(){
+ document.getElementById("tonePicker").hidden=true;
+ toneTargetId=null;
+}
+document.getElementById("toneClose").onclick=closeTonePicker;
+// Flüstern: schreibt "/f Name: " ins Nachrichtenfeld und setzt den Cursor dahinter.
+document.getElementById("toneWhisper").onclick=()=>{
+ if(!toneTargetName)return;
+ const field=document.getElementById("message");
+ field.value="/f "+toneTargetName+": ";
+ field.focus();
+ field.setSelectionRange(field.value.length,field.value.length);
+ closeTonePicker();
+};
+// Zum Spiel einladen: führt zur Spielauswahl und merkt sich den Spieler.
+document.getElementById("toneGame").onclick=()=>{
+ if(!toneTargetId)return;
+ closeTonePicker();
+ setModus("multi", false);
+ renderGamePicker(currentPlayersList);
+ const box=document.getElementById("modusbox");
+ if(box&&!box.hidden)box.scrollIntoView({behavior:"smooth",block:"start"});
+ // Der Hinweis steht direkt in der Zeile des Spielers; die Statuszeile wird
+ // vom Takt überschrieben und würde nur kurz aufblitzen.
+};
+[1,2,3].forEach(min=>{
+ document.getElementById("toneMute"+min).onclick=()=>{
+  if(toneTargetId)mutePlayer(toneTargetId,min);
+  closeTonePicker();
+ };
+});
+document.querySelectorAll("#tonePicker .tone-btn:not(.whisper):not(.game)").forEach(btn=>{
+ btn.onclick=async()=>{
+  if(!toneTargetId)return;
+  const response=await fetch("/api/tone?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,targetId:toneTargetId,kind:btn.dataset.tone})
+  });
+  if(response.ok){
+   closeTonePicker();
+   refresh();
+  }else{
+   setRoomStatus((await response.text()).trim()||"Das hat nicht geklappt.");
+  }
+ };
+});
+
+// Sucht einen Spieler im Raum über seinen Namen (genau oder eindeutiger Anfang).
+function spielerMitNamen(name){
+ const gesucht=name.trim().toLowerCase();
+ if(!gesucht)return null;
+ const alle=currentPlayersList.filter(p=>p.id!==sessionID);
+ const genau=alle.find(p=>p.name.trim().toLowerCase()===gesucht);
+ if(genau)return genau;
+ const anfang=alle.filter(p=>p.name.trim().toLowerCase().startsWith(gesucht));
+ return anfang.length===1?anfang[0]:null;
+}
+
+// Alles geht an alle. Nur "/f Name: Text" geht als Flüsterpost an eine Person.
+async function send(){
+ const field=document.getElementById("message");
+ let text=field.value.trim();
+ if(!text||!activeRoom)return;
+
+ let toId="";
+ const fluester=/^\/f\s+([^:]+):\s*([\s\S]*)$/i.exec(text);
+ if(fluester){
+  const ziel=spielerMitNamen(fluester[1]);
+  if(!ziel){
+   setRoomStatus("Niemand namens \""+fluester[1].trim()+"\" ist im Raum – dann geht der Text an alle.");
+   return;
+  }
+  toId=ziel.id;
+  text=fluester[2].trim();
+  if(!text){
+   setRoomStatus("Schreib hinter \"/f "+ziel.name+":\" noch deinen Text.");
+   return;
+  }
+ }
+
+ const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom),{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({id:sessionID,name:playerName(),text,toId})
+ });
+ if(r.ok){
+  field.value="";
+  refresh();
+ }else{
+  setRoomStatus((await r.text()).trim()||"Nachricht konnte nicht gesendet werden.");
+ }
+}
+
+document.getElementById("message").addEventListener("keydown",e=>{
+ if(e.key==="Enter")send();
+});
+
+// Springt von selbst ins Spiel, sobald eine Partie für mich läuft – egal ob
+// ich eingeladen habe, eingeladen wurde oder der Gastgeber den Tisch startet.
+let startLaeuft = false;
+async function pruefeSpielstart(){
+ if(!activeRoom||startLaeuft)return;
+ try{
+  const r=await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
+  if(!r.ok)return;
+  const d=await r.json();
+  if(d&&d.aktiv){
+   startLaeuft=true;
+   openGame(gamePath(d.aktiv));
+  }
+ }catch(e){}
+}
+setInterval(pruefeSpielstart,2000);
+
+// Die Spiele-Liste kommt aus der Spiele-Übersicht selbst – so bleibt sie
+// automatisch aktuell, wenn dort ein Spiel dazukommt.
+async function ladeAlleinSpiele(){
+ const liste=document.getElementById("soloListe");
+ if(!liste||liste.dataset.geladen==="1")return;
+ liste.dataset.geladen="1";
+ try{
+  const r=await fetch("/spiele/spiele.html",{cache:"no-store"});
+  if(!r.ok)throw Error("Status "+r.status);
+  const doc=new DOMParser().parseFromString(await r.text(),"text/html");
+  const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
+  if(!gruppen.length)throw Error("keine Gruppen");
+  liste.innerHTML="";
+  gruppen.forEach(gruppe=>{
+   const kasten=document.createElement("div");
+   kasten.className="solo-gruppe";
+   const titel=document.createElement("h3");
+   titel.textContent=(gruppe.querySelector("h2")?.textContent||"Spiele").trim();
+   const raster=document.createElement("div");
+   raster.className="solo-raster";
+   [...gruppe.querySelectorAll("a[href]")]
+    // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
+    .filter(eintrag=>!/editor|^malen\//i.test(eintrag.getAttribute("href")||""))
+    .forEach(alt=>{
+    const link=document.createElement("a");
+    link.className="solo-link";
+    link.href="/spiele/"+alt.getAttribute("href");
+    link.target="_blank";
+    link.rel="noopener";
+    link.textContent=alt.textContent.trim();
+    raster.appendChild(link);
+   });
+   if(raster.children.length){
+    kasten.append(titel,raster);
+    liste.appendChild(kasten);
+   }
+  });
+ }catch(e){
+  liste.dataset.geladen="0";
+  liste.innerHTML="";
+  const p=document.createElement("p");
+  p.className="empty";
+  p.textContent="Die Spieleliste konnte nicht geladen werden.";
+  liste.appendChild(p);
+ }
+}
+
+loadStatus();
+// Ohne gespeicherten Raum direkt hinein – ohne Klick und ohne Namen.
+restoreRoom().finally(()=>{ if(!activeRoom)joinSingleRoom(); });
+setInterval(heartbeat,5000);
+setInterval(refresh,1000);
+setInterval(refreshPlayers,3000);
+setInterval(loadMutes,3000);
+
+document.getElementById("player").addEventListener("keydown",e=>{
+ if(e.key==="Enter"){
+  e.preventDefault();
+  nameUebernehmen();
+ }else if(e.key==="Escape"){
+  e.preventDefault();
+  zeigeNamen(true);
+ }
+});
+document.getElementById("player").addEventListener("blur",()=>{
+ // Klick irgendwo hin zählt als "fertig" – aber nur, wenn das Feld offen war.
+ if(!document.getElementById("nameRow").hidden)nameUebernehmen();
+});
+
+const params=new URLSearchParams(location.search);
+if(params.get("room")){
+ document.getElementById("room").value=params.get("room");
+ // Zurück aus einem Spiel: mit gespeichertem Namen direkt hinein.
+ if(nameField.value.trim()){
+  join();
+ }else{
+  setRoomStatus("Bitte gib deinen Namen ein und tritt dem Raum bei.");
+ }
+}
+</script>
+</body>
+</html>

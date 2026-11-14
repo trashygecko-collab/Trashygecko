@@ -83,6 +83,53 @@ button{font:inherit;cursor:pointer}
 }
 .farbe.aktiv{border-color:var(--teal);box-shadow:0 0 10px #4df5c288}
 .hinweis{margin:0;font-size:12px;color:var(--muted)}
+.farbkreis{
+  width:44px;
+  height:44px;
+  flex:0 0 auto;
+  padding:3px;
+  border:3px solid #3d4a45;
+  border-radius:50%;
+  background:conic-gradient(#e53935,#fbc02d,#43a047,#1e88e5,#8e24aa,#e53935);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.farbkreis:hover{border-color:var(--teal)}
+.farbkreis input{
+  width:100%;
+  height:100%;
+  padding:0;
+  border:none;
+  border-radius:50%;
+  background:transparent;
+  cursor:pointer;
+  appearance:none;
+  -webkit-appearance:none;
+}
+.farbkreis input::-webkit-color-swatch-wrapper{padding:0}
+.farbkreis input::-webkit-color-swatch{border:none;border-radius:50%}
+.farbkreis input::-moz-color-swatch{border:none;border-radius:50%}
+.knopf.aktiv{
+  background:linear-gradient(180deg,#4df5c2,#37b492);
+  border-color:var(--teal);
+  color:#102b27;
+}
+.staerke{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-size:11px;
+  letter-spacing:1px;
+  color:var(--muted);
+}
+.staerke input[type=range]{width:120px;accent-color:var(--teal)}
+.staerke output{min-width:16px;color:var(--ivory);font-weight:bold;letter-spacing:0}
+.felder{position:absolute;inset:0;pointer-events:none}
+.felder i{position:absolute;background:rgba(120,112,96,.3)}
+#gitterX{top:0;bottom:0;width:1.5px}
+#gitterY{left:0;right:0;height:1.5px}
 .flaeche{
   position:relative;
   background:#fff;
@@ -100,6 +147,29 @@ canvas{
   cursor:crosshair;
   background:#fff;
 }
+.karte{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:74px;
+  height:74px;
+  padding:0;
+  border:2px solid rgba(213,179,106,.8);
+  border-radius:9px;
+  background:#fff;
+  box-shadow:0 3px 10px #0004;
+  line-height:0;
+  cursor:pointer;
+}
+.karte canvas{
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  border-radius:6px;
+  touch-action:none;
+}
+.karte:hover{border-color:var(--teal)}
+.karte:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .status{margin:0;font-size:12px;color:var(--muted);min-height:16px}
 </style>
 </head>
@@ -120,11 +190,25 @@ canvas{
 
   <section class="werkzeug">
     <div class="farben" id="farben"></div>
+    <label class="farbkreis" title="Eigene Farbe aussuchen">
+      <input type="color" id="farbkreis" value="#111111" aria-label="Eigene Farbe aussuchen">
+    </label>
+    <button type="button" id="radierer" class="knopf" aria-pressed="false">RADIERER</button>
+    <label class="staerke" for="staerke">STÄRKE <output id="staerkeWert">8</output>
+      <input type="range" id="staerke" min="2" max="40" step="1" value="8">
+    </label>
     <p class="hinweis" id="malHinweis">Farbe wählen und loskritzeln.</p>
+    <p class="hinweis" id="gestenHinweis">Fläche ist vier Bildschirme groß · schieben mit zwei Fingern, rechter Maustaste oder Mausrad · Zoom mit Strg + Mausrad · die Karte oben rechts springt in den Viertel.</p>
   </section>
 
   <section class="flaeche">
     <canvas id="blatt" width="1200" height="1200"></canvas>
+    <div class="felder" aria-hidden="true"><i id="gitterX"></i><i id="gitterY"></i></div>
+    <button type="button" class="karte" id="karte"
+            title="Welchen Viertel du siehst – klicken zum Hinspringen"
+            aria-label="Übersicht der Fläche: zeig den Viertel, den du siehst. Klicken springt dorthin.">
+      <canvas id="karteBlatt" width="148" height="148"></canvas>
+    </button>
   </section>
 
   <p class="status" id="status">Bereit.</p>
@@ -142,8 +226,7 @@ const FARBEN = [
   { wert:"#1e88e5", titel:"Blau" },
   { wert:"#8e24aa", titel:"Lila" },
   { wert:"#fb8c00", titel:"Orange" },
-  { wert:"#6d4c41", titel:"Braun" },
-  { wert:"#ffffff", titel:"Radierer" }
+  { wert:"#6d4c41", titel:"Braun" }
 ];
 
 const parameter = new URLSearchParams(location.search);
@@ -157,15 +240,37 @@ const stift = blatt.getContext("2d");
 const statusFeld = document.getElementById("status");
 const resetKnopf = document.getElementById("resetButton");
 const hinweis = document.getElementById("malHinweis");
+const karte = document.getElementById("karte");
+const karteStift = document.getElementById("karteBlatt").getContext("2d");
+const farbkreis = document.getElementById("farbkreis");
+const radiererKnopf = document.getElementById("radierer");
+const staerkeFeld = document.getElementById("staerke");
+const staerkeWert = document.getElementById("staerkeWert");
+const gitterX = document.getElementById("gitterX");
+const gitterY = document.getElementById("gitterY");
 
 let farbe = FARBEN[0].wert;
 let breite = 8;
+let radiert = false;        // Pinsel oder Radierer
 let zeichnet = false;
 let eigenerStrich = null;   // {color,width,points:[]}
-let malbar = [];            // eigene Striche, die schon gezeichnet sind
+let alleStriche = [];       // alles, was auf dem Brett ist – fürs Neuzeichnen
 let epoche = -1;            // Fassung der Fläche laut Server
 let stand = 0;              // so viele Striche kennen wir vom Server
 let istAdmin = !zusammen;
+
+// Das Brett ist vier Bildschirme groß: zwei Felder breit, zwei hoch. Der
+// sichtbare Ausschnitt davon ist ein Viertel, deshalb fängt zoom bei 2 an
+// (1 wäre das ganze Brett auf einem Bildschirm).
+const WELT = MAL;
+const FELD = WELT / 2;
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 10;
+let zoom = 2;
+let kameraX = FELD / 2;     // linker Rand des Blicks in Brettkoordinaten
+let kameraY = FELD / 2;     // oberer Rand des Blicks
+let zeiger = new Map();     // welche Finger / Maustasten gerade drücken
+let griff = null;           // läuft ein Verschieben / Zoomen?
 
 // --------------------------------------------------
 // FARBEN
@@ -179,18 +284,54 @@ function baueFarben(){
     knopf.className = "farbe";
     knopf.style.background = eintrag.wert;
     knopf.title = eintrag.titel;
+    knopf.dataset.wert = eintrag.wert;
     knopf.setAttribute("aria-label", eintrag.titel);
     if (eintrag.wert === farbe) knopf.classList.add("aktiv");
     knopf.addEventListener("click", ()=>{
       farbe = eintrag.wert;
-      box.querySelectorAll(".farbe").forEach(f=>f.classList.toggle("aktiv", f === knopf));
-      hinweis.textContent = eintrag.titel === "Radierer"
-        ? "Radierer: wische über die Fläche."
-        : "Farbe " + eintrag.titel + " – jetzt malen.";
+      farbkreis.value = eintrag.wert;
+      if (radiert) radiererUmschalten(false);
+      markiereFarbe();
+      hinweis.textContent = "Farbe " + eintrag.titel + " – jetzt malen.";
     });
     box.appendChild(knopf);
   });
 }
+
+// --------------------------------------------------
+// FARBKREIS, RADIERER, STÄRKE
+// --------------------------------------------------
+
+function markiereFarbe(){
+  document.querySelectorAll("#farben .farbe").forEach(knopf=>{
+    knopf.classList.toggle("aktiv", knopf.dataset.wert === farbe && !radiert);
+  });
+}
+
+function radiererUmschalten(an){
+  radiert = !!an;
+  radiererKnopf.classList.toggle("aktiv", radiert);
+  radiererKnopf.setAttribute("aria-pressed", radiert ? "true" : "false");
+  markiereFarbe();
+  hinweis.textContent = radiert
+    ? "Radierer: wische über die Fläche."
+    : "Pinsel – Farbe " + farbe + ", jetzt malen.";
+}
+
+// Der Farbkreis öffnet die Farbauswahl des Geräts.
+farbkreis.addEventListener("input", ()=>{
+  farbe = farbkreis.value;
+  if (radiert) radiererUmschalten(false);
+  markiereFarbe();
+  hinweis.textContent = "Eigene Farbe " + farbe + " – jetzt malen.";
+});
+
+radiererKnopf.addEventListener("click", ()=> radiererUmschalten(!radiert));
+
+staerkeFeld.addEventListener("input", ()=>{
+  breite = Math.min(60, Math.max(2, Number(staerkeFeld.value) || 8));
+  staerkeWert.textContent = String(breite);
+});
 
 // --------------------------------------------------
 // ZEICHNEN
@@ -216,17 +357,123 @@ function strichZeichnen(strich){
   stift.stroke();
 }
 
-function flaecheLeeren(){
-  stift.fillStyle = "#ffffff";
-  stift.fillRect(0, 0, MAL, MAL);
+// --------------------------------------------------
+// BLICK: ZOOM UND VERSCHIEBEN
+// --------------------------------------------------
+
+function kameraKlemmen(){
+  const breite = WELT / zoom;
+  kameraX = Math.min(Math.max(kameraX, 0), WELT - breite);
+  kameraY = Math.min(Math.max(kameraY, 0), WELT - breite);
 }
 
-function stelleAufDemBlatt(ereignis){
+// Bildschirmpunkt (CSS-Pixel) in Brettkoordinaten umrechnen.
+function aufDemBlatt(ereignis){
   const rechteck = blatt.getBoundingClientRect();
+  const breite = WELT / zoom;
   return [
-    (ereignis.clientX - rechteck.left) * MAL / rechteck.width,
-    (ereignis.clientY - rechteck.top) * MAL / rechteck.height
+    kameraX + (ereignis.clientX - rechteck.left) / rechteck.width * breite,
+    kameraY + (ereignis.clientY - rechteck.top) / rechteck.height * breite
   ];
+}
+
+// Zeichenfläche auf den Ausschnitt einstellen: ein Brettpunkt = k Bildpunkte.
+function kameraSetzen(){
+  const k = blatt.width * zoom / WELT;
+  stift.setTransform(k, 0, 0, k, -kameraX * k, -kameraY * k);
+}
+
+// Alles neu zeichnen – nötig, sobald der Blick verschoben oder gezoomt wird.
+function neuZeichnen(){
+  stift.setTransform(1, 0, 0, 1, 0, 0);
+  stift.fillStyle = "#e7e1d3";              // Rand außerhalb des Bretts
+  stift.fillRect(0, 0, blatt.width, blatt.height);
+  kameraSetzen();
+  stift.fillStyle = "#ffffff";
+  stift.fillRect(0, 0, WELT, WELT);
+
+  alleStriche.forEach(strichZeichnen);
+  linienSetzen();
+  karteZeichnen();
+}
+
+// Die vier Felder: hauchdünne Linien als Lage über der Fläche. Sie gehören
+// nicht zum Gemalten, verschwinden beim Radieren also nicht, und Striche
+// laufen einfach darüber – die Fläche bleibt ein Stück.
+function linienSetzen(){
+  const anteil = 100 / (WELT / zoom);
+  const x = (FELD - kameraX) * anteil;
+  const y = (FELD - kameraY) * anteil;
+  gitterX.style.display = (x < 0 || x > 100) ? "none" : "block";
+  gitterX.style.left = x + "%";
+  gitterY.style.display = (y < 0 || y > 100) ? "none" : "block";
+  gitterY.style.top = y + "%";
+}
+
+function verschieben(dxPixel, dyPixel){
+  const rechteck = blatt.getBoundingClientRect();
+  const breite = WELT / zoom;
+  kameraX -= dxPixel / rechteck.width * breite;
+  kameraY -= dyPixel / rechteck.height * breite;
+  kameraKlemmen();
+  neuZeichnen();
+}
+
+// Mit der Karte in einen Viertel springen: der angeklickte Punkt wird zur
+// Mitte des Blicks.
+function springeZu(weltX, weltY){
+  const breite = WELT / zoom;
+  kameraX = weltX - breite / 2;
+  kameraY = weltY - breite / 2;
+  kameraKlemmen();
+  neuZeichnen();
+}
+
+// Kleine Übersicht: ganzes Brett, die vier Felder und der Blick als Rahmen.
+function karteZeichnen(){
+  const groesse = karteStift.canvas.width;
+  const s = groesse / WELT;
+  karteStift.setTransform(1, 0, 0, 1, 0, 0);
+  karteStift.fillStyle = "#ffffff";
+  karteStift.fillRect(0, 0, groesse, groesse);
+
+  karteStift.strokeStyle = "#ded7c7";
+  karteStift.lineWidth = 1;
+  karteStift.beginPath();
+  karteStift.moveTo(groesse / 2, 0);
+  karteStift.lineTo(groesse / 2, groesse);
+  karteStift.moveTo(0, groesse / 2);
+  karteStift.lineTo(groesse, groesse / 2);
+  karteStift.stroke();
+
+  const breite = (WELT / zoom) * s;
+  karteStift.fillStyle = "rgba(77,245,194,.25)";
+  karteStift.fillRect(kameraX * s, kameraY * s, breite, breite);
+  karteStift.strokeStyle = "#102b27";
+  karteStift.lineWidth = 2;
+  karteStift.strokeRect(kameraX * s, kameraY * s, breite, breite);
+}
+
+function zoomenUm(faktor, clientX, clientY){
+  const rechteck = blatt.getBoundingClientRect();
+  const punkt = [
+    kameraX + (clientX - rechteck.left) / rechteck.width * (WELT / zoom),
+    kameraY + (clientY - rechteck.top) / rechteck.height * (WELT / zoom)
+  ];
+  zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom * faktor));
+  const breite = WELT / zoom;
+  kameraX = punkt[0] - (clientX - rechteck.left) / rechteck.width * breite;
+  kameraY = punkt[1] - (clientY - rechteck.top) / rechteck.height * breite;
+  kameraKlemmen();
+  neuZeichnen();
+}
+
+// --------------------------------------------------
+// MALEN
+// --------------------------------------------------
+
+function stiftFarbe(){
+  return radiert ? "#ffffff" : farbe;
 }
 
 function punktAnhaengen(punkt){
@@ -236,9 +483,9 @@ function punktAnhaengen(punkt){
   punkte.push(punkt);
   // Nur das neue Stück zeichnen, nicht den ganzen Strich.
   if (punkte.length === 1) {
-    strichZeichnen({ color: farbe, width: breite, points: punkte });
+    strichZeichnen({ color: stiftFarbe(), width: breite, points: punkte });
   } else {
-    stift.strokeStyle = farbe;
+    stift.strokeStyle = stiftFarbe();
     stift.lineWidth = breite;
     stift.lineCap = "round";
     stift.lineJoin = "round";
@@ -249,19 +496,11 @@ function punktAnhaengen(punkt){
   }
 }
 
-blatt.addEventListener("pointerdown", ereignis=>{
-  ereignis.preventDefault();
+function strichStarten(ereignis){
   zeichnet = true;
-  eigenerStrich = { color: farbe, width: breite, points: [] };
-  // Faengt der Browser den Zeiger nicht, wird trotzdem gezeichnet.
-  try { blatt.setPointerCapture(ereignis.pointerId); } catch (fehler) {}
-  punktAnhaengen(stelleAufDemBlatt(ereignis));
-});
-
-blatt.addEventListener("pointermove", ereignis=>{
-  if (!zeichnet || !eigenerStrich) return;
-  punktAnhaengen(stelleAufDemBlatt(ereignis));
-});
+  eigenerStrich = { color: stiftFarbe(), width: breite, points: [] };
+  punktAnhaengen(aufDemBlatt(ereignis));
+}
 
 function strichBeenden(){
   if (!zeichnet) return;
@@ -269,13 +508,169 @@ function strichBeenden(){
   const strich = eigenerStrich;
   eigenerStrich = null;
   if (!strich || !strich.points.length) return;
-  malbar.push(strich);
+  alleStriche.push(strich);
   if (zusammen) strichSenden(strich);
 }
 
-blatt.addEventListener("pointerup", strichBeenden);
-blatt.addEventListener("pointercancel", strichBeenden);
-blatt.addEventListener("pointerleave", strichBeenden);
+// Angefangenen Strich wegwerfen (z. B. wenn der zweite Finger dazukommt).
+function strichVerwerfen(){
+  if (!zeichnet) return;
+  zeichnet = false;
+  eigenerStrich = null;
+  neuZeichnen();
+}
+
+function zweiFingerMerken(){
+  const punkte = [...zeiger.values()];
+  if (punkte.length < 2) { griff = null; return; }
+  const dx = punkte[0].x - punkte[1].x;
+  const dy = punkte[0].y - punkte[1].y;
+  griff = {
+    art: "finger",
+    abstand: Math.max(1, Math.hypot(dx, dy)),
+    mitteX: (punkte[0].x + punkte[1].x) / 2,
+    mitteY: (punkte[0].y + punkte[1].y) / 2,
+    zoom: zoom,
+    kameraX: kameraX,
+    kameraY: kameraY
+  };
+}
+
+blatt.addEventListener("pointerdown", ereignis=>{
+  ereignis.preventDefault();
+  try { blatt.setPointerCapture(ereignis.pointerId); } catch (fehler) {}
+
+  // Rechte oder mittlere Maustaste schiebt die Fläche – keine Extraknöpfe.
+  if (ereignis.pointerType === "mouse" && ereignis.button !== 0) {
+    zeiger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
+    griff = { art: "maus", x: ereignis.clientX, y: ereignis.clientY };
+    blatt.style.cursor = "grabbing";
+    return;
+  }
+
+  zeiger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
+  if (zeiger.size >= 2) {
+    // Zwei Finger: nicht malen, sondern schieben und zoomen. Der eben
+    // begonnene Punkt wird wieder verworfen, damit kein Klecks bleibt.
+    strichVerwerfen();
+    zweiFingerMerken();
+    return;
+  }
+  strichStarten(ereignis);
+});
+
+blatt.addEventListener("pointermove", ereignis=>{
+  if (zeiger.has(ereignis.pointerId)) {
+    zeiger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
+  }
+
+  if (griff && griff.art === "maus") {
+    verschieben(ereignis.clientX - griff.x, ereignis.clientY - griff.y);
+    griff.x = ereignis.clientX;
+    griff.y = ereignis.clientY;
+    return;
+  }
+
+  if (griff && griff.art === "finger" && zeiger.size >= 2) {
+    const punkte = [...zeiger.values()];
+    const rechteck = blatt.getBoundingClientRect();
+    const dx = punkte[0].x - punkte[1].x;
+    const dy = punkte[0].y - punkte[1].y;
+    const abstand = Math.max(1, Math.hypot(dx, dy));
+    const mitteX = (punkte[0].x + punkte[1].x) / 2;
+    const mitteY = (punkte[0].y + punkte[1].y) / 2;
+
+    zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, griff.zoom * abstand / griff.abstand));
+    const breite = WELT / zoom;
+    const breiteAlt = WELT / griff.zoom;
+    // Der Punkt, der unter der Finger-Mitte lag, bleibt dort stehen.
+    const weltX = griff.kameraX + (griff.mitteX - rechteck.left) / rechteck.width * breiteAlt;
+    const weltY = griff.kameraY + (griff.mitteY - rechteck.top) / rechteck.height * breiteAlt;
+    kameraX = weltX - (mitteX - rechteck.left) / rechteck.width * breite;
+    kameraY = weltY - (mitteY - rechteck.top) / rechteck.height * breite;
+    kameraKlemmen();
+    neuZeichnen();
+    return;
+  }
+
+  if (!zeichnet || !eigenerStrich) return;
+  punktAnhaengen(aufDemBlatt(ereignis));
+});
+
+function zeigerWeg(ereignis){
+  zeiger.delete(ereignis.pointerId);
+  if (griff && griff.art === "maus") {
+    griff = null;
+    blatt.style.cursor = "crosshair";
+    return;
+  }
+  if (griff && griff.art === "finger") {
+    if (zeiger.size >= 2) zweiFingerMerken(); else griff = null;
+    return;
+  }
+  strichBeenden();
+}
+
+blatt.addEventListener("pointerup", zeigerWeg);
+blatt.addEventListener("pointercancel", zeigerWeg);
+
+blatt.addEventListener("wheel", ereignis=>{
+  ereignis.preventDefault();
+
+  if (ereignis.ctrlKey || ereignis.metaKey) {
+    zoomenUm(Math.exp(-ereignis.deltaY * 0.002), ereignis.clientX, ereignis.clientY);
+    return;
+  }
+
+  // Ohne Strg schiebt das Rad – so klappt auch das Zwei-Finger-Wischen
+  // auf dem Touchpad. Mit Umschalt geht es waagerecht.
+  const rechteck = blatt.getBoundingClientRect();
+  const breite = WELT / zoom;
+  const dx = ereignis.shiftKey ? ereignis.deltaY : ereignis.deltaX;
+  const dy = ereignis.shiftKey ? 0 : ereignis.deltaY;
+  kameraX += dx / rechteck.width * breite;
+  kameraY += dy / rechteck.height * breite;
+  kameraKlemmen();
+  neuZeichnen();
+}, { passive: false });
+
+// Klick auf die Karte: dorthin springen. Über die Tastatur geht es der Reihe
+// nach durch die vier Viertel.
+const VIERTEL = [[300, 300], [900, 300], [900, 900], [300, 900]];
+let naechstesViertel = 0;
+
+karte.addEventListener("pointerdown", ereignis=>{
+  ereignis.preventDefault();
+  ereignis.stopPropagation();
+  const rechteck = karte.getBoundingClientRect();
+  springeZu(
+    (ereignis.clientX - rechteck.left) / rechteck.width * WELT,
+    (ereignis.clientY - rechteck.top) / rechteck.height * WELT
+  );
+});
+
+karte.addEventListener("keydown", ereignis=>{
+  if (ereignis.key !== "Enter" && ereignis.key !== " ") return;
+  ereignis.preventDefault();
+  const ziel = VIERTEL[naechstesViertel % VIERTEL.length];
+  naechstesViertel = (naechstesViertel + 1) % VIERTEL.length;
+  springeZu(ziel[0], ziel[1]);
+});
+
+// Rechtsklick soll das Menü nicht aufziehen, sondern die Fläche schieben.
+blatt.addEventListener("contextmenu", ereignis=>ereignis.preventDefault());
+
+// Passt die Zeichenfläche an die Anzeige an (scharf auch auf dem Handy).
+function blattGroesse(){
+  const rechteck = blatt.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const kanten = Math.max(320, Math.round(rechteck.width * dpr));
+  if (blatt.width !== kanten) {
+    blatt.width = kanten;
+    blatt.height = kanten;
+  }
+  neuZeichnen();
+}
 
 // --------------------------------------------------
 // MIT DEM SERVER ABGLEICHEN
@@ -312,13 +707,17 @@ async function abgleichen(){
 
     if (daten.epoch !== epoche) {
       // Jemand hat die Fläche geleert (oder wir sind neu dabei).
-      flaecheLeeren();
+      alleStriche = (daten.strokes || []).slice();
       epoche = daten.epoch;
-      stand = 0;
-      (daten.strokes || []).forEach(strichZeichnen);
       stand = daten.rev;
+      neuZeichnen();
     } else {
-      (daten.strokes || []).forEach(strichZeichnen);
+      (daten.strokes || []).forEach(strich=>{
+        // Eigene Striche liegen schon auf dem Brett.
+        if (strich.author === spielerId) return;
+        alleStriche.push(strich);
+        strichZeichnen(strich);
+      });
       stand = daten.rev;
     }
 
@@ -336,9 +735,9 @@ async function abgleichen(){
 
 async function flaecheZuruecksetzen(){
   if (!zusammen) {
-    flaecheLeeren();
-    malbar = [];
+    alleStriche = [];
     stand = 0;
+    neuZeichnen();
     statusFeld.textContent = "Fläche geleert.";
     return;
   }
@@ -352,10 +751,11 @@ async function flaecheZuruecksetzen(){
       statusFeld.textContent = "Nur der Admin kann die Fläche leeren.";
       return;
     }
-    flaecheLeeren();
+    alleStriche = [];
     const daten = await antwort.json();
     epoche = daten.epoch;
     stand = 0;
+    neuZeichnen();
     statusFeld.textContent = "Fläche geleert – alle fangen neu an.";
   }catch(fehler){
     statusFeld.textContent = "Zurücksetzen hat nicht geklappt.";
@@ -380,13 +780,14 @@ async function lebenszeichen(){
 
 function starten(){
   baueFarben();
-  flaecheLeeren();
+  blattGroesse();
 
   const zurueck = document.getElementById("backButton");
   zurueck.href = zusammen ? "/connector" : "../spiele.html";
 
   resetKnopf.hidden = !istAdmin;
   resetKnopf.addEventListener("click", flaecheZuruecksetzen);
+  window.addEventListener("resize", blattGroesse);
 
   if (zusammen) {
     statusFeld.textContent = "Verbinde …";

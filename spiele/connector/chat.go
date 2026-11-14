@@ -8,6 +8,10 @@ import (
 	"unicode/utf8"
 )
 
+// adminPasswort gehört zum Chat-Befehl "/Admin <Passwort>". Damit wird man
+// auch dann Admin, wenn der Platz schon vergeben ist (online die Regel).
+const adminPasswort = "Admin"
+
 // messages handles GET (fetch) and POST (send) chat messages.
 func messages(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(r.URL.Query().Get("room"))
@@ -91,6 +95,31 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		if muted, remaining := room.isMuted(input.ID); muted {
 			mu.Unlock()
 			http.Error(w, "Du bist stummgeschaltet für "+remaining.Truncate(time.Second).String(), http.StatusForbidden)
+			return
+		}
+		// "/Admin Admin": Im Internet kann der Boss-Platz schon vergeben sein.
+		// Wer das Passwort kennt, wird damit Admin. Der Befehl selbst landet
+		// nie im Chat, damit das Passwort nicht für alle sichtbar wird.
+		if strings.HasPrefix(strings.ToLower(input.Text), "/admin") {
+			teile := strings.Fields(input.Text)
+			if len(teile) == 2 && strings.EqualFold(teile[1], adminPasswort) {
+				room.OwnerID = input.ID
+				room.OwnerName = sender.Name
+				room.Name = roomTitle(sender.Name)
+				jetzt := time.Now()
+				room.addMessage(Message{
+					Name:     sender.Name,
+					Text:     "ist jetzt Admin.",
+					Time:     jetzt.Format("15:04:05"),
+					SenderID: input.ID,
+				})
+				room.LastActive = jetzt
+				mu.Unlock()
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			mu.Unlock()
+			http.Error(w, "Falsches Passwort für /Admin.", http.StatusForbidden)
 			return
 		}
 		// Spam protection: max 5 messages per 10 seconds

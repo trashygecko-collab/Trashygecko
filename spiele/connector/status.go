@@ -59,5 +59,18 @@ func status(w http.ResponseWriter, r *http.Request) {
 	if len(ips) > 0 {
 		primary = ips[0]
 	}
-	jsonResponse(w, map[string]any{"port": port, "ip": primary, "ips": ips, "homepage": home})
+	// url ist die Adresse, die Mitspieler eintippen sollen. Lokal ist das die
+	// LAN-Adresse; die Online-Fassung setzt hier ihre öffentliche Adresse ein.
+	url := ""
+	if primary != "" {
+		url = "http://" + primary + ":" + port + "/connector"
+	}
+	jsonResponse(w, map[string]any{
+		"port":     port,
+		"ip":       primary,
+		"ips":      ips,
+		"url":      url,
+		"homepage": home,
+		"online":   false,
+	})
 }

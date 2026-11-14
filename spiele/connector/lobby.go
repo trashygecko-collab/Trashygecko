@@ -50,6 +50,12 @@ func roomTitle(name string) string {
 	return name + "s Abenteuerland"
 }
 
+// bossErkennen bestimmt, wer als Boss (Admin) gilt. Lokal ist das der PC, auf
+// dem der Connector läuft; die Online-Fassung setzt das beim Start um.
+var bossErkennen = func(r *http.Request, room *Room) bool {
+	return isServerMachine(r)
+}
+
 // isServerMachine meldet, ob die Anfrage von diesem PC kommt. Nur dort läuft der
 // Connector – also sitzt dort der Host, der automatisch Admin ist.
 func isServerMachine(r *http.Request) bool {
@@ -188,9 +194,6 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.Name = limitName(input.Name)
-	// Wer ohne eigenen Namen hereinkommt, bekommt einen: am Server-PC "Boss",
-	// alle anderen "Spieler1", "Spieler2", … – umbenennen geht jederzeit.
-	amServer := isServerMachine(r)
 
 	mu.Lock()
 	room := rooms[input.Room]
@@ -219,6 +222,9 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	room.cleanPlayers()
+	// Wer ohne eigenen Namen hereinkommt, bekommt einen: der Boss "Boss",
+	// alle anderen "Spieler1", "Spieler2", … – umbenennen geht jederzeit.
+	amServer := bossErkennen(r, room)
 	if input.Name == "" {
 		if amServer {
 			input.Name = "Boss"
@@ -248,6 +254,16 @@ func presence(w http.ResponseWriter, r *http.Request) {
 			Text:     text,
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
+		})
+		// Begrüßung nur für den Neuen – der Raum flüstert ihn an, die anderen
+		// sehen davon nichts.
+		room.addMessage(Message{
+			Name:    "Der Raum",
+			Text:    "Hallo und herzlich willkommen!",
+			Time:    time.Now().Format("15:04:05"),
+			ToID:    input.ID,
+			ToName:  name,
+			Whisper: true,
 		})
 	} else if player.Name != "" && player.Name != name {
 		// Umbenennen einmal im Chat bekanntgeben – mit dem alten Namen als
