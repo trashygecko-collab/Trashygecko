@@ -154,6 +154,18 @@ canvas{
    eigene Kopfzeile nötig ist. */
 .kopf-rechts{margin-left:auto;display:flex;gap:8px;align-items:center}
 .knopf-klein{padding:7px 10px;font-size:11px}
+/* Die Fläche wird so groß wie möglich: ihre Breite setzt das Skript so,
+   dass das Quadrat immer in den Bildschirm passt. Deshalb nicht strecken. */
+.flaeche{align-self:center}
+/* Vollbild: Werkzeugleiste und Fläche füllen den ganzen Schirm. */
+.seite:fullscreen{
+  width:100%;max-width:none;height:100vh;
+  padding:8px 10px 10px;gap:8px;
+  background:radial-gradient(ellipse at center,#244b40 0%,#102b27 75%);
+}
+.seite:-webkit-full-screen{
+  width:100%;max-width:none;height:100vh;padding:8px 10px 10px;
+}
 /* Kleine Anzeige über dem Brett: Pinsel (mit Farbe) oder Radierer.
    Sie lässt Klicks durch und stört beim Malen nicht. */
 .werkzeug-anzeige{
@@ -226,6 +238,7 @@ canvas{
       <input type="range" id="staerke" min="2" max="40" step="1" value="8">
     </label>
     <span class="kopf-rechts">
+      <button type="button" id="vollbild" class="knopf knopf-klein" aria-pressed="false">⛶ VOLLBILD</button>
       <button type="button" id="resetButton" class="knopf knopf-klein" hidden>ZURÜCKSETZEN</button>
       <a href="../spiele.html" id="backButton" class="knopf knopf-klein">◀ SPIELE</a>
     </span>
@@ -290,6 +303,9 @@ const radiererKnopf = document.getElementById("radierer");
 const staerkeFeld = document.getElementById("staerke");
 const staerkeWert = document.getElementById("staerkeWert");
 const gitterX = document.getElementById("gitterX");
+const seite = document.querySelector(".seite");
+const flaeche = document.querySelector(".flaeche");
+const vollbildKnopf = document.getElementById("vollbild");
 const gitterY = document.getElementById("gitterY");
 
 let farbe = FARBEN[0].wert;
@@ -753,6 +769,41 @@ blatt.addEventListener("wheel", ereignis=>{
 blatt.addEventListener("contextmenu", ereignis=>ereignis.preventDefault());
 
 // Passt die Zeichenfläche an die Anzeige an (scharf auch auf dem Handy).
+// So groß wie möglich: die Breite der Spalte, aber nie höher als der Platz,
+// der unter der Werkzeugleiste übrig bleibt – also immer ein Quadrat, das
+// ohne Scrollen auf den Schirm passt (auch im Vollbild).
+function flaecheGroesse(){
+  const stil = getComputedStyle(seite);
+  const luecke = parseFloat(stil.rowGap) || 0;
+  // Nur sichtbare Nachbarn zählen: ausgeblendete Zeilen (leere Statuszeile,
+  // niemand malt gerade) nehmen auch keinen Platz und keine Lücke weg.
+  const andere = [...seite.children].filter(k => k !== flaeche && k.getClientRects().length);
+  const hoeheAndere = andere.reduce((summe, k) => summe + k.getBoundingClientRect().height, 0);
+  const platzHoehe = window.innerHeight
+    - parseFloat(stil.paddingTop) - parseFloat(stil.paddingBottom)
+    - hoeheAndere - luecke * andere.length - 8;   // Rand der Fläche + Reserve
+  const platzBreite = seite.clientWidth
+    - parseFloat(stil.paddingLeft) - parseFloat(stil.paddingRight) - 4;
+  const kante = Math.max(240, Math.min(1600, Math.floor(Math.min(platzBreite, platzHoehe))));
+  blatt.style.width = kante + "px";
+}
+
+// Beim Verkleinern verschwindet die Bildlaufleiste erst nach dem Setzen der
+// Breite – dann ist ein paar Pixel mehr Platz. Deshalb einmal nachmessen.
+function flaecheNachmessen(){
+  flaecheGroesse();
+  blattGroesse();
+  requestAnimationFrame(() => { flaecheGroesse(); blattGroesse(); });
+}
+
+function vollbildUmschalten(){
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else if (seite.requestFullscreen) {
+    seite.requestFullscreen();
+  }
+}
+
 function blattGroesse(){
   const rechteck = blatt.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -874,14 +925,21 @@ async function lebenszeichen(){
 function starten(){
   baueFarben();
   zeigeWerkzeug();
-  blattGroesse();
+  flaecheNachmessen();
 
   const zurueck = document.getElementById("backButton");
   zurueck.href = zusammen ? "/connector" : "../spiele.html";
 
   resetKnopf.hidden = !istAdmin;
   resetKnopf.addEventListener("click", flaecheZuruecksetzen);
-  window.addEventListener("resize", blattGroesse);
+  window.addEventListener("resize", flaecheNachmessen);
+  vollbildKnopf.addEventListener("click", vollbildUmschalten);
+  document.addEventListener("fullscreenchange", () => {
+    const an = !!document.fullscreenElement;
+    vollbildKnopf.textContent = an ? "⛶ VOLLBILD AUS" : "⛶ VOLLBILD";
+    vollbildKnopf.setAttribute("aria-pressed", an ? "true" : "false");
+    flaecheNachmessen();
+  });
 
   if (zusammen) {
     lebenszeichen();
