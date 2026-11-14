@@ -17,7 +17,9 @@ function createDefaultStorage() {
         settings: {
             sound: true,
             animations: true,
-            hints: true
+            hints: true,
+            steinForm: "rund",
+            steinZustand: "neu"
         }
     };
 }
@@ -32,10 +34,16 @@ function loadStorage() {
         }
 
         const data = JSON.parse(saved);
+        const standard = createDefaultStorage();
 
         return {
-            ...createDefaultStorage(),
-            ...data
+            ...standard,
+            ...data,
+            // Neue Einstellungen fehlen in alten Spielstaenden - ergaenzen.
+            settings: {
+                ...standard.settings,
+                ...(data.settings || {})
+            }
         };
 
     } catch (error) {

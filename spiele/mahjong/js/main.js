@@ -100,9 +100,22 @@ const RUNDEN_FARBEN = [
     "Azur",
     "Amethyst",
     "Schiefer",
-    "Schwarz",
-    "Tiefschwarz"
+    "Weinrot",
+    "Tiefschwarz",
+    // Versteckte Zugabe: eine Runde mit allen Farben gleichzeitig.
+    "Regenbogen"
 ];
+
+// Nur diese Farben stehen in der Farbwahl - die Regenbogen-Runde bleibt
+// eine Ueberraschung und taucht erst nach Level 504 auf.
+const RUNDEN_FARBEN_SICHTBAR = RUNDEN_FARBEN.slice(0, RUNDEN_FARBEN.length - 1);
+
+// Laeuft gerade die Regenbogen-Runde (Level 505-560, 1065-1120, ...)?
+function istRegenbogenRunde(runde) {
+    const nummer = ((runde - 1) % RUNDEN_FARBEN.length) + 1;
+
+    return nummer === RUNDEN_FARBEN.length;
+}
 
 // Welche Form gehoert zu diesem Level?
 function formVon(level) {
@@ -126,6 +139,10 @@ function rundeStartHinweis(level) {
 
     if (formVon(level) !== 1 || runde < 2) return "";
 
+    if (istRegenbogenRunde(runde)) {
+        return 'Runde ' + runde + ' – alle Farben. Jedes Paar hat seine eigene Farbe.';
+    }
+
     return 'Neue Runde ' + runde + ' – Steinfarbe ' + farbenName(runde) + '.';
 }
 
@@ -143,6 +160,9 @@ function setzeRundenFarbe(runde) {
     const nummer = ((runde - 1) % RUNDEN_FARBEN.length) + 1;
 
     document.body.dataset.runde = String(nummer);
+
+    // In der Regenbogen-Runde bekommt jeder Stein seine eigene Farbe.
+    document.body.dataset.regenbogen = istRegenbogenRunde(runde) ? "ja" : "nein";
 }
 
 function formatTime(seconds) {
@@ -182,7 +202,23 @@ function updateStats() {
         ["scoreDisplay"],
         `Punkte: ${score}`
     );
+
+    // Tipp-Knopf: unter 200 Punkten gibt es keinen Tipp - das sieht man
+    // schon am Knopf, nicht erst nach dem Klick.
+    const hintButton = getElement("hintButton");
+
+    if (hintButton) {
+        const keinTipp = score < TIPP_KOSTEN || !gameRunning;
+
+        hintButton.disabled = keinTipp;
+        hintButton.title = keinTipp
+            ? `Tipp erst ab ${TIPP_KOSTEN} Punkten`
+            : `Markiert ein Paar und kostet ${TIPP_KOSTEN} Punkte`;
+    }
 }
+
+// Was ein Tipp kostet und ab wann es ueberhaupt einen gibt.
+const TIPP_KOSTEN = 200;
 
 // Gut lesbare Farben auf dem dunklen Feld - fuer den Spruch nach einem Paar.
 const SPRUCH_FARBEN = [
@@ -588,6 +624,13 @@ function mischeBrett() {
 function showHint() {
     if (!gameRunning) return;
 
+    // Ein Tipp kostet 200 Punkte - darunter gibt es keinen mehr.
+    if (score < TIPP_KOSTEN) {
+        setMessage(`Für einen Tipp brauchst du mindestens ${TIPP_KOSTEN} Punkte.`);
+
+        return;
+    }
+
     const freeTiles = getFreeTiles(currentBoard);
 
     for (let i = 0; i < freeTiles.length; i++) {
@@ -602,17 +645,13 @@ function showHint() {
 
                 aktualisiereBrett();
 
-                // Ein Tipp kostet 50 Punkte - solange noch welche da sind.
-                // Der Spruch kommt wie beim Fehlgriff in Rot, nur milder.
-                if (score > 0) {
-                    score = Math.max(0, score - 50);
+                // Ein Tipp kostet 200 Punkte - der Spruch kommt wie beim
+                // Fehlgriff in Rot, nur milder.
+                score = Math.max(0, score - TIPP_KOSTEN);
 
-                    updateStats();
-                    blinkePunkte();
-                    setMessage(pechSpruch(), true, "- 50 Punkte");
-                } else {
-                    setMessage("Diese beiden Steine passen zusammen.");
-                }
+                updateStats();
+                blinkePunkte();
+                setMessage(pechSpruch(), true, `- ${TIPP_KOSTEN} Punkte`);
 
                 return;
             }
@@ -817,6 +856,74 @@ function geschafftInRunde(runde) {
     return anzahl;
 }
 
+// --------------------------------------------------
+// STEIN-FORM UND ALTERUNG
+// --------------------------------------------------
+
+const STIL_FORMEN = ["rund", "eckig"];
+const STIL_ZUSTAENDE = ["neu", "alt"];
+
+// Setzt Form und Zustand der Steine (CSS: body[data-form], body[data-zustand]).
+function setzeStil(form, zustand, speichern = true) {
+    const formWert = STIL_FORMEN.includes(form) ? form : "rund";
+    const zustandWert = STIL_ZUSTAENDE.includes(zustand) ? zustand : "neu";
+
+    document.body.dataset.form = formWert;
+    document.body.dataset.zustand = zustandWert;
+
+    document.querySelectorAll(".stil-gruppe").forEach(gruppe => {
+        const aktiv =
+            gruppe.dataset.gruppe === "form" ? formWert : zustandWert;
+
+        gruppe.querySelectorAll("button").forEach(knopf => {
+            const an = knopf.dataset.wert === aktiv;
+
+            knopf.classList.toggle("aktiv", an);
+            knopf.setAttribute("aria-pressed", an ? "true" : "false");
+        });
+    });
+
+    if (speichern && gameData) {
+        gameData.settings.steinForm = formWert;
+        gameData.settings.steinZustand = zustandWert;
+
+        saveStorage(gameData);
+    }
+}
+
+function aktuellerStil() {
+    const settings = (gameData && gameData.settings) || {};
+
+    return {
+        form: STIL_FORMEN.includes(settings.steinForm) ? settings.steinForm : "rund",
+        zustand: STIL_ZUSTAENDE.includes(settings.steinZustand)
+            ? settings.steinZustand
+            : "neu"
+    };
+}
+
+function baueStilwahl() {
+    const leiste = getElement("stilLeiste");
+
+    if (!leiste) return;
+
+    leiste.querySelectorAll(".stil-gruppe").forEach(gruppe => {
+        const feld = gruppe.dataset.gruppe;
+
+        gruppe.querySelectorAll("button").forEach(knopf => {
+            knopf.addEventListener("click", () => {
+                const jetzt = aktuellerStil();
+
+                if (feld === "form") {
+                    setzeStil(knopf.dataset.wert, jetzt.zustand);
+                } else {
+                    setzeStil(jetzt.form, knopf.dataset.wert);
+                }
+            });
+        });
+    });
+}
+
 function baueLevelAuswahl(runde = auswahlRunde) {
     const raster = getElement("levelGrid");
 
@@ -884,7 +991,7 @@ function baueFarbwahl() {
 
     leiste.innerHTML = "";
 
-    RUNDEN_FARBEN.forEach((name, index) => {
+    RUNDEN_FARBEN_SICHTBAR.forEach((name, index) => {
         const runde = index + 1;
         const abLevel = (runde - 1) * hoechstesLevel() + 1;
 
@@ -1098,6 +1205,10 @@ function initializeGame() {
             schliesseLevelAuswahl();
         }
     });
+
+    // Steinform und Alterung aus dem Spielstand uebernehmen.
+    baueStilwahl();
+    setzeStil(aktuellerStil().form, aktuellerStil().zustand, false);
 
     updateStats();
 

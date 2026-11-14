@@ -451,6 +451,16 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
 
         button.disabled = !free;
 
+        // Regenbogen-Runde: Farbe aus dem Motiv, damit jedes Paar eine hat.
+        if (document.body.dataset.regenbogen === "ja") {
+            // symbolId ist "motiv-07" - die Zahl daraus zaehlt.
+            const nummer =
+                parseInt(String(tile.symbolId).replace(/\D/g, ""), 10) || 1;
+            const farbe = ((nummer - 1) % 9) + 1;
+
+            button.dataset.farbe = String(farbe);
+        }
+
         const image = document.createElement("img");
 
         image.className = "tile-symbol";
@@ -465,6 +475,20 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
         };
 
         button.appendChild(image);
+
+        // Alterung: Ausbrueche (deckend) und Risse (geblendet). Beide liegen
+        // ueber dem Motiv und tauchen nur bei body[data-zustand="alt"] auf.
+        const wear = document.createElement("span");
+
+        wear.className = "tile-wear";
+        wear.setAttribute("aria-hidden", "true");
+        button.appendChild(wear);
+
+        const risse = document.createElement("span");
+
+        risse.className = "tile-risse";
+        risse.setAttribute("aria-hidden", "true");
+        button.appendChild(risse);
 
         if (typeof onTileClick === "function") {
             button.addEventListener("click", () => {

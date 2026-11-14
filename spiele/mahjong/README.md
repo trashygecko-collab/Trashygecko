@@ -31,7 +31,7 @@ Der Spielstand (Level, Punkte, Bestzeiten) liegt im `localStorage` des Browsers.
 | Zoomen | zwei Finger auseinander/zusammen oder Mausrad |
 | Gesamtansicht | Doppelklick / Doppeltipp auf eine freie Stelle |
 | Level wählen | auf `LV 37 ▾` tippen, dann ein Feld im Raster; unten eine Farbe antippen, um in deren Runde zu springen |
-| Tipp | Knopf `TIPP` markiert ein freies Paar – kostet 50 Punkte |
+| Tipp | Knopf `TIPP` markiert ein freies Paar in Türkis – kostet 200 Punkte, erst ab 200 Punkten |
 | Neu mischen (nur wenn kein Zug geht) | Knopf `NEU MISCHEN` – einmal pro Level gratis |
 | Neu mischen | Knopf `NEU` startet das aktuelle Level neu |
 | Vollbild | Knopf `⛶` |
@@ -43,7 +43,13 @@ Notch/Safe-Area bleibt zusätzlich frei).
 ## Spielablauf und Punkte
 
 - Ein Stein ist frei, wenn nichts darauf liegt und links oder rechts daneben
-  kein Stein mehr steht. Nicht erreichbare Steine sind deutlich dunkler.
+  kein Stein mehr steht. Nicht erreichbare Steine sind deutlich dunkler, in
+  Runde 7 (Schiefer) zusätzlich leicht durchscheinend. In den beiden schwarzen
+  Runden 8 und 9 bleiben sie deckend, weil halb durchsichtige schwarze Steine
+  vor dem dunklen Brett wie Löcher wirken: Runde 8 dunkelt nur sanft ab
+  (Helligkeit 0,88) und gibt den freien Steinen einen helleren Glanz an der
+  Innenkante, Runde 9 dunkelt kräftiger ab (0,78) und trennt zusätzlich über
+  den Sockel.
 - **Gleiches Paar:** +100 Punkte, dazu ein zufälliger Spruch aus `lob.txt`. Der
   Spruch erscheint jedes Mal in einer anderen, gut lesbaren Farbe (Gold, Mint,
   Himmelblau, Rosa, Lavendel, Sand, Aqua, Apricot, nie zweimal dieselbe
@@ -58,9 +64,11 @@ Notch/Safe-Area bleibt zusätzlich frei).
   Farbe (warme Palette: Orange, Gold, Amber, Coral, Rosa, Honig, nie zweimal
   dieselbe hintereinander). Am Ende zählen ein Zeitbonus
   (1000 − 2 pro Sekunde) und ein Abzug von 25 Punkten je Fehlgriff.
-- **Tipp:** `TIPP` markiert ein freies Paar und kostet 50 Punkte – mit einem
-  Spruch aus `pech.txt` in Rot und `- 50 Punkte` dahinter, wie beim Fehlgriff.
-  Bei 0 Punkten bleibt es beim sachlichen Hinweis ohne Abzug.
+- **Tipp:** `TIPP` markiert ein freies Paar mit türkisem Ring und pulsierendem
+  Schein und kostet **200 Punkte** – mit einem Spruch aus `pech.txt` in Rot und
+  `- 200 Punkte` dahinter, wie beim Fehlgriff. Unter 200 Punkten gibt es keinen
+  Tipp mehr: Der Knopf `TIPP` ist dann ausgegraut und nicht drückbar
+  (Tooltip „Tipp erst ab 200 Punkten").
 - **Kein Zug mehr möglich:** Nach jedem Paar prüft das Spiel, ob überhaupt noch
   zwei freie Steine mit gleichem Motiv da sind. Wenn nicht, erscheint über dem
   Brett der Knopf `NEU MISCHEN`. Einmal pro Level ist das gratis: die Form bleibt,
@@ -125,22 +133,35 @@ spielt, ergibt sich aus `((Level − 1) mod 56) + 1`, die Runde aus
 | 5 | Azur | 225 |
 | 6 | Amethyst | 281 |
 | 7 | Schiefer (dunkel) | 337 |
-| 8 | Schwarz (dunkel) | 393 |
+| 8 | Weinrot (dunkel) | 393 |
 | 9 | Tiefschwarz (richtiges Schwarz) | 449 |
+| 10 | Regenbogen (versteckt, alle Farben) | 505 |
 
-Nach Runde 9 beginnt es wieder mit Elfenbein (Runde 10 = Level 505). Das letzte
-Level einer vollen Farbrunde (504, 1008, …) zeigt auf der Siegtafel zusätzlich
-die Tafel „ALLE FARBEN DURCH" mit dem Hinweis, dass es wieder mit Elfenbein
-weitergeht.
+### Die Regenbogen-Runde (versteckt)
+
+Nach dem letzten schwarzen Level kommt eine Zugabe: Level 505–560 zeigen alle
+neun Farben **gleichzeitig** – jedes Paar in einer eigenen Farbe. Die Farbe
+kommt aus dem Motiv (`((Motivnummer − 1) mod 9) + 1`), und weil beide Steine
+eines Paares dasselbe Motiv haben, passen sie immer farblich zusammen; es
+werden genau 8 Paare je Farbe. In der Runde setzt nicht das Brett eine Farbe
+(`body[data-runde]`), sondern jeder Stein selbst (`.mahjong-tile[data-farbe]`,
+neun Paletten-Blöcke am Ende von `css/mahjong.css`).
+
+Die Runde ist absichtlich geheim: In der Farbwahl stehen nur die neun normalen
+Farben (`RUNDEN_FARBEN_SICHTBAR`), der zehnte Punkt fehlt. Beim Start steht in
+der Statuszeile „Runde 10 – alle Farben. Jedes Paar hat seine eigene Farbe."
+Danach geht es mit Elfenbein weiter (Level 561 = Runde 11), die Tafel „ALLE
+FARBEN DURCH" erscheint jetzt am Ende der Regenbogen-Runde (Level 560, 1120, …).
 
 Bildet ein Level den Anfang einer neuen Runde (57, 113, …, 505), steht beim
-Start in der Statuszeile: „Neue Runde 10 – Steinfarbe Elfenbein."
+Start in der Statuszeile der Rundenhinweis.
 
 Die Farben sind zurückhaltend gewählt, damit die Motive gut lesbar bleiben;
 die letzten drei sind dunkel, dort wird die Schrift auf den Steinen hell
-(`--stein-text`) und die gesperrten Steine werden über Deckkraft statt über
-Helligkeit abgedunkelt. Die Kopfzeile zeigt nur die Levelnummer; welche Runde
-und Farbe läuft, steht in der Level-Auswahl über dem Raster.
+(`--stein-text`). In Runde 7 bleiben die gesperrten Steine leicht durchscheinend,
+in den dunklen Runden 8 und 9 sind sie deckend und nur abgedunkelt – sonst
+wirken sie wie Löcher im Brett. Die Kopfzeile zeigt nur die Levelnummer; welche
+Runde und Farbe läuft, steht in der Level-Auswahl über dem Raster.
 
 Die Farbe steckt in CSS-Variablen am Stein (`--stein-hell`, `--stein-mitte`,
 `--stein-rand`, `--stein-sockel`, `--stein-linie`, `--stein-text`), gesetzt wird
@@ -153,6 +174,18 @@ dieser Runde mit ihren Level-Nummern. Geschaffte Level tragen ein grünes
 Häkchen und darunter ihre Bestzeit (mm:ss); die Tooltips der Farbpunkte nennen
 den Fortschritt der jeweiligen Runde. Am Ende der Auswahl steht die Farbwahl – eine Farbe
 antippen springt an den Anfang dieser Runde (Level 1, 57, 113, …).
+
+Ganz oben in der Auswahl stehen zwei Umschalter: **FORM** (`RUND` / `ECKIG`)
+und **ZUSTAND** (`NEU` / `ALT`). Sie wirken sofort auf das Brett und werden im
+Spielstand unter `settings.steinForm` und `settings.steinZustand` gespeichert.
+`ECKIG` setzt nur die Ecken des Steins auf 2 px (statt 8 px) und den inneren
+Rahmen auf 0. `ALT` legt zwei Ebenen über das Motiv: Ausbrüche am Rand
+(deckend, mit Schatten und heller Bruchkante) und feine Risse (geblendet).
+Die Risse nutzen `multiply` auf den hellen Runden und `screen` auf den dunklen,
+weil sie sonst im Schwarz verschwinden. Die Ausbrüche gibt es dreifach:
+warmbraun für Elfenbein, Bernstein und Rosé (`stein-alt-kanten-hell.webp`),
+graugrün für Jade, Azur und Amethyst (`stein-alt-kanten-kuehl.webp`) und
+tiefschwarz für die dunklen Runden (`stein-alt-kanten.webp`).
 
 ## Aufbau der Dateien
 
@@ -167,9 +200,9 @@ mahjong/
 │   ├── solver.js         prüft/ findet eine Abräum-Reihenfolge
 │   ├── storage.js        Spielstand und Bestzeiten (localStorage)
 │   ├── renderer.js       Brett zeichnen, Zoom, Verschieben, Blinkeffekte
-│   ├── lob.js            432 Lob-Sprüche für ein gefundenes Paar
-│   ├── pech.js           272 Sprüche für einen Fehlgriff
-│   ├── gewonnen.js       Sprüche und Symbole für die Siegerehrung
+│   ├── lob.js            476 Lob-Sprüche für ein gefundenes Paar
+│   ├── pech.js           396 Sprüche für einen Fehlgriff
+│   ├── gewonnen.js       362 Sprüche und Symbole für die Siegerehrung
 │   └── main.js           Ablauf: Timer, Punkte, Level, Siegerehrung
 └── assets/              72 Motive als WebP (160 × 160, verlustfrei)
 ```
@@ -189,9 +222,10 @@ mahjong/
   Pixel identisch). Im Startzoom sind sie je nach Form und Fenster rund
   38 × 45 px groß (gemessen bei 390 und 1280 px Breite), die 160 px Auflösung
   bleibt auch beim Hineinzoomen scharf.
-- **Sprüche:** kommen aus `lob.txt` (alphabetisch sortiert), `pech.txt` und
-  `gewonnen.txt`. Die JS-Dateien enthalten jeweils eine gemischte Ziehung ohne
-  direkte Wiederholung.
+- **Sprüche:** kommen aus `lob.txt`, `pech.txt` und `gewonnen.txt`, alle drei
+  alphabetisch sortiert und zeilenweise in `"…"` gesetzt (Umlaute zählen als
+  Grundbuchstabe, also Ä wie A). Die JS-Dateien enthalten dieselben Sprüche in
+  derselben Reihenfolge und ziehen daraus ohne direkte Wiederholung.
 - **Zwei Ablageorte:** Der Ordner liegt parallel unter
   `Documents\Homepage\spiele\mahjong` und `Documents\GitHub\Homepage\spiele\mahjong`.
   Änderungen gehören in beide, damit die Kopien gleich bleiben.
