@@ -2398,8 +2398,12 @@ async function ladeAlleinSpiele(){
    const raster=document.createElement("div");
    raster.className="solo-raster";
    [...gruppe.querySelectorAll("a[href]")]
+    // Nur echte Spieldateien ("ordner/spiel.html"). Damit fällt der Verweis
+    // auf den Connector selbst heraus, der in der Übersicht mit in der Gruppe
+    // steht, hier aber kein Spiel wäre.
+    .filter(eintrag=>/^[^\/:]+\/[^\/:]+\.html$/i.test(eintrag.getAttribute("href")||""))
     // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
-    .filter(eintrag=>!/editor|^malen\//i.test(eintrag.getAttribute("href")||""))
+    .filter(eintrag=>! /^malen\//i.test(eintrag.getAttribute("href")||""))
     .map(alt=>({ href:alt.getAttribute("href"), text:alt.textContent.trim() }))
     // Nach Alphabet, damit man ein Spiel schnell findet.
     .sort((a,b)=>a.text.localeCompare(b.text,"de",{numeric:true,sensitivity:"base"}))
