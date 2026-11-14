@@ -98,5 +98,15 @@ echo "== Prüfen"
 "$BT/apksigner.bat" verify --min-sdk-version "$MINDESTENS" --print-certs "$HIER/T.Spiele.apk" | head -4
 "$BT/aapt2.exe" dump badging "$HIER/T.Spiele.apk" | head -4
 
+# Die Kachel "Meine Android App" auf spiele.html holt die App aus
+# spiele/android – dorthin kommt die neue Fassung gleich mit.
+ZIEL="$HIER/../../spiele/android"
+if [ -d "$ZIEL" ]; then
+  cp "$HIER/T.Spiele.apk" "$ZIEL/tspiele.apk"
+  echo "Kopie für die Seite: $(cd "$ZIEL" && pwd)/tspiele.apk"
+else
+  echo "Hinweis: Ordner $ZIEL fehlt – Kopie für die Seite übersprungen."
+fi
+
 echo
 echo "Fertig: $HIER/T.Spiele.apk"

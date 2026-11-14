@@ -233,5 +233,29 @@
 <tr><td><a href="../index.html" class="class1" target="_self">&lt;&minus;back</a></td></tr>
 </table>
 
+<script>
+// Kacheln und Gruppen stehen im Alphabet. Neue Spiele kann man oben in der
+// Liste eintragen – die Anzeige sortiert sich beim Laden selbst.
+(function(){
+  const container=document.querySelector(".spiele-container");
+  if(!container)return;
+  const vergleiche=(a,b)=>a.localeCompare(b,"de",{numeric:true,sensitivity:"base"});
+  const gruppen=[...container.querySelectorAll(".spiele-bereich")];
+
+  gruppen.forEach(gruppe=>{
+    const raster=gruppe.querySelector(".spiele-kacheln");
+    if(!raster)return;
+    [...raster.children]
+      .sort((a,b)=>vergleiche((a.textContent||"").trim(),(b.textContent||"").trim()))
+      .forEach(kachel=>raster.appendChild(kachel));
+  });
+
+  gruppen
+    .sort((a,b)=>vergleiche((a.querySelector("h2")?.textContent||"").trim(),
+                            (b.querySelector("h2")?.textContent||"").trim()))
+    .forEach(gruppe=>container.appendChild(gruppe));
+})();
+</script>
+
 </body>
 </html>

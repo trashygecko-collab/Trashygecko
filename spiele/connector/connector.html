@@ -732,6 +732,11 @@ const SUPPORTED_GAMES = [
  { id: "malen", name: "Malen", path: "/spiele/malen/malen.html", api: "" }
 ];
 
+// Im Alphabet, damit die Auswahl nicht in der Reihenfolge dasteht, in der die
+// Spiele eingetragen wurden. "de" ordnet ä/ö/ü richtig ein, numeric vergleicht
+// Zahlen in Namen richtig (21 vor 31).
+SUPPORTED_GAMES.sort((a,b)=>a.name.localeCompare(b.name,"de",{numeric:true,sensitivity:"base"}));
+
 function tttStatus(text, gameId){
  const box=document.getElementById("game-status");
  box.textContent=text;
@@ -2384,6 +2389,7 @@ async function ladeAlleinSpiele(){
   const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
   if(!gruppen.length)throw Error("keine Gruppen");
   liste.innerHTML="";
+  const kaesten=[];
   gruppen.forEach(gruppe=>{
    const kasten=document.createElement("div");
    kasten.className="solo-gruppe";
@@ -2394,20 +2400,30 @@ async function ladeAlleinSpiele(){
    [...gruppe.querySelectorAll("a[href]")]
     // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
     .filter(eintrag=>!/editor|^malen\//i.test(eintrag.getAttribute("href")||""))
-    .forEach(alt=>{
+    .map(alt=>({ href:alt.getAttribute("href"), text:alt.textContent.trim() }))
+    // Nach Alphabet, damit man ein Spiel schnell findet.
+    .sort((a,b)=>a.text.localeCompare(b.text,"de",{numeric:true,sensitivity:"base"}))
+    .forEach(eintrag=>{
     const link=document.createElement("a");
     link.className="solo-link";
-    link.href="/spiele/"+alt.getAttribute("href");
+    link.href="/spiele/"+eintrag.href;
     link.target="_blank";
     link.rel="noopener";
-    link.textContent=alt.textContent.trim();
+    link.textContent=eintrag.text;
     raster.appendChild(link);
    });
    if(raster.children.length){
     kasten.append(titel,raster);
-    liste.appendChild(kasten);
+    kaesten.push(kasten);
    }
   });
+  // Auch die Gruppen selbst im Alphabet ("2 Personen Spiele", "Extras",
+  // "Single Player Spiele" …), damit die Reihenfolge nicht von der
+  // Spiele-Übersicht abhängt.
+  kaesten
+   .sort((a,b)=>a.querySelector("h3").textContent.localeCompare(
+    b.querySelector("h3").textContent,"de",{numeric:true,sensitivity:"base"}))
+   .forEach(kasten=>liste.appendChild(kasten));
  }catch(e){
   liste.dataset.geladen="0";
   liste.innerHTML="";

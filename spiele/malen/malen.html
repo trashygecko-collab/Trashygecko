@@ -26,10 +26,10 @@ button{font:inherit;cursor:pointer}
 .seite{
   width:min(1000px,96%);
   margin:0 auto;
-  padding:14px 14px 24px;
+  padding:12px 14px 16px;
   display:flex;
   flex-direction:column;
-  gap:12px;
+  gap:8px;
 }
 .kopf{
   display:flex;
@@ -147,30 +147,53 @@ canvas{
   cursor:crosshair;
   background:#fff;
 }
-.karte{
-  position:absolute;
-  top:10px;
-  right:10px;
-  width:74px;
-  height:74px;
-  padding:0;
-  border:2px solid rgba(213,179,106,.8);
-  border-radius:9px;
-  background:#fff;
-  box-shadow:0 3px 10px #0004;
-  line-height:0;
-  cursor:pointer;
+.status{margin:0;font-size:12px;color:var(--gold)}
+/* Leere Statuszeile nimmt keinen Platz weg. */
+.status:empty{display:none}
+/* ZURÜCKSETZEN und SPIELE sitzen in der Werkzeugleiste, damit oben keine
+   eigene Kopfzeile nötig ist. */
+.kopf-rechts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.knopf-klein{padding:7px 10px;font-size:11px}
+/* Kleine Anzeige über dem Brett: Pinsel (mit Farbe) oder Radierer.
+   Sie lässt Klicks durch und stört beim Malen nicht. */
+.werkzeug-anzeige{
+  position:absolute;left:10px;bottom:10px;z-index:3;
+  display:flex;align-items:center;gap:6px;
+  padding:4px 9px;border-radius:999px;
+  background:rgba(16,43,39,.62);
+  border:1px solid rgba(213,179,106,.45);
+  color:var(--ivory);font-size:11px;letter-spacing:.4px;
+  pointer-events:none;opacity:.92;
 }
-.karte canvas{
-  width:100%;
-  height:100%;
-  aspect-ratio:auto;
-  border-radius:6px;
-  touch-action:none;
+.werkzeug-anzeige .punkt{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 1px #0006}
+.werkzeug-anzeige .punkt.radier{background:#fff;box-shadow:0 0 0 1px #59647c inset}
+.werkzeug-anzeige .staerke-wert{opacity:.72}
+
+/* Der kurze Hinweistext und die Statuszeile brauchen keinen Platz: die
+   gewählte Farbe sieht man am hervorgehobenen Farbpunkt, Fehler erscheinen
+   weiterhin unten in der Statuszeile. */
+#malHinweis{display:none}
+/* Am Handy alles eine Spur kleiner, damit das Brett mehr Platz behält. */
+@media (max-width:600px){
+  .seite{padding:8px 8px 12px;gap:6px}
+  .werkzeug{gap:6px 8px;padding:6px 8px;border-radius:10px}
+  .farbe{width:26px;height:26px;border-width:2px;position:relative}
+  /* Unsichtbarer größerer Tippbereich, damit die kleinen Punkte treffbar bleiben. */
+  .farbe::after{content:"";position:absolute;inset:-6px;border-radius:50%}
+  .farben{gap:6px}
+  .farbkreis{width:32px;height:32px;padding:2px;border-width:2px}
+  .knopf{padding:8px 9px;font-size:10px;letter-spacing:.5px}
+  .knopf-klein{padding:8px 9px;font-size:10px}
+  .kopf-rechts{gap:6px}
+  .staerke{font-size:10px;gap:5px}
+  .staerke .wort{display:none}
+  .staerke input[type=range]{width:74px}
+  .mitmaler{gap:6px}
+  .mitmaler .person{padding:3px 8px;font-size:11px}
+  /* Werkzeug-Anzeige am Handy eine Spur kleiner und näher in die Ecke. */
+  .werkzeug-anzeige{font-size:10px;padding:3px 7px;gap:5px;left:8px;bottom:8px;opacity:.88}
+  .werkzeug-anzeige .punkt{width:9px;height:9px}
 }
-.karte:hover{border-color:var(--teal)}
-.karte:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.status{margin:0;font-size:12px;color:var(--muted);min-height:16px}
 /* Wer malt gerade: je Person ein Punkt in ihrer Farbe. */
 .mitmaler{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .mitmaler:empty{display:none}
@@ -191,17 +214,6 @@ canvas{
 
 <div class="seite">
 
-  <header class="kopf">
-    <div>
-      <h1>MALEN</h1>
-      <p>GEMEINSAME FLÄCHE · EINFACH DRAUFLOS</p>
-    </div>
-    <div class="kopf-knoepfe">
-      <button type="button" id="resetButton" class="knopf" hidden>ZURÜCKSETZEN</button>
-      <a href="../spiele.html" id="backButton" class="knopf">◀ SPIELE</a>
-    </div>
-  </header>
-
   <div class="mitmaler" id="mitmaler" aria-live="polite"></div>
 
   <section class="werkzeug">
@@ -210,24 +222,23 @@ canvas{
       <input type="color" id="farbkreis" value="#111111" aria-label="Eigene Farbe aussuchen">
     </label>
     <button type="button" id="radierer" class="knopf" aria-pressed="false">RADIERER</button>
-    <label class="staerke" for="staerke">STÄRKE <output id="staerkeWert">8</output>
+    <label class="staerke" for="staerke"><span class="wort">STÄRKE</span> <output id="staerkeWert">8</output>
       <input type="range" id="staerke" min="2" max="40" step="1" value="8">
     </label>
+    <span class="kopf-rechts">
+      <button type="button" id="resetButton" class="knopf knopf-klein" hidden>ZURÜCKSETZEN</button>
+      <a href="../spiele.html" id="backButton" class="knopf knopf-klein">◀ SPIELE</a>
+    </span>
     <p class="hinweis" id="malHinweis">Farbe wählen und loskritzeln.</p>
-    <p class="hinweis" id="gestenHinweis">Fläche ist vier Bildschirme groß · schieben mit zwei Fingern, rechter Maustaste oder Mausrad · Zoom mit Strg + Mausrad · die Karte oben rechts springt in den Viertel.</p>
   </section>
 
   <section class="flaeche">
     <canvas id="blatt" width="1200" height="1200"></canvas>
     <div class="felder" aria-hidden="true"><i id="gitterX"></i><i id="gitterY"></i></div>
-    <button type="button" class="karte" id="karte"
-            title="Welchen Viertel du siehst – klicken zum Hinspringen"
-            aria-label="Übersicht der Fläche: zeig den Viertel, den du siehst. Klicken springt dorthin.">
-      <canvas id="karteBlatt" width="148" height="148"></canvas>
-    </button>
+    <div class="werkzeug-anzeige" id="werkzeugAnzeige" aria-live="polite"></div>
   </section>
 
-  <p class="status" id="status">Bereit.</p>
+  <p class="status" id="status"></p>
 
 </div>
 
@@ -264,11 +275,17 @@ const zusammen = !!(raum && spielerId);
 const blatt = document.getElementById("blatt");
 const stift = blatt.getContext("2d");
 const statusFeld = document.getElementById("status");
+// Unten steht nur etwas, wenn es etwas zu sagen gibt (Fehler, kurze
+// Bestätigung). statusBis sagt, wie lange die Zeile stehen bleiben darf.
+let statusBis = 0;
+function zeigeStatus(text, ms){
+  statusFeld.textContent = text || "";
+  statusBis = ms ? Date.now() + ms : 0;
+}
 const resetKnopf = document.getElementById("resetButton");
 const hinweis = document.getElementById("malHinweis");
-const karte = document.getElementById("karte");
-const karteStift = document.getElementById("karteBlatt").getContext("2d");
 const farbkreis = document.getElementById("farbkreis");
+const werkzeugAnzeige = document.getElementById("werkzeugAnzeige");
 const radiererKnopf = document.getElementById("radierer");
 const staerkeFeld = document.getElementById("staerke");
 const staerkeWert = document.getElementById("staerkeWert");
@@ -332,6 +349,21 @@ function markiereFarbe(){
   document.querySelectorAll("#farben .farbe").forEach(knopf=>{
     knopf.classList.toggle("aktiv", knopf.dataset.wert === farbe && !radiert);
   });
+  zeigeWerkzeug();
+}
+
+// Klein und unaufdringlich über dem Brett: was gerade eingestellt ist.
+function zeigeWerkzeug(){
+  if (!werkzeugAnzeige) return;
+  const punkt = document.createElement("i");
+  punkt.className = radiert ? "punkt radier" : "punkt";
+  if (!radiert) punkt.style.background = farbe;
+  const text = document.createElement("span");
+  text.textContent = radiert ? "Radierer" : "Pinsel";
+  const staerke = document.createElement("span");
+  staerke.className = "staerke-wert";
+  staerke.textContent = "· " + Math.round(breite) + " px";
+  werkzeugAnzeige.replaceChildren(punkt, text, staerke);
 }
 
 function radiererUmschalten(an){
@@ -357,6 +389,7 @@ radiererKnopf.addEventListener("click", ()=> radiererUmschalten(!radiert));
 staerkeFeld.addEventListener("input", ()=>{
   breite = Math.min(60, Math.max(2, Number(staerkeFeld.value) || 8));
   staerkeWert.textContent = String(breite);
+  zeigeWerkzeug();
 });
 
 // --------------------------------------------------
@@ -409,10 +442,6 @@ function mitmalerZeichnen(){
     }
     box.appendChild(person);
   });
-  const legende = document.createElement("span");
-  legende.className = "legende";
-  legende.textContent = "Der Saum um einen Strich zeigt, von wem er ist.";
-  box.appendChild(legende);
 }
 
 // Wer ist im Raum? Für die Namen über dem Brett.
@@ -510,7 +539,6 @@ function neuZeichnen(){
 
   alleStriche.forEach(strichZeichnen);
   linienSetzen();
-  karteZeichnen();
 }
 
 // Die vier Felder: hauchdünne Linien als Lage über der Fläche. Sie gehören
@@ -533,41 +561,6 @@ function verschieben(dxPixel, dyPixel){
   kameraY -= dyPixel / rechteck.height * breite;
   kameraKlemmen();
   neuZeichnen();
-}
-
-// Mit der Karte in einen Viertel springen: der angeklickte Punkt wird zur
-// Mitte des Blicks.
-function springeZu(weltX, weltY){
-  const breite = WELT / zoom;
-  kameraX = weltX - breite / 2;
-  kameraY = weltY - breite / 2;
-  kameraKlemmen();
-  neuZeichnen();
-}
-
-// Kleine Übersicht: ganzes Brett, die vier Felder und der Blick als Rahmen.
-function karteZeichnen(){
-  const groesse = karteStift.canvas.width;
-  const s = groesse / WELT;
-  karteStift.setTransform(1, 0, 0, 1, 0, 0);
-  karteStift.fillStyle = "#ffffff";
-  karteStift.fillRect(0, 0, groesse, groesse);
-
-  karteStift.strokeStyle = "#ded7c7";
-  karteStift.lineWidth = 1;
-  karteStift.beginPath();
-  karteStift.moveTo(groesse / 2, 0);
-  karteStift.lineTo(groesse / 2, groesse);
-  karteStift.moveTo(0, groesse / 2);
-  karteStift.lineTo(groesse, groesse / 2);
-  karteStift.stroke();
-
-  const breite = (WELT / zoom) * s;
-  karteStift.fillStyle = "rgba(77,245,194,.25)";
-  karteStift.fillRect(kameraX * s, kameraY * s, breite, breite);
-  karteStift.strokeStyle = "#102b27";
-  karteStift.lineWidth = 2;
-  karteStift.strokeRect(kameraX * s, kameraY * s, breite, breite);
 }
 
 function zoomenUm(faktor, clientX, clientY){
@@ -756,29 +749,6 @@ blatt.addEventListener("wheel", ereignis=>{
   neuZeichnen();
 }, { passive: false });
 
-// Klick auf die Karte: dorthin springen. Über die Tastatur geht es der Reihe
-// nach durch die vier Viertel.
-const VIERTEL = [[300, 300], [900, 300], [900, 900], [300, 900]];
-let naechstesViertel = 0;
-
-karte.addEventListener("pointerdown", ereignis=>{
-  ereignis.preventDefault();
-  ereignis.stopPropagation();
-  const rechteck = karte.getBoundingClientRect();
-  springeZu(
-    (ereignis.clientX - rechteck.left) / rechteck.width * WELT,
-    (ereignis.clientY - rechteck.top) / rechteck.height * WELT
-  );
-});
-
-karte.addEventListener("keydown", ereignis=>{
-  if (ereignis.key !== "Enter" && ereignis.key !== " ") return;
-  ereignis.preventDefault();
-  const ziel = VIERTEL[naechstesViertel % VIERTEL.length];
-  naechstesViertel = (naechstesViertel + 1) % VIERTEL.length;
-  springeZu(ziel[0], ziel[1]);
-});
-
 // Rechtsklick soll das Menü nicht aufziehen, sondern die Fläche schieben.
 blatt.addEventListener("contextmenu", ereignis=>ereignis.preventDefault());
 
@@ -806,7 +776,7 @@ async function strichSenden(strich){
       body: JSON.stringify({ id: spielerId, strokes: [strich] })
     });
   }catch(fehler){
-    statusFeld.textContent = "Verbindung kurz weg – der Strich geht beim nächsten Versuch mit.";
+    zeigeStatus("Verbindung kurz weg – der Strich geht beim nächsten Versuch mit.", 4000);
   }
 }
 
@@ -820,9 +790,9 @@ async function abgleichen(){
       { cache: "no-store" }
     );
     if (!antwort.ok) {
-      statusFeld.textContent = antwort.status === 404
+      zeigeStatus(antwort.status === 404
         ? "Dieser Raum existiert nicht mehr."
-        : "Kein Zugriff – bitte im Connector neu betreten.";
+        : "Kein Zugriff – bitte im Connector neu betreten.", 5000);
       return;
     }
     const daten = await antwort.json();
@@ -849,11 +819,10 @@ async function abgleichen(){
       istAdmin = daten.admin;
       resetKnopf.hidden = !istAdmin;
     }
-    statusFeld.textContent = istAdmin
-      ? "Verbunden · als Admin darfst du die Fläche leeren."
-      : "Verbunden · alle malen auf derselben Fläche.";
+    // Im Normalfall bleibt die Zeile unten leer; nur Meldungen stehen dort.
+    if (Date.now() > statusBis) statusFeld.textContent = "";
   }catch(fehler){
-    statusFeld.textContent = "Verbindung wird wiederhergestellt …";
+    zeigeStatus("Verbindung wird wiederhergestellt …");
   }
 }
 
@@ -862,7 +831,7 @@ async function flaecheZuruecksetzen(){
     alleStriche = [];
     stand = 0;
     neuZeichnen();
-    statusFeld.textContent = "Fläche geleert.";
+    zeigeStatus("Fläche geleert.", 2500);
     return;
   }
   try{
@@ -872,7 +841,7 @@ async function flaecheZuruecksetzen(){
       body: JSON.stringify({ id: spielerId })
     });
     if (!antwort.ok) {
-      statusFeld.textContent = "Nur der Admin kann die Fläche leeren.";
+      zeigeStatus("Nur der Admin kann die Fläche leeren.", 4000);
       return;
     }
     alleStriche = [];
@@ -880,9 +849,9 @@ async function flaecheZuruecksetzen(){
     epoche = daten.epoch;
     stand = 0;
     neuZeichnen();
-    statusFeld.textContent = "Fläche geleert – alle fangen neu an.";
+    zeigeStatus("Fläche geleert – alle fangen neu an.", 2500);
   }catch(fehler){
-    statusFeld.textContent = "Zurücksetzen hat nicht geklappt.";
+    zeigeStatus("Zurücksetzen hat nicht geklappt.", 4000);
   }
 }
 
@@ -904,6 +873,7 @@ async function lebenszeichen(){
 
 function starten(){
   baueFarben();
+  zeigeWerkzeug();
   blattGroesse();
 
   const zurueck = document.getElementById("backButton");
@@ -914,7 +884,6 @@ function starten(){
   window.addEventListener("resize", blattGroesse);
 
   if (zusammen) {
-    statusFeld.textContent = "Verbinde …";
     lebenszeichen();
     abgleichen();
     mitmalerHolen();
@@ -922,8 +891,6 @@ function starten(){
     setInterval(lebenszeichen, 5000);
     setInterval(mitmalerHolen, 5000);
     setInterval(mitmalerZeichnen, 1000);
-  } else {
-    statusFeld.textContent = "Nur du – male einfach drauflos.";
   }
 }
 
