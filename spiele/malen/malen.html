@@ -142,7 +142,7 @@ canvas{
   display:block;
   width:100%;
   height:auto;
-  aspect-ratio:1 / 1;
+  aspect-ratio:210 / 297;
   touch-action:none;
   cursor:crosshair;
   background:#fff;
@@ -246,7 +246,7 @@ canvas{
   </section>
 
   <section class="flaeche">
-    <canvas id="blatt" width="1200" height="1200"></canvas>
+    <canvas id="blatt" width="1200" height="1697"></canvas>
     <div class="felder" aria-hidden="true"><i id="gitterX"></i><i id="gitterY"></i></div>
     <div class="werkzeug-anzeige" id="werkzeugAnzeige" aria-live="polite"></div>
   </section>
@@ -318,18 +318,29 @@ let epoche = -1;            // Fassung der Fläche laut Server
 let stand = 0;              // so viele Striche kennen wir vom Server
 let istAdmin = !zusammen;
 
-// Das Brett ist vier Bildschirme groß: zwei Felder breit, zwei hoch. Der
+// Das Blatt ist vier Bildschirme groß: zwei Felder breit, zwei hoch. Der
 // sichtbare Ausschnitt davon ist ein Viertel, deshalb fängt zoom bei 2 an
-// (1 wäre das ganze Brett auf einem Bildschirm).
-const WELT = MAL;
-const FELD = WELT / 2;
+// (1 wäre das ganze Blatt auf einem Bildschirm).
+const WELT_B = MAL;                             // Breite des Blatts
+const WELT_H = Math.round(MAL * Math.SQRT2);    // Höhe: DIN A4 (1 : √2)
+const FELD_X = WELT_B / 2;
+const FELD_Y = WELT_H / 2;
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 10;
 let zoom = 2;
-let kameraX = FELD / 2;     // linker Rand des Blicks in Brettkoordinaten
-let kameraY = FELD / 2;     // oberer Rand des Blicks
+let kameraX = FELD_X / 2;   // linker Rand des Blicks in Brettkoordinaten
+let kameraY = FELD_Y / 2;   // oberer Rand des Blicks
 let zeiger = new Map();     // welche Finger / Maustasten gerade drücken
 let griff = null;           // läuft ein Verschieben / Zoomen?
+
+// Sichtbarer Ausschnitt in Brettkoordinaten. Breite und Höhe getrennt,
+// weil das Blatt hochkant ist.
+function sichtBreite(){
+  return WELT_B / zoom;
+}
+function sichtHoehe(){
+  return WELT_H / zoom;
+}
 
 // --------------------------------------------------
 // FARBEN
@@ -523,24 +534,22 @@ function strichZeichnen(strich){
 // --------------------------------------------------
 
 function kameraKlemmen(){
-  const breite = WELT / zoom;
-  kameraX = Math.min(Math.max(kameraX, 0), WELT - breite);
-  kameraY = Math.min(Math.max(kameraY, 0), WELT - breite);
+  kameraX = Math.min(Math.max(kameraX, 0), WELT_B - sichtBreite());
+  kameraY = Math.min(Math.max(kameraY, 0), WELT_H - sichtHoehe());
 }
 
 // Bildschirmpunkt (CSS-Pixel) in Brettkoordinaten umrechnen.
 function aufDemBlatt(ereignis){
   const rechteck = blatt.getBoundingClientRect();
-  const breite = WELT / zoom;
   return [
-    kameraX + (ereignis.clientX - rechteck.left) / rechteck.width * breite,
-    kameraY + (ereignis.clientY - rechteck.top) / rechteck.height * breite
+    kameraX + (ereignis.clientX - rechteck.left) / rechteck.width * sichtBreite(),
+    kameraY + (ereignis.clientY - rechteck.top) / rechteck.height * sichtHoehe()
   ];
 }
 
 // Zeichenfläche auf den Ausschnitt einstellen: ein Brettpunkt = k Bildpunkte.
 function kameraSetzen(){
-  const k = blatt.width * zoom / WELT;
+  const k = blatt.width * zoom / WELT_B;
   stift.setTransform(k, 0, 0, k, -kameraX * k, -kameraY * k);
 }
 
@@ -551,7 +560,7 @@ function neuZeichnen(){
   stift.fillRect(0, 0, blatt.width, blatt.height);
   kameraSetzen();
   stift.fillStyle = "#ffffff";
-  stift.fillRect(0, 0, WELT, WELT);
+  stift.fillRect(0, 0, WELT_B, WELT_H);
 
   alleStriche.forEach(strichZeichnen);
   linienSetzen();
@@ -561,9 +570,10 @@ function neuZeichnen(){
 // nicht zum Gemalten, verschwinden beim Radieren also nicht, und Striche
 // laufen einfach darüber – die Fläche bleibt ein Stück.
 function linienSetzen(){
-  const anteil = 100 / (WELT / zoom);
-  const x = (FELD - kameraX) * anteil;
-  const y = (FELD - kameraY) * anteil;
+  const anteilX = 100 / sichtBreite();
+  const anteilY = 100 / sichtHoehe();
+  const x = (FELD_X - kameraX) * anteilX;
+  const y = (FELD_Y - kameraY) * anteilY;
   gitterX.style.display = (x < 0 || x > 100) ? "none" : "block";
   gitterX.style.left = x + "%";
   gitterY.style.display = (y < 0 || y > 100) ? "none" : "block";
@@ -572,9 +582,8 @@ function linienSetzen(){
 
 function verschieben(dxPixel, dyPixel){
   const rechteck = blatt.getBoundingClientRect();
-  const breite = WELT / zoom;
-  kameraX -= dxPixel / rechteck.width * breite;
-  kameraY -= dyPixel / rechteck.height * breite;
+  kameraX -= dxPixel / rechteck.width * sichtBreite();
+  kameraY -= dyPixel / rechteck.height * sichtHoehe();
   kameraKlemmen();
   neuZeichnen();
 }
@@ -582,13 +591,12 @@ function verschieben(dxPixel, dyPixel){
 function zoomenUm(faktor, clientX, clientY){
   const rechteck = blatt.getBoundingClientRect();
   const punkt = [
-    kameraX + (clientX - rechteck.left) / rechteck.width * (WELT / zoom),
-    kameraY + (clientY - rechteck.top) / rechteck.height * (WELT / zoom)
+    kameraX + (clientX - rechteck.left) / rechteck.width * sichtBreite(),
+    kameraY + (clientY - rechteck.top) / rechteck.height * sichtHoehe()
   ];
   zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom * faktor));
-  const breite = WELT / zoom;
-  kameraX = punkt[0] - (clientX - rechteck.left) / rechteck.width * breite;
-  kameraY = punkt[1] - (clientY - rechteck.top) / rechteck.height * breite;
+  kameraX = punkt[0] - (clientX - rechteck.left) / rechteck.width * sichtBreite();
+  kameraY = punkt[1] - (clientY - rechteck.top) / rechteck.height * sichtHoehe();
   kameraKlemmen();
   neuZeichnen();
 }
@@ -712,13 +720,13 @@ blatt.addEventListener("pointermove", ereignis=>{
     const mitteY = (punkte[0].y + punkte[1].y) / 2;
 
     zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, griff.zoom * abstand / griff.abstand));
-    const breite = WELT / zoom;
-    const breiteAlt = WELT / griff.zoom;
+    const breiteAlt = WELT_B / griff.zoom;
+    const hoeheAlt = WELT_H / griff.zoom;
     // Der Punkt, der unter der Finger-Mitte lag, bleibt dort stehen.
     const weltX = griff.kameraX + (griff.mitteX - rechteck.left) / rechteck.width * breiteAlt;
-    const weltY = griff.kameraY + (griff.mitteY - rechteck.top) / rechteck.height * breiteAlt;
-    kameraX = weltX - (mitteX - rechteck.left) / rechteck.width * breite;
-    kameraY = weltY - (mitteY - rechteck.top) / rechteck.height * breite;
+    const weltY = griff.kameraY + (griff.mitteY - rechteck.top) / rechteck.height * hoeheAlt;
+    kameraX = weltX - (mitteX - rechteck.left) / rechteck.width * sichtBreite();
+    kameraY = weltY - (mitteY - rechteck.top) / rechteck.height * sichtHoehe();
     kameraKlemmen();
     neuZeichnen();
     return;
@@ -756,11 +764,10 @@ blatt.addEventListener("wheel", ereignis=>{
   // Ohne Strg schiebt das Rad – so klappt auch das Zwei-Finger-Wischen
   // auf dem Touchpad. Mit Umschalt geht es waagerecht.
   const rechteck = blatt.getBoundingClientRect();
-  const breite = WELT / zoom;
   const dx = ereignis.shiftKey ? ereignis.deltaY : ereignis.deltaX;
   const dy = ereignis.shiftKey ? 0 : ereignis.deltaY;
-  kameraX += dx / rechteck.width * breite;
-  kameraY += dy / rechteck.height * breite;
+  kameraX += dx / rechteck.width * sichtBreite();
+  kameraY += dy / rechteck.height * sichtHoehe();
   kameraKlemmen();
   neuZeichnen();
 }, { passive: false });
@@ -769,9 +776,10 @@ blatt.addEventListener("wheel", ereignis=>{
 blatt.addEventListener("contextmenu", ereignis=>ereignis.preventDefault());
 
 // Passt die Zeichenfläche an die Anzeige an (scharf auch auf dem Handy).
-// So groß wie möglich: die Breite der Spalte, aber nie höher als der Platz,
-// der unter der Werkzeugleiste übrig bleibt – also immer ein Quadrat, das
-// ohne Scrollen auf den Schirm passt (auch im Vollbild).
+// So groß wie möglich, aber im Verhältnis DIN A4 (210 : 297, hochkant) –
+// begrenzt von der Breite der Spalte und von der Höhe, die unter der
+// Werkzeugleiste übrig bleibt. So passt das Blatt ohne Scrollen auf den
+// Schirm (auch im Vollbild).
 function flaecheGroesse(){
   const stil = getComputedStyle(seite);
   const luecke = parseFloat(stil.rowGap) || 0;
@@ -784,7 +792,9 @@ function flaecheGroesse(){
     - hoeheAndere - luecke * andere.length - 8;   // Rand der Fläche + Reserve
   const platzBreite = seite.clientWidth
     - parseFloat(stil.paddingLeft) - parseFloat(stil.paddingRight) - 4;
-  const kante = Math.max(240, Math.min(1600, Math.floor(Math.min(platzBreite, platzHoehe))));
+  // Breite so wählen, dass die A4-Höhe in den Platz passt.
+  const verhaeltnis = WELT_B / WELT_H;   // 0,707 – Breite pro Höhe
+  const kante = Math.max(180, Math.min(platzBreite, Math.floor(platzHoehe * verhaeltnis)));
   blatt.style.width = kante + "px";
 }
 
@@ -807,10 +817,11 @@ function vollbildUmschalten(){
 function blattGroesse(){
   const rechteck = blatt.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const kanten = Math.max(320, Math.round(rechteck.width * dpr));
-  if (blatt.width !== kanten) {
-    blatt.width = kanten;
-    blatt.height = kanten;
+  const breite = Math.max(240, Math.round(rechteck.width * dpr));
+  const hoehe = Math.round(breite * WELT_H / WELT_B);
+  if (blatt.width !== breite || blatt.height !== hoehe) {
+    blatt.width = breite;
+    blatt.height = hoehe;
   }
   neuZeichnen();
 }

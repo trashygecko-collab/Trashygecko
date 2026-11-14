@@ -1,12 +1,18 @@
 # T.Spiele – Android-App
 
-Eine winzige App, die nichts weiter tut, als die Connector-Adresse im Browser zu
-öffnen:
+Ein kleiner Startbildschirm mit zwei Wegen, beide öffnen sich im Browser:
 
-    https://trashygecko.onrender.com/connector
+- **Connector öffnen** → `https://trashygecko.onrender.com/connector`
+  (Chat, Räume und alle Spiele)
+- **Meine Homepage** (unten) → `https://trashygecko-collab.github.io/Trashygecko/`
 
-Kein eigener Browser, keine Oberfläche, keine Berechtigungen außer Internet.
-Antippen → Browser geht auf → die App ist wieder weg.
+Dazu kommt **jeden Morgen um 7:30 ein Lob als Benachrichtigung** – ohne Server,
+der Wecker steckt im Gerät (auch nach einem Neustart wird er neu gestellt).
+Abschalten geht in den Android-Einstellungen unter Benachrichtigungen.
+
+Kein eigener Browser. Berechtigungen: Internet, Benachrichtigungen (ab Android 13
+zu bestätigen) und „Neustart erkennen“ für den Wecker. Die App bleibt im
+Hintergrund stehen, der Zurück-Knopf führt wieder auf den Startbildschirm.
 
 | | |
 |---|---|
@@ -31,8 +37,11 @@ Alternativ per Kabel: `adb install -r T.Spiele.apk`
 
 ## Etwas ändern
 
-**Andere Adresse:** in `src/de/trashygecko/tspiele/MainActivity.java` die Zeile
-`ADRESSE` ändern, dann neu bauen.
+**Uhrzeit oder Sprüche ändern:** in `src/de/trashygecko/tspiele/LobWecker.java`
+stehen `STUNDE`/`MINUTE` und die Liste `LOBS`.
+
+**Andere Adressen:** in `src/de/trashygecko/tspiele/MainActivity.java` die
+Konstanten `CONNECTOR` und `HOMEPAGE` ändern, dann neu bauen.
 
 **Anderes Symbol:** `werkzeuge/monster_icon.py` malen lassen
 (`python werkzeuge/monster_icon.py`) – es schreibt alle Größen nach `res/`.
@@ -53,7 +62,9 @@ App legen. Wer ihn verliert, muss die App vorher deinstallieren.
 ## Aufbau
 
     AndroidManifest.xml          eine Activity, Startmenü-Eintrag, Internet
-    src/…/MainActivity.java      öffnet die Adresse und beendet sich
+    src/…/MainActivity.java      Startbildschirm mit Connector und Homepage
+    src/…/LobWecker.java         Morgen-Lob um 7:30 (Wecker + Anzeige)
+    src/…/LobStart.java          stellt den Wecker nach Neustart wieder
     res/mipmap-*/ic_launcher.png    Symbol für Android bis 7
     res/mipmap-*/ic_launcher_fg.png Symbol-Vordergrund für Android 8+
     res/mipmap-anydpi-v26/…      adaptives Symbol

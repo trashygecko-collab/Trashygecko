@@ -39,7 +39,10 @@ body{
   display:flex;
   justify-content:center;
   width:100%;
-  max-width:min(40vh,420px);
+  max-width:min(100%,calc((100vh - 130px)/2),420px);
+}
+@supports (height:100dvh){
+  .buehne{max-width:min(100%,calc((100dvh - 130px)/2),420px)}
 }
 
 .feld{
@@ -75,6 +78,17 @@ body{
 }
 .kopf .gegner{color:var(--text);font-weight:bold;overflow:hidden;text-overflow:ellipsis}
 .kopf .linien{margin-left:auto;color:var(--cyan)}
+
+.lob{
+  position:absolute;
+  left:50%;top:40%;transform:translate(-50%,-50%);
+  padding:10px 16px;max-width:88%;min-width:58%;
+  border:1px solid var(--cyan);border-radius:12px;
+  background:rgba(6,10,17,.88);color:var(--cyan);
+  font-size:clamp(15px,4.4vw,20px);font-weight:bold;letter-spacing:1px;
+  text-align:center;pointer-events:none;
+  box-shadow:0 0 18px #31e0ff55;z-index:5;
+}
 
 .knoepfe{display:flex;gap:5px;width:100%}
 .knoepfe button{
@@ -141,6 +155,13 @@ body{
   cursor:pointer;
 }
 
+@media(max-width:560px){
+  body{padding:4px}
+  .spiel{gap:8px}
+  .feld{gap:4px}
+  .knoepfe button{height:48px}
+  .verlassen{padding:10px 12px;font-size:13px}
+}
 @media(max-width:360px){
   .knoepfe button{height:48px;font-size:18px}
   .kopf{font-size:11px}
@@ -157,6 +178,7 @@ body{
         <span class="linien" id="linien">0 LINIEN</span>
       </div>
       <canvas id="feld" width="240" height="480" aria-label="Tetris Spielfeld"></canvas>
+      <div class="lob" id="lob" hidden></div>
       <div class="knoepfe" id="knoepfe">
         <button type="button" data-tat="links" aria-label="Nach links">←</button>
         <button type="button" data-tat="linksdrehen" aria-label="Links drehen">↺</button>
@@ -173,6 +195,7 @@ body{
   <button type="button" class="verlassen" id="verlassen">SPIEL VERLASSEN</button>
 </main>
 
+<script src="/spiele/lob.js"></script>
 <script src="/spiele/netz.js"></script>
 <script>
 "use strict";
@@ -236,6 +259,20 @@ const ctx = canvas.getContext("2d");
 const endeFeld = document.getElementById("ende");
 const endeText = document.getElementById("endeText");
 const linienFeld = document.getElementById("linien");
+const lobFeld = document.getElementById("lob");
+let lobTakt = null;
+
+// Vier Reihen auf einmal: kurz einen Lob-Spruch über dem Feld einblenden.
+function zeigeLob(text){
+  if (!lobFeld || !text) return;
+  lobFeld.textContent = text;
+  lobFeld.hidden = false;
+  if (lobTakt) clearTimeout(lobTakt);
+  lobTakt = setTimeout(() => {
+    lobFeld.hidden = true;
+    lobTakt = null;
+  }, 2400);
+}
 const gegnerFeld = document.getElementById("gegner");
 
 let brett = Array.from({ length: ZEILEN }, () => Array(SPALTEN).fill(LEER));
@@ -361,6 +398,7 @@ function einrasten(){
     brett = rest;
     linien += volle;
     linienFeld.textContent = linien + (linien === 1 ? " LINIE" : " LINIEN");
+    if (volle === 4 && typeof lobSpruch === "function") zeigeLob(lobSpruch());
     muellSenden(volle);
     synchronisiere({ lines: linien });
   }

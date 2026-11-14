@@ -63,12 +63,13 @@ echo "== Ressourcen"
   --java "$BAU/gen" \
   --min-sdk-version "$MINDESTENS" \
   --target-sdk-version "$ZIEL" \
-  --version-code 1 --version-name 1.0 \
+  --version-code 3 --version-name 1.2 \
   "$BAU/res.zip"
 
 echo "== Java"
-javac -source 8 -target 8 -nowarn -bootclasspath "$ANDROID_JAR" \
-  -d "$BAU/klassen" src/de/trashygecko/tspiele/MainActivity.java
+# -encoding UTF-8: sonst werden Umlaute beim Uebersetzen zerstoert.
+javac -encoding UTF-8 -source 8 -target 8 -nowarn -bootclasspath "$ANDROID_JAR" \
+  -d "$BAU/klassen" $(find src -name "*.java")
 
 echo "== Dex"
 "$BT/d8.bat" --lib "$ANDROID_JAR" --min-api "$MINDESTENS" \

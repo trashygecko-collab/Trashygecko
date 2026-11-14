@@ -3,6 +3,9 @@
     package="de.trashygecko.tspiele">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Morgen-Lob um 7:30 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -15,11 +18,26 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@android:style/Theme.NoDisplay">
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Schickt jeden Morgen das Lob. -->
+        <receiver
+            android:name=".LobWecker"
+            android:exported="false" />
+
+        <!-- Plant den Wecker nach Neustart oder Update neu ein. -->
+        <receiver
+            android:name=".LobStart"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

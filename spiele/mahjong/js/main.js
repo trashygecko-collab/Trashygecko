@@ -459,7 +459,7 @@ function handleTileClick(tileId) {
         if (foundPairs === 72) {
             finishGame();
         } else {
-            setMessage(lobSpruch(), false, "+100 Punkte");
+            setMessage(lobSpruch(true), false, "+100 Punkte");
             pruefeFestgefahren();
         }
 

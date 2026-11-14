@@ -1,3 +1,5 @@
+// Lob- und Anerkennungssprüche ohne jeden Mahjong-Bezug: kein Stein, kein
+// Ziegel, kein Paar. Diese Liste können alle Spiele verwenden.
 const LOB_SPRUECHE = [
     "Absolut genial!",
     "Absolut preisverdächtig!",
@@ -32,7 +34,6 @@ const LOB_SPRUECHE = [
     "Bestleistung!",
     "Big Move!",
     "Big Win!",
-    "Bingo! Die beiden gehören zusammen.",
     "Bleib dran!",
     "Blick fürs Detail!",
     "Bombastisch!",
@@ -97,24 +98,16 @@ const LOB_SPRUECHE = [
     "Das verdient Sonderapplaus!",
     "Das war eine Glanzleistung!",
     "Das war eine Punktlandung!",
-    "Das war eine steinharte Leistung!",
-    "Das war eine steinige Angelegenheit. Aber du hast sie gemeistert!",
-    "Das war ja steinreich an Erfolg!",
-    "Das war kein Zufall, das war Stein-Genialität!",
     "Das war meisterhaft!",
-    "Das war steinreich an guten Entscheidungen!",
     "Das war wirklich eine starke Leistung!",
     "Das wird von Mal zu Mal besser!",
     "Dein Tempo stimmt!",
-    "Deine Leistung ist nicht von schlechten Steinen!",
     "Den Nagel auf den Kopf getroffen!",
     "Der Durchblick ist zurück!",
     "Der Hammer!",
     "Detailverliebt!",
     "Die Kombination sitzt!",
     "Die richtigen Schlüsse gezogen!",
-    "Die Steine haben ihren Meister gefunden.",
-    "Die Steine haben keine Chance gegen dich!",
     "Diplomatisches Meisterstück!",
     "Disziplin auf hohem Niveau!",
     "Drangeblieben!",
@@ -132,7 +125,6 @@ const LOB_SPRUECHE = [
     "Du bist Gold wert!",
     "Du bist heute nicht zu stoppen!",
     "Du bist in deinem Element!",
-    "Du bist ja ein richtiges Stein-Genie!",
     "Du bist mit Leib und Seele dabei!",
     "Du bist Spitze!",
     "Du bist unersetzlich!",
@@ -144,7 +136,6 @@ const LOB_SPRUECHE = [
     "Du hast den Dreh raus!",
     "Du hast den Durchblick!",
     "Du hast den richtigen Riecher!",
-    "Du hast den Steindurchblick!",
     "Du hast den Turbo gezündet!",
     "Du hast den Vogel abgeschossen!",
     "Du hast dich selbst übertroffen!",
@@ -152,7 +143,6 @@ const LOB_SPRUECHE = [
     "Du hast einen rausgehauen!",
     "Du hast es drauf!",
     "Du hast Nägel mit Köpfen gemacht!",
-    "Du hast wirklich einen Stein im Brett!",
     "Du kannst stolz auf dich sein!",
     "Du lässt dich nicht beirren!",
     "Du machst das super!",
@@ -182,11 +172,8 @@ const LOB_SPRUECHE = [
     "Ein kreativer Geniestreich!",
     "Ein Meisterstück der Fantasie!",
     "Ein Musterbeispiel an Können!",
-    "Ein Paar für die Ewigkeit!",
-    "Ein Paar weniger, ein Erfolg mehr!",
     "Ein Paradebeispiel für Qualität!",
     "Ein starkes Fundament!",
-    "Ein Stein nach dem anderen und schon bist du am Ziel!",
     "Eine außergewöhnliche Darbietung!",
     "Eine Auszeichnung wert!",
     "Eine beeindruckende Demonstration!",
@@ -267,9 +254,7 @@ const LOB_SPRUECHE = [
     "Herrlich!",
     "Hervorragend!",
     "Hervorragende Arbeit!",
-    "Heute hast du den Stein der Weisen gefunden!",
     "Heute hast du einen echten Lauf!",
-    "Heute läuft's wie geschmiert – stein auf stein!",
     "Höchst anspruchsvoll umgesetzt!",
     "Höchste Anerkennung!",
     "Höchstleistung!",
@@ -284,7 +269,6 @@ const LOB_SPRUECHE = [
     "Inspiration pur!",
     "Intellektuell brillant!",
     "Intelligenz in Aktion!",
-    "Jawoll! Ein perfektes Paar!",
     "Jederzeit eine sichere Bank!",
     "Kaum zu toppen!",
     "Killer-Performance!",
@@ -306,7 +290,6 @@ const LOB_SPRUECHE = [
     "Läuft bei dir!",
     "Läuft rund!",
     "Läuft!",
-    "Liebe auf den ersten Blick. Stein 1 hat Stein 2 gefunden.",
     "Locker aus dem Ärmel geschüttelt!",
     "Logisch bis ins letzte Detail!",
     "Makellos!",
@@ -404,8 +387,6 @@ const LOB_SPRUECHE = [
     "Starker Teamplayer!",
     "Starkes Ding!",
     "Starkes Engagement!",
-    "Stein für Stein zum Erfolg!",
-    "Steingut ist kein Kompliment? Bei dir schon!",
     "Stil und Klasse!",
     "Stilvoll gelöst!",
     "Strategisch hervorragend!",
@@ -468,23 +449,57 @@ const LOB_SPRUECHE = [
     "Wertvoller Beitrag!",
     "Wie dafür geboren!",
     "Wie geschmiert!",
-    "Wieder ein Paar glücklich vereint!",
     "Wohldurchdacht!",
     "Wow!",
     "Zielstrebig bis zum Ende!",
     "Ziemlich krass!",
     "Zusammenhänge perfekt erkannt!",
-    "Zwei gefunden. Der Rest kann sich warm anziehen."
 ];
 
+// Mahjong-Sprüche (Steine, Paare, gefundene Ziegel …). Stehen bewusst ganz
+// unten und getrennt, damit sie in anderen Spielen nicht auftauchen.
+const LOB_MAHJONG = [
+    "Bingo! Die beiden gehören zusammen.",
+    "Das war eine steinharte Leistung!",
+    "Das war eine steinige Angelegenheit. Aber du hast sie gemeistert!",
+    "Das war ja steinreich an Erfolg!",
+    "Das war kein Zufall, das war Stein-Genialität!",
+    "Das war steinreich an guten Entscheidungen!",
+    "Deine Leistung ist nicht von schlechten Steinen!",
+    "Die Steine haben ihren Meister gefunden.",
+    "Die Steine haben keine Chance gegen dich!",
+    "Du bist ja ein richtiges Stein-Genie!",
+    "Du hast den Steindurchblick!",
+    "Du hast wirklich einen Stein im Brett!",
+    "Ein Paar für die Ewigkeit!",
+    "Ein Paar weniger, ein Erfolg mehr!",
+    "Ein Stein nach dem anderen und schon bist du am Ziel!",
+    "Heute hast du den Stein der Weisen gefunden!",
+    "Heute läuft's wie geschmiert – stein auf stein!",
+    "Jawoll! Ein perfektes Paar!",
+    "Liebe auf den ersten Blick. Stein 1 hat Stein 2 gefunden.",
+    "Stein für Stein zum Erfolg!",
+    "Steingut ist kein Kompliment? Bei dir schon!",
+    "Wieder ein Paar glücklich vereint!",
+    "Zwei gefunden. Der Rest kann sich warm anziehen.",
+];
+
+// Beide Listen zusammen – nur Mahjong braucht das.
+const LOB_ALLE = LOB_SPRUECHE.concat(LOB_MAHJONG);
+
 let lobVorrat = [];
+let lobQuelle = null;
 let letzterLob = "";
 
 // Zieht einen Spruch, ohne dass sich einer direkt wiederholt. Erst wenn alle
-// Sprueche durch sind, wird neu gemischt.
-function lobSpruch() {
-    if (lobVorrat.length === 0) {
-        lobVorrat = LOB_SPRUECHE.slice();
+// Sprüche durch sind, wird neu gemischt. mitSteinen = true nimmt auch die
+// Mahjong-Sprüche dazu.
+function lobSpruch(mitSteinen) {
+    const quelle = mitSteinen ? LOB_ALLE : LOB_SPRUECHE;
+
+    if (lobQuelle !== quelle || lobVorrat.length === 0) {
+        lobQuelle = quelle;
+        lobVorrat = quelle.slice();
 
         for (let i = lobVorrat.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
