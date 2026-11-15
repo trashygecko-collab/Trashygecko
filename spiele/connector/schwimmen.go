@@ -51,7 +51,23 @@ type SchwimmenGame struct {
 	Winner     string           `json:"winner,omitempty"`
 	Note       string           `json:"note,omitempty"`
 	Result     []string         `json:"result,omitempty"`
+	Log        []string         `json:"log,omitempty"`
 	DeckCount  int              `json:"deckCount"`
+}
+
+// schwimmLog merkt die letzten Züge, damit jeder sieht, was die anderen am
+// Tisch gemacht haben. Doppelte aufeinanderfolgende Zeilen fallen weg.
+func (g *SchwimmenGame) schwimmLog(text string) {
+	if text == "" {
+		return
+	}
+	if n := len(g.Log); n > 0 && g.Log[n-1] == text {
+		return
+	}
+	g.Log = append(g.Log, text)
+	if len(g.Log) > 6 {
+		g.Log = g.Log[len(g.Log)-6:]
+	}
 }
 
 type SchwimmSeatView struct {
@@ -84,6 +100,7 @@ type SchwimmenView struct {
 	Winner     string            `json:"winner,omitempty"`
 	Note       string            `json:"note,omitempty"`
 	Result     []string          `json:"result,omitempty"`
+	Log        []string          `json:"log,omitempty"`
 	You        int               `json:"you"`
 	Hand       []SchwimmCard     `json:"hand"`
 	Score      float64           `json:"score"`
@@ -99,6 +116,19 @@ func schwimmDeck() []SchwimmCard {
 	}
 	rand.Shuffle(len(deck), func(i, j int) { deck[i], deck[j] = deck[j], deck[i] })
 	return deck
+}
+
+// schwimmReshuffle legt die alten Tischkarten zurück in den Stapel und mischt
+// neu. Bei neun Spielern sind 27 Karten in den Händen – ohne Nachmischen wäre
+// der Nachziehstapel nach wenigen Runden leer.
+func schwimmReshuffle(g *SchwimmenGame) {
+	if len(g.Deck) >= schwimmHandSize {
+		return
+	}
+	deck := append([]SchwimmCard{}, g.Deck...)
+	deck = append(deck, g.Table...)
+	rand.Shuffle(len(deck), func(i, j int) { deck[i], deck[j] = deck[j], deck[i] })
+	g.Deck = deck
 }
 
 func schwimmDraw(g *SchwimmenGame) (SchwimmCard, bool) {
@@ -178,6 +208,7 @@ func (g *SchwimmenGame) schwimmFeuer(seat int) {
 		"Alle anderen verlieren ein Leben.",
 		"Verloren: " + strings.Join(verloren, ", "),
 	}
+	g.schwimmLog(name + " hat Feuer – alle anderen verlieren ein Leben.")
 	g.FinalTurns = -1
 	g.Passes = 0
 
@@ -284,7 +315,9 @@ func schwimmDeal(g *SchwimmenGame) {
 	}
 	g.Phase = "playing"
 	g.Status = "active"
+	g.Log = nil
 	g.Note = g.Players[g.Current].Name + " beginnt."
+	g.schwimmLog("Runde " + strconv.Itoa(g.Round) + " – " + g.Note)
 	g.DeckCount = len(g.Deck)
 }
 
@@ -335,6 +368,7 @@ func (g *SchwimmenGame) schwimmFinishRound(reason string) {
 	g.Result = lines
 	g.FinalTurns = -1
 	g.Passes = 0
+	g.schwimmLog(reason + " Verloren: " + strings.Join(losers, ", ") + " (" + schwimmScoreText(lowest) + " Punkte).")
 
 	if stillIn := schwimmActive(g); stillIn <= 1 {
 		g.Status = "finished"
@@ -378,6 +412,7 @@ func (g *SchwimmenGame) viewFor(id string) SchwimmenView {
 		Winner:     g.Winner,
 		Note:       g.Note,
 		Result:     append([]string(nil), g.Result...),
+		Log:        append([]string(nil), g.Log...),
 		You:        schwimmSeat(g, id),
 		Hand:       []SchwimmCard{},
 	}
@@ -429,6 +464,7 @@ func cloneSchwimmen(g *SchwimmenGame) *SchwimmenGame {
 	c.Deck = append([]SchwimmCard(nil), g.Deck...)
 	c.Table = append([]SchwimmCard(nil), g.Table...)
 	c.Result = append([]string(nil), g.Result...)
+	c.Log = append([]string(nil), g.Log...)
 	c.Players = make([]*SchwimmPlayer, len(g.Players))
 	for i, p := range g.Players {
 		copied := *p
@@ -656,6 +692,7 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 				game.Table[input.TableIndex], me.Hand[input.HandIndex]
 			game.Passes = 0
 			game.Note = player.Name + " tauscht eine Karte."
+			game.schwimmLog(game.Note)
 			if schwimmIsFeuer(me.Hand) {
 				game.schwimmFeuer(seat)
 				break
@@ -670,6 +707,7 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 			me.Hand, game.Table = game.Table, me.Hand
 			game.Passes = 0
 			game.Note = player.Name + " tauscht alle drei Karten."
+			game.schwimmLog(game.Note)
 			if schwimmIsFeuer(me.Hand) {
 				game.schwimmFeuer(seat)
 				break
@@ -683,7 +721,9 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 		case "pass":
 			game.Passes++
 			game.Note = player.Name + " schiebt."
+			game.schwimmLog(game.Note)
 			if game.Passes >= schwimmActive(game) {
+				schwimmReshuffle(game)
 				neu := []SchwimmCard{}
 				for i := 0; i < schwimmHandSize; i++ {
 					if card, ok := schwimmDraw(game); ok {
@@ -696,6 +736,7 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 				} else {
 					game.Note = "Alle schieben – der Stapel ist leer."
 				}
+				game.schwimmLog(game.Note)
 				game.Passes = 0
 			}
 			game.schwimmAdvance()
@@ -707,6 +748,7 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			game.FinalTurns = schwimmActive(game) - 1
 			game.Note = player.Name + " klopft – letzter Durchgang!"
+			game.schwimmLog(game.Note)
 			if game.FinalTurns == 0 {
 				game.schwimmFinishRound("Die Klopfrunde ist beendet.")
 				break
