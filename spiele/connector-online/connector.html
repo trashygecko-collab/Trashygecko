@@ -203,8 +203,10 @@ html:fullscreen body{padding:18px 1px}
 /* Spieler, den man gerade einladen möchte, wird hervorgehoben. */
 .game-player.ziel{border-color:#e8cd8e;box-shadow:0 0 12px #e8cd8e55}
 /* Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern. */
-.modus-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.modus-btn{padding:11px 8px;border:1px solid #2f5a4b;background:#0b241d;color:#b9c9bf;border-radius:9px;font-size:13px;font-weight:bold;cursor:pointer}
+.modus-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+/* "Namen ändern" steht oben über den beiden Spielarten und nimmt die volle Zeile. */
+#modusName{grid-column:1 / -1}
+.modus-btn{padding:12px 9px;border:1px solid #2f5a4b;background:#0b241d;color:#b9c9bf;border-radius:9px;font-size:16px;font-weight:bold;cursor:pointer}
 .modus-btn:hover{color:#fff;border-color:#e8cd8e}
 .modus-btn[aria-selected="true"]{background:#1a4a3a;border-color:#e8cd8e;color:#e8cd8e;box-shadow:0 0 10px #e8cd8e33}
 .modus-panel{margin-top:14px}
@@ -225,7 +227,7 @@ html:fullscreen body{padding:18px 1px}
 .runde-knoepfe .los{flex:1 1 120px}
 .runde-knoepfe .sekundaer{flex:0 0 auto;background:none;border:1px solid #3f7360;color:#b9c9bf;font-weight:normal}
 .angebot-ende{display:block;margin-top:6px;font-size:11px;color:#9db3a6}
-@media(max-width:420px){.modus-btn{font-size:12px;padding:10px 6px}}
+@media(max-width:420px){.modus-btn{font-size:19px;padding:13px 8px;line-height:1.25}}
 /* Alle Spiele aus der Übersicht, direkt im Connector. */
 .solo-gruppe{margin:20px 0 0}
 .solo-gruppe h3{margin:0 0 10px;font-size:12px;color:#a9bfb2;font-weight:normal;
@@ -236,7 +238,7 @@ html:fullscreen body{padding:18px 1px}
 @media(min-width:560px){.solo-raster{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .solo-link{display:flex;align-items:center;justify-content:center;min-height:58px;
  padding:12px 10px;border:1px solid #3f7360;border-radius:8px;background:#0b241d;
- color:#e8cd8e;text-decoration:none;font-size:13px;text-align:center;line-height:1.3}
+ color:#e8cd8e;text-decoration:none;font-size:16px;text-align:center;line-height:1.3}
 .solo-link:hover{border-color:#e8cd8e;background:#1a4a3a}
 /* Status und Link unter der Spieleliste: gleicher stiller Stil wie der
    Spielstatus im Multiplayer. */
@@ -276,7 +278,7 @@ html:fullscreen body{padding:18px 1px}
  #addressbox summary{font-size:13px;color:#a9bfb2;font-weight:normal;padding:2px 0}
  #addressbox summary::after{font-size:11px}
  #addressbox details p,#addressbox details button{font-size:13px}
- .solo-link{min-height:58px;font-size:12.5px;padding:12px 8px}
+ .solo-link{min-height:64px;font-size:19px;padding:12px 8px}
  #nameKnown{gap:6px;margin:0}
  /* Spielerzeilen und Statuskasten etwas flacher. */
  .game-player{padding:8px 10px;margin:6px 0}
@@ -359,9 +361,9 @@ html:fullscreen body{padding:18px 1px}
 <!-- Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern. -->
 <section id="modusbox" hidden>
 <div class="modus-buttons" role="tablist">
+<button type="button" class="modus-btn" id="modusName" data-modus="name" role="tab" aria-selected="false">Namen ändern</button>
 <button type="button" class="modus-btn" id="modusSolo" data-modus="solo" role="tab" aria-selected="false">Einzelspieler</button>
 <button type="button" class="modus-btn" id="modusMulti" data-modus="multi" role="tab" aria-selected="false">Multiplayer</button>
-<button type="button" class="modus-btn" id="modusName" data-modus="name" role="tab" aria-selected="false">Namen ändern</button>
 </div>
 
 <div id="soloPanel" class="modus-panel" hidden>
@@ -2976,6 +2978,12 @@ async function ladeAlleinSpiele(){
   const doc=new DOMParser().parseFromString(await r.text(),"text/html");
   const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
   if(!gruppen.length)throw Error("keine Gruppen");
+  // "Bubble Shooter (2 Spieler)" -> "Bubble Shooter": Spielerangaben wie
+  // "(2 Spieler)", "ab 3 Spieler" oder "2-4 Spieler" gehoeren nicht in die Kachel.
+  const ohneSpielerAngabe=text=>String(text)
+   .replace(/\s*[\(\[]\s*(?:ab\s+)?\d+(?:\s*(?:-|–|bis)\s*\d+)?\s*Spieler[^\)\]]*[\)\]]/gi,"")
+   .replace(/\s*[-–,]?\s*(?:ab\s+)?\d+(?:\s*(?:-|–|bis)\s*\d+)?\s*Spieler\b.*$/i,"")
+   .trim();
   liste.innerHTML="";
   const kaesten=[];
   gruppen.forEach(gruppe=>{
@@ -3001,18 +3009,19 @@ async function ladeAlleinSpiele(){
     // Nach Alphabet, damit man ein Spiel schnell findet.
     .sort((a,b)=>a.text.localeCompare(b.text,"de",{numeric:true,sensitivity:"base"}))
     .forEach(eintrag=>{
+    const name=ohneSpielerAngabe(eintrag.text);
     const link=document.createElement("a");
     link.className="solo-link";
     link.href="/spiele/"+eintrag.href;
     link.target="_blank";
     link.rel="noopener";
-    link.textContent=eintrag.text;
+    link.textContent=name;
     // Am PC rechts neben dem Chat öffnen, auf dem Handy im neuen Tab.
     link.addEventListener("click",ev=>{
      if(!istPc())return;
      if(ev.ctrlKey||ev.metaKey||ev.shiftKey||ev.altKey)return;
      ev.preventDefault();
-     spielOeffnen(eintrag.text,link.href);
+     spielOeffnen(name,link.href);
     });
     raster.appendChild(link);
    });
