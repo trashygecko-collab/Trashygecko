@@ -915,12 +915,18 @@ function statusMerken(text, gameId, leer){
 // geändert hat; sonst würde der Kasten bei jedem Durchlauf neu aufgebaut.
 function statusAnzeigen(meldung){
  const kennung=meldung.text+"|"+meldung.gameId+"|"+(meldung.leer?1:0)+"|"+
-  meldung.knoepfe.map(k=>k.label).join(",");
+  (meldung.hinweis||"")+"|"+meldung.knoepfe.map(k=>k.label).join(",");
  if(kennung===statusGezeichnet)return;
  statusGezeichnet=kennung;
  const box=document.getElementById("game-status");
  box.classList.toggle("leer", !!meldung.leer);  // sonst steht etwas Echtes da
  box.textContent=meldung.text;
+ if(meldung.hinweis){
+  const zeile=document.createElement("span");
+  zeile.className="angebot-ende";
+  zeile.textContent=meldung.hinweis;
+  box.appendChild(zeile);
+ }
  const def=meldung.gameId?SUPPORTED_GAMES.find(g=>g.id===meldung.gameId):null;
  // Manche Spiele setzen "Spiel öffnen" zusätzlich selbst – dann nicht zweimal.
  const schonDa=meldung.knoepfe.some(k=>k.label==="Spiel öffnen");
@@ -1030,9 +1036,16 @@ async function refreshGames(players, vorrang){
   // Ab hier darf wieder sofort gezeichnet werden (z. B. aus einem Knopf).
   statusZyklus=false;
  }
- // Einmal zeichnen: ein offenes Angebot sticht alle Spielmeldungen.
- if(vorrang)statusAnzeigen({text:vorrang, gameId:"", leer:false, knoepfe:[]});
- else if(statusPuffer)statusAnzeigen(statusPuffer);
+ // Einmal zeichnen. Läuft für mich schon eine Partie (oder sitze ich an einem
+ // Tisch), steht deren Meldung samt Knopf vorn – das offene Angebot kommt als
+ // kleine Zeile darunter. Sonst zählt das Angebot allein.
+ if(statusPuffer && !statusPuffer.leer){
+  statusAnzeigen(Object.assign({},statusPuffer,{hinweis:vorrang||""}));
+ }else if(vorrang){
+  statusAnzeigen({text:vorrang, gameId:"", leer:false, knoepfe:[], hinweis:""});
+ }else if(statusPuffer){
+  statusAnzeigen(statusPuffer);
+ }
  statusPuffer=null; statusFrisch=false;
 }
 
@@ -3004,19 +3017,14 @@ document.getElementById("message").addEventListener("keydown",e=>{
  if(e.key==="Enter")send();
 });
 
-// Springt von selbst ins Spiel, sobald eine Partie für mich läuft – egal ob
-// ich eingeladen habe, eingeladen wurde oder der Gastgeber den Tisch startet.
-let startLaeuft = false;
+// Lebenszeichen für den Raum: hält den Spieler anwesend (sonst fällt er nach
+// 150 s raus), verlässt die Seite aber nicht mehr von selbst. Ins Spiel geht
+// es über den Knopf im Statusfenster – sonst springt die Seite beim Annehmen
+// einer Einladung weg und der Knopf ist nicht mehr zu treffen.
 async function pruefeSpielstart(){
- if(!activeRoom||startLaeuft)return;
+ if(!activeRoom||!sessionID)return;
  try{
-  const r=await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
-  if(!r.ok)return;
-  const d=await r.json();
-  if(d&&d.aktiv){
-   startLaeuft=true;
-   openGame(gamePath(d.aktiv));
-  }
+  await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
  }catch(e){}
 }
 setInterval(pruefeSpielstart,2000);

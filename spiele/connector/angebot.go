@@ -53,6 +53,7 @@ var spielApi = map[string]string{
 	"siebzehn":         "siebzehn",
 	"baccara":         "baccara",
 	"schiffe":         "schiffe",
+	"tetris":          "tetris",
 	"malen":            "malen",
 }
 
@@ -85,6 +86,7 @@ var spielAnzeige = map[string]string{
 	"siebzehn":         "17 und 4",
 	"baccara":         "Baccara",
 	"schiffe":         "Schiffe versenken",
+	"tetris":          "Tetris",
 	"malen":            "Malen",
 }
 
