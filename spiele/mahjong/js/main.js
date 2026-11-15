@@ -85,8 +85,35 @@ function createGameInformation() {
 // --------------------------------------------------
 
 // So viele Formen gibt es (jede Form in board-layout.js ist eine).
-function hoechstesLevel() {
-    return Math.max(...Object.keys(BOARD_LAYOUTS).map(Number));
+function hoechstesLevel(satz = FORMEN_SATZ) {
+    const formen = satz === 2 ? BOARD_LAYOUTS_2 : BOARD_LAYOUTS;
+
+    return Math.max(...Object.keys(formen).map(Number));
+}
+
+// Der Spielstand liegt getrennt vor: Formen 1 wie bisher ganz oben,
+// Formen 2 in einem eigenen Abschnitt mit eigenen Haken und Bestzeiten.
+function satzDaten(satz = FORMEN_SATZ) {
+    if (!gameData) return createDefaultStorage();
+
+    if (satz !== 2) return gameData;
+
+    if (!gameData.satz2) {
+        gameData.satz2 = {
+            currentLevel: 1,
+            unlockedLevel: 1,
+            gamesPlayed: 0,
+            gamesWon: 0,
+            bestTimes: {}
+        };
+    }
+
+    return gameData.satz2;
+}
+
+// Name der Form – im zweiten Satz hat jede Form einen.
+function formName(level, satz = FORMEN_SATZ) {
+    return satz === 2 ? formNameSatz2(formVon(level, satz)) : "";
 }
 
 // Nach der letzten Form beginnt die naechste Runde mit Form 1 - dann in einer
@@ -118,13 +145,13 @@ function istRegenbogenRunde(runde) {
 }
 
 // Welche Form gehoert zu diesem Level?
-function formVon(level) {
-    return ((level - 1) % hoechstesLevel()) + 1;
+function formVon(level, satz = FORMEN_SATZ) {
+    return ((level - 1) % hoechstesLevel(satz)) + 1;
 }
 
 // In welcher Runde liegt dieses Level?
-function rundeVon(level) {
-    return Math.floor((level - 1) / hoechstesLevel()) + 1;
+function rundeVon(level, satz = FORMEN_SATZ) {
+    return Math.floor((level - 1) / hoechstesLevel(satz)) + 1;
 }
 
 // Name der Steinfarbe dieser Runde.
@@ -177,11 +204,24 @@ function formatTime(seconds) {
 }
 
 function updateStats() {
-    // Level laufen endlos weiter - die Anzeige zeigt die volle Nummer.
+    // Beide Level-Waehler zeigen ihren eigenen Formensatz: oben Gold (Formen 1),
+    // darunter Kupfer (Formen 2). Der laufende Satz steht auf dem aktuellen Wert.
+    const levelSatz1 = FORMEN_SATZ === 1 ? currentLevel : satzDaten(1).currentLevel || 1;
+    const levelSatz2 = FORMEN_SATZ === 2 ? currentLevel : satzDaten(2).currentLevel || 1;
+
     setText(
-        ["levelNumber", "level", "currentLevel", "levelDisplay"],
+        ["level", "currentLevel", "levelDisplay"],
         String(currentLevel).padStart(2, "0")
     );
+
+    setText(["levelNumber"], String(levelSatz1).padStart(2, "0"));
+    setText(["levelNumber2"], String(levelSatz2).padStart(2, "0"));
+
+    const knopfSatz1 = getElement("levelButton");
+    const knopfSatz2 = getElement("levelButton2");
+
+    if (knopfSatz1) knopfSatz1.classList.toggle("aktiv", FORMEN_SATZ === 1);
+    if (knopfSatz2) knopfSatz2.classList.toggle("aktiv", FORMEN_SATZ === 2);
 
     setText(
         ["remainingTiles"],
@@ -348,7 +388,7 @@ function startGame() {
     score = 0;
 
     if (gameData) {
-        currentLevel = gameData.currentLevel || 1;
+        currentLevel = satzDaten().currentLevel || 1;
     }
 
     if (!Number.isFinite(currentLevel) || currentLevel < 1) {
@@ -695,7 +735,7 @@ function finishGame() {
 
     try {
         if (gameData) {
-            saveLevelResult(gameData, currentLevel, gameSeconds);
+            saveLevelResult(gameData, currentLevel, gameSeconds, satzDaten());
 
             gameData.totalScore =
                 (gameData.totalScore || 0) + score;
@@ -707,7 +747,7 @@ function finishGame() {
 
             saveStorage(gameData);
 
-            currentLevel = gameData.currentLevel;
+            currentLevel = satzDaten().currentLevel;
 
             updateStats();
 
@@ -835,22 +875,25 @@ function zeigeSiegWerte() {
 // Runde, die in der Level-Auswahl gerade angezeigt wird.
 let auswahlRunde = 1;
 
+// Formensatz, den die offene Level-Auswahl zeigt (1 oder 2).
+let auswahlSatz = 1;
+
 // Bestzeit eines Levels in Sekunden - null, wenn es noch nicht geschafft ist.
-function bestzeitVon(level) {
-    const zeiten = gameData ? gameData.bestTimes : null;
-    const wert = zeiten ? zeiten[level] : undefined;
+function bestzeitVon(level, satz = FORMEN_SATZ) {
+    const daten = gameData ? satzDaten(satz) : null;
+    const wert = daten && daten.bestTimes ? daten.bestTimes[level] : undefined;
 
     return Number.isFinite(wert) ? wert : null;
 }
 
 // Wie viele Level dieser Runde sind schon geschafft?
-function geschafftInRunde(runde) {
-    const formen = hoechstesLevel();
+function geschafftInRunde(runde, satz = FORMEN_SATZ) {
+    const formen = hoechstesLevel(satz);
     const start = (runde - 1) * formen;
     let anzahl = 0;
 
     for (let form = 1; form <= formen; form++) {
-        if (bestzeitVon(start + form) !== null) anzahl++;
+        if (bestzeitVon(start + form, satz) !== null) anzahl++;
     }
 
     return anzahl;
@@ -933,13 +976,13 @@ function baueLevelAuswahl(runde = auswahlRunde) {
 
     raster.innerHTML = "";
 
-    const formen = hoechstesLevel();
+    const formen = hoechstesLevel(auswahlSatz);
     const start = (auswahlRunde - 1) * formen;
 
     for (let form = 1; form <= formen; form++) {
         const level = start + form;
         const feld = document.createElement("button");
-        const bestzeit = bestzeitVon(level);
+        const bestzeit = bestzeitVon(level, auswahlSatz);
 
         feld.type = "button";
         feld.className = "level-feld";
@@ -961,10 +1004,13 @@ function baueLevelAuswahl(runde = auswahlRunde) {
             feld.classList.add("geschafft");
         }
 
+        const name = formName(level, auswahlSatz);
+        const formTitel = name ? `Form ${form} · ${name}` : `Form ${form}`;
+
         feld.title =
             bestzeit !== null
-                ? `Form ${form} · Bestzeit ${formatTime(bestzeit)}`
-                : `Form ${form}`;
+                ? `${formTitel} · Bestzeit ${formatTime(bestzeit)}`
+                : formTitel;
 
         feld.addEventListener("click", () => waehleLevel(level));
 
@@ -975,8 +1021,8 @@ function baueLevelAuswahl(runde = auswahlRunde) {
 
     if (anzeige) {
         anzeige.textContent =
-            `Runde ${auswahlRunde} · ${farbenName(auswahlRunde)} · ` +
-            `${geschafftInRunde(auswahlRunde)} von ${formen}`;
+            `Formen ${auswahlSatz} · Runde ${auswahlRunde} · ${farbenName(auswahlRunde)} · ` +
+            `${geschafftInRunde(auswahlRunde, auswahlSatz)} von ${formen}`;
     }
 
     baueFarbwahl();
@@ -993,18 +1039,18 @@ function baueFarbwahl() {
 
     RUNDEN_FARBEN_SICHTBAR.forEach((name, index) => {
         const runde = index + 1;
-        const abLevel = (runde - 1) * hoechstesLevel() + 1;
+        const abLevel = (runde - 1) * hoechstesLevel(auswahlSatz) + 1;
 
         const feld = document.createElement("button");
 
         feld.type = "button";
         feld.className = "farbe-feld";
         feld.dataset.farbe = String(runde);
-        const geschafft = geschafftInRunde(runde);
+        const geschafft = geschafftInRunde(runde, auswahlSatz);
 
         feld.title =
             `Runde ${runde} · ${name} · ab Level ${abLevel} · ` +
-            `${geschafft} von ${hoechstesLevel()} geschafft`;
+            `${geschafft} von ${hoechstesLevel(auswahlSatz)} geschafft`;
         feld.setAttribute(
             "aria-label",
             `Runde ${runde}, ${name}, ab Level ${abLevel}`
@@ -1019,20 +1065,26 @@ function baueFarbwahl() {
 }
 
 function markiereAktuellesLevel() {
+    // Nur der laufende Formensatz hat ein aktuelles Level.
     document.querySelectorAll(".level-feld").forEach(feld => {
         feld.classList.toggle(
             "aktuell",
-            Number(feld.dataset.level) === currentLevel
+            auswahlSatz === FORMEN_SATZ &&
+                Number(feld.dataset.level) === currentLevel
         );
     });
 }
 
-function oeffneLevelAuswahl() {
+function oeffneLevelAuswahl(satz = FORMEN_SATZ) {
     const auswahl = getElement("levelPicker");
 
     if (!auswahl) return;
 
-    baueLevelAuswahl(rundeVon(currentLevel));
+    auswahlSatz = satz === 2 ? 2 : 1;
+
+    const level = satzDaten(auswahlSatz).currentLevel || 1;
+
+    baueLevelAuswahl(rundeVon(level, auswahlSatz));
 
     auswahl.hidden = false;
 
@@ -1057,9 +1109,15 @@ function schliesseLevelAuswahl() {
 function waehleLevel(level) {
     // Level laufen endlos: nach Form 56 geht es in der naechsten Runde weiter.
     const ziel = Math.max(1, Math.floor(level));
+    const satz = auswahlSatz === 2 ? 2 : 1;
+
+    FORMEN_SATZ = satz;
 
     if (gameData) {
-        gameData.currentLevel = ziel;
+        satzDaten(satz).currentLevel = ziel;
+
+        gameData.settings = gameData.settings || {};
+        gameData.settings.formenSatz = satz;
 
         try {
             saveStorage(gameData);
@@ -1067,7 +1125,6 @@ function waehleLevel(level) {
     }
 
     currentLevel = ziel;
-    gameData.currentLevel = ziel;
 
     schliesseLevelAuswahl();
     startGame();
@@ -1084,7 +1141,8 @@ function initializeGame() {
 
     try {
         gameData = loadStorage();
-        currentLevel = gameData.currentLevel || 1;
+        FORMEN_SATZ = gameData.settings && gameData.settings.formenSatz === 2 ? 2 : 1;
+        currentLevel = satzDaten().currentLevel || 1;
     } catch (error) {
         console.error("Speicherfehler:", error);
 
@@ -1185,7 +1243,13 @@ function initializeGame() {
     const levelPickerClose = getElement("levelPickerClose");
 
     if (levelButton) {
-        levelButton.addEventListener("click", oeffneLevelAuswahl);
+        levelButton.addEventListener("click", () => oeffneLevelAuswahl(1));
+    }
+
+    const levelButton2 = getElement("levelButton2");
+
+    if (levelButton2) {
+        levelButton2.addEventListener("click", () => oeffneLevelAuswahl(2));
     }
 
     if (levelPickerClose) {

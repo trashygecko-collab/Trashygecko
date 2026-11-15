@@ -19,7 +19,16 @@ function createDefaultStorage() {
             animations: true,
             hints: true,
             steinForm: "rund",
-            steinZustand: "neu"
+            steinZustand: "neu",
+            formenSatz: 1
+        },
+        // Zweiter Formensatz: eigener Fortschritt, eigene Bestzeiten.
+        satz2: {
+            currentLevel: 1,
+            unlockedLevel: 1,
+            gamesPlayed: 0,
+            gamesWon: 0,
+            bestTimes: {}
         }
     };
 }
@@ -80,24 +89,29 @@ function saveLevelProgress(data, level) {
     return saveStorage(data);
 }
 
-// Speichert einen abgeschlossenen Level
-function saveLevelResult(data, level, seconds) {
-    data.gamesPlayed++;
-    data.gamesWon++;
+// Speichert einen abgeschlossenen Level. Mit "ziel" landet der Fortschritt in
+// einem eigenen Abschnitt (zweiter Formensatz), gespeichert wird immer alles.
+function saveLevelResult(data, level, seconds, ziel) {
+    const eintrag = ziel || data;
 
-    const previousBest = data.bestTimes[level];
+    eintrag.gamesPlayed = (eintrag.gamesPlayed || 0) + 1;
+    eintrag.gamesWon = (eintrag.gamesWon || 0) + 1;
+
+    eintrag.bestTimes = eintrag.bestTimes || {};
+
+    const previousBest = eintrag.bestTimes[level];
 
     if (
         previousBest === undefined ||
         seconds < previousBest
     ) {
-        data.bestTimes[level] = seconds;
+        eintrag.bestTimes[level] = seconds;
     }
 
-    data.currentLevel = level + 1;
+    eintrag.currentLevel = level + 1;
 
-    data.unlockedLevel = Math.max(
-        data.unlockedLevel,
+    eintrag.unlockedLevel = Math.max(
+        eintrag.unlockedLevel || 1,
         level + 1
     );
 

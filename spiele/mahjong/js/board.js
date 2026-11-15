@@ -9,7 +9,9 @@
 // --------------------------------------------------
 
 function createBoard(level = 1) {
-    const layout = BOARD_LAYOUTS[level] || BOARD_LAYOUT;
+    // Formen 1 stehen in board-layout.js, Formen 2 in board-layout-2.js.
+    const formen = FORMEN_SATZ === 2 ? BOARD_LAYOUTS_2 : BOARD_LAYOUTS;
+    const layout = formen[level] || formen[1] || BOARD_LAYOUT;
 
     return layout.positions.map((position, index) => ({
         id: index,

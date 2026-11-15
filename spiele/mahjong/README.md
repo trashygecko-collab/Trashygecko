@@ -117,6 +117,20 @@ Die Level 51–56 sind bewusst einfache Formen: Würfel (drei gleiche Ebenen),
 Rechteck, Ball, Pyramide, ein Feld aus zwölf Säulen und eine Brücke, deren Steg
 in der Mitte über einer Lücke liegt.
 
+## Formen 2 – die zweite Level-Auswahl
+
+Unter dem goldenen Level-Knopf (`LV 01 ▾`) sitzt ein kupferner. Er öffnet
+dieselbe Level-Auswahl, aber mit **56 anderen Formen**: gleiche Runden, gleiche
+Steinfarben, gleiche Sprüche, gleiche Punktzahl – nur andere Muster.
+
+- Jede Form ist **höchstens 6 Steine breit und 8 Steine hoch** (Handyformat) und
+  hat trotzdem genau 144 Steine. Gestapelt wird immer genau übereinander, damit
+  unten am Rand von jedem Stein ein Streifen sichtbar bleibt; die Tiefe ist frei.
+- Die Formen stehen als kleine Bilder (8 Zeilen mit je 6 Zeichen, `#` = Stein)
+  in `js/board-layout-2.js`; daraus werden die 144 Steine gleichmäßig gestapelt.
+- Fortschritt, Häkchen und Bestzeiten der beiden Sätze sind **getrennt**: Satz 1
+  liegt wie bisher ganz oben im Spielstand, Satz 2 in `satz2`.
+
 ## Runden und Steinfarben
 
 Die Formen wiederholen sich, die Steinfarbe nicht: Level 1–56 sind Runde 1,
@@ -195,6 +209,7 @@ mahjong/
 ├── css/mahjong.css       gesamte Optik (auch Handy/Tablet und Querformat)
 ├── js/
 │   ├── board-layout.js   alle 56 Formen als Positionen (x, y, Ebene)
+│   ├── board-layout-2.js die 56 Formen des zweiten Satzes (6 × 8, gestapelt)
 │   ├── board.js          Regeln: freie Steine, Paare entfernen
 │   ├── generator.js      verteilt die 72 Motive und sorgt für Lösbarkeit
 │   ├── solver.js         prüft/ findet eine Abräum-Reihenfolge
