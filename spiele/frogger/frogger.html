@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Frogger</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
+ gap:6px;justify-content:center;padding:8px 8px 4px;background:#08120f}
+.pad button{font-family:inherit;font-size:20px;border-radius:8px;cursor:pointer;
+ border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
+.pad button:active{background:#1e5645}
+.pad .oben{grid-column:2;grid-row:1}
+.pad .links{grid-column:1;grid-row:2}
+.pad .runter{grid-column:2;grid-row:2}
+.pad .rechts{grid-column:3;grid-row:2}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Frogger</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnPause">Pause</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Level <b id="level">1</b></span>
+  <span>Leben <b id="leben">●●●</b></span>
+  <span>Zeit <b id="zeit">35</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="416" height="416"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">FROGGER</h2>
+    <p id="meldungText">Bring den Frosch über Straße und Fluss in eine der fünf Buchten oben.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="pad">
+  <button class="oben" data-dir="hoch">▲</button>
+  <button class="links" data-dir="links">◀</button>
+  <button class="runter" data-dir="runter">▼</button>
+  <button class="rechts" data-dir="rechts">▶</button>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Wischen oder Pfeile: ein Satz pro Feld.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Den Frosch von unten nach oben bringen und in eine der fünf Buchten setzen. Jede Bucht gibt 50 Punkte plus Zeitbonus, alle fünf zusammen bringen das nächste Level.</li>
+   <li><b>Steuern:</b> Mit dem Finger über das Feld wischen oder das Pfeilfeld unter dem Brett benutzen, am PC auch die Pfeiltasten. Jeder Satz geht genau ein Feld.</li>
+   <li><b>Straße:</b> Autos und Lastwagen dürfen den Frosch nicht berühren.</li>
+   <li><b>Fluss:</b> Der Frosch kann nicht schwimmen – er muss auf Baumstämmen und Schildkröten mitfahren und darf dabei nicht ins Wasser oder an den Rand geraten.</li>
+   <li><b>Zeit:</b> Pro Leben laufen 35 Sekunden. Läuft die Zeit ab, ist ein Leben weg. Drei Leben pro Spiel, jedes erreichte Ziel bringt die Zeit zurück.</li>
+   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const SPALTEN=13, ZEILEN=13, Z=32;
+const W=SPALTEN*Z, H=ZEILEN*Z;
+canvas.width=W;
+canvas.height=H;
+
+const HEIM_ZEILE=0;
+const WASSER=[1,2,3,4,5];
+const UFER=6;
+const STRASSE=[7,8,9,10,11];
+const START_ZEILE=12;
+const ZEIT_PRO_LEBEN=35;
+
+let zustand="start";        // start, laeuft, pause, level, ende
+let punkte=0, level=1, leben=3;
+let zeit=ZEIT_PRO_LEBEN;
+let frosch={x:0,y:0,zielX:0,zielY:0,huepfend:false,t:0};
+let bahnen=[];
+let buchten=[];             // true = besetzt
+let blitz=0;                // kurzer roter Blitz nach einem Treffer
+let letzteZeit=0;
+
+const rnd=Math.random;
+
+// ---------------------------------------------------------------- Aufbau
+
+function neueBahnen(){
+ bahnen=[];
+ const faktor=1+(level-1)*0.13;
+
+ // Fluss: Baumstämme und Schildkröten, abwechselnd beide Richtungen
+ const fluss=[
+  {art:"holz",  reihe:1, tempo:46, richtung:1,  breite:96,  abstand:70},
+  {art:"schild",reihe:2, tempo:58, richtung:-1, breite:66,  abstand:52},
+  {art:"holz",  reihe:3, tempo:70, richtung:1,  breite:128, abstand:84},
+  {art:"schild",reihe:4, tempo:52, richtung:-1, breite:44,  abstand:46},
+  {art:"holz",  reihe:5, tempo:64, richtung:1,  breite:80,  abstand:64}
+ ];
+ fluss.forEach(b=>{
+  const teile=[];
+  const schritt=b.breite+b.abstand;
+  for(let x=-b.breite;x<W+b.breite;x+=schritt){
+   teile.push({x:x,y:b.reihe*Z+(Z-20)/2,w:b.breite,h:20});
+  }
+  bahnen.push({...b,tempo:b.tempo*faktor,teile});
+ });
+
+ // Straße: Autos und Lastwagen
+ const strasse=[
+  {art:"auto",  reihe:7,  tempo:78,  richtung:-1, breite:52, abstand:96},
+  {art:"lkw",   reihe:8,  tempo:54,  richtung:1,  breite:96, abstand:110},
+  {art:"auto",  reihe:9,  tempo:96,  richtung:-1, breite:46, abstand:120},
+  {art:"auto",  reihe:10, tempo:66,  richtung:1,  breite:56, abstand:84},
+  {art:"lkw",   reihe:11, tempo:88,  richtung:-1, breite:104, abstand:130}
+ ];
+ strasse.forEach(b=>{
+  const teile=[];
+  const schritt=b.breite+b.abstand;
+  for(let x=-b.breite;x<W+b.breite;x+=schritt){
+   teile.push({x:x,y:b.reihe*Z+4,w:b.breite,h:Z-8});
+  }
+  bahnen.push({...b,tempo:b.tempo*faktor,teile});
+ });
+}
+
+function froschZurueck(){
+ frosch={x:6*Z+Z/2,y:START_ZEILE*Z+Z/2,zielX:6*Z+Z/2,zielY:START_ZEILE*Z+Z/2,huepfend:false,t:0};
+ zeit=ZEIT_PRO_LEBEN;
+ $("zeit").textContent=Math.ceil(zeit);
+}
+
+function neuesSpiel(){
+ punkte=0; level=1; leben=3;
+ buchten=[false,false,false,false,false];
+ neueBahnen();
+ froschZurueck();
+ zahlenZeigen();
+ $("rekord").textContent=rekordLaden();
+ zustand="start";
+ $("btnPause").textContent="Pause";
+ zeigeMeldung("FROGGER","Bring den Frosch über Straße und Fluss in eine der fünf Buchten oben.","Starten");
+ $("meldungKnopf").onclick=starten;
+ zeichne();
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("frogger-rekord")||0); }catch(e){ return 0; }
+}
+
+function zahlenZeigen(){
+ $("punkte").textContent=punkte;
+ $("level").textContent=level;
+ $("leben").textContent="●".repeat(Math.max(0,leben))+"○".repeat(Math.max(0,3-leben));
+ $("zeit").textContent=Math.max(0,Math.ceil(zeit));
+}
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ letzteZeit=performance.now();
+ $("hinweis").textContent="Wischen oder Pfeile: ein Satz pro Feld.";
+}
+
+// ---------------------------------------------------------------- Bewegung
+
+function huepfen(dx,dy){
+ if(zustand!=="laeuft"||frosch.huepfend)return;
+ // Auf Baumstämmen steht der Frosch zwischen den Feldern: erst einrasten
+ const spalte=Math.max(0,Math.min(SPALTEN-1,Math.round((frosch.x-Z/2)/Z)));
+ const reihe=Math.round((frosch.y-Z/2)/Z);
+ const zielSpalte=spalte+dx;
+ const zielReihe=reihe+dy;
+
+ if(zielSpalte<0||zielSpalte>=SPALTEN)return;
+ if(zielReihe<0||zielReihe>START_ZEILE)return;
+
+ frosch.huepfend=true;
+ frosch.t=0;
+ frosch.startX=frosch.x;
+ frosch.startY=frosch.y;
+ frosch.zielX=zielSpalte*Z+Z/2;
+ frosch.zielY=zielReihe*Z+Z/2;
+ frosch.zielSpalte=zielSpalte;
+ frosch.zielReihe=zielReihe;
+}
+
+function sprungFertig(){
+ frosch.x=frosch.zielX;
+ frosch.y=frosch.zielY;
+ frosch.huepfend=false;
+ const reihe=frosch.zielReihe;
+
+ if(reihe===HEIM_ZEILE){
+  const spalte=frosch.zielSpalte;
+  const bucht=spalte%2===1&&spalte<=9?(spalte-1)/2:-1;
+  if(bucht>=0&&!buchten[bucht]){
+   buchten[bucht]=true;
+   punkte+=50+Math.floor(zeit)*2;
+   zahlenZeigen();
+   rekordPruefen();
+   if(buchten.every(b=>b)){
+    levelGeschafft();
+    return;
+   }
+   froschZurueck();
+   return;
+  }
+  sterben("Zwischen den Buchten gelandet");
+ }
+}
+
+function sterben(grund){
+ if(zustand!=="laeuft")return;
+ blitz=0.35;
+ leben--;
+ zahlenZeigen();
+ $("hinweis").textContent=grund+" – noch "+Math.max(0,leben)+" Leben.";
+ if(leben<=0){
+  zustand="ende";
+  rekordPruefen();
+  zeigeMeldung("GAME OVER","Punkte: "+punkte+" · Level "+level,"Nochmal");
+  $("meldungKnopf").onclick=neuesSpiel;
+  return;
+ }
+ froschZurueck();
+}
+
+function rekordPruefen(){
+ if(punkte>rekordLaden()){
+  try{ localStorage.setItem("frogger-rekord",String(punkte)); }catch(e){}
+  $("rekord").textContent=punkte;
+ }
+}
+
+function levelGeschafft(){
+ zustand="level";
+ punkte+=200;
+ zahlenZeigen();
+ rekordPruefen();
+ const naechstes=level+1;
+ zeigeMeldung("Level "+level+" geschafft","Alle fünf Buchten besetzt · +200 Punkte · Level "+naechstes,"Weiter");
+ $("meldungKnopf").onclick=()=>{
+  $("meldung").hidden=true;
+  level=naechstes;
+  buchten=[false,false,false,false,false];
+  neueBahnen();
+  froschZurueck();
+  zahlenZeigen();
+  zustand="laeuft";
+  letzteZeit=performance.now();
+ };
+}
+
+// ---------------------------------------------------------------- Update
+
+function update(dt){
+ if(zustand!=="laeuft")return;
+ if(blitz>0)blitz=Math.max(0,blitz-dt);
+
+ // Bahnen bewegen
+ bahnen.forEach(b=>{
+  b.teile.forEach(t=>{
+   t.x+=b.tempo*b.richtung*dt;
+   if(b.richtung>0&&t.x>W) t.x=-t.w;
+   if(b.richtung<0&&t.x+t.w<0) t.x=W;
+  });
+ });
+
+ // Zeit
+ zeit-=dt;
+ $("zeit").textContent=Math.max(0,Math.ceil(zeit));
+ if(zeit<=0){
+  sterben("Zeit abgelaufen");
+  return;
+ }
+
+ // Sprung
+ if(frosch.huepfend){
+  frosch.t=Math.min(1,frosch.t+dt/0.13);
+  const e=frosch.t<0.5?2*frosch.t*frosch.t:1-Math.pow(-2*frosch.t+2,2)/2;
+  frosch.x=frosch.startX+(frosch.zielX-frosch.startX)*e;
+  frosch.y=frosch.startY+(frosch.zielY-frosch.startY)*e;
+  if(frosch.t>=1)sprungFertig();
+  return;
+ }
+
+ const reihe=Math.round((frosch.y-Z/2)/Z);
+
+ // Fluss: mitfahren oder untergehen
+ if(WASSER.includes(reihe)){
+  const bahn=bahnen.find(b=>b.reihe===reihe);
+  const treffer=bahn&&bahn.teile.find(t=>frosch.x+9>t.x&&frosch.x-9<t.x+t.w);
+  if(treffer){
+   frosch.x+=bahn.tempo*bahn.richtung*dt;
+   if(frosch.x<8||frosch.x>W-8)sterben("Vom Baumstamm ins Wasser gefallen");
+  }else{
+   sterben("Platsch – der Frosch kann nicht schwimmen");
+  }
+  return;
+ }
+
+ // Straße: Autos prüfen
+ if(STRASSE.includes(reihe)){
+  const bahn=bahnen.find(b=>b.reihe===reihe);
+  const getroffen=bahn&&bahn.teile.find(t=>frosch.x+10>t.x&&frosch.x-10<t.x+t.w);
+  if(getroffen)sterben("Autsch – überfahren");
+ }
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Wiesen
+ ctx.fillStyle="#1b4a39";
+ ctx.fillRect(0,HEIM_ZEILE*Z,W,Z);
+ ctx.fillStyle="#245239";
+ ctx.fillRect(0,UFER*Z,W,Z);
+ ctx.fillStyle="#245239";
+ ctx.fillRect(0,START_ZEILE*Z,W,Z);
+
+ // Fluss
+ const wg=ctx.createLinearGradient(0,WASSER[0]*Z,0,(WASSER[4]+1)*Z);
+ wg.addColorStop(0,"#123a4a");
+ wg.addColorStop(1,"#0d2f3c");
+ ctx.fillStyle=wg;
+ ctx.fillRect(0,WASSER[0]*Z,W,WASSER.length*Z);
+ // Wellen
+ ctx.strokeStyle="#ffffff12";
+ ctx.lineWidth=1;
+ for(let i=0;i<5;i++){
+  const yy=(WASSER[0]+i)*Z+Z/2;
+  ctx.beginPath();
+  for(let x=0;x<W;x+=8)ctx.lineTo(x,yy+Math.sin(x/14+i)*1.6);
+  ctx.stroke();
+ }
+
+ // Straße
+ ctx.fillStyle="#16241f";
+ ctx.fillRect(0,STRASSE[0]*Z,W,STRASSE.length*Z);
+ // Trennlinien
+ ctx.strokeStyle="#e8cd8e33";
+ ctx.setLineDash([12,12]);
+ for(let i=1;i<STRASSE.length;i++){
+  const yy=STRASSE[0]*Z+i*Z;
+  ctx.beginPath();
+  ctx.moveTo(0,yy+.5);
+  ctx.lineTo(W,yy+.5);
+  ctx.stroke();
+ }
+ ctx.setLineDash([]);
+
+ // Bahnen zeichnen
+ bahnen.forEach(b=>{
+  b.teile.forEach(t=>{
+   if(b.art==="holz"){
+    const hg=ctx.createLinearGradient(0,t.y,0,t.y+t.h);
+    hg.addColorStop(0,"#8a6238");
+    hg.addColorStop(.5,"#6f4c2a");
+    hg.addColorStop(1,"#583a1f");
+    ctx.fillStyle=hg;
+    ctx.beginPath();
+    ctx.roundRect(t.x,t.y,t.w,t.h,6);
+    ctx.fill();
+    ctx.strokeStyle="#2d1c0e66";
+    ctx.lineWidth=1;
+    ctx.stroke();
+    ctx.strokeStyle="#2d1c0e33";
+    ctx.beginPath();
+    ctx.moveTo(t.x+8,t.y+t.h/2);
+    ctx.lineTo(t.x+t.w-8,t.y+t.h/2);
+    ctx.stroke();
+   }else if(b.art==="schild"){
+    const anzahl=Math.max(2,Math.round(t.w/22));
+    const r=(t.w/anzahl)/2;
+    for(let i=0;i<anzahl;i++){
+     const cx=t.x+r+i*r*2;
+     const cy=t.y+t.h/2;
+     const sg=ctx.createRadialGradient(cx-3,cy-3,2,cx,cy,r);
+     sg.addColorStop(0,"#7fc0a6");
+     sg.addColorStop(1,"#2f6b57");
+     ctx.fillStyle=sg;
+     ctx.beginPath();
+     ctx.ellipse(cx,cy,r-1,r-1,0,0,Math.PI*2);
+     ctx.fill();
+     ctx.strokeStyle="#0e2b22";
+     ctx.lineWidth=1;
+     ctx.stroke();
+    }
+   }else if(b.art==="lkw"){
+    const cg=ctx.createLinearGradient(0,t.y,0,t.y+t.h);
+    cg.addColorStop(0,"#e8cd8e");
+    cg.addColorStop(1,"#b98f3f");
+    ctx.fillStyle=cg;
+    ctx.beginPath();
+    ctx.roundRect(t.x,t.y,t.w,t.h,5);
+    ctx.fill();
+    ctx.strokeStyle="#2d1c0e88";
+    ctx.stroke();
+    ctx.fillStyle="#0f2b23";
+    ctx.fillRect(t.x+t.w-(b.richtung>0?26:8),t.y+5,16,9);
+   }else{
+    const cg=ctx.createLinearGradient(0,t.y,0,t.y+t.h);
+    cg.addColorStop(0,"#d9806a");
+    cg.addColorStop(1,"#8d3a22");
+    ctx.fillStyle=cg;
+    ctx.beginPath();
+    ctx.roundRect(t.x,t.y,t.w,t.h,7);
+    ctx.fill();
+    ctx.strokeStyle="#2d1c0e88";
+    ctx.stroke();
+    ctx.fillStyle="#0f2b23";
+    ctx.fillRect(t.x+8,t.y+5,t.w-16,8);
+   }
+  });
+ });
+
+ // Buchten
+ for(let i=0;i<5;i++){
+  const x=((i*2)+1)*Z;
+  const y=HEIM_ZEILE*Z+3;
+  const wB=Z-8, hB=Z-6;
+  ctx.fillStyle=buchten[i]?"#4fb3a0":"#0d2f3c";
+  ctx.beginPath();
+  ctx.roundRect(x-wB/2,y,wB,hB,6);
+  ctx.fill();
+  ctx.strokeStyle="#d9bc7c66";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  if(buchten[i]){
+   // sitzender Frosch
+   ctx.fillStyle="#e8cd8e";
+   ctx.beginPath();
+   ctx.arc(x,y+hB/2+2,4.5,0,Math.PI*2);
+   ctx.fill();
+  }else{
+   ctx.fillStyle="#ffffff22";
+   ctx.beginPath();
+   ctx.arc(x,y+hB/2,5,0,Math.PI*2);
+   ctx.fill();
+  }
+ }
+
+ // Frosch
+ const fx=frosch.x, fy=frosch.y;
+ // Schatten
+ ctx.fillStyle="#00000044";
+ ctx.beginPath();
+ ctx.ellipse(fx,fy+9,10,4,0,0,Math.PI*2);
+ ctx.fill();
+ const fg=ctx.createRadialGradient(fx-4,fy-5,2,fx,fy,13);
+ fg.addColorStop(0,"#a8e0a0");
+ fg.addColorStop(.6,"#5fae72");
+ fg.addColorStop(1,"#2f7d4f");
+ ctx.fillStyle=fg;
+ ctx.beginPath();
+ ctx.ellipse(fx,fy,10,9,0,0,Math.PI*2);
+ ctx.fill();
+ ctx.strokeStyle="#123a2a";
+ ctx.lineWidth=1.5;
+ ctx.stroke();
+ // Augen
+ [-4.5,4.5].forEach(dx=>{
+  ctx.fillStyle="#f4e6c2";
+  ctx.beginPath();
+  ctx.arc(fx+dx,fy-5,3.2,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle="#0b241d";
+  ctx.beginPath();
+  ctx.arc(fx+dx,fy-5.4,1.6,0,Math.PI*2);
+  ctx.fill();
+ });
+ // Beine
+ ctx.strokeStyle="#2f7d4f";
+ ctx.lineWidth=2.5;
+ ctx.beginPath();
+ ctx.moveTo(fx-8,fy+5);ctx.lineTo(fx-12,fy+9);
+ ctx.moveTo(fx+8,fy+5);ctx.lineTo(fx+12,fy+9);
+ ctx.stroke();
+
+ // Trefferblitz
+ if(blitz>0){
+  ctx.fillStyle="rgba(194,96,63,"+(blitz*0.9)+")";
+  ctx.fillRect(0,0,W,H);
+ }
+
+ // Rand
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+}
+
+// ---------------------------------------------------------------- Meldung
+
+function zeigeMeldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeitJetzt){
+ const dt=Math.min(0.05,(zeitJetzt-letzteZeit)/1000||0.016);
+ letzteZeit=zeitJetzt;
+ if(zustand==="laeuft"){
+  update(dt);
+  // Symbole (Zeit) mitziehen
+  $("zeit").textContent=Math.max(0,Math.ceil(zeit));
+ }
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+let wischStart=null;
+
+canvas.addEventListener("pointerdown",e=>{
+ wischStart={x:e.clientX,y:e.clientY};
+ e.preventDefault();
+});
+canvas.addEventListener("pointerup",e=>{
+ if(!wischStart)return;
+ const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
+ wischStart=null;
+ if(Math.hypot(dx,dy)<14){
+  if(zustand==="start")starten();
+  return;
+ }
+ if(Math.abs(dx)>Math.abs(dy))huepfen(dx>0?1:-1,0);
+ else huepfen(0,dy>0?1:-1);
+ e.preventDefault();
+});
+canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
+
+document.querySelectorAll(".pad button").forEach(knopf=>{
+ knopf.addEventListener("click",()=>{
+  if(zustand==="start"){ starten(); return; }
+  const d=knopf.dataset.dir;
+  if(d==="hoch")huepfen(0,-1);
+  else if(d==="runter")huepfen(0,1);
+  else if(d==="links")huepfen(-1,0);
+  else huepfen(1,0);
+ });
+});
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(k==="ArrowUp"||k==="w"||k==="W"){ e.preventDefault(); huepfen(0,-1); }
+ else if(k==="ArrowDown"||k==="s"||k==="S"){ e.preventDefault(); huepfen(0,1); }
+ else if(k==="ArrowLeft"||k==="a"||k==="A"){ e.preventDefault(); huepfen(-1,0); }
+ else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); huepfen(1,0); }
+ else if(k===" "){ e.preventDefault(); if(zustand==="start")starten(); }
+});
+
+$("btnNeu").onclick=neuesSpiel;
+$("btnPause").onclick=()=>{
+ if(zustand==="laeuft"){
+  zustand="pause";
+  $("btnPause").textContent="Weiter";
+  $("hinweis").textContent="Pause – tippe auf Weiter.";
+ }else if(zustand==="pause"){
+  zustand="laeuft";
+  $("btnPause").textContent="Pause";
+  letzteZeit=performance.now();
+  $("hinweis").textContent="Wischen oder Pfeile: ein Satz pro Feld.";
+ }
+};
+
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+})();
+</script>
+</body>
+</html>

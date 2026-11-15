@@ -11,6 +11,11 @@ Hintergrund ist tiefes Grün mit einem hellen Schein in der Mitte, die Schrift
 golden und in Serifen (wie eine Einladung), der Abstand zwischen den Knöpfen
 34 dp – die Luft darüber und darunter teilt sich im goldenen Schnitt (1 : 1,618).
 
+Zwischen den beiden Knöpfen steht ein Spruch mit dem heutigen Datum und der
+laufenden Uhrzeit: „Wenn die Zeiger am Samstag, 15. November 2026 auf 10:42 Uhr
+stehen, erwacht unser Spiel zum Leben. Jetzt treffen sich Taktik, Glück und gute
+Laune." Die Uhr tickt im Sekundentakt, solange der Startbildschirm offen ist.
+
 Dazu kommt **jeden Morgen um 7:30 ein Lob als Benachrichtigung** – ohne Server,
 der Wecker steckt im Gerät (auch nach einem Neustart wird er neu gestellt).
 Abschalten geht in den Android-Einstellungen unter Benachrichtigungen.

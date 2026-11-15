@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Flappy Bird</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Flappy Bird</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Tempo <b id="tempo">1,0×</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="400" height="600"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">FLAPPY BIRD</h2>
+    <p id="meldungText">Tippe ins Feld, um zu flattern, und fliege durch die Lücken zwischen den Rohren.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Tippen oder Leertaste: ein Flügelschlag.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Durch möglichst viele Rohrlücken fliegen. Jede Lücke zählt einen Punkt.</li>
+   <li><b>Steuern:</b> Tippen oder Klicken ins Feld, am PC die Leertaste oder die Pfeiltaste nach oben. Jeder Flügelschlag hebt den Vogel an.</li>
+   <li><b>Schwerkraft:</b> Ohne Flügelschlag sinkt der Vogel. Ein zu hektisches Flattern treibt ihn an die Decke, ein zu spätes kostet die Höhe.</li>
+   <li><b>Tempo:</b> Mit jedem Punkt werden die Rohre etwas schneller und die Lücken enger.</li>
+   <li><b>Ende:</b> Eine Berührung mit einem Rohr oder dem Boden beendet den Flug. Die Bestmarke merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const W=400, H=600;
+canvas.width=W;
+canvas.height=H;
+
+const BODEN=64;           // Höhe des Bodens
+const GRAV=0.42;          // Schwerkraft pro Frame
+const FLUEGEL=-7.2;       // Flügelschlag
+const MAX_FALL=9.5;       // maximale Sinkgeschwindigkeit
+const VOGEL_X=112;
+const VOGEL_R=14;
+const ROHR_W=66;
+const ABSTAND=205;        // waagerechter Abstand der Rohre
+const LUECKE_START=176;   // Lückenhöhe zu Beginn
+const LUECKE_MIN=132;     // engste Lücke
+const TEMPO_START=2.15;
+const TEMPO_MAX=3.7;
+
+let zustand="start";      // start, laeuft, ende
+let vogel={y:H*0.42,vy:0,drall:0,fluegel:0};
+let rohre=[];
+let punkte=0;
+let tempo=TEMPO_START;
+let luecke=LUECKE_START;
+let bodenX=0;
+let wolken=[];
+let sterbeTimer=0;
+let letzteZeit=0;
+let akku=0;
+let rekord=0;
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ---------------------------------------------------------------- Aufbau
+
+function neuesSpiel(){
+ zustand="start";
+ vogel={y:H*0.42,vy:0,drall:0,fluegel:0};
+ rohre=[];
+ punkte=0;
+ tempo=TEMPO_START;
+ luecke=LUECKE_START;
+ bodenX=0;
+ sterbeTimer=0;
+ akku=0;
+ wolken=[];
+ for(let i=0;i<6;i++){
+  wolken.push({x:rnd(0,W),y:rnd(30,H-BODEN-150),s:rnd(0.5,1.1),v:rnd(0.15,0.4)});
+ }
+ rohrNeu(W+40);
+ $("meldung").hidden=false;
+ $("meldungTitel").textContent="FLAPPY BIRD";
+ $("meldungText").textContent="Tippe ins Feld, um zu flattern, und fliege durch die Lücken zwischen den Rohren.";
+ $("meldungKnopf").textContent="Starten";
+ $("meldungKnopf").onclick=starten;
+ $("hinweis").textContent="Tippen oder Leertaste: ein Flügelschlag.";
+ $("rekord").textContent=rekordLaden();
+ zahlenZeigen();
+ zeichne();
+}
+
+function starten(){
+ zustand="laeuft";
+ akku=0;
+ letzteZeit=performance.now();
+ $("meldung").hidden=true;
+ flattern();
+}
+
+function rohrNeu(x){
+ const rand=Math.max(56,H-BODEN-luecke-120);
+ const oben=rnd(56,Math.max(60,rand));
+ rohre.push({x,y:oben,h:luecke,gepunktet:false});
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("flappy-rekord")||0); }catch(e){ return 0; }
+}
+
+function zahlenZeigen(){
+ $("punkte").textContent=punkte;
+ $("tempo").textContent=(tempo/TEMPO_START).toFixed(1).replace(".",",")+"×";
+ $("rekord").textContent=Math.max(rekord,rekordLaden());
+}
+
+// ---------------------------------------------------------------- Physik
+
+function flattern(){
+ if(zustand==="start"){ starten(); return; }
+ if(zustand!=="laeuft")return;
+ vogel.vy=FLUEGEL;
+ vogel.fluegel=1;
+}
+
+function schritt(){
+ // Vogel
+ vogel.fluegel=Math.max(0,vogel.fluegel-0.06);
+ vogel.vy=Math.min(MAX_FALL,vogel.vy+GRAV);
+ vogel.y+=vogel.vy;
+ if(vogel.y<VOGEL_R+2){ vogel.y=VOGEL_R+2; vogel.vy=Math.max(vogel.vy,0); }
+ vogel.drall=Math.max(-0.5,Math.min(1.3,vogel.vy/11));
+
+ // Rohre
+ const dx=tempo;
+ rohre.forEach(r=>{ r.x-=dx; });
+
+ // neues Rohr, wenn das letzte weit genug heran ist
+ const letztes=rohre[rohre.length-1];
+ if(!letztes||letztes.x<W-ABSTAND)rohrNeu(W+ROHR_W);
+
+ // alte Rohre weg
+ rohre=rohre.filter(r=>r.x+ROHR_W>-20);
+
+ // Punkte
+ rohre.forEach(r=>{
+  if(!r.gepunktet&&r.x+ROHR_W<VOGEL_X-VOGEL_R*0.4){
+   r.gepunktet=true;
+   punkte++;
+   tempo=Math.min(TEMPO_MAX,TEMPO_START+punkte*0.055);
+   luecke=Math.max(LUECKE_MIN,LUECKE_START-punkte*1.4);
+   zahlenZeigen();
+  }
+ });
+
+ // Boden und Wolken scrollen
+ bodenX=(bodenX+tempo)%48;
+ wolken.forEach(w=>{
+  w.x-=w.v+tempo*0.12;
+  if(w.x<-70){ w.x=W+60; w.y=rnd(30,H-BODEN-150); }
+ });
+
+ // Kollision
+ if(vogel.y+VOGEL_R>=H-BODEN){ vogel.y=H-BODEN-VOGEL_R; ende(); return; }
+ rohre.forEach(r=>{
+  if(kreisRechteck(VOGEL_X,vogel.y,VOGEL_R,r.x,-10,ROHR_W,r.y+10)){ ende(); return; }
+  const untenY=r.y+r.h;
+  if(kreisRechteck(VOGEL_X,vogel.y,VOGEL_R,r.x,untenY,ROHR_W,H-BODEN-untenY+10)){ ende(); }
+ });
+}
+
+function kreisRechteck(cx,cy,cr,rx,ry,rw,rh){
+ const nx=Math.max(rx,Math.min(cx,rx+rw));
+ const ny=Math.max(ry,Math.min(cy,ry+rh));
+ const dx=cx-nx, dy=cy-ny;
+ return dx*dx+dy*dy<cr*cr;
+}
+
+function update(dt){
+ if(zustand==="start"){
+  vogel.y=H*0.42+Math.sin(performance.now()/420)*10;
+  vogel.drall=0;
+  return;
+ }
+ if(zustand==="ende"){
+  // Vogel fällt noch zu Boden
+  if(vogel.y+VOGEL_R<H-BODEN){
+   vogel.vy=Math.min(MAX_FALL,vogel.vy+GRAV);
+   vogel.y=Math.min(H-BODEN-VOGEL_R,vogel.y+vogel.vy);
+   vogel.drall=Math.min(1.3,vogel.drall+0.06);
+  }
+  return;
+ }
+ akku+=Math.min(dt,0.12);
+ let schutz=0;
+ while(akku>=1/60&&schutz<6){
+  akku-=1/60;
+  schritt();
+  schutz++;
+  if(zustand!=="laeuft")break;
+ }
+ if(schutz>=6)akku=0;
+}
+
+function ende(){
+ if(zustand!=="laeuft")return;
+ zustand="ende";
+ if(punkte>rekordLaden()){
+  rekord=punkte;
+  try{ localStorage.setItem("flappy-rekord",String(punkte)); }catch(e){}
+ }
+ $("rekord").textContent=Math.max(rekord,rekordLaden());
+ $("meldungTitel").textContent="Vorbei";
+ $("meldungText").textContent="Rohre: "+punkte+" · Rekord: "+Math.max(rekord,rekordLaden());
+ $("meldungKnopf").textContent="Nochmal";
+ $("meldung").hidden=false;
+ $("meldungKnopf").onclick=()=>{ neuesSpiel(); starten(); };
+ $("hinweis").textContent="Nochmal tippen, um einen neuen Flug zu starten.";
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Himmel
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#123f31");
+ g.addColorStop(.55,"#0d3026");
+ g.addColorStop(1,"#081c16");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Wolken
+ wolken.forEach(w=>{
+  ctx.fillStyle="#ffffff0e";
+  ctx.beginPath();
+  ctx.ellipse(w.x,w.y,38*w.s,15*w.s,0,0,Math.PI*2);
+  ctx.ellipse(w.x+22*w.s,w.y+5*w.s,26*w.s,12*w.s,0,0,Math.PI*2);
+  ctx.ellipse(w.x-24*w.s,w.y+6*w.s,22*w.s,10*w.s,0,0,Math.PI*2);
+  ctx.fill();
+ });
+
+ // ferne Hügel
+ ctx.fillStyle="#0f3a2d";
+ ctx.beginPath();
+ ctx.moveTo(0,H-BODEN);
+ for(let x=0;x<=W;x+=20){
+  ctx.lineTo(x,H-BODEN-34-Math.sin((x+bodenX*2)/90)*14);
+ }
+ ctx.lineTo(W,H-BODEN);
+ ctx.closePath();
+ ctx.fill();
+
+ // Rohre
+ rohre.forEach(r=>{
+  const untenY=r.y+r.h;
+  rohrZeichnen(r.x,-12,ROHR_W,r.y+12);
+  rohrZeichnen(r.x,untenY,ROHR_W,H-BODEN-untenY);
+ });
+
+ // Boden
+ const bg=ctx.createLinearGradient(0,H-BODEN,0,H);
+ bg.addColorStop(0,"#1f5b46");
+ bg.addColorStop(1,"#0d2a21");
+ ctx.fillStyle=bg;
+ ctx.fillRect(0,H-BODEN,W,BODEN);
+ ctx.strokeStyle="#d9bc7c66";
+ ctx.lineWidth=2;
+ ctx.beginPath();
+ ctx.moveTo(0,H-BODEN+1);
+ ctx.lineTo(W,H-BODEN+1);
+ ctx.stroke();
+ ctx.fillStyle="#ffffff10";
+ for(let x=-bodenX;x<W;x+=48){
+  ctx.fillRect(x,H-BODEN+14,26,5);
+  ctx.fillRect(x+14,H-BODEN+34,26,5);
+ }
+
+ // Vogel
+ const vx=VOGEL_X, vy=vogel.y;
+ ctx.save();
+ ctx.translate(vx,vy);
+ ctx.rotate(vogel.drall);
+ // Körper
+ const kg=ctx.createLinearGradient(0,-VOGEL_R,0,VOGEL_R);
+ kg.addColorStop(0,"#f0d79c");
+ kg.addColorStop(1,"#c99f47");
+ ctx.fillStyle=kg;
+ ctx.beginPath();
+ ctx.ellipse(0,0,VOGEL_R+2,VOGEL_R,0,0,Math.PI*2);
+ ctx.fill();
+ ctx.strokeStyle="#6b4c14";
+ ctx.lineWidth=2;
+ ctx.stroke();
+ // Flügel
+ const hoch=vogel.fluegel>0.4?-1:1;
+ ctx.fillStyle="#f7ecc9";
+ ctx.beginPath();
+ ctx.ellipse(-3,2+hoch*4,9,6,hoch*0.5,0,Math.PI*2);
+ ctx.fill();
+ ctx.strokeStyle="#6b4c14";
+ ctx.lineWidth=1.6;
+ ctx.stroke();
+ // Auge
+ ctx.fillStyle="#ffffff";
+ ctx.beginPath();
+ ctx.arc(5,-5,5.4,0,Math.PI*2);
+ ctx.fill();
+ ctx.fillStyle="#0b241d";
+ ctx.beginPath();
+ ctx.arc(6.4,-5,2.4,0,Math.PI*2);
+ ctx.fill();
+ // Schnabel
+ ctx.fillStyle="#d98b3a";
+ ctx.beginPath();
+ ctx.moveTo(VOGEL_R+1,1);
+ ctx.lineTo(VOGEL_R+12,4);
+ ctx.lineTo(VOGEL_R+1,8);
+ ctx.closePath();
+ ctx.fill();
+ ctx.strokeStyle="#7a4a12";
+ ctx.lineWidth=1.4;
+ ctx.stroke();
+ ctx.restore();
+
+ // Punkte groß im Bild
+ if(zustand!=="start"){
+  ctx.font="bold 34px Georgia,serif";
+  ctx.textAlign="center";
+  ctx.lineWidth=4;
+  ctx.strokeStyle="#07190fcc";
+  ctx.strokeText(String(punkte),W/2,86);
+  ctx.fillStyle="#f4e6c2";
+  ctx.fillText(String(punkte),W/2,86);
+ }
+
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+}
+
+function rohrZeichnen(x,y,w,h){
+ if(h<=0)return;
+ const grad=ctx.createLinearGradient(x,0,x+w,0);
+ grad.addColorStop(0,"#3f8f6f");
+ grad.addColorStop(.45,"#5fb891");
+ grad.addColorStop(1,"#2c6b52");
+ ctx.fillStyle=grad;
+ ctx.fillRect(x,y,w,h);
+ ctx.strokeStyle="#163d2e";
+ ctx.lineWidth=2;
+ ctx.strokeRect(x+1,y+1,w-2,h-2);
+ // Goldrand an der Öffnung
+ ctx.fillStyle="#d9bc7c";
+ const kappe=18;
+ const ky=(y<0)?y+h-kappe:y;
+ ctx.fillRect(x-5,ky,w+10,kappe);
+ ctx.strokeStyle="#7a5a1c";
+ ctx.lineWidth=2;
+ ctx.strokeRect(x-5,ky,w+10,kappe);
+ ctx.fillStyle="#ffffff22";
+ ctx.fillRect(x+6,ky+3,w-12,4);
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0.016);
+ letzteZeit=zeit;
+ update(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+canvas.addEventListener("pointerdown",e=>{
+ flattern();
+ e.preventDefault();
+});
+window.addEventListener("keydown",e=>{
+ if(e.code==="Space"||e.key==="ArrowUp"||e.key==="w"||e.key==="W"){
+  flattern();
+  e.preventDefault();
+ }
+});
+$("btnNeu").onclick=()=>{ neuesSpiel(); };
+
+rekord=rekordLaden();
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+
+})();
+</script>
+</body>
+</html>

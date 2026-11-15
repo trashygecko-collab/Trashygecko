@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Flipper</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 14px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:820px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:12.5px;padding:7px 9px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+#punkte{font-size:16px;color:#fff3d2}
+
+.tisch{display:flex;gap:10px;padding:8px;background:#08120f;align-items:flex-start;justify-content:center}
+.leinwand{position:relative;flex:1 1 auto;max-width:430px}
+canvas{display:block;width:100%;height:auto;border-radius:10px;
+ border:1px solid #d9bc7c33;background:#04100c;touch-action:none}
+
+.meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:10px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:290px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:18px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fluegel{display:flex;gap:8px;padding:0 8px 8px;background:#08120f}
+.fluegel button{flex:1;font-family:inherit;font-size:15px;padding:14px 8px;border-radius:8px;
+ border:1px solid #d9bc7c66;background:#123a2e;color:#e8cd8e;cursor:pointer;touch-action:none}
+.fluegel button:active,.fluegel button.drueckt{background:#e8cd8e;color:#0b241d}
+
+.fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:26px}
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Flipper</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste" id="automatLeiste"></div>
+
+ <div class="statuszeile">
+  <span id="automatName">–</span>
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Kugeln <b id="kugeln">3</b></span>
+  <span>Rekord <b id="rekord">–</b></span>
+ </div>
+
+ <div class="tisch">
+  <div class="leinwand">
+   <canvas id="leinwand" width="400" height="700"></canvas>
+   <div class="meldung" id="meldung">
+    <div class="kasten">
+     <h2 id="meldungTitel">FLIPPER</h2>
+     <p id="meldungText"></p>
+     <button id="meldungKnopf">Los geht's</button>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div class="fluegel">
+  <button id="links">◀ linker Flipper</button>
+  <button id="rechts">rechter Flipper ▶</button>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Leertaste oder „Los geht's" wirft die Kugel ein.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Mit den beiden Flippern die Kugel im Spiel halten und möglichst viele Punkte sammeln.</li>
+   <li><b>Flipper:</b> Linke Bildhälfte antippen oder <b>A</b> / <b>←</b> für den linken, rechte Hälfte oder <b>L</b> / <b>→</b> für den rechten Flipper.</li>
+   <li><b>Einwerfen:</b> Leertaste, der Knopf in der Meldung oder ein Tipp auf die Kugel oben.</li>
+   <li><b>Punkte:</b> Bumper geben bei jedem Treffer Punkte, Schleudern über den Flippern etwas weniger, Zielscheiben viel. Ist eine ganze Reihe Ziele abgeräumt, gibt es einen Bonus und die Reihe steht wieder.</li>
+   <li><b>Kugeln:</b> Drei Kugeln pro Partie – fällt die Kugel unten durch, kommt die nächste.</li>
+   <li><b>Rekord:</b> Der höchste Punktestand wird für jeden Automaten getrennt gemerkt.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const leinwand=$("leinwand");
+const ctx=leinwand.getContext("2d");
+
+const W=400, H=700, RK=8;      // logische Größe, Kugelradius
+const MAXSPEED=1750;
+
+// ------------------------------------------------------------------ Rahmen
+// Gemeinsames Gehäuse: Außenwände, obere Rundung, Trichter zum Auslass.
+const RAHMEN=[
+ [24,132,24,468],
+ [24,468,92,614],
+ [92,614,142,664],
+ [376,132,376,468],
+ [376,468,308,614],
+ [308,614,258,664],
+ [24,132,58,64],
+ [58,64,116,34],
+ [116,34,284,34],
+ [284,34,342,64],
+ [342,64,376,132]
+];
+
+// ------------------------------------------------------------------ Automaten
+const AUTOMATEN=[
+{
+ id:"zwerg", name:"Zwergenwerk", kugeln:3, grav:1180,
+ farbe:{grund1:"#123a2c",grund2:"#06150f",wand:"#d9bc7c",licht:"#e8cd8e",
+        bumper1:"#2f8a66",bumper2:"#123a2c",ziel:"#c8a96a",kugel:"#fff4d6"},
+ tipp:"Der Klassiker im Stollen: drei Bumper, ruhiger Tisch.",
+ wand:[],
+ bumper:[{x:200,y:196,r:19,punkte:100,kick:430},
+         {x:146,y:268,r:16,punkte:150,kick:400},
+         {x:254,y:268,r:16,punkte:150,kick:400}],
+ ziele:[{x:118,y:392,w:44,h:14},{x:172,y:392,w:44,h:14},{x:226,y:392,w:44,h:14}],
+ baenke:[[0,1,2]],
+ bonus:2500
+},
+{
+ id:"neon", name:"Neon-Stadt", kugeln:3, grav:1240,
+ farbe:{grund1:"#241a3d",grund2:"#0a0614",wand:"#6ee7ff",licht:"#ff5fd2",
+        bumper1:"#ff5fd2",bumper2:"#2a0f38",ziel:"#6ee7ff",kugel:"#f2faff"},
+ tipp:"Vier Bumper im Rautenmuster und ein Zielbänkchen oben rechts.",
+ wand:[[300,236,330,300],[330,300,300,364]],
+ bumper:[{x:200,y:176,r:18,punkte:120,kick:470},
+         {x:150,y:232,r:15,punkte:100,kick:450},
+         {x:250,y:232,r:15,punkte:100,kick:450},
+         {x:200,y:288,r:18,punkte:120,kick:470}],
+ ziele:[{x:96,y:300,w:16,h:56},{x:120,y:300,w:16,h:56},{x:144,y:300,w:16,h:56}],
+ baenke:[[0,1,2]],
+ bonus:3000
+},
+{
+ id:"pirat", name:"Piratenbucht", kugeln:3, grav:1120,
+ farbe:{grund1:"#0e3340",grund2:"#041014",wand:"#d9a05a",licht:"#f0c98a",
+        bumper1:"#2b8a92",bumper2:"#08262c",ziel:"#d9a05a",kugel:"#fff1d8"},
+ tipp:"Fünf Bumper und zwei Zielgruppen – viel Betrieb an Deck.",
+ wand:[[64,300,96,360],[96,360,64,420]],
+ bumper:[{x:200,y:166,r:16,punkte:120,kick:420},
+         {x:146,y:220,r:14,punkte:100,kick:400},
+         {x:254,y:220,r:14,punkte:100,kick:400},
+         {x:176,y:296,r:14,punkte:150,kick:430},
+         {x:236,y:296,r:14,punkte:150,kick:430}],
+ ziele:[{x:236,y:368,w:16,h:52},{x:260,y:368,w:16,h:52},{x:284,y:368,w:16,h:52}],
+ baenke:[[0,1,2]],
+ bonus:3200
+},
+{
+ id:"stern", name:"Sternenstaub", kugeln:3, grav:1080,
+ farbe:{grund1:"#2a1a45",grund2:"#08040f",wand:"#cfc0ff",licht:"#ffffff",
+        bumper1:"#8f6bff",bumper2:"#1b1030",ziel:"#cfc0ff",kugel:"#ffffff"},
+ tipp:"Meisterklasse: große Bumper, vier Ziele, hohe Punkte.",
+ wand:[[118,430,150,486],[150,486,118,540],[282,430,250,486],[250,486,282,540]],
+ bumper:[{x:200,y:180,r:26,punkte:200,kick:520},
+         {x:140,y:272,r:22,punkte:150,kick:480},
+         {x:260,y:272,r:22,punkte:150,kick:480}],
+ ziele:[{x:104,y:352,w:14,h:50},{x:126,y:352,w:14,h:50},{x:148,y:352,w:14,h:50},{x:170,y:352,w:14,h:50}],
+ baenke:[[0,1,2,3]],
+ bonus:4000
+}
+];
+
+// ------------------------------------------------------------------ Zustand
+let automat=AUTOMATEN[0];
+let wand=[], bumper=[], ziele=[], baenke=[], flipper=[];
+let kugel={x:200,y:110,vx:0,vy:0};
+let spur=[];
+let punkte=0, restKugeln=3, zustand="bereit", vorbei=false;
+let zielTreffer=new Set();
+let popups=[];
+let letzteZeit=0, sammler=0;
+let ruhigSeit=0;
+
+function baueAutomat(a){
+ automat=a;
+ wand=RAHMEN.concat(a.wand).map(s=>({x1:s[0],y1:s[1],x2:s[2],y2:s[3]}));
+ bumper=a.bumper.map(b=>({...b,blitz:0,cooldown:0}));
+ ziele=a.ziele.map(z=>({...z,runter:false,blitz:0}));
+ baenke=a.baenke;
+ baueFlipper();
+ $("automatName").textContent=a.name;
+ $("hinweis").textContent=a.tipp+" Leertaste wirft ein.";
+ zeigeRekord();
+}
+
+function baueFlipper(){
+ flipper=[
+  {x:128,y:606,len:74,ruhe:0.52,aktiv:-0.56,winkel:0.52,alt:0.52,an:false,schub:17,links:true},
+  {x:272,y:606,len:74,ruhe:Math.PI-0.52,aktiv:Math.PI+0.56,winkel:Math.PI-0.52,alt:Math.PI-0.52,an:false,schub:17,links:false}
+ ];
+}
+
+function neuesSpiel(a){
+ if(a)baueAutomat(a);
+ punkte=0; restKugeln=automat.kugeln; vorbei=false;
+ zielTreffer=new Set();
+ ziele.forEach(z=>z.runter=false);
+ popups=[];
+ meldungZu();
+ neueKugel();
+ zeigeZahlen();
+}
+
+function neueKugel(){
+ kugel={x:200,y:112,vx:0,vy:0};
+ spur=[];
+ zustand="bereit";
+ ruhigSeit=0;
+ $("hinweis").textContent="Bereit – Leertaste, Knopf oder Tipp auf die Kugel wirft sie ein.";
+}
+
+function einwerfen(){
+ if(zustand!=="bereit"||vorbei)return;
+ zustand="spiel";
+ kugel.vy=170;
+ kugel.vx=(Math.random()-0.5)*70;
+ $("hinweis").textContent="Viel Glück!";
+}
+
+// ------------------------------------------------------------------ Physik
+function naechsterPunkt(px,py,ax,ay,bx,by){
+ const dx=bx-ax, dy=by-ay;
+ const l=dx*dx+dy*dy;
+ let t=l>0?((px-ax)*dx+(py-ay)*dy)/l:0;
+ t=Math.max(0,Math.min(1,t));
+ return {x:ax+t*dx,y:ay+t*dy};
+}
+
+function wandTreffer(ax,ay,bx,by,e){
+ const c=naechsterPunkt(kugel.x,kugel.y,ax,ay,bx,by);
+ let dx=kugel.x-c.x, dy=kugel.y-c.y;
+ let d=Math.hypot(dx,dy);
+ if(d>=RK)return false;
+ if(d<0.0001){ dx=0; dy=-1; d=1; }
+ const nx=dx/d, ny=dy/d;
+ kugel.x=c.x+nx*(RK+0.4);
+ kugel.y=c.y+ny*(RK+0.4);
+ const vn=kugel.vx*nx+kugel.vy*ny;
+ if(vn<0){
+  kugel.vx-=(1+e)*vn*nx;
+  kugel.vy-=(1+e)*vn*ny;
+  // etwas Reibung quer zur Wand
+  const tx=-ny, ty=nx;
+  const vt=kugel.vx*tx+kugel.vy*ty;
+  kugel.vx-=vt*0.04*tx;
+  kugel.vy-=vt*0.04*ty;
+ }
+ return true;
+}
+
+function kugelInRechteck(z){
+ const c=naechsterPunkt(kugel.x,kugel.y,z.x,z.y,z.x+z.w,z.y+z.h);
+ let dx=kugel.x-c.x, dy=kugel.y-c.y;
+ let d=Math.hypot(dx,dy);
+ if(d>=RK)return null;
+ if(d<0.0001){ dx=0; dy=-1; d=1; }
+ return {nx:dx/d,ny:dy/d,cx:c.x,cy:c.y,d};
+}
+
+function physik(dt){
+ // Flipper drehen
+ for(const f of flipper){
+  const ziel=f.an?f.aktiv:f.ruhe;
+  const max=f.schub*dt;
+  let d=ziel-f.winkel;
+  if(d>Math.PI)d-=Math.PI*2;
+  if(d<-Math.PI)d+=Math.PI*2;
+  f.winkel+=Math.max(-max,Math.min(max,d));
+  f.omega=(f.winkel-f.alt)/dt;
+  f.alt=f.winkel;
+ }
+
+ if(zustand!=="spiel")return;
+
+ kugel.vy+=automat.grav*dt;
+ kugel.x+=kugel.vx*dt;
+ kugel.y+=kugel.vy*dt;
+
+ // Wände
+ for(const w of wand)wandTreffer(w.x1,w.y1,w.x2,w.y2,0.55);
+
+ // Bumper
+ for(const b of bumper){
+  if(b.cooldown>0)b.cooldown-=dt;
+  const dx=kugel.x-b.x, dy=kugel.y-b.y;
+  const d=Math.hypot(dx,dy);
+  const min=b.r+RK;
+  if(d<min&&d>0){
+   const nx=dx/d, ny=dy/d;
+   kugel.x=b.x+nx*(min+0.6);
+   kugel.y=b.y+ny*(min+0.6);
+   const vn=kugel.vx*nx+kugel.vy*ny;
+   if(vn<0){
+    kugel.vx-=(1+0.55)*vn*nx;
+    kugel.vy-=(1+0.55)*vn*ny;
+   }
+   kugel.vx+=nx*b.kick;
+   kugel.vy+=ny*b.kick;
+   if(b.cooldown<=0){
+    b.cooldown=0.12;
+    b.blitz=1;
+    addiere(b.punkte,b.x,b.y-4);
+   }
+  }
+ }
+
+ // Zielscheiben
+ ziele.forEach((z,idx)=>{
+  if(z.blitz>0)z.blitz-=dt*3;
+  if(z.runter)return;
+  const t=kugelInRechteck(z);
+  if(!t)return;
+  kugel.x=t.cx+t.nx*(RK+0.5);
+  kugel.y=t.cy+t.ny*(RK+0.5);
+  const vn=kugel.vx*t.nx+kugel.vy*t.ny;
+  if(vn<0){
+   kugel.vx-=(1+0.5)*vn*t.nx;
+   kugel.vy-=(1+0.5)*vn*t.ny;
+  }
+  z.runter=true;
+  z.blitz=1;
+  zielTreffer.add(idx);
+  addiere(500,z.x+z.w/2,z.y-2);
+  pruefeBaenke();
+ });
+
+ // Flipper
+ for(const f of flipper){
+  const ex=f.x+Math.cos(f.winkel)*f.len, ey=f.y+Math.sin(f.winkel)*f.len;
+  const c=naechsterPunkt(kugel.x,kugel.y,f.x,f.y,ex,ey);
+  let dx=kugel.x-c.x, dy=kugel.y-c.y;
+  let d=Math.hypot(dx,dy);
+  const dick=RK+5;
+  if(d>=dick)continue;
+  if(d<0.0001){ dx=0; dy=-1; d=1; }
+  const nx=dx/d, ny=dy/d;
+  kugel.x=c.x+nx*(dick+0.4);
+  kugel.y=c.y+ny*(dick+0.4);
+  // Geschwindigkeit der Flipperoberfläche an dieser Stelle
+  const ox=c.x-f.x, oy=c.y-f.y;
+  const svx=-f.omega*oy, svy=f.omega*ox;
+  const rvx=kugel.vx-svx, rvy=kugel.vy-svy;
+  const vn=rvx*nx+rvy*ny;
+  if(vn<0){
+   const e=0.62;
+   kugel.vx-=(1+e)*vn*nx;
+   kugel.vy-=(1+e)*vn*ny;
+  }
+  // Rückstoß, wenn der Flipper nach oben schlägt
+  if(f.an&&Math.abs(f.omega)>4){
+   kugel.vx+=nx*160;
+   kugel.vy+=ny*230;
+  }
+ }
+
+ // Geschwindigkeit deckeln
+ const v=Math.hypot(kugel.vx,kugel.vy);
+ if(v>MAXSPEED){ kugel.vx*=MAXSPEED/v; kugel.vy*=MAXSPEED/v; }
+
+ // Spurfaden
+ spur.push({x:kugel.x,y:kugel.y});
+ if(spur.length>8)spur.shift();
+
+ // Auslass
+ if(kugel.y>H-8||kugel.y<-200||kugel.x<-40||kugel.x>W+40){
+  kugelVerloren();
+  return;
+ }
+
+ // steckengebliebene Kugel anstupsen
+ if(v<26){
+  ruhigSeit+=dt;
+  if(ruhigSeit>2.5){
+   kugel.vx+=(Math.random()-0.5)*260;
+   kugel.vy-=180;
+   ruhigSeit=0;
+  }
+ } else ruhigSeit=0;
+}
+
+function kugelVerloren(){
+ restKugeln--;
+ zeigeZahlen();
+ if(restKugeln<=0){
+  vorbei=true; zustand="vorbei";
+  const key="flipper-best-"+automat.id;
+  const alt=Number(localStorage.getItem(key)||0);
+  let zusatz="";
+  if(punkte>alt){
+   try{ localStorage.setItem(key,String(punkte)); }catch(e){}
+   zusatz=" Neuer Rekord!";
+  }
+  zeigeRekord();
+  meldung("PARTIE VORBEI",punkte.toLocaleString("de-DE")+" Punkte am "+automat.name+"."+zusatz,"Noch einmal");
+  return;
+ }
+ neueKugel();
+}
+
+function pruefeBaenke(){
+ for(const bank of baenke){
+  if(bank.every(i=>ziele[i]&&ziele[i].runter)){
+   addiere(automat.bonus,200,300);
+   bank.forEach(i=>{ if(ziele[i])ziele[i].runter=false; });
+   zielTreffer=new Set();
+   $("hinweis").textContent="Reihe abgeräumt! Bonus "+automat.bonus.toLocaleString("de-DE")+" Punkte – die Ziele stehen wieder.";
+  }
+ }
+}
+
+function addiere(wert,x,y){
+ punkte+=wert;
+ zeigeZahlen();
+ popups.push({x,y,text:"+"+wert,leben:1});
+ if(popups.length>14)popups.shift();
+}
+
+function zeigeZahlen(){
+ $("punkte").textContent=punkte.toLocaleString("de-DE");
+ $("kugeln").textContent=Math.max(0,restKugeln);
+}
+function zeigeRekord(){
+ const wert=Number(localStorage.getItem("flipper-best-"+automat.id)||0);
+ $("rekord").textContent=wert>0?wert.toLocaleString("de-DE"):"–";
+}
+
+// ------------------------------------------------------------------ Zeichnen
+function zeichne(){
+ const f=automat.farbe;
+ // Tisch
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,f.grund1);
+ g.addColorStop(1,f.grund2);
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Dekostrahlen
+ ctx.save();
+ ctx.globalAlpha=0.07;
+ ctx.strokeStyle=f.licht;
+ ctx.lineWidth=1;
+ for(let i=-6;i<16;i++){
+  ctx.beginPath();
+  ctx.moveTo(i*44,0);
+  ctx.lineTo(i*44+180,H);
+  ctx.stroke();
+ }
+ ctx.restore();
+
+ // Wände
+ ctx.lineCap="round";
+ for(const w of wand){
+  ctx.strokeStyle=f.wand+"55";
+  ctx.lineWidth=9;
+  ctx.beginPath(); ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke();
+  ctx.strokeStyle=f.wand;
+  ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke();
+ }
+ // Maschinen-eigene Leitbleche etwas dünner
+ for(const w of automat.wand){
+  ctx.strokeStyle="#ffffffaa";
+  ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(w[0],w[1]); ctx.lineTo(w[2],w[3]); ctx.stroke();
+ }
+
+ // Ziele
+ ziele.forEach(z=>{
+  const runter=z.runter;
+  ctx.save();
+  ctx.globalAlpha=runter?0.28:1;
+  ctx.fillStyle=runter?f.grund2:f.ziel;
+  ctx.strokeStyle=f.licht;
+  ctx.lineWidth=1.6;
+  rundeFlaeche(z.x,z.y,z.w,z.h,5);
+  ctx.fill(); ctx.stroke();
+  if(z.blitz>0){
+   ctx.globalAlpha=z.blitz*0.8;
+   ctx.fillStyle="#ffffff";
+   rundeFlaeche(z.x,z.y,z.w,z.h,5);
+   ctx.fill();
+  }
+  ctx.restore();
+ });
+
+ // Bumper
+ bumper.forEach(b=>{
+  const gl=ctx.createRadialGradient(b.x-b.r*0.35,b.y-b.r*0.4,b.r*0.2,b.x,b.y,b.r);
+  gl.addColorStop(0,"#ffffff");
+  gl.addColorStop(0.35,f.bumper1);
+  gl.addColorStop(1,f.bumper2);
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+  ctx.fillStyle=gl; ctx.fill();
+  ctx.lineWidth=2;
+  ctx.strokeStyle=b.blitz>0?"#ffffff":f.licht;
+  ctx.stroke();
+  if(b.blitz>0){
+   ctx.beginPath(); ctx.arc(b.x,b.y,b.r+6*b.blitz,0,Math.PI*2);
+   ctx.strokeStyle="rgba(255,255,255,"+(b.blitz*0.5)+")";
+   ctx.lineWidth=2; ctx.stroke();
+  }
+ });
+
+ // Flipper
+ for(const fl of flipper){
+  ctx.save();
+  ctx.translate(fl.x,fl.y);
+  ctx.rotate(fl.winkel);
+  const gl=ctx.createLinearGradient(0,-6,0,6);
+  gl.addColorStop(0,"#fff6dc");
+  gl.addColorStop(0.45,f.licht);
+  gl.addColorStop(1,"#8a6a33");
+  ctx.fillStyle=gl;
+  rundeFlaeche(0,-5,fl.len,10,5);
+  ctx.fill();
+  ctx.strokeStyle="#00000066";
+  ctx.lineWidth=1;
+  ctx.stroke();
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(fl.x,fl.y,4,0,Math.PI*2);
+  ctx.fillStyle="#0a1f19"; ctx.fill();
+  ctx.strokeStyle=f.licht; ctx.lineWidth=1.5; ctx.stroke();
+ }
+
+ // Spur
+ spur.forEach((p,i)=>{
+  ctx.beginPath();
+  ctx.arc(p.x,p.y,RK*(0.35+i*0.06),0,Math.PI*2);
+  ctx.fillStyle="rgba(255,240,200,"+(i/spur.length*0.22)+")";
+  ctx.fill();
+ });
+
+ // Kugel
+ if(zustand!=="vorbei"){
+  const gl=ctx.createRadialGradient(kugel.x-3,kugel.y-4,1,kugel.x,kugel.y,RK);
+  gl.addColorStop(0,"#ffffff");
+  gl.addColorStop(0.55,f.kugel);
+  gl.addColorStop(1,"#8d8b80");
+  ctx.beginPath(); ctx.arc(kugel.x,kugel.y,RK,0,Math.PI*2);
+  ctx.fillStyle=gl; ctx.fill();
+  ctx.strokeStyle="#00000055"; ctx.lineWidth=1; ctx.stroke();
+  if(zustand==="bereit"){
+   ctx.beginPath();
+   ctx.arc(kugel.x,kugel.y,RK+7,0,Math.PI*2);
+   ctx.strokeStyle="rgba(232,205,142,"+(0.35+0.3*Math.sin(performance.now()/300))+")";
+   ctx.lineWidth=2; ctx.stroke();
+  }
+ }
+
+ // Punkte-Popups
+ ctx.textAlign="center";
+ ctx.font="bold 14px Georgia, serif";
+ for(let i=popups.length-1;i>=0;i--){
+  const p=popups[i];
+  ctx.globalAlpha=Math.max(0,p.leben);
+  ctx.fillStyle="#fff3d2";
+  ctx.fillText(p.text,p.x,p.y);
+  ctx.globalAlpha=1;
+  p.leben-=0.016;
+  if(p.leben<=0)popups.splice(i,1);
+ }
+}
+
+function rundeFlaeche(x,y,w,h,r){
+ ctx.beginPath();
+ ctx.moveTo(x+r,y);
+ ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+ ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+ ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+ ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+ ctx.closePath();
+}
+
+// ------------------------------------------------------------------ Schleife
+function runde(zeit){
+ const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0);
+ letzteZeit=zeit;
+ sammler+=dt;
+ let schritte=0;
+ while(sammler>=1/240&&schritte<12){
+  physik(1/240);
+  sammler-=1/240;
+  schritte++;
+ }
+ zeichne();
+ requestAnimationFrame(runde);
+}
+
+// ------------------------------------------------------------------ Bedienung
+function fluegel(links,an){
+ const f=flipper[links?0:1];
+ if(!f)return;
+ f.an=an;
+ $(links?"links":"rechts").classList.toggle("drueckt",an);
+}
+
+leinwand.addEventListener("pointerdown",e=>{
+ const r=leinwand.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width*W;
+ const y=(e.clientY-r.top)/r.height*H;
+ if(zustand==="bereit"&&Math.hypot(x-kugel.x,y-kugel.y)<40){ einwerfen(); return; }
+ fluegel(x<W/2,true);
+ leinwand.setPointerCapture?.(e.pointerId);
+});
+leinwand.addEventListener("pointerup",()=>{ fluegel(true,false); fluegel(false,false); });
+leinwand.addEventListener("pointercancel",()=>{ fluegel(true,false); fluegel(false,false); });
+
+["links","rechts"].forEach(id=>{
+ const el=$(id);
+ const links=id==="links";
+ el.addEventListener("pointerdown",e=>{ e.preventDefault(); fluegel(links,true); });
+ el.addEventListener("pointerup",()=>fluegel(links,false));
+ el.addEventListener("pointerleave",()=>fluegel(links,false));
+ el.addEventListener("pointercancel",()=>fluegel(links,false));
+});
+
+window.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A"){ fluegel(true,true); e.preventDefault(); }
+ if(e.key==="ArrowRight"||e.key==="l"||e.key==="L"){ fluegel(false,true); e.preventDefault(); }
+ if(e.key===" "){
+  if(!$("meldung").hidden)$("meldungKnopf").click();
+  else einwerfen();
+  e.preventDefault();
+ }
+});
+window.addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A")fluegel(true,false);
+ if(e.key==="ArrowRight"||e.key==="l"||e.key==="L")fluegel(false,false);
+});
+
+// Meldung
+function meldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+function meldungZu(){ $("meldung").hidden=true; }
+$("meldungKnopf").onclick=()=>{
+ neuesSpiel();
+ if(zustand==="bereit")einwerfen();
+};
+
+// Automatenwahl
+AUTOMATEN.forEach((a,i)=>{
+ const b=document.createElement("button");
+ b.type="button";
+ b.textContent=a.name;
+ b.dataset.auto=a.id;
+ if(i===0)b.classList.add("aktiv");
+ b.onclick=()=>{
+  document.querySelectorAll("#automatLeiste button").forEach(x=>x.classList.remove("aktiv"));
+  b.classList.add("aktiv");
+  neuesSpiel(a);
+  meldung("FLIPPER",a.tipp+"\nEine Kugel ist bereit – Knopf drücken und los.","Los geht's");
+ };
+ $("automatLeiste").appendChild(b);
+});
+
+// Start
+baueAutomat(AUTOMATEN[0]);
+neuesSpiel();
+meldung("FLIPPER",automat.tipp+" Drei Kugeln, zwei Flipper – viel Glück.","Los geht's");
+requestAnimationFrame(zeit=>{ letzteZeit=zeit; runde(zeit); });
+})();
+</script>
+</body>
+</html>

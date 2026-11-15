@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Pong</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Pong</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnSolo" class="aktiv">1 Spieler</button>
+  <button id="btnDuell">2 Spieler</button>
+ </div>
+
+ <div class="statuszeile">
+  <span id="statusPunkte">Punkte <b id="punkte">0 : 0</b></span>
+  <span id="statusRallye">Rallye <b id="rallye">0</b></span>
+  <span id="statusBest">Längste <b id="best">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="400" height="600"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">PONG</h2>
+    <p id="meldungText">Du spielst unten, der Computer oben. Wer zuerst 7 Punkte hat, gewinnt.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Finger in deiner Hälfte ziehen: der Schläger folgt.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Den Ball am eigenen Rand vorbeispielen lassen. Wer zuerst 7 Punkte hat, gewinnt.</li>
+   <li><b>Steuern:</b> Finger in der eigenen Bildschirmhälfte ziehen – der Schläger folgt waagerecht. Am PC: Pfeiltasten oder A/D.</li>
+   <li><b>Zwei Spieler:</b> Spieler 1 spielt unten, Spieler 2 oben – jeder mit dem eigenen Finger in seiner Hälfte.</li>
+   <li><b>Ball:</b> Der Ball wird mit jedem Schlägertreffer schneller. Wo er den Schläger trifft, bestimmt den Winkel.</li>
+   <li><b>Modus:</b> Bei „1 Spieler" übernimmt der Computer die obere Seite und wird mit jeder Rallye sicherer.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const W=400, H=600;
+canvas.width=W;
+canvas.height=H;
+
+const SIEGPUNKTE=7;
+const BALL_R=9;
+const TEMPO_START=5.4;
+const TEMPO_MAX=11.5;
+const SCHLAEGER_W=78;
+const SCHLAEGER_H=13;
+const SPIELFELD_OBEN=24;
+const SPIELFELD_UNTEN=H-24;
+
+let modus="solo";            // solo, duell
+let zustand="start";         // start, laeuft, pause, ende
+let ball={x:W/2,y:H/2,vx:0,vy:0,r:BALL_R};
+let schlaeger1={x:W/2,y:SPIELFELD_UNTEN-SCHLAEGER_H,w:SCHLAEGER_W,h:SCHLAEGER_H};
+let schlaeger2={x:W/2,y:SPIELFELD_OBEN,w:SCHLAEGER_W,h:SCHLAEGER_H};
+let punkte1=0, punkte2=0;
+let rallye=0;
+let beste=0;
+let pauseTimer=0;
+let aufschlagRichtung=-1;    // -1 = nach oben, 1 = nach unten
+let letzteZeit=0;
+let akku=0;
+let zugGewinner=null;        // welcher Schläger zuletzt traf (für Effekt)
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ---------------------------------------------------------------- Aufbau
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("pong-rallye")||0); }catch(e){ return 0; }
+}
+
+function neuesSpiel(){
+ zustand="start";
+ punkte1=0; punkte2=0;
+ rallye=0;
+ ball={x:W/2,y:H/2,vx:0,vy:0,r:BALL_R};
+ schlaeger1.x=W/2;
+ schlaeger2.x=W/2;
+ pauseTimer=0;
+ aufschlagRichtung=-1;
+ akku=0;
+ aktualisiere();
+ $("meldung").hidden=false;
+ $("meldungTitel").textContent="PONG";
+ $("meldungText").textContent=modus==="solo"
+  ?"Du spielst unten, der Computer oben. Wer zuerst 7 Punkte hat, gewinnt."
+  :"Spieler 1 unten, Spieler 2 oben. Jeder zieht mit dem Finger in seiner Hälfte.";
+ $("meldungKnopf").textContent=modus==="solo"?"Starten":"Duell starten";
+ $("meldungKnopf").onclick=starten;
+ $("hinweis").textContent=modus==="solo"
+  ?"Finger in der unteren Hälfte ziehen: der Schläger folgt."
+  :"Unten Spieler 1, oben Spieler 2 – jeder in seiner Hälfte ziehen.";
+ zeichne();
+}
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ aufschlag(-1);
+ letzteZeit=performance.now();
+ akku=0;
+}
+
+function aufschlag(richtung){
+ ball.x=W/2+rnd(-40,40);
+ ball.y=H/2;
+ const winkel=rnd(-0.5,0.5);
+ const tempo=TEMPO_START;
+ ball.vx=Math.sin(winkel)*tempo;
+ ball.vy=Math.cos(winkel)*tempo*richtung;
+ rallye=0;
+ aktualisiere();
+}
+
+function aktualisiere(){
+ $("punkte").textContent=punkte1+" : "+punkte2;
+ $("rallye").textContent=rallye;
+ $("best").textContent=Math.max(beste,rekordLaden());
+}
+
+// ---------------------------------------------------------------- Physik
+
+function schritt(){
+ if(zustand==="pause"){
+  pauseTimer-=1/60;
+  if(pauseTimer<=0){
+   zustand="laeuft";
+   aufschlag(aufschlagRichtung);
+  }
+  return;
+ }
+ if(zustand!=="laeuft")return;
+
+ // Computer oben
+ if(modus==="solo"){
+  const ziel=ball.x+(ball.y<H*0.45?ball.vx*6:0);
+  const maxTempo=4.1+Math.min(2.4,rallye*0.12);
+  const d=ziel-schlaeger2.x;
+  if(Math.abs(d)>4)schlaeger2.x+=Math.sign(d)*Math.min(maxTempo,Math.abs(d));
+  begrenze(schlaeger2);
+ }
+
+ // Ball in kleinen Schritten bewegen (kein Durchrutschen)
+ const speed=Math.hypot(ball.vx,ball.vy);
+ const schritte=Math.max(1,Math.ceil(speed/3));
+ const sx=ball.vx/schritte, sy=ball.vy/schritte;
+ for(let i=0;i<schritte;i++){
+  ball.x+=sx;
+  ball.y+=sy;
+  // Seitenwände
+  if(ball.x-ball.r<0){ ball.x=ball.r; ball.vx=Math.abs(ball.vx); }
+  if(ball.x+ball.r>W){ ball.x=W-ball.r; ball.vx=-Math.abs(ball.vx); }
+  // Schläger unten
+  if(ball.vy>0&&ball.y+ball.r>=schlaeger1.y&&ball.y+ball.r<=schlaeger1.y+schlaeger1.h+10){
+   if(Math.abs(ball.x-schlaeger1.x)<schlaeger1.w/2+ball.r*0.6){
+    treffer(schlaeger1,-1);
+   }
+  }
+  // Schläger oben
+  if(ball.vy<0&&ball.y-ball.r<=schlaeger2.y+schlaeger2.h&&ball.y-ball.r>=schlaeger2.y-10){
+   if(Math.abs(ball.x-schlaeger2.x)<schlaeger2.w/2+ball.r*0.6){
+    treffer(schlaeger2,1);
+   }
+  }
+  // Punkt
+  if(ball.y-ball.r>H){ punkt(2); return; }
+  if(ball.y+ball.r<0){ punkt(1); return; }
+ }
+}
+
+function treffer(schl,richtung){
+ const versatz=(ball.x-schl.x)/(schl.w/2);
+ const speed=Math.min(TEMPO_MAX,Math.hypot(ball.vx,ball.vy)*1.045);
+ ball.vx=versatz*speed*0.72;
+ ball.vy=richtung*Math.sqrt(Math.max(1,speed*speed-ball.vx*ball.vx));
+ ball.y=richtung<0?schl.y-ball.r:schl.y+schl.h+ball.r;
+ rallye++;
+ if(rallye>beste)beste=rallye;
+ if(beste>rekordLaden()){
+  try{ localStorage.setItem("pong-rallye",String(beste)); }catch(e){}
+ }
+ aktualisiere();
+}
+
+function punkt(wer){
+ if(wer===1)punkte1++; else punkte2++;
+ rallye=0;
+ aufschlagRichtung=wer===1?-1:1;   // Aufschlag geht zum Verlierer
+ aktualisiere();
+ if(punkte1>=SIEGPUNKTE||punkte2>=SIEGPUNKTE){ ende(); return; }
+ zustand="pause";
+ pauseTimer=0.9;
+ ball.vx=0; ball.vy=0;
+ ball.x=W/2; ball.y=H/2;
+}
+
+function begrenze(schl){
+ const halb=schl.w/2;
+ if(schl.x<halb)schl.x=halb;
+ if(schl.x>W-halb)schl.x=W-halb;
+}
+
+function ende(){
+ zustand="ende";
+ const sieger=punkte1>punkte2?1:2;
+ let titel;
+ if(modus==="solo")titel=sieger===1?"Gewonnen":"Verloren";
+ else titel="Spieler "+sieger+" gewinnt";
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent="Endstand "+punkte1+" : "+punkte2+" · Längste Rallye: "+beste;
+ $("meldungKnopf").textContent="Nochmal";
+ $("meldungKnopf").onclick=()=>{ neuesSpiel(); starten(); };
+ $("meldung").hidden=false;
+}
+
+// ---------------------------------------------------------------- Steuerung
+
+function ziehen(clientX,clientY){
+ const r=canvas.getBoundingClientRect();
+ const x=(clientX-r.left)/r.width*W;
+ const y=(clientY-r.top)/r.height*H;
+ const unten=y>H/2;
+ if(modus==="solo"){
+  schlaeger1.x=x;
+  begrenze(schlaeger1);
+  return;
+ }
+ if(unten){ schlaeger1.x=x; begrenze(schlaeger1); }
+ else{ schlaeger2.x=x; begrenze(schlaeger2); }
+}
+
+canvas.addEventListener("pointerdown",e=>{
+ if(zustand==="start"){ starten(); return; }
+ ziehen(e.clientX,e.clientY);
+ e.preventDefault();
+});
+canvas.addEventListener("pointermove",e=>{
+ ziehen(e.clientX,e.clientY);
+});
+canvas.addEventListener("pointerup",e=>{ e.preventDefault(); });
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(k===" "&&zustand==="start"){ starten(); e.preventDefault(); return; }
+ if(k==="ArrowLeft"||k==="a"||k==="A"){
+  const ziel=modus==="duell"?(k==="a"||k==="A"?schlaeger2:schlaeger1):schlaeger1;
+  ziel.x-=26; begrenze(ziel); e.preventDefault();
+ }
+ if(k==="ArrowRight"||k==="d"||k==="D"){
+  const ziel=modus==="duell"?(k==="d"||k==="D"?schlaeger2:schlaeger1):schlaeger1;
+  ziel.x+=26; begrenze(ziel); e.preventDefault();
+ }
+});
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#0f3a2c");
+ g.addColorStop(.5,"#0b2a21");
+ g.addColorStop(1,"#071912");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Mittellinie
+ ctx.save();
+ ctx.setLineDash([12,14]);
+ ctx.strokeStyle="#d9bc7c55";
+ ctx.lineWidth=3;
+ ctx.beginPath();
+ ctx.moveTo(0,H/2);
+ ctx.lineTo(W,H/2);
+ ctx.stroke();
+ ctx.restore();
+
+ // große Punkte im Hintergrund
+ ctx.save();
+ ctx.textAlign="center";
+ ctx.font="bold 150px Georgia,serif";
+ ctx.fillStyle="#e8cd8e14";
+ ctx.fillText(String(punkte2),W/2,H*0.36);
+ ctx.fillText(String(punkte1),W/2,H*0.80);
+ ctx.restore();
+
+ // Spielfeldränder
+ ctx.strokeStyle="#d9bc7c33";
+ ctx.lineWidth=2;
+ ctx.beginPath();
+ ctx.moveTo(0,SPIELFELD_OBEN-6);
+ ctx.lineTo(W,SPIELFELD_OBEN-6);
+ ctx.moveTo(0,SPIELFELD_UNTEN+6);
+ ctx.lineTo(W,SPIELFELD_UNTEN+6);
+ ctx.stroke();
+
+ // Schläger
+ schlaegerZeichnen(schlaeger2,"#e8cd8e");
+ schlaegerZeichnen(schlaeger1,"#4fb3a0");
+
+ // Ball mit Schweif
+ if(zustand!=="pause"){
+  ctx.fillStyle="#e8cd8e33";
+  for(let i=1;i<=3;i++){
+   ctx.beginPath();
+   ctx.arc(ball.x-ball.vx*i*0.5,ball.y-ball.vy*i*0.5,ball.r-i*1.6,0,Math.PI*2);
+   ctx.fill();
+  }
+  const bg=ctx.createRadialGradient(ball.x-3,ball.y-3,1,ball.x,ball.y,ball.r);
+  bg.addColorStop(0,"#ffffff");
+  bg.addColorStop(1,"#e8cd8e");
+  ctx.fillStyle=bg;
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle="#7a5a1c";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+ }
+
+ // Spielerbeschriftung
+ ctx.font="12px Georgia,serif";
+ ctx.fillStyle="#a9c3b6";
+ ctx.textAlign="left";
+ ctx.fillText(modus==="solo"?"Computer":"Spieler 2",10,SPIELFELD_OBEN-12);
+ ctx.fillText(modus==="solo"?"Du":"Spieler 1",10,SPIELFELD_UNTEN+22);
+
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+}
+
+function schlaegerZeichnen(schl,farbe){
+ const g=ctx.createLinearGradient(schl.x,schl.y,schl.x,schl.y+schl.h);
+ g.addColorStop(0,farbe);
+ g.addColorStop(1,"#0b241d");
+ ctx.fillStyle=g;
+ ctx.beginPath();
+ ctx.roundRect(schl.x-schl.w/2,schl.y,schl.w,schl.h,6);
+ ctx.fill();
+ ctx.strokeStyle="#06141099";
+ ctx.lineWidth=2;
+ ctx.stroke();
+ ctx.fillStyle="#ffffff2e";
+ ctx.fillRect(schl.x-schl.w/2+8,schl.y+2,schl.w-16,3);
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0.016);
+ letzteZeit=zeit;
+ akku+=dt;
+ let schutz=0;
+ while(akku>=1/60&&schutz<5){
+  akku-=1/60;
+  schritt();
+  schutz++;
+ }
+ if(schutz>=5)akku=0;
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Start
+
+$("btnNeu").onclick=()=>{ neuesSpiel(); };
+$("btnSolo").onclick=()=>{
+ if(modus==="solo")return;
+ modus="solo";
+ $("btnSolo").classList.add("aktiv");
+ $("btnDuell").classList.remove("aktiv");
+ neuesSpiel();
+};
+$("btnDuell").onclick=()=>{
+ if(modus==="duell")return;
+ modus="duell";
+ $("btnDuell").classList.add("aktiv");
+ $("btnSolo").classList.remove("aktiv");
+ neuesSpiel();
+};
+
+beste=rekordLaden();
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+
+})();
+</script>
+</body>
+</html>

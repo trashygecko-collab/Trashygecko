@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Bejeweled</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.zeit{height:6px;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.zeit > i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#4fb3a0,#e8cd8e);
+ border-radius:0 3px 3px 0;transition:width .12s linear}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Bejeweled</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnMischen">Neu mischen</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Zeit <b id="zeit">60</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+ <div class="zeit"><i id="zeitbalken"></i></div>
+
+ <div class="buehne">
+  <canvas id="feld" width="400" height="400"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">BEJEWELED</h2>
+    <p id="meldungText">Tausche zwei benachbarte Steine, damit drei oder mehr gleiche in einer Reihe liegen.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Stein antippen, dann einen Nachbarn antippen – oder gleich hinüberziehen.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> In 60 Sekunden so viele Punkte wie möglich sammeln. Jeder Treffer verlängert die Zeit wieder.</li>
+   <li><b>Tauschen:</b> Stein antippen und einen direkt benachbarten antippen – oder vom Stein zum Nachbarn ziehen. Ein Tausch, der keine Reihe bildet, wird zurückgenommen.</li>
+   <li><b>Reihen:</b> Drei oder mehr gleiche Steine waagerecht oder senkrecht verschwinden. Je Stein gibt es 20 Punkte.</li>
+   <li><b>Ketten:</b> Fallen danach neue Steine nach und bilden wieder Reihen, zählt jede Kaskade doppelt so viel wie die vorige.</li>
+   <li><b>Kein Zug mehr:</b> Geht nichts mehr, mischt sich das Feld von selbst neu.</li>
+   <li><b>Ende:</b> Läuft die Zeit ab, ist die Runde vorbei. Die Bestmarke merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const W=400, H=400;
+canvas.width=W;
+canvas.height=H;
+
+const N=8;                 // Feldgröße
+const RAND=8;              // Rand im Bild
+const ZELLE=(W-2*RAND)/N;  // 48 px
+const ARTEN=6;             // Anzahl Steinsorten
+const STARTZEIT=60;
+
+const FARBEN=["#4fb3a0","#e8cd8e","#6f9fd8","#d98b8b","#a58bd8","#e3a76f"];
+
+let feld=[];               // feld[reihe][spalte] = 0..ARTEN-1
+let zustand="start";       // start, ruhe, blitz, ende
+let punkte=0;
+let zeit=STARTZEIT;
+let rekord=0;
+let kaskade=1;
+let blinken=[];            // Zellen, die gerade verschwinden
+let blitzTimer=0;
+let auswahl=null;          // {r,c}
+let zeigerStart=null;
+let letzteZeit=0;
+
+const rndInt=n=>Math.floor(Math.random()*n);
+
+// ---------------------------------------------------------------- Aufbau
+
+function neuesBrett(){
+ do{
+  feld=[];
+  for(let r=0;r<N;r++){
+   const reihe=[];
+   for(let c=0;c<N;c++)reihe.push(rndInt(ARTEN));
+   feld.push(reihe);
+  }
+  // Startreihen auflösen
+  let schutz=0;
+  while(gleicheReihen().length&&schutz<200){
+   gleicheReihen().forEach(([r,c])=>{ feld[r][c]=rndInt(ARTEN); });
+   schutz++;
+  }
+ }while(!hatZug());
+}
+
+function neuesSpiel(){
+ neuesBrett();
+ zustand="start";
+ punkte=0;
+ zeit=STARTZEIT;
+ kaskade=1;
+ blinken=[];
+ auswahl=null;
+ aktualisiere();
+ $("meldung").hidden=false;
+ $("meldungTitel").textContent="BEJEWELED";
+ $("meldungText").textContent="Tausche zwei benachbarte Steine, damit drei oder mehr gleiche in einer Reihe liegen.";
+ $("meldungKnopf").textContent="Starten";
+ $("meldungKnopf").onclick=starten;
+ $("hinweis").textContent="Stein antippen, dann einen Nachbarn antippen – oder gleich hinüberziehen.";
+ zeichne();
+}
+
+function starten(){
+ zustand="ruhe";
+ auswahl=null;
+ zeit=STARTZEIT;
+ letzteZeit=performance.now();
+ $("meldung").hidden=true;
+ aktualisiere();
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("bejeweled-rekord")||0); }catch(e){ return 0; }
+}
+
+function aktualisiere(){
+ $("punkte").textContent=punkte;
+ $("zeit").textContent=Math.max(0,Math.ceil(zeit));
+ $("zeitbalken").style.width=Math.max(0,Math.min(100,zeit/STARTZEIT*100))+"%";
+ $("rekord").textContent=Math.max(rekord,rekordLaden());
+}
+
+// ---------------------------------------------------------------- Regeln
+
+function gleicheReihen(){
+ const treffer=new Set();
+ // waagerecht
+ for(let r=0;r<N;r++){
+  let lauf=1;
+  for(let c=1;c<=N;c++){
+   const gleich=c<N&&feld[r][c]!=null&&feld[r][c]===feld[r][c-1];
+   if(gleich)lauf++;
+   else{
+    if(lauf>=3&&feld[r][c-1]!=null){
+     for(let k=c-lauf;k<c;k++)treffer.add(r+"_"+k);
+    }
+    lauf=1;
+   }
+  }
+ }
+ // senkrecht
+ for(let c=0;c<N;c++){
+  let lauf=1;
+  for(let r=1;r<=N;r++){
+   const gleich=r<N&&feld[r][c]!=null&&feld[r][c]===feld[r-1][c];
+   if(gleich)lauf++;
+   else{
+    if(lauf>=3&&feld[r-1][c]!=null){
+     for(let k=r-lauf;k<r;k++)treffer.add(k+"_"+c);
+    }
+    lauf=1;
+   }
+  }
+ }
+ return [...treffer].map(s=>s.split("_").map(Number));
+}
+
+function tauschMoeglich(a,b){
+ if(a[0]===b[0]&&Math.abs(a[1]-b[1])===1)return true;
+ if(a[1]===b[1]&&Math.abs(a[0]-b[0])===1)return true;
+ return false;
+}
+
+function hatZug(){
+ for(let r=0;r<N;r++){
+  for(let c=0;c<N;c++){
+   if(c+1<N){
+    tauscheZellen([r,c],[r,c+1]);
+    const t=gleicheReihen().length>0;
+    tauscheZellen([r,c],[r,c+1]);
+    if(t)return true;
+   }
+   if(r+1<N){
+    tauscheZellen([r,c],[r+1,c]);
+    const t=gleicheReihen().length>0;
+    tauscheZellen([r,c],[r+1,c]);
+    if(t)return true;
+   }
+  }
+ }
+ return false;
+}
+
+function tauscheZellen(a,b){
+ const t=feld[a[0]][a[1]];
+ feld[a[0]][a[1]]=feld[b[0]][b[1]];
+ feld[b[0]][b[1]]=t;
+}
+
+// ---------------------------------------------------------------- Ablauf
+
+function tauschVersuchen(a,b){
+ if(zustand!=="ruhe")return;
+ auswahl=null;
+ tauscheZellen(a,b);
+ const treffer=gleicheReihen();
+ if(!treffer.length){
+  tauscheZellen(a,b);
+  return;
+ }
+ kaskade=1;
+ punkteTreffer(treffer);
+}
+
+function punkteTreffer(treffer){
+ punkte+=20*treffer.length*kaskade;
+ zeit=Math.min(STARTZEIT,zeit+0.55*treffer.length);
+ blinken=treffer;
+ zustand="blitz";
+ blitzTimer=0.2;
+ aktualisiere();
+}
+
+function entfernen(){
+ blinken.forEach(([r,c])=>{ feld[r][c]=null; });
+ blinken=[];
+ // Steine fallen lassen
+ for(let c=0;c<N;c++){
+  const rest=[];
+  for(let r=N-1;r>=0;r--)if(feld[r][c]!=null)rest.push(feld[r][c]);
+  for(let r=N-1;r>=0;r--){
+   if(N-1-r<rest.length)feld[r][c]=rest[N-1-r];
+   else feld[r][c]=null;
+  }
+  // oben auffüllen
+  for(let r=0;r<N;r++){
+   if(feld[r][c]==null)feld[r][c]=rndInt(ARTEN);
+  }
+ }
+}
+
+function nachBlitz(){
+ kaskade++;
+ const treffer=gleicheReihen();
+ if(treffer.length){
+  punkteTreffer(treffer);
+  return;
+ }
+ kaskade=1;
+ if(!hatZug()){
+  mischen();
+ }
+ zustand="ruhe";
+ aktualisiere();
+}
+
+function mischen(){
+ let schutz=0;
+ do{
+  const alle=[];
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++)alle.push(feld[r][c]);
+  for(let i=alle.length-1;i>0;i--){
+   const j=rndInt(i+1);
+   const t=alle[i]; alle[i]=alle[j]; alle[j]=t;
+  }
+  let k=0;
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++)feld[r][c]=alle[k++];
+  schutz++;
+ }while((gleicheReihen().length||!hatZug())&&schutz<300);
+ $("hinweis").textContent="Kein Zug mehr möglich – das Feld wurde neu gemischt.";
+}
+
+function ende(){
+ if(zustand==="ende")return;
+ zustand="ende";
+ if(punkte>rekordLaden()){
+  try{ localStorage.setItem("bejeweled-rekord",String(punkte)); }catch(e){}
+  rekord=punkte;
+ }
+ aktualisiere();
+ $("meldungTitel").textContent="Vorbei";
+ $("meldungText").textContent="Punkte: "+punkte+" · Rekord: "+Math.max(rekord,rekordLaden());
+ $("meldungKnopf").textContent="Nochmal";
+ $("meldungKnopf").onclick=()=>{ neuesSpiel(); starten(); };
+ $("meldung").hidden=false;
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zelleMitte(r,c){
+ return {x:RAND+ZELLE*c+ZELLE/2, y:RAND+ZELLE*r+ZELLE/2};
+}
+
+function form(art,x,y,r){
+ ctx.beginPath();
+ if(art===0){
+  ctx.arc(x,y,r,0,Math.PI*2);
+ }else if(art===1){
+  ctx.moveTo(x,y-r); ctx.lineTo(x+r,y); ctx.lineTo(x,y+r); ctx.lineTo(x-r,y); ctx.closePath();
+ }else if(art===2){
+  for(let i=0;i<6;i++){
+   const a=-Math.PI/2+i*Math.PI/3;
+   const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+   if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+ }else if(art===3){
+  const s=r*0.82;
+  ctx.roundRect(x-s,y-s,s*2,s*2,7);
+ }else if(art===4){
+  ctx.moveTo(x,y-r*1.05);
+  ctx.lineTo(x+r*1.05,y+r*0.85);
+  ctx.lineTo(x-r*1.05,y+r*0.85);
+  ctx.closePath();
+ }else{
+  for(let i=0;i<10;i++){
+   const a=-Math.PI/2+i*Math.PI/5;
+   const rr=i%2?r*0.44:r;
+   const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr;
+   if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+ }
+}
+
+function stein(art,x,y,r,alpha){
+ const farbe=FARBEN[art];
+ ctx.globalAlpha=alpha==null?1:alpha;
+ const g=ctx.createRadialGradient(x-r*0.35,y-r*0.4,r*0.15,x,y,r*1.15);
+ g.addColorStop(0,"#ffffffbb");
+ g.addColorStop(.35,farbe);
+ g.addColorStop(1,"#0b241dcc");
+ form(art,x,y,r);
+ ctx.fillStyle=g;
+ ctx.fill();
+ ctx.strokeStyle="#06141099";
+ ctx.lineWidth=1.6;
+ ctx.stroke();
+ ctx.globalAlpha=1;
+}
+
+function zeichne(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#123f31");
+ g.addColorStop(.6,"#0c2c23");
+ g.addColorStop(1,"#071912");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Rasterlinien
+ ctx.strokeStyle="#ffffff0a";
+ ctx.lineWidth=1;
+ for(let i=0;i<=N;i++){
+  const p=RAND+i*ZELLE;
+  ctx.beginPath();
+  ctx.moveTo(p,RAND);
+  ctx.lineTo(p,H-RAND);
+  ctx.moveTo(RAND,p);
+  ctx.lineTo(W-RAND,p);
+  ctx.stroke();
+ }
+
+ // Steine
+ for(let r=0;r<N;r++){
+  for(let c=0;c<N;c++){
+   const art=feld[r][c];
+   if(art==null)continue;
+   const {x,y}=zelleMitte(r,c);
+   const weg=blinken.some(([br,bc])=>br===r&&bc===c);
+   stein(art,x,y,ZELLE*0.38,weg?0.45:1);
+  }
+ }
+
+ // Auswahl
+ if(auswahl){
+  const {x,y}=zelleMitte(auswahl[0],auswahl[1]);
+  ctx.strokeStyle="#f1dca8";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.roundRect(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,8);
+  ctx.stroke();
+ }
+
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schritt(dt){
+ if(zustand==="ruhe"){
+  zeit-=dt;
+  if(zeit<=0){ zeit=0; aktualisiere(); ende(); return; }
+  aktualisiere();
+ }else if(zustand==="blitz"){
+  blitzTimer-=dt;
+  if(blitzTimer<=0){
+   entfernen();
+   nachBlitz();
+  }
+ }
+}
+
+function schleife(zeitpunkt){
+ const dt=Math.min(0.05,(zeitpunkt-letzteZeit)/1000||0.016);
+ letzteZeit=zeitpunkt;
+ schritt(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+function zelleAusEvent(e){
+ const r=canvas.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width*W;
+ const y=(e.clientY-r.top)/r.height*H;
+ const c=Math.floor((x-RAND)/ZELLE);
+ const rr=Math.floor((y-RAND)/ZELLE);
+ if(rr<0||rr>=N||c<0||c>=N)return null;
+ return [rr,c];
+}
+
+canvas.addEventListener("pointerdown",e=>{
+ if(zustand==="start"){ starten(); return; }
+ if(zustand!=="ruhe")return;
+ const z=zelleAusEvent(e);
+ if(!z)return;
+ zeigerStart=z;
+ if(auswahl&&(auswahl[0]!==z[0]||auswahl[1]!==z[1])&&tauschMoeglich(auswahl,z)){
+  const a=auswahl;
+  auswahl=null;
+  tauschVersuchen(a,z);
+ }else if(auswahl&&auswahl[0]===z[0]&&auswahl[1]===z[1]){
+  auswahl=null;
+ }else{
+  auswahl=z;
+ }
+ e.preventDefault();
+});
+
+canvas.addEventListener("pointerup",e=>{
+ if(zustand!=="ruhe"||!zeigerStart)return;
+ const z=zelleAusEvent(e);
+ if(z&&(z[0]!==zeigerStart[0]||z[1]!==zeigerStart[1])&&tauschMoeglich(zeigerStart,z)){
+  auswahl=null;
+  tauschVersuchen(zeigerStart,z);
+ }
+ zeigerStart=null;
+});
+
+canvas.addEventListener("pointercancel",()=>{ zeigerStart=null; });
+
+window.addEventListener("keydown",e=>{
+ if(e.key===" "&&zustand==="start"){ starten(); e.preventDefault(); }
+});
+
+$("btnNeu").onclick=neuesSpiel;
+$("btnMischen").onclick=()=>{
+ if(zustand!=="ruhe")return;
+ mischen();
+ $("hinweis").textContent="Feld neu gemischt.";
+};
+
+rekord=rekordLaden();
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+
+})();
+</script>
+</body>
+</html>

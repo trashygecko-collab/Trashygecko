@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>SameGame</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+.menueleiste button:disabled{opacity:.45;cursor:default}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;background:#08120f}
+.brett{display:grid;grid-template-columns:repeat(var(--sp,12),1fr);gap:3px;
+ max-width:460px;margin:auto}
+.stein{padding:0;margin:0;border:1px solid #00000044;border-radius:5px;aspect-ratio:1;
+ cursor:pointer;box-shadow:inset 0 1px 0 #ffffff22;
+ transition:transform .16s ease,opacity .16s ease}
+.stein:hover{filter:brightness(1.18)}
+.stein.gruppe{filter:brightness(1.35);box-shadow:inset 0 0 0 2px #f4e6c2,inset 0 0 10px #00000055}
+.stein.weg{transform:scale(.25);opacity:0}
+.stein.wackeln{animation:wackeln .3s}
+@keyframes wackeln{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">SameGame</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnKlein">10×12</button>
+  <button id="btnMittel" class="aktiv">12×14</button>
+  <button id="btnGross">14×16</button>
+  <button id="btnZurueck" disabled>Rückgängig</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Züge <b id="zuege">0</b></span>
+  <span>Blöcke <b id="rest">0</b></span>
+  <span>Rekord <b id="rekord">–</b></span>
+ </div>
+
+ <div class="buehne">
+  <div class="brett" id="brett"></div>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">SAMEGAME</h2>
+    <p id="meldungText">Tippe auf eine Gruppe gleichfarbiger Steine – mindestens zwei. Sie verschwindet, der Rest rutscht nach.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Große Gruppen bringen viel: Punkte = (Steine − 2)².</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Das Brett leeren, indem zusammenhängende Steine gleicher Farbe verschwinden.</li>
+   <li><b>Zug:</b> Eine Gruppe aus mindestens zwei gleichen Steinen antippen (waagerecht oder senkrecht verbunden, nicht diagonal).</li>
+   <li><b>Nachrutschen:</b> Steine fallen nach unten, leere Spalten rücken nach links zusammen.</li>
+   <li><b>Punkte:</b> Für eine Gruppe mit <b>n</b> Steinen gibt es <b>(n−2)²</b> Punkte – zwei Steine also 0, fünf Steine 9, zehn Steine 64.</li>
+   <li><b>Bonus:</b> Ist am Ende kein Stein mehr übrig, gibt es <b>1000 Punkte</b> dazu.</li>
+   <li><b>Ende:</b> Das Spiel ist vorbei, wenn keine zwei gleichen Steine mehr nebeneinander liegen.</li>
+   <li><b>Rückgängig:</b> Der letzte Zug lässt sich zurücknehmen – der Rekord zählt trotzdem nur für gespielte Partien.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+
+const FARBEN=["#e8cd8e","#4fb3a0","#6f9fd8","#d98b8b","#a58bd8"];
+
+const STUFEN={
+ klein:{sp:10,ze:12,key:"samegame-best-10x12"},
+ mittel:{sp:12,ze:14,key:"samegame-best-12x14"},
+ gross:{sp:14,ze:16,key:"samegame-best-14x16"}
+};
+
+let stufe="mittel";
+let spalten=STUFEN.mittel.sp, zeilen=STUFEN.mittel.ze;
+let feld=[];            // feld[zeile][spalte] = Farbindex oder null
+let punkte=0, zuege=0;
+let verlauf=[];         // Schnappschüsse für "Rückgängig"
+let vorbei=false;
+let sperre=false;       // während der Räum-Animation
+
+const brett=$("brett");
+
+// ---------------------------------------------------------------- Spielfeld
+function neuesSpiel(){
+ const s=STUFEN[stufe];
+ spalten=s.sp; zeilen=s.ze;
+ brett.style.setProperty("--sp",spalten);
+ feld=Array.from({length:zeilen},()=>
+  Array.from({length:spalten},()=>Math.floor(Math.random()*FARBEN.length)));
+ punkte=0; zuege=0; verlauf=[]; vorbei=false; sperre=false;
+ meldungZu();
+ zeichne();
+ zeigeRekord();
+}
+
+function zeichne(){
+ const stick=document.createDocumentFragment();
+ for(let z=0;z<zeilen;z++){
+  for(let s=0;s<spalten;s++){
+   const farbe=feld[z][s];
+   const stein=document.createElement("button");
+   stein.type="button";
+   stein.className="stein";
+   stein.dataset.z=z; stein.dataset.s=s;
+   if(farbe===null){
+    stein.style.visibility="hidden";
+    stein.tabIndex=-1;
+   }else{
+    stein.style.background="linear-gradient(160deg,"+FARBEN[farbe]+","+FARBEN[farbe]+"aa)";
+   }
+   stick.appendChild(stein);
+  }
+ }
+ brett.replaceChildren(stick);
+ $("punkte").textContent=punkte;
+ $("zuege").textContent=zuege;
+ $("rest").textContent=anzahlSteine();
+ $("btnZurueck").disabled=verlauf.length===0||vorbei;
+}
+
+function anzahlSteine(){
+ let n=0;
+ for(let z=0;z<zeilen;z++)for(let s=0;s<spalten;s++)if(feld[z][s]!==null)n++;
+ return n;
+}
+
+// ------------------------------------------------------------- Gruppen suchen
+function nachbarn(z,s,farbe,gesehen){
+ const liste=[];
+ const stapel=[[z,s]];
+ gesehen.add(z*spalten+s);
+ while(stapel.length){
+  const [zz,ss]=stapel.pop();
+  liste.push([zz,ss]);
+  const richtungen=[[zz-1,ss],[zz+1,ss],[zz,ss-1],[zz,ss+1]];
+  for(const [nz,ns] of richtungen){
+   if(nz<0||nz>=zeilen||ns<0||ns>=spalten)continue;
+   const schluessel=nz*spalten+ns;
+   if(gesehen.has(schluessel))continue;
+   if(feld[nz][ns]!==farbe)continue;
+   gesehen.add(schluessel);
+   stapel.push([nz,ns]);
+  }
+ }
+ return liste;
+}
+
+function gruppeBei(z,s){
+ if(feld[z][s]===null)return [];
+ return nachbarn(z,s,feld[z][s],new Set());
+}
+
+/** Gibt es überhaupt noch eine Gruppe aus zwei oder mehr Steinen? */
+function zugMoeglich(){
+ const gesehen=new Set();
+ for(let z=0;z<zeilen;z++){
+  for(let s=0;s<spalten;s++){
+   const farbe=feld[z][s];
+   if(farbe===null)continue;
+   if(gesehen.has(z*spalten+s))continue;
+   if(nachbarn(z,s,farbe,gesehen).length>=2)return true;
+  }
+ }
+ return false;
+}
+
+// ------------------------------------------------------------------- Bewegen
+function nachrutschen(){
+ // Erst nach unten fallen lassen …
+ for(let s=0;s<spalten;s++){
+  let ziel=zeilen-1;
+  for(let z=zeilen-1;z>=0;z--){
+   if(feld[z][s]!==null){
+    const farbe=feld[z][s];
+    if(ziel!==z){ feld[ziel][s]=farbe; feld[z][s]=null; }
+    ziel--;
+   }
+  }
+  for(let z=ziel;z>=0;z--)feld[z][s]=null;
+ }
+ // … dann leere Spalten nach links zusammenrücken.
+ let schreib=0;
+ for(let s=0;s<spalten;s++){
+  let belegt=false;
+  for(let z=0;z<zeilen;z++)if(feld[z][s]!==null){ belegt=true; break; }
+  if(!belegt)continue;
+  if(schreib!==s){
+   for(let z=0;z<zeilen;z++){ feld[z][schreib]=feld[z][s]; feld[z][s]=null; }
+  }
+  schreib++;
+ }
+}
+
+function tippen(z,s){
+ if(sperre||vorbei)return;
+ const gruppe=gruppeBei(z,s);
+ if(gruppe.length===0)return;
+
+ const steine=[...brett.children];
+ if(gruppe.length===1){
+  const ein=steine[z*spalten+s];
+  ein.classList.remove("wackeln");
+  void ein.offsetWidth;
+  ein.classList.add("wackeln");
+  $("hinweis").textContent="Mindestens zwei gleiche Steine – allein passiert nichts.";
+  return;
+ }
+
+ verlauf.push({feld:feld.map(r=>r.slice()),punkte,zuege});
+ const gewinn=(gruppe.length-2)*(gruppe.length-2);
+ punkte+=gewinn; zuege++;
+
+ sperre=true;
+ gruppe.forEach(([gz,gs])=>{
+  const el=steine[gz*spalten+gs];
+  if(el){ el.classList.add("gruppe"); setTimeout(()=>el.classList.add("weg"),30); }
+ });
+
+ setTimeout(()=>{
+  gruppe.forEach(([gz,gs])=>{ feld[gz][gs]=null; });
+  nachrutschen();
+  zeichne();
+  sperre=false;
+  $("hinweis").textContent="+"+gewinn+" Punkte für "+gruppe.length+" Steine.";
+  pruefeEnde();
+ },200);
+}
+
+function pruefeEnde(){
+ if(zugMoeglich())return;
+ vorbei=true;
+ const rest=anzahlSteine();
+ let text;
+ if(rest===0){
+  punkte+=1000;
+  text="Brett leer! Dafür gibt es 1000 Punkte extra. Endstand: "+punkte+" Punkte in "+zuege+" Zügen.";
+ }else{
+  text="Keine zwei gleichen Steine mehr nebeneinander. "+rest+(rest===1?" Stein bleibt":" Steine bleiben")
+      +" übrig – "+punkte+" Punkte in "+zuege+" Zügen.";
+ }
+ speichereRekord(punkte);
+ zeigeRekord();
+ zeichne();
+ meldung("GESCHAFFT",text,"Noch einmal");
+}
+
+// ------------------------------------------------------------------ Rekorde
+function zeigeRekord(){
+ const wert=Number(localStorage.getItem(STUFEN[stufe].key)||0);
+ $("rekord").textContent=wert>0?wert:"–";
+}
+function speichereRekord(wert){
+ const key=STUFEN[stufe].key;
+ if(wert>Number(localStorage.getItem(key)||0)){
+  try{ localStorage.setItem(key,String(wert)); }catch(e){}
+ }
+}
+
+// ------------------------------------------------------------------ Meldung
+function meldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+function meldungZu(){ $("meldung").hidden=true; }
+
+// ------------------------------------------------------------------ Bedienung
+brett.addEventListener("click",e=>{
+ const stein=e.target.closest(".stein");
+ if(!stein)return;
+ tippen(Number(stein.dataset.z),Number(stein.dataset.s));
+});
+
+$("btnNeu").onclick=()=>neuesSpiel();
+
+function stufeWaehlen(name,id){
+ if(stufe===name)return;
+ stufe=name;
+ ["btnKlein","btnMittel","btnGross"].forEach(k=>$(k).classList.remove("aktiv"));
+ $(id).classList.add("aktiv");
+ neuesSpiel();
+}
+$("btnKlein").onclick=()=>stufeWaehlen("klein","btnKlein");
+$("btnMittel").onclick=()=>stufeWaehlen("mittel","btnMittel");
+$("btnGross").onclick=()=>stufeWaehlen("gross","btnGross");
+
+$("btnZurueck").onclick=()=>{
+ if(sperre||!verlauf.length)return;
+ const alt=verlauf.pop();
+ feld=alt.feld; punkte=alt.punkte; zuege=alt.zuege;
+ vorbei=false;
+ zeichne();
+ $("hinweis").textContent="Zug zurückgenommen.";
+};
+
+$("meldungKnopf").onclick=()=>neuesSpiel();
+
+window.addEventListener("keydown",e=>{
+ if(e.key===" "&&!$("meldung").hidden){ $("meldungKnopf").click(); e.preventDefault(); }
+ if((e.key==="z"||e.key==="Z")&&!$("btnZurueck").disabled)  { $("btnZurueck").click(); }
+});
+
+neuesSpiel();
+})();
+</script>
+</body>
+</html>

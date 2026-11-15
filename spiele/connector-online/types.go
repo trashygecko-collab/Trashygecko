@@ -73,38 +73,45 @@ type Room struct {
 	// EmptySince merkt sich, seit wann niemand mehr im Raum ist. Solange das
 	// nicht lange her ist, bleiben laufende Partien liegen (Handy gesperrt,
 	// Rechner zu, kurze Pause).
-	EmptySince   time.Time
-	Name         string // e.g. "Spielername Raum"
-	Created      time.Time
-	LastActive   time.Time
-	Players      map[string]Player
-	Messages     []Message
-	TicTacToe    *TicTacToeGame
-	VierGewinnt  *VierGewinntGame
-	Dame         *DameGame
-	Paare        *PaareGame
-	Menschaerger *MenschaergerGame
-	Kaese        *KaeseGame
-	Sim          *SimGame
-	Kalaha       *KalahaGame
-	Streichholz  *StreichholzGame
-	Muehle       *MuehleGame
-	Reversi      *ReversiGame
-	Hold         *HoldGame
-	Skyjo        *SkyjoGame
-	Kniffel      *KniffelGame
-	Schach       *ChessGame
-	Go           *GoGame
-	Backgammon   *BackgammonGame
-	MauMau       *MauMauGame
-	Uno          *UnoGame
-	Schwimmen    *SchwimmenGame
-	Arschloch    *ArschlochGame
-	Rechen       *RechenGame
-	Mal          *Malbrett              // gemeinsame Zeichenfläche
-	Angebot      *Angebot               // offene Runde für den ganzen Raum
-	Mutes        map[string]time.Time   // playerID -> unmute time
-	MsgTimes     map[string][]time.Time // for spam protection
+	EmptySince      time.Time
+	Name            string // e.g. "Spielername Raum"
+	Created         time.Time
+	LastActive      time.Time
+	Players         map[string]Player
+	Messages        []Message
+	TicTacToe       *TicTacToeGame
+	VierGewinnt     *VierGewinntGame
+	Dame            *DameGame
+	Paare           *PaareGame
+	Menschaerger    *MenschaergerGame
+	Kaese           *KaeseGame
+	Sim             *SimGame
+	Tetris          *TetrisGame
+	Kalaha          *KalahaGame
+	Streichholz     *StreichholzGame
+	Muehle          *MuehleGame
+	Reversi         *ReversiGame
+	Hold            *HoldGame
+	Skyjo           *SkyjoGame
+	Kniffel         *KniffelGame
+	Schach          *ChessGame
+	Go              *GoGame
+	Backgammon      *BackgammonGame
+	MauMau          *MauMauGame
+	Uno             *UnoGame
+	Poker           *PokerGame
+	Cabo            *CaboGame
+	Siebzehn        *SiebzehnGame
+	Baccara         *BaccaraGame
+	Schiffe         *SchiffeGame
+	Schwimmen       *SchwimmenGame
+	Arschloch       *ArschlochGame
+	Sechsundsechzig *SechsundsechzigGame
+	Rechen          *RechenGame
+	Mal             *Malbrett              // gemeinsame Zeichenfläche
+	Angebot         *Angebot               // offene Runde für den ganzen Raum
+	Mutes           map[string]time.Time   // playerID -> unmute time
+	MsgTimes        map[string][]time.Time // for spam protection
 }
 
 type RoomInfo struct {
@@ -191,6 +198,9 @@ func (r *Room) cleanPlayers() {
 	if r.Sim != nil && r.gameAbandoned(r.Sim.Status, r.Sim.RedID, r.Sim.BlueID) {
 		r.Sim = nil
 	}
+	if r.Tetris != nil && r.gameAbandoned(r.Tetris.Status, r.Tetris.RedID, r.Tetris.BlueID) {
+		r.Tetris = nil
+	}
 	if r.Kalaha != nil && r.gameAbandoned(r.Kalaha.Status, r.Kalaha.RedID, r.Kalaha.BlueID) {
 		r.Kalaha = nil
 	}
@@ -235,11 +245,77 @@ func (r *Room) cleanPlayers() {
 	if r.Uno != nil && r.Uno.allGone(r) {
 		r.Uno = nil
 	}
+	if r.Poker != nil {
+		present := 0
+		for _, p := range r.Poker.Spieler {
+			if _, ok := r.Players[p.ID]; ok {
+				present++
+			}
+		}
+		if present == 0 {
+			r.Poker = nil
+		}
+	}
+	if r.Cabo != nil {
+		present := 0
+		for _, p := range r.Cabo.Spieler {
+			if _, ok := r.Players[p.ID]; ok {
+				present++
+			}
+		}
+		if present == 0 {
+			r.Cabo = nil
+		}
+	}
+	if r.Schiffe != nil {
+		present := 0
+		for _, p := range r.Schiffe.Spieler {
+			if _, ok := r.Players[p.ID]; ok {
+				present++
+			}
+		}
+		if present == 0 {
+			r.Schiffe = nil
+		}
+	}
+	if r.Baccara != nil {
+		present := 0
+		for _, p := range r.Baccara.Spieler {
+			if _, ok := r.Players[p.ID]; ok {
+				present++
+			}
+		}
+		if present == 0 {
+			r.Baccara = nil
+		}
+	}
+	if r.Siebzehn != nil {
+		present := 0
+		for _, p := range r.Siebzehn.Spieler {
+			if _, ok := r.Players[p.ID]; ok {
+				present++
+			}
+		}
+		if present == 0 {
+			r.Siebzehn = nil
+		}
+	}
 	if r.Schwimmen != nil && r.Schwimmen.allGone(r) {
 		r.Schwimmen = nil
 	}
 	if r.Arschloch != nil && r.Arschloch.allGone(r) {
 		r.Arschloch = nil
+	}
+	if r.Sechsundsechzig != nil {
+		present := 0
+		for _, p := range r.Sechsundsechzig.Spieler {
+			if _, ok := r.Players[p.ID]; ok {
+				present++
+			}
+		}
+		if present == 0 {
+			r.Sechsundsechzig = nil
+		}
 	}
 	if r.Rechen != nil && r.Rechen.allGone(r) {
 		r.Rechen = nil

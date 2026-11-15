@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Snake</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Snake</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnPause">Pause</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Länge <b id="laenge">3</b></span>
+  <span>Tempo <b id="tempo">1</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="420" height="460"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">SNAKE</h2>
+    <p id="meldungText">Wische über das Feld, um die Richtung zu bestimmen – oder nimm die Pfeiltasten.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Wischen lenkt die Schlange. Jeder Apfel macht sie länger und schneller.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Die Schlange frisst Äpfel und wird dabei länger. Jeder Apfel gibt 10 Punkte, alle fünf Äpfel ein Level mehr und etwas mehr Tempo.</li>
+   <li><b>Steuern:</b> Mit dem Finger über das Feld wischen – nach oben, unten, links oder rechts. Am PC gehen auch die Pfeiltasten und W A S D.</li>
+   <li><b>Vorsicht:</b> Die Schlange darf weder den Rand noch sich selbst berühren. Umkehren geht nicht, Richtungswechsel werden gesammelt und nacheinander ausgeführt.</li>
+   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const SPALTEN=21, ZEILEN=23;
+const ZELLE=20;
+const W=SPALTEN*ZELLE, H=ZEILEN*ZELLE;
+canvas.width=W;
+canvas.height=H;
+
+const START_TEMPO=160;   // Millisekunden pro Schritt
+const MIN_TEMPO=62;
+
+let zustand="start";     // start, laeuft, pause, ende
+let schlange=[];
+let richtung={x:1,y:0};
+let warteschlange=[];
+let apfel={x:0,y:0};
+let punkte=0;
+let gefressen=0;
+let takt=0;
+let letzteZeit=0;
+let schrittRest=0;
+
+function tempoJetzt(){
+ return Math.max(MIN_TEMPO,START_TEMPO-gefressen*4);
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("snake-rekord")||0); }catch(e){ return 0; }
+}
+
+function zahlenZeigen(){
+ $("punkte").textContent=punkte;
+ $("laenge").textContent=schlange.length;
+ $("tempo").textContent=Math.floor(gefressen/5)+1;
+}
+
+function neuesSpiel(){
+ punkte=0;
+ gefressen=0;
+ takt=0;
+ schrittRest=0;
+ schlange=[{x:6,y:11},{x:5,y:11},{x:4,y:11}];
+ richtung={x:1,y:0};
+ warteschlange=[];
+ apfelSetzen();
+ zahlenZeigen();
+ $("rekord").textContent=rekordLaden();
+ zustand="start";
+ $("btnPause").textContent="Pause";
+ zeigeMeldung("SNAKE","Wische über das Feld, um die Richtung zu bestimmen – oder nimm die Pfeiltasten.","Starten");
+ $("meldungKnopf").onclick=starten;
+ zeichne();
+}
+
+function apfelSetzen(){
+ const frei=[];
+ for(let y=0;y<ZEILEN;y++)for(let x=0;x<SPALTEN;x++){
+  if(!schlange.some(s=>s.x===x&&s.y===y))frei.push({x,y});
+ }
+ apfel=frei[Math.floor(Math.random()*frei.length)]||{x:0,y:0};
+}
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ letzteZeit=performance.now();
+ schrittRest=0;
+ $("hinweis").textContent="Wischen lenkt die Schlange. Jeder Apfel macht sie länger und schneller.";
+}
+
+function richtungSetzen(dx,dy){
+ const letzte=warteschlange.length?warteschlange[warteschlange.length-1]:richtung;
+ if(letzte.x===-dx&&letzte.y===-dy)return;      // Umkehren verboten
+ if(letzte.x===dx&&letzte.y===dy)return;        // gleiche Richtung: nichts zu tun
+ if(warteschlange.length>=3)return;
+ warteschlange.push({x:dx,y:dy});
+}
+
+function schritt(){
+ if(warteschlange.length)richtung=warteschlange.shift();
+ const kopf=schlange[0];
+ const neu={x:kopf.x+richtung.x,y:kopf.y+richtung.y};
+
+ if(neu.x<0||neu.y<0||neu.x>=SPALTEN||neu.y>=ZEILEN)return verlieren();
+ const beisst=schlange.some((teil,index)=>{
+  // der letzte Schwanzring verschwindet gleich, dort darf der Kopf hin
+  if(index===schlange.length-1)return false;
+  return teil.x===neu.x&&teil.y===neu.y;
+ });
+ if(beisst)return verlieren();
+
+ schlange.unshift(neu);
+ if(neu.x===apfel.x&&neu.y===apfel.y){
+  punkte+=10;
+  gefressen++;
+  apfelSetzen();
+  zahlenZeigen();
+ }else{
+  schlange.pop();
+ }
+ takt++;
+
+ if(punkte>rekordLaden()){
+  try{ localStorage.setItem("snake-rekord",String(punkte)); }catch(e){}
+  $("rekord").textContent=punkte;
+ }
+}
+
+function verlieren(){
+ zustand="ende";
+ zeigeMeldung("GAME OVER","Punkte: "+punkte+" · Länge "+schlange.length,"Nochmal");
+ $("meldungKnopf").onclick=neuesSpiel;
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Spielfeld
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#0d3a2c");
+ g.addColorStop(.6,"#0a2a21");
+ g.addColorStop(1,"#061a14");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Karomuster
+ ctx.fillStyle="#ffffff08";
+ for(let y=0;y<ZEILEN;y++)for(let x=0;x<SPALTEN;x++){
+  if((x+y)%2===0)ctx.fillRect(x*ZELLE,y*ZELLE,ZELLE,ZELLE);
+ }
+
+ // sanftes Gitter
+ ctx.strokeStyle="#ffffff0a";
+ ctx.lineWidth=1;
+ for(let x=0;x<=SPALTEN;x++){
+  ctx.beginPath();ctx.moveTo(x*ZELLE+.5,0);ctx.lineTo(x*ZELLE+.5,H);ctx.stroke();
+ }
+ for(let y=0;y<=ZEILEN;y++){
+  ctx.beginPath();ctx.moveTo(0,y*ZELLE+.5);ctx.lineTo(W,y*ZELLE+.5);ctx.stroke();
+ }
+
+ // Rand
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+
+ // Apfel
+ const ax=apfel.x*ZELLE+ZELLE/2, ay=apfel.y*ZELLE+ZELLE/2;
+ const ag=ctx.createRadialGradient(ax-3,ay-4,2,ax,ay,ZELLE*0.55);
+ ag.addColorStop(0,"#f2a08a");
+ ag.addColorStop(.5,"#c2603f");
+ ag.addColorStop(1,"#8d3a22");
+ ctx.fillStyle=ag;
+ ctx.beginPath();
+ ctx.arc(ax,ay,ZELLE*0.38,0,Math.PI*2);
+ ctx.fill();
+ ctx.fillStyle="#4fb3a0";
+ ctx.beginPath();
+ ctx.ellipse(ax+3,ay-ZELLE*0.36,3.6,2.2,-0.5,0,Math.PI*2);
+ ctx.fill();
+
+ // Schlange
+ schlange.forEach((teil,index)=>{
+  const px=teil.x*ZELLE, py=teil.y*ZELLE;
+  const innen=index===0?1.4:1.9;
+  const gr=ctx.createLinearGradient(px,py,px,py+ZELLE);
+  if(index===0){
+   gr.addColorStop(0,"#ffe9b0");
+   gr.addColorStop(1,"#d9bc7c");
+  }else{
+   gr.addColorStop(0,"#7fc0a6");
+   gr.addColorStop(1,"#3f7d67");
+  }
+  ctx.fillStyle=gr;
+  ctx.beginPath();
+  ctx.roundRect(px+innen,py+innen,ZELLE-innen*2,ZELLE-innen*2,index===0?6:5);
+  ctx.fill();
+  ctx.strokeStyle="#0a2a2188";
+  ctx.lineWidth=1;
+  ctx.stroke();
+
+  if(index===0){
+   // Augen je nach Blickrichtung
+   const mx=richtung.x, my=richtung.y;
+   const augen=[];
+   if(mx!==0){
+    augen.push({x:px+ZELLE/2+mx*4,y:py+ZELLE/2-4});
+    augen.push({x:px+ZELLE/2+mx*4,y:py+ZELLE/2+4});
+   }else{
+    augen.push({x:px+ZELLE/2-4,y:py+ZELLE/2+my*4});
+    augen.push({x:px+ZELLE/2+4,y:py+ZELLE/2+my*4});
+   }
+   ctx.fillStyle="#0b241d";
+   augen.forEach(a=>{
+    ctx.beginPath();
+    ctx.arc(a.x,a.y,2.1,0,Math.PI*2);
+    ctx.fill();
+   });
+  }
+ });
+}
+
+function zeigeMeldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeit){
+ const dt=Math.min(80,zeit-letzteZeit||16);
+ letzteZeit=zeit;
+ if(zustand==="laeuft"){
+  schrittRest+=dt;
+  const taktLaenge=tempoJetzt();
+  while(schrittRest>=taktLaenge){
+   schrittRest-=taktLaenge;
+   schritt();
+   if(zustand!=="laeuft")break;
+  }
+ }
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+let wischStart=null;
+
+canvas.addEventListener("pointerdown",e=>{
+ wischStart={x:e.clientX,y:e.clientY};
+ e.preventDefault();
+});
+canvas.addEventListener("pointerup",e=>{
+ if(!wischStart)return;
+ const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
+ wischStart=null;
+ if(Math.hypot(dx,dy)<16){
+  if(zustand==="start")starten();
+  return;
+ }
+ if(zustand!=="laeuft")return;
+ if(Math.abs(dx)>Math.abs(dy))richtungSetzen(dx>0?1:-1,0);
+ else richtungSetzen(0,dy>0?1:-1);
+ e.preventDefault();
+});
+canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ const map={
+  ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
+  w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]
+ };
+ if(map[k]){
+  e.preventDefault();
+  if(zustand==="start")starten();
+  if(zustand!=="laeuft")return;
+  richtungSetzen(map[k][0],map[k][1]);
+ }else if(k===" "){
+  e.preventDefault();
+  if(zustand==="start")starten();
+ }
+});
+
+$("btnNeu").onclick=neuesSpiel;
+$("btnPause").onclick=()=>{
+ if(zustand==="laeuft"){
+  zustand="pause";
+  $("btnPause").textContent="Weiter";
+  $("hinweis").textContent="Pause – tippe auf Weiter.";
+ }else if(zustand==="pause"){
+  zustand="laeuft";
+  $("btnPause").textContent="Pause";
+  letzteZeit=performance.now();
+  $("hinweis").textContent="Wischen lenkt die Schlange. Jeder Apfel macht sie länger und schneller.";
+ }
+};
+
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+})();
+</script>
+</body>
+</html>

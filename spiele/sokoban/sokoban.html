@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Sokoban</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;max-width:480px;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
+ gap:6px;justify-content:center;padding:8px 8px 4px;background:#08120f}
+.pad button{font-family:inherit;font-size:20px;border-radius:8px;cursor:pointer;
+ border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
+.pad button:active{background:#1e5645}
+.pad .oben{grid-column:2;grid-row:1}
+.pad .links{grid-column:1;grid-row:2}
+.pad .runter{grid-column:2;grid-row:2}
+.pad .rechts{grid-column:3;grid-row:2}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Sokoban</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <select id="levelWahl"></select>
+  <button id="btnZurueck">Zurück</button>
+  <button id="btnNochmal">Level neu</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Züge <b id="zuege">0</b></span>
+  <span>Schieben <b id="schieben">0</b></span>
+  <span>Kisten <b id="kisten">0/0</b></span>
+  <span>Bestwert <b id="bestwert">–</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="400" height="280"></canvas>
+  <div class="meldung" id="meldung" hidden>
+   <div class="kasten">
+    <h2 id="meldungTitel">Level geschafft</h2>
+    <p id="meldungText">Alle Kisten sind auf ihren Zielen.</p>
+    <button id="meldungKnopf">Weiter</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="pad">
+  <button class="oben" data-dir="hoch">▲</button>
+  <button class="links" data-dir="links">◀</button>
+  <button class="runter" data-dir="runter">▼</button>
+  <button class="rechts" data-dir="rechts">▶</button>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Wischen oder Pfeile: Der Arbeiter geht einen Schritt.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Alle Kisten auf die goldenen Ziele schieben. Der Arbeiter kann nur schieben, nicht ziehen – und immer nur eine Kiste auf einmal.</li>
+   <li><b>Steuern:</b> Mit dem Finger über das Feld wischen, das Pfeilfeld benutzen oder am PC die Pfeiltasten und W A S D drücken.</li>
+   <li><b>Rückgängig:</b> „Zurück" nimmt den letzten Schritt zurück, „Level neu" setzt die Kiste wieder an den Anfang.</li>
+   <li><b>Achtung:</b> Eine Kiste in einer Ecke oder an der Wand lässt sich nicht mehr bewegen. Alle Level sind geprüft und lösbar.</li>
+   <li><b>Bestwert:</b> Die wenigsten Züge pro Level merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const LEVEL=[
+ ["#######","#  .  #","#     #","#  $  #","#  @  #","#######"],
+ ["########","#   .  #","#      #","#  $   #","#  @   #","########"],
+ ["########","#      #","# $  . #","#  @   #","#      #","########"],
+ ["#########","#  . .  #","#  $ $  #","#   @   #","#       #","#########"],
+ ["##########","#        #","#  .  .  #","#  $  $  #","#   @    #","#        #","##########"],
+ ["#########","#  .    #","#  $#   #","#   #   #","#  $@   #","#  .    #","#########"],
+ ["###########","#         #","#  . . .  #","#  $ $ $  #","#    @    #","#         #","###########"],
+ ["##########","#        #","#  $  .  #","#   ##   #","#  .  $  #","#    @   #","##########"],
+ ["#########","#       #","# $   . #","#   @   #","# $   . #","#       #","#########"],
+ ["##########","#   #    #","# $ # .  #","#   #    #","#   @    #","#  .  $  #","##########"]
+];
+
+let levelNr=0;
+let waende=[];        // Set-artige Liste "x,y"
+let ziele=[];
+let kisten=[];
+let spieler={x:0,y:0};
+let spalten=0, zeilen=0;
+let zuege=0, schieben=0;
+let verlauf=[];
+let geloest=false;
+
+const Z=40;
+
+function istWand(x,y){ return waende.includes(x+","+y); }
+function kisteBei(x,y){ return kisten.findIndex(k=>k.x===x&&k.y===y); }
+
+function levelLaden(nummer){
+ levelNr=nummer;
+ const karte=LEVEL[nummer];
+ zeilen=karte.length;
+ spalten=Math.max(...karte.map(z=>z.length));
+ waende=[]; ziele=[]; kisten=[];
+ for(let y=0;y<zeilen;y++){
+  const zeile=karte[y];
+  for(let x=0;x<spalten;x++){
+   const c=zeile[x]||" ";
+   if(c==="#")waende.push(x+","+y);
+   if(c==="."||c==="*"||c==="+")ziele.push({x,y});
+   if(c==="$"||c==="*")kisten.push({x,y});
+   if(c==="@"||c==="+")spieler={x,y};
+  }
+ }
+ zuege=0; schieben=0; verlauf=[]; geloest=false;
+ canvas.width=spalten*Z;
+ canvas.height=zeilen*Z;
+ $("meldung").hidden=true;
+ $("levelWahl").value=String(nummer);
+ zahlenZeigen();
+ bestwertZeigen();
+ $("hinweis").textContent="Wischen oder Pfeile: Der Arbeiter geht einen Schritt.";
+ zeichne();
+}
+
+function zahlenZeigen(){
+ const aufZiel=kisten.filter(k=>ziele.some(z=>z.x===k.x&&z.y===k.y)).length;
+ $("zuege").textContent=zuege;
+ $("schieben").textContent=schieben;
+ $("kisten").textContent=aufZiel+"/"+kisten.length;
+}
+
+function bestwertLaden(nr){
+ try{ return Number(localStorage.getItem("sokoban-best-"+nr)||0); }catch(e){ return 0; }
+}
+function bestwertZeigen(){
+ const b=bestwertLaden(levelNr);
+ $("bestwert").textContent=b?b+" Züge":"–";
+}
+
+function bewegen(dx,dy){
+ if(geloest)return;
+ const nx=spieler.x+dx, ny=spieler.y+dy;
+ if(istWand(nx,ny))return;
+ const k=kisteBei(nx,ny);
+ if(k>=0){
+  const hx=nx+dx, hy=ny+dy;
+  if(istWand(hx,hy)||kisteBei(hx,hy)>=0)return;
+  verlauf.push({spieler:{...spieler},kisten:kisten.map(x=>({...x})),zuege,schieben});
+  kisten[k]={x:hx,y:hy};
+  schieben++;
+ }else{
+  verlauf.push({spieler:{...spieler},kisten:kisten.map(x=>({...x})),zuege,schieben});
+ }
+ spieler={x:nx,y:ny};
+ zuege++;
+ zahlenZeigen();
+ zeichne();
+ pruefen();
+}
+
+function zurueck(){
+ if(geloest||!verlauf.length)return;
+ const s=verlauf.pop();
+ spieler=s.spieler;
+ kisten=s.kisten;
+ zuege=s.zuege;
+ schieben=s.schieben;
+ zahlenZeigen();
+ zeichne();
+}
+
+function pruefen(){
+ const alle=kisten.every(k=>ziele.some(z=>z.x===k.x&&z.y===k.y));
+ if(!alle)return;
+ geloest=true;
+ const best=bestwertLaden(levelNr);
+ if(!best||zuege<best){
+  try{ localStorage.setItem("sokoban-best-"+levelNr,String(zuege)); }catch(e){}
+  bestwertZeigen();
+ }
+ const letztes=levelNr>=LEVEL.length-1;
+ $("meldungTitel").textContent=letztes?"Alle Level geschafft":"Level "+(levelNr+1)+" geschafft";
+ $("meldungText").textContent="Züge: "+zuege+" · Schieben: "+schieben+
+   (best&&zuege>=best?" · Bestwert: "+best+" Züge":" · neuer Bestwert!");
+ $("meldungKnopf").textContent=letztes?"Von vorn":"Weiter";
+ $("meldung").hidden=false;
+ $("meldungKnopf").onclick=()=>{
+  levelLaden(letztes?0:levelNr+1);
+ };
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Boden
+ ctx.fillStyle="#0c2a21";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ for(let y=0;y<zeilen;y++){
+  for(let x=0;x<spalten;x++){
+   const px=x*Z, py=y*Z;
+   if(istWand(x,y)){
+    const g=ctx.createLinearGradient(px,py,px,py+Z);
+    g.addColorStop(0,"#2a6a54");
+    g.addColorStop(1,"#17453a");
+    ctx.fillStyle=g;
+    ctx.fillRect(px,py,Z,Z);
+    ctx.strokeStyle="#0b241d";
+    ctx.lineWidth=2;
+    ctx.strokeRect(px+1,py+1,Z-2,Z-2);
+    ctx.fillStyle="#ffffff14";
+    ctx.fillRect(px+3,py+3,Z-6,3);
+   }else{
+    ctx.fillStyle=(x+y)%2===0?"#123329":"#102e25";
+    ctx.fillRect(px,py,Z,Z);
+    ctx.strokeStyle="#ffffff08";
+    ctx.lineWidth=1;
+    ctx.strokeRect(px+.5,py+.5,Z-1,Z-1);
+   }
+  }
+ }
+
+ // Ziele
+ ziele.forEach(z=>{
+  const cx=z.x*Z+Z/2, cy=z.y*Z+Z/2;
+  ctx.strokeStyle="#e8cd8e88";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.arc(cx,cy,Z*0.26,0,Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle="#e8cd8e33";
+  ctx.beginPath();
+  ctx.arc(cx,cy,Z*0.16,0,Math.PI*2);
+  ctx.fill();
+ });
+
+ // Kisten
+ kisten.forEach(k=>{
+  const aufZiel=ziele.some(z=>z.x===k.x&&z.y===k.y);
+  const px=k.x*Z+3, py=k.y*Z+3, w=Z-6;
+  const g=ctx.createLinearGradient(px,py,px,py+w);
+  if(aufZiel){
+   g.addColorStop(0,"#cfe6b0");
+   g.addColorStop(1,"#7fa864");
+  }else{
+   g.addColorStop(0,"#b98f5c");
+   g.addColorStop(1,"#7a5730");
+  }
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.roundRect(px,py,w,w,5);
+  ctx.fill();
+  ctx.strokeStyle=aufZiel?"#4c6a3a":"#3d2a14";
+  ctx.lineWidth=2;
+  ctx.stroke();
+  // Streben
+  ctx.strokeStyle=aufZiel?"#4c6a3a99":"#3d2a1499";
+  ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(px+5,py+5); ctx.lineTo(px+w-5,py+w-5);
+  ctx.moveTo(px+w-5,py+5); ctx.lineTo(px+5,py+w-5);
+  ctx.stroke();
+ });
+
+ // Spielfigur
+ const cx=spieler.x*Z+Z/2, cy=spieler.y*Z+Z/2;
+ ctx.fillStyle="#00000044";
+ ctx.beginPath();
+ ctx.ellipse(cx,cy+Z*0.3,Z*0.26,Z*0.1,0,0,Math.PI*2);
+ ctx.fill();
+ const pg=ctx.createRadialGradient(cx-4,cy-6,2,cx,cy,Z*0.32);
+ pg.addColorStop(0,"#ffe9b0");
+ pg.addColorStop(1,"#c99a3f");
+ ctx.fillStyle=pg;
+ ctx.beginPath();
+ ctx.arc(cx,cy,Z*0.28,0,Math.PI*2);
+ ctx.fill();
+ ctx.strokeStyle="#6b4a12";
+ ctx.lineWidth=1.5;
+ ctx.stroke();
+ // Augen
+ [-4,4].forEach(dx=>{
+  ctx.fillStyle="#0b241d";
+  ctx.beginPath();
+  ctx.arc(cx+dx,cy-2,1.8,0,Math.PI*2);
+  ctx.fill();
+ });
+ ctx.strokeStyle="#0b241d";
+ ctx.lineWidth=1.6;
+ ctx.beginPath();
+ ctx.arc(cx,cy+3,4,0.25*Math.PI,0.75*Math.PI);
+ ctx.stroke();
+
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,canvas.width-3,canvas.height-3);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+let wischStart=null;
+canvas.addEventListener("pointerdown",e=>{ wischStart={x:e.clientX,y:e.clientY}; e.preventDefault(); });
+canvas.addEventListener("pointerup",e=>{
+ if(!wischStart)return;
+ const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
+ wischStart=null;
+ if(Math.hypot(dx,dy)<14)return;
+ if(Math.abs(dx)>Math.abs(dy))bewegen(dx>0?1:-1,0);
+ else bewegen(0,dy>0?1:-1);
+ e.preventDefault();
+});
+canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
+
+document.querySelectorAll(".pad button").forEach(b=>{
+ b.addEventListener("click",()=>{
+  const d=b.dataset.dir;
+  if(d==="hoch")bewegen(0,-1);
+  else if(d==="runter")bewegen(0,1);
+  else if(d==="links")bewegen(-1,0);
+  else bewegen(1,0);
+ });
+});
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(k==="ArrowUp"||k==="w"||k==="W"){ e.preventDefault(); bewegen(0,-1); }
+ else if(k==="ArrowDown"||k==="s"||k==="S"){ e.preventDefault(); bewegen(0,1); }
+ else if(k==="ArrowLeft"||k==="a"||k==="A"){ e.preventDefault(); bewegen(-1,0); }
+ else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); bewegen(1,0); }
+ else if(k==="z"||k==="Z"||k==="Backspace"){ e.preventDefault(); zurueck(); }
+ else if(k==="r"||k==="R"){ e.preventDefault(); levelLaden(levelNr); }
+});
+
+$("btnNeu").onclick=()=>levelLaden(0);
+$("btnZurueck").onclick=zurueck;
+$("btnNochmal").onclick=()=>levelLaden(levelNr);
+$("levelWahl").onchange=()=>levelLaden(Number($("levelWahl").value));
+
+// Auswahl füllen
+LEVEL.forEach((_,i)=>{
+ const o=document.createElement("option");
+ o.value=String(i);
+ o.textContent="Level "+(i+1);
+ $("levelWahl").appendChild(o);
+});
+
+levelLaden(0);
+})();
+</script>
+</body>
+</html>

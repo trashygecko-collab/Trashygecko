@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Sudoku</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+#brett{display:grid;grid-template-columns:repeat(9,1fr);width:100%;max-width:420px;
+ border:2px solid #d9bc7c88;border-radius:8px;overflow:hidden;background:#0b241d}
+.zelle{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+ font-size:clamp(16px,4.8vw,22px);color:#e8cd8e;background:#123329;cursor:pointer;
+ border-right:1px solid #d9bc7c22;border-bottom:1px solid #d9bc7c22}
+#brett .zelle:nth-child(9n+3),#brett .zelle:nth-child(9n+6){border-right:2px solid #e8cd8e99}
+#brett .zelle:nth-child(n+19):nth-child(-n+27),
+#brett .zelle:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #e8cd8e99}
+.zelle.bereich{background:#173f34}
+.zelle.gegeben{color:#f7efd8;background:#164036}
+.zelle.gleich{background:#1a4a3c}
+.zelle.gewaehlt{background:#1e5645;box-shadow:inset 0 0 0 2px #e8cd8e}
+.zelle.fehler{color:#e8836a}
+.zelle.hinweis{color:#8fd0b4}
+.zelle .notizen{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);
+ grid-template-rows:repeat(3,1fr);font-size:9px;color:#8fb3a6;line-height:1;padding:1px}
+.zelle .notizen span{display:flex;align-items:center;justify-content:center}
+
+.pad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px;background:#08120f}
+.pad button{font-family:inherit;font-size:19px;padding:10px 0;border-radius:8px;cursor:pointer;
+ border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e;position:relative}
+.pad button:active{background:#1e5645}
+.pad button.leer{opacity:.35}
+.pad button .rest{position:absolute;top:2px;right:5px;font-size:9px;color:#8fb3a6}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Sudoku</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <select id="stufe">
+   <option value="leicht">Leicht</option>
+   <option value="mittel" selected>Mittel</option>
+   <option value="schwer">Schwer</option>
+  </select>
+  <button id="btnNotizen">Notizen</button>
+  <button id="btnHinweis">Hinweis</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Zeit <b id="zeit">0:00</b></span>
+  <span>Fehler <b id="fehler">0</b></span>
+  <span>Frei <b id="frei">81</b></span>
+  <span>Bestzeit <b id="bestzeit">–</b></span>
+ </div>
+
+ <div class="buehne">
+  <div id="brett"></div>
+  <div class="meldung" id="meldung" hidden>
+   <div class="kasten">
+    <h2 id="meldungTitel">Geschafft!</h2>
+    <p id="meldungText">Zeit: 0:00</p>
+    <button id="meldungKnopf">Neues Spiel</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="pad" id="pad"></div>
+
+ <div class="fuss">
+  <span id="hinweis">Zelle antippen, dann Zahl wählen.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Jede Zeile, jede Spalte und jeder der neun 3×3-Blöcke enthält die Zahlen 1 bis 9 genau einmal.</li>
+   <li><b>Bedienen:</b> Zelle antippen und unten eine Zahl wählen. Am PC gehen auch die Zahlentasten, die Pfeiltasten zum Wandern und die Rücktaste zum Löschen.</li>
+   <li><b>Notizen:</b> Mit dem Knopf „Notizen" schaltest du kleine Merkzahlen in den Zellen ein – gut zum Vorbereiten schwieriger Stellen.</li>
+   <li><b>Fehler:</b> Falsche Zahlen werden rot und mitgezählt. Sie lassen sich jederzeit überschreiben.</li>
+   <li><b>Hinweis:</b> Setzt eine richtige Zahl in die gewählte Zelle – jede Hilfe schlägt 30 Sekunden auf die Zeit.</li>
+   <li><b>Bestzeit:</b> Pro Schwierigkeit merkt sich der Browser die schnellste Lösung.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const brett=$("brett");
+const pad=$("pad");
+
+const STUFEN={
+ leicht:{geben:44,label:"Leicht"},
+ mittel:{geben:36,label:"Mittel"},
+ schwer:{geben:29,label:"Schwer"}
+};
+
+let loesung=[];        // vollständige Lösung als 81 Zahlen
+let werte=[];          // aktueller Stand
+let gegeben=[];        // true = vorgegeben
+let notizen=[];        // Array von Sets
+let gewaehlt=-1;
+let fehler=0;
+let sekunden=0;
+let timer=null;
+let notizModus=false;
+let geloest=false;
+let stufe="mittel";
+
+// ---------------------------------------------------------------- Sudoku-Kern
+
+function indexZeile(i){ return Math.floor(i/9); }
+function indexSpalte(i){ return i%9; }
+
+function moeglich(feld,i,zahl){
+ const z=indexZeile(i), s=indexSpalte(i);
+ for(let k=0;k<9;k++){
+  if(feld[z*9+k]===zahl)return false;
+  if(feld[k*9+s]===zahl)return false;
+ }
+ const bz=Math.floor(z/3)*3, bs=Math.floor(s/3)*3;
+ for(let dz=0;dz<3;dz++)for(let ds=0;ds<3;ds++){
+  if(feld[(bz+dz)*9+bs+ds]===zahl)return false;
+ }
+ return true;
+}
+
+function loesungenZaehlen(feld,grenze){
+ const leer=feld.indexOf(0);
+ if(leer<0)return 1;
+ let anzahl=0;
+ for(let zahl=1;zahl<=9;zahl++){
+  if(!moeglich(feld,leer,zahl))continue;
+  feld[leer]=zahl;
+  anzahl+=loesungenZaehlen(feld,grenze-anzahl);
+  feld[leer]=0;
+  if(anzahl>=grenze)break;
+ }
+ return anzahl;
+}
+
+function mische(liste){
+ for(let i=liste.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [liste[i],liste[j]]=[liste[j],liste[i]];
+ }
+ return liste;
+}
+
+function vollesFeld(){
+ const feld=new Array(81).fill(0);
+ (function fuellen(){
+  const leer=feld.indexOf(0);
+  if(leer<0)return true;
+  for(const zahl of mische([1,2,3,4,5,6,7,8,9])){
+   if(!moeglich(feld,leer,zahl))continue;
+   feld[leer]=zahl;
+   if(fuellen())return true;
+   feld[leer]=0;
+  }
+  return false;
+ })();
+ return feld;
+}
+
+function neuesRaster(anzahlGegeben){
+ const voll=vollesFeld();
+ const feld=voll.slice();
+ const plaetze=mische([...Array(81).keys()]);
+ let entfernt=81-anzahlGegeben;
+ for(const platz of plaetze){
+  if(entfernt<=0)break;
+  const alt=feld[platz];
+  if(alt===0)continue;
+  feld[platz]=0;
+  const probe=feld.slice();
+  if(loesungenZaehlen(probe,2)!==1){
+   feld[platz]=alt;
+  }else{
+   entfernt--;
+  }
+ }
+ return {loesung:voll,raetsel:feld};
+}
+
+// ---------------------------------------------------------------- Aufbau
+
+function zelleBauen(i){
+ const z=document.createElement("div");
+ z.className="zelle";
+ z.dataset.i=i;
+ if(indexSpalte(i)%3===2&&indexSpalte(i)<8)z.classList.add("rand-rechts");
+ if(indexZeile(i)%3===2&&indexZeile(i)<8)z.classList.add("rand-unten");
+ z.addEventListener("click",()=>waehlen(i));
+ return z;
+}
+
+function brettBauen(){
+ brett.innerHTML="";
+ for(let i=0;i<81;i++)brett.appendChild(zelleBauen(i));
+ pad.innerHTML="";
+ for(let zahl=1;zahl<=9;zahl++){
+  const b=document.createElement("button");
+  b.dataset.zahl=zahl;
+  b.innerHTML=zahl+'<span class="rest"></span>';
+  b.addEventListener("click",()=>zahlSetzen(zahl));
+  pad.appendChild(b);
+ }
+ const weg=document.createElement("button");
+ weg.textContent="✕";
+ weg.title="Löschen";
+ weg.addEventListener("click",()=>zahlLoeschen());
+ pad.appendChild(weg);
+}
+
+function zeichneZelle(i){
+ const el=brett.children[i];
+ const wert=werte[i];
+ el.className="zelle";
+ if(indexSpalte(i)%3===2&&indexSpalte(i)<8)el.classList.add("rand-rechts");
+ if(indexZeile(i)%3===2&&indexZeile(i)<8)el.classList.add("rand-unten");
+ if(gegeben[i])el.classList.add("gegeben");
+ if(gewaehlt>=0&&i!==gewaehlt){
+  const oz=indexZeile(gewaehlt), os=indexSpalte(gewaehlt);
+  const gleicheReihe=indexZeile(i)===oz;
+  const gleicheSpalte=indexSpalte(i)===os;
+  const gleicherBlock=Math.floor(indexZeile(i)/3)===Math.floor(oz/3)&&
+                      Math.floor(indexSpalte(i)/3)===Math.floor(os/3);
+  if(gleicheReihe||gleicheSpalte||gleicherBlock)el.classList.add("bereich");
+ }
+ if(gewaehlt===i)el.classList.add("gewaehlt");
+ else if(gewaehlt>=0&&wert&&wert===werte[gewaehlt])el.classList.add("gleich");
+ if(notizen[i]&&notizen[i].size&&!wert){
+  const kasten=document.createElement("div");
+  kasten.className="notizen";
+  for(let z=1;z<=9;z++){
+   const s=document.createElement("span");
+   s.textContent=notizen[i].has(z)?z:"";
+   kasten.appendChild(s);
+  }
+  el.innerHTML="";
+  el.appendChild(kasten);
+ }else{
+  el.textContent=wert?wert:"";
+ }
+}
+
+function zeichneAlles(){
+ for(let i=0;i<81;i++)zeichneZelle(i);
+ fehlerMarkieren();
+ zahlenRest();
+}
+
+function fehlerMarkieren(){
+ // Falsche Zahlen werden sofort rot markiert, Doppelbelegungen ebenfalls.
+ for(let i=0;i<81;i++){
+  if(!werte[i]||gegeben[i])continue;
+  if(werte[i]!==loesung[i])brett.children[i].classList.add("fehler");
+ }
+}
+
+function zahlenRest(){
+ for(const b of pad.querySelectorAll("button[data-zahl]")){
+  const zahl=Number(b.dataset.zahl);
+  const gesetzt=werte.filter(w=>w===zahl).length;
+  const rest=Math.max(0,9-gesetzt);
+  b.querySelector(".rest").textContent=rest?rest:"";
+  b.classList.toggle("leer",rest===0);
+ }
+}
+
+function freiZaehlen(){
+ let n=0;
+ for(let i=0;i<81;i++)if(!werte[i])n++;
+ return n;
+}
+
+function statusZeigen(){
+ $("fehler").textContent=fehler;
+ $("frei").textContent=freiZaehlen();
+}
+
+function zeitFormat(s){
+ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+}
+
+function bestzeitLaden(){
+ try{ return Number(localStorage.getItem("sudoku-best-"+stufe)||0); }catch(e){ return 0; }
+}
+
+function bestzeitZeigen(){
+ const b=bestzeitLaden();
+ $("bestzeit").textContent=b?zeitFormat(b):"–";
+}
+
+// ---------------------------------------------------------------- Spielen
+
+function neuesSpiel(){
+ const info=STUFEN[stufe];
+ const {loesung:voll,raetsel}=neuesRaster(info.geben);
+ loesung=voll;
+ werte=raetsel.slice();
+ gegeben=raetsel.map(w=>w!==0);
+ notizen=Array.from({length:81},()=>new Set());
+ gewaehlt=-1;
+ fehler=0;
+ sekunden=0;
+ geloest=false;
+ notizModus=false;
+ $("btnNotizen").classList.remove("aktiv");
+ $("meldung").hidden=true;
+ $("zeit").textContent="0:00";
+ $("hinweis").textContent="Zelle antippen, dann Zahl wählen.";
+ zeichneAlles();
+ statusZeigen();
+ bestzeitZeigen();
+ timerStarten();
+}
+
+function timerStarten(){
+ if(timer)clearInterval(timer);
+ timer=setInterval(()=>{
+  if(geloest)return;
+  sekunden++;
+  $("zeit").textContent=zeitFormat(sekunden);
+ },1000);
+}
+
+function waehlen(i){
+ gewaehlt=i;
+ zeichneAlles();
+}
+
+function zahlSetzen(zahl){
+ if(geloest)return;
+ if(gewaehlt<0){
+  $("hinweis").textContent="Erst eine Zelle antippen.";
+  return;
+ }
+ if(gegeben[gewaehlt]){
+  $("hinweis").textContent="Vorgegebene Zahlen lassen sich nicht ändern.";
+  return;
+ }
+ if(notizModus){
+  if(werte[gewaehlt]){
+   $("hinweis").textContent="Diese Zelle ist schon ausgefüllt.";
+   return;
+  }
+  if(notizen[gewaehlt].has(zahl))notizen[gewaehlt].delete(zahl);
+  else notizen[gewaehlt].add(zahl);
+  zeichneAlles();
+  return;
+ }
+ werte[gewaehlt]=zahl;
+ notizen[gewaehlt].clear();
+ if(zahl!==loesung[gewaehlt]){
+  fehler++;
+  $("hinweis").textContent="Diese Zahl stimmt hier nicht – rot markiert.";
+ }else{
+  $("hinweis").textContent="Zelle antippen, dann Zahl wählen.";
+ }
+ zeichneAlles();
+ statusZeigen();
+ pruefeFertig();
+}
+
+function zahlLoeschen(){
+ if(geloest||gewaehlt<0||gegeben[gewaehlt])return;
+ werte[gewaehlt]=0;
+ notizen[gewaehlt].clear();
+ zeichneAlles();
+ statusZeigen();
+}
+
+function hinweisGeben(){
+ if(geloest)return;
+ let ziel=gewaehlt;
+ if(ziel<0||gegeben[ziel]||werte[ziel]===loesung[ziel]){
+  const offen=[];
+  for(let i=0;i<81;i++)if(!gegeben[i]&&werte[i]!==loesung[i])offen.push(i);
+  if(!offen.length)return;
+  ziel=offen[Math.floor(Math.random()*offen.length)];
+ }
+ werte[ziel]=loesung[ziel];
+ notizen[ziel].clear();
+ gewaehlt=ziel;
+ sekunden+=30;
+ $("zeit").textContent=zeitFormat(sekunden);
+ brett.children[ziel].classList.add("hinweis");
+ zeichneAlles();
+ statusZeigen();
+ $("hinweis").textContent="Hinweis gesetzt (+30 Sekunden).";
+ pruefeFertig();
+}
+
+function pruefeFertig(){
+ const voll=werte.every((w,i)=>w===loesung[i]);
+ if(!voll)return;
+ geloest=true;
+ if(timer)clearInterval(timer);
+ const best=bestzeitLaden();
+ if(!best||sekunden<best){
+  try{ localStorage.setItem("sudoku-best-"+stufe,String(sekunden)); }catch(e){}
+  $("meldungTitel").textContent="Geschafft!";
+  $("meldungText").textContent="Neue Bestzeit für "+STUFEN[stufe].label+": "+zeitFormat(sekunden)+" · Fehler: "+fehler;
+ }else{
+  $("meldungTitel").textContent="Geschafft!";
+  $("meldungText").textContent="Zeit: "+zeitFormat(sekunden)+" · Fehler: "+fehler+" · Bestzeit: "+zeitFormat(best);
+ }
+ $("meldungKnopf").textContent="Neues Spiel";
+ $("meldung").hidden=false;
+ bestzeitZeigen();
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+$("btnNeu").onclick=neuesSpiel;
+$("stufe").onchange=()=>{ stufe=$("stufe").value; neuesSpiel(); };
+$("btnNotizen").onclick=()=>{
+ notizModus=!notizModus;
+ $("btnNotizen").classList.toggle("aktiv",notizModus);
+ $("hinweis").textContent=notizModus?"Notizen an – Zahlen werden nur klein vermerkt.":"Notizen aus.";
+};
+$("btnHinweis").onclick=hinweisGeben;
+$("meldungKnopf").onclick=neuesSpiel;
+
+window.addEventListener("keydown",e=>{
+ if(e.key>="1"&&e.key<="9"){ zahlSetzen(Number(e.key)); e.preventDefault(); return; }
+ if(e.key==="Backspace"||e.key==="Delete"){ zahlLoeschen(); e.preventDefault(); return; }
+ const pfeile={ArrowUp:-9,ArrowDown:9,ArrowLeft:-1,ArrowRight:1};
+ if(pfeile[e.key]!==undefined){
+  e.preventDefault();
+  if(gewaehlt<0){ waehlen(0); return; }
+  const z=indexZeile(gewaehlt), s=indexSpalte(gewaehlt);
+  let nz=z, ns=s;
+  if(e.key==="ArrowUp")nz=(z+8)%9;
+  if(e.key==="ArrowDown")nz=(z+1)%9;
+  if(e.key==="ArrowLeft")ns=(s+8)%9;
+  if(e.key==="ArrowRight")ns=(s+1)%9;
+  waehlen(nz*9+ns);
+ }
+});
+
+brettBauen();
+neuesSpiel();
+
+})();
+</script>
+</body>
+</html>

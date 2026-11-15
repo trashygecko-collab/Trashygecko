@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Pac-Man</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
+ gap:6px;justify-content:center;padding:8px 8px 4px;background:#08120f}
+.pad button{font-family:inherit;font-size:20px;border-radius:8px;cursor:pointer;
+ border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
+.pad button:active{background:#1e5645}
+.pad .oben{grid-column:2;grid-row:1}
+.pad .links{grid-column:1;grid-row:2}
+.pad .runter{grid-column:2;grid-row:2}
+.pad .rechts{grid-column:3;grid-row:2}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Pac-Man</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnPause">Pause</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Level <b id="level">1</b></span>
+  <span>Leben <b id="leben">●●●</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="380" height="420"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">PAC-MAN</h2>
+    <p id="meldungText">Alle Punkte fressen und den Geistern ausweichen. Kraftpillen machen die Geister für kurze Zeit essbar.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="pad">
+  <button class="oben" data-dir="hoch">▲</button>
+  <button class="links" data-dir="links">◀</button>
+  <button class="runter" data-dir="runter">▼</button>
+  <button class="rechts" data-dir="rechts">▶</button>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Wischen oder Pfeile: Pac-Man läuft in die Richtung.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Alle Punkte im Labyrinth fressen. Kleine Punkte geben 10, die großen Kraftpillen in den Ecken 50 Punkte.</li>
+   <li><b>Kraftpille:</b> Für etwa sieben Sekunden werden die Geister blau und lassen sich fressen – 200, 400, 800 und 1600 Punkte nacheinander.</li>
+   <li><b>Geister:</b> Vier Verfolger mit unterschiedlichen Wegen. Wer sie ohne Kraftpille berührt, verliert ein Leben. Drei Leben pro Spiel.</li>
+   <li><b>Steuern:</b> Mit dem Finger über das Feld wischen, das Pfeilfeld unter dem Brett benutzen oder am PC die Pfeiltasten drücken. Die Richtung wird vorgemerkt und beim nächsten Abzweig genommen.</li>
+   <li><b>Level:</b> Sind alle Punkte weg, geht es ein Level höher – die Geister werden etwas schneller.</li>
+   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const MAZE=[
+"###################",
+"#o...............o#",
+"#.###.###.###.###.#",
+"#.###.###.###.###.#",
+"#.###.###.###.###.#",
+"#.................#",
+"#.#######.#######.#",
+"#.#.............#.#",
+"#.#.#####.#####.#.#",
+"#.#.#### - ####.#.#",
+"#.#.####   ####.#.#",
+"#.#.####   ####.#.#",
+"#.#.###########.#.#",
+"#.................#",
+"#.#.#.###.###.#.#.#",
+"#.#.............#.#",
+"#.###.###.###.###.#",
+"#.................#",
+"#.#######.#######.#",
+"#o...............o#",
+"###################"
+];
+
+const SPALTEN=19, ZEILEN=21, Z=20;
+const W=SPALTEN*Z, H=ZEILEN*Z;
+canvas.width=W;
+canvas.height=H;
+
+const START={x:9,y:19};
+const HAUS_AUSGANG={x:9,y:8};
+const GEIST_START=[
+ {x:9,y:10,name:"Blinky",farbe:"#c2603f"},
+ {x:8,y:10,name:"Pinky",farbe:"#e8a7c0"},
+ {x:10,y:10,name:"Inky",farbe:"#4fb3a0"},
+ {x:9,y:11,name:"Clyde",farbe:"#d9bc7c"}
+];
+
+let zustand="start";       // start, laeuft, pause, tot, level, ende
+let punkte=0, level=1, leben=3;
+let pillen=[];             // 0 leer, 1 Punkt, 2 Kraftpille
+let offenePillen=0;
+let pac=null;
+let geister=[];
+let angstZeit=0;           // Restzeit Kraftpille
+let geisterKette=0;        // 200/400/800/1600
+let jagdZeit=0;            // Phase Jagd/Scheu
+let letzteZeit=0;
+let todesZeit=0;
+let mundPhase=0;
+let meldungAktiv=false;
+
+const richtungen={hoch:{x:0,y:-1},runter:{x:0,y:1},links:{x:-1,y:0},rechts:{x:1,y:0}};
+
+// ---------------------------------------------------------------- Kacheln
+
+function feldAt(x,y){
+ if(y<0||y>=ZEILEN||x<0||x>=SPALTEN)return "#";
+ return MAZE[y][x];
+}
+
+function begehbar(x,y,fuerGeist){
+ const c=feldAt(x,y);
+ if(c==="#")return false;
+ if(c==="-")return !!fuerGeist;      // Tor: nur Geister
+ return true;
+}
+
+function zentrum(x,y){ return {x:x*Z+Z/2,y:y*Z+Z/2}; }
+
+// ---------------------------------------------------------------- Aufbau
+
+function pillenLaden(){
+ pillen=[];
+ offenePillen=0;
+ for(let y=0;y<ZEILEN;y++){
+  const zeile=[];
+  for(let x=0;x<SPALTEN;x++){
+   const c=MAZE[y][x];
+   if(c==="."){ zeile.push(1); offenePillen++; }
+   else if(c==="o"){ zeile.push(2); offenePillen++; }
+   else zeile.push(0);
+  }
+  pillen.push(zeile);
+ }
+}
+
+function wesenNeu(x,y,dir){
+ const p=zentrum(x,y);
+ return {tx:x,ty:y,nx:x,ny:y,t:0,dir:dir?{...dir}:{x:0,y:0},px:p.x,py:p.y};
+}
+
+function pacNeu(){
+ pac=wesenNeu(START.x,START.y,{x:-1,y:0});
+ pac.dir={x:0,y:0};
+ pac.wunsch={x:0,y:0};
+ pac.x=pac.px;
+ pac.y=pac.py;
+}
+
+function geisterNeu(){
+ geister=GEIST_START.map((g,index)=>({
+  ...wesenNeu(g.x,g.y,{x:0,y:-1}),
+  name:g.name,
+  farbe:g.farbe,
+  heim:index===0?0:1+index,     // gestaffelte Freigabe in Sekunden
+  status:"haus",
+  x:zentrum(g.x,g.y).x,
+  y:zentrum(g.x,g.y).y
+ }));
+ /* Geschwindigkeiten: Index 0 ist der schnellste */
+ geister.forEach((g,i)=>{ g.tempo=5.2-i*0.18; });
+}
+
+function neuesSpiel(){
+ punkte=0; level=1; leben=3;
+ angstZeit=0; geisterKette=0; jagdZeit=0;
+ pillenLaden();
+ pacNeu();
+ geisterNeu();
+ zahlenZeigen();
+ $("rekord").textContent=rekordLaden();
+ zustand="start";
+ $("btnPause").textContent="Pause";
+ zeigeMeldung("PAC-MAN","Alle Punkte fressen und den Geistern ausweichen. Kraftpillen machen die Geister für kurze Zeit essbar.","Starten");
+ $("meldungKnopf").onclick=starten;
+ zeichne();
+}
+
+function levelStarten(neu){
+ if(neu){ level++; }
+ pillenLaden();
+ pacNeu();
+ geisterNeu();
+ angstZeit=0; geisterKette=0; jagdZeit=0;
+ zahlenZeigen();
+}
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ meldungAktiv=false;
+ letzteZeit=performance.now();
+ $("hinweis").textContent="Wischen oder Pfeile: Pac-Man läuft in die Richtung.";
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("pacman-rekord")||0); }catch(e){ return 0; }
+}
+function rekordPruefen(){
+ if(punkte>rekordLaden()){
+  try{ localStorage.setItem("pacman-rekord",String(punkte)); }catch(e){}
+  $("rekord").textContent=punkte;
+ }
+}
+function zahlenZeigen(){
+ $("punkte").textContent=punkte;
+ $("level").textContent=level;
+ $("leben").textContent="●".repeat(Math.max(0,leben))+"○".repeat(Math.max(0,3-leben));
+}
+
+// ---------------------------------------------------------------- Bewegung
+
+function tempoPac(){ return 6.1+Math.min(1.2,(level-1)*0.2); }
+function tempoGeist(g){
+ const basis=g.tempo+Math.min(1.4,(level-1)*0.18);
+ if(g.status==="heim")return 9;
+ if(angstZeit>0&&g.status!=="heim")return basis*0.62;
+ return basis;
+}
+
+function naechsteKachel(w){
+ // aus aktueller Kachel in Richtung weiter, wenn frei
+ const zx=w.tx+w.dir.x, zy=w.ty+w.dir.y;
+ if(w.dir.x===0&&w.dir.y===0)return null;
+ if(begehbar(zx,zy,false))return {x:zx,y:zy};
+ return null;
+}
+
+function bewegePac(dt){
+ const tempo=tempoPac();
+ const w=pac.wunsch;
+
+ // Umdrehen mitten auf dem Weg ist sofort erlaubt
+ if(w&&(w.x||w.y)&&(pac.dir.x||pac.dir.y)&&w.x===-pac.dir.x&&w.y===-pac.dir.y&&pac.t>0){
+  const otx=pac.tx, oty=pac.ty;
+  pac.tx=pac.nx; pac.ty=pac.ny;
+  pac.nx=otx;    pac.ny=oty;
+  pac.t=1-pac.t;
+  pac.dir={...w};
+  pac.wunsch={x:0,y:0};
+ }
+
+ if(pac.nx===pac.tx&&pac.ny===pac.ty){
+  const z=(w&&(w.x||w.y)&&begehbar(pac.tx+w.x,pac.ty+w.y,false))?w:pac.dir;
+  if(z&&(z.x||z.y)&&begehbar(pac.tx+z.x,pac.ty+z.y,false)){
+   pac.dir={...z};
+   if(z===w)pac.wunsch={x:0,y:0};
+   pac.nx=pac.tx+z.x;
+   pac.ny=pac.ty+z.y;
+  }else{
+   pac.dir={x:0,y:0};
+   pac.x=zentrum(pac.tx,pac.ty).x;
+   pac.y=zentrum(pac.tx,pac.ty).y;
+   return;
+  }
+ }
+
+ pac.t+=tempo*dt;
+ if(pac.t>=1){
+  pac.t-=1;
+  pac.tx=pac.nx;
+  pac.ty=pac.ny;
+  pac.nx=pac.tx;
+  pac.ny=pac.ty;
+  const w2=pac.wunsch;
+  let richtung={...pac.dir};
+  if(w2&&(w2.x||w2.y)&&begehbar(pac.tx+w2.x,pac.ty+w2.y,false)){
+   richtung={...w2};
+   pac.wunsch={x:0,y:0};
+  }
+  if(richtung.x||richtung.y){
+   if(begehbar(pac.tx+richtung.x,pac.ty+richtung.y,false)){
+    pac.dir=richtung;
+    pac.nx=pac.tx+richtung.x;
+    pac.ny=pac.ty+richtung.y;
+   }else{
+    pac.dir={x:0,y:0};
+   }
+  }
+ }
+ const a=zentrum(pac.tx,pac.ty), b=zentrum(pac.nx,pac.ny);
+ pac.x=a.x+(b.x-a.x)*pac.t;
+ pac.y=a.y+(b.y-a.y)*pac.t;
+ munchPruefen();
+}
+
+function bfsRichtung(vonX,vonY,zielX,zielY){
+ if(vonX===zielX&&vonY===zielY)return null;
+ const startKey=vonX+","+vonY;
+ const vorgaenger=new Map();
+ vorgaenger.set(startKey,null);
+ const schlange=[[vonX,vonY]];
+ let gefunden=false;
+ while(schlange.length){
+  const [x,y]=schlange.shift();
+  if(x===zielX&&y===zielY){ gefunden=true; break; }
+  for(const d of [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}]){
+   const nx=x+d.x, ny=y+d.y, key=nx+","+ny;
+   if(vorgaenger.has(key))continue;
+   if(!begehbar(nx,ny,true))continue;
+   if(nx<0||ny<0||nx>=SPALTEN||ny>=ZEILEN)continue;
+   vorgaenger.set(key,[x,y]);
+   schlange.push([nx,ny]);
+  }
+ }
+ if(!gefunden)return null;
+ const pfad=[[zielX,zielY]];
+ let cur=[zielX,zielY];
+ while(true){
+  const vor=vorgaenger.get(cur[0]+","+cur[1]);
+  if(!vor)break;
+  pfad.push(vor);
+  cur=vor;
+ }
+ pfad.reverse();
+ if(pfad.length<2)return null;
+ return {x:pfad[1][0]-vonX,y:pfad[1][1]-vonY};
+}
+
+function geistSchritt(g){
+ // Haus und Heimweg: sicherer Weg per Breitensuche
+ if(g.status==="heim"||g.status==="haus"){
+  const ziel=g.status==="heim"?{x:9,y:10}:HAUS_AUSGANG;
+  const d=bfsRichtung(g.tx,g.ty,ziel.x,ziel.y);
+  if(d){
+   g.dir={...d};
+   g.nx=g.tx+d.x;
+   g.ny=g.ty+d.y;
+   return;
+  }
+ }
+
+ // Ziel je nach Zustand
+ let ziel=null;
+ if(angstZeit>0){
+  ziel=null;
+ }else if(jagdZeit<18){
+  ziel={x:pac.tx,y:pac.ty};
+ }else{
+  ziel={x:1,y:1};
+ }
+
+ const optionen=[];
+ for(const k of ["hoch","links","runter","rechts"]){
+  const d=richtungen[k];
+  if(d.x===-g.dir.x&&d.y===-g.dir.y)continue;
+  if(!begehbar(g.tx+d.x,g.ty+d.y,true))continue;
+  optionen.push(d);
+ }
+ if(!optionen.length){
+  // Sackgasse: umdrehen
+  const d={x:-g.dir.x,y:-g.dir.y};
+  if(begehbar(g.tx+d.x,g.ty+d.y,true)||g.status==="haus")optionen.push(d);
+ }
+ if(!optionen.length)return;
+
+ let d;
+ if(!ziel||angstZeit>0&&g.status!=="heim"){
+  d=optionen[Math.floor(Math.random()*optionen.length)];
+ }else{
+  let best=Infinity;
+  optionen.forEach(k=>{
+   const ex=g.tx+k.x, ey=g.ty+k.y;
+   const abstand=Math.hypot(ex-ziel.x,ey-ziel.y);
+   if(abstand<best){ best=abstand; d=k; }
+  });
+ }
+ if(!d)d=optionen[0];
+ g.dir={...d};
+ g.nx=g.tx+d.x;
+ g.ny=g.ty+d.y;
+}
+
+function bewegeGeist(g,dt){
+ if(g.status==="haus"){
+  g.heim-=dt;
+  if(g.heim>0)return;
+ }
+ if(g.nx===g.tx&&g.ny===g.ty){
+  geistSchritt(g);
+ }
+ g.t+=tempoGeist(g)*dt;
+ while(g.t>=1){
+  g.t-=1;
+  g.tx=g.nx; g.ty=g.ny;
+  // angekommen?
+  if(g.status==="haus"&&g.tx===HAUS_AUSGANG.x&&g.ty===HAUS_AUSGANG.y){
+   g.status="jagd";
+  }
+  if(g.status==="heim"&&g.tx===9&&g.ty===10){
+   g.status="haus";
+   g.heim=0.6;
+  }
+  geistSchritt(g);
+  if(g.t>=1)continue;
+  break;
+ }
+ const a=zentrum(g.tx,g.ty), b=zentrum(g.nx,g.ny);
+ g.x=a.x+(b.x-a.x)*g.t;
+ g.y=a.y+(b.y-a.y)*g.t;
+}
+
+// ---------------------------------------------------------------- Regeln
+
+function munchPruefen(){
+ const x=pac.tx, y=pac.ty;
+ if(pac.t>0.35)return;
+ const feld=pillen[y]&&pillen[y][x];
+ if(!feld)return;
+ pillen[y][x]=0;
+ offenePillen--;
+ if(feld===2){
+  punkte+=50;
+  angstZeit=7;
+  geisterKette=0;
+ }else{
+  punkte+=10;
+ }
+ zahlenZeigen();
+ rekordPruefen();
+ if(offenePillen<=0)levelGeschafft();
+}
+
+function beruehrung(){
+ if(zustand!=="laeuft")return;
+ const abstand=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ geister.forEach(g=>{
+  if(abstand(g,pac)>Z*0.62)return;
+  if(g.status==="heim"||g.status==="haus")return;
+  if(angstZeit>0){
+   geisterKette=Math.min(3,geisterKette+1);
+   punkte+=200*Math.pow(2,geisterKette-1);
+   zahlenZeigen();
+   rekordPruefen();
+   g.status="heim";
+   g.dir={x:0,y:0};
+  }else{
+   sterben();
+  }
+ });
+}
+
+function sterben(){
+ zustand="tot";
+ todesZeit=1.1;
+ leben--;
+ zahlenZeigen();
+ $("hinweis").textContent="Erwischt – noch "+Math.max(0,leben)+" Leben.";
+}
+
+function nachTod(){
+ if(leben<=0){
+  zustand="ende";
+  rekordPruefen();
+  zeigeMeldung("GAME OVER","Punkte: "+punkte+" · Level "+level,"Nochmal");
+  $("meldungKnopf").onclick=neuesSpiel;
+  return;
+ }
+ pacNeu();
+ geisterNeu();
+ angstZeit=0;
+ zustand="laeuft";
+ letzteZeit=performance.now();
+}
+
+function levelGeschafft(){
+ zustand="level";
+ zahlenZeigen();
+ rekordPruefen();
+ const naechstes=level+1;
+ zeigeMeldung("Level "+level+" geschafft","Alle Punkte gefressen · Level "+naechstes+" wird schneller.","Weiter");
+ $("meldungKnopf").onclick=()=>{
+  $("meldung").hidden=true;
+  meldungAktiv=false;
+  levelStarten(true);
+  zustand="laeuft";
+  letzteZeit=performance.now();
+ };
+}
+
+// ---------------------------------------------------------------- Update
+
+function update(dt){
+ if(zustand==="tot"){
+  todesZeit-=dt;
+  if(todesZeit<=0)nachTod();
+  return;
+ }
+ if(zustand!=="laeuft")return;
+
+ if(angstZeit>0){
+  angstZeit-=dt;
+  if(angstZeit<=0){ angstZeit=0; geisterKette=0; }
+ }
+ jagdZeit=(jagdZeit+dt)%30;
+
+ bewegePac(dt);
+ geister.forEach(g=>bewegeGeist(g,dt));
+ beruehrung();
+ mundPhase+=dt;
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Hintergrund
+ ctx.fillStyle="#07130f";
+ ctx.fillRect(0,0,W,H);
+
+ // Labyrinth
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const c=MAZE[y][x];
+   if(c==="#"){
+    const g=ctx.createLinearGradient(x*Z,y*Z,x*Z,y*Z+Z);
+    g.addColorStop(0,"#1d5a49");
+    g.addColorStop(1,"#144336");
+    ctx.fillStyle=g;
+    ctx.fillRect(x*Z+1,y*Z+1,Z-2,Z-2);
+    ctx.strokeStyle="#d9bc7c33";
+    ctx.lineWidth=1;
+    ctx.strokeRect(x*Z+1.5,y*Z+1.5,Z-3,Z-3);
+   }else if(c==="-"){
+    ctx.fillStyle="#e8a7c0";
+    ctx.fillRect(x*Z+2,y*Z+Z/2-2,Z-4,4);
+   }
+  }
+ }
+
+ // Pillen
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const feld=pillen[y]&&pillen[y][x];
+   if(!feld)continue;
+   const c=zentrum(x,y);
+   if(feld===1){
+    ctx.fillStyle="#e8cd8e";
+    ctx.beginPath();
+    ctx.arc(c.x,c.y,2.2,0,Math.PI*2);
+    ctx.fill();
+   }else{
+    const puls=2+Math.sin(performance.now()/220)*1.4;
+    ctx.fillStyle="#f4e6c2";
+    ctx.beginPath();
+    ctx.arc(c.x,c.y,5+puls,0,Math.PI*2);
+    ctx.fill();
+   }
+  }
+ }
+
+ // Geister
+ geister.forEach(g=>{
+  const blau=angstZeit>0&&g.status!=="heim";
+  const r=Z*0.42;
+  ctx.beginPath();
+  ctx.arc(g.x,g.y-2,r,Math.PI,0);
+  ctx.lineTo(g.x+r,g.y+r*0.7);
+  // Wellensaum
+  const unten=g.y+r*0.7;
+  for(let i=0;i<3;i++){
+   const x1=g.x+r-(i*2*r/3);
+   ctx.quadraticCurveTo(x1-r/3,unten-r*0.5,x1-2*r/3,unten);
+  }
+  ctx.closePath();
+  ctx.fillStyle=g.status==="heim"?"#4a6b60":(blau?("#4f7fd9"):g.farbe);
+  ctx.fill();
+  ctx.strokeStyle="#07130f";
+  ctx.lineWidth=1;
+  ctx.stroke();
+
+  if(g.status!=="heim"){
+   // Augen
+   const dx=g.dir.x*1.6, dy=g.dir.y*1.6;
+   [-r*0.35,r*0.35].forEach(off=>{
+    ctx.fillStyle="#f7f3e6";
+    ctx.beginPath();
+    ctx.ellipse(g.x+off,g.y-2,2.9,3.2,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle=blau?"#0b241d":"#123a2a";
+    ctx.beginPath();
+    ctx.arc(g.x+off+dx,g.y-2+dy,1.5,0,Math.PI*2);
+    ctx.fill();
+   });
+  }
+ });
+
+ // Pac-Man
+ const radius=Z*0.46;
+ const offen=pac.dir.x||pac.dir.y?Math.abs(Math.sin(mundPhase*11))*0.55+0.08:0.35;
+ let winkel=0;
+ if(pac.dir.x>0)winkel=0;
+ else if(pac.dir.x<0)winkel=Math.PI;
+ else if(pac.dir.y>0)winkel=Math.PI/2;
+ else if(pac.dir.y<0)winkel=-Math.PI/2;
+ else winkel=0;
+ ctx.fillStyle="#e8cd8e";
+ ctx.beginPath();
+ ctx.moveTo(pac.x,pac.y);
+ ctx.arc(pac.x,pac.y,radius,winkel+offen,winkel-offen+Math.PI*2);
+ ctx.closePath();
+ ctx.fill();
+ ctx.strokeStyle="#7a5a1c";
+ ctx.lineWidth=1;
+ ctx.stroke();
+
+ // Todesblitz / Lebensverlust
+ if(zustand==="tot"){
+  ctx.fillStyle="rgba(194,96,63,"+Math.min(0.55,todesZeit*0.6)+")";
+  ctx.fillRect(0,0,W,H);
+ }
+
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+}
+
+// ---------------------------------------------------------------- Meldung
+
+function zeigeMeldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+ meldungAktiv=true;
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeitJetzt){
+ const dt=Math.min(0.05,(zeitJetzt-letzteZeit)/1000||0.016);
+ letzteZeit=zeitJetzt;
+ update(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+function richtungWunsch(d){
+ if(zustand==="start"){ starten(); }
+ if(zustand!=="laeuft")return;
+ pac.wunsch={...d};
+}
+
+let wischStart=null;
+canvas.addEventListener("pointerdown",e=>{ wischStart={x:e.clientX,y:e.clientY}; e.preventDefault(); });
+canvas.addEventListener("pointerup",e=>{
+ if(!wischStart)return;
+ const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
+ wischStart=null;
+ if(Math.hypot(dx,dy)<14){ if(zustand==="start")starten(); return; }
+ if(Math.abs(dx)>Math.abs(dy))richtungWunsch(dx>0?richtungen.rechts:richtungen.links);
+ else richtungWunsch(dy>0?richtungen.runter:richtungen.hoch);
+ e.preventDefault();
+});
+canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
+
+document.querySelectorAll(".pad button").forEach(knopf=>{
+ knopf.addEventListener("click",()=>{
+  const d=knopf.dataset.dir;
+  richtungWunsch(richtungen[d]);
+ });
+});
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(k==="ArrowUp"||k==="w"||k==="W"){ e.preventDefault(); richtungWunsch(richtungen.hoch); }
+ else if(k==="ArrowDown"||k==="s"||k==="S"){ e.preventDefault(); richtungWunsch(richtungen.runter); }
+ else if(k==="ArrowLeft"||k==="a"||k==="A"){ e.preventDefault(); richtungWunsch(richtungen.links); }
+ else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); richtungWunsch(richtungen.rechts); }
+ else if(k===" "){ e.preventDefault(); if(zustand==="start")starten(); }
+});
+
+$("btnNeu").onclick=neuesSpiel;
+$("btnPause").onclick=()=>{
+ if(zustand==="laeuft"){
+  zustand="pause";
+  $("btnPause").textContent="Weiter";
+  $("hinweis").textContent="Pause – tippe auf Weiter.";
+ }else if(zustand==="pause"){
+  zustand="laeuft";
+  $("btnPause").textContent="Pause";
+  letzteZeit=performance.now();
+  $("hinweis").textContent="Wischen oder Pfeile: Pac-Man läuft in die Richtung.";
+ }
+};
+
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+})();
+</script>
+</body>
+</html>

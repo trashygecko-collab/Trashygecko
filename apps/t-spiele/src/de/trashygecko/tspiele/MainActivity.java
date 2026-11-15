@@ -9,12 +9,18 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * T.Spiele zeigt zwei Wege: oben den Connector mit Chat und Spielen, darunter
@@ -43,6 +49,19 @@ public class MainActivity extends Activity {
     private static final float PHI = 1.618f;
 
     private float dichte;
+
+    /** Zeile in der Mitte, die Datum und Uhrzeit im Spruch mitführt. */
+    private TextView uhr;
+
+    /** Taktgeber: einmal pro Sekunde den Spruch neu schreiben. */
+    private final Handler takt = new Handler(Looper.getMainLooper());
+    private final Runnable ticker = new Runnable() {
+        @Override
+        public void run() {
+            zeigeZeit();
+            takt.postDelayed(this, 1000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle zustand) {
@@ -88,9 +107,21 @@ public class MainActivity extends Activity {
 
         seite.addView(knopf("Connector öffnen", "Chat und alle Spiele", CONNECTOR));
 
-        // Abstand der beiden Wege: 34 dp, die Luft nach unten ist gut halb so groß.
+        // In der Mitte zwischen den beiden Wegen steht der Spruch mit Datum
+        // und Uhrzeit – die Luft darüber und darunter hält sie auseinander.
         seite.addView(new View(this), new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, px(34)));
+                LinearLayout.LayoutParams.MATCH_PARENT, px(22)));
+
+        uhr = schrift("", 0xFFE3D6B8, 13, 0.02f, Typeface.ITALIC);
+        uhr.setLineSpacing(px(4), 1f);
+        uhr.setPadding(px(6), 0, px(6), 0);
+        seite.addView(uhr, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        zeigeZeit();
+
+        seite.addView(new View(this), new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, px(22)));
 
         seite.addView(knopf("Meine Homepage", "", HOMEPAGE));
 
@@ -98,6 +129,32 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f / PHI));
 
         setContentView(seite);
+    }
+
+    /** Zeilenumbruch im Spruch – als Escape, damit die Datei lesbar bleibt. */
+    private static final String NL = "\n";
+
+    /** Schreibt den Spruch mit dem heutigen Datum und der aktuellen Uhrzeit. */
+    private void zeigeZeit() {
+        if (uhr == null) return;
+        Date jetzt = new Date();
+        String datum = new SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMAN).format(jetzt);
+        String zeit = new SimpleDateFormat("HH:mm", Locale.GERMAN).format(jetzt);
+        uhr.setText("Wenn die Zeiger am " + datum + " auf " + zeit + " Uhr stehen," + NL
+                + "erwacht unser Spiel zum Leben." + NL
+                + "Jetzt treffen sich Taktik, Glück und gute Laune.");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        takt.post(ticker);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        takt.removeCallbacks(ticker);
     }
 
     /** Ab Android 13 muss man Benachrichtigungen ausdrücklich erlauben. */

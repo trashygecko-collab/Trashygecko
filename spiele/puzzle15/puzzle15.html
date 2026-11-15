@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>15-Puzzle</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;background:#08120f}
+.brett{position:relative;width:100%;max-width:440px;aspect-ratio:1;margin:auto;
+ background:#0a1f19;border:1px solid #d9bc7c33;border-radius:10px;overflow:hidden}
+.platte{position:absolute;display:flex;align-items:center;justify-content:center;
+ border:1px solid #d9bc7c66;border-radius:8px;padding:0;margin:0;
+ background:linear-gradient(#1c5241,#11342a);color:#f1dca8;
+ font-family:inherit;cursor:pointer;
+ transition:left .16s ease,top .16s ease,background .2s,border-color .2s;
+ box-shadow:inset 0 1px 0 #ffffff1a}
+.platte:hover{background:linear-gradient(#22624e,#154034)}
+.platte.richtig{border-color:#e8cd8e;color:#fff3d2;box-shadow:inset 0 0 10px #e8cd8e33}
+.platte.leer{display:none}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">15-Puzzle</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btn3">3×3</button>
+  <button id="btn4" class="aktiv">4×4</button>
+  <button id="btn5">5×5</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Züge <b id="zuege">0</b></span>
+  <span>Zeit <b id="zeit">0:00</b></span>
+  <span>Rekord <b id="rekord">–</b></span>
+ </div>
+
+ <div class="buehne">
+  <div class="brett" id="brett"></div>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">15-PUZZLE</h2>
+    <p id="meldungText">Schiebe die Platten, bis die Zahlen von 1 bis 15 der Reihe nach liegen und das Loch unten rechts ist.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Eine Platte antippen, die neben dem Loch liegt – sie rutscht hinein.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Die Platten so schieben, dass 1 bis 15 in der richtigen Reihenfolge liegen – das Loch gehört in die Ecke unten rechts.</li>
+   <li><b>Zug:</b> Nur Platten, die waagerecht oder senkrecht direkt neben dem Loch liegen, lassen sich hineinschieben.</li>
+   <li><b>Mischen:</b> Das Brett wird durch echte Züge gemischt – jede Aufgabe ist also lösbar.</li>
+   <li><b>Zeit:</b> Sie läuft ab dem ersten Zug und stoppt, wenn das Bild sitzt.</li>
+   <li><b>Rekord:</b> Die wenigsten Züge werden für jede Größe getrennt gemerkt.</li>
+   <li><b>Hilfe:</b> Platten, die schon richtig liegen, haben einen goldenen Rand.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const brett=$("brett");
+
+const STUFEN={
+ drei:{n:3,key:"puzzle15-best-3"},
+ vier:{n:4,key:"puzzle15-best-4"},
+ fuenf:{n:5,key:"puzzle15-best-5"}
+};
+
+let stufe="vier";
+let n=4;
+let feld=[];          // feld[index] = Zahl (1..n²-1) oder 0 für das Loch
+let plaetten=[];      // DOM-Elemente je Index
+let zuege=0;
+let startZeit=0, laeuft=false, uhrTimer=0;
+let fertig=false;
+
+// ------------------------------------------------------------------ Aufbau
+function neuesSpiel(){
+ n=STUFEN[stufe].n;
+ feld=Array.from({length:n*n},(_,i)=>(i===n*n-1?0:i+1));
+ mischen();
+ zuege=0; fertig=false; laeuft=false;
+ clearInterval(uhrTimer);
+ $("zuege").textContent="0";
+ $("zeit").textContent="0:00";
+ meldungZu();
+ baue();
+ zeigeRekord();
+ $("hinweis").textContent="Eine Platte antippen, die neben dem Loch liegt – sie rutscht hinein.";
+}
+
+/** Mischt durch echte Züge – so bleibt jede Aufgabe lösbar. */
+function mischen(){
+ const wieviele=n*n*14;
+ let letzte=-1;
+ for(let i=0;i<wieviele;i++){
+  const loch=feld.indexOf(0);
+  const moeglich=[]; 
+  const z=Math.floor(loch/n), s=loch%n;
+  if(z>0)moeglich.push(loch-n);
+  if(z<n-1)moeglich.push(loch+n);
+  if(s>0)moeglich.push(loch-1);
+  if(s<n-1)moeglich.push(loch+1);
+  const auswahl=moeglich.filter(k=>k!==letzte);
+  const ziel=auswahl[Math.floor(Math.random()*auswahl.length)];
+  feld[loch]=feld[ziel]; feld[ziel]=0;
+  letzte=loch;
+ }
+ // Nicht schon gelöst dastehen
+ if(geloest())mischen();
+}
+
+function geloest(){
+ for(let i=0;i<n*n-1;i++)if(feld[i]!==i+1)return false;
+ return feld[n*n-1]===0;
+}
+
+function baue(){
+ brett.replaceChildren();
+ plaetten=[];
+ const zelle=100/n;
+ for(let i=0;i<n*n;i++){
+  const wert=feld[i];
+  const el=document.createElement("button");
+  el.type="button";
+  el.className="platte"+(wert===0?" leer":"");
+  el.dataset.index=i;
+  el.textContent=wert===0?"":String(wert);
+  el.style.width=(zelle-2)+"%";
+  el.style.height=(zelle-2)+"%";
+  el.style.left=((i%n)*zelle+1)+"%";
+  el.style.top=(Math.floor(i/n)*zelle+1)+"%";
+  el.style.fontSize=Math.max(14,Math.round(brett.clientWidth/n*0.42))+"px";
+  if(wert!==0&&wert===i+1)el.classList.add("richtig");
+  brett.appendChild(el);
+  plaetten.push(el);
+ }
+}
+
+function setzePositionen(){
+ const zelle=100/n;
+ for(let i=0;i<n*n;i++){
+  const el=plaetten[i];
+  if(!el)continue;
+  el.style.left=((i%n)*zelle+1)+"%";
+  el.style.top=(Math.floor(i/n)*zelle+1)+"%";
+  el.style.fontSize=Math.max(14,Math.round(brett.clientWidth/n*0.42))+"px";
+  el.classList.toggle("richtig",feld[i]!==0&&feld[i]===i+1);
+ }
+}
+
+// ------------------------------------------------------------------ Ziehen
+function zug(index){
+ if(fertig)return;
+ const loch=feld.indexOf(0);
+ const z=Math.floor(index/n), s=index%n;
+ const lz=Math.floor(loch/n), ls=loch%n;
+ const nachbar=(Math.abs(z-lz)+Math.abs(s-ls))===1;
+ if(!nachbar){
+  const el=plaetten[index];
+  if(el){ el.animate?el.animate([{transform:"translateX(0)"},{transform:"translateX(-2px)"},{transform:"translateX(2px)"},{transform:"translateX(0)"}],{duration:180}):0; }
+  $("hinweis").textContent="Diese Platte liegt nicht neben dem Loch.";
+  return;
+ }
+ feld[loch]=feld[index];
+ feld[index]=0;
+ zuege++;
+ $("zuege").textContent=zuege;
+ if(!laeuft){
+  laeuft=true; startZeit=Date.now();
+  clearInterval(uhrTimer);
+  uhrTimer=setInterval(zeigeZeit,200);
+ }
+ setzePositionen();
+ if(geloest())gewonnen();
+}
+
+function zeigeZeit(){
+ if(!laeuft)return;
+ const s=Math.floor((Date.now()-startZeit)/1000);
+ $("zeit").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+}
+
+function gewonnen(){
+ fertig=true; laeuft=false;
+ clearInterval(uhrTimer);
+ zeigeZeit();
+ const sekunden=Math.floor((Date.now()-startZeit)/1000);
+ const zeitText=Math.floor(sekunden/60)+":"+String(sekunden%60).padStart(2,"0");
+ const key=STUFEN[stufe].key;
+ const alt=Number(localStorage.getItem(key)||0);
+ let zusatz="";
+ if(alt===0||zuege<alt){
+  try{ localStorage.setItem(key,String(zuege)); }catch(e){}
+  zusatz=" Neuer Rekord!";
+ }
+ zeigeRekord();
+ meldung("GESCHAFFT","Alle Platten sitzen: "+zuege+" Züge in "+zeitText+"."+zusatz,"Noch einmal");
+}
+
+function zeigeRekord(){
+ const wert=Number(localStorage.getItem(STUFEN[stufe].key)||0);
+ $("rekord").textContent=wert>0?wert+" Züge":"–";
+}
+
+// ------------------------------------------------------------------ Meldung
+function meldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+function meldungZu(){ $("meldung").hidden=true; }
+
+// ------------------------------------------------------------------ Bedienung
+brett.addEventListener("click",e=>{
+ const el=e.target.closest(".platte");
+ if(!el)return;
+ zug(Number(el.dataset.index));
+});
+
+$("btnNeu").onclick=()=>neuesSpiel();
+$("meldungKnopf").onclick=()=>neuesSpiel();
+
+function stufeWaehlen(name,id){
+ if(stufe===name)return;
+ stufe=name;
+ ["btn3","btn4","btn5"].forEach(k=>$(k).classList.remove("aktiv"));
+ $(id).classList.add("aktiv");
+ neuesSpiel();
+}
+$("btn3").onclick=()=>stufeWaehlen("drei","btn3");
+$("btn4").onclick=()=>stufeWaehlen("vier","btn4");
+$("btn5").onclick=()=>stufeWaehlen("fuenf","btn5");
+
+window.addEventListener("resize",()=>{ setzePositionen(); });
+window.addEventListener("keydown",e=>{
+ if(e.key===" "&&!$("meldung").hidden){ $("meldungKnopf").click(); e.preventDefault(); }
+});
+
+neuesSpiel();
+})();
+</script>
+</body>
+</html>

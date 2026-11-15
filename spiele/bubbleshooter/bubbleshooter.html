@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Bubble Shooter</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;align-items:flex-start;
+ gap:6px;background:#08120f}
+.buehne canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+.buehne.duell canvas{max-width:196px;border-radius:6px}
+.brettwrap{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 0;max-width:400px}
+.buehne.duell .brettwrap{max-width:196px}
+.brettkopf{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:#a9c3b6;padding:0 2px}
+.brettkopf b{color:#e8cd8e;font-weight:normal}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Bubble Shooter</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnSolo" class="aktiv">1 Spieler</button>
+  <button id="btnDuell">2 Spieler</button>
+ </div>
+
+ <div class="statuszeile">
+  <span id="statusLinks">Punkte <b id="punkte">0</b></span>
+  <span id="statusRechts">Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne" id="buehne">
+  <div class="brettwrap" id="wrap1">
+   <div class="brettkopf" id="kopf1" hidden><span>Spieler 1</span><b id="k1">0</b></div>
+   <canvas id="feld1"></canvas>
+  </div>
+  <div class="brettwrap" id="wrap2" hidden>
+   <div class="brettkopf" id="kopf2"><span>Spieler 2</span><b id="k2">0</b></div>
+   <canvas id="feld2"></canvas>
+  </div>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">BUBBLE SHOOTER</h2>
+    <p id="meldungText">Ziele mit dem Finger und schieße Kugeln in die Reihen. Drei gleiche Farben platzen.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Finger aufs Feld setzen: Zielen und schießen.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Mit möglichst wenigen Schüssen das Feld leer räumen. Drei oder mehr Kugeln gleicher Farbe platzen.</li>
+   <li><b>Zielen:</b> Finger oder Maus ins Feld setzen – die Ziellinie zeigt den Weg samt Abpraller an der Wand. Tippen oder klicken schießt.</li>
+   <li><b>Absturz:</b> Kugeln, die nach dem Platzen keinen Halt mehr an der Decke haben, fallen herunter und bringen Extrapunkte.</li>
+   <li><b>Nachschub:</b> Nach je acht Schüssen schiebt sich oben eine neue Reihe nach. Berührt eine Kugel die goldene Linie, ist das Spiel vorbei.</li>
+   <li><b>Tasten:</b> Pfeiltasten links/rechts zielen, Leertaste oder Pfeil nach oben schießt.</li>
+   <li><b>Zwei Spieler:</b> Jeder hat sein eigenes Feld. Wer zuerst die goldene Linie überschreitet, verliert – der andere gewinnt.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+
+const FARBEN=["#4fb3a0","#e8cd8e","#6f9fd8","#d98b8b","#a58bd8"];
+const TEMPO=8.5;          // Kugelgeschwindigkeit pro Frame
+const WINKEL_MAX=1.32;    // maximale Neigung in Radiant
+
+// ---------------------------------------------------------------- Hilfen
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function mulberry32(a){
+ return function(){
+  a|=0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296;
+ };
+}
+
+function hell(hex,t){
+ const n=parseInt(hex.slice(1),16), r=n>>16, g=(n>>8)&255, b=n&255;
+ return "rgb("+Math.round(r+(255-r)*t)+","+Math.round(g+(255-g)*t)+","+Math.round(b+(255-b)*t)+")";
+}
+function dunkel(hex,t){
+ const n=parseInt(hex.slice(1),16), r=n>>16, g=(n>>8)&255, b=n&255;
+ return "rgb("+Math.round(r*(1-t))+","+Math.round(g*(1-t))+","+Math.round(b*(1-t))+")";
+}
+
+// ---------------------------------------------------------------- Spielbrett
+
+function Brett(canvas,opt){
+ const ctx=canvas.getContext("2d");
+ const W=opt.W, H=opt.H, R=opt.R;
+ canvas.width=W;
+ canvas.height=H;
+
+ const SP=Math.floor((W-2)/(2*R));       // Spalten pro Reihe
+ const RH=R*Math.sqrt(3);                // Reihenhöhe im Sechseckraster
+ const TOD=H-opt.tod;                    // goldene Linie
+ const SCHUSS_Y=H-26;
+ const FARBENZAHL=opt.farben;
+
+ let feld=[];              // [{v:0|1, z:[farbe|null,...]}, ...]
+ let zufall=mulberry32(1);
+ let zustand="start";
+ let punkte=0;
+ let schuss=null;
+ let aktuell=0, naechste=0;
+ let winkel=0;
+ let schuesse=0;
+ let reihenBisNeu=opt.reihenBisNeu;
+ let aufPunkte=opt.onPunkte||function(){};
+ let aufEnde=opt.onEnde||function(){};
+
+ const zufallsFarbe=()=>Math.floor(zufall()*FARBENZAHL);
+
+ // Versatz einer Reihe; unterhalb des Rasters gibt es eine gedachte neue Reihe
+ function reihenV(r){
+  if(r<feld.length)return feld[r].v;
+  return feld.length?1-feld[feld.length-1].v:0;
+ }
+ function zelleX(r,c){ return R+2*R*c+(reihenV(r)?R:0); }
+ function zelleY(r){ return R+RH*r; }
+
+ function nachbarn(r,c){
+  const liste=[];
+  const v=reihenV(r);
+  const dr=[[-1,v?0:-1],[-1,v?1:0],[0,-1],[0,1],[1,v?0:-1],[1,v?1:0]];
+  dr.forEach(([dr2,dc])=>{
+   const rr=r+dr2, cc=c+dc;
+   if(rr<0||rr>feld.length)return;
+   if(cc<0||cc>=SP)return;
+   liste.push([rr,cc]);
+  });
+  return liste;
+ }
+
+ function kugelBei(r,c){ return feld[r]&&feld[r].z[c]!=null; }
+
+ function neu(){
+  zufall=mulberry32(opt.seed||7);
+  feld=[];
+  for(let r=0;r<opt.reihen;r++){
+   const z=new Array(SP).fill(null);
+   for(let c=0;c<SP;c++)z[c]=zufallsFarbe();
+   feld.push({v:r%2, z});
+  }
+  punkte=0;
+  schuss=null;
+  schuesse=0;
+  winkel=0;
+  zustand="start";
+  aktuell=zufallsFarbe();
+  naechste=zufallsFarbe();
+  aufPunkte(punkte);
+  zeichne();
+ }
+
+ function los(){
+  zustand="laeuft";
+ }
+
+ function zielen(cx,cy){
+  const dx=cx-W/2, dy=SCHUSS_Y-cy;
+  if(dy<=4&&Math.abs(dx)<6)winkel=0;
+  else winkel=Math.max(-WINKEL_MAX,Math.min(WINKEL_MAX,Math.atan2(dx,Math.max(6,dy))));
+ }
+
+ function winkelAendern(d){
+  winkel=Math.max(-WINKEL_MAX,Math.min(WINKEL_MAX,winkel+d));
+ }
+
+ function schiessen(){
+  if(zustand!=="laeuft"||schuss)return;
+  schuss={
+   x:W/2, y:SCHUSS_Y-R,
+   vx:Math.sin(winkel)*TEMPO,
+   vy:-Math.cos(winkel)*TEMPO,
+   farbe:aktuell
+  };
+  aktuell=naechste;
+  naechste=zufallsFarbe();
+  schuesse++;
+ }
+
+ function freieZellen(){
+  const set=new Map();
+  let hatKugel=false;
+  for(let r=0;r<feld.length;r++){
+   for(let c=0;c<SP;c++){
+    if(!kugelBei(r,c))continue;
+    hatKugel=true;
+    nachbarn(r,c).forEach(([rr,cc])=>{
+     if(!kugelBei(rr,cc))set.set(rr+"_"+cc,[rr,cc]);
+    });
+   }
+  }
+  if(!hatKugel){
+   if(!feld.length)feld.push({v:0,z:new Array(SP).fill(null)});
+   for(let c=0;c<SP;c++)set.set("0_"+c,[0,c]);
+  }
+  return [...set.values()];
+ }
+
+ function anhaengen(x,y){
+  const farbe=schuss.farbe;
+  const kandidaten=freieZellen();
+  let beste=null, bestD=Infinity;
+  kandidaten.forEach(([r,c])=>{
+   const dx=zelleX(r,c)-x, dy=zelleY(r)-y;
+   const d=dx*dx+dy*dy;
+   if(d<bestD){ bestD=d; beste=[r,c]; }
+  });
+  schuss=null;
+  if(!beste)return;
+  const [r,c]=beste;
+  if(r>=feld.length)feld.push({v:reihenV(r),z:new Array(SP).fill(null)});
+  feld[r].z[c]=farbe;
+  pruefen(r,c);
+ }
+
+ function gleiche(r,c){
+  const farbe=feld[r].z[c];
+  if(farbe==null)return [];
+  const gesehen=new Set([r+"_"+c]);
+  const stapel=[[r,c]];
+  const treffer=[];
+  while(stapel.length){
+   const [rr,cc]=stapel.pop();
+   treffer.push([rr,cc]);
+   nachbarn(rr,cc).forEach(([r2,c2])=>{
+    const k=r2+"_"+c2;
+    if(gesehen.has(k))return;
+    if(!kugelBei(r2,c2))return;
+    if(feld[r2].z[c2]!==farbe)return;
+    gesehen.add(k);
+    stapel.push([r2,c2]);
+   });
+  }
+  return treffer;
+ }
+
+ function schwebende(){
+  const erreichbar=new Set();
+  const stapel=[];
+  for(let c=0;c<SP;c++){
+   if(kugelBei(0,c)){ erreichbar.add("0_"+c); stapel.push([0,c]); }
+  }
+  while(stapel.length){
+   const [r,c]=stapel.pop();
+   nachbarn(r,c).forEach(([r2,c2])=>{
+    const k=r2+"_"+c2;
+    if(erreichbar.has(k)||!kugelBei(r2,c2))return;
+    erreichbar.add(k);
+    stapel.push([r2,c2]);
+   });
+  }
+  const weg=[];
+  for(let r=0;r<feld.length;r++){
+   for(let c=0;c<SP;c++){
+    if(!kugelBei(r,c))continue;
+    if(!erreichbar.has(r+"_"+c))weg.push([r,c]);
+   }
+  }
+  return weg;
+ }
+
+ function pruefen(r,c){
+  const gruppe=gleiche(r,c);
+  if(gruppe.length>=3){
+   gruppe.forEach(([rr,cc])=>{ feld[rr].z[cc]=null; });
+   punkte+=10*gruppe.length;
+   schwebende().forEach(([rr,cc])=>{
+    if(feld[rr].z[cc]==null)return;
+    feld[rr].z[cc]=null;
+    punkte+=20;
+   });
+  }
+  aufPunkte(punkte);
+  pruefeEnde();
+ }
+
+ function pruefeEnde(){
+  for(let r=0;r<feld.length;r++){
+   for(let c=0;c<SP;c++){
+    if(!kugelBei(r,c))continue;
+    if(zelleY(r)+R>=TOD){ ende(); return; }
+   }
+  }
+ }
+
+ function neueReihe(){
+  const v=feld.length?1-feld[0].v:0;
+  const z=new Array(SP).fill(null);
+  for(let c=0;c<SP;c++)z[c]=zufallsFarbe();
+  feld.unshift({v,z});
+  pruefeEnde();
+ }
+
+ function bewegen(){
+  const schritte=Math.max(1,Math.ceil(Math.hypot(schuss.vx,schuss.vy)/3));
+  const sx=schuss.vx/schritte, sy=schuss.vy/schritte;
+  for(let i=0;i<schritte;i++){
+   schuss.x+=sx;
+   schuss.y+=sy;
+   if(schuss.x<R+1){ schuss.x=R+1; schuss.vx=Math.abs(schuss.vx); }
+   if(schuss.x>W-R-1){ schuss.x=W-R-1; schuss.vx=-Math.abs(schuss.vx); }
+   if(schuss.y<=R+1){ anhaengen(schuss.x,schuss.y); return; }
+   if(trifftKugel(schuss.x,schuss.y)){ anhaengen(schuss.x,schuss.y); return; }
+  }
+ }
+
+ function trifftKugel(x,y){
+  for(let r=0;r<feld.length;r++){
+   for(let c=0;c<SP;c++){
+    if(!kugelBei(r,c))continue;
+    const dx=zelleX(r,c)-x, dy=zelleY(r)-y;
+    if(dx*dx+dy*dy<R*R*3.1)return true;
+   }
+  }
+  return false;
+ }
+
+ function schritt(){
+  if(zustand!=="laeuft")return;
+  if(schuss)bewegen();
+  else if(schuesse>=reihenBisNeu){ schuesse=0; neueReihe(); }
+ }
+
+ function ende(){
+  if(zustand!=="laeuft")return;
+  zustand="ende";
+  aufEnde(punkte);
+ }
+
+ function zielLinie(){
+  // simulierte Flugbahn für die Ziellinie
+  let x=W/2, y=SCHUSS_Y-R;
+  let vx=Math.sin(winkel)*6, vy=-Math.cos(winkel)*6;
+  const punkte=[];
+  let schutz=0;
+  while(schutz<260){
+   schutz++;
+   x+=vx; y+=vy;
+   if(x<R+1){ x=R+1; vx=Math.abs(vx); }
+   if(x>W-R-1){ x=W-R-1; vx=-Math.abs(vx); }
+   punkte.push([x,y]);
+   if(y<R+1)break;
+   let treffer=false;
+   for(let r=0;r<feld.length&&!treffer;r++){
+    for(let c=0;c<SP;c++){
+     if(!kugelBei(r,c))continue;
+     const dx=zelleX(r,c)-x, dy=zelleY(r)-y;
+     if(dx*dx+dy*dy<R*R*3.1){ treffer=true; break; }
+    }
+   }
+   if(treffer)break;
+  }
+  return punkte;
+ }
+
+ function kugel(x,y,rr,farbe){
+  const g=ctx.createRadialGradient(x-rr*0.35,y-rr*0.4,rr*0.12,x,y,rr*1.05);
+  g.addColorStop(0,hell(farbe,0.55));
+  g.addColorStop(.58,farbe);
+  g.addColorStop(1,dunkel(farbe,0.5));
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.arc(x,y,rr,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle="#06141088";
+  ctx.lineWidth=1.4;
+  ctx.stroke();
+  ctx.fillStyle="#ffffff55";
+  ctx.beginPath();
+  ctx.arc(x-rr*0.32,y-rr*0.38,rr*0.22,0,Math.PI*2);
+  ctx.fill();
+ }
+
+ function zeichne(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#123f31");
+  g.addColorStop(.6,"#0c2c23");
+  g.addColorStop(1,"#071912");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+
+  // Sterne
+  ctx.fillStyle="#ffffff0d";
+  for(let i=0;i<26;i++)ctx.fillRect((i*79)%W,(i*137)%(H-120),2,2);
+
+  // Ziellinie
+  if(zustand==="laeuft"){
+   const linie=zielLinie();
+   ctx.save();
+   ctx.setLineDash([5,7]);
+   ctx.strokeStyle="#e8cd8ecc";
+   ctx.lineWidth=2;
+   ctx.beginPath();
+   for(let i=0;i<linie.length;i+=2){
+    const [x,y]=linie[i];
+    if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+   }
+   ctx.stroke();
+   ctx.restore();
+   if(linie.length){
+    const [ex,ey]=linie[linie.length-1];
+    ctx.fillStyle="#e8cd8e55";
+    ctx.beginPath();
+    ctx.arc(ex,ey,6,0,Math.PI*2);
+    ctx.fill();
+   }
+  }
+
+  // Kugeln
+  for(let r=0;r<feld.length;r++){
+   for(let c=0;c<SP;c++){
+    const f=feld[r].z[c];
+    if(f==null)continue;
+    kugel(zelleX(r,c),zelleY(r),R-1,FARBEN[f]);
+   }
+  }
+
+  // goldene Linie
+  ctx.save();
+  ctx.setLineDash([8,6]);
+  ctx.strokeStyle="#d9bc7c";
+  ctx.globalAlpha=.55;
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(0,TOD);
+  ctx.lineTo(W,TOD);
+  ctx.stroke();
+  ctx.restore();
+
+  // Kanone
+  const cx=W/2, cy=SCHUSS_Y;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(winkel);
+  ctx.fillStyle="#123a2d";
+  ctx.strokeStyle="#d9bc7c88";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.roundRect(-7,-R*2.1,14,R*2.1,5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle="#1a4a3a";
+  ctx.strokeStyle="#d9bc7c99";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.arc(cx,cy,R*0.95,0,Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
+  // aktuelle Kugel im Rohr
+  if(zustand!=="ende"){
+   kugel(cx+Math.sin(winkel)*R*1.9,cy-Math.cos(winkel)*R*1.9,R*0.82,FARBEN[aktuell]);
+  }
+
+  // nächste Kugel an der Seite
+  if(W>260){
+   ctx.fillStyle="#a9c3b6";
+   ctx.font="11px Georgia,serif";
+   ctx.textAlign="center";
+   ctx.fillText("Nächste",W-32,cy-24);
+   kugel(W-32,cy-2,R*0.68,FARBEN[naechste]);
+  }
+
+  // fliegende Kugel
+  if(schuss)kugel(schuss.x,schuss.y,R*0.86,FARBEN[schuss.farbe]);
+
+  ctx.strokeStyle="#d9bc7c44";
+  ctx.lineWidth=3;
+  ctx.strokeRect(1.5,1.5,W-3,H-3);
+ }
+
+ return {
+  W,H,R,SP,TOD,
+  neu,los,schiessen,zielen,winkelAendern,schritt,zeichne,
+  stand:()=>({zustand,punkte,schuesse,aktuell,naechste,winkel:Number(winkel.toFixed(3)),
+   schuss:schuss?{x:Math.round(schuss.x),y:Math.round(schuss.y),farbe:schuss.farbe}:null,
+   reihen:feld.length,schuesseBisReihe:reihenBisNeu-schuesse,
+   kugeln:feld.reduce((s,re)=>s+re.z.filter(v=>v!=null).length,0)}),
+  feld:()=>feld.map(re=>({v:re.v,z:re.z.slice()})),
+  setzeFeld:(f)=>{ feld=f; },
+  setzeZustand:(z)=>{ zustand=z; },
+  setzeKugel:(r,c,farbe)=>{ feld[r].z[c]=farbe; },
+  leeren:()=>{ feld=[]; },
+  kugelZelle:(r,c)=>({x:zelleX(r,c),y:zelleY(r)}),
+  reiheEinfuegen:()=>neueReihe(),
+  farbeSetzen:(a,n2)=>{ aktuell=a; if(n2!=null)naechste=n2; }
+ };
+}
+
+// ---------------------------------------------------------------- Aufbau der Seite
+
+let modus="solo";           // solo, duell
+let bretter=[];             // [{brett, canvas, kopf, punkteEl, name}]
+let rekord=0;
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("bubble-rekord")||0); }catch(e){ return 0; }
+}
+
+function rekordSpeichern(v){
+ try{ localStorage.setItem("bubble-rekord",String(v)); }catch(e){}
+}
+
+function spielAufbauen(){
+ // aufräumen
+ bretter=[];
+ $("meldung").hidden=false;
+
+ if(modus==="solo"){
+  $("buehne").classList.remove("duell");
+  $("wrap1").hidden=false;
+  $("wrap2").hidden=true;
+  $("kopf1").hidden=true;
+
+  const brett=Brett($("feld1"),{
+   W:400,H:600,R:17,reihen:5,tod:76,reihenBisNeu:8,farben:4,seed:7,
+   onPunkte:(p)=>{ const el=document.getElementById("punkte"); if(el)el.textContent=p; },
+   onEnde:(p)=>endeSolo(p)
+  });
+  bretter.push({brett,canvas:$("feld1"),name:"Spieler 1"});
+  brett.neu();
+
+  $("statusLinks").innerHTML='Punkte <b id="punkte">0</b>';
+  $("statusRechts").innerHTML='Rekord <b id="rekord">'+Math.max(rekord,rekordLaden())+'</b>';
+  $("meldungTitel").textContent="BUBBLE SHOOTER";
+  $("meldungText").textContent="Ziele mit dem Finger und schieße Kugeln in die Reihen. Drei gleiche Farben platzen.";
+  $("meldungKnopf").textContent="Starten";
+  $("hinweis").textContent="Finger aufs Feld setzen: Zielen und schießen.";
+ }else{
+  $("buehne").classList.add("duell");
+  $("wrap1").hidden=false;
+  $("wrap2").hidden=false;
+  $("kopf1").hidden=false;
+
+  [1,2].forEach(nr=>{
+   const b=Brett($("feld"+nr),{
+    W:196,H:560,R:13,reihen:6,tod:66,reihenBisNeu:6,farben:4,seed:7,
+    onPunkte:(p)=>{
+     const el=document.getElementById("k"+nr);
+     if(el)el.textContent=p;
+    },
+    onEnde:(p)=>endeDuell(nr,p)
+   });
+   bretter.push({brett:b,canvas:$("feld"+nr),name:"Spieler "+nr});
+   b.neu();
+  });
+
+  $("statusLinks").innerHTML="Duell";
+  $("statusRechts").innerHTML="Wer zuerst die goldene Linie überschreitet, verliert.";
+  $("meldungTitel").textContent="BUBBLE SHOOTER";
+  $("meldungText").textContent="Zwei Felder: Spieler 1 links, Spieler 2 rechts. Jeder zielt mit dem eigenen Finger.";
+  $("meldungKnopf").textContent="Duell starten";
+  $("hinweis").textContent="Spieler 1 links, Spieler 2 rechts – jeder tippt in sein eigenes Feld.";
+ }
+
+ $("meldungKnopf").onclick=starten;
+ verbinden();
+}
+
+function verbinden(){
+ bretter.forEach(({brett,canvas})=>{
+  const zeigerPos=e=>{
+   const r=canvas.getBoundingClientRect();
+   return {
+    x:(e.clientX-r.left)/r.width*brett.W,
+    y:(e.clientY-r.top)/r.height*brett.H
+   };
+  };
+  canvas.onpointerdown=e=>{
+   const p=zeigerPos(e);
+   brett.zielen(p.x,p.y);
+   if(gesamtZustand()!=="laeuft")starten();
+   else brett.schiessen();
+   e.preventDefault();
+  };
+  canvas.onpointermove=e=>{
+   const p=zeigerPos(e);
+   brett.zielen(p.x,p.y);
+  };
+ });
+}
+
+function gesamtZustand(){
+ if(!bretter.length)return "start";
+ return bretter[0].brett.stand().zustand;
+}
+
+function starten(){
+ bretter.forEach(({brett})=>brett.los());
+ $("meldung").hidden=true;
+}
+
+function neuStart(){
+ if(modus==="solo"){
+  bretter[0].brett.neu();
+  $("punkte").textContent="0";
+ }else{
+  bretter.forEach(({brett})=>brett.neu());
+  $("k1").textContent="0";
+  $("k2").textContent="0";
+ }
+ $("meldungTitel").textContent="BUBBLE SHOOTER";
+ $("meldungText").textContent=modus==="solo"
+  ?"Ziele mit dem Finger und schieße Kugeln in die Reihen. Drei gleiche Farben platzen."
+  :"Zwei Felder: Spieler 1 links, Spieler 2 rechts. Jeder zielt mit dem eigenen Finger.";
+ $("meldungKnopf").textContent=modus==="solo"?"Starten":"Duell starten";
+ $("meldungKnopf").onclick=starten;
+ $("meldung").hidden=false;
+}
+
+function endeSolo(p){
+ if(p>rekordLaden()){
+  rekordSpeichern(p);
+  const el=$("rekord");
+  if(el)el.textContent=p;
+ }
+ $("meldungTitel").textContent="Vorbei";
+ $("meldungText").textContent="Punkte: "+p+" · Rekord: "+Math.max(rekord,rekordLaden());
+ $("meldungKnopf").textContent="Nochmal";
+ $("meldungKnopf").onclick=()=>{ neuStart(); starten(); };
+ $("meldung").hidden=false;
+}
+
+function endeDuell(verlierer,punkte){
+ const gewinner=verlierer===1?2:1;
+ const p1=bretter[0].brett.stand().punkte;
+ const p2=bretter[1].brett.stand().punkte;
+ $("meldungTitel").textContent="Spieler "+gewinner+" gewinnt";
+ $("meldungText").textContent="Spieler 1: "+p1+" Punkte · Spieler 2: "+p2+" Punkte";
+ $("meldungKnopf").textContent="Nochmal";
+ $("meldungKnopf").onclick=()=>{ neuStart(); starten(); };
+ $("meldung").hidden=false;
+}
+
+// ---------------------------------------------------------------- Tasten
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(modus==="solo"){
+  if(k==="ArrowLeft"){ bretter[0]&&bretter[0].brett.winkelAendern(-0.06); e.preventDefault(); }
+  if(k==="ArrowRight"){ bretter[0]&&bretter[0].brett.winkelAendern(0.06); e.preventDefault(); }
+  if(k===" "||k==="ArrowUp"){
+   if(bretter.length){
+    if(gesamtZustand()!=="laeuft")starten();
+    else bretter[0].brett.schiessen();
+   }
+   e.preventDefault();
+  }
+ }else if(bretter.length===2){
+  if(k==="ArrowLeft"){ bretter[0].brett.winkelAendern(-0.06); e.preventDefault(); }
+  if(k==="ArrowRight"){ bretter[0].brett.winkelAendern(0.06); e.preventDefault(); }
+  if(k==="ArrowUp"||k===" "){
+   if(gesamtZustand()!=="laeuft")starten();
+   else bretter[0].brett.schiessen();
+   e.preventDefault();
+  }
+  if(k==="a"||k==="A"){ bretter[1].brett.winkelAendern(-0.06); e.preventDefault(); }
+  if(k==="d"||k==="D"){ bretter[1].brett.winkelAendern(0.06); e.preventDefault(); }
+  if(k==="w"||k==="W"){
+   if(gesamtZustand()!=="laeuft")starten();
+   else bretter[1].brett.schiessen();
+   e.preventDefault();
+  }
+ }
+});
+
+// ---------------------------------------------------------------- Schleife
+
+let letzteZeit=0, akku=0;
+
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0.016);
+ letzteZeit=zeit;
+ akku+=dt;
+ let schutz=0;
+ while(akku>=1/60&&schutz<5){
+  akku-=1/60;
+  bretter.forEach(({brett})=>brett.schritt());
+  schutz++;
+ }
+ bretter.forEach(({brett})=>brett.zeichne());
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Start
+
+$("btnNeu").onclick=()=>{ neuStart(); };
+$("btnSolo").onclick=()=>{
+ if(modus==="solo")return;
+ modus="solo";
+ $("btnSolo").classList.add("aktiv");
+ $("btnDuell").classList.remove("aktiv");
+ spielAufbauen();
+};
+$("btnDuell").onclick=()=>{
+ if(modus==="duell")return;
+ modus="duell";
+ $("btnDuell").classList.add("aktiv");
+ $("btnSolo").classList.remove("aktiv");
+ spielAufbauen();
+};
+
+rekord=rekordLaden();
+spielAufbauen();
+requestAnimationFrame(schleife);
+
+
+})();
+</script>
+</body>
+</html>

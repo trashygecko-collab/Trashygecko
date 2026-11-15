@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Labyrinth Plus!</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste .rechts{display:flex;gap:4px;margin-left:auto}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+.leben span{letter-spacing:2px;color:#e8cd8e}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#0b241d}
+canvas{display:block;border-radius:10px;touch-action:none;width:100%;height:auto;max-width:100%}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#08211acc;border-radius:10px;padding:16px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.12em;font-size:18px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss .gut{color:#e8cd8e}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+
+@media(max-width:430px){ .menueleiste button{font-size:12px;padding:6px 8px} }
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Labyrinth Plus!</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnNochmal">Level neu</button>
+  <span class="rechts">
+   <button id="btnZurueck">◀ Level</button>
+   <button id="btnVor">Level ▶</button>
+  </span>
+ </div>
+
+ <div class="statuszeile">
+  <span>Level <b id="level">1</b></span>
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Zeit <b id="zeit">0:00</b></span>
+  <span class="leben">Bälle <b id="leben">●●●</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="brett" width="640" height="800"></canvas>
+  <div class="meldung" id="meldung" hidden>
+   <div class="kasten">
+    <h2 id="meldungTitel">Geschafft</h2>
+    <p id="meldungText"></p>
+    <button id="meldungKnopf">Weiter</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Ziehe mit dem Finger über das Brett – es kippt dorthin, wo du hinzeigst.</span>
+  <span class="gut" id="bestwert"></span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Bringe die Kugel zum goldenen Pokal am Ende des Labyrinths. Wer den Pokal berührt, ist durch.</li>
+   <li><b>Steuern:</b> Finger (oder Maus) aufs Brett legen und in die Richtung ziehen, in die die Kugel rollen soll – das Brett kippt dorthin. Am PC gehen auch die Pfeiltasten.</li>
+   <li><b>Löcher:</b> Fällt die Kugel hinein, ist ein Ball weg und du startest wieder am Anfang. Drei Bälle pro Level.</li>
+   <li><b>Bewegliche Löcher:</b> Ab Level 5 öffnen und schließen sich manche Löcher im Takt – nur über geschlossene Löcher rollen.</li>
+   <li><b>Diamanten:</b> Unterwegs liegen kleine Steine, jeder bringt 25 Punkte extra.</li>
+   <li><b>Punkte:</b> Jedes geschaffte Level gibt 100 Punkte, jeder übrige Ball 50. Die Level werden größer und enger, je weiter du kommst.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("brett");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const MAX_LEVEL=40;
+const ZELLE=64;        // Grundgröße einer Zelle im Rechenraum
+const WAND=12;         // Wandstärke
+const KUGEL=ZELLE*0.30;
+const KUGEL_MAX=ZELLE*0.30;
+const BESCHL=1.5;      // Beschleunigung bei voller Neigung
+const REIBUNG=0.995;
+const MAX_TEMPO=ZELLE*0.62;
+
+let level=1, punkte=0, leben=3;
+let maze=null;
+let kugel={x:0,y:0,vx:0,vy:0};
+let neigung={x:0,y:0};
+let tasten={links:false,rechts:false,oben:false,unten:false};
+let zeigerAktiv=false, zeiger={x:0,y:0};
+let steine=[];
+let loecher=[];
+let pokal={x:0,y:0};
+let skala=1, offsetX=0, offsetY=0;
+let letzteZeit=0;
+let laeuft=false;
+let levelZeit=0, uhr=null;
+let gesperrt=false;
+
+// ---------------------------------------------------------------- Zufall
+
+function rng(seed){
+ let s=seed>>>0;
+ return ()=>{
+  s=(s+0x6D2B79F5)>>>0;
+  let t=s;
+  t=Math.imul(t^(t>>>15),t|1);
+  t=(t+Math.imul(t^(t>>>7),t|61))^t;
+  return ((t^(t>>>14))>>>0)/4294967296;
+ };
+}
+
+// ---------------------------------------------------------------- Labyrinth
+
+function baueMaze(stufe){
+ const rnd=rng(stufe*7919+101);
+ const spalten=Math.min(11,5+Math.floor((stufe-1)/6));
+ const reihen=Math.min(13,spalten+2);
+ const einheit=ZELLE+WAND;
+
+ // Wände: horizontal zwischen (c,r) und (c,r+1), vertikal zwischen (c,r) und (c+1,r)
+ const hWand=Array.from({length:spalten},()=>Array(reihen+1).fill(true));
+ const vWand=Array.from({length:spalten+1},()=>Array(reihen).fill(true));
+ const besucht=Array.from({length:spalten},()=>Array(reihen).fill(false));
+
+ const stos=[[0,0]];
+ besucht[0][0]=true;
+ while(stos.length){
+  const [c,r]=stos[stos.length-1];
+  const nachbarn=[];
+  if(r>0&&!besucht[c][r-1])nachbarn.push([c,r-1,"n"]);
+  if(r<reihen-1&&!besucht[c][r+1])nachbarn.push([c,r+1,"s"]);
+  if(c>0&&!besucht[c-1][r])nachbarn.push([c-1,r,"w"]);
+  if(c<spalten-1&&!besucht[c+1][r])nachbarn.push([c+1,r,"o"]);
+  if(!nachbarn.length){ stos.pop(); continue; }
+  const [nc,nr,richtung]=nachbarn[Math.floor(rnd()*nachbarn.length)];
+  if(richtung==="n")hWand[c][r]=false;
+  if(richtung==="s")hWand[c][r+1]=false;
+  if(richtung==="w")vWand[c][r]=false;
+  if(richtung==="o")vWand[c+1][r]=false;
+  besucht[nc][nr]=true;
+  stos.push([nc,nr]);
+ }
+
+ // Ein paar zusätzliche Öffnungen, damit es nicht nur einen Weg gibt.
+ for(let i=0;i<Math.max(2,Math.floor(spalten*reihen/14));i++){
+  const c=Math.floor(rnd()*spalten), r=Math.floor(rnd()*reihen);
+  if(rnd()<0.5&&r>0)hWand[c][r]=false;
+  else if(c<spalten-1)vWand[c+1][r]=false;
+ }
+
+ const breite=2*WAND+(spalten-1)*einheit+ZELLE;
+ const hoehe=2*WAND+(reihen-1)*einheit+ZELLE;
+
+ const mitte=(c,r)=>({
+  x:WAND+c*einheit+ZELLE/2,
+  y:WAND+r*einheit+ZELLE/2
+ });
+
+ // Wandstücke als Rechtecke
+ const waende=[];
+ for(let c=0;c<spalten;c++){
+  for(let r=0;r<=reihen;r++){
+   if(!hWand[c][r])continue;
+   waende.push({
+    x:c*einheit,
+    y:r*einheit,
+    w:ZELLE+WAND,
+    h:WAND
+   });
+  }
+ }
+ for(let c=0;c<=spalten;c++){
+  for(let r=0;r<reihen;r++){
+   if(!vWand[c][r])continue;
+   waende.push({
+    x:c*einheit,
+    y:r*einheit,
+    w:WAND,
+    h:ZELLE+WAND
+   });
+  }
+ }
+
+ // Löcher: nicht auf Start, Ziel und den ersten Nachbarzellen
+ const start={c:0,r:0};
+ const ziel={c:spalten-1,r:reihen-1};
+ const lochZahl=Math.min(spalten*reihen-4,3+Math.floor(stufe*0.8));
+ const belegt=new Set([`${start.c},${start.r}`,`${ziel.c},${ziel.r}`,
+  `${start.c+1},${start.r}`,`${start.c},${start.r+1}`]);
+ const frei=[];
+ for(let c=0;c<spalten;c++)for(let r=0;r<reihen;r++){
+  const key=`${c},${r}`;
+  if(!belegt.has(key))frei.push({c,r});
+ }
+ for(let i=frei.length-1;i>0;i--){
+  const j=Math.floor(rnd()*(i+1));
+  [frei[i],frei[j]]=[frei[j],frei[i]];
+ }
+
+ const loecher=[];
+ for(let i=0;i<lochZahl&&i<frei.length;i++){
+  const zelle=frei[i];
+  const p=mitte(zelle.c,zelle.r);
+  const bewegt=stufe>=5&&rnd()<0.35;
+  loecher.push({
+   x:p.x,y:p.y,r:ZELLE*0.30,
+   bewegt:bewegt,
+   phase:rnd()*Math.PI*2,
+   takt:1.6+rnd()*1.2
+  });
+ }
+
+ // Diamanten
+ const steine=[];
+ const steinZahl=2+Math.floor(stufe/4);
+ for(let i=lochZahl;i<lochZahl+steinZahl&&i<frei.length;i++){
+  const p=mitte(frei[i].c,frei[i].r);
+  steine.push({x:p.x,y:p.y,r:ZELLE*0.14,weg:false});
+ }
+
+ const startPunkt=mitte(start.c,start.r);
+ const zielPunkt=mitte(ziel.c,ziel.r);
+
+ return {spalten,reihen,breite,hoehe,waende,loecher,steine,start:startPunkt,ziel:zielPunkt};
+}
+
+// ---------------------------------------------------------------- Level
+
+function levelLaden(nummer,zuruecksetzen){
+ level=Math.max(1,Math.min(MAX_LEVEL,nummer));
+ if(zuruecksetzen!==false){ leben=3; }
+ maze=baueMaze(level);
+ kugel={x:maze.start.x,y:maze.start.y,vx:0,vy:0};
+ neigung={x:0,y:0};
+ zeigerAktiv=false;
+ gesperrt=false;
+ $("meldung").hidden=true;
+ $("level").textContent=level;
+ levelZeit=0;
+ $("zeit").textContent="0:00";
+ zeigeLeben();
+ passeCanvasAn();
+ laeuft=true;
+ letzteZeit=performance.now();
+ if(uhr)clearInterval(uhr);
+ uhr=setInterval(()=>{
+  if(!laeuft)return;
+  levelZeit++;
+  $("zeit").textContent=Math.floor(levelZeit/60)+":"+String(levelZeit%60).padStart(2,"0");
+ },1000);
+ $("hinweis").textContent="Ziehe mit dem Finger über das Brett – es kippt dorthin, wo du hinzeigst.";
+ zeigeBestwert();
+ // Einmal sofort zeichnen, damit das Brett auch ohne den ersten
+ // Animationsschritt schon steht.
+ zeichne();
+}
+
+function zeigeLeben(){
+ $("leben").textContent="●".repeat(leben)+"○".repeat(3-leben);
+}
+function zeigePunkte(){
+ $("punkte").textContent=punkte;
+}
+function zeigeBestwert(){
+ let best={};
+ try{ best=JSON.parse(localStorage.getItem("labyrinth-beste")||"{}"); }catch(e){}
+ $("bestwert").textContent=best.level?("Bestes Level "+best.level):"";
+}
+
+function passeCanvasAn(){
+ const box=canvas.parentElement;
+ const verhaeltnis=maze.hoehe/maze.breite;
+ // Breite aus dem Platz im Fenster, Höhe aus dem, was der Bildschirm hergibt –
+ // so passt das Brett auch auf ein Handy ohne Scrollen.
+ const platzBreite=Math.max(220,Math.min(box.clientWidth-16,620));
+ const platzHoehe=Math.max(240,window.innerHeight-300);
+ const breite=Math.round(Math.min(platzBreite,platzHoehe/verhaeltnis));
+ const hoehe=Math.round(breite*verhaeltnis);
+ const dpr=Math.min(2,window.devicePixelRatio||1);
+ canvas.style.width=breite+"px";
+ canvas.style.height=hoehe+"px";
+ canvas.width=Math.round(breite*dpr);
+ canvas.height=Math.round(hoehe*dpr);
+ skala=(breite*dpr)/maze.breite;
+ offsetX=0;
+ offsetY=0;
+ ctx.setTransform(skala,0,0,skala,0,0);
+}
+
+// ---------------------------------------------------------------- Physik
+
+function kollision(kugel,rechteck){
+ const nahX=Math.max(rechteck.x,Math.min(kugel.x,rechteck.x+rechteck.w));
+ const nahY=Math.max(rechteck.y,Math.min(kugel.y,rechteck.y+rechteck.h));
+ const dx=kugel.x-nahX, dy=kugel.y-nahY;
+ const abstand=Math.hypot(dx,dy);
+ if(abstand>=KUGEL)return null;
+ // Überlappung auflösen: bei Kreismittelpunkt im Rechteck die kleinere Achse nehmen
+ if(abstand===0){
+  const links=kugel.x-rechteck.x, rechts=rechteck.x+rechteck.w-kugel.x;
+  const oben=kugel.y-rechteck.y, unten=rechteck.y+rechteck.h-kugel.y;
+  const min=Math.min(links,rechts,oben,unten);
+  if(min===links)return {dx:-1,dy:0,tiefe:links+KUGEL};
+  if(min===rechts)return {dx:1,dy:0,tiefe:rechts+KUGEL};
+  if(min===oben)return {dx:0,dy:-1,tiefe:oben+KUGEL};
+  return {dx:0,dy:1,tiefe:unten+KUGEL};
+ }
+ return {dx:dx/abstand,dy:dy/abstand,tiefe:KUGEL-abstand};
+}
+
+function schritt(dt){
+ if(!laeuft||gesperrt)return;
+
+ // Neigung aus Zeiger oder Tasten
+ let nx=0, ny=0;
+ if(zeigerAktiv){
+  const mx=maze.breite/2, my=maze.hoehe/2;
+  nx=(zeiger.x-mx)/(maze.breite/2);
+  ny=(zeiger.y-my)/(maze.hoehe/2);
+  const l=Math.hypot(nx,ny);
+  if(l>1){ nx/=l; ny/=l; }
+ }else{
+  if(tasten.links)nx-=1;
+  if(tasten.rechts)nx+=1;
+  if(tasten.oben)ny-=1;
+  if(tasten.unten)ny+=1;
+  const l=Math.hypot(nx,ny);
+  if(l>1){ nx/=l; ny/=l; }
+ }
+ kugel.vx+=nx*BESCHL*ZELLE*dt;
+ kugel.vy+=ny*BESCHL*ZELLE*dt;
+ kugel.vx*=Math.pow(REIBUNG,dt*60);
+ kugel.vy*=Math.pow(REIBUNG,dt*60);
+
+ const tempo=Math.hypot(kugel.vx,kugel.vy);
+ if(tempo>MAX_TEMPO){
+  kugel.vx=kugel.vx/tempo*MAX_TEMPO;
+  kugel.vy=kugel.vy/tempo*MAX_TEMPO;
+ }
+
+ kugel.x+=kugel.vx*dt;
+ kugel.y+=kugel.vy*dt;
+
+ // Wände
+ for(const wand of maze.waende){
+  // grobe Vorprüfung, spart Rechenzeit
+  if(kugel.x+KUGEL<wand.x||kugel.x-KUGEL>wand.x+wand.w)continue;
+  if(kugel.y+KUGEL<wand.y||kugel.y-KUGEL>wand.y+wand.h)continue;
+  const k=kollision(kugel,wand);
+  if(!k)continue;
+  kugel.x+=k.dx*k.tiefe;
+  kugel.y+=k.dy*k.tiefe;
+  const prall=0.35;
+  if(Math.abs(k.dx)>Math.abs(k.dy)){
+   kugel.vx=-kugel.vx*prall;
+  }else{
+   kugel.vy=-kugel.vy*prall;
+  }
+ }
+
+ // Rand
+ const rand=WAND;
+ if(kugel.x<KUGEL+rand){ kugel.x=KUGEL+rand; kugel.vx=Math.abs(kugel.vx)*0.3; }
+ if(kugel.y<KUGEL+rand){ kugel.y=KUGEL+rand; kugel.vy=Math.abs(kugel.vy)*0.3; }
+ if(kugel.x>maze.breite-KUGEL-rand){ kugel.x=maze.breite-KUGEL-rand; kugel.vx=-Math.abs(kugel.vx)*0.3; }
+ if(kugel.y>maze.hoehe-KUGEL-rand){ kugel.y=maze.hoehe-KUGEL-rand; kugel.vy=-Math.abs(kugel.vy)*0.3; }
+
+ // Diamanten
+ for(const stein of maze.steine){
+  if(stein.weg)continue;
+  if(Math.hypot(kugel.x-stein.x,kugel.y-stein.y)<KUGEL+stein.r){
+   stein.weg=true;
+   punkte+=25;
+   zeigePunkte();
+  }
+ }
+
+ // Löcher
+ for(const loch of maze.loecher){
+  if(loch.bewegt){
+   // geschlossen, wenn sin positiv ist
+   const t=performance.now()/1000;
+   loch.offen=Math.sin(t*Math.PI/loch.takt+loch.phase)>0;
+  }else{
+   loch.offen=true;
+  }
+  if(!loch.offen)continue;
+  if(Math.hypot(kugel.x-loch.x,kugel.y-loch.y)<loch.r*0.62){
+   gefallen();
+   return;
+  }
+ }
+
+ // Pokal
+ if(Math.hypot(kugel.x-maze.ziel.x,kugel.y-maze.ziel.y)<KUGEL+ZELLE*0.22){
+  levelGeschafft();
+ }
+}
+
+function gefallen(){
+ leben--;
+ zeigeLeben();
+ if(leben<=0){
+  gesperrt=true;
+  laeuft=false;
+  $("meldungTitel").textContent="Keine Bälle mehr";
+  $("meldungText").textContent="Level "+level+" wird mit drei neuen Bällen noch einmal gestartet.";
+  $("meldungKnopf").textContent="Nochmal";
+  $("meldungKnopf").onclick=()=>{ levelLaden(level,true); };
+  $("meldung").hidden=false;
+  return;
+ }
+ // Zurück zum Anfang, kurz unverwundbar zentriert
+ kugel={x:maze.start.x,y:maze.start.y,vx:0,vy:0};
+ $("hinweis").textContent="Ball verloren – noch "+leben+(leben===1?" Ball":" Bälle")+" in diesem Level.";
+}
+
+function levelGeschafft(){
+ laeuft=false;
+ gesperrt=true;
+ const bonus=100+leben*50;
+ punkte+=bonus;
+ zeigePunkte();
+ let best={};
+ try{ best=JSON.parse(localStorage.getItem("labyrinth-beste")||"{}"); }catch(e){}
+ if(!best.level||level>best.level){
+  best.level=level;
+  try{ localStorage.setItem("labyrinth-beste",JSON.stringify(best)); }catch(e){}
+ }
+ const letztes=level>=MAX_LEVEL;
+ $("meldungTitel").textContent=letztes?"Alle Level geschafft":"Level "+level+" geschafft";
+ $("meldungText").textContent=letztes
+  ? ("Punkte: "+punkte+" · Zeit: "+Math.floor(levelZeit/60)+":"+String(levelZeit%60).padStart(2,"0"))
+  : ("+"+bonus+" Punkte · gesamte Punkte: "+punkte);
+ $("meldungKnopf").textContent=letztes?"Nochmal von vorn":"Weiter zu Level "+(level+1);
+ $("meldungKnopf").onclick=()=>{
+  if(letztes){ punkte=0; zeigePunkte(); levelLaden(1,true); }
+  else{ levelLaden(level+1,true); }
+ };
+ $("meldung").hidden=false;
+ zeigeBestwert();
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ if(!maze)return;
+ const w=maze.breite, h=maze.hoehe;
+
+ // Holzrahmen
+ ctx.fillStyle="#6b4a2b";
+ ctx.fillRect(0,0,w,h);
+ const holz=ctx.createLinearGradient(0,0,w,h);
+ holz.addColorStop(0,"#8a6238");
+ holz.addColorStop(.5,"#6f4d2c");
+ holz.addColorStop(1,"#59391f");
+ ctx.fillStyle=holz;
+ ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle="#3f2814";
+ ctx.lineWidth=4;
+ ctx.strokeRect(2,2,w-4,h-4);
+
+ // Spielfläche
+ const innen={x:WAND/2,y:WAND/2,w:w-WAND,h:h-WAND};
+ const flaeche=ctx.createLinearGradient(0,0,0,h);
+ flaeche.addColorStop(0,"#efe3c8");
+ flaeche.addColorStop(1,"#e2d3b1");
+ ctx.fillStyle=flaeche;
+ ctx.fillRect(innen.x,innen.y,innen.w,innen.h);
+
+ // Wände
+ for(const wand of maze.waende){
+  const g=ctx.createLinearGradient(wand.x,wand.y,wand.x+wand.w,wand.y+wand.h);
+  g.addColorStop(0,"#8a7148");
+  g.addColorStop(1,"#5c4526");
+  ctx.fillStyle=g;
+  ctx.fillRect(wand.x,wand.y,wand.w,wand.h);
+  ctx.strokeStyle="#3d2c15";
+  ctx.lineWidth=1;
+  ctx.strokeRect(wand.x+.5,wand.y+.5,wand.w-1,wand.h-1);
+ }
+
+ // Löcher
+ for(const loch of maze.loecher){
+  if(loch.offen===false){
+   // geschlossen: Metallplatte
+   ctx.beginPath();
+   ctx.arc(loch.x,loch.y,loch.r,0,Math.PI*2);
+   ctx.fillStyle="#b9b3a4";
+   ctx.fill();
+   ctx.strokeStyle="#7d7768";
+   ctx.lineWidth=2;
+   ctx.stroke();
+   ctx.beginPath();
+   ctx.arc(loch.x,loch.y,loch.r*0.5,0,Math.PI*2);
+   ctx.strokeStyle="#8f897a";
+   ctx.stroke();
+   continue;
+  }
+  const schacht=ctx.createRadialGradient(loch.x,loch.y,loch.r*0.2,loch.x,loch.y,loch.r);
+  schacht.addColorStop(0,"#000000");
+  schacht.addColorStop(.75,"#101010");
+  schacht.addColorStop(1,"#3a3128");
+  ctx.beginPath();
+  ctx.arc(loch.x,loch.y,loch.r,0,Math.PI*2);
+  ctx.fillStyle=schacht;
+  ctx.fill();
+  ctx.strokeStyle="#5b4a33";
+  ctx.lineWidth=2;
+  ctx.stroke();
+ }
+
+ // Diamanten
+ for(const stein of maze.steine){
+  if(stein.weg)continue;
+  ctx.save();
+  ctx.translate(stein.x,stein.y);
+  ctx.rotate(Math.PI/4);
+  ctx.fillStyle="#3fbfa0";
+  ctx.strokeStyle="#146a55";
+  ctx.lineWidth=2;
+  ctx.fillRect(-stein.r,-stein.r,stein.r*2,stein.r*2);
+  ctx.strokeRect(-stein.r,-stein.r,stein.r*2,stein.r*2);
+  ctx.restore();
+ }
+
+ // Pokal
+ const ziel=maze.ziel;
+ ctx.save();
+ ctx.translate(ziel.x,ziel.y);
+ ctx.scale(1.45,1.45);
+ const gold=ctx.createLinearGradient(0,-ZELLE*0.2,0,ZELLE*0.2);
+ gold.addColorStop(0,"#ffe9a8");
+ gold.addColorStop(.55,"#e8cd8e");
+ gold.addColorStop(1,"#b98f3f");
+ ctx.fillStyle=gold;
+ ctx.strokeStyle="#7a5a1c";
+ ctx.lineWidth=1.6;
+ ctx.beginPath();
+ ctx.moveTo(-ZELLE*0.16,-ZELLE*0.18);
+ ctx.lineTo(ZELLE*0.16,-ZELLE*0.18);
+ ctx.lineTo(ZELLE*0.10,ZELLE*0.02);
+ ctx.lineTo(-ZELLE*0.10,ZELLE*0.02);
+ ctx.closePath();
+ ctx.fill();
+ ctx.stroke();
+ ctx.fillRect(-ZELLE*0.03,ZELLE*0.02,ZELLE*0.06,ZELLE*0.10);
+ ctx.fillRect(-ZELLE*0.10,ZELLE*0.12,ZELLE*0.20,ZELLE*0.05);
+ ctx.beginPath();
+ ctx.arc(-ZELLE*0.16,-ZELLE*0.10,ZELLE*0.05,Math.PI*0.5,Math.PI*1.5);
+ ctx.arc(ZELLE*0.16,-ZELLE*0.10,ZELLE*0.05,-Math.PI*0.5,Math.PI*0.5);
+ ctx.strokeStyle="#c9a85f";
+ ctx.lineWidth=3;
+ ctx.stroke();
+ ctx.restore();
+
+ // Kugel
+ ctx.save();
+ ctx.beginPath();
+ ctx.ellipse(kugel.x+3,kugel.y+KUGEL*0.75,KUGEL*0.95,KUGEL*0.45,0,0,Math.PI*2);
+ ctx.fillStyle="#00000033";
+ ctx.fill();
+ const kugelFarbe=ctx.createRadialGradient(
+  kugel.x-KUGEL*0.35,kugel.y-KUGEL*0.4,KUGEL*0.2,
+  kugel.x,kugel.y,KUGEL);
+ kugelFarbe.addColorStop(0,"#ffffff");
+ kugelFarbe.addColorStop(.35,"#e4ddc9");
+ kugelFarbe.addColorStop(1,"#9c9484");
+ ctx.beginPath();
+ ctx.arc(kugel.x,kugel.y,KUGEL,0,Math.PI*2);
+ ctx.fillStyle=kugelFarbe;
+ ctx.fill();
+ ctx.strokeStyle="#6f6a5d";
+ ctx.lineWidth=1.5;
+ ctx.stroke();
+ ctx.restore();
+}
+
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0.016);
+ letzteZeit=zeit;
+ schritt(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+function zeigerPosition(e){
+ const r=canvas.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width*maze.breite;
+ const y=(e.clientY-r.top)/r.height*maze.hoehe;
+ return {x,y};
+}
+
+canvas.addEventListener("pointerdown",e=>{
+ if(e.button&&e.button!==0)return;
+ zeigerAktiv=true;
+ zeiger=zeigerPosition(e);
+ try{ canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId); }catch(_){ }
+ e.preventDefault();
+});
+canvas.addEventListener("pointermove",e=>{
+ if(!zeigerAktiv)return;
+ zeiger=zeigerPosition(e);
+ e.preventDefault();
+});
+function zeigerLos(){ zeigerAktiv=false; }
+canvas.addEventListener("pointerup",zeigerLos);
+canvas.addEventListener("pointercancel",zeigerLos);
+canvas.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse")zeigerLos(); });
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(k==="ArrowLeft")tasten.links=true;
+ else if(k==="ArrowRight")tasten.rechts=true;
+ else if(k==="ArrowUp")tasten.oben=true;
+ else if(k==="ArrowDown")tasten.unten=true;
+ else return;
+ zeigerAktiv=false;
+ e.preventDefault();
+});
+window.addEventListener("keyup",e=>{
+ const k=e.key;
+ if(k==="ArrowLeft")tasten.links=false;
+ else if(k==="ArrowRight")tasten.rechts=false;
+ else if(k==="ArrowUp")tasten.oben=false;
+ else if(k==="ArrowDown")tasten.unten=false;
+});
+
+window.addEventListener("resize",()=>{ if(maze)passeCanvasAn(); });
+
+$("btnNeu").onclick=()=>{ punkte=0; zeigePunkte(); levelLaden(1,true); };
+$("btnNochmal").onclick=()=>levelLaden(level,true);
+$("btnZurueck").onclick=()=>{ if(level>1)levelLaden(level-1,true); };
+$("btnVor").onclick=()=>{ if(level<MAX_LEVEL)levelLaden(level+1,true); };
+
+zeigePunkte();
+levelLaden(1,true);
+requestAnimationFrame(schleife);
+
+})();
+</script>
+</body>
+</html>

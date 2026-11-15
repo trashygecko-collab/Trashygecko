@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Tron – Lichtrennen</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 14px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:820px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{font-weight:normal}
+#p1Stand{color:#ff8a5c}
+#p2Stand{color:#5ce0ff}
+.statuszeile .runde{font-size:12px}
+
+.tisch{padding:8px;background:#08120f}
+.leinwand{position:relative;max-width:640px;margin:auto}
+canvas{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #d9bc7c33;
+ background:#02080a;touch-action:none}
+
+.meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#02080acc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.12em;font-size:18px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.tasten{display:flex;gap:8px;padding:0 8px 8px;background:#08120f;justify-content:space-between;
+ font-size:12.5px;color:#a9c3b6;flex-wrap:wrap}
+.tasten .block{flex:1 1 220px;border:1px solid #d9bc7c33;border-radius:7px;padding:7px 9px;background:#0b241d}
+.tasten .block b{font-weight:normal}
+.pi{display:inline-block;border:1px solid #d9bc7c66;border-radius:4px;padding:1px 5px;
+ font-family:Consolas,monospace;font-size:12px;color:#e8cd8e}
+
+.fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:24px}
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Tron · Lichtrennen</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neue Partie</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Spieler 1 <b id="p1Stand">0</b></span>
+  <span class="runde">Runde <b id="rundeNr">1</b> · Ziel <b id="ziel">3</b></span>
+  <span>Spieler 2 <b id="p2Stand">0</b></span>
+ </div>
+
+ <div class="tisch">
+  <div class="leinwand">
+   <canvas id="leinwand" width="528" height="384"></canvas>
+   <div class="meldung" id="meldung">
+    <div class="kasten">
+     <h2 id="meldungTitel">TRON</h2>
+     <p id="meldungText">Zwei Lichtrenner, zwei Spuren. Wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.</p>
+     <button id="meldungKnopf">Starten</button>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div class="tasten">
+  <div class="block"><b>Spieler 1</b> (orange, links): <span class="pi">W</span> <span class="pi">A</span> <span class="pi">S</span> <span class="pi">D</span> – oder auf der linken Hälfte wischen</div>
+  <div class="block"><b>Spieler 2</b> (blau, rechts): <span class="pi">↑</span> <span class="pi">←</span> <span class="pi">↓</span> <span class="pi">→</span> – oder auf der rechten Hälfte wischen</div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Tippen oder Leertaste startet die Runde.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Den eigenen Lichtrenner so lenken, dass der Gegner zuerst in eine Wand oder in eine Spur fährt.</li>
+   <li><b>Spuren:</b> Jeder Renner zieht eine Leuchtspur, die zur Wand wird – auch für den eigenen Fahrer.</li>
+   <li><b>Lenken:</b> Nur rechtswinklige Kurven, umdrehen geht nicht.</li>
+   <li><b>Runde:</b> Wer anstößt, verliert die Runde. Fahren beide Köpfe ineinander, ist die Runde unentschieden und wird wiederholt.</li>
+   <li><b>Partie:</b> Wer zuerst drei Runden gewinnt, gewinnt das Match.</li>
+   <li><b>Handy:</b> Zwei Spieler halten je eine Bildschirmhälfte und wischen in die gewünschte Richtung.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const leinwand=$("leinwand");
+const ctx=leinwand.getContext("2d");
+
+const SPALTEN=44, ZEILEN=32, ZELLE=12;
+const W=SPALTEN*ZELLE, H=ZEILEN*ZELLE;   // 528 × 384
+const ZIEL=3;                            // Rundensiege für den Matchgewinn
+const TAKT=0.072;                        // Sekunden pro Feld
+
+let raster=new Uint8Array(SPALTEN*ZEILEN);
+let spieler=[];
+let zustand="bereit";                    // bereit | laeuft | runde | match
+let runde=1, sieg1=0, sieg2=0, unentschieden=false;
+let sammler=0, letzte=0, rundenEnde=null;
+let staub=[];
+
+function neuerRenner(nr){
+ const start={x:nr===1?3:SPALTEN-4, y:nr===1?(ZEILEN>>1)-5:(ZEILEN>>1)+5, dx:nr===1?1:-1, dy:0};
+ return {
+  nr, x:start.x, y:start.y, dx:start.dx, dy:start.dy,
+  naechste:null, tot:false, sieg:false,
+  farbe:nr===1?"#ff8a5c":"#5ce0ff",
+  farbe2:nr===1?"#ffb08a":"#a8ecff",
+  spur:nr===1?1:2
+ };
+}
+
+function neueRunde(){
+ raster=new Uint8Array(SPALTEN*ZEILEN);
+ spieler=[neuerRenner(1),neuerRenner(2)];
+ for(const s of spieler)raster[s.y*SPALTEN+s.x]=s.spur;
+ rundenEnde=null;
+ staub=[];
+ zustand="bereit";
+ $("rundeNr").textContent=runde;
+ zeichne();
+}
+
+function neuePartie(){
+ runde=1; sieg1=0; sieg2=0;
+ zeigeStand();
+ neueRunde();
+ meldungZu();
+ $("hinweis").textContent="Tippen oder Leertaste startet die Runde.";
+}
+
+function zeigeStand(){
+ $("p1Stand").textContent=sieg1;
+ $("p2Stand").textContent=sieg2;
+ $("rundeNr").textContent=runde;
+ $("ziel").textContent=ZIEL;
+}
+
+// ------------------------------------------------------------------ Lenken
+const RICHTUNGEN={hoch:[0,-1],runter:[0,1],links:[-1,0],rechts:[1,0]};
+
+function lenke(nr,richtung){
+ if(zustand!=="bereit"&&zustand!=="laeuft")return;
+ const s=spieler[nr-1];
+ if(!s||s.tot)return;
+ const [dx,dy]=RICHTUNGEN[richtung];
+ if(dx===-s.dx&&dy===-s.dy)return;      // umdrehen verboten
+ if(dx===s.dx&&dy===s.dy)return;        // schon in die Richtung
+ s.naechste=[dx,dy];
+}
+
+// ------------------------------------------------------------------ Ablauf
+function feldFrei(x,y){ return x>=0&&x<SPALTEN&&y>=0&&y<ZEILEN; }
+
+function takt(){
+ if(zustand!=="laeuft")return;
+
+ for(const s of spieler){
+  if(s.naechste){ s.dx=s.naechste[0]; s.dy=s.naechste[1]; s.naechste=null; }
+ }
+ // neue Köpfe bestimmen
+ for(const s of spieler){
+  s.nx=s.x+s.dx; s.ny=s.y+s.dy;
+ }
+ // Kollisionen prüfen
+ for(const s of spieler){
+  const andere=spieler.find(o=>o!==s);
+  const wand=!feldFrei(s.nx,s.ny);
+  const spur=raster[s.ny*SPALTEN+s.nx]!==0;
+  const kopfAnKopf=andere&&s.nx===andere.nx&&s.ny===andere.ny;
+  const kreuz=andere&&s.nx===andere.x&&s.ny===andere.y&&andere.nx===s.x&&andere.ny===s.y;
+  s.stirbt=wand||spur||kopfAnKopf||kreuz;
+ }
+ // bewegen und Spuren ziehen
+ for(const s of spieler){
+  if(s.stirbt){ s.tot=true; continue; }
+  s.x=s.nx; s.y=s.ny;
+  raster[s.y*SPALTEN+s.x]=s.spur;
+ }
+ // Staub an den Köpfen
+ for(const s of spieler){
+  if(!s.tot&&Math.random()<0.25)staub.push({x:s.x,y:s.y,f:s.farbe,leben:1});
+ }
+
+ if(spieler.every(s=>s.tot))rundeVorbei(0);
+ else if(spieler[0].tot)rundeVorbei(2);
+ else if(spieler[1].tot)rundeVorbei(1);
+}
+
+function rundeVorbei(gewinner){
+ zustand="runde";
+ unentschieden=gewinner===0;
+ if(gewinner===1)sieg1++;
+ if(gewinner===2)sieg2++;
+ zeigeStand();
+ const steht=sieg1>=ZIEL||sieg2>=ZIEL;
+ if(steht){
+  zustand="match";
+  const wer=sieg1>sieg2?1:2;
+  meldung("PARTIE VORBEI",
+   "Spieler "+wer+" gewinnt das Match mit "+Math.max(sieg1,sieg2)+" zu "+Math.min(sieg1,sieg2)+" Runden.",
+   "Neue Partie");
+  $("hinweis").textContent="Tippen oder Leertaste startet eine neue Partie.";
+ } else {
+  const text=gewinner===0
+   ? "Kopf an Kopf – beide Renner sind gestorben. Runde "+runde+" wird wiederholt."
+   : "Spieler "+gewinner+" gewinnt die Runde "+runde+".";
+  meldung("RUNDE "+runde,text+" Stand: "+sieg1+" zu "+sieg2+".","Nächste Runde");
+  $("hinweis").textContent="Tippen oder Leertaste für die nächste Runde.";
+ }
+}
+
+function weiter(){
+ if(zustand==="match"){ neuePartie(); starteRunde(); return; }
+ if(zustand==="runde"){
+  if(!unentschieden)runde++;
+  unentschieden=false;
+  zeigeStand();
+  neueRunde();
+  starteRunde();
+  return;
+ }
+ if(zustand==="bereit")starteRunde();
+}
+
+function starteRunde(){
+ meldungZu();
+ zustand="laeuft";
+ sammler=0;
+ $("hinweis").textContent="Los!";
+}
+
+// ------------------------------------------------------------------ Zeichnen
+function zeichne(){
+ // Hintergrund
+ const g=ctx.createRadialGradient(W/2,H/2,40,W/2,H/2,W*0.75);
+ g.addColorStop(0,"#07201f");
+ g.addColorStop(1,"#02080a");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Gitter
+ ctx.strokeStyle="rgba(90,220,220,0.07)";
+ ctx.lineWidth=1;
+ ctx.beginPath();
+ for(let x=1;x<SPALTEN;x++){ ctx.moveTo(x*ZELLE,0); ctx.lineTo(x*ZELLE,H); }
+ for(let y=1;y<ZEILEN;y++){ ctx.moveTo(0,y*ZELLE); ctx.lineTo(W,y*ZELLE); }
+ ctx.stroke();
+
+ // Spuren
+ ctx.save();
+ ctx.shadowBlur=8;
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const v=raster[y*SPALTEN+x];
+   if(!v)continue;
+   ctx.fillStyle=v===1?"rgba(255,138,92,0.85)":"rgba(92,224,255,0.85)";
+   ctx.shadowColor=v===1?"#ff8a5c":"#5ce0ff";
+   ctx.fillRect(x*ZELLE+1.5,y*ZELLE+1.5,ZELLE-3,ZELLE-3);
+  }
+ }
+ ctx.restore();
+
+ // Staub
+ for(let i=staub.length-1;i>=0;i--){
+  const p=staub[i];
+  ctx.globalAlpha=p.leben*0.55;
+  ctx.fillStyle=p.f;
+  ctx.beginPath();
+  ctx.arc(p.x*ZELLE+ZELLE/2,p.y*ZELLE+ZELLE/2,ZELLE*0.35*p.leben,0,Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=1;
+  p.leben-=0.06;
+  if(p.leben<=0)staub.splice(i,1);
+ }
+
+ // Köpfe
+ for(const s of spieler){
+  if(s.tot)continue;
+  const cx=s.x*ZELLE+ZELLE/2, cy=s.y*ZELLE+ZELLE/2;
+  ctx.save();
+  ctx.shadowBlur=14;
+  ctx.shadowColor=s.farbe;
+  ctx.fillStyle=s.farbe2;
+  ctx.beginPath(); ctx.arc(cx,cy,ZELLE*0.44,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#ffffff";
+  ctx.beginPath(); ctx.arc(cx,cy,ZELLE*0.2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+ }
+
+ // Rahmen
+ ctx.strokeStyle="rgba(232,205,142,0.55)";
+ ctx.lineWidth=2;
+ ctx.strokeRect(1,1,W-2,H-2);
+
+ // Trennlinie für Wischzonen (nur solange nicht gespielt wird)
+ if(zustand==="bereit"){
+  ctx.save();
+  ctx.setLineDash([6,7]);
+  ctx.strokeStyle="rgba(232,205,142,0.2)";
+  ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle="rgba(232,205,142,0.45)";
+  ctx.font="13px Georgia, serif";
+  ctx.textAlign="center";
+  ctx.fillText("Spieler 1",W*0.25,H-14);
+  ctx.fillText("Spieler 2",W*0.75,H-14);
+ }
+}
+
+// ------------------------------------------------------------------ Schleife
+function schleife(zeit){
+ const dt=Math.min(0.1,(zeit-letzte)/1000||0);
+ letzte=zeit;
+ if(zustand==="laeuft"){
+  sammler+=dt;
+  let schutz=0;
+  while(sammler>=TAKT&&schutz<4){ takt(); sammler-=TAKT; schutz++; }
+ }
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ------------------------------------------------------------------ Bedienung
+const TASTEN={
+ KeyW:[1,"hoch"], KeyA:[1,"links"], KeyS:[1,"runter"], KeyD:[1,"rechts"],
+ ArrowUp:[2,"hoch"], ArrowLeft:[2,"links"], ArrowDown:[2,"runter"], ArrowRight:[2,"rechts"]
+};
+
+window.addEventListener("keydown",e=>{
+ const t=TASTEN[e.code];
+ if(t){ e.preventDefault(); lenke(t[0],t[1]); return; }
+ if(e.code==="Space"||e.code==="Enter"){
+  e.preventDefault();
+  if(!$("meldung").hidden)$("meldungKnopf").click();
+  else weiter();
+ }
+});
+
+// Wischen: je Bildschirmhälfte ein Spieler
+const wisch=new Map();
+leinwand.addEventListener("pointerdown",e=>{
+ const r=leinwand.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width;
+ if(zustand==="bereit"&&$("meldung").hidden){ starteRunde(); }
+ wisch.set(e.pointerId,{x:e.clientX,y:e.clientY,nr:x<0.5?1:2});
+ try{ leinwand.setPointerCapture?.(e.pointerId); }catch(fehler){}
+});
+leinwand.addEventListener("pointerup",e=>{
+ const w=wisch.get(e.pointerId);
+ wisch.delete(e.pointerId);
+ if(!w)return;
+ const dx=e.clientX-w.x, dy=e.clientY-w.y;
+ if(Math.abs(dx)<14&&Math.abs(dy)<14){
+  if(!$("meldung").hidden)$("meldungKnopf").click();
+  else weiter();
+  return;
+ }
+ if(Math.abs(dx)>Math.abs(dy))lenke(w.nr,dx>0?"rechts":"links");
+ else lenke(w.nr,dy>0?"runter":"hoch");
+});
+leinwand.addEventListener("pointercancel",e=>wisch.delete(e.pointerId));
+
+// Meldung
+function meldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+function meldungZu(){ $("meldung").hidden=true; }
+$("meldungKnopf").onclick=()=>{
+ if(zustand==="bereit")starteRunde();
+ else weiter();
+};
+$("btnNeu").onclick=()=>{ neuePartie(); meldung("TRON","Neue Partie – drei Runden gewinnen das Match.","Starten"); };
+
+neuePartie();
+meldung("TRON","Zwei Lichtrenner, zwei Spuren – wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.","Starten");
+requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });
+})();
+</script>
+</body>
+</html>

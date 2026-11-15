@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b241d">
+<title>Minensucher</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 20px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none}
+main{max-width:760px;margin:auto}
+
+/* Fensterrahmen im XP-Look */
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste .stufen{display:flex;gap:4px;margin-left:auto}
+.menueleiste .stufen button.aktiv{border-color:#e8cd8e;color:#0b241d;background:#e8cd8e;font-weight:bold}
+.menueleiste #btnFlagge.an{border-color:#c2765c;color:#f7d9c9;background:#3a2018}
+
+/* Der graue Spielkasten wie im Original */
+.kasten{padding:8px;display:flex;justify-content:center;background:#0b241d}
+.spiel{background:#bdbdbd;max-width:100%;min-width:0;border-top:2px solid #ffffff;border-left:2px solid #ffffff;
+ border-right:2px solid #7b7b7b;border-bottom:2px solid #7b7b7b;padding:6px;
+ --zelle:clamp(16px,calc((100vw - 54px)/var(--spalten)),30px)}
+
+/* Zähler, Smiley, Zeit */
+.kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ margin-bottom:6px;padding:4px;
+ border-top:2px solid #7b7b7b;border-left:2px solid #7b7b7b;
+ border-right:2px solid #ffffff;border-bottom:2px solid #ffffff}
+.led{background:#000;color:#ff2b2b;font:bold 20px/1 "Consolas","Courier New",monospace;
+ letter-spacing:2px;padding:3px 6px;border:1px solid #7b7b7b;min-width:58px;text-align:center;
+ text-shadow:0 0 6px #ff2b2b88}
+.smiley{width:36px;height:34px;font-size:19px;line-height:1;cursor:pointer;
+ background:#bdbdbd;border-top:2px solid #ffffff;border-left:2px solid #ffffff;
+ border-right:2px solid #7b7b7b;border-bottom:2px solid #7b7b7b;padding:0}
+.smiley:active{border-top-color:#7b7b7b;border-left-color:#7b7b7b;
+ border-right-color:#ffffff;border-bottom-color:#ffffff}
+
+/* Spielfeld */
+.brettrahmen{overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+.brett{display:grid;grid-template-columns:repeat(var(--spalten),var(--zelle));
+ gap:var(--abstand,0px);width:max-content;
+ border-top:2px solid #7b7b7b;border-left:2px solid #7b7b7b;
+ border-right:2px solid #ffffff;border-bottom:2px solid #ffffff;padding:2px}
+
+.zelle{width:var(--zelle);height:var(--zelle);padding:0;font-family:"Segoe UI",Tahoma,sans-serif;
+ font-weight:bold;font-size:calc(var(--zelle) * .62);line-height:1;cursor:pointer;
+ display:flex;align-items:center;justify-content:center;background:#bdbdbd;color:#000;
+ border-top:2px solid #ffffff;border-left:2px solid #ffffff;
+ border-right:2px solid #7b7b7b;border-bottom:2px solid #7b7b7b}
+.zelle:active{border-color:#7b7b7b #ffffff #ffffff #7b7b7b}
+.zelle.offen{border:1px solid #9a9a9a;background:#c6c6c6;cursor:default}
+.zelle.mine{background:#c6c6c6}
+.zelle.daneben{background:#ff6b5e}
+.zelle.falsch{background:#e6b0a8}
+.zelle.n1{color:#0000ff}.zelle.n2{color:#008000}.zelle.n3{color:#ff0000}.zelle.n4{color:#000080}
+.zelle.n5{color:#800000}.zelle.n6{color:#008080}.zelle.n7{color:#000000}.zelle.n8{color:#808080}
+
+.fuss{display:flex;justify-content:space-between;align-items:center;gap:10px;
+ padding:6px 8px;font-size:13px;color:#a9c3b6;min-height:30px}
+.fuss .zeitgut{color:#e8cd8e}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+
+@media(max-width:430px){
+ .menueleiste button{font-size:12px;padding:6px 8px}
+ .led{font-size:18px;min-width:52px}
+}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Minensucher</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnFlagge" title="Zum Setzen von Flaggen">🚩 Flaggen</button>
+  <span class="stufen" id="stufen">
+   <button data-stufe="anfaenger" class="aktiv">Anfänger</button>
+   <button data-stufe="fortgeschritten">Fortgeschritten</button>
+   <button data-stufe="experte">Experte</button>
+  </span>
+ </div>
+
+ <div class="kasten">
+  <div class="spiel">
+   <div class="kopf">
+    <span class="led" id="mienenAnzeige">010</span>
+    <button class="smiley" id="smiley" aria-label="Neues Spiel">🙂</button>
+    <span class="led" id="zeitAnzeige">000</span>
+   </div>
+   <div class="brettrahmen">
+    <div class="brett" id="brett"></div>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Erstes Feld antippen – die Minen kommen danach.</span>
+  <span class="zeitgut" id="bestzeit"></span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Alle Felder aufdecken, ohne eine Mine zu treffen. Die Zahlen sagen, wie viele Minen an das Feld angrenzen.</li>
+   <li><b>Aufdecken:</b> Feld antippen. Leere Felder decken von selbst die Umgebung mit auf.</li>
+   <li><b>Flaggen:</b> Rechtsklick am PC, am Handy gedrückt halten – oder den Knopf <b>🚩 Flaggen</b> einschalten und tippen. Der Zähler links zeigt, wie viele Minen noch übrig sind.</li>
+   <li><b>Weiterschieben:</b> Ein aufgedecktes Feld mit Zahl antippen, wenn ringsum genug Flaggen liegen – dann werden die übrigen Nachbarn aufgedeckt.</li>
+   <li><b>Stufen:</b> Anfänger 9×9 mit 10 Minen, Fortgeschritten 16×16 mit 40, Experte 30×16 mit 99 Minen.</li>
+   <li><b>Zeit:</b> Die Uhr startet mit dem ersten Feld. Die beste Zeit je Stufe merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const STUFEN={
+ anfaenger:{spalten:9,reihen:9,mienen:10,name:"Anfänger"},
+ fortgeschritten:{spalten:16,reihen:16,mienen:40,name:"Fortgeschritten"},
+ experte:{spalten:30,reihen:16,mienen:99,name:"Experte"}
+};
+const BEST_KEY="minensucher-beste";
+const ZAHLEN=["","1","2","3","4","5","6","7","8"];
+
+let stufe="anfaenger";
+let spalten=9, reihen=9, mienen=10;
+let felder=[];
+let gelegt=false;
+let zustand="bereit";   // bereit, laeuft, gewonnen, verloren
+let flaggenModus=false;
+let sekunden=0;
+let uhr=null;
+let langdruckTimer=null;
+let klickUnterdruecken=false;
+
+const $=id=>document.getElementById(id);
+
+function led(wert){
+ const n=Math.max(0,Math.min(999,wert));
+ return String(n).padStart(3,"0");
+}
+
+function bestzeitenLaden(){
+ try{ return JSON.parse(localStorage.getItem(BEST_KEY)||"{}"); }catch(e){ return {}; }
+}
+function bestzeitZeigen(){
+ const b=bestzeitenLaden()[stufe];
+ $("bestzeit").textContent=(typeof b==="number")?("Bestzeit "+b+" s"):"";
+}
+
+// ---------------------------------------------------------------- Aufbau
+
+function neuesSpiel(){
+ const s=STUFEN[stufe];
+ spalten=s.spalten; reihen=s.reihen; mienen=s.mienen;
+ felder=Array.from({length:spalten*reihen},()=>({mine:false,offen:false,flagge:false,nachbarn:0}));
+ gelegt=false;
+ zustand="bereit";
+ sekunden=0;
+ if(uhr)clearInterval(uhr);
+ uhr=null;
+ $("zeitAnzeige").textContent=led(0);
+ $("mienenAnzeige").textContent=led(mienen);
+ $("smiley").textContent="🙂";
+ $("hinweis").textContent="Erstes Feld antippen – die Minen kommen danach.";
+ document.documentElement.style.setProperty("--spalten",spalten);
+ zeichne();
+ bestzeitZeigen();
+}
+
+function nachbarn(i){
+ const x=i%spalten, y=Math.floor(i/spalten);
+ const liste=[];
+ for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+  if(dx===0&&dy===0)continue;
+  const nx=x+dx, ny=y+dy;
+  if(nx<0||ny<0||nx>=spalten||ny>=reihen)continue;
+  liste.push(ny*spalten+nx);
+ }
+ return liste;
+}
+
+function minenLegen(start){
+ const verboten=new Set([start,...nachbarn(start)]);
+ const kandidaten=[];
+ for(let i=0;i<felder.length;i++)if(!verboten.has(i))kandidaten.push(i);
+ for(let i=kandidaten.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [kandidaten[i],kandidaten[j]]=[kandidaten[j],kandidaten[i]];
+ }
+ for(let i=0;i<mienen&&i<kandidaten.length;i++)felder[kandidaten[i]].mine=true;
+ for(let i=0;i<felder.length;i++){
+  if(felder[i].mine)continue;
+  felder[i].nachbarn=nachbarn(i).filter(n=>felder[n].mine).length;
+ }
+ gelegt=true;
+}
+
+// ---------------------------------------------------------------- Spielzüge
+
+function uhrStarten(){
+ if(uhr)return;
+ uhr=setInterval(()=>{
+  sekunden=Math.min(999,sekunden+1);
+  $("zeitAnzeige").textContent=led(sekunden);
+ },1000);
+}
+
+function zeitStoppen(){
+ if(uhr)clearInterval(uhr);
+ uhr=null;
+}
+
+function aufdecken(i){
+ if(zustand==="gewonnen"||zustand==="verloren")return;
+ const feld=felder[i];
+ if(feld.offen||feld.flagge)return;
+
+ if(!gelegt){
+  minenLegen(i);
+  zustand="laeuft";
+  uhrStarten();
+  $("hinweis").textContent="Viel Glück.";
+ }
+
+ if(feld.mine){
+  feld.offen=true;
+  verloren(i);
+  return;
+ }
+
+ // Leere Felder decken die Umgebung gleich mit auf.
+ const stos=[i];
+ while(stos.length){
+  const k=stos.pop();
+  const f=felder[k];
+  if(f.offen||f.flagge)continue;
+  f.offen=true;
+  if(f.nachbarn===0){
+   nachbarn(k).forEach(n=>{ if(!felder[n].offen&&!felder[n].flagge&&!felder[n].mine)stos.push(n); });
+  }
+ }
+ zeichne();
+ pruefeSieg();
+}
+
+function flaggeUmschalten(i){
+ if(zustand==="gewonnen"||zustand==="verloren")return;
+ const feld=felder[i];
+ if(feld.offen)return;
+ feld.flagge=!feld.flagge;
+ zeichne();
+}
+
+function zahlOeffnen(i){
+ const feld=felder[i];
+ if(!feld.offen||feld.nachbarn===0)return;
+ const umfeld=nachbarn(i);
+ const flaggen=umfeld.filter(n=>felder[n].flagge).length;
+ if(flaggen!==feld.nachbarn)return;
+ umfeld.forEach(n=>{ if(!felder[n].offen&&!felder[n].flagge)aufdecken(n); });
+}
+
+function verloren(explodiert){
+ zustand="verloren";
+ zeitStoppen();
+ $("smiley").textContent="😵";
+ $("hinweis").textContent="Mine getroffen – neues Spiel über den Smiley.";
+ felder.forEach(f=>{ if(f.mine)f.offen=true; });
+ zeichne(explodiert);
+}
+
+function pruefeSieg(){
+ const offen=felder.filter(f=>f.offen&&!f.mine).length;
+ if(offen<felder.length-mienen)return;
+ zustand="gewonnen";
+ zeitStoppen();
+ $("smiley").textContent="😎";
+ felder.forEach(f=>{ if(f.mine)f.flagge=true; });
+ zeichne();
+ $("mienenAnzeige").textContent=led(0);
+ const best=bestzeitenLaden();
+ const alt=best[stufe];
+ if(!alt||sekunden<alt){
+  best[stufe]=sekunden;
+  try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)); }catch(e){}
+  $("hinweis").textContent="Gewonnen in "+sekunden+" Sekunden – neue Bestzeit!";
+ }else{
+  $("hinweis").textContent="Gewonnen in "+sekunden+" Sekunden (Bestzeit "+alt+" s).";
+ }
+ bestzeitZeigen();
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(explodiert){
+ const brett=$("brett");
+ brett.innerHTML="";
+ const fragment=document.createDocumentFragment();
+ felder.forEach((feld,i)=>{
+  const el=document.createElement("button");
+  el.type="button";
+  el.className="zelle";
+  el.dataset.i=String(i);
+  if(feld.offen){
+   el.classList.add("offen");
+   if(feld.mine){
+    el.classList.add("mine");
+    el.textContent="💣";
+    if(i===explodiert)el.classList.add("daneben");
+   }else if(feld.nachbarn>0){
+    el.textContent=ZAHLEN[feld.nachbarn];
+    el.classList.add("n"+feld.nachbarn);
+   }
+  }else if(feld.flagge){
+   el.textContent="🚩";
+   if(zustand==="verloren"&&!feld.mine)el.classList.add("falsch");
+  }
+  fragment.appendChild(el);
+ });
+ brett.appendChild(fragment);
+ $("mienenAnzeige").textContent=led(mienen-felder.filter(f=>f.flagge&&!f.offen).length);
+}
+
+// ---------------------------------------------------------------- Bedienung
+
+const brett=$("brett");
+
+brett.addEventListener("contextmenu",e=>{
+ const el=e.target.closest(".zelle");
+ if(!el)return;
+ e.preventDefault();
+ flaggeUmschalten(Number(el.dataset.i));
+});
+
+brett.addEventListener("pointerdown",e=>{
+ const el=e.target.closest(".zelle");
+ if(!el||e.button===2)return;
+ klickUnterdruecken=false;
+ langdruckTimer=setTimeout(()=>{
+  langdruckTimer=null;
+  klickUnterdruecken=true;
+  flaggeUmschalten(Number(el.dataset.i));
+  if(navigator.vibrate)navigator.vibrate(15);
+ },380);
+});
+
+function druckBeenden(){
+ if(langdruckTimer){ clearTimeout(langdruckTimer); langdruckTimer=null; }
+}
+brett.addEventListener("pointerup",druckBeenden);
+brett.addEventListener("pointerleave",druckBeenden);
+brett.addEventListener("pointercancel",druckBeenden);
+
+brett.addEventListener("click",e=>{
+ const el=e.target.closest(".zelle");
+ if(!el)return;
+ if(klickUnterdruecken){ klickUnterdruecken=false; return; }
+ const i=Number(el.dataset.i);
+ if(flaggenModus)flaggeUmschalten(i);
+ else if(felder[i].offen)zahlOeffnen(i);
+ else aufdecken(i);
+});
+
+$("btnNeu").onclick=()=>neuesSpiel();
+$("smiley").onclick=()=>neuesSpiel();
+$("btnFlagge").onclick=()=>{
+ flaggenModus=!flaggenModus;
+ $("btnFlagge").classList.toggle("an",flaggenModus);
+ $("btnFlagge").textContent=flaggenModus?"🚩 Flaggen an":"🚩 Flaggen";
+};
+
+document.querySelectorAll("#stufen button").forEach(b=>{
+ b.onclick=()=>{
+  stufe=b.dataset.stufe;
+  document.querySelectorAll("#stufen button").forEach(x=>x.classList.toggle("aktiv",x===b));
+  neuesSpiel();
+ };
+});
+
+neuesSpiel();
+})();
+</script>
+</body>
+</html>

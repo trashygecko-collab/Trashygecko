@@ -294,6 +294,41 @@ html:fullscreen body{padding:18px 1px}
  border:1px solid #d9bc7c8c;border-top:none;
  border-radius:0 0 6px 6px}
 .chat-send-row{border:none;padding:0;background:none}
+/* --- Spiel neben dem Chat: nur auf großen Bildschirmen (PC) -------------- */
+#spielFenster{display:none}
+.spiel-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:8px 12px;background:linear-gradient(#1e5645,#144238);
+ border-bottom:1px solid #d9bc7c44;color:#f4e6c2;font-size:14px}
+.spiel-kopf .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em}
+.spiel-knoepfe{display:flex;gap:6px}
+.spiel-knopf{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;
+ padding:0;font-size:15px;line-height:1;border-radius:6px;border:1px solid #d9bc7c66;
+ background:#0b241d;color:#e8cd8e;text-decoration:none;cursor:pointer;font-family:inherit}
+.spiel-knopf:hover{background:#184536;filter:none}
+#spielRahmen{flex:1;width:100%;border:0;background:#08120f;display:block}
+#spielGriff{display:none;position:fixed;top:0;bottom:0;left:var(--links-breite,42%);
+ width:14px;margin-left:-7px;cursor:col-resize;z-index:40;touch-action:none;outline:none}
+#spielGriff::after{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;
+ background:#d9bc7c44;border-radius:2px;transition:background .15s}
+#spielGriff:hover::after,#spielGriff:focus-visible::after,body.griff-aktiv #spielGriff::after{background:#e8cd8e}
+#spielGriff:focus-visible{box-shadow:inset 0 0 0 1px #e8cd8e66}
+.solo-pch{display:none}
+@media(min-width:1024px){
+ body.spiel-offen{display:grid;
+  grid-template-columns:var(--links-breite,minmax(340px,42%)) minmax(0,1fr);
+  gap:0;height:100vh;padding:0;overflow:hidden;align-items:stretch}
+ /* Griff zwischen Chat und Spiel: nach links/rechts ziehen. */
+ body.spiel-offen #spielGriff{display:block}
+ /* Der Vollbild-Knopf läge sonst über den Knöpfen des Spielfensters. */
+ body.spiel-offen #fullscreenBtn{display:none}
+ body.griff-aktiv{cursor:col-resize;user-select:none}
+ body.griff-aktiv iframe{pointer-events:none}
+ body.spiel-offen main{max-width:none;width:100%;height:100vh;overflow-y:auto;
+  margin:0;padding:8px 14px 14px}
+ body.spiel-offen #spielFenster{display:flex;flex-direction:column;height:100vh;min-width:0;
+  border-left:1px solid #d9bc7c55;background:#08120f}
+ .solo-pch{display:block;margin:10px 0 0;font-size:13px;color:#a9bfb2}
+}
 </style>
 </head>
 <body>
@@ -331,6 +366,7 @@ html:fullscreen body{padding:18px 1px}
 
 <div id="soloPanel" class="modus-panel" hidden>
 <div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
+<p class="solo-pch">Am PC öffnen sich die Spiele rechts neben dem Chat – mitspielen und weiterreden.</p>
 <p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
 </div>
 
@@ -380,6 +416,22 @@ html:fullscreen body{padding:18px 1px}
 </section>
 
 </main>
+
+<!-- Einzelspieler-Spiel rechts neben dem Chat (nur auf großen Bildschirmen). -->
+<aside id="spielFenster" aria-label="Spiel">
+ <div class="spiel-kopf">
+  <span class="name" id="spielName">Spiel</span>
+  <span class="spiel-knoepfe">
+   <a id="spielTab" class="spiel-knopf" href="#" target="_blank" rel="noopener"
+      title="In neuem Tab öffnen" aria-label="In neuem Tab öffnen">↗</a>
+   <button type="button" id="spielZu" class="spiel-knopf"
+           title="Spiel schließen" aria-label="Spiel schließen">×</button>
+  </span>
+ </div>
+ <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen"></iframe>
+</aside>
+<div id="spielGriff" role="separator" aria-orientation="vertical" tabindex="0"
+     aria-label="Breite von Chat und Spiel ziehen" title="Breite ziehen"></div>
 
 <script src="/spiele/netz.js"></script>
 <script>
@@ -2834,6 +2886,84 @@ async function pruefeSpielstart(){
 }
 setInterval(pruefeSpielstart,2000);
 
+// --- Spiel neben dem Chat -------------------------------------------------
+// Auf breiten Bildschirmen (PC) öffnet ein Einzelspieler-Spiel rechts neben
+// dem Chat, damit man weiterreden kann. Auf dem Handy bleibt es beim neuen Tab.
+const pcBreit=window.matchMedia("(min-width: 1024px)");
+const istPc=()=>pcBreit.matches;
+
+function spielOeffnen(name,url){
+ const rahmen=document.getElementById("spielRahmen");
+ document.getElementById("spielName").textContent=name;
+ document.getElementById("spielTab").href=url;
+ if(rahmen.getAttribute("src")!==url)rahmen.src=url;
+ document.body.classList.add("spiel-offen");
+}
+
+function spielSchliessen(){
+ document.body.classList.remove("spiel-offen");
+ const rahmen=document.getElementById("spielRahmen");
+ if(rahmen.getAttribute("src")!=="about:blank")rahmen.src="about:blank";
+}
+
+// --- Breite zwischen Chat und Spiel ziehen --------------------------------
+const griff=document.getElementById("spielGriff");
+const MIN_LINKS=340;      // schmalster Chat
+const MIN_SPIEL=420;      // schmalstes Spielfeld
+let griffAktiv=false;
+let linksBreite=0;        // gemerkte Breite in Pixeln, 0 = Standard (42 %)
+
+function breiteSetzen(px,merken){
+ const max=Math.max(MIN_LINKS,window.innerWidth-MIN_SPIEL);
+ const breite=Math.max(MIN_LINKS,Math.min(max,Math.round(px)));
+ linksBreite=breite;
+ document.documentElement.style.setProperty("--links-breite",breite+"px");
+ griff.setAttribute("aria-valuenow",String(breite));
+ if(merken){
+  try{ localStorage.setItem("connector-split-breite",String(breite)); }catch(e){}
+ }
+}
+
+function breiteLaden(){
+ let wert=0;
+ try{ wert=Number(localStorage.getItem("connector-split-breite"))||0; }catch(e){}
+ if(wert)breiteSetzen(wert,false);
+}
+
+griff.addEventListener("pointerdown",e=>{
+ griffAktiv=true;
+ document.body.classList.add("griff-aktiv");
+ try{ griff.setPointerCapture(e.pointerId); }catch(err){}
+ breiteSetzen(e.clientX,false);
+ e.preventDefault();
+});
+griff.addEventListener("pointermove",e=>{
+ if(!griffAktiv)return;
+ breiteSetzen(e.clientX,false);
+});
+function griffLos(){
+ if(!griffAktiv)return;
+ griffAktiv=false;
+ document.body.classList.remove("griff-aktiv");
+ if(linksBreite)breiteSetzen(linksBreite,true);
+}
+griff.addEventListener("pointerup",griffLos);
+griff.addEventListener("pointercancel",griffLos);
+griff.addEventListener("keydown",e=>{
+ const schritt=24;
+ if(e.key==="ArrowLeft"){ breiteSetzen((linksBreite||window.innerWidth*0.42)-schritt,true); e.preventDefault(); }
+ if(e.key==="ArrowRight"){ breiteSetzen((linksBreite||window.innerWidth*0.42)+schritt,true); e.preventDefault(); }
+});
+
+document.getElementById("spielZu").addEventListener("click",spielSchliessen);
+// Fenster schmal machen: das Spiel würde sonst unsichtbar weiterlaufen.
+pcBreit.addEventListener("change",e=>{ if(!e.matches)spielSchliessen(); });
+window.addEventListener("resize",()=>{
+ if(!istPc())spielSchliessen();
+ if(linksBreite)breiteSetzen(linksBreite,false);
+});
+breiteLaden();
+
 // Die Spiele-Liste kommt aus der Spiele-Übersicht selbst – so bleibt sie
 // automatisch aktuell, wenn dort ein Spiel dazukommt.
 async function ladeAlleinSpiele(){
@@ -2855,6 +2985,9 @@ async function ladeAlleinSpiele(){
    titel.textContent=(gruppe.querySelector("h2")?.textContent||"Spiele").trim();
    // "Extras" (Rechner, Connector-Link …) ist kein Spiel und bleibt draußen.
    if(/^extras$/i.test(titel.textContent))return;
+   // Mehrspieler-Spiele brauchen einen Raum: allein geöffnet sagen sie nur,
+   // dass sie über den Connector laufen. Sie stehen im Multiplayer-Reiter.
+   if(/^mehrspieler/i.test(titel.textContent))return;
    const raster=document.createElement("div");
    raster.className="solo-raster";
    [...gruppe.querySelectorAll("a[href]")]
@@ -2874,6 +3007,13 @@ async function ladeAlleinSpiele(){
     link.target="_blank";
     link.rel="noopener";
     link.textContent=eintrag.text;
+    // Am PC rechts neben dem Chat öffnen, auf dem Handy im neuen Tab.
+    link.addEventListener("click",ev=>{
+     if(!istPc())return;
+     if(ev.ctrlKey||ev.metaKey||ev.shiftKey||ev.altKey)return;
+     ev.preventDefault();
+     spielOeffnen(eintrag.text,link.href);
+    });
     raster.appendChild(link);
    });
    if(raster.children.length){
@@ -2881,13 +3021,8 @@ async function ladeAlleinSpiele(){
     kaesten.push(kasten);
    }
   });
-  // Auch die Gruppen selbst im Alphabet ("2 Personen Spiele", "Extras",
-  // "Single Player Spiele" …), damit die Reihenfolge nicht von der
-  // Spiele-Übersicht abhängt.
-  kaesten
-   .sort((a,b)=>a.querySelector("h3").textContent.localeCompare(
-    b.querySelector("h3").textContent,"de",{numeric:true,sensitivity:"base"}))
-   .forEach(kasten=>liste.appendChild(kasten));
+  // Reihenfolge wie in der Spiele-Übersicht: erst allein, dann zu zweit.
+  kaesten.forEach(kasten=>liste.appendChild(kasten));
  }catch(e){
   liste.dataset.geladen="0";
   liste.innerHTML="";

@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Bomberman</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 14px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:880px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:12.5px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+
+.statuszeile{display:flex;gap:6px;flex-wrap:wrap;padding:6px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c22;font-size:12.5px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid #d9bc7c33;border-radius:6px;
+ padding:3px 8px;background:#0f2b23;color:#cfdcd5}
+.chip .punkt{width:10px;height:10px;border-radius:50%;box-shadow:0 0 6px currentColor}
+.chip b{font-weight:normal;color:#f1dca8}
+.chip .aus{opacity:.45;text-decoration:line-through}
+
+.tisch{padding:8px;background:#08120f;display:flex;flex-direction:column;align-items:center;gap:6px}
+.leinwand{position:relative;width:100%;max-width:600px}
+canvas{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #d9bc7c33;
+ background:#0a1410;touch-action:none}
+
+.pads{display:flex;gap:10px;justify-content:space-between;width:100%;max-width:600px}
+.pads:empty{display:none}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+ gap:3px;width:126px;height:126px;touch-action:none}
+.pad button{font-family:inherit;font-size:15px;border-radius:8px;cursor:pointer;
+ border:1px solid #d9bc7c55;background:#123a2e;color:#e8cd8e;touch-action:none;padding:0}
+.pad button:active{background:#e8cd8e;color:#0b241d}
+.pad [data-dir="hoch"]{grid-area:1/2}
+.pad [data-dir="links"]{grid-area:2/1}
+.pad [data-dir="bombe"]{grid-area:2/2;font-size:17px;background:#2a1610;color:#ffb08a;
+ border-color:#ff8a5c88}
+.pad [data-dir="rechts"]{grid-area:2/3}
+.pad [data-dir="runter"]{grid-area:3/2}
+.pad1 button{border-color:#ff8a5c88}
+.pad2 button{border-color:#5ce0ff88}
+.pad3 button{border-color:#7fe08a88}
+.pad4 button{border-color:#c9a0ff88}
+
+.meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:330px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.12em;font-size:18px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.tasten{display:flex;gap:8px;padding:0 8px 8px;background:#08120f;flex-wrap:wrap;font-size:12.5px;
+ color:#a9c3b6}
+.tasten .block{flex:1 1 190px;border:1px solid #d9bc7c33;border-radius:7px;padding:7px 9px;background:#0b241d}
+.pi{display:inline-block;border:1px solid #d9bc7c66;border-radius:4px;padding:1px 5px;
+ font-family:Consolas,monospace;font-size:11.5px;color:#e8cd8e}
+.fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:24px}
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Bomberman</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neue Partie</button>
+  <span style="width:10px"></span>
+  <button data-spieler="2" class="aktiv">2 Spieler</button>
+  <button data-spieler="3">3 Spieler</button>
+  <button data-spieler="4">4 Spieler</button>
+ </div>
+
+ <div class="statuszeile" id="status"></div>
+
+ <div class="tisch">
+  <div class="pads" id="padsOben"></div>
+  <div class="leinwand">
+   <canvas id="leinwand" width="600" height="520"></canvas>
+   <div class="meldung" id="meldung">
+    <div class="kasten">
+     <h2 id="meldungTitel">BOMBERMAN</h2>
+     <p id="meldungText"></p>
+     <button id="meldungKnopf">Los geht's</button>
+    </div>
+   </div>
+  </div>
+  <div class="pads" id="padsUnten"></div>
+ </div>
+
+ <div class="tasten">
+  <div class="block"><b>Spieler 1</b> (orange): <span class="pi">W</span><span class="pi">A</span><span class="pi">S</span><span class="pi">D</span> · Bombe <span class="pi">Q</span></div>
+  <div class="block"><b>Spieler 2</b> (blau): <span class="pi">↑</span><span class="pi">←</span><span class="pi">↓</span><span class="pi">→</span> · Bombe <span class="pi">Enter</span></div>
+  <div class="block"><b>Spieler 3</b> (grün): <span class="pi">I</span><span class="pi">J</span><span class="pi">K</span><span class="pi">L</span> · Bombe <span class="pi">U</span></div>
+  <div class="block"><b>Spieler 4</b> (violett): <span class="pi">T</span><span class="pi">F</span><span class="pi">G</span><span class="pi">H</span> · Bombe <span class="pi">V</span> <span class="klein">(oder Ziffernblock)</span></div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Leertaste oder „Los geht's" startet die Runde.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Als letzter Bomber übrig bleiben – wer von einer Flamme erwischt wird, ist raus.</li>
+   <li><b>Bombe:</b> Legen, drei Sekunden warten, dann brennt ein Kreuz in vier Richtungen. Die eigene Bombe ist gefährlich – also weggehen.</li>
+   <li><b>Kisten:</b> Braune Kisten verschwinden in der Flamme. Manchmal steckt etwas darunter.</li>
+   <li><b>Extras:</b> <b>Flamme</b> = größere Explosion, <b>Bombe</b> = eine Bombe mehr gleichzeitig, <b>Tempo</b> = schneller laufen.</li>
+   <li><b>Ketten:</b> Trifft eine Flamme eine andere Bombe, explodiert die sofort mit.</li>
+   <li><b>Partie:</b> Wer zuerst drei Runden gewinnt, gewinnt das Match. Sterben alle gleichzeitig, ist die Runde unentschieden.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const leinwand=$("leinwand");
+const ctx=leinwand.getContext("2d");
+
+const SPALTEN=15, ZEILEN=13, K=40;
+const W=SPALTEN*K, H=ZEILEN*K;          // 600 × 520
+const RADIUS=0.33;                       // Spielerradius in Kacheln
+const BOMBENZEIT=2.4, FLAMMENZEIT=0.62;
+const ZIEL=3;
+
+const FARBEN={
+ 1:{haupt:"#ff8a5c",hell:"#ffc7a6",dunkel:"#a34a26"},
+ 2:{haupt:"#5ce0ff",hell:"#b6f0ff",dunkel:"#1f7d97"},
+ 3:{haupt:"#7fe08a",hell:"#c6f5cc",dunkel:"#2f7a3b"},
+ 4:{haupt:"#c9a0ff",hell:"#e7d6ff",dunkel:"#6b45a3"}
+};
+const NAMEN={1:"Spieler 1",2:"Spieler 2",3:"Spieler 3",4:"Spieler 4"};
+const ECKEN=[[1,1],[13,11],[1,11],[13,1]];
+
+// ------------------------------------------------------------------ Zustand
+let raster=new Uint8Array(SPALTEN*ZEILEN);   // 0 frei, 1 Wand, 2 Kiste
+let spieler=[];
+let bomben=[];
+let flammen=[];
+let powerups=[];
+let trümmer=[];
+let eingabe={};                               // nr -> {dx,dy}
+let anzahl=2;
+let runde=1, zustand="start", vorlauf=0, rundenEnde=false, unentschieden=false;
+let siegesZiel=ZIEL;
+let letzte=0;
+
+// ------------------------------------------------------------------ Aufbau
+function neueKarten(){
+ raster=new Uint8Array(SPALTEN*ZEILEN);
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const rand=(x===0||y===0||x===SPALTEN-1||y===ZEILEN-1);
+   const pfeiler=(x%2===0&&y%2===0);
+   if(rand||pfeiler)raster[y*SPALTEN+x]=1;
+  }
+ }
+ // Startecken freihalten
+ for(const [sx,sy] of ECKEN){
+  for(const [dx,dy] of [[0,0],[1,0],[0,1],[-1,0],[0,-1]]){
+   const x=sx+dx, y=sy+dy;
+   if(x>0&&y>0&&x<SPALTEN-1&&y<ZEILEN-1)raster[y*SPALTEN+x]=0;
+  }
+ }
+ // Kisten
+ for(let y=1;y<ZEILEN-1;y++){
+  for(let x=1;x<SPALTEN-1;x++){
+   if(raster[y*SPALTEN+x]!==0)continue;
+   if(Math.random()<0.58)raster[y*SPALTEN+x]=2;
+  }
+ }
+}
+
+function neuerSpieler(nr){
+ const [sx,sy]=ECKEN[nr-1];
+ return {
+  nr, x:sx+0.5, y:sy+0.5, dx:0, dy:0,
+  bombenMax:1, feuer:1, tempo:1,
+  leben:true, sieg:0, aufBombe:0, laufT:0, totSeit:0,
+  farbe:FARBEN[nr]
+ };
+}
+
+function neuesSpiel(){
+ bomben=[]; flammen=[]; powerups=[]; trümmer=[]; eingabe={};
+ neueKarten();
+ spieler=[];
+ for(let nr=1;nr<=anzahl;nr++)spieler.push(neuerSpieler(nr));
+ rundenEnde=false;
+ startRunde();
+ zeigeStand();
+}
+
+function startRunde(){
+ bomben=[]; flammen=[]; powerups=[]; trümmer=[]; eingabe={};
+ neueKarten();
+ spieler.forEach((s,i)=>{
+  const [sx,sy]=ECKEN[i];
+  s.x=sx+0.5; s.y=sy+0.5; s.dx=0; s.dy=0;
+  s.bombenMax=1; s.feuer=1; s.tempo=1;
+  s.leben=true; s.aufBombe=0; s.laufT=0; s.totSeit=0;
+ });
+ rundenEnde=false;
+ zustand="laeuft";
+ vorlauf=1.9;
+ meldungZu();
+ zeigeStand();
+ $("hinweis").textContent="Achtung, gleich geht's los …";
+}
+
+// ------------------------------------------------------------------ Bombe legen
+function legeBombe(nr){
+ if(zustand!=="laeuft"||vorlauf>0)return;
+ const s=spieler.find(p=>p.nr===nr);
+ if(!s||!s.leben)return;
+ const bx=Math.floor(s.x), by=Math.floor(s.y);
+ if(bomben.some(b=>b.x===bx&&b.y===by))return;
+ if(bomben.filter(b=>b.nr===nr).length>=s.bombenMax)return;
+ bomben.push({x:bx,y:by,nr,zeit:BOMBENZEIT,radius:s.feuer,explodiert:false,phase:Math.random()*6,freiFuer:nr});
+}
+
+// ------------------------------------------------------------------ Physik
+function kachel(x,y){
+ if(x<0||y<0||x>=SPALTEN||y>=ZEILEN)return 1;
+ return raster[y*SPALTEN+x];
+}
+
+function begehbar(x,y,s){
+ for(const [ox,oy] of [[-RADIUS,-RADIUS],[RADIUS,-RADIUS],[-RADIUS,RADIUS],[RADIUS,RADIUS]]){
+  if(kachel(Math.floor(x+ox),Math.floor(y+oy))!==0)return false;
+ }
+ for(const b of bomben){
+  if(b.freiFuer===s.nr){
+   // Der eigene Bomber darf die Bombe verlassen, solange er sie noch berührt
+   if(x+RADIUS<=b.x||x-RADIUS>=b.x+1||y+RADIUS<=b.y||y-RADIUS>=b.y+1)b.freiFuer=0;
+   continue;
+  }
+  if(x+RADIUS>b.x&&x-RADIUS<b.x+1&&y+RADIUS>b.y&&y-RADIUS<b.y+1)return false;
+ }
+ return true;
+}
+
+function bewege(s,dt){
+ if(!s.leben||vorlauf>0)return;
+ const e=eingabe[s.nr];
+ if(!e)return;
+ const stufe=3.05*s.tempo;
+ const schritt=stufe*dt;
+ let nx=s.x, ny=s.y;
+
+ if(e.dx!==0){
+  ny=s.y+Math.max(-8*dt,Math.min(8*dt,(Math.floor(s.y)+0.5)-s.y));
+  const ziel=s.x+e.dx*schritt;
+  if(begehbar(ziel,ny,s))nx=ziel;
+ } else if(e.dy!==0){
+  nx=s.x+Math.max(-8*dt,Math.min(8*dt,(Math.floor(s.x)+0.5)-s.x));
+  const ziel=s.y+e.dy*schritt;
+  if(begehbar(nx,ziel,s))ny=ziel;
+ }
+ if(nx!==s.x||ny!==s.y){
+  s.x=nx; s.y=ny;
+  s.laufT+=dt;
+  s.letzteRichtung=[e.dx,e.dy];
+ }
+
+ // Power-up einsammeln
+ for(let i=powerups.length-1;i>=0;i--){
+  const p=powerups[i];
+  if(p.x===Math.floor(s.x)&&p.y===Math.floor(s.y)){
+   if(p.art==="bombe")s.bombenMax=Math.min(6,s.bombenMax+1);
+   if(p.art==="feuer")s.feuer=Math.min(6,s.feuer+1);
+   if(p.art==="tempo")s.tempo=Math.min(1.8,s.tempo*1.22);
+   powerups.splice(i,1);
+   zeigeStand();
+  }
+ }
+}
+
+function vielleichtPowerup(x,y){
+ if(Math.random()>0.34)return;
+ const arten=["feuer","feuer","bombe","bombe","tempo"];
+ powerups.push({x,y,art:arten[Math.floor(Math.random()*arten.length)],phase:Math.random()*6});
+}
+
+function explo(b){
+ if(b.explodiert)return;
+ b.explodiert=true;
+ const zellen=[{x:b.x,y:b.y}];
+ for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+  for(let i=1;i<=b.radius;i++){
+   const tx=b.x+dx*i, ty=b.y+dy*i;
+   const k=kachel(tx,ty);
+   if(k===1)break;
+   zellen.push({x:tx,y:ty});
+   if(k===2){
+    raster[ty*SPALTEN+tx]=0;
+    vielleichtPowerup(tx,ty);
+    trümmer.push({x:tx,y:ty,leben:1,phase:Math.random()*6});
+    break;
+   }
+  }
+ }
+ for(const z of zellen)flammen.push({x:z.x,y:z.y,leben:FLAMMENZEIT,phase:Math.random()*6});
+ // Kettenreaktion
+ for(const z of zellen){
+  for(const b2 of bomben){
+   if(!b2.explodiert&&b2.x===z.x&&b2.y===z.y)explo(b2);
+  }
+ }
+}
+
+function update(dt){
+ if(zustand!=="laeuft")return;
+ if(vorlauf>0){ vorlauf-=dt; if(vorlauf<=0)$("hinweis").textContent="Los!"; }
+
+ for(const s of spieler)bewege(s,dt);
+
+ // Bomben zünden
+ for(const b of bomben){
+  if(!b.explodiert){
+   b.zeit-=dt;
+   if(b.zeit<=0)explo(b);
+  }
+ }
+ bomben=bomben.filter(b=>!b.explodiert);
+
+ // Flammen leben und töten
+ for(let i=flammen.length-1;i>=0;i--){
+  flammen[i].leben-=dt;
+  if(flammen[i].leben<=0)flammen.splice(i,1);
+ }
+ for(let i=trümmer.length-1;i>=0;i--){
+  trümmer[i].leben-=dt*1.6;
+  if(trümmer[i].leben<=0)trümmer.splice(i,1);
+ }
+ for(const s of spieler){
+  if(!s.leben)continue;
+  const tx=Math.floor(s.x), ty=Math.floor(s.y);
+  if(flammen.some(f=>f.x===tx&&f.y===ty)){
+   s.leben=false; s.totSeit=0;
+   trümmer.push({x:tx,y:ty,leben:1,phase:0,farbe:s.farbe.haupt});
+   zeigeStand();
+  }
+ }
+
+ // Rundenende
+ const lebend=spieler.filter(s=>s.leben);
+ if(lebend.length<=1&&!rundenEnde){
+  rundenEnde=true;
+  if(lebend.length===1){
+   const gewinner=lebend[0];
+   unentschieden=false;
+   gewinner.sieg++;
+   zeigeStand();
+   if(gewinner.sieg>=siegesZiel){
+    zustand="match";
+    meldung("MATCH VORBEI",
+     NAMEN[gewinner.nr]+" gewinnt das Match mit "+gewinner.sieg+" Rundensiegen.",
+     "Neue Partie");
+    $("hinweis").textContent="Tippen oder Leertaste startet eine neue Partie.";
+   } else {
+    zustand="runde";
+    meldung("RUNDE "+runde,
+     NAMEN[gewinner.nr]+" gewinnt die Runde "+runde+" und steht bei "+gewinner.sieg+(gewinner.sieg===1?" Sieg.":" Siegen."),
+     "Nächste Runde");
+    $("hinweis").textContent="Tippen oder Leertaste für die nächste Runde.";
+   }
+  } else {
+   zustand="runde";
+   unentschieden=true;
+   meldung("UNENTSCHIEDEN",
+    "Alle Bomber sind gleichzeitig hochgegangen. Runde "+runde+" wird wiederholt.",
+    "Noch einmal");
+   $("hinweis").textContent="Tippen oder Leertaste für die nächste Runde.";
+  }
+ }
+}
+
+function weiter(){
+ if(zustand==="match"){ runde=1; spieler.forEach(s=>s.sieg=0); neuesSpiel(); return; }
+ if(zustand==="runde"){ if(!unentschieden)runde++; unentschieden=false; startRunde(); return; }
+ if(zustand==="start"){ neuesSpiel(); }
+}
+
+// ------------------------------------------------------------------ Zeichnen
+function kachelGrund(x,y){
+ const dunkel=(x+y)%2===0;
+ ctx.fillStyle=dunkel?"#1b3a2c":"#204634";
+ ctx.fillRect(x*K,y*K,K,K);
+ ctx.fillStyle="rgba(255,255,255,0.03)";
+ ctx.fillRect(x*K,y*K,K,2);
+}
+
+function zeichneWand(x,y){
+ const px=x*K, py=y*K;
+ ctx.fillStyle="#3d4a52";
+ ctx.fillRect(px,py,K,K);
+ ctx.fillStyle="#55656f";
+ ctx.fillRect(px+2,py+2,K-4,K-6);
+ ctx.fillStyle="#7d8f99";
+ ctx.fillRect(px+4,py+4,K-8,4);
+ ctx.strokeStyle="#222b31";
+ ctx.lineWidth=1.5;
+ ctx.strokeRect(px+1,py+1,K-2,K-2);
+}
+
+function zeichneKiste(x,y){
+ const px=x*K, py=y*K;
+ ctx.fillStyle="#7a4a22";
+ ctx.fillRect(px+1,py+1,K-2,K-2);
+ ctx.fillStyle="#a2642f";
+ ctx.fillRect(px+3,py+3,K-6,K-6);
+ ctx.strokeStyle="#5d3517";
+ ctx.lineWidth=3;
+ ctx.beginPath();
+ ctx.moveTo(px+4,py+4); ctx.lineTo(px+K-4,py+K-4);
+ ctx.moveTo(px+K-4,py+4); ctx.lineTo(px+4,py+K-4);
+ ctx.stroke();
+ ctx.strokeStyle="#c78748";
+ ctx.lineWidth=2;
+ ctx.strokeRect(px+3,py+3,K-6,K-6);
+}
+
+function zeichneBombe(b){
+ const cx=b.x*K+K/2, cy=b.y*K+K/2;
+ const puls=1+Math.sin(performance.now()/110+b.phase)*0.07;
+ const r=K*0.34*puls;
+ ctx.save();
+ ctx.fillStyle="rgba(0,0,0,0.45)";
+ ctx.beginPath(); ctx.ellipse(cx,cy+K*0.3,r*0.95,r*0.4,0,0,Math.PI*2); ctx.fill();
+ const g=ctx.createRadialGradient(cx-r*0.35,cy-r*0.4,r*0.2,cx,cy,r);
+ g.addColorStop(0,"#5a5a62");
+ g.addColorStop(0.45,"#20202a");
+ g.addColorStop(1,"#050508");
+ ctx.fillStyle=g;
+ ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+ ctx.strokeStyle="#000"; ctx.lineWidth=1; ctx.stroke();
+ // Zündschnur
+ ctx.strokeStyle="#c9a06a"; ctx.lineWidth=2;
+ ctx.beginPath();
+ ctx.moveTo(cx+r*0.4,cy-r*0.75);
+ ctx.quadraticCurveTo(cx+r*0.85,cy-r*1.5,cx+r*0.3,cy-r*1.75);
+ ctx.stroke();
+ // Funke
+ const funke=0.6+Math.abs(Math.sin(performance.now()/90+b.phase))*0.6;
+ ctx.fillStyle="rgba(255,220,120,"+funke+")";
+ ctx.beginPath(); ctx.arc(cx+r*0.3,cy-r*1.75,3+funke*2,0,Math.PI*2); ctx.fill();
+ // Blinklicht
+ if(b.zeit<0.9&&Math.sin(performance.now()/70)>0){
+  ctx.fillStyle="rgba(255,80,60,0.55)";
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.35,0,Math.PI*2); ctx.fill();
+ }
+ ctx.restore();
+}
+
+function zeichneFlamme(f){
+ const px=f.x*K, py=f.y*K;
+ const t=f.leben/FLAMMENZEIT;           // 1 -> 0
+ const s=0.62+0.38*Math.min(1,t*2.2);
+ const cx=px+K/2, cy=py+K/2;
+ ctx.save();
+ ctx.globalAlpha=Math.min(1,t*2.4);
+ const g=ctx.createRadialGradient(cx,cy,K*0.05,cx,cy,K*0.62*s);
+ g.addColorStop(0,"#fffbe0");
+ g.addColorStop(0.35,"#ffd24a");
+ g.addColorStop(0.7,"#ff7a22");
+ g.addColorStop(1,"rgba(180,40,0,0.35)");
+ ctx.fillStyle=g;
+ const r=K*0.52*s;
+ ctx.beginPath();
+ ctx.arc(cx,cy,r,0,Math.PI*2);
+ ctx.fill();
+ // Flammenzacken
+ ctx.globalAlpha=Math.min(1,t*1.8)*0.85;
+ ctx.fillStyle="#ffcf5a";
+ for(let i=0;i<5;i++){
+  const winkel=f.phase+i*1.27+performance.now()/240;
+  const rr=r*(0.55+0.3*Math.abs(Math.sin(winkel)));
+  const ox=Math.cos(winkel*1.7)*r*0.35, oy=Math.sin(winkel*1.3)*r*0.35;
+  ctx.beginPath(); ctx.arc(cx+ox,cy+oy,rr*0.42,0,Math.PI*2); ctx.fill();
+ }
+ ctx.restore();
+}
+
+function zeichnePowerup(p){
+ const cx=p.x*K+K/2, cy=p.y*K+K/2;
+ const bob=Math.sin(performance.now()/260+p.phase)*2;
+ const r=K*0.31;
+ ctx.save();
+ ctx.translate(cx,cy+bob);
+ ctx.fillStyle="rgba(0,0,0,0.4)";
+ ctx.beginPath(); ctx.ellipse(0,r*1.35,r*0.9,r*0.35,0,0,Math.PI*2); ctx.fill();
+ const g=ctx.createRadialGradient(-r*0.3,-r*0.4,r*0.2,0,0,r*1.2);
+ if(p.art==="feuer"){ g.addColorStop(0,"#ffe9a8"); g.addColorStop(1,"#e2551a"); }
+ else if(p.art==="bombe"){ g.addColorStop(0,"#e8f4ff"); g.addColorStop(1,"#2c5a7a"); }
+ else { g.addColorStop(0,"#f0ffe0"); g.addColorStop(1,"#3f7a2c"); }
+ ctx.fillStyle=g;
+ ctx.beginPath();
+ ctx.roundRect?ctx.roundRect(-r,-r,r*2,r*2,r*0.35):ctx.rect(-r,-r,r*2,r*2);
+ ctx.fill();
+ ctx.strokeStyle="#0b241d"; ctx.lineWidth=1.5; ctx.stroke();
+
+ ctx.fillStyle="#0b241d";
+ if(p.art==="feuer"){
+  ctx.beginPath();
+  ctx.moveTo(0,-r*0.7);
+  ctx.quadraticCurveTo(r*0.62,-r*0.1,r*0.28,r*0.55);
+  ctx.quadraticCurveTo(0,r*0.85,-r*0.28,r*0.55);
+  ctx.quadraticCurveTo(-r*0.62,-r*0.1,0,-r*0.7);
+  ctx.fill();
+  ctx.fillStyle="#ffe9a8";
+  ctx.beginPath(); ctx.arc(0,r*0.2,r*0.22,0,Math.PI*2); ctx.fill();
+ } else if(p.art==="bombe"){
+  ctx.beginPath(); ctx.arc(0,r*0.12,r*0.52,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#0b241d"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(r*0.2,-r*0.4); ctx.quadraticCurveTo(r*0.7,-r*0.75,r*0.35,-r*0.95); ctx.stroke();
+ } else {
+  ctx.beginPath();
+  ctx.moveTo(-r*0.6,r*0.35); ctx.lineTo(0,-r*0.55); ctx.lineTo(r*0.6,r*0.35);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(-r*0.16,-r*0.1,r*0.32,r*0.6);
+ }
+ ctx.restore();
+}
+
+function zeichneSpieler(s){
+ const cx=s.x*K, cy=s.y*K;
+ const bob=s.laufT>0?Math.abs(Math.sin(s.laufT*13))*3:0;
+ const r=K*0.33;
+ ctx.save();
+ // Schatten
+ ctx.fillStyle="rgba(0,0,0,0.38)";
+ ctx.beginPath(); ctx.ellipse(cx,cy+r*0.95,r*0.95,r*0.36,0,0,Math.PI*2); ctx.fill();
+ if(!s.leben){
+  ctx.globalAlpha=0.35;
+ }
+ // Körper
+ const g=ctx.createRadialGradient(cx-r*0.35,cy-r*0.45-bob,r*0.2,cx,cy-bob,r*1.15);
+ g.addColorStop(0,s.farbe.hell);
+ g.addColorStop(0.55,s.farbe.haupt);
+ g.addColorStop(1,s.farbe.dunkel);
+ ctx.fillStyle=g;
+ ctx.beginPath(); ctx.arc(cx,cy-bob,r,0,Math.PI*2); ctx.fill();
+ ctx.strokeStyle="rgba(0,0,0,0.45)"; ctx.lineWidth=1.5; ctx.stroke();
+ // Augen
+ const blick=s.letzteRichtung||[0,0];
+ const ox=blick[0]*r*0.16, oy=blick[1]*r*0.16;
+ for(const seite of [-1,1]){
+  const ex=cx+seite*r*0.36+ox, ey=cy-bob-r*0.1+oy;
+  ctx.fillStyle="#ffffff";
+  ctx.beginPath(); ctx.arc(ex,ey,r*0.26,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#101820";
+  ctx.beginPath(); ctx.arc(ex+ox*0.5,ey+oy*0.5,r*0.13,0,Math.PI*2); ctx.fill();
+ }
+ // Helmglanz
+ ctx.fillStyle="rgba(255,255,255,0.35)";
+ ctx.beginPath(); ctx.ellipse(cx-r*0.3,cy-bob-r*0.55,r*0.34,r*0.16,-0.6,0,Math.PI*2); ctx.fill();
+ // Nummer
+ if(!s.leben){
+  ctx.globalAlpha=1;
+  ctx.fillStyle="rgba(255,120,90,0.9)";
+  ctx.font="bold 12px Georgia, serif";
+  ctx.textAlign="center";
+  ctx.fillText("✕",cx,cy-bob+4);
+ }
+ ctx.restore();
+}
+
+function zeichne(){
+ // Boden
+ for(let y=0;y<ZEILEN;y++)for(let x=0;x<SPALTEN;x++)kachelGrund(x,y);
+
+ // Wände und Kisten
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const v=raster[y*SPALTEN+x];
+   if(v===1)zeichneWand(x,y);
+   else if(v===2)zeichneKiste(x,y);
+  }
+ }
+
+ for(const p of powerups)zeichnePowerup(p);
+ for(const b of bomben)zeichneBombe(b);
+ for(const s of spieler)if(s.leben)zeichneSpieler(s);
+ for(const t of trümmer){
+  ctx.globalAlpha=t.leben*0.5;
+  ctx.fillStyle=t.farbe||"#c78748";
+  ctx.beginPath();
+  ctx.arc(t.x*K+K/2+(Math.random()-0.5)*10,t.y*K+K/2+(Math.random()-0.5)*10,6*t.leben+3,0,Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=1;
+ }
+ for(const f of flammen)zeichneFlamme(f);
+ for(const s of spieler)if(!s.leben&&s.totSeit<2)zeichneSpieler(s);
+
+ // Vorlauf-Zähler
+ if(vorlauf>0&&zustand==="laeuft"){
+  const n=Math.ceil(vorlauf);
+  const text=vorlauf<=0.55?"LOS!":String(Math.max(1,n-1));
+  ctx.save();
+  ctx.globalAlpha=0.85;
+  ctx.fillStyle="rgba(4,16,12,0.55)";
+  ctx.fillRect(0,H/2-52,W,104);
+  ctx.fillStyle="#f7e9c4";
+  ctx.font="bold 62px Georgia, serif";
+  ctx.textAlign="center";
+  ctx.fillText(text,W/2,H/2+22);
+  ctx.restore();
+ }
+
+ // Rahmen
+ ctx.strokeStyle="rgba(232,205,142,0.45)";
+ ctx.lineWidth=2;
+ ctx.strokeRect(1,1,W-2,H-2);
+}
+
+// ------------------------------------------------------------------ Schleife
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzte)/1000||0);
+ letzte=zeit;
+ update(dt);
+ spieler.forEach(s=>{ if(!s.leben)s.totSeit+=dt; });
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ------------------------------------------------------------------ Bedienung
+function setzeRichtung(nr,dx,dy){
+ if(dx===0&&dy===0)delete eingabe[nr];
+ else eingabe[nr]={dx,dy};
+}
+
+const TASTEN={
+ KeyW:[1,0,-1],KeyA:[1,-1,0],KeyS:[1,0,1],KeyD:[1,1,0],KeyQ:[1,"bombe"],
+ ArrowUp:[2,0,-1],ArrowLeft:[2,-1,0],ArrowDown:[2,0,1],ArrowRight:[2,1,0],Enter:[2,"bombe"],
+ KeyI:[3,0,-1],KeyJ:[3,-1,0],KeyK:[3,0,1],KeyL:[3,1,0],KeyU:[3,"bombe"],
+ KeyT:[4,0,-1],KeyF:[4,-1,0],KeyG:[4,0,1],KeyH:[4,1,0],KeyV:[4,"bombe"],
+ Numpad8:[4,0,-1],Numpad4:[4,-1,0],Numpad5:[4,0,1],Numpad6:[4,1,0],Numpad0:[4,"bombe"]
+};
+const gedrueckt=new Map();
+
+window.addEventListener("keydown",e=>{
+ if(e.code==="Space"){
+  e.preventDefault();
+  if(!$("meldung").hidden)$("meldungKnopf").click();
+  else weiter();
+  return;
+ }
+ const t=TASTEN[e.code];
+ if(!t)return;
+ e.preventDefault();
+ if(t[1]==="bombe"){ legeBombe(t[0]); return; }
+ gedrueckt.set(e.code,t[0]);
+ setzeRichtung(t[0],t[1],t[2]);
+});
+window.addEventListener("keyup",e=>{
+ const t=TASTEN[e.code];
+ if(!t||t[1]==="bombe")return;
+ gedrueckt.delete(e.code);
+ // nur löschen, wenn keine andere Richtungstaste dieses Spielers noch gedrückt ist
+ for(const [code,nr] of gedrueckt)if(nr===t[0])return;
+ setzeRichtung(t[0],0,0);
+});
+
+// Touch-Steuerkreuze
+function bauePads(){
+ const oben=$("padsOben"), unten=$("padsUnten");
+ oben.replaceChildren(); unten.replaceChildren();
+ const knopf=(nr,dir,text)=>"";
+ for(let nr=1;nr<=anzahl;nr++){
+  const pad=document.createElement("div");
+  pad.className="pad pad"+nr;
+  pad.dataset.nr=nr;
+  [["hoch","▲"],["links","◀"],["bombe","✸"],["rechts","▶"],["runter","▼"]].forEach(([dir,text])=>{
+   const b=document.createElement("button");
+   b.type="button";
+   b.dataset.dir=dir;
+   b.textContent=text;
+   const richtung={hoch:[0,-1],runter:[0,1],links:[-1,0],rechts:[1,0]}[dir];
+   b.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    if(dir==="bombe")legeBombe(nr);
+    else setzeRichtung(nr,richtung[0],richtung[1]);
+   });
+   const los=()=>{ if(dir!=="bombe")setzeRichtung(nr,0,0); };
+   b.addEventListener("pointerup",los);
+   b.addEventListener("pointerleave",los);
+   b.addEventListener("pointercancel",los);
+   pad.appendChild(b);
+  });
+  (nr<=2?unten:oben).appendChild(pad);
+ }
+}
+
+function zeigeStand(){
+ const box=$("status");
+ box.replaceChildren();
+ spieler.forEach(s=>{
+  const c=document.createElement("div");
+  c.className="chip"+(s.leben?"":" aus");
+  c.innerHTML='<span class="punkt" style="background:'+s.farbe.haupt+';color:'+s.farbe.haupt+'"></span>'+
+   '<span>'+NAMEN[s.nr]+'</span><b>'+s.sieg+'</b>'+
+   '<span title="Bomben">💣'+s.bombenMax+'</span>'+
+   '<span title="Reichweite">🔥'+s.feuer+'</span>'+
+   '<span title="Tempo">👟'+s.tempo.toFixed(2).replace(".",",")+'</span>';
+  box.appendChild(c);
+ });
+}
+
+// Meldung
+function meldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+function meldungZu(){ $("meldung").hidden=true; }
+$("meldungKnopf").onclick=()=>{
+ if(zustand==="start"){ neuesSpiel(); return; }
+ weiter();
+};
+
+$("btnNeu").onclick=()=>{ runde=1; spieler.forEach(s=>s.sieg=0); neuesSpiel(); };
+
+document.querySelectorAll("[data-spieler]").forEach(b=>{
+ b.onclick=()=>{
+  anzahl=Number(b.dataset.spieler);
+  document.querySelectorAll("[data-spieler]").forEach(x=>x.classList.remove("aktiv"));
+  b.classList.add("aktiv");
+  bauePads();
+  runde=1;
+  spieler.forEach(s=>s.sieg=0);
+  neuesSpiel();
+  $("hinweis").textContent=anzahl+" Spieler sind bereit.";
+ };
+});
+
+// Start
+bauePads();
+spieler=[neuerSpieler(1),neuerSpieler(2)];
+neueKarten();
+zeigeStand();
+meldung("BOMBERMAN",
+ zustand==="start"?"Zwei bis vier Bomber, ein Tisch voller Kisten. Wer zuerst drei Runden gewinnt, gewinnt das Match.":"",
+ "Los geht's");
+requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });
+})();
+</script>
+</body>
+</html>

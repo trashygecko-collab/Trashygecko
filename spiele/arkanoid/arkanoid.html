@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Arkanoid</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+.menueleiste .rechts{margin-left:auto;display:flex;gap:4px}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss .gut{color:#e8cd8e}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+
+@media(max-width:430px){ .menueleiste button{font-size:12px;padding:6px 8px} }
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Arkanoid</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnPause">Pause</button>
+  <span class="rechts">
+   <button id="btnLaser" hidden>◉ Feuer</button>
+  </span>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Level <b id="level">1</b></span>
+  <span>Leben <b id="leben">●●●</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="480" height="520"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">ARKANOID</h2>
+    <p id="meldungText">Schläger unten mit dem Finger bewegen. Tippen startet den Ball.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Finger über das Feld ziehen – der Schläger folgt.</span>
+  <span class="gut" id="power"></span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Mit dem Schläger den Ball zurückspielen und alle Steine zerschlagen. Fällt der Ball ins Leere, ist ein Leben weg – drei Leben pro Spiel.</li>
+   <li><b>Steuern:</b> Finger (oder Maus) irgendwo aufs Feld setzen und ziehen, der Schläger folgt der Spur. Am PC gehen auch ← und →, die Leertaste schießt Laser und lässt einen geklebten Ball los.</li>
+   <li><b>Trefferwinkel:</b> Wo der Ball auf den Schläger trifft, bestimmt die Richtung – außen fliegt er flacher, in der Mitte steiler nach oben.</li>
+   <li><b>Power-ups</b> fallen aus zerschlagenen Steinen und werden mit dem Schläger aufgefangen: <b>E</b> breiter Schläger, <b>C</b> Ball klebt, <b>L</b> Laser, <b>D</b> drei Bälle, <b>S</b> langsamer, <b>P</b> ein Leben extra.</li>
+   <li><b>Steine:</b> Je höher die Reihe sitzt, desto mehr Punkte gibt sie. Alle Steine weg heißt: nächstes Level, der Ball wird dabei etwas schneller.</li>
+   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const W=480, H=520;
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const SPALTEN=10, REIHEN_MAX=7;
+const RAND=12, FUGEN=4;
+const STEIN_W=(W-2*RAND-(SPALTEN-1)*FUGEN)/SPALTEN;
+const STEIN_H=18;
+const SCHLAEGER_H=14;
+const BALL_R=8;
+
+const POWER={
+ E:{farbe:"#4fb3a0",text:"E"},
+ C:{farbe:"#d9bc7c",text:"C"},
+ L:{farbe:"#c2603f",text:"L"},
+ D:{farbe:"#8fb3e8",text:"D"},
+ S:{farbe:"#9fb98f",text:"S"},
+ P:{farbe:"#e8a7c0",text:"P"}
+};
+
+let zustand="start";       // start, laeuft, pause, level, ende
+let punkte=0, leben=3, level=1;
+let steine=[];
+let bälle=[];
+let schlaeger={x:W/2,w:84};
+let powerUps=[];
+let schuesse=[];
+let aktivePower=[];        // {art, rest}
+let fangBall=null;
+let letzteZeit=0;
+let ticker=0;
+let eingabe={links:false,rechts:false};
+let tippSperre=0;
+
+const rnd=Math.random;
+
+// ---------------------------------------------------------------- Level
+
+const MUSTER=[
+ ["1111111111","1111111111","1111111111","1111111111","1111111111"],
+ ["1111111111","1222222221","1233333321","1222222221","1111111111"],
+ ["1000000001","0100000010","0010000100","0001001000","0000110000"],
+ ["1111111111","0111111110","0011111100","0001111000","0000110000"],
+ ["1010101010","0101010101","1010101010","0101010101","1010101010"],
+ ["1111111111","1000000001","1011111101","1000000001","1111111111"],
+ ["0001111000","0011111100","0111111110","1111111111","0111111110","0011111100"],
+ ["1111111111","2222222222","1111111111","2222222222"],
+ ["0100000010","1110000111","1111001111","1111111111","1111001111","1110000111"],
+ ["1111111111","1111111111","1111111111","1111111111","1111111111","1111111111"]
+];
+
+function levelAufbau(nummer){
+ const index=(nummer-1)%MUSTER.length;
+ const basis=MUSTER[index];
+ steine=[];
+ basis.forEach((zeile,reihe)=>{
+  for(let i=0;i<SPALTEN&&i<zeile.length;i++){
+   const wert=Number(zeile[i]);
+   if(!wert)continue;
+   steine.push({
+    x:RAND+i*(STEIN_W+FUGEN),
+    y:56+reihe*(STEIN_H+FUGEN),
+    w:STEIN_W,
+    h:STEIN_H,
+    reihe:reihe,
+    // Hohe Reihen zählen mehr, mehrfach belegte Muster (2,3) halten zwei Treffer.
+    treffer:wert>1?2:1,
+    punkte:(REIHEN_MAX-reihe)*10*(wert>1?2:1)
+   });
+  }
+ });
+
+ bälle=[];
+ schuesse=[];
+ powerUps=[];
+ aktivePower=[];
+ fangBall=null;
+ schlaeger.w=84;
+ schlaeger.x=W/2;
+ neuerBall();
+ $("level").textContent=nummer;
+ powerZeigen();
+}
+
+function neuerBall(){
+ bälle=[{x:W/2,y:H-90,vx:0,vy:0,r:BALL_R,fest:true}];
+ fangBall=null;
+}
+
+function ballTempo(){
+ return Math.min(430,300+level*7);
+}
+
+function ballLoslassen(){
+ const ball=bälle[0];
+ if(!ball||!ball.fest)return;
+ const tempo=ballTempo();
+ ball.fest=false;
+ ball.vx=tempo*0.35*(rnd()<0.5?-1:1);
+ ball.vy=-tempo*0.94;
+}
+
+// ---------------------------------------------------------------- Punkte
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("arkanoid-rekord")||0); }catch(e){ return 0; }
+}
+function rekordPruefen(){
+ const alt=rekordLaden();
+ if(punkte>alt){
+  try{ localStorage.setItem("arkanoid-rekord",String(punkte)); }catch(e){}
+  $("rekord").textContent=punkte;
+ }
+}
+function punkteZeigen(){ $("punkte").textContent=punkte; }
+function lebenZeigen(){ $("leben").textContent="●".repeat(Math.max(0,leben))+"○".repeat(Math.max(0,3-leben)); }
+
+let letztePowerAnzeige="";
+function powerZeigen(){
+ const teile=aktivePower.map(p=>{
+  const def=POWER[p.art];
+  const rest=Math.ceil(p.rest);
+  return '<span style="color:'+def.farbe+'">'+def.text+'</span> '+rest+"s";
+ });
+ const text=teile.join(" · ");
+ if(text!==letztePowerAnzeige){
+  letztePowerAnzeige=text;
+  $("power").innerHTML=text;
+ }
+ $("btnLaser").hidden=!aktivePower.some(p=>p.art==="L");
+}
+
+function powerGeben(art){
+ if(art==="P"){
+  if(leben<5){ leben++; lebenZeigen(); }
+  return;
+ }
+ const vorhanden=aktivePower.find(p=>p.art===art);
+ if(vorhanden){ vorhanden.rest=Math.max(vorhanden.rest,15); }
+ else aktivePower.push({art:art,rest:art==="L"?12:18});
+
+ if(art==="E")schlaeger.w=126;
+ if(art==="S")bälle.forEach(b=>{ b.vx*=0.65; b.vy*=0.65; });
+ if(art==="D"){
+  if(bälle.length){
+   const b=bälle[0];
+   const tempo=Math.hypot(b.vx,b.vy)||ballTempo();
+   for(let i=0;i<2;i++){
+    const winkel=(-0.5+i)*(Math.PI/3);
+    bälle.push({x:b.x,y:b.y,vx:Math.cos(winkel)*tempo*(i?1:-1),vy:-Math.abs(Math.sin(winkel))*tempo-120,r:BALL_R,fest:false});
+   }
+  }
+ }
+ powerZeigen();
+}
+
+function powerAbgelaufen(art){
+ if(art==="E"){
+  schlaeger.w=84;
+  schlaeger.x=Math.max(schlaeger.w/2,Math.min(W-schlaeger.w/2,schlaeger.x));
+ }
+ if(art==="C"&&fangBall){ // geklebten Ball freigeben
+  fangBall=null;
+ }
+ powerZeigen();
+}
+
+// ---------------------------------------------------------------- Update
+
+function update(dt){
+ if(zustand!=="laeuft")return;
+ ticker+=dt;
+
+ // Schläger
+ const tempo=520*dt;
+ let ziel=null;
+ if(eingabe.links)ziel=(ziel===null?schlaeger.x:ziel)-tempo;
+ if(eingabe.rechts)ziel=(ziel===null?schlaeger.x:ziel)+tempo;
+ if(ziel!==null){
+  schlaeger.x=Math.max(schlaeger.w/2,Math.min(W-schlaeger.w/2,ziel));
+ }
+ schlaeger.x=Math.max(schlaeger.w/2,Math.min(W-schlaeger.w/2,schlaeger.x));
+
+ // Power-Uhr
+ for(let i=aktivePower.length-1;i>=0;i--){
+  aktivePower[i].rest-=dt;
+  if(aktivePower[i].rest<=0){
+   powerAbgelaufen(aktivePower[i].art);
+   aktivePower.splice(i,1);
+  }
+ }
+ powerZeigen();
+
+ // fallende Kapseln
+ for(let i=powerUps.length-1;i>=0;i--){
+  const p=powerUps[i];
+  p.y+=110*dt;
+  const nah=Math.abs(p.x-schlaeger.x)<schlaeger.w/2+8&&Math.abs(p.y-(H-34))<16;
+  if(nah){
+   powerGeben(p.art);
+   powerUps.splice(i,1);
+   continue;
+  }
+  if(p.y>H+20)powerUps.splice(i,1);
+ }
+
+ // Laser
+ for(let i=schuesse.length-1;i>=0;i--){
+  const s=schuesse[i];
+  s.y-=760*dt;
+  if(s.y<0){ schuesse.splice(i,1); continue; }
+  let getroffen=false;
+  for(let j=steine.length-1;j>=0;j--){
+   const st=steine[j];
+   if(s.x>st.x&&s.x<st.x+st.w&&s.y<st.y+st.h&&s.y>st.y){
+    st.treffer--;
+    punkte+=10;
+    punkteZeigen();
+    if(st.treffer<=0)steinZerstoeren(j,st);
+    getroffen=true;
+    break;
+   }
+  }
+  if(getroffen)schuesse.splice(i,1);
+ }
+
+ // Kugeln
+ for(let bi=bälle.length-1;bi>=0;bi--){
+  const b=bälle[bi];
+  if(b.fest){
+   b.x=schlaeger.x;
+   b.y=H-34-BALL_R-4;
+   continue;
+  }
+  // in kleinen Schritten, damit nichts durchrutscht
+  const strecke=Math.hypot(b.vx,b.vy)*dt;
+  const schritte=Math.max(1,Math.ceil(strecke/(BALL_R*0.8)));
+  for(let s=0;s<schritte;s++){
+   b.x+=b.vx*dt/schritte;
+   b.y+=b.vy*dt/schritte;
+
+   if(b.x<b.r){ b.x=b.r; b.vx=Math.abs(b.vx); }
+   if(b.x>W-b.r){ b.x=W-b.r; b.vx=-Math.abs(b.vx); }
+   if(b.y<b.r){ b.y=b.r; b.vy=Math.abs(b.vy); }
+
+   // Schläger
+   if(b.vy>0&&b.y+b.r>H-34&&b.y-b.r<H-34+SCHLAEGER_H&&
+      b.x>schlaeger.x-schlaeger.w/2-b.r&&b.x<schlaeger.x+schlaeger.w/2+b.r){
+    const versatz=(b.x-schlaeger.x)/(schlaeger.w/2);
+    const tempoBall=Math.min(430,Math.hypot(b.vx,b.vy)*1.01);
+    const winkel=versatz*Math.PI/3;
+    b.vx=Math.sin(winkel)*tempoBall;
+    b.vy=-Math.cos(winkel)*tempoBall;
+    b.y=H-34-BALL_R;
+    if(aktivePower.some(p=>p.art==="C")){
+     b.fest=true;
+     fangBall=b;
+    }
+   }
+
+   // Steine
+   for(let j=steine.length-1;j>=0;j--){
+    const st=steine[j];
+    const nahX=Math.max(st.x,Math.min(b.x,st.x+st.w));
+    const nahY=Math.max(st.y,Math.min(b.y,st.y+st.h));
+    if(Math.hypot(b.x-nahX,b.y-nahY)>=b.r)continue;
+    // Seite bestimmen: kleinste Überlappung
+    const dx=b.x-(st.x+st.w/2), dy=b.y-(st.y+st.h/2);
+    if(Math.abs(dx)/(st.w/2+b.r)>Math.abs(dy)/(st.h/2+b.r)){
+     b.vx=dx>0?Math.abs(b.vx):-Math.abs(b.vx);
+    }else{
+     b.vy=dy>0?Math.abs(b.vy):-Math.abs(b.vy);
+    }
+    st.treffer--;
+    punkte+=10;
+    punkteZeigen();
+    if(st.treffer<=0)steinZerstoeren(j,st);
+    break;
+   }
+  }
+
+  if(b.y>H+30){
+   bälle.splice(bi,1);
+  }
+ }
+
+ if(!bälle.length)lebenVerlieren();
+ else if(steine.length===0)levelGeschafft();
+}
+
+function steinZerstoeren(index,stein){
+ punkte+=stein.punkte-10;
+ punkteZeigen();
+ steine.splice(index,1);
+ if(rnd()<0.16){
+  const arten=Object.keys(POWER);
+  const art=arten[Math.floor(rnd()*arten.length)];
+  powerUps.push({x:stein.x+stein.w/2,y:stein.y+stein.h/2,art:art});
+ }
+}
+
+function lebenVerlieren(){
+ leben--;
+ lebenZeigen();
+ aktivePower=[];
+ schlaeger.w=84;
+ powerZeigen();
+ if(leben<=0){
+  zustand="ende";
+  rekordPruefen();
+  zeigeMeldung("GAME OVER","Punkte: "+punkte+" · Level "+level,"Nochmal");
+  $("meldungKnopf").onclick=()=>{ neuesSpiel(); };
+  return;
+ }
+ neuerBall();
+ zustand="pause";
+ zeigeMeldung("Ball verloren","Noch "+leben+(leben===1?" Leben":" Leben")+" – tippe zum Weiterspielen.",
+  "Weiter",null);
+ $("meldungKnopf").onclick=()=>{ $("meldung").hidden=true; zustand="laeuft"; letzteZeit=performance.now(); };
+}
+
+function levelGeschafft(){
+ zustand="level";
+ punkte+=level*50;
+ punkteZeigen();
+ rekordPruefen();
+ const naechstes=level+1;
+ zeigeMeldung("Level "+level+" geschafft","Bonus "+(level*50)+" Punkte · Level "+naechstes+" wartet.",
+  "Weiter",null);
+ $("meldungKnopf").onclick=()=>{
+  $("meldung").hidden=true;
+  level=naechstes;
+  levelAufbau(level);
+  zustand="laeuft";
+  letzteZeit=performance.now();
+ };
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Hintergrund
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#0d3a2c");
+ g.addColorStop(.6,"#0a2a21");
+ g.addColorStop(1,"#061a14");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // feine Punkte als Raster
+ ctx.fillStyle="#ffffff0d";
+ for(let x=18;x<W;x+=32)for(let y=18;y<H;y+=32){
+  ctx.fillRect(x,y,1.5,1.5);
+ }
+
+ // Rand
+ ctx.strokeStyle="#d9bc7c33";
+ ctx.lineWidth=2;
+ ctx.strokeRect(1,1,W-2,H-2);
+
+ // Steine
+ steine.forEach(st=>{
+  const farben=["#e8cd8e","#d9bc7c","#b9d8c4","#a9c3b6","#c2765c","#9fb3ab","#7f9c8f"];
+  const farbe=farben[Math.min(farben.length-1,st.reihe)];
+  const grad=ctx.createLinearGradient(st.x,st.y,st.x,st.y+st.h);
+  grad.addColorStop(0,"#ffffff");
+  grad.addColorStop(.12,farbe);
+  grad.addColorStop(1,farbe);
+  ctx.fillStyle=grad;
+  ctx.globalAlpha=st.treffer>1?1:0.92;
+  ctx.fillRect(st.x,st.y,st.w,st.h);
+  ctx.globalAlpha=1;
+  ctx.strokeStyle="#0a2a2188";
+  ctx.lineWidth=1;
+  ctx.strokeRect(st.x+.5,st.y+.5,st.w-1,st.h-1);
+  ctx.fillStyle="#ffffff55";
+  ctx.fillRect(st.x+2,st.y+2,st.w-4,2);
+  ctx.fillStyle="#0a2a2144";
+  ctx.fillRect(st.x+2,st.y+st.h-4,st.w-4,2);
+  if(st.treffer>1){
+   ctx.fillStyle="#0a2a2177";
+   ctx.fillRect(st.x+st.w/2-6,st.y+st.h/2-1.5,12,3);
+  }
+ });
+
+ // Power-Ups
+ powerUps.forEach(p=>{
+  const def=POWER[p.art];
+  ctx.fillStyle=def.farbe;
+  ctx.beginPath();
+  ctx.roundRect(p.x-9,p.y-11,18,22,5);
+  ctx.fill();
+  ctx.strokeStyle="#0a2a21";
+  ctx.lineWidth=2;
+  ctx.stroke();
+  ctx.fillStyle="#0b241d";
+  ctx.font="bold 13px Georgia,serif";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText(def.text,p.x,p.y+1);
+ });
+
+ // Laser
+ ctx.fillStyle="#ffd9a0";
+ schuesse.forEach(s=>ctx.fillRect(s.x-1.5,s.y-12,3,12));
+
+ // Schläger
+ const sx=schlaeger.x-schlaeger.w/2;
+ const sg=ctx.createLinearGradient(0,H-34,0,H-34+SCHLAEGER_H);
+ sg.addColorStop(0,"#ffe9b0");
+ sg.addColorStop(.5,"#e8cd8e");
+ sg.addColorStop(1,"#a9873f");
+ ctx.fillStyle=sg;
+ ctx.beginPath();
+ ctx.roundRect(sx,H-34,schlaeger.w,SCHLAEGER_H,5);
+ ctx.fill();
+ ctx.strokeStyle="#5c4715";
+ ctx.lineWidth=1.5;
+ ctx.stroke();
+ // seitliche Metallspitzen
+ ctx.fillStyle="#d9bc7c";
+ ctx.fillRect(sx-3,H-32,4,8);
+ ctx.fillRect(sx+schlaeger.w-1,H-32,4,8);
+
+ // Bälle
+ bälle.forEach(b=>{
+  const bg=ctx.createRadialGradient(b.x-2,b.y-2,1,b.x,b.y,b.r+2);
+  bg.addColorStop(0,"#ffffff");
+  bg.addColorStop(.6,"#f1e6c8");
+  bg.addColorStop(1,"#c9b98f");
+  ctx.beginPath();
+  ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+  ctx.fillStyle=bg;
+  ctx.fill();
+ });
+
+ // Trennlinie unten
+ ctx.strokeStyle="#ffffff14";
+ ctx.beginPath();
+ ctx.moveTo(0,H-34);
+ ctx.lineTo(W,H-34);
+ ctx.stroke();
+}
+
+// ---------------------------------------------------------------- Meldung
+
+function zeigeMeldung(titel,text,knopfText){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopfText;
+ $("meldung").hidden=false;
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeit){
+ const dt=Math.min(0.033,(zeit-letzteZeit)/1000||0.016);
+ letzteZeit=zeit;
+ update(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+function setzeSchlaeger(clientX){
+ const r=canvas.getBoundingClientRect();
+ const x=(clientX-r.left)/r.width*W;
+ schlaeger.x=Math.max(schlaeger.w/2,Math.min(W-schlaeger.w/2,x));
+}
+
+function feuer(){
+ if(!aktivePower.some(p=>p.art==="L"))return;
+ if(zustand!=="laeuft")return;
+ if(ticker-tippSperre<0.12)return;
+ tippSperre=ticker;
+ schuesse.push({x:schlaeger.x-schlaeger.w/2+6,y:H-40});
+ schuesse.push({x:schlaeger.x+schlaeger.w/2-6,y:H-40});
+}
+
+canvas.addEventListener("pointerdown",e=>{
+ setzeSchlaeger(e.clientX);
+ if(zustand==="start"){ starten(); return; }
+ if(zustand==="laeuft"){
+  const ball=bälle.find(b=>b.fest);
+  if(ball){ ballLoslassen(); }
+  else feuer();
+ }
+ e.preventDefault();
+});
+canvas.addEventListener("pointermove",e=>{
+ if(e.buttons||e.pointerType==="touch")setzeSchlaeger(e.clientX);
+});
+canvas.addEventListener("pointerup",e=>{ e.preventDefault(); });
+
+window.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"){ eingabe.links=true; e.preventDefault(); }
+ else if(e.key==="ArrowRight"){ eingabe.rechts=true; e.preventDefault(); }
+ else if(e.key===" "){
+  e.preventDefault();
+  if(zustand==="start")starten();
+  else{
+   const ball=bälle.find(b=>b.fest);
+   if(ball)ballLoslassen();
+   else feuer();
+  }
+ }
+});
+window.addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft")eingabe.links=false;
+ if(e.key==="ArrowRight")eingabe.rechts=false;
+});
+
+$("btnLaser").onclick=feuer;
+$("btnNeu").onclick=()=>{ neuesSpiel(); };
+$("btnPause").onclick=()=>{
+ if(zustand==="laeuft"){
+  zustand="pause";
+  $("btnPause").textContent="Weiter";
+  $("hinweis").textContent="Pause – tippe auf Weiter.";
+ }else if(zustand==="pause"){
+  zustand="laeuft";
+  $("btnPause").textContent="Pause";
+  $("meldung").hidden=true;
+  $("hinweis").textContent="Finger über das Feld ziehen – der Schläger folgt.";
+  letzteZeit=performance.now();
+ }
+};
+
+// ---------------------------------------------------------------- Start
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ letzteZeit=performance.now();
+ $("hinweis").textContent="Finger über das Feld ziehen – der Schläger folgt.";
+ ballLoslassen();
+}
+
+function neuesSpiel(){
+ punkte=0;
+ leben=3;
+ level=1;
+ punkteZeigen();
+ lebenZeigen();
+ $("rekord").textContent=rekordLaden();
+ levelAufbau(1);
+ zustand="start";
+ $("meldung").hidden=false;
+ zeigeMeldung("ARKANOID","Schläger unten mit dem Finger bewegen. Tippen startet den Ball.","Starten");
+ $("meldungKnopf").onclick=starten;
+ $("btnPause").textContent="Pause";
+ zeichne();
+}
+
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+})();
+</script>
+</body>
+</html>

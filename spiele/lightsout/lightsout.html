@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Lights Out</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:10px;display:flex;justify-content:center;background:#08120f}
+#brett{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:420px}
+.licht{position:relative;aspect-ratio:1/1;border-radius:12px;cursor:pointer;
+ border:1px solid #123a2a;background:
+  radial-gradient(circle at 50% 42%,#0d2a22 0%,#0a201a 62%,#071611 100%);
+ box-shadow:inset 0 2px 6px #00000088,0 1px 0 #ffffff10;
+ transition:background .12s ease,box-shadow .12s ease,transform .06s ease}
+.licht.an{background:
+  radial-gradient(circle at 50% 42%,#fff4cf 0%,#f4d78f 38%,#d8a94a 72%,#8c6a24 100%);
+ box-shadow:0 0 16px #e8cd8ecc,0 0 34px #d9bc7c55,inset 0 1px 3px #ffffff88;
+ border-color:#f4e6c2}
+.licht:active{transform:scale(.97)}
+.licht.tipp{box-shadow:0 0 0 3px #4fb3a0,0 0 18px #4fb3a0aa,inset 0 2px 6px #00000066}
+.licht.an.tipp{box-shadow:0 0 0 3px #4fb3a0,0 0 22px #f4d78fcc,inset 0 1px 3px #ffffff88}
+
+.meldung{position:absolute;inset:10px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Lights Out</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <select id="stufe">
+   <option value="leicht">Leicht</option>
+   <option value="mittel" selected>Mittel</option>
+   <option value="schwer">Schwer</option>
+  </select>
+  <button id="btnHinweis">Hinweis</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Züge <b id="zuege">0</b></span>
+  <span>Zeit <b id="zeit">0:00</b></span>
+  <span>An <b id="an">0</b></span>
+  <span>Rekord <b id="rekord">–</b></span>
+ </div>
+
+ <div class="buehne">
+  <div id="brett"></div>
+  <div class="meldung" id="meldung" hidden>
+   <div class="kasten">
+    <h2 id="meldungTitel">Geschafft!</h2>
+    <p id="meldungText">Alle Lichter sind aus.</p>
+    <button id="meldungKnopf">Neues Spiel</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Ein Feld antippen – es selbst und seine vier Nachbarn wechseln.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Alle 25 Lichter ausschalten. Ein Tippen schaltet das Feld selbst und die vier Nachbarn oben, unten, links, rechts um.</li>
+   <li><b>Aufgaben:</b> Jedes Rätsel entsteht aus einem dunklen Brett durch eine Reihe zufälliger Züge – es ist damit immer lösbar.</li>
+   <li><b>Schwierigkeit:</b> Leicht mischt vier Züge, Mittel sechs, Schwer neun.</li>
+   <li><b>Hinweis:</b> Markiert ein Feld, das zu einer Lösung mit den wenigsten Zügen gehört – jede Hilfe kostet 15 Sekunden Zeit.</li>
+   <li><b>Rekord:</b> Die wenigsten Züge pro Schwierigkeit merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const N=5, FELDER=N*N;
+const brett=$("brett");
+
+const STUFEN={leicht:4,mittel:6,schwer:9};
+
+let lichter=[];        // true = an
+let zuege=0;
+let sekunden=0;
+let timer=null;
+let fertig=false;
+let stufe="mittel";
+let tippFeld=-1;
+
+// ---------------------------------------------------------------- Rechnen
+
+// Wirkung eines Zuges: Feld selbst plus Nachbarn
+function wirkung(i){
+ let maske=0;
+ const r=Math.floor(i/N), c=i%N;
+ for(const [dr,dc] of [[0,0],[-1,0],[1,0],[0,-1],[0,1]]){
+  const nr=r+dr, nc=c+dc;
+  if(nr<0||nr>=N||nc<0||nc>=N)continue;
+  maske|=1<<(nr*N+nc);
+ }
+ return maske;
+}
+
+const WIRKUNG=Array.from({length:FELDER},(_,i)=>wirkung(i));
+
+// Lineares Gleichungssystem über GF(2) lösen; alle Lösungen zurückgeben
+function loesungen(bits){
+ // Zeilen: eine Gleichung je Feld
+ const zeilen=[];
+ for(let i=0;i<FELDER;i++){
+  zeilen.push({maske:WIRKUNG[i],rhs:(bits>>i)&1});
+ }
+ const pivotSpalte=[];
+ let zeile=0;
+ for(let spalte=0;spalte<FELDER&&zeile<FELDER;spalte++){
+  let treffer=-1;
+  for(let z=zeile;z<FELDER;z++)if((zeilen[z].maske>>spalte)&1){ treffer=z; break; }
+  if(treffer<0)continue;
+  [zeilen[zeile],zeilen[treffer]]=[zeilen[treffer],zeilen[zeile]];
+  for(let z=0;z<FELDER;z++){
+   if(z===zeile)continue;
+   if((zeilen[z].maske>>spalte)&1){
+    zeilen[z].maske^=zeilen[zeile].maske;
+    zeilen[z].rhs^=zeilen[zeile].rhs;
+   }
+  }
+  pivotSpalte[zeile]=spalte;
+  zeile++;
+ }
+ for(let z=zeile;z<FELDER;z++){
+  if(zeilen[z].maske===0&&zeilen[z].rhs===1)return [];   // unlösbar
+ }
+ const frei=[];
+ for(let s=0;s<FELDER;s++)if(!pivotSpalte.includes(s))frei.push(s);
+ // Basislösung: freie Variablen 0
+ const basis=0;
+ const loesungsListe=[];
+ const maxKombis=1<<frei.length;
+ for(let k=0;k<maxKombis;k++){
+  let x=basis;
+  for(let f=0;f<frei.length;f++){
+   if((k>>f)&1)x|=1<<frei[f];
+  }
+  // Pivot-Variablen bestimmen
+  for(let z=0;z<zeile;z++){
+   const spalte=pivotSpalte[z];
+   let summe=zeilen[z].rhs;
+   for(let s=0;s<FELDER;s++){
+    if(s===spalte)continue;
+    if((zeilen[z].maske>>s)&1&&((x>>s)&1))summe^=1;
+   }
+   if(summe)x|=1<<spalte;
+   else x&=~(1<<spalte);
+  }
+  loesungsListe.push(x);
+ }
+ return loesungsListe;
+}
+
+function gewicht(bits){
+ let n=0;
+ for(let i=0;i<FELDER;i++)if((bits>>i)&1)n++;
+ return n;
+}
+
+function bitsAusLichtern(){
+ let bits=0;
+ for(let i=0;i<FELDER;i++)if(lichter[i])bits|=1<<i;
+ return bits;
+}
+
+function besteLoesung(){
+ const liste=loesungen(bitsAusLichtern());
+ if(!liste.length)return null;
+ let best=null;
+ for(const l of liste){
+  if(best===null||gewicht(l)<gewicht(best))best=l;
+ }
+ return best;
+}
+
+// ---------------------------------------------------------------- Aufbau
+
+function brettBauen(){
+ brett.innerHTML="";
+ for(let i=0;i<FELDER;i++){
+  const el=document.createElement("div");
+  el.className="licht";
+  el.dataset.i=i;
+  el.addEventListener("click",()=>druecken(i));
+  brett.appendChild(el);
+ }
+}
+
+function zeichnen(){
+ for(let i=0;i<FELDER;i++){
+  const el=brett.children[i];
+  el.classList.toggle("an",!!lichter[i]);
+  el.classList.toggle("tipp",tippFeld===i);
+ }
+ let an=0;
+ for(let i=0;i<FELDER;i++)if(lichter[i])an++;
+ $("an").textContent=an;
+ $("zuege").textContent=zuege;
+}
+
+function neuesSpiel(){
+ const mischZuege=STUFEN[stufe];
+ lichter=new Array(FELDER).fill(false);
+ zuege=0;
+ sekunden=0;
+ fertig=false;
+ tippFeld=-1;
+ // mischen: nur verschiedene Felder drücken, damit die Aufgabe nicht zu leicht wird
+ const felder=[...Array(FELDER).keys()];
+ for(let i=felder.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [felder[i],felder[j]]=[felder[j],felder[i]];
+ }
+ for(let k=0;k<mischZuege;k++)anwenden(felder[k]);
+ let an=0;
+ for(let i=0;i<FELDER;i++)if(lichter[i])an++;
+ if(an<Math.max(4,mischZuege)){ return neuesSpiel(); }
+ $("zeit").textContent="0:00";
+ $("meldung").hidden=true;
+ $("hinweis").textContent="Ein Feld antippen – es selbst und seine vier Nachbarn wechseln.";
+ rekordZeigen();
+ zeichnen();
+ timerStarten();
+}
+
+function anwenden(i){
+ let maske=WIRKUNG[i];
+ for(let k=0;k<FELDER;k++){
+  if((maske>>k)&1)lichter[k]=!lichter[k];
+ }
+}
+
+function druecken(i){
+ if(fertig)return;
+ anwenden(i);
+ zuege++;
+ tippFeld=-1;
+ zeichnen();
+ if(lichter.every(l=>!l))gewonnen();
+}
+
+function gewonnen(){
+ fertig=true;
+ if(timer)clearInterval(timer);
+ const rekord=rekordLaden();
+ let text="Züge: "+zuege+" · Zeit: "+zeitFormat(sekunden);
+ if(!rekord||zuege<rekord){
+  try{ localStorage.setItem("lightsout-rekord-"+stufe,String(zuege)); }catch(e){}
+  text+=" · neuer Rekord!";
+ }
+ $("meldungTitel").textContent="Alle Lichter aus";
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent="Neues Spiel";
+ $("meldung").hidden=false;
+ rekordZeigen();
+}
+
+function hinweisGeben(){
+ if(fertig)return;
+ const loesung=besteLoesung();
+ if(!loesung){ $("hinweis").textContent="Diese Stellung ist nicht mehr lösbar – besser neu mischen."; return; }
+ // Feld aus der kürzesten Lösung wählen
+ const kandidaten=[];
+ for(let i=0;i<FELDER;i++)if((loesung>>i)&1)kandidaten.push(i);
+ if(!kandidaten.length)return;
+ tippFeld=kandidaten[Math.floor(Math.random()*kandidaten.length)];
+ sekunden+=15;
+ $("zeit").textContent=zeitFormat(sekunden);
+ $("hinweis").textContent="Noch "+kandidaten.length+(kandidaten.length===1?" Zug":" Züge")+" bis alles aus ist – das markierte Feld drücken (+15 s).";
+ zeichnen();
+}
+
+// ---------------------------------------------------------------- Anzeige
+
+function zeitFormat(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("lightsout-rekord-"+stufe)||0); }catch(e){ return 0; }
+}
+function rekordZeigen(){
+ const r=rekordLaden();
+ $("rekord").textContent=r?r+" Züge":"–";
+}
+
+function timerStarten(){
+ if(timer)clearInterval(timer);
+ timer=setInterval(()=>{
+  if(fertig)return;
+  sekunden++;
+  $("zeit").textContent=zeitFormat(sekunden);
+ },1000);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+$("btnNeu").onclick=neuesSpiel;
+$("btnHinweis").onclick=hinweisGeben;
+$("stufe").onchange=()=>{ stufe=$("stufe").value; neuesSpiel(); };
+$("meldungKnopf").onclick=neuesSpiel;
+
+brettBauen();
+neuesSpiel();
+})();
+</script>
+</body>
+</html>

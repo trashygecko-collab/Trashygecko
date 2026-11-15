@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Doodle Jump</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
+ box-shadow:inset 0 0 40px #00000088}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Doodle Jump</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Höhe <b id="hoehe">0 m</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="400" height="600"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">DOODLE JUMP</h2>
+    <p id="meldungText">Hüpfe von Plattform zu Plattform, so hoch du kommst. Finger links oder rechts aufs Feld halten.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Finger aufs Feld halten: links oder rechts steuern.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> So hoch wie möglich hüpfen. Der Doodler springt von selbst – du steuerst nur nach links und rechts.</li>
+   <li><b>Steuern:</b> Finger aufs Feld halten und nach links oder rechts ziehen, am PC die Pfeiltasten oder A und D. Am Rand geht es auf der anderen Seite weiter.</li>
+   <li><b>Plattformen:</b> Grüne halten, blaue wackeln seitwärts, braune brechen nach einem Sprung weg. Mit Federn fliegst du besonders hoch.</li>
+   <li><b>Monster:</b> Von oben auf den Kopf springen bringt Punkte und einen Absprung. Seitlich berührt kostet es das Spiel.</li>
+   <li><b>Propeller:</b> Kurz aufgesammelt trägt er dich ein Stück nach oben.</li>
+   <li><b>Punkte:</b> Jeder Meter Höhe zählt; die Bestmarke merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const W=400, H=600;
+canvas.width=W;
+canvas.height=H;
+
+const GRAV=0.42;          // Schwerkraft
+const SPRUNG=11.6;        // normaler Absprung
+const FEDER=19.5;
+const SEITEN=5.2;         // waagerechte Geschwindigkeit
+const PLATTFORM_W=70;
+const PLATTFORM_H=14;
+
+let zustand="start";      // start, laeuft, ende
+let spieler={x:W/2,y:H-120,vx:0,vy:0,r:15};
+let plattformen=[];
+let monster=[];
+let extras=[];            // Propeller
+let kamera=0;
+let maxHoehe=0;
+let punkte=0;
+let propeller=0;
+let letzteZeit=0;
+let zielX=null;           // Fingermarkierung
+let links=false, rechts=false;
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ---------------------------------------------------------------- Aufbau
+
+function plattformNeu(y,mitMonster,mitFeder){
+ return {
+  x:rnd(10,W-PLATTFORM_W-10),
+  y:y,
+  w:PLATTFORM_W,
+  h:PLATTFORM_H,
+  art:Math.random()<0.18?"blau":(Math.random()<0.16?"braun":"gruen"),
+  vx:0,
+  weg:false,
+  feder:!!mitFeder,
+  benutzt:false
+ };
+}
+
+function neuesSpiel(){
+ zustand="start";
+ spieler={x:W/2,y:H-120,vx:0,vy:0,r:15};
+ plattformen=[];
+ monster=[];
+ extras=[];
+ kamera=0;
+ maxHoehe=0;
+ punkte=0;
+ propeller=0;
+ zielX=null;
+ links=false; rechts=false;
+
+ // Startplattform unter dem Spieler
+ plattformen.push({x:W/2-PLATTFORM_W/2,y:H-90,w:PLATTFORM_W,h:PLATTFORM_H,art:"gruen",vx:0,weg:false,feder:false,benutzt:false});
+ let y=H-150;
+ while(y>-200){
+  const p=plattformNeu(y,false,Math.random()<0.12);
+  plattformen.push(p);
+  if(p.art==="blau")p.vx=rnd(0.6,1.6)*(Math.random()<0.5?-1:1);
+  y-=rnd(58,92);
+ }
+ // Startmonster weiter oben verteilen
+ for(let i=0;i<3;i++){
+  const p=plattformen[4+i*3];
+  if(p&&p.art==="gruen"){
+   monster.push({x:p.x+p.w/2,y:p.y-16,w:34,h:28,vx:0.8,plattform:p,besiegt:false});
+  }
+ }
+
+ $("meldung").hidden=false;
+ $("meldungTitel").textContent="DOODLE JUMP";
+ $("meldungText").textContent="Hüpfe von Plattform zu Plattform, so hoch du kommst. Finger links oder rechts aufs Feld halten.";
+ $("meldungKnopf").textContent="Starten";
+ $("meldungKnopf").onclick=starten;
+ $("hinweis").textContent="Finger aufs Feld halten: links oder rechts steuern.";
+ $("rekord").textContent=rekordLaden();
+ zahlenZeigen();
+ zeichne();
+}
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ letzteZeit=performance.now();
+ spieler.vy=-SPRUNG;
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("doodle-rekord")||0); }catch(e){ return 0; }
+}
+
+function zahlenZeigen(){
+ $("punkte").textContent=punkte;
+ $("hoehe").textContent=Math.floor(maxHoehe/10)+" m";
+}
+
+// ---------------------------------------------------------------- Physik
+
+function update(dt){
+ if(zustand!=="laeuft")return;
+ const schritt=Math.min(dt,1/30);
+
+ // Steuerung
+ let richtung=0;
+ if(links)richtung=-1;
+ if(rechts)richtung=1;
+ if(zielX!==null){
+  // kürzesten Weg über den Rand nehmen
+  let d=zielX-spieler.x;
+  if(d>W/2)d-=W;
+  if(d<-W/2)d+=W;
+  if(Math.abs(d)>3)richtung=d>0?1:-1;
+ }
+ spieler.vx=richtung*SEITEN;
+
+ spieler.x+=spieler.vx;
+ if(spieler.x<-spieler.r)spieler.x=W+spieler.r;
+ if(spieler.x>W+spieler.r)spieler.x=-spieler.r;
+
+ // Propeller
+ if(propeller>0){
+  propeller-=schritt;
+  spieler.vy=Math.max(spieler.vy-1.35, -8.5);
+ }else{
+  spieler.vy+=GRAV;
+ }
+
+ spieler.y+=spieler.vy;
+
+ // Plattformen bewegen
+ plattformen.forEach(p=>{
+  if(p.art==="blau"&&!p.weg){
+   p.x+=p.vx;
+   if(p.x<6||p.x+p.w>W-6)p.vx*=-1;
+  }
+ });
+
+ // Kollision: nur beim Fallen von oben
+ if(spieler.vy>0){
+  plattformen.forEach(p=>{
+   if(p.weg)return;
+   const unten=spieler.y+spieler.r;
+   const vorher=unten-spieler.vy;
+   if(vorher<=p.y+2&&unten>=p.y&&
+      spieler.x+spieler.r*0.7>p.x&&spieler.x-spieler.r*0.7<p.x+p.w){
+    springen(p);
+   }
+  });
+ }
+
+ // Monster laufen auf ihrer Plattform hin und her
+ monster.forEach(m=>{
+  if(m.besiegt)return;
+  if(m.plattform&&!m.plattform.weg){
+   m.x+=m.vx;
+   if(m.x<m.plattform.x+12||m.x>m.plattform.x+m.plattform.w-12)m.vx*=-1;
+  }
+  const dx=Math.abs(m.x-spieler.x);
+  const dy=Math.abs(m.y-spieler.y);
+  if(dx<m.w/2+spieler.r*0.7&&dy<m.h/2+spieler.r*0.7){
+   if(spieler.vy>0&&spieler.y+spieler.r<m.y+m.h*0.5){
+    m.besiegt=true;
+    punkte+=50;
+    spieler.vy=-SPRUNG;
+    zahlenZeigen();
+   }else{
+    ende();
+   }
+  }
+ });
+
+ // Propeller einsammeln
+ extras.forEach(e=>{
+  if(e.weg)return;
+  if(Math.abs(e.x-spieler.x)<26&&Math.abs(e.y-spieler.y)<26){
+   e.weg=true;
+   propeller=1.6;
+   spieler.vy=-6;
+  }
+ });
+
+ // Kamera mitziehen
+ if(spieler.y<kamera+H*0.42){
+  kamera=spieler.y-H*0.42;
+ }
+ const hoehe=H-120-spieler.y;
+ if(hoehe>maxHoehe){
+  maxHoehe=hoehe;
+  punkte=Math.max(punkte,Math.floor(maxHoehe/10));
+  zahlenZeigen();
+ }
+
+ // Fallen: unter dem Bildschirm
+ if(spieler.y-kamera>H+40){
+  ende();
+ }
+
+ // Welt nachziehen
+ nachfuellen();
+}
+
+function springen(p){
+ if(p.art==="braun"){
+  p.weg=true;
+  spieler.vy=-SPRUNG*0.9;
+ }else if(p.feder&&!p.benutzt){
+  p.benutzt=true;
+  spieler.vy=-FEDER;
+  p.feder=false;
+ }else{
+  spieler.vy=-SPRUNG;
+ }
+ spieler.y=Math.min(spieler.y,p.y-spieler.r);
+}
+
+function nachfuellen(){
+ // oberste Plattform finden
+ let oben=Infinity;
+ plattformen.forEach(p=>{ if(!p.weg)oben=Math.min(oben,p.y); });
+ while(oben-kamera>-60){
+  const y=oben-rnd(58,92);
+  const p=plattformNeu(y,false,Math.random()<0.1);
+  if(p.art==="blau")p.vx=rnd(0.6,1.6)*(Math.random()<0.5?-1:1);
+  plattformen.push(p);
+  if(Math.random()<0.12&&monster.filter(m=>!m.besiegt).length<4){
+   monster.push({x:p.x+p.w/2,y:p.y-16,w:34,h:28,vx:0.8,plattform:p,besiegt:false});
+  }
+  if(Math.random()<0.05){
+   extras.push({x:p.x+p.w/2,y:p.y-40,weg:false});
+  }
+  oben=y;
+ }
+ // alte Plattformen wegwerfen
+ plattformen=plattformen.filter(p=>p.y-kamera<H+80&&!p.weg);
+ monster=monster.filter(m=>m.y-kamera<H+120&&!m.besiegt);
+ extras=extras.filter(e=>e.y-kamera<H+80&&!e.weg);
+}
+
+function ende(){
+ if(zustand!=="laeuft")return;
+ zustand="ende";
+ if(punkte>rekordLaden()){
+  try{ localStorage.setItem("doodle-rekord",String(punkte)); }catch(e){}
+  $("rekord").textContent=punkte;
+ }
+ $("meldungTitel").textContent="Vorbei";
+ $("meldungText").textContent="Punkte: "+punkte+" · Höhe: "+Math.floor(maxHoehe/10)+" m";
+ $("meldungKnopf").textContent="Nochmal";
+ $("meldung").hidden=false;
+ $("meldungKnopf").onclick=()=>{ neuesSpiel(); starten(); };
+}
+
+// ---------------------------------------------------------------- Zeichnen
+
+function zeichne(){
+ // Himmel
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#0d3a2c");
+ g.addColorStop(.55,"#0a2a21");
+ g.addColorStop(1,"#07190f");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ // Sterne
+ ctx.fillStyle="#ffffff10";
+ for(let i=0;i<40;i++){
+  const sx=(i*97)%W;
+  const sy=((i*151+kamera*0.15)%H+H)%H;
+  ctx.fillRect(sx,sy,2,2);
+ }
+
+ // Plattformen
+ plattformen.forEach(p=>{
+  const py=p.y-kamera;
+  if(py<-40||py>H+40)return;
+  const farbe=p.art==="blau"?"#6f9fd8":(p.art==="braun"?"#a9773f":"#4fb3a0");
+  const grad=ctx.createLinearGradient(p.x,py,p.x,py+p.h);
+  grad.addColorStop(0,farbe);
+  grad.addColorStop(1,"#0f2e25");
+  ctx.fillStyle=grad;
+  ctx.beginPath();
+  ctx.roundRect(p.x,py,p.w,p.h,p.art==="blau"?9:5);
+  ctx.fill();
+  ctx.strokeStyle="#00000055";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  ctx.fillStyle="#ffffff22";
+  ctx.fillRect(p.x+6,py+2,p.w-12,3);
+
+  if(p.feder){
+   ctx.strokeStyle="#e8cd8e";
+   ctx.lineWidth=3;
+   ctx.beginPath();
+   for(let i=0;i<4;i++){
+    ctx.moveTo(p.x+p.w/2-8,py-6-i*5);
+    ctx.lineTo(p.x+p.w/2+8,py-9-i*5);
+   }
+   ctx.stroke();
+  }
+ });
+
+ // Propeller
+ extras.forEach(e=>{
+  const ey=e.y-kamera;
+  ctx.fillStyle="#d9bc7c";
+  ctx.beginPath();
+  ctx.arc(e.x,ey,10,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle="#7a5a1c";
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(e.x-14,ey-4);
+  ctx.lineTo(e.x+14,ey-4);
+  ctx.stroke();
+ });
+
+ // Monster
+ monster.forEach(m=>{
+  const my=m.y-kamera;
+  if(my<-40||my>H+40)return;
+  ctx.fillStyle="#8fb3a6";
+  ctx.beginPath();
+  ctx.ellipse(m.x,my,m.w/2,m.h/2,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle="#123a2a";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  // Augen
+  [-7,7].forEach(dx=>{
+   ctx.fillStyle="#f4e6c2";
+   ctx.beginPath();
+   ctx.arc(m.x+dx,my-4,4.5,0,Math.PI*2);
+   ctx.fill();
+   ctx.fillStyle="#0b241d";
+   ctx.beginPath();
+   ctx.arc(m.x+dx,my-4,2,0,Math.PI*2);
+   ctx.fill();
+  });
+  // Mund
+  ctx.strokeStyle="#123a2a";
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.arc(m.x,my+6,6,0.15*Math.PI,0.85*Math.PI);
+  ctx.stroke();
+ });
+
+ // Spieler
+ const px=spieler.x, py=spieler.y-kamera;
+ ctx.fillStyle="#00000033";
+ ctx.beginPath();
+ ctx.ellipse(px+3,py+spieler.r-2,12,5,0,0,Math.PI*2);
+ ctx.fill();
+
+ const pg=ctx.createLinearGradient(px,py-spieler.r,px,py+spieler.r);
+ pg.addColorStop(0,"#cfe6a8");
+ pg.addColorStop(1,"#7fae5c");
+ ctx.fillStyle=pg;
+ ctx.beginPath();
+ ctx.roundRect(px-spieler.r+1,py-spieler.r,spieler.r*2-2,spieler.r*2,8);
+ ctx.fill();
+ ctx.strokeStyle="#2f5a2a";
+ ctx.lineWidth=2;
+ ctx.stroke();
+ // Augen
+ [-5,5].forEach(dx=>{
+  ctx.fillStyle="#0b241d";
+  ctx.beginPath();
+  ctx.arc(px+dx,py-3,2.2,0,Math.PI*2);
+  ctx.fill();
+ });
+ // Mund
+ ctx.strokeStyle="#2f5a2a";
+ ctx.lineWidth=1.6;
+ ctx.beginPath();
+ ctx.arc(px,py+4,4,0.2*Math.PI,0.8*Math.PI);
+ ctx.stroke();
+ // Propellerhut
+ if(propeller>0){
+  ctx.strokeStyle="#e8cd8e";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(px,py-spieler.r-2);
+  ctx.lineTo(px,py-spieler.r-10);
+  ctx.moveTo(px-12,py-spieler.r-10);
+  ctx.lineTo(px+12,py-spieler.r-10);
+  ctx.stroke();
+ }
+
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+}
+
+// ---------------------------------------------------------------- Schleife
+
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0.016);
+ letzteZeit=zeit;
+ update(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ---------------------------------------------------------------- Eingabe
+
+function positionAusEvent(e){
+ const r=canvas.getBoundingClientRect();
+ return Math.max(0,Math.min(W,(e.clientX-r.left)/r.width*W));
+}
+
+canvas.addEventListener("pointerdown",e=>{
+ zielX=positionAusEvent(e);
+ if(zustand==="start")starten();
+ e.preventDefault();
+});
+canvas.addEventListener("pointermove",e=>{
+ if(e.buttons||e.pointerType==="touch")zielX=positionAusEvent(e);
+});
+canvas.addEventListener("pointerup",e=>{ zielX=null; e.preventDefault(); });
+canvas.addEventListener("pointercancel",()=>{ zielX=null; });
+
+window.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A"){ links=true; e.preventDefault(); }
+ if(e.key==="ArrowRight"||e.key==="d"||e.key==="D"){ rechts=true; e.preventDefault(); }
+ if(e.key===" "){ if(zustand==="start")starten(); e.preventDefault(); }
+});
+window.addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A")links=false;
+ if(e.key==="ArrowRight"||e.key==="d"||e.key==="D")rechts=false;
+});
+
+$("btnNeu").onclick=neuesSpiel;
+
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+})();
+</script>
+</body>
+</html>
