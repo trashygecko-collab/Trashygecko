@@ -48,6 +48,11 @@ var spielApi = map[string]string{
 	"schwimmen":        "schwimmen",
 	"arschloch":        "arschloch",
 	"einsxeins":        "einsxeins",
+	"poker":            "poker",
+	"cabo":             "cabo",
+	"siebzehn":         "siebzehn",
+	"baccara":         "baccara",
+	"schiffe":         "schiffe",
 	"malen":            "malen",
 }
 
@@ -75,6 +80,11 @@ var spielAnzeige = map[string]string{
 	"schwimmen":        "31 Schwimmen",
 	"arschloch":        "Arschloch",
 	"einsxeins":        "1×1-Rennen",
+	"poker":            "Poker",
+	"cabo":             "Cabo",
+	"siebzehn":         "17 und 4",
+	"baccara":         "Baccara",
+	"schiffe":         "Schiffe versenken",
 	"malen":            "Malen",
 }
 
@@ -86,6 +96,11 @@ var tischspiel = map[string]bool{
 	"schwimmen": true,
 	"arschloch": true,
 	"einsxeins": true,
+	"poker":     true,
+	"cabo":      true,
+	"siebzehn":  true,
+	"baccara":  true,
+	"schiffe":  true,
 }
 
 // Gemeinsame Fläche: Malen hat kein Gegenüber und keinen Spielstand, der

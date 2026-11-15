@@ -120,11 +120,12 @@ small{color:#b3c6ba}
  .chat-send-row button{width:auto}
 }
 
-#game-status{line-height:1.45;margin-top:12px}
+#game-status{line-height:1.45;margin-top:12px;box-sizing:border-box;min-height:140px;display:flex;flex-direction:column;gap:8px;justify-content:flex-start}
 /* Kein offenes Spiel: ein kurzer, stiller Satz in einem leisen Kästchen. */
-#game-status.leer{margin-top:10px;padding:9px 12px;text-align:center;
+#game-status.leer{margin-top:12px;padding:9px 12px;text-align:center;
  border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;
- color:#a9bfb2;font-size:13px;line-height:1.35;font-style:italic}
+ color:#a9bfb2;font-size:13px;line-height:1.35;font-style:italic;
+ box-sizing:border-box;min-height:140px;display:flex;align-items:center;justify-content:center}
 /* Aufklappbarer Kopf der Bereiche (Lokale Verbindung). */
 details summary{cursor:pointer;font-size:20px;font-weight:bold;color:#fff;padding:2px 0;outline:none}
 details summary::-webkit-details-marker{display:none}
@@ -165,7 +166,7 @@ html:fullscreen body{padding:18px 1px}
 .game-invite{border:1px solid #e8cd8e;border-radius:9px;padding:12px;margin:10px 0;background:#16423a}
 .game-invite strong{color:#e8cd8e}
 .game-invite-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.game-invite-actions button{flex:1;min-width:110px}
+.game-invite-actions button{flex:1 1 0;min-width:0;white-space:nowrap;padding:9px 10px}
 .chat-name-btn{background:none;border:none;padding:0;cursor:pointer;text-decoration:none;
  font-family:Georgia,"Times New Roman",serif;font-size:16px;font-weight:normal;
  letter-spacing:.05em;color:#f1dca8}
@@ -255,7 +256,7 @@ html:fullscreen body{padding:18px 1px}
 .game-player{color:#efe6d2;font-weight:normal;text-align:left;width:100%;background:#0b241d}
 .game-player:hover{filter:brightness(1.3)}
 .game-player:disabled{opacity:.55;cursor:default}
-.open-game{margin-top:8px}
+.open-game{margin-top:0;width:100%;padding:9px 10px;font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Gemeinsame Malfläche öffnen. */
 /* Spielauswahl: oben das Spiel, darunter die Spieler, rechts daneben der Status. */
 .games-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:14px;align-items:start}
@@ -263,7 +264,7 @@ html:fullscreen body{padding:18px 1px}
 .games-main{min-width:0}
 .games-side{background:#0b241d;border:1px solid #2f5a4b;border-radius:10px;padding:10px 12px}
 .games-side h3{margin:0 0 6px;font-size:14px;color:#e8cd8e}
-.games-side #game-status{margin-top:0}
+.games-side #game-status,.games-side #game-status.leer{margin-top:0}
 /* --- Kleine Handys (etwa 6 Zoll): eine Spur kompakter, aber lesbar ------ */
 @media(max-width:600px){
  body{padding:4px 1px 6px}
@@ -744,6 +745,11 @@ let currentReversiGame=null;
 let currentHoldGame=null;
 let currentSkyjoGame=null;
 let currentKniffelGame=null;
+let currentPokerGame=null;
+let currentCaboGame=null;
+let currentSiebzehnGame=null;
+let currentBaccaraGame=null;
+let currentSchiffeGame=null;
 let currentSchachGame=null;
 let currentGoGame=null;
 let currentBackgammonGame=null;
@@ -752,6 +758,7 @@ let currentUnoGame=null;
 let currentSchwimmenGame=null;
 let currentArschlochGame=null;
 let currentEinsxeinsGame=null;
+let currentSechsundsechzigGame=null;
 
 const SUPPORTED_GAMES = [
  { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/tictac/tictactoe.html", api: "/api/tictactoe" },
@@ -773,10 +780,16 @@ const SUPPORTED_GAMES = [
  { id: "go", name: "Go", path: "/spiele/go/go.html", api: "/api/go" },
  { id: "backgammon", name: "Backgammon", path: "/spiele/backgammon/backgammon.html", api: "/api/backgammon" },
  { id: "maumau", name: "Mau Mau", path: "/spiele/maumau/maumau.html", api: "/api/maumau" },
+ { id: "siebzehn", name: "17 und 4", path: "/spiele/siebzehn/siebzehn.html", api: "/api/siebzehn" },
+ { id: "baccara", name: "Baccara", path: "/spiele/baccara/baccara.html", api: "/api/baccara" },
+ { id: "schiffe", name: "Schiffe versenken", path: "/spiele/schiffe/schiffe.html", api: "/api/schiffe" },
+ { id: "cabo", name: "Cabo", path: "/spiele/cabo/cabo.html", api: "/api/cabo" },
+ { id: "poker", name: "Poker", path: "/spiele/poker/poker.html", api: "/api/poker" },
  { id: "uno", name: "UNO", path: "/spiele/uno/uno.html", api: "/api/uno" },
  { id: "schwimmen", name: "31 Schwimmen", path: "/spiele/schwimmen/schwimmen.html", api: "/api/schwimmen" },
  { id: "arschloch", name: "Arschloch", path: "/spiele/arschloch/arschloch.html", api: "/api/arschloch" },
  { id: "einsxeins", name: "1×1-Rennen", path: "/spiele/1x1/1x1.html", api: "/api/einsxeins" },
+ { id: "sechsundsechzig", name: "Sechsundsechzig", path: "/spiele/sechsundsechzig/sechsundsechzig.html", api: "/api/sechsundsechzig" },
  // Malen braucht keine Einladung: alle im Raum landen auf derselben Fläche.
  { id: "malen", name: "Malen", path: "/spiele/malen/malen.html", api: "" }
 ];
@@ -863,6 +876,12 @@ async function refreshGames(players){
  await refreshHold(players);
  await refreshSkyjo(players);
  await refreshKniffel(players);
+ await refreshPoker(players);
+ await refreshCabo(players);
+ await refreshSiebzehn(players);
+ await refreshSechsundsechzig(players);
+ await refreshBaccara(players);
+ await refreshSchiffe(players);
  await refreshSchach(players);
  await refreshGo(players);
  await refreshBackgammon(players);
@@ -889,6 +908,11 @@ function gameStateFor(gameId){
  if(gameId==="hold")return currentHoldGame;
  if(gameId==="skyjo")return currentSkyjoGame;
  if(gameId==="kniffel")return currentKniffelGame;
+ if(gameId==="poker")return currentPokerGame;
+ if(gameId==="cabo")return currentCaboGame;
+ if(gameId==="siebzehn")return currentSiebzehnGame;
+ if(gameId==="baccara")return currentBaccaraGame;
+ if(gameId==="schiffe")return currentSchiffeGame;
  if(gameId==="schach")return currentSchachGame;
  if(gameId==="go")return currentGoGame;
  if(gameId==="backgammon")return currentBackgammonGame;
@@ -897,6 +921,7 @@ function gameStateFor(gameId){
  if(gameId==="schwimmen")return currentSchwimmenGame;
  if(gameId==="arschloch")return currentArschlochGame;
  if(gameId==="einsxeins")return currentEinsxeinsGame;
+ if(gameId==="sechsundsechzig")return currentSechsundsechzigGame;
  return currentTTTGame;
 }
 
@@ -1165,6 +1190,346 @@ async function refreshKniffel(players){
 
  if(game.status==="finished"){
   tttStatus("Kniffel beendet – "+game.winner+" gewinnt.", "kniffel");
+ }
+}
+
+// 17 und 4: einer ist die Bank, alle anderen spielen dagegen.
+async function refreshSiebzehn(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/siebzehn?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSiebzehnGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(", ");
+ if(!namen)return;
+ const meiner=game.spieler.some(p=>p.id===sessionID);
+ const bank=game.spieler[game.bankSitz]?game.spieler[game.bankSitz].name:"die Bank";
+ const euro=betrag=>((betrag/100).toFixed(2).replace(".",",")+" Euro");
+
+ if(game.status==="invited"){
+  tttStatus("17 und 4: "+namen+" – "+game.spieler.length+" Plätze belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("siebzehn")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("siebzehn", "join")){
+     openGame(gamePath("siebzehn"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="bank"){
+  tttStatus("17 und 4: "+bank+" legt die Bank.", "siebzehn");
+  return;
+ }
+
+ if(game.status==="setzen"){
+  tttStatus("17 und 4 – Bank "+euro(game.bank)+", Einsätze "+euro(game.belegt)+" ("+namen+").", "siebzehn");
+  return;
+ }
+
+ if(game.status==="spiel"){
+  const dran=game.spieler[game.zug];
+  tttStatus("17 und 4 läuft – "+(dran?dran.name:"jemand")+" ist dran. Bank "+bank+".", "siebzehn");
+  return;
+ }
+
+ if(game.status==="runde"){
+  tttStatus("17 und 4 – Runde "+game.runde+" abgerechnet.", "siebzehn");
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("17 und 4 beendet – "+(game.sieger||"niemand")+" gewinnt.", "siebzehn");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("siebzehn", "reset")){
+    openGame(gamePath("siebzehn"));
+   }
+  });
+ }
+}
+
+// Sechsundsechzig: zwei Spieler, 24 Karten, wer zuerst 66 Augen meldet gewinnt.
+async function refreshSechsundsechzig(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/sechsundsechzig?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSechsundsechzigGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(" und ");
+ const meiner=game.spieler.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Sechsundsechzig: "+namen+" am Tisch ("+game.spieler.length+"/2).");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("sechsundsechzig")));
+  }else if(game.spieler.length<2){
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("sechsundsechzig", "join")){
+     openGame(gamePath("sechsundsechzig"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="spiel"){
+  const dran=game.spieler[game.zug];
+  const augen=game.spieler.map(p=>p.name+": "+(p.augen+p.ansage)).join(", ");
+  tttStatus("Sechsundsechzig läuft – "+(dran?dran.name:"jemand")+" ist dran ("+augen+").", "sechsundsechzig");
+  return;
+ }
+
+ if(game.status==="runde"){
+  tttStatus("Sechsundsechzig – Runde "+game.runde+" abgerechnet.", "sechsundsechzig");
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("Sechsundsechzig beendet – "+(game.sieger||"niemand")+" gewinnt die Partie.", "sechsundsechzig");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("sechsundsechzig", "reset")){
+    openGame(gamePath("sechsundsechzig"));
+   }
+  });
+ }
+}
+
+// Schiffe versenken: zwei Spieler, jeder eine verdeckte Flotte.
+async function refreshSchiffe(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/schiffe?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSchiffeGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(" gegen ");
+ if(!namen)return;
+ const meiner=game.spieler.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Schiffe versenken: "+namen+" – "+game.spieler.length+" von 2 Plätzen belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("schiffe")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("schiffe", "join")){
+     openGame(gamePath("schiffe"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="setzen"){
+  const fertig=game.spieler.filter(p=>p.fertig).map(p=>p.name);
+  tttStatus("Schiffe versenken – Flotten werden gesetzt"+(fertig.length?" ("+fertig.join(", ")+" fertig)":"")+".", "schiffe");
+  return;
+ }
+
+ if(game.status==="spiel"){
+  const dran=game.spieler[game.zug];
+  tttStatus("Schiffe versenken – "+(dran?dran.name:"jemand")+" ist am Schießen.", "schiffe");
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("Schiffe versenken beendet – "+(game.sieger||"niemand")+" gewinnt.", "schiffe");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("schiffe", "reset")){
+    openGame(gamePath("schiffe"));
+   }
+  });
+ }
+}
+
+// Baccara: einer ist die Bank, alle setzen auf dieselbe Ponte-Hand.
+async function refreshBaccara(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/baccara?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentBaccaraGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(", ");
+ if(!namen)return;
+ const meiner=game.spieler.some(p=>p.id===sessionID);
+ const bank=game.spieler[game.bankSitz]?game.spieler[game.bankSitz].name:"die Bank";
+ const euro=betrag=>((betrag/100).toFixed(2).replace(".",",")+" Euro");
+
+ if(game.status==="invited"){
+  tttStatus("Baccara: "+namen+" – "+game.spieler.length+" Plätze belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("baccara")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("baccara", "join")){
+     openGame(gamePath("baccara"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="bank"){
+  tttStatus("Baccara: "+bank+" legt die Bank.", "baccara");
+  return;
+ }
+
+ if(game.status==="setzen"){
+  tttStatus("Baccara – Bank "+euro(game.bank)+", Einsätze "+euro(game.belegt)+" ("+namen+").", "baccara");
+  return;
+ }
+
+ if(game.status==="zug"){
+  const dran=game.spieler[game.zug];
+  tttStatus("Baccara – Ponte "+game.pontePunkte+": "+(dran?dran.name:"jemand")+" entscheidet über die dritte Karte.", "baccara");
+  return;
+ }
+
+ if(game.status==="runde"){
+  tttStatus("Baccara – Runde "+game.runde+": Ponte "+game.pontePunkte+" gegen Bank "+game.bankPunkte+".", "baccara");
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("Baccara beendet – "+(game.sieger||"niemand")+" gewinnt.", "baccara");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("baccara", "reset")){
+    openGame(gamePath("baccara"));
+   }
+  });
+ }
+}
+
+// Cabo: zwei bis vier Spieler, vier Karten vor jedem.
+async function refreshCabo(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/cabo?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentCaboGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(", ");
+ if(!namen)return;
+ const meiner=game.spieler.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Cabo: "+namen+" – "+game.spieler.length+" von 4 Plätzen belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("cabo")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("cabo", "join")){
+     openGame(gamePath("cabo"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="anschauen"){
+  tttStatus("Cabo: "+namen+" – jeder schaut sich zwei Karten an.", "cabo");
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.spieler[game.zug];
+  const cabo=game.caboVon>=0?"Cabo gerufen, ":"";
+  tttStatus("Cabo läuft – "+namen+". "+cabo+(dran?dran.name:"jemand")+" ist dran.", "cabo");
+  return;
+ }
+
+ if(game.status==="wertung"){
+  tttStatus("Cabo – Runde "+game.runde+" gewertet.", "cabo");
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("Cabo beendet – "+(game.sieger||"niemand")+" gewinnt.", "cabo");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("cabo", "reset")){
+    openGame(gamePath("cabo"));
+   }
+  });
+ }
+}
+
+// Poker: Texas Hold'em für zwei bis sechs Spieler, jeder mit 10 Euro.
+async function refreshPoker(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/poker?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentPokerGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(", ");
+ if(!namen)return;
+ const meiner=game.spieler.some(p=>p.id===sessionID);
+
+ if(game.status==="invited"){
+  tttStatus("Poker: "+namen+" – "+game.spieler.length+" von 6 Plätzen belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("poker")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("poker", "join")){
+     openGame(gamePath("poker"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="active"){
+  const dran=game.spieler[game.amZug];
+  const pot=(game.pot/100).toFixed(2).replace(".",",")+" Euro";
+  const zug=game.runde==="showdown"?"Showdown":((dran?dran.name:"jemand")+" ist dran");
+  tttStatus("Poker läuft – "+namen+". "+zug+", Pot "+pot+".", "poker");
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("Poker beendet – "+(game.gewinner||"niemand")+" hat den Tisch abgeräumt.", "poker");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("poker", "reset")){
+    openGame(gamePath("poker"));
+   }
+  });
  }
 }
 
@@ -2245,7 +2610,7 @@ async function refresh(){
       actions.className="game-invite-actions";
 
       const accept=document.createElement("button");
-      accept.textContent="Einladung annehmen";
+      accept.textContent="Annehmen";
       accept.onclick=async()=>{
        if(await gameApiAction(m.game, "accept")){
         openGame(gameDef.path);

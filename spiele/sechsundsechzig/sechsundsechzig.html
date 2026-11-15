@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b241d">
+<title>Sechsundsechzig – Connector</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:8px 10px 24px;color:#efe6d2;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ font:16px Georgia,"Times New Roman",serif}
+main{max-width:640px;margin:auto}
+h1{color:#f1dca8;text-align:center;font-size:clamp(17px,4.2vw,24px);
+ font-weight:normal;letter-spacing:.18em;margin:4px 0 10px}
+h2{font-size:16px;margin:0 0 8px;color:#f1dca8;font-weight:normal;letter-spacing:.1em}
+section{background:#12332ae8;border:1px solid #d9bc7c59;border-radius:8px;padding:12px;margin:9px 0}
+button{font-family:inherit;font-size:15px;padding:10px 14px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.4;cursor:default;filter:none}
+button.still{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c66;font-weight:normal}
+.zeile{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mitte{text-align:center}
+small,.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+
+/* Karten */
+.karten{display:flex;gap:5px;flex-wrap:wrap}
+.karte{position:relative;width:46px;height:68px;border-radius:7px;background:#f7efdd;color:#173028;
+ border:1px solid #d9bc7c;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ font-weight:bold;line-height:1;box-shadow:0 2px 5px #00000045}
+.karte .rang{font-size:20px}
+.karte .farbe{font-size:16px;margin-top:3px}
+.karte.rot{color:#a6332a}
+.karte.zu{background:repeating-linear-gradient(45deg,#18402f 0 6px,#12332a 6px 12px);
+ border:1px solid #d9bc7c55;color:#d9bc7c66;box-shadow:none;justify-content:center;font-size:16px}
+.karte.spielbar{cursor:pointer;outline:2px solid #e8cd8e88;outline-offset:1px}
+.karte.spielbar:hover{filter:brightness(1.05)}
+.karte.gesagt{outline:2px solid #c2765c;outline-offset:1px}
+.karte.klein2{width:38px;height:55px;border-radius:6px}
+@media(max-width:370px){.karte{width:42px;height:62px}.karte .rang{font-size:18px}}
+.karte.klein2 .rang{font-size:16px}
+.karte.klein2 .farbe{font-size:13px}
+
+/* Tisch */
+.tischbox{border:1px solid #d9bc7c44;border-radius:8px;background:#0f2b23aa;padding:10px;margin-bottom:10px}
+.tischkopf{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:8px}
+.marke{font-size:12px;letter-spacing:.06em;border:1px solid #d9bc7c55;border-radius:99px;
+ padding:3px 9px;color:#e8cd8e;background:#0b241d}
+.marke.warn{border-color:#c2765c88;color:#e6b6a1}
+.mittetisch{min-height:74px;display:flex;gap:10px;align-items:center;justify-content:center;
+ border-top:1px solid #d9bc7c26;border-bottom:1px solid #d9bc7c26;padding:8px 0}
+.mittetisch .leer{color:#7f9c8f;font-style:italic;font-size:14px}
+.sitze{display:grid;gap:8px}
+.sitz{border:1px solid #d9bc7c33;border-radius:7px;padding:8px 10px;background:#0b241d}
+.sitz.dran{border-color:#e8cd8e;box-shadow:0 0 0 1px #e8cd8e33}
+.sitz.ich{background:#103027}
+.sitz .kopf{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.sitz .name{color:#f1dca8}
+.sitz .info{font-size:13px;color:#a9c3b6}
+
+/* Hand */
+.handbox{margin-top:10px}
+.handkopf{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.aktionen{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.aktionen button{flex:1 1 130px}
+.note{margin-top:8px;color:#a9c3b6;font-style:italic;font-size:14px}
+.fehler{color:#f0b3a4;font-size:14px;margin-top:6px}
+
+/* Wertung */
+.zeileWert{display:flex;justify-content:space-between;gap:10px;padding:7px 0;
+ border-bottom:1px solid #d9bc7c26;font-size:15px}
+.zeileWert:last-of-type{border-bottom:none}
+.zeileWert b{color:#f1dca8;font-weight:normal}
+.plus{color:#b9e3c6}
+.minus{color:#e8b6a6}
+
+/* Regeln */
+#regeln{margin-top:18px}
+#regeln h2{font-size:15px;letter-spacing:.12em;text-transform:uppercase}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:14px;color:#d8d2bf}
+#regeln li{margin-bottom:6px}
+#regeln b{color:#f1dca8;font-weight:normal}
+</style>
+</head>
+<body>
+<main>
+<h1>SECHSUNDSECHZIG</h1>
+
+<section id="start" hidden>
+ <h2>Tisch</h2>
+ <p class="klein" id="startText"></p>
+ <div class="zeile" style="margin-top:10px">
+  <button id="btnCreate">Tisch eröffnen</button>
+ </div>
+ <div class="fehler" id="fehlerStart"></div>
+</section>
+
+<section id="lobby" hidden>
+ <h2>Am Tisch</h2>
+ <div class="sitze" id="lobbyListe"></div>
+ <div class="zeile" style="margin-top:10px">
+  <button id="btnBereit">Bereit</button>
+  <button id="btnStart" hidden>Karten geben</button>
+ </div>
+ <div class="note" id="lobbyNote"></div>
+ <div class="fehler" id="fehlerLobby"></div>
+ <p class="klein">Sechsundsechzig ist ein Spiel für zwei. Jeder startet mit sieben Bummerl.</p>
+</section>
+
+<section id="spiel" hidden>
+ <div class="tischbox">
+  <div class="tischkopf">
+   <span class="marke" id="markeTrumpf">Trumpf –</span>
+   <span class="marke" id="markeTalon">Talon 12</span>
+   <span class="marke warn" id="markeZwang" hidden>Farb- und Stichzwang</span>
+  </div>
+  <div class="mittetisch" id="mittetisch"><span class="leer">Noch kein Stich.</span></div>
+ </div>
+
+ <div class="sitze" id="sitze"></div>
+
+ <div class="handbox">
+  <div class="handkopf">
+   <span class="klein" id="handTitel">Deine Hand</span>
+   <span class="klein" id="handAugen"></span>
+  </div>
+  <div class="karten" id="hand"></div>
+ </div>
+
+ <div class="aktionen" id="aktionen"></div>
+ <div class="note" id="note"></div>
+ <div class="fehler" id="fehlerSpiel"></div>
+</section>
+
+<section id="wertung" hidden>
+ <h2 id="wertungTitel">Runde</h2>
+ <div id="wertungInhalt"></div>
+ <div class="zeile" style="margin-top:10px">
+  <button id="btnWeiter">Nächste Runde</button>
+  <button id="btnNeu" hidden>Neue Partie</button>
+ </div>
+ <div class="fehler" id="fehlerWertung"></div>
+</section>
+
+<section id="regeln">
+ <h2>Regeln</h2>
+ <ol>
+  <li><b>Blatt:</b> 24 Karten – Ass, Zehn, König, Dame, Bube und Neun in vier Farben. Ass zählt 11 Augen, Zehn 10, König 4, Dame 3, Bube 2, Neun 0.</li>
+  <li><b>Geben:</b> Jeder bekommt sechs Karten. Die dreizehnte Karte liegt offen und bestimmt die <b>Trumpffarbe</b>; sie ist die unterste Karte des Talons und wird zuletzt gehoben.</li>
+  <li><b>Stiche:</b> Wer den Stich gewinnt, hebt zuerst vom Talon, der andere danach. Der Stichgewinner spielt zum nächsten Stich aus. Trumpf sticht jede andere Farbe.</li>
+  <li><b>Zwang:</b> Solange der Talon offen ist, darf man frei abwerfen. Ist er leer oder zugedreht, gilt <b>Farbzwang vor Stichzwang</b>: erst höher bedienen, sonst zugeben, sonst Trumpf stechen, sonst abwerfen.</li>
+  <li><b>Ansagen:</b> König und Dame einer Farbe sind eine Ansage – in Trumpf <b>40 Augen</b>, in einer anderen Farbe <b>20</b>. Danach muss eine der beiden Karten ausgespielt werden. Ohne einen einzigen Stich zählt die Ansage nicht.</li>
+  <li><b>Talon zudrehen:</b> Wer sich sicher ist, sperrt den Talon. Ab dann gilt Zwang, und der letzte Stich bringt keine zehn Augen extra.</li>
+  <li><b>66:</b> Wer 66 Augen erreicht, meldet „66" und beendet die Runde. Hat der Gegner keinen Stich: <b>3 Punkte</b>, bis 32 Augen: <b>2</b>, darüber: <b>1</b>. Wer falsch meldet, gibt dem Gegner diese Punkte.</li>
+  <li><b>Letzter Stich:</b> Kommt es zur letzten Karte, bekommt der Gewinner des letzten Stichs zehn Augen dazu – dann gewinnt, wer mehr Augen hat.</li>
+  <li><b>Partie:</b> Beide zählen von sieben Bummerl herunter. Wer zuerst auf null kommt, gewinnt die Partie.</li>
+ </ol>
+ <p class="klein mitte"><a href="/connector">Zurück zum Connector</a></p>
+</section>
+</main>
+
+<script>
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get("room")||"").toUpperCase();
+const ID=params.get("id")||"";
+const NAME=params.get("name")||"Spieler";
+const ONLINE=!!(ROOM&&ID);
+
+const $=id=>document.getElementById(id);
+let game=null;
+let letzteDaten="";
+let fehlerTimer=0;
+
+const FARBEN=["♥","♦","♠","♣"];
+const FARBNAMEN=["Herz","Karo","Pik","Kreuz"];
+
+function zeige(id,an){ $(id).hidden=!an; }
+function sichtbar(id){ return !$(id).hidden; }
+function escapeHtml(t){
+ return String(t||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+function rangText(wert){
+ return {9:"9",10:"10",11:"B",12:"D",13:"K",14:"A"}[wert]||String(wert);
+}
+function kartenName(karte){
+ return FARBEN[Math.floor(karte/100)]+rangText(karte%100);
+}
+function karteHtml(karte,zusatz){
+ const farbe=Math.floor(karte/100), wert=karte%100;
+ const rot=(farbe===0||farbe===1)?" rot":"";
+ return '<div class="karte'+rot+(zusatz||"")+'"><span class="rang">'+rangText(wert)+
+  '</span><span class="farbe">'+FARBEN[farbe]+'</span></div>';
+}
+function meinSitz(){
+ if(!game)return -1;
+ return game.spieler.findIndex(p=>p.id===ID);
+}
+function ich(){
+ const s=meinSitz();
+ return s<0?null:game.spieler[s];
+}
+function fehler(text){
+ const box=sichtbar("fehlerSpiel")?$("fehlerSpiel"):(sichtbar("fehlerWertung")?$("fehlerWertung"):(sichtbar("fehlerLobby")?$("fehlerLobby"):$("fehlerStart")));
+ box.textContent=text;
+ clearTimeout(fehlerTimer);
+ fehlerTimer=setTimeout(()=>{box.textContent="";},7000);
+}
+
+async function holen(){
+ if(!ONLINE)return;
+ try{
+  const r=await fetch("/api/sechsundsechzig?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
+  if(r.status===403){ $("startText").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen."; zeige("start",true); zeige("spiel",false); return; }
+  if(!r.ok)throw Error();
+  const d=await r.json();
+  const roh=JSON.stringify(d.game);
+  if(roh===letzteDaten)return;
+  letzteDaten=roh;
+  game=d.game||null;
+  zeichne();
+ }catch(e){
+  $("note").textContent="Verbindung sucht …";
+ }
+}
+
+async function tu(aktion,daten){
+ if(!ONLINE)return;
+ try{
+  const r=await fetch("/api/sechsundsechzig?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:ID},daten||{}))
+  });
+  const text=await r.text();
+  if(!r.ok){ fehler(text.trim()||("Fehler "+r.status)); return; }
+  const d=JSON.parse(text);
+  game=d.game||null;
+  letzteDaten=JSON.stringify(d.game);
+  zeichne();
+ }catch(e){
+  fehler("Verbindung fehlgeschlagen.");
+ }
+}
+
+function zeichne(){
+ if(!ONLINE){
+  zeige("start",true); zeige("lobby",false); zeige("spiel",false); zeige("wertung",false);
+  $("startText").textContent="Sechsundsechzig läuft über den Connector: Raum öffnen, das Spiel anbieten, Karte im Chat antippen.";
+  $("btnCreate").hidden=true;
+  return;
+ }
+ if(!game){
+  zeige("start",true); zeige("lobby",false); zeige("spiel",false); zeige("wertung",false);
+  $("btnCreate").hidden=false;
+  $("startText").textContent="Noch kein Tisch in diesem Raum. Eröffne einen – der andere steigt über die Spielkarte ein.";
+  return;
+ }
+
+ if(game.status==="invited"){
+  zeige("start",false); zeige("lobby",true); zeige("spiel",false); zeige("wertung",false);
+  const drin=meinSitz()>=0;
+  $("lobbyListe").innerHTML=game.spieler.map(p=>
+   '<div class="sitz"><div class="kopf"><span class="name">'+escapeHtml(p.name)+
+   (p.id===game.hostId?' <small>· gibt</small>':"")+'</span>'+
+   '<span class="info">'+(p.ready?"bereit":"wartet auf Bereit")+'</span></div></div>').join("");
+  $("btnBereit").textContent=!drin?"Mitspielen":(ich().ready?"Doch nicht bereit":"Bereit");
+  $("btnBereit").onclick=()=>tu(drin?"ready":"join");
+  $("btnStart").hidden=!(drin&&ich().id===game.hostId);
+  $("btnStart").disabled=game.spieler.length<2||!game.spieler.every(p=>p.ready);
+  $("lobbyNote").textContent=game.note||"";
+  return;
+ }
+
+ $("fehlerSpiel").textContent="";
+ $("fehlerLobby").textContent="";
+ const offen=game.status==="runde"||game.status==="ende";
+ zeige("start",false); zeige("lobby",false);
+ zeige("spiel",!offen);
+ zeige("wertung",offen);
+ if(offen){ zeichneWertung(); return; }
+
+ // Trumpf und Talon
+ $("markeTrumpf").innerHTML="Trumpf "+(game.trumpf>=0?FARBEN[game.trumpf]:"–")+
+  (game.trumpfKarte?' <span style="opacity:.75">('+kartenName(game.trumpfKarte)+')</span>':"");
+ $("markeTalon").textContent="Talon "+game.talonRest;
+ $("markeZwang").hidden=!game.zwang;
+ $("markeZwang").textContent=game.gesperrt?"Talon zu – Zwang":(game.zwang?"Talon leer – Zwang":"Farb- und Stichzwang");
+
+ // Tisch
+ const tisch=$("mittetisch");
+ tisch.innerHTML=game.tisch&&game.tisch.length
+  ? game.tisch.map(z=>karteHtml(z.karte," klein2")).join("")
+  : '<span class="leer">Noch kein Stich – '+(game.spieler[game.zug]?escapeHtml(game.spieler[game.zug].name):"")+" spielt aus.</span>";
+
+ // Sitze (immer der Gegner zuerst)
+ const ichSitz=meinSitz();
+ $("sitze").innerHTML=game.spieler.map((p,i)=>{
+  const augen=p.augen+p.ansage;
+  const marken=[];
+  if(i===game.geber)marken.push("gibt");
+  if(i===game.zug&&!game.tisch.length)marken.push("spielt aus");
+  const stiche=p.stiche===1?"1 Stich":p.stiche+" Stiche";
+  const karten=p.anzahl===1?"1 Karte":p.anzahl+" Karten";
+  return '<div class="sitz'+(i===game.zug?" dran":"")+(i===ichSitz?" ich":"")+'">'+
+   '<div class="kopf"><span class="name">'+escapeHtml(p.name)+(i===ichSitz?" (du)":"")+'</span>'+
+   '<span class="info">'+augen+' Augen · '+p.rest+' Bummerl</span></div>'+
+   '<div class="info" style="margin-top:3px">'+karten+' · '+stiche+
+   (marken.length?' · <span style="color:#e8cd8e">'+marken.join(" · ")+'</span>':"")+'</div>'+
+   '</div>';
+ }).join("");
+
+ // Hand
+ const meine=ich();
+ const dran=game.zug===ichSitz&&!game.tisch.length;
+ $("handTitel").textContent="Deine Hand"+(dran?" – du spielst aus":(game.zug===ichSitz?" – du bist dran":""));
+ $("handAugen").textContent=meine?("Stiche: "+meine.stiche+" · "+(meine.augen+meine.ansage)+" Augen"+(meine.ansage?" (inkl. Ansage "+meine.ansage+")":"")):"";
+ const hand=$("hand");
+ hand.innerHTML="";
+ (meine?meine.hand:[]).forEach(karte=>{
+  const wert=document.createElement("div");
+  wert.innerHTML=karteHtml(karte, dran?" spielbar":"");
+  const el=wert.firstChild;
+  if(dran){ el.onclick=()=>tu("spielen",{karte:karte}); }
+  if(game.ansagePflicht===Math.floor(karte/100)&&dran){ el.classList.add("gesagt"); }
+  hand.appendChild(el);
+ });
+ if(!meine||!meine.hand.length){ hand.innerHTML='<span class="klein">Keine Karten auf der Hand.</span>'; }
+
+ // Aktionen
+ const aktionen=$("aktionen");
+ aktionen.innerHTML="";
+ if(dran&&meine){
+  (meine.ansagbar||[]).forEach(farbe=>{
+   const b=document.createElement("button");
+   b.className="still";
+   b.textContent="Ansage "+FARBEN[farbe]+" "+(farbe===game.trumpf?"(40)":"(20)");
+   b.onclick=()=>tu("heiraten",{farbe:farbe});
+   aktionen.appendChild(b);
+  });
+  if(!game.gesperrt&&game.talonRest>1){
+   const s=document.createElement("button");
+   s.className="still";
+   s.textContent="Talon zudrehen";
+   s.onclick=()=>tu("sperren");
+   aktionen.appendChild(s);
+  }
+ }
+ if(meine&&(meine.augen+meine.ansage)>=66){
+  const m=document.createElement("button");
+  m.textContent="66 melden";
+  m.onclick=()=>tu("melden");
+  aktionen.appendChild(m);
+ }
+ if(!aktionen.children.length){
+  aktionen.innerHTML='<span class="klein">'+(dran?"Spiele eine Karte.":"Der andere ist am Zug.")+'</span>';
+ }
+
+ $("note").textContent=game.note||"";
+}
+
+function zeichneWertung(){
+ const ende=game.status==="ende";
+ $("wertungTitel").textContent=ende?"Partie gewonnen":"Runde "+game.runde;
+ const e=game.ergebnis;
+ let html="";
+ if(e){
+  const grund={gemeldet:"66 gemeldet",falsch:"falsch gemeldet",letzter:"letzter Stich",sperre:"Talon gesperrt"}[e.grund]||e.grund;
+  html+='<div class="klein" style="margin-bottom:6px">'+escapeHtml(grund)+' · '+e.punkte+' Punkt(e) für '+escapeHtml(game.spieler[e.sieger]?game.spieler[e.sieger].name:"?")+'</div>';
+  game.spieler.forEach((p,i)=>{
+   const gewonnen=i===e.sieger;
+   html+='<div class="zeileWert"><span>'+escapeHtml(p.name)+(gewonnen?' <b>· gewinnt</b>':"")+'</span>'+
+    '<span class="'+(gewonnen?"plus":"minus")+'">'+e.augen[i]+' Augen · '+e.stiche[i]+' Stich(e) · '+e.rest[i]+' Bummerl</span></div>';
+  });
+ }
+ html+='<div class="note">'+escapeHtml(game.note||"")+'</div>';
+ $("wertungInhalt").innerHTML=html;
+ $("btnWeiter").hidden=ende;
+ $("btnNeu").hidden=!ende;
+}
+
+$("btnCreate").onclick=()=>tu("create");
+$("btnStart").onclick=()=>tu("start");
+$("btnWeiter").onclick=()=>tu("naechste");
+$("btnNeu").onclick=()=>tu("reset");
+
+if(!ONLINE){
+ $("startText").textContent="Sechsundsechzig läuft über den Connector: Raum öffnen, das Spiel anbieten, Karte im Chat antippen.";
+ zeige("start",true);
+}else{
+ holen();
+ setInterval(holen,1300);
+ setInterval(()=>{
+  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:ROOM,id:ID,name:(meinSitz()>=0?game.spieler[meinSitz()].name:NAME),active:true})}).catch(()=>{});
+ },30000);
+}
+</script>
+</body>
+</html>

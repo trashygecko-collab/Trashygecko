@@ -124,6 +124,8 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 				game = "Backgammon"
 			} else if room.Menschaerger != nil && (room.Menschaerger.Status == "active" || room.Menschaerger.Status == "invited") {
 				game = "Mensch ärgere dich nicht"
+			} else if room.Sechsundsechzig != nil && (room.Sechsundsechzig.Status == "spiel" || room.Sechsundsechzig.Status == "invited") {
+				game = "Sechsundsechzig"
 			}
 			list = append(list, RoomInfo{Code: code, Players: len(room.Players), Created: room.Created.Format("15:04"), CreatedAt: room.Created, Owner: room.OwnerName, Status: status, Game: game, Name: room.Name})
 		}
