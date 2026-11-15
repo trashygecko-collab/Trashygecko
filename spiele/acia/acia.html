@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Acia – Kugel im Labyrinth</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 14px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px Georgia,"Times New Roman",serif;
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:820px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:12.5px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+#levelName{color:#f1dca8}
+.herzen{letter-spacing:2px;color:#ff7a7a}
+.boni{display:flex;gap:6px;font-size:12px}
+.boni .an{color:#e8cd8e}
+.boni .aus{opacity:.3}
+.zug{border:1px solid currentColor;border-radius:6px;padding:2px 8px;font-size:12.5px}
+
+.tisch{padding:8px;background:#08120f;display:flex;flex-direction:column;align-items:center;gap:8px}
+.leinwand{position:relative;width:100%;max-width:600px}
+canvas{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #d9bc7c33;
+ background:#070f14;touch-action:none}
+
+.pads{display:flex;gap:10px;justify-content:center;width:100%;max-width:600px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+ gap:3px;width:150px;height:150px;touch-action:none}
+.pad button{font-family:inherit;font-size:17px;border-radius:9px;cursor:pointer;
+ border:1px solid #d9bc7c66;background:#123a2e;color:#e8cd8e;touch-action:none;padding:0}
+.pad button:active{background:#e8cd8e;color:#0b241d}
+.pad [data-dir="hoch"]{grid-area:1/2}
+.pad [data-dir="links"]{grid-area:2/1}
+.pad [data-dir="rechts"]{grid-area:2/3}
+.pad [data-dir="runter"]{grid-area:3/2}
+
+.meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:340px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.1em;font-size:18px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:24px}
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+</style>
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Acia · Kugel im Labyrinth</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Level neu</button>
+  <button id="btnReset">Von vorn</button>
+  <span style="width:10px"></span>
+  <button data-modus="1" class="aktiv">1 Spieler</button>
+  <button data-modus="2">2 Spieler</button>
+ </div>
+
+ <div class="statuszeile">
+  <span id="levelName">–</span>
+  <span>Kugel <b id="kugelFarbe">–</b></span>
+  <span>Ziegel <b id="ziegelStand">0/0</b></span>
+  <span id="punkte">Punkte <b>0</b></span>
+  <span class="herzen" id="leben">♥♥♥</span>
+  <span class="boni" id="boni"></span>
+  <span class="zug" id="dran" hidden></span>
+ </div>
+
+ <div class="tisch">
+  <div class="leinwand">
+   <canvas id="leinwand" width="600" height="480"></canvas>
+   <div class="meldung" id="meldung">
+    <div class="kasten">
+     <h2 id="meldungTitel">ACIA</h2>
+     <p id="meldungText"></p>
+     <button id="meldungKnopf">Los</button>
+    </div>
+   </div>
+  </div>
+  <div class="pads">
+   <div class="pad" id="pad">
+    <button data-dir="hoch">▲</button>
+    <button data-dir="links">◀</button>
+    <button data-dir="rechts">▶</button>
+    <button data-dir="runter">▼</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Pfeiltasten, W A S D oder wischen – die Kugel läuft, bis etwas im Weg ist.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Alle Ziegel zertrümmern, dann öffnet sich der Ausgang.</li>
+   <li><b>Fahren:</b> Eine Richtung antippen – die Kugel rollt weiter, bis eine Wand oder ein Ziegel sie stoppt. Unterwegs zerschlägt sie jeden Ziegel <b>ihrer eigenen Farbe</b>.</li>
+   <li><b>Farbe:</b> Ziegel anderer Farben sind feste Hindernisse. Farbfelder am Boden färben die Kugel um.</li>
+   <li><b>Doppelziegel</b> (mit Riss) brauchen zwei Treffer.</li>
+   <li><b>Extras:</b> <b>Schild</b> schützt kurz vor Wächtern, <b>Faust</b> zerschlägt Ziegel jeder Farbe, <b>Steuerung</b> gibt für ein paar Sekunden direkte Kontrolle – die Kugel hält an, sobald du loslässt.</li>
+   <li><b>Schalter</b> öffnen Tore, <b>Teleporter</b> versetzen die Kugel, <b>Wächter</b> kosten ein Leben.</li>
+   <li><b>Original:</b> Nachgebaut nach „Acia" von Peter Kaul (CP Verlag, Game On 1/1990), der vierten Crillion-Variante.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const leinwand=$("leinwand");
+const ctx=leinwand.getContext("2d");
+
+const SPALTEN=15, ZEILEN=12, K=40;        // Originalfeld: 15 × 12 Kacheln
+const W=SPALTEN*K, H=ZEILEN*K;            // 600 × 480
+const SPEED=6.2;                          // Felder pro Sekunde
+const FARBEN={
+ R:{haupt:"#ff5a5a",hell:"#ffb3b3",dunkel:"#9c2323",name:"rot"},
+ G:{haupt:"#6fe07a",hell:"#c2f7c8",dunkel:"#2c7a38",name:"grün"},
+ B:{haupt:"#5aa8ff",hell:"#bcd9ff",dunkel:"#245a9c",name:"blau"},
+ Y:{haupt:"#ffd75a",hell:"#ffefb8",dunkel:"#9c7a1c",name:"gelb"}
+};
+const BONI={schild:{dauer:8,text:"Schild"},faust:{dauer:7,text:"Faust"},steuerung:{dauer:7,text:"Steuerung"}};
+
+// ------------------------------------------------------------------ Level
+const LEVEL=[
+ // Level 1 ist aus dem Originalspeicher ausgelesen (Acia, Peter Kaul 1989).
+ {name:"Werkstatt", start:"B", tipp:"Original-Level 1: Blau beginnt oben links. Ziegel zerspringen nur in der eigenen Farbe.", karte:[
+  "###############",
+  "###############",
+  "##BRR.....GGR##",
+  "##RR.......GG##",
+  "##R.#.....#.G##",
+  "#.....@.E.....#",
+  "#.............#",
+  "##G.#.....#.B##",
+  "##RB.......BB##",
+  "##BRG.....BBG##",
+  "##BR.......GB##",
+  "###############"]},
+ // Level 2 ist ebenfalls aus dem Originalspeicher ausgelesen (Bildschirm des laufenden Spiels).
+ // Rahmen/Innenrahmen = Wand, die farbigen Kacheln sind die Ziegel (rot 22, blau 8, grün 4 = 34).
+ // Die zwei Sonderfelder in der Mitte tauschen die Kugelfarbe; das einzelne Feld darüber ist der Ausgang.
+ {name:"Labyrinth", start:"R", tipp:"Original-Level 2: rot, blau und grün im Labyrinth. Die zwei Mittelfelder wechseln die Kugelfarbe – ohne sie bleiben blau und grün unerreichbar.", karte:[
+  "###############",
+  "###.........###",
+  "###BB.....BB.##",
+  "###.BB.E.BB..##",
+  "###..2...3...##",
+  "###..........##",
+  "##....GGG....##",
+  "##R...#G#...R.#",
+  "##RR.......RR.#",
+  "##.RRRRRRRRR..#",
+  "###.RRRRRRR..##",
+  "####........###"]},
+ {name:"Zwei Hiebe", start:"R", tipp:"Ziegel mit Riss platzen erst beim zweiten Treffer.", karte:[
+  "###############",
+  "#.............#",
+  "#..rrr...bbb..#",
+  "#..r.......b..#",
+  "#..r..1.2..b..#",
+  "#.....@.......#",
+  "#..y..3.4..g..#",
+  "#..y.......g..#",
+  "#..yyy...ggg..#",
+  "#......E......#",
+  "#.............#",
+  "###############"]},
+ {name:"Schalterhalle", start:"R", tipp:"Der goldene Schalter öffnet die Gitter vor dem Ausgang.", karte:[
+  "###############",
+  "#....RRR......#",
+  "#......R......#",
+  "#..1...R...2..#",
+  "#......G......#",
+  "#.....@.G.....#",
+  "#..Y..===..B..#",
+  "#..Y...E...B..#",
+  "#..YYY.S..BB..#",
+  "#......3......#",
+  "#.............#",
+  "###############"]},
+ {name:"Kurven", start:"G", tipp:"Die Kugel rollt, bis etwas kommt – Wände sind auch Kurvenhilfen.", karte:[
+  "###############",
+  "#.............#",
+  "#.RR#.....GG..#",
+  "#.R.#......G..#",
+  "#.R.#.1.2..G..#",
+  "#...@.........#",
+  "#.Y.#.3.4..B..#",
+  "#.Y.#......B..#",
+  "#.YY#.....BB..#",
+  "#......E......#",
+  "#.............#",
+  "###############"]},
+ {name:"Wächter", start:"R", tipp:"Die Stacheln fahren ihre Bahn ab. Schild oder Abstand halten.", karte:[
+  "###############",
+  "#.............#",
+  "#..RR...GG....#",
+  "#..R..X..G....#",
+  "#..R..1.2.....#",
+  "#.....@.......#",
+  "#..Y..3.4.....#",
+  "#..Y..Z..B....#",
+  "#..YYY...BBB..#",
+  "#......E......#",
+  "#.............#",
+  "###############"]},
+ {name:"Sprungbrett", start:"G", tipp:"Die Teleporter verbinden sich paarweise – der Ring zeigt, wohin es geht.", karte:[
+  "###############",
+  "#.............#",
+  "#..RR...GG....#",
+  "#..R.T...G....#",
+  "#..R..1.2...T.#",
+  "#.....@.......#",
+  "#..Y..3.4.....#",
+  "#..Y...T.B....#",
+  "#..YYY..TBB...#",
+  "#......E......#",
+  "#.............#",
+  "###############"]},
+ {name:"Farbenwirrwarr", start:"R", tipp:"Alles dreht sich um Farbe: erst zum Feld, dann durch die Reihe.", karte:[
+  "###############",
+  "#.R.G.B.Y.R.G.#",
+  "#.R.G.B.Y.R.G.#",
+  "#.....1.2.....#",
+  "#.G.R.Y.B.G.R.#",
+  "#.....@.......#",
+  "#.B.Y.G.R.B.Y.#",
+  "#.....3.4.....#",
+  "#.Y.B.R.G.Y.B.#",
+  "#......E......#",
+  "#.............#",
+  "###############"]},
+ {name:"Meisterprüfung", start:"R", tipp:"Alles auf einmal: Risse, Schalter-Labyrinth, Teleporter, enge Gassen.", karte:[
+  "###############",
+  "#..R#G#B#Y....#",
+  "#..R.G.B.Y..1.#",
+  "#..###.###....#",
+  "#..r..2..b....#",
+  "#..@..###...T.#",
+  "#..y..3..g..T.#",
+  "#..###.###....#",
+  "#..Y.G.B.R..4.#",
+  "#......E......#",
+  "#.............#",
+  "###############"]}
+];
+
+// ------------------------------------------------------------------ Zustand
+let feld=[];              // {art, farbe, leben}
+let kugel=null;
+let waecher=[];
+let teilchen=[];
+let pops=[];
+let levelNr=0, punkte=0, leben=3;
+let modus=1, dran=1, punkte1=0, punkte2=0, zugAktiv=false;
+let zustand="start";      // start | spiel | ende | fertig
+let torOffen=false, ziegelGesamt=0, ziegelWeg=0;
+let boni={schild:0,faust:0,steuerung:0};
+let letzte=0, wackeln=0;
+let gehalten={dx:0,dy:0};
+let wunsch=null;
+
+const ZIEGEL_ZEICHEN={R:"R",G:"G",B:"B",Y:"Y"};
+const PAD_ZEICHEN={"1":"R","2":"G","3":"B","4":"Y"};
+
+function neuesLevel(nr){
+ levelNr=nr;
+ const L=LEVEL[nr];
+ feld=[]; waecher=[]; teilchen=[]; pops=[];
+ torOffen=false; ziegelWeg=0; ziegelGesamt=0;
+ const teleporter=[];
+ let startX=7, startY=5;
+
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const c=L.karte[y][x];
+   let zelle={art:"frei"};
+   if(c==="#")zelle={art:"wand"};
+   else if(c==="R"||c==="G"||c==="B"||c==="Y"){zelle={art:"ziegel",farbe:c,leben:1};ziegelGesamt++;}
+   else if(c==="r"||c==="g"||c==="b"||c==="y"){zelle={art:"ziegel",farbe:c.toUpperCase(),leben:2};ziegelGesamt++;}
+   else if(PAD_ZEICHEN[c])zelle={art:"pad",farbe:PAD_ZEICHEN[c]};
+   else if(c==="S")zelle={art:"schalter"};
+   else if(c==="=")zelle={art:"tor"};
+   else if(c==="E")zelle={art:"ausgang"};
+   else if(c==="T"){zelle={art:"teleporter",paar:-1};teleporter.push({x,y});}
+   else if(c==="X"||c==="Z"){zelle={art:"frei"};waecher.push({x,y,dx:c==="X"?1:0,dy:c==="Z"?0:1,phase:Math.random()*6});}
+   else if(c==="@"){zelle={art:"frei"};startX=x;startY=y;}
+   feld.push(zelle);
+  }
+ }
+ // Teleporter paarweise verbinden
+ for(let i=0;i+1<teleporter.length;i+=2){
+  const a=teleporter[i], b=teleporter[i+1];
+  feld[a.y*SPALTEN+a.x].paar=b.y*SPALTEN+b.x;
+  feld[b.y*SPALTEN+b.x].paar=a.y*SPALTEN+a.x;
+ }
+ kugel={cx:startX,cy:startY,px:startX,py:startY,farbe:L.start,dx:0,dy:0,
+  tx:startX,ty:startY,t:0,bewegt:false,wackeln:0};
+ boni={schild:0,faust:0,steuerung:0};
+ wunsch=null; gehalten={dx:0,dy:0};
+ $("levelName").textContent="Level "+(nr+1)+" · "+L.name;
+ zeigeStatus();
+}
+
+function zelleBei(x,y){
+ if(x<0||y<0||x>=SPALTEN||y>=ZEILEN)return {art:"wand"};
+ return feld[y*SPALTEN+x];
+}
+
+// ------------------------------------------------------------------ Bewegung
+function passierbar(x,y){
+ const z=zelleBei(x,y);
+ if(z.art==="wand")return false;
+ if(z.art==="tor"&&!torOffen)return false;
+ if(z.art==="ausgang"&&!ausgangOffen())return false;
+ if(z.art==="ziegel"){
+  const passt=(boni.faust>0)||(z.farbe===kugel.farbe);
+  return passt;
+ }
+ return true;
+}
+
+function ausgangOffen(){ return ziegelWeg>=ziegelGesamt; }
+
+function richtungSetzen(dx,dy){
+ if(zustand!=="spiel")return;
+ wunsch={dx,dy};
+ gehalten={dx,dy};
+ if(!kugel.bewegt)naechstesZiel();
+}
+
+function naechstesZiel(){
+ let d=wunsch||{dx:kugel.dx,dy:kugel.dy};
+ wunsch=null;
+ if(!d.dx&&!d.dy){kugel.bewegt=false;return;}
+ // Steuerungs-Bonus: nur laufen, solange gehalten wird
+ if(boni.steuerung>0&&!(gehalten.dx===d.dx&&gehalten.dy===d.dy)){kugel.bewegt=false;return;}
+
+ kugel.dx=d.dx; kugel.dy=d.dy;
+ const nx=kugel.cx+d.dx, ny=kugel.cy+d.dy;
+ const z=zelleBei(nx,ny);
+
+ if(z.art==="ziegel"){
+  if(!passierbar(nx,ny)){
+   kugel.bewegt=false;
+   kugel.wackeln=1;
+   const f=FARBEN[z.farbe];
+   $("hinweis").textContent="Der Ziegel ist "+f.name+" – die Kugel muss erst "+f.name+" werden.";
+   return;
+  }
+  // Ziegel zerschlagen
+  z.leben--;
+  if(z.leben<=0){
+   z.art="frei";
+   ziegelWeg++;
+   punkteAdd(10);
+   pops.push({x:nx*K+K/2,y:ny*K+K/2,text:"+10",leben:1});
+   for(let i=0;i<8;i++)teilchen.push({x:nx*K+K/2,y:ny*K+K/2,
+     vx:(Math.random()-0.5)*180,vy:(Math.random()-0.5)*180-40,leben:0.5,farbe:FARBEN[z.farbe].haupt});
+   // Extra?
+   if(Math.random()<0.16){
+    const arten=["schild","faust","steuerung"];
+    const art=arten[Math.floor(Math.random()*arten.length)];
+    boni[art]=BONI[art].dauer;
+    pops.push({x:nx*K+K/2,y:ny*K+K/2-18,text:BONI[art].text+"!",leben:1.4,gross:true});
+   }
+   zeigeStatus();
+  } else {
+   pops.push({x:nx*K+K/2,y:ny*K+K/2,text:"Riss! +5",leben:0.9});
+   punkteAdd(5);
+   for(let i=0;i<5;i++)teilchen.push({x:nx*K+K/2,y:ny*K+K/2,
+     vx:(Math.random()-0.5)*120,vy:(Math.random()-0.5)*120,leben:0.4,farbe:FARBEN[z.farbe].hell});
+   zeigeStatus();
+   kugel.bewegt=false; kugel.wackeln=1;
+   return;
+  }
+ }
+ if(!passierbar(nx,ny)){kugel.bewegt=false;kugel.wackeln=1;return;}
+ kugel.tx=nx; kugel.ty=ny; kugel.t=0; kugel.bewegt=true;
+ zugAktiv=true;
+}
+
+function punkteAdd(wert){
+ if(modus===1){ punkte+=wert; }
+ else if(dran===1){ punkte1+=wert; }
+ else { punkte2+=wert; }
+ zeigeStatus();
+}
+
+/** Im Zweispieler-Modus wechselt nach jedem Schuss der Spieler. */
+function zugZuEnde(){
+ if(modus!==2||!zugAktiv)return;
+ zugAktiv=false;
+ dran=dran===1?2:1;
+ zeigeStatus();
+}
+
+function zelleBetreten(){
+ const z=zelleBei(kugel.cx,kugel.cy);
+ if(z.art==="pad"){
+  if(kugel.farbe!==z.farbe){
+   kugel.farbe=z.farbe;
+   pops.push({x:kugel.cx*K+K/2,y:kugel.cy*K+K/2-16,text:"Farbe "+FARBEN[z.farbe].name,leben:1.2,gross:true});
+   zeigeStatus();
+  }
+ } else if(z.art==="schalter"){
+  if(!torOffen){
+   torOffen=true;
+   pops.push({x:kugel.cx*K+K/2,y:kugel.cy*K+K/2-16,text:"Tor offen!",leben:1.4,gross:true});
+   $("hinweis").textContent="Das Gitter ist offen – der Weg zum Ausgang ist frei.";
+  }
+ } else if(z.art==="teleporter"&&z.paar>=0){
+  const zielX=z.paar%SPALTEN, zielY=Math.floor(z.paar/SPALTEN);
+  pops.push({x:kugel.cx*K+K/2,y:kugel.cy*K+K/2,text:"↯",leben:0.8,gross:true});
+  kugel.cx=zielX; kugel.cy=zielY; kugel.px=zielX; kugel.py=zielY;
+  kugel.tx=zielX; kugel.ty=zielY; kugel.t=0; kugel.bewegt=false; kugel.stopNach=true;
+ } else if(z.art==="ausgang"&&ausgangOffen()){
+  levelGeschafft();
+ }
+}
+
+function update(dt){
+ // Bonus-Zeiten
+ for(const k in boni)if(boni[k]>0){boni[k]-=dt;if(boni[k]<0)boni[k]=0;}
+ if(zustand!=="spiel")return;
+
+ // Kugel
+ if(kugel.bewegt){
+  kugel.t+=dt*SPEED;
+  if(kugel.t>=1){
+   kugel.cx=kugel.tx; kugel.cy=kugel.ty;
+   kugel.px=kugel.cx; kugel.py=kugel.cy;
+   kugel.t=0;
+   zelleBetreten();
+   if(zustand!=="spiel")return;
+   if(kugel.stopNach){ kugel.stopNach=false; kugel.bewegt=false; zugZuEnde(); return; }
+   naechstesZiel();
+  } else {
+   kugel.px=kugel.cx+(kugel.tx-kugel.cx)*kugel.t;
+   kugel.py=kugel.cy+(kugel.ty-kugel.cy)*kugel.t;
+  }
+ }
+ if(!kugel.bewegt)zugZuEnde();          // Schuss vorbei -> im Zweispieler-Modus wechseln
+ if(kugel.wackeln>0)kugel.wackeln=Math.max(0,kugel.wackeln-dt*3);
+
+ // Wächter
+ for(const w of waecher){
+  w.phase+=dt*3;
+  const nx=w.x+w.dx*2.5*dt, ny=w.y+w.dy*2.5*dt;
+  const zi=zelleBei(Math.round(nx),Math.round(ny));
+  if(zi.art!=="wand"&&(zi.art!=="ziegel")&&!(zi.art==="tor"&&!torOffen)){
+   w.x=nx; w.y=ny;
+  } else { w.dx*=-1; w.dy*=-1; }
+  if(w.x<1||w.x>13||w.y<1||w.y>10){ w.dx*=-1; w.dy*=-1; }
+  // Treffer?
+  if(boni.schild<=0){
+   const d=Math.hypot(w.x-kugel.px,w.y-kugel.py);
+   if(d<0.62)getroffen();
+  }
+ }
+
+ // Teilchen
+ for(let i=teilchen.length-1;i>=0;i--){
+  const t=teilchen[i];
+  t.x+=t.vx*dt; t.y+=t.vy*dt; t.vy+=240*dt; t.leben-=dt;
+  if(t.leben<=0)teilchen.splice(i,1);
+ }
+ for(let i=pops.length-1;i>=0;i--){
+  pops[i].leben-=dt;
+  if(pops[i].leben<=0)pops.splice(i,1);
+ }
+}
+
+function getroffen(){
+ leben=Math.max(0,leben-1);
+ wackeln=1;
+ zugAktiv=false;
+ if(modus===2)dran=dran===1?2:1;   // wer erwischt wird, gibt den Zug ab
+ zeigeStatus();
+ if(leben<=0){
+  zustand="ende";
+  meldung("VORBEI","Die Wächter haben die Kugel erwischt. "+
+   (modus===1?punkte.toLocaleString("de-DE")+" Punkte – bis Level "+(levelNr+1)+".":siegerText()+" Bis Level "+(levelNr+1)+"."),
+   "Von vorn");
+ } else {
+  zustand="start";
+  meldung("ERWISCHT","Ein Wächter hat die Kugel getroffen. Noch "+leben+" Leben – das Level beginnt neu.",
+   "Weiter");
+ }
+}
+
+function levelGeschafft(){
+ zustand="start";
+ const bonus=250+leben*50;
+ const wer=dran;
+ punkteAdd(bonus);
+ zugAktiv=false;
+ if(levelNr+1>=LEVEL.length){
+  zustand="fertig";
+  meldung("GESCHAFFT!","Alle "+LEVEL.length+" Level gelöst. "+
+   (modus===1?"Endstand: "+punkte.toLocaleString("de-DE")+" Punkte.":siegerText()),
+   "Noch einmal");
+ } else {
+  meldung("LEVEL GESCHAFFT","„"+LEVEL[levelNr].name+"“ ist leer. Bonus "+bonus+
+   (modus===1?" Punkte.":" für Spieler "+wer+" – Stand "+punkte1+" : "+punkte2+"."),"Weiter");
+ }
+}
+
+/** Wer führt – als Satz für die Meldungen. */
+function siegerText(){
+ if(punkte1===punkte2)return "Unentschieden bei "+punkte1+" zu "+punkte2+" Punkten.";
+ const w=punkte1>punkte2?1:2;
+ return "Spieler "+w+" gewinnt mit "+Math.max(punkte1,punkte2)+" zu "+Math.min(punkte1,punkte2)+" Punkten.";
+}
+
+// ------------------------------------------------------------------ Status
+function zeigeStatus(){
+ $("kugelFarbe").textContent=FARBEN[kugel.farbe].name;
+ $("ziegelStand").textContent=ziegelWeg+"/"+ziegelGesamt;
+ if(modus===1){
+  $("punkte").innerHTML="Punkte <b>"+punkte.toLocaleString("de-DE")+"</b>";
+  $("dran").hidden=true;
+ } else {
+  $("punkte").innerHTML='<b style="color:#ff8a5c">P1 '+punkte1.toLocaleString("de-DE")+"</b> · <b style=\"color:#5ce0ff\">P2 "+punkte2.toLocaleString("de-DE")+"</b>";
+  const d=$("dran");
+  d.hidden=false;
+  d.textContent=(dran===1?"Spieler 1 am Zug":"Spieler 2 am Zug");
+  d.style.color=dran===1?"#ff8a5c":"#5ce0ff";
+ }
+ $("leben").textContent="♥".repeat(Math.max(0,leben))+"·".repeat(Math.max(0,3-leben));
+ const b=$("boni");
+ b.replaceChildren();
+ for(const k in BONI){
+  const s=document.createElement("span");
+  s.className=boni[k]>0?"an":"aus";
+  s.textContent=(k==="schild"?"🛡":k==="faust"?"✊":"🎮")+(boni[k]>0?" "+Math.ceil(boni[k])+"s":"");
+  b.appendChild(s);
+ }
+}
+
+// ------------------------------------------------------------------ Zeichnen
+function zeichne(){
+ // Boden
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const dunkel=(x+y)%2===0;
+   ctx.fillStyle=dunkel?"#10202b":"#132631";
+   ctx.fillRect(x*K,y*K,K,K);
+  }
+ }
+
+ const shake=wackeln>0?(Math.random()-0.5)*4:0;
+ ctx.save();
+ ctx.translate(shake,shake);
+
+ for(let y=0;y<ZEILEN;y++){
+  for(let x=0;x<SPALTEN;x++){
+   const z=feld[y*SPALTEN+x];
+   if(z.art==="wand")zeichneWand(x,y);
+   else if(z.art==="ziegel")zeichneZiegel(x,y,z);
+   else if(z.art==="pad")zeichnePad(x,y,z);
+   else if(z.art==="tor")zeichneTor(x,y);
+   else if(z.art==="schalter")zeichneSchalter(x,y);
+   else if(z.art==="teleporter")zeichneTeleporter(x,y,z);
+   else if(z.art==="ausgang")zeichneAusgang(x,y);
+  }
+ }
+
+ for(const w of waecher)zeichneWaecher(w);
+ for(const t of teilchen){
+  ctx.globalAlpha=Math.max(0,t.leben*2);
+  ctx.fillStyle=t.farbe;
+  ctx.beginPath(); ctx.arc(t.x,t.y,3.5*t.leben+1,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+ }
+ zeichneKugel();
+
+ for(const p of pops){
+  ctx.globalAlpha=Math.min(1,p.leben);
+  ctx.fillStyle=p.gross?"#fff3d2":"#e8cd8e";
+  ctx.font=(p.gross?"bold 16px":"bold 13px")+" Georgia, serif";
+  ctx.textAlign="center";
+  ctx.fillText(p.text,p.x,p.y-(1-p.leben)*18);
+  ctx.globalAlpha=1;
+ }
+ ctx.restore();
+
+ // Rahmen
+ ctx.strokeStyle="rgba(232,205,142,0.45)";
+ ctx.lineWidth=2;
+ ctx.strokeRect(1,1,W-2,H-2);
+}
+
+function zeichneWand(x,y){
+ const px=x*K, py=y*K;
+ ctx.fillStyle="#26333d";
+ ctx.fillRect(px,py,K,K);
+ ctx.fillStyle="#37474f";
+ ctx.fillRect(px+2,py+2,K-4,K-5);
+ ctx.fillStyle="#52646e";
+ ctx.fillRect(px+4,py+4,K-8,4);
+ ctx.strokeStyle="#141d24";
+ ctx.lineWidth=1.5;
+ ctx.strokeRect(px+1.5,py+1.5,K-3,K-3);
+}
+
+function zeichneZiegel(x,y,z){
+ const f=FARBEN[z.farbe];
+ const px=x*K, py=y*K;
+ const g=ctx.createLinearGradient(px,py,px+K,py+K);
+ g.addColorStop(0,f.hell);
+ g.addColorStop(0.45,f.haupt);
+ g.addColorStop(1,f.dunkel);
+ ctx.fillStyle=g;
+ ctx.fillRect(px+1.5,py+1.5,K-3,K-3);
+ ctx.strokeStyle="rgba(0,0,0,0.5)";
+ ctx.lineWidth=1.5;
+ ctx.strokeRect(px+1.5,py+1.5,K-3,K-3);
+ // Glanzkante
+ ctx.fillStyle="rgba(255,255,255,0.45)";
+ ctx.fillRect(px+4,py+4,K-8,3);
+ ctx.fillRect(px+4,py+4,3,K-8);
+ if(z.leben>1){
+  ctx.strokeStyle="rgba(0,0,0,0.55)";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(px+9,py+8);
+  ctx.lineTo(px+17,py+18);
+  ctx.lineTo(px+11,py+23);
+  ctx.lineTo(px+21,py+33);
+  ctx.stroke();
+  ctx.strokeStyle="rgba(255,255,255,0.5)";
+  ctx.lineWidth=1;
+  ctx.stroke();
+ }
+}
+
+function zeichnePad(x,y,z){
+ const f=FARBEN[z.farbe];
+ const cx=x*K+K/2, cy=y*K+K/2;
+ const puls=0.75+0.25*Math.sin(performance.now()/380);
+ ctx.save();
+ ctx.globalAlpha=0.5*puls;
+ ctx.strokeStyle=f.haupt;
+ ctx.lineWidth=3;
+ ctx.beginPath(); ctx.arc(cx,cy,K*0.34*puls+4,0,Math.PI*2); ctx.stroke();
+ ctx.globalAlpha=0.85;
+ ctx.fillStyle=f.haupt;
+ ctx.beginPath(); ctx.arc(cx,cy,K*0.2,0,Math.PI*2); ctx.fill();
+ ctx.globalAlpha=1;
+ ctx.fillStyle="rgba(255,255,255,0.5)";
+ ctx.beginPath(); ctx.arc(cx-3,cy-4,K*0.07,0,Math.PI*2); ctx.fill();
+ ctx.restore();
+}
+
+function zeichneTor(x,y){
+ const px=x*K, py=y*K;
+ ctx.fillStyle=torOffen?"rgba(120,140,150,0.18)":"#4a3a1c";
+ ctx.fillRect(px+1,py+1,K-2,K-2);
+ if(!torOffen){
+  ctx.strokeStyle="#c9a64a";
+  ctx.lineWidth=4;
+  for(let i=0;i<3;i++){
+   const ox=px+8+i*11;
+   ctx.beginPath(); ctx.moveTo(ox,py+3); ctx.lineTo(ox,py+K-3); ctx.stroke();
+  }
+  ctx.strokeStyle="#7a6224";
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(px+3,py+K/2); ctx.lineTo(px+K-3,py+K/2); ctx.stroke();
+ } else {
+  ctx.strokeStyle="rgba(201,166,74,0.35)";
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([4,5]);
+  ctx.strokeRect(px+2,py+2,K-4,K-4);
+  ctx.setLineDash([]);
+ }
+}
+
+function zeichneSchalter(x,y){
+ const cx=x*K+K/2, cy=y*K+K/2;
+ ctx.fillStyle="#2b3b45";
+ ctx.beginPath(); ctx.arc(cx,cy,K*0.36,0,Math.PI*2); ctx.fill();
+ ctx.strokeStyle=torOffen?"#6fe07a":"#e8cd8e";
+ ctx.lineWidth=3;
+ ctx.beginPath(); ctx.arc(cx,cy,K*0.36,0,Math.PI*2); ctx.stroke();
+ ctx.fillStyle=torOffen?"#6fe07a":"#e8cd8e";
+ ctx.beginPath();
+ ctx.arc(cx,cy-6,5,0,Math.PI*2);
+ ctx.fill();
+ ctx.fillRect(cx-2.5,cy-4,5,12);
+}
+
+function zeichneTeleporter(x,y,z){
+ const cx=x*K+K/2, cy=y*K+K/2;
+ const t=performance.now()/420;
+ ctx.save();
+ ctx.globalAlpha=0.75;
+ ctx.strokeStyle="#7fe8e0";
+ ctx.lineWidth=3;
+ for(let i=0;i<3;i++){
+  ctx.beginPath();
+  ctx.arc(cx,cy,K*0.32,t+i*2.1,t+i*2.1+1.5);
+  ctx.stroke();
+ }
+ ctx.globalAlpha=0.35;
+ ctx.fillStyle="#2a6d72";
+ ctx.beginPath(); ctx.arc(cx,cy,K*0.2,0,Math.PI*2); ctx.fill();
+ ctx.restore();
+}
+
+function zeichneAusgang(x,y){
+ const offen=ausgangOffen();
+ const px=x*K, py=y*K;
+ ctx.save();
+ if(offen){
+  const puls=0.7+0.3*Math.sin(performance.now()/300);
+  const g=ctx.createRadialGradient(px+K/2,py+K/2,3,px+K/2,py+K/2,K*0.8);
+  g.addColorStop(0,"#fffbe6");
+  g.addColorStop(0.45,"rgba(232,205,142,"+(0.85*puls)+")");
+  g.addColorStop(1,"rgba(232,205,142,0.05)");
+  ctx.fillStyle=g;
+  ctx.fillRect(px-6,py-6,K+12,K+12);
+  ctx.strokeStyle="#fff8dc";
+  ctx.lineWidth=2;
+  ctx.strokeRect(px+6,py+5,K-12,K-10);
+ } else {
+  ctx.fillStyle="#1a2a33";
+  ctx.fillRect(px+4,py+4,K-8,K-8);
+  ctx.strokeStyle="#5d707b";
+  ctx.lineWidth=2;
+  ctx.strokeRect(px+6,py+5,K-12,K-10);
+  // Schloss
+  ctx.strokeStyle="#8d9aa3";
+  ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(px+K/2,py+K/2-2,5,Math.PI,0); ctx.stroke();
+  ctx.fillStyle="#8d9aa3";
+  ctx.fillRect(px+K/2-6,py+K/2-2,12,9);
+ }
+ ctx.restore();
+}
+
+function zeichneWaecher(w){
+ const cx=w.x*K+K/2, cy=w.y*K+K/2;
+ const r=K*0.33;
+ ctx.save();
+ ctx.translate(cx,cy);
+ ctx.rotate(w.phase);
+ ctx.fillStyle="#8d2f2f";
+ for(let i=0;i<6;i++){
+  ctx.rotate(Math.PI/3);
+  ctx.beginPath();
+  ctx.moveTo(0,-r*0.55);
+  ctx.lineTo(r*0.22,-r*1.05);
+  ctx.lineTo(r*0.22,-r*0.55);
+  ctx.closePath();
+  ctx.fill();
+ }
+ const g=ctx.createRadialGradient(-r*0.3,-r*0.35,r*0.15,0,0,r);
+ g.addColorStop(0,"#ffb0a0");
+ g.addColorStop(0.5,"#e05a4a");
+ g.addColorStop(1,"#6e1a14");
+ ctx.fillStyle=g;
+ ctx.beginPath(); ctx.arc(0,0,r*0.72,0,Math.PI*2); ctx.fill();
+ ctx.strokeStyle="rgba(0,0,0,0.5)"; ctx.lineWidth=1.5; ctx.stroke();
+ ctx.restore();
+}
+
+function zeichneKugel(){
+ const cx=kugel.px*K+K/2, cy=kugel.py*K+K/2;
+ const f=FARBEN[kugel.farbe];
+ const r=K*0.34;
+ const bob=Math.sin(performance.now()/180)*(kugel.bewegt?1.2:0);
+ ctx.save();
+ ctx.fillStyle="rgba(0,0,0,0.35)";
+ ctx.beginPath(); ctx.ellipse(cx,cy+r*0.95,r*0.85,r*0.3,0,0,Math.PI*2); ctx.fill();
+
+ const g=ctx.createRadialGradient(cx-r*0.35,cy-r*0.4-bob,r*0.15,cx,cy-bob,r*1.1);
+ g.addColorStop(0,"#ffffff");
+ g.addColorStop(0.35,f.hell);
+ g.addColorStop(0.75,f.haupt);
+ g.addColorStop(1,f.dunkel);
+ ctx.fillStyle=g;
+ ctx.beginPath(); ctx.arc(cx,cy-bob,r,0,Math.PI*2); ctx.fill();
+ ctx.strokeStyle="rgba(0,0,0,0.45)"; ctx.lineWidth=1.5; ctx.stroke();
+
+ // Boni-Ringe
+ if(boni.schild>0){
+  ctx.strokeStyle="rgba(120,220,255,"+(0.5+0.3*Math.sin(performance.now()/150))+")";
+  ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(cx,cy-bob,r+4,0,Math.PI*2); ctx.stroke();
+ }
+ if(boni.faust>0){
+  ctx.strokeStyle="rgba(255,200,90,0.85)";
+  ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(cx,cy-bob,r+7,0.5,2.4); ctx.stroke();
+ }
+ if(boni.steuerung>0){
+  ctx.strokeStyle="rgba(160,255,160,0.8)";
+  ctx.lineWidth=2;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.arc(cx,cy-bob,r+10,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+ }
+ // Glanzpunkt
+ ctx.fillStyle="rgba(255,255,255,0.85)";
+ ctx.beginPath(); ctx.ellipse(cx-r*0.32,cy-bob-r*0.36,r*0.24,r*0.15,-0.7,0,Math.PI*2); ctx.fill();
+ // Wer am Zug ist, bekommt einen farbigen Ring
+ if(modus===2){
+  ctx.strokeStyle=dran===1?"#ff8a5c":"#5ce0ff";
+  ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(cx,cy-bob,r+3,0,Math.PI*2); ctx.stroke();
+ }
+ ctx.restore();
+}
+
+// ------------------------------------------------------------------ Schleife
+function schleife(zeit){
+ const dt=Math.min(0.05,(zeit-letzte)/1000||0);
+ letzte=zeit;
+ update(dt);
+ if(wackeln>0)wackeln=Math.max(0,wackeln-dt*3);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+// ------------------------------------------------------------------ Bedienung
+const RICHTUNGEN={hoch:[0,-1],runter:[0,1],links:[-1,0],rechts:[1,0]};
+
+window.addEventListener("keydown",e=>{
+ const map={ArrowUp:"hoch",ArrowDown:"runter",ArrowLeft:"links",ArrowRight:"rechts",
+  w:"hoch",s:"runter",a:"links",d:"rechts",W:"hoch",S:"runter",A:"links",D:"rechts"};
+ const r=map[e.key];
+ if(r){ e.preventDefault(); const [dx,dy]=RICHTUNGEN[r]; richtungSetzen(dx,dy); return; }
+ if(e.key===" "||e.key==="Enter"){
+  e.preventDefault();
+  if(!$("meldung").hidden)$("meldungKnopf").click();
+ }
+});
+window.addEventListener("keyup",e=>{
+ const map={ArrowUp:"hoch",ArrowDown:"runter",ArrowLeft:"links",ArrowRight:"rechts",
+  w:"hoch",s:"runter",a:"links",d:"rechts",W:"hoch",S:"runter",A:"links",D:"rechts"};
+ const r=map[e.key];
+ if(r){ const [dx,dy]=RICHTUNGEN[r]; if(gehalten.dx===dx&&gehalten.dy===dy)gehalten={dx:0,dy:0}; }
+});
+
+$("pad").querySelectorAll("button").forEach(b=>{
+ const dir=b.dataset.dir;
+ const [dx,dy]=RICHTUNGEN[dir];
+ b.addEventListener("pointerdown",e=>{e.preventDefault();richtungSetzen(dx,dy);});
+ b.addEventListener("pointerup",()=>{ if(gehalten.dx===dx&&gehalten.dy===dy)gehalten={dx:0,dy:0}; });
+ b.addEventListener("pointerleave",()=>{ if(gehalten.dx===dx&&gehalten.dy===dy)gehalten={dx:0,dy:0}; });
+});
+
+// Wischen
+let wischStart=null;
+leinwand.addEventListener("pointerdown",e=>{
+ const r=leinwand.getBoundingClientRect();
+ wischStart={x:e.clientX,y:e.clientY,w:r.width,h:r.height};
+});
+leinwand.addEventListener("pointerup",e=>{
+ if(!wischStart)return;
+ const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
+ wischStart=null;
+ if(Math.abs(dx)<16&&Math.abs(dy)<16){
+  if(!$("meldung").hidden)$("meldungKnopf").click();
+  return;
+ }
+ if(Math.abs(dx)>Math.abs(dy))richtungSetzen(dx>0?1:-1,0);
+ else richtungSetzen(0,dy>0?1:-1);
+});
+
+// Meldung
+function meldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+function meldungZu(){ $("meldung").hidden=true; }
+
+function allesNeu(){
+ punkte=0; punkte1=0; punkte2=0; leben=3; dran=1; zugAktiv=false;
+ neuesLevel(0); zustand="spiel";
+}
+
+$("meldungKnopf").onclick=()=>{
+ meldungZu();
+ if(zustand==="fertig"){
+  allesNeu();
+ } else if(zustand==="ende"){
+  allesNeu();
+ } else if(zustand==="start"&&$("meldungTitel").textContent==="ERWISCHT"){
+  neuesLevel(levelNr); zustand="spiel";
+ } else if(zustand==="start"&&$("meldungTitel").textContent==="LEVEL GESCHAFFT"){
+  neuesLevel(levelNr+1); zustand="spiel";
+ } else {
+  zustand="spiel";
+ }
+ zeigeStatus();
+};
+
+$("btnNeu").onclick=()=>{ neuesLevel(levelNr); zustand="spiel"; meldungZu(); };
+$("btnReset").onclick=()=>{ allesNeu(); meldungZu(); };
+
+document.querySelectorAll("[data-modus]").forEach(b=>{
+ b.onclick=()=>{
+  modus=Number(b.dataset.modus);
+  document.querySelectorAll("[data-modus]").forEach(x=>x.classList.remove("aktiv"));
+  b.classList.add("aktiv");
+  allesNeu();
+  meldungZu();
+  $("hinweis").textContent=modus===2
+   ? "Zweispieler: Jeder Zapfen ist ein Schuss – wer am Zug ist, wählt eine Richtung, dann ist der andere dran."
+   : "Pfeiltasten, W A S D oder wischen – die Kugel läuft, bis etwas im Weg ist.";
+  zeigeStatus();
+ };
+});
+
+// Start
+neuesLevel(0);
+zustand="start";
+meldung("ACIA",
+ "Eine Kugel, viele Farben: Zerschlage jeden Ziegel deiner Farbe, wechsle auf den Farbfeldern und räume den Weg zum Ausgang frei. Neun Level warten – allein oder zu zweit am selben Gerät.",
+ "Los");
+// --- nur zum Prüfen (wird nach dem Testen entfernt) -------------------------
+window.__acia={
+ stand:()=>({zustand,modus,dran,punkte,punkte1,punkte2,leben,levelNr,ziegelWeg,ziegelGesamt,zugAktiv,
+   kugel:{cx:kugel.cx,cy:kugel.cy,farbe:kugel.farbe,bewegt:kugel.bewegt}}),
+ schritt:(n,dt)=>{for(let i=0;i<(n||1);i++)update(dt||1/60);},
+ richtung:richtungSetzen,zeichne,neuesLevel,allesNeu,
+ setze:(x,y,f)=>{kugel.cx=x;kugel.cy=y;kugel.px=x;kugel.py=y;kugel.tx=x;kugel.ty=y;
+   kugel.t=0;kugel.bewegt=false;if(f)kugel.farbe=f;},
+ spielStarten:()=>{zustand="spiel";meldungZu();},
+ freiesLevel:()=>{feld.forEach(z=>{if(z.art==="ziegel")z.art="frei";});ziegelWeg=ziegelGesamt;},
+ zelle:(x,y)=>({...zelleBei(x,y)})
+};
+requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });
+})();
+</script>
+</body>
+</html>

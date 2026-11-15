@@ -225,7 +225,7 @@ html:fullscreen body{padding:18px 1px}
 .runde-knoepfe .los{flex:1 1 120px}
 .runde-knoepfe .sekundaer{flex:0 0 auto;background:none;border:1px solid #3f7360;color:#b9c9bf;font-weight:normal}
 .angebot-ende{display:block;margin-top:6px;font-size:11px;color:#9db3a6}
-@media(max-width:420px){.modus-btn{font-size:12px;padding:10px 6px}}
+@media(max-width:420px){.modus-btn{font-size:14px;padding:10px 6px;line-height:1.3}}
 /* Alle Spiele aus der Übersicht, direkt im Connector. */
 .solo-gruppe{margin:20px 0 0}
 .solo-gruppe h3{margin:0 0 10px;font-size:12px;color:#a9bfb2;font-weight:normal;
@@ -276,11 +276,22 @@ html:fullscreen body{padding:18px 1px}
  #addressbox summary{font-size:13px;color:#a9bfb2;font-weight:normal;padding:2px 0}
  #addressbox summary::after{font-size:11px}
  #addressbox details p,#addressbox details button{font-size:13px}
- .solo-link{min-height:58px;font-size:12.5px;padding:12px 8px}
+ .solo-link{min-height:62px;font-size:15px;padding:12px 8px}
  #nameKnown{gap:6px;margin:0}
  /* Spielerzeilen und Statuskasten etwas flacher. */
- .game-player{padding:8px 10px;margin:6px 0}
+ .game-player{padding:10px 10px;margin:6px 0;font-size:15px}
  .games-side{padding:8px 10px}
+ /* Knopfschrift darf auf dem Handy nicht mitschrumpsen: "Spiel öffnen",
+    "Runde anbieten" und "Mitspielen" standen bei 12–13 px da und waren kaum
+    zu lesen. Außerdem darf der Text umbrechen statt abgeschnitten zu werden. */
+ .open-game{font-size:16px;padding:11px 10px;white-space:normal;overflow:visible;text-overflow:clip}
+ .runde-starten{font-size:16px;padding:11px 16px}
+ .runde-knoepfe .los,.runde-knoepfe .sekundaer{font-size:16px;padding:11px 12px}
+ .game-invite-actions button{font-size:16px;white-space:normal}
+ .game-invite-controls select,.game-invite-controls button{font-size:16px}
+ /* Vollbild-Knopf nicht mehr schwebend: auf dem Handy deckte er beim Scrollen
+    die Knöpfe zu. Er sitzt jetzt oben rechts im Kopf und scrollt mit. */
+ #fullscreenBtn{position:absolute;top:4px;right:8px;font-size:16px;padding:7px 10px;opacity:.88}
  #game-status{margin-top:6px}
  /* Chat: flacher, die Eingabe bleibt beim Lesen unten kleben. */
  #chat{height:380px;padding:8px;font-size:14px;line-height:1.35}
@@ -851,10 +862,23 @@ const SUPPORTED_GAMES = [
 // Zahlen in Namen richtig (21 vor 31).
 SUPPORTED_GAMES.sort((a,b)=>a.name.localeCompare(b.name,"de",{numeric:true,sensitivity:"base"}));
 
+// refreshGames fragt alle Spiele nacheinander ab, und jedes schreibt in
+// dieselbe Statusbox. Vorher löschte das letzte Spiel, das "Noch keine Runde
+// offen." meldet, den Knopf, den ein anderes Spiel gerade gesetzt hatte – der
+// Knopf blitzte deshalb nur kurz auf und war kaum zu treffen. Innerhalb eines
+// Durchlaufs gewinnt jetzt die erste Meldung, und eine Meldung mit Knopf hat
+// Vorrang vor einer reinen Textmeldung.
+let statusZyklus=false, statusGesetzt=false, statusKnopf=false;
+
 function tttStatus(text, gameId){
+ if(statusZyklus){
+  if(statusKnopf)return;               // der Knopf steht schon
+  if(statusGesetzt && !gameId)return;  // es steht schon eine Meldung da
+ }
  const box=document.getElementById("game-status");
  box.classList.remove("leer");   // jetzt steht etwas Echtes da
  box.textContent=text;
+ statusGesetzt=true;
  if(!gameId)return;
  const def=SUPPORTED_GAMES.find(g=>g.id===gameId);
  if(!def)return;
@@ -864,6 +888,7 @@ function tttStatus(text, gameId){
  open.textContent="Spiel öffnen";
  open.onclick=()=>openGame(def.path);
  box.appendChild(open);
+ statusKnopf=true;
 }
 
 function openGame(path){
@@ -913,6 +938,9 @@ async function dameAction(action,data={}){
 }
 
 async function refreshGames(players){
+ // Ein Durchlauf: die Statusmeldungen der Spiele konkurrieren nicht mehr
+ // gegeneinander (siehe tttStatus).
+ statusZyklus=true; statusGesetzt=false; statusKnopf=false;
  await refreshTicTacToe(players);
  await refreshVierGewinnt(players);
  await refreshDame(players);
@@ -942,6 +970,7 @@ async function refreshGames(players){
  await refreshSchwimmen(players);
  await refreshArschloch(players);
  await refreshEinsxeins(players);
+ statusZyklus=false;
 }
 
 // Aktueller Spielstand des jeweiligen Spiels, für die Einladungen im Chat.
@@ -2213,6 +2242,9 @@ function gamePath(id){
 // Zusätzlicher Knopf unter dem Spielstatus (z. B. "Spiel starten").
 // Nichts offen: nur ein kurzer Satz, kein Hinweisblock.
 function zeigeLeerenStatus(){
+ // Läuft gerade ein Durchlauf und ein Spiel hat schon etwas gemeldet, bleibt
+ // dessen Meldung (und ein gesetzter Knopf) stehen.
+ if(statusZyklus && statusGesetzt)return;
  const box=document.getElementById("game-status");
  box.classList.add("leer");
  box.textContent="Noch keine Runde offen.";
