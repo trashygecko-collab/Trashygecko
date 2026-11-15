@@ -323,7 +323,7 @@ function drawCheckers(){
  }
 }
 function currentOptimal(){return rolled?optimalMoves(state,player,dice.filter(d=>!d.used).map(d=>d.value)):[];}
-function movesForSelected(){const opts=currentOptimal();return selectedDie===null?[]:opts.filter(m=>m.die===dice.find(d=>d.id===selectedDie)?.value);}
+function movesForSelected(){const opts=currentOptimal();return selectedDie===null?[]:opts.filter(m=>{const w=dice.find(d=>d.id===selectedDie);return m.die===(w?w.value:void 0);});}
 function renderTargets(){
  targetLayer.innerHTML='';
  if(!rolled||gameOver)return;
@@ -423,7 +423,7 @@ function executeMove(move){
   return;
  }
  const nextDie=remaining.find(v=>best.some(m=>m.die===v));
- selectedDie=dice.find(d=>!d.used&&d.value===nextDie)?.id??null;
+ selectedDie=(()=>{const w=dice.find(d=>!d.used&&d.value===nextDie);return w&&w.id!=null?w.id:null;})();
  draw();
  setStatus('Guter Zug! Wähle den nächsten Würfel und Stein.');
  $('instructions').textContent='Wähle einen noch verfügbaren Würfel, dann einen leuchtenden Stein.';
@@ -453,7 +453,7 @@ function finishRoll(a,b){
  const best=optimalMoves(state,player,values);
  if(!best.length){selectedDie=null;draw();$('rollNote').textContent=a===b?`Pasch ${a}, aber kein Zug möglich.`:`${a} und ${b}: kein Zug möglich.`;setStatus('Kein Zug möglich. In einer Sekunde ist der andere Spieler dran.');passTimer=setTimeout(nextTurn,1100);return;}
  const validValues=[...new Set(best.map(m=>m.die))];
- const chosen=validValues[0];selectedDie=dice.find(d=>d.value===chosen)?.id??null;
+ const chosen=validValues[0];selectedDie=(()=>{const w=dice.find(d=>d.value===chosen);return w&&w.id!=null?w.id:null;})();
  draw();
  $('rollNote').textContent=a===b?`Pasch! Vier Züge mit der ${a}.`:`Du hast ${a} und ${b} gewürfelt.`;
  $('instructions').textContent='Tippe einen Würfel an, danach einen deiner leuchtenden Steine und sein Zielfeld.';
@@ -536,7 +536,7 @@ function applyOnlineState(game){
   const usable=dice.some(d=>d.id===selectedDie&&!d.used&&valid.includes(d.value));
   if(!usable){
    const chosen=valid[0];
-   selectedDie=chosen===undefined?null:(dice.find(d=>!d.used&&d.value===chosen)?.id??null);
+   selectedDie=chosen===undefined?null:(()=>{const w=dice.find(d=>!d.used&&d.value===chosen);return w&&w.id!=null?w.id:null;})();
   }
  }else if(!rolled){
   selectedDie=null;

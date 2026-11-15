@@ -139,7 +139,7 @@ function findRemovalOrder(originalBoard) {
     if (solution === null) {
         throw new Error(
             "Keine vollständige Abbaureihenfolge für Level " +
-            (originalBoard[0]?.level || "?") +
+            ((originalBoard[0] && originalBoard[0].level) || "?") +
             " gefunden."
         );
     }
