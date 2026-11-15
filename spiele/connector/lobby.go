@@ -261,7 +261,7 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		// sehen davon nichts.
 		room.addMessage(Message{
 			Name:    "Der Raum",
-			Text:    "Hallo und herzlich willkommen!",
+			Text:    "Hallo und herzlich willkommen! Spieler anflüstern mit /f Name",
 			Time:    time.Now().Format("15:04:05"),
 			ToID:    input.ID,
 			ToName:  name,

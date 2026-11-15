@@ -107,8 +107,8 @@ input::placeholder{color:#6f8f80}
 .tile.wrong{background:#2c5a49;border:2px solid #e8b3a6;color:#f6edda}
 .tile:disabled{opacity:1;cursor:default}
 .feedback{
-  min-height:42px;display:flex;align-items:center;justify-content:center;
-  text-align:center;color:var(--muted);font-size:14px;margin:10px 0;
+  min-height:44px;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--muted);font-size:16px;margin:10px 0;
 }
 .feedback.good{color:var(--good)}
 .feedback.bad{color:var(--bad)}
@@ -243,6 +243,8 @@ let seenGameId = "";
 let resultShown = false;
 let gameSettings = {kind:"numbers",pairs:1};
 let pendingStartAt = 0;
+// Lob für die geschaffte Runde – steht nach dem Abschluss auch im Ergebnis.
+let lobText = "";
 
 const $ = id => document.getElementById(id);
 
@@ -513,7 +515,9 @@ async function finishRound(){
   locked=true;
   if(timerInterval){clearInterval(timerInterval);timerInterval=null}
   myDone={time:elapsed(),mistakes};
-  $("feedback").textContent="Alle Paare gefunden!";
+  // Auch für die geschaffte Runde gibt es ein Lob, nicht nur für einzelne Paare.
+  lobText = typeof lobSpruch==="function" ? lobSpruch() : "Geschafft!";
+  $("feedback").textContent="Alle Paare gefunden – "+lobText;
   $("feedback").className="feedback good";
   renderBoard();
   if(mode==="multi"){
@@ -553,13 +557,50 @@ function showOnlineResult(){
   resultShown=true;
   $("resultTitle").textContent=title;
   $("resultTime").textContent=formatTime(mine.time);
-  $("resultText").textContent=text+"\n\nDeine Fehler: "+mine.mistakes;
+  $("resultText").textContent=(lobText?lobText+"\n\n":"")+text+"\n\nDeine Fehler: "+mine.mistakes;
   showScreen("resultScreen");
 }
+// Bestenliste: die schnellste Zeit je Einstellung (Spielart + Anzahl Paare).
+// Bewusst nur im Browser gespeichert – keine Anmeldung, kein Server.
+function bestKey(settings){
+  return "paare:best:"+settings.kind+":"+settings.pairs;
+}
+function liesBestzeit(settings){
+  try{
+    const wert=Number(localStorage.getItem(bestKey(settings)));
+    return Number.isFinite(wert)&&wert>0?wert:null;
+  }catch(e){
+    return null;
+  }
+}
+function merkeBestzeit(settings,zeit){
+  const alt=liesBestzeit(settings);
+  if(alt!==null&&alt<=zeit)return false;
+  try{ localStorage.setItem(bestKey(settings),String(Math.round(zeit))); }catch(e){}
+  return true;
+}
+function artName(wert){
+  return ({numbers:"Zahlen",letters:"Buchstaben",symbols:"Sonderzeichen"})[wert]||wert;
+}
 function showSoloResult(){
+  const zeit=myDone.time;
+  const vorher=liesBestzeit(gameSettings);
+  const neueBestzeit=merkeBestzeit(gameSettings,zeit);
   $("resultTitle").textContent="GESCHAFFT!";
-  $("resultTime").textContent=formatTime(myDone.time);
-  $("resultText").textContent="Du hast alle "+pairCount+" Paare gefunden.\nFehlversuche: "+mistakes;
+  $("resultTime").textContent=formatTime(zeit);
+  const zeilen=[];
+  if(lobText)zeilen.push(lobText,"");
+  zeilen.push("Du hast alle "+gameSettings.pairs+" Paare gefunden.");
+  zeilen.push("Fehlversuche: "+mistakes,"");
+  zeilen.push("Deine Zeit: "+formatTime(zeit));
+  if(neueBestzeit){
+    zeilen.push(vorher===null
+      ? "Das ist die erste Bestzeit für diese Einstellung!"
+      : "Neue Bestzeit! Vorher: "+formatTime(vorher));
+  }else{
+    zeilen.push("Bestzeit war "+formatTime(vorher)+" ("+gameSettings.pairs+" Paare · "+artName(gameSettings.kind)+").");
+  }
+  $("resultText").textContent=zeilen.join("\n");
   showScreen("resultScreen");
 }
 function stopRoundTimers(){
