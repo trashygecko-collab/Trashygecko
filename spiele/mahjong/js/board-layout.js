@@ -384,7 +384,7 @@ function createTopLayers(firstRow) {
     return [second, third, fourth];
 }
 
-function createShapeLayout({ id, level, rows, base, layerStart }) {
+function createShapeLayout({ id, level, rows, base: basis, layerStart }) {
     const [second, third, fourth] = createTopLayers(layerStart);
 
     return {
@@ -393,8 +393,8 @@ function createShapeLayout({ id, level, rows, base, layerStart }) {
         columns: 12,
         rows,
         tileCount: 144,
-        layers: [base, second, third, fourth],
-        positions: [...base, ...second, ...third, ...fourth]
+        layers: [basis, second, third, fourth],
+        positions: [...basis, ...second, ...third, ...fourth]
     };
 }
 

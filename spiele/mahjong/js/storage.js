@@ -20,7 +20,8 @@ function createDefaultStorage() {
             hints: true,
             steinForm: "rund",
             steinZustand: "neu",
-            formenSatz: 1
+            formenSatz: 1,
+            hintergrund: "gruen"
         },
         // Zweiter Formensatz: eigener Fortschritt, eigene Bestzeiten.
         satz2: {
@@ -78,16 +79,6 @@ function saveStorage(data) {
 }
 
 // Speichert den erreichten Level
-function saveLevelProgress(data, level) {
-    data.currentLevel = level;
-
-    data.unlockedLevel = Math.max(
-        data.unlockedLevel,
-        level
-    );
-
-    return saveStorage(data);
-}
 
 // Speichert einen abgeschlossenen Level. Mit "ziel" landet der Fortschritt in
 // einem eigenen Abschnitt (zweiter Formensatz), gespeichert wird immer alles.
@@ -119,20 +110,5 @@ function saveLevelResult(data, level, seconds, ziel) {
 }
 
 // Speichert Einstellungen
-function saveSettings(data, settings) {
-    data.settings = {
-        ...data.settings,
-        ...settings
-    };
-
-    return saveStorage(data);
-}
 
 // Setzt alle Spieldaten zurück
-function resetStorage() {
-    const freshData = createDefaultStorage();
-
-    saveStorage(freshData);
-
-    return freshData;
-}

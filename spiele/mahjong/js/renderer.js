@@ -17,6 +17,7 @@ let boardViewport = null;
 let boardStage = null;
 let boardPointerStart = null;
 let boardInitialFit = true;
+let boardSpielerZoom = false;   // Zoom selbst gewaehlt? Dann bleibt er beim Resize.
 let letzteBuehne = "";
 let boardSuppressClick = false;
 let boardPinch = null;
@@ -30,9 +31,43 @@ function updateBoardTransform() {
         `translate(${boardOffsetX}px, ${boardOffsetY}px) scale(${boardZoom})`;
 }
 
-// Das Spielfeld nimmt immer den ganzen Bereich ein - hier ist nichts
-// nachzujustieren.
-function passeBuehneAn() {}
+// Ein Grenzbereich fuer alle Wege - Einpassen, Mausrad und zwei Finger.
+// Die Obergrenze waechst mit dem Geraet, damit die Steine auf groesseren
+// Bildschirmen mitwachsen statt nur die Flaeche: 1,2 auf 5 Zoll.
+const ZOOM_MIN = 0.3;
+
+function zoomObergrenze() {
+    return 1.2 * (typeof groesseFaktor === "function" ? groesseFaktor() : 1);
+}
+
+function begrenzeZoom(zoom) {
+    return Math.min(zoomObergrenze(), Math.max(ZOOM_MIN, zoom));
+}
+
+// Zoom aendern und dabei den Brettpunkt halten, der bisher bei (ankerX, ankerY)
+// im Sichtfenster lag. Beim Zoomen ist das die Bildmitte, beim Resize die Mitte
+// der alten Groesse - so bleibt eine verschobene Ansicht stehen, statt um die
+// neue Mitte zu springen.
+function halteAnsicht(neuerZoom, ankerX, ankerY) {
+    const brettX = (ankerX - boardOffsetX) / boardZoom;
+    const brettY = (ankerY - boardOffsetY) / boardZoom;
+
+    boardZoom = neuerZoom;
+
+    boardOffsetX = boardViewport.clientWidth / 2 - brettX * neuerZoom;
+    boardOffsetY = boardViewport.clientHeight / 2 - brettY * neuerZoom;
+
+    updateBoardTransform();
+}
+
+// Zoomen um die aktuelle Bildmitte (Mausrad).
+function zoomeUmMitte(neuerZoom) {
+    halteAnsicht(
+        neuerZoom,
+        boardViewport.clientWidth / 2,
+        boardViewport.clientHeight / 2
+    );
+}
 
 function fitBoard() {
     if (!boardViewport || !boardStage) return;
@@ -48,15 +83,18 @@ function fitBoard() {
 
     // Beim Start und nach dem Drehen ist das ganze Muster zu sehen.
     // Vergroessern geht mit zwei Fingern bzw. dem Mausrad.
-    boardZoom = Math.max(
-        0.25,
-        Math.min(breitenZoom, hoehenZoom, 1.2),
-        // Im Querformat ist die Hoehe sehr knapp - dann lieber groesser
-        // bleiben und wischen, statt auf Briefmarkengroesse zu schrumpfen.
-        Math.min(breitenZoom, 0.5)
+    boardZoom = begrenzeZoom(
+        Math.max(
+            Math.min(breitenZoom, hoehenZoom),
+            // Im Querformat ist die Hoehe sehr knapp - dann lieber groesser
+            // bleiben und wischen, statt auf Briefmarkengroesse zu schrumpfen.
+            Math.min(breitenZoom, 0.5)
+        )
     );
 
-    passeBuehneAn();
+    // Einpassen ist die Voreinstellung - ab jetzt zaehlt wieder das Geraet.
+    boardSpielerZoom = false;
+
 
     boardOffsetX =
         (boardViewport.clientWidth - width * boardZoom) / 2;
@@ -69,8 +107,9 @@ function fitBoard() {
     updateBoardTransform();
 }
 
-// Nach Drehen des Geraets oder Groessenaenderung neu einpassen. Der Zoom des
-// Spielers bleibt erhalten, solange das Brett weiterhin passt.
+// Nach Drehen des Geraets oder Groessenaenderung: ein selbst gewaehlter Zoom
+// bleibt stehen (nur auf die neuen Grenzen gestutzt), ohne eigenen Zoom wird
+// wieder eingepasst.
 let groessenTimer = null;
 
 function passeNachGroesseAn() {
@@ -80,12 +119,23 @@ function passeNachGroesseAn() {
         boardViewport.clientWidth !== letzteBreite ||
         boardViewport.clientHeight !== letzteHoehe;
 
-    if (geaendert) {
-        fitBoard();
+    if (!geaendert) {
+        updateBoardTransform();
         return;
     }
 
-    updateBoardTransform();
+    if (boardSpielerZoom) {
+        halteAnsicht(
+            begrenzeZoom(boardZoom),
+            letzteBreite / 2,
+            letzteHoehe / 2
+        );
+    } else {
+        fitBoard();
+    }
+
+    letzteBreite = boardViewport.clientWidth;
+    letzteHoehe = boardViewport.clientHeight;
 }
 
 function planeGroessenPruefung() {
@@ -103,24 +153,12 @@ if (window.visualViewport) {
 function changeBoardZoom(amount) {
     if (!boardViewport || !boardStage) return;
 
-    const oldZoom = boardZoom;
-    const newZoom = Math.min(2.5, Math.max(0.3, oldZoom + amount));
+    const neuerZoom = begrenzeZoom(boardZoom + amount);
 
-    if (newZoom === oldZoom) return;
+    if (neuerZoom === boardZoom) return;
 
-    const centerX = boardViewport.clientWidth / 2;
-    const centerY = boardViewport.clientHeight / 2;
-
-    const boardX = (centerX - boardOffsetX) / oldZoom;
-    const boardY = (centerY - boardOffsetY) / oldZoom;
-
-    boardZoom = newZoom;
-
-    boardOffsetX = centerX - boardX * newZoom;
-    boardOffsetY = centerY - boardY * newZoom;
-
-    passeBuehneAn();
-    updateBoardTransform();
+    boardSpielerZoom = true;
+    zoomeUmMitte(neuerZoom);
 }
 
 // Doppelklick / Doppeltipp: das ganze Brett ins Bild holen. Der Startzoom
@@ -134,10 +172,9 @@ function resetBoardView() {
     const breitenZoom = (boardViewport.clientWidth - 16) / width;
     const hoehenZoom = (boardViewport.clientHeight - 16) / height;
 
-    boardZoom = Math.max(
-        0.25,
-        Math.min(breitenZoom, hoehenZoom, 1.2)
-    );
+    boardZoom = begrenzeZoom(Math.min(breitenZoom, hoehenZoom));
+
+    boardSpielerZoom = false;
 
     boardOffsetX =
         (boardViewport.clientWidth - width * boardZoom) / 2;
@@ -220,10 +257,7 @@ function enableBoardMovement(viewport) {
             const mitte = mittelpunkt(a, b);
             const faktor = entfernung(a, b) / boardPinch.abstand;
 
-            const neuerZoom = Math.min(
-                2.5,
-                Math.max(0.3, boardPinch.zoom * faktor)
-            );
+            const neuerZoom = begrenzeZoom(boardPinch.zoom * faktor);
 
             const brettX =
                 (boardPinch.x - boardPinch.offsetX) / boardPinch.zoom;
@@ -231,11 +265,11 @@ function enableBoardMovement(viewport) {
                 (boardPinch.y - boardPinch.offsetY) / boardPinch.zoom;
 
             boardZoom = neuerZoom;
+            boardSpielerZoom = true;
 
             boardOffsetX = (mitte.x - rahmen.left) - brettX * neuerZoom;
             boardOffsetY = (mitte.y - rahmen.top) - brettY * neuerZoom;
 
-            passeBuehneAn();
             updateBoardTransform();
 
             boardSuppressClick = true;
@@ -255,7 +289,10 @@ function enableBoardMovement(viewport) {
                 // Verschieben auch ausserhalb des Bretts weiterlaeuft.
                 try {
                     viewport.setPointerCapture(event.pointerId);
-                } catch (fehler) {}
+                } catch (fehler) {
+                    // Nicht jede Umgebung erlaubt das Festhalten - dann laeuft
+                    // das Ziehen eben nur innerhalb des Bretts weiter.
+                }
             }
         }
 
@@ -392,32 +429,13 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
 
     viewport.className = "board-viewport";
 
-    viewport.style.cssText = `
-        position:relative;
-        flex:1 1 auto;
-        width:100%;
-        height:100%;
-        min-height:0;
-        overflow:hidden;
-        touch-action:none;
-        cursor:grab;
-        background:transparent;
-        user-select:none;
-    `;
-
     const stage = document.createElement("div");
 
     stage.className = "board-stage";
 
-    stage.style.cssText = `
-        position:absolute;
-        left:0;
-        top:0;
-        width:${boardWidth}px;
-        height:${boardHeight}px;
-        transform-origin:top left;
-        will-change:transform;
-    `;
+    // Alles Feste steht in css/mahjong.css; hier nur, was vom Brett abhaengt.
+    stage.style.width = boardWidth + "px";
+    stage.style.height = boardHeight + "px";
 
     board.forEach(tile => {
         if (tile.removed) return;
@@ -427,6 +445,7 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
         button.type = "button";
         button.className = "mahjong-tile";
         button.dataset.tileId = tile.id;
+        button.setAttribute("aria-pressed", "false");
 
         const free = isTileFree(tile, board);
 
@@ -516,7 +535,6 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
         fitBoard();
         boardInitialFit = false;
     } else {
-        passeBuehneAn();
         updateBoardTransform();
     }
 
@@ -577,6 +595,10 @@ function updateBoardView(board, selectedId = null, hinweisIds = [], onTileClick 
         const frei = isTileFree(tile, board);
 
         element.disabled = !frei;
+        element.setAttribute(
+            "aria-pressed",
+            tile.id === selectedId ? "true" : "false"
+        );
         element.classList.toggle("blocked", !frei);
         element.classList.toggle("selected", tile.id === selectedId);
         element.classList.toggle("hinweis", hinweisIds.includes(tile.id));
@@ -614,13 +636,3 @@ function blinkeFalscheSteine(ids, dauer = 700) {
     }, dauer);
 }
 
-function clearBoard() {
-    const container = document.getElementById("board");
-
-    if (container) {
-        container.innerHTML = "";
-    }
-
-    boardViewport = null;
-    boardStage = null;
-}

@@ -13,9 +13,6 @@
  * gleichmäßig hoch, der Rest kommt in die Mitte, damit der Rand glatt bleibt.
  */
 
-// Laeuft gerade der zweite Formensatz? Wird von main.js gesetzt.
-let FORMEN_SATZ = 1;
-
 // --------------------------------------------------
 // AUS EINEM BILD WIRD EIN BRETT
 // --------------------------------------------------

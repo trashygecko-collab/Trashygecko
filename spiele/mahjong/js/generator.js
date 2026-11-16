@@ -40,25 +40,6 @@ function createSymbolSet(symbolIds) {
 // SPIELBRETT ERSTELLEN
 // --------------------------------------------------
 
-function generateBoard(symbolIds, level = 1) {
-    const symbols = createSymbolSet(symbolIds);
-    const board = createBoard(level);
-
-    const pairs = [];
-
-    symbols.forEach(symbolId => {
-        pairs.push(symbolId, symbolId);
-    });
-
-    const mixedPairs = shuffle(pairs);
-
-    board.forEach((tile, index) => {
-        tile.symbolId = mixedPairs[index];
-    });
-
-    return board;
-}
-
 // --------------------------------------------------
 // LÖSUNGSREIHENFOLGE SUCHEN
 // --------------------------------------------------

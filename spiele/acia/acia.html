@@ -326,6 +326,20 @@ function rolleVonId(id){
 //   ID 09: oben 10, unten 14 | ID 0A: oben 10, unten 13 | ID 0B: oben 14, unten 13
 // 0C/0D/0E sind einfarbig (14, 10, 13).
 const ZWEITFARBE={0x09:0x0E, 0x0A:0x0D, 0x0B:0x0D};
+// Kacheln, die das Original NICHT aus vier aufeinanderfolgenden Zeichen baut:
+// Mauern setzen sich aus gespiegelten Teilen zusammen ($70/$71/$72 mit $41,
+// $42, $73, $76, $77, $78, $79, $7A, $7B).  Aus $0400 aller zehn Felder
+// gelesen - je ID genau eine Variante, also fest verdrahtbar.
+const KACHEL4={0x30:[0x70,0x41,0x76,0x43], 0x31:[0x72,0x74,0x76,0x43],
+ 0x32:[0x70,0x41,0x78,0x7A], 0x33:[0x70,0x73,0x76,0x79],
+ 0x35:[0x71,0x71,0x42,0x43], 0x36:[0x71,0x75,0x42,0x79],
+ 0x39:[0x40,0x73,0x77,0x7B], 0x3B:[0x40,0x73,0x42,0x79],
+ 0x3C:[0x40,0x41,0x77,0x7A]};
+// Farben der vier Unterzeichen aus dem Farb-RAM, wo sie nicht einheitlich sind.
+// ID 01 traegt im vierten Feld Farbe 15 (in allen zehn Feldern 192x gemessen).
+// 09/0A/0B stehen nicht hier: bei ihnen haengt die untere Haelfte an ZWEITFARBE
+// und am Farbwechsler, wird also beim Zeichnen bestimmt.
+const KACHEL_FARBE={0x01:[9,9,9,15]};
 // Am Original gemessen (Feld 3): nach dem Zerstoeren einer Kiste steht das Schiff
 // 12 Bilder still und faehrt dann in derselben Richtung weiter.  12 Bilder bei
 // 50 Hz sind 0,24 s.
@@ -372,10 +386,39 @@ let gegner=[], takt=0, levelWechsel=false;
 let ausgangOffen=false; // im Original: Flagge $14BF, erst dann zaehlt der Ausgang
 const portale=[];       // Indizes der blinkenden Ecken-Kacheln
 
-// Blinktakt der Ecken (am Original gemessen: alle 25 Bilder ein Schritt,
-// drei Schritte: eigene Kachel, Partnergrafik, offener Boden).
-const BLINK_TAKT=25;
-function blinkPhase(){ return Math.floor(takt/BLINK_TAKT)%3; }   // 2 = durchlaessig
+// Blinktakt der Portale, Bild fuer Bild am Original gemessen.
+// Feld 5 (1400 Bilder): die Ecken sind meistens offen, nur die beiden
+// DiagonAlpaare leuchten kurz auf - Periode 250 Bilder (5 s), Blitz 28 Bilder
+// (0,56 s), die Paare um 125 Bilder (halbe Periode) versetzt.  Beim Levelstart
+// leuchten beide Paare noch aus; das ist der Rest des Blitzes von vor dem Start
+// und wird aus dem Anker gerechnet (Bild 236-250+28 = 14 bzw. 361-250+28 = 139),
+// darum steht in der Tabelle nur der gemessene Blitzbeginn.
+// Feld 2 (1260 Bilder, Schiff bis an die Portale gefahren): dort blinkt nichts -
+// die Portale leuchten im Ruhezustand und oeffnen, sobald das Schiff nahe kommt,
+// beide Kacheln eines Paares gemeinsam; sie schliessen wieder, wenn es wegfaehrt.
+// Nahe heisst: Schiffsmittelpunkt innerhalb einer Kachel um die Kachelmitte
+// (gemessen: 2 Punkte Abstand offen, 8 Punkte noch zu, 20 Punkte wieder zu).
+// Leuchtend kostet ein Leben, offen ($40) springt zur Gegenkachel.
+const BLINK_PERIODE=250, BLINK_BLITZ=28;
+const BLINK_JE_LEVEL={
+ 4:{blitz:[236,361]},   // Feld 5 (Index = levelNr), Beginn des ersten Blitzes je Paar
+ 1:{nah:true}           // Feld 2, oeffnet bei Annaeherung
+};
+function eckeNah(i){
+ // Schiffspositionen stehen in Kacheln (TEMPO = 6,25 Kacheln je Sekunde)
+ const tx=i%SPALTEN, ty=(i-tx)/SPALTEN;
+ for(const s of schiffe)if(Math.abs(s.x-(tx+0.5))<1&&Math.abs(s.y-(ty+0.5))<1)return true;
+ return false;
+}
+function eckeLeuchtet(i,zeit){
+ const z=feld[i], plan=BLINK_JE_LEVEL[levelNr];
+ if(!z||z.paar==null||!plan)return false;
+ if(plan.nah)return !(eckeNah(i)||(z.partner>=0&&eckeNah(z.partner)));
+ const t=(zeit==null)?takt:zeit, anker=plan.blitz[z.paar|0];
+ if(t<anker-BLINK_PERIODE+BLINK_BLITZ)return true;   // Ausleuchten beim Start
+ const a=(t-anker)%BLINK_PERIODE;
+ return a>=0&&a<BLINK_BLITZ;
+}
 
 const TEMPO=6.25;       // Kacheln je Sekunde = 2 Pixel je Bild bei 50 Hz
                         // (fahrten_pruefen.js: Original genau 2.00 px/Bild)
@@ -391,6 +434,16 @@ function feldAusZellen(f){
   const gx=SPALTEN-1-x, gy=ZEILEN-1-y, ziel=gy*SPALTEN+gx;
   f[i].partner=(ziel!==i&&f[ziel]&&f[ziel].rolle==="portal")?ziel:-1;
  }
+ // Portale zu Paaren fassen (jede Gegenkachel-Paarung ist ein Paar); die Paare
+ // blinken im Original versetzt zueinander.  Reihenfolge: nach kleinster Index.
+ const paarSchluessel=[];
+ for(const i of portale){
+  const p=f[i].partner, s=(p>=0)?Math.min(i,p):i;
+  f[i].paarSchluessel=s;
+  if(paarSchluessel.indexOf(s)<0)paarSchluessel.push(s);
+ }
+ paarSchluessel.sort((x,y)=>x-y);
+ for(const i of portale)f[i].paar=paarSchluessel.indexOf(f[i].paarSchluessel);
  return f;
 }
 function feldAusDaten(lv){
@@ -478,6 +531,12 @@ function startFarbe(){
  for(const k in c)if(c[k]>max){max=c[k];best=Number(k);}
  return best;
 }
+// Die zwei Mischfarben der Mehrfarbzeichen ($D022/$D023) setzt das Original je
+// Level; im Bildvergleich Original/Nachbau gemessen (Nachbau malte ueberall
+// orange/braun): Feld 2/3 grau/dunkelgrau, Feld 5/9 hellrot/rot, Feld 6
+// tuerkis/lila, Feld 8 hellgruen/gruen, Feld 1/4/7/10 orange/braun.
+const MISCH=[[8,9],[12,11],[12,11],[8,9],[10,2],[3,4],[8,9],[13,5],[10,2],[8,9]];
+function mischFarben(){ return MISCH[levelNr]||MISCH[0]; }
 
 function zelleBei(x,y){
  if(x<0||y<0||x>=SPALTEN||y>=ZEILEN)return {rolle:"rand"};
@@ -501,14 +560,20 @@ function grundNeu(){
 function zeichneKachel(g,tx,ty,z){
  const basis=z.weg?0x40:z.basis;
  const farbe=z.weg?15:z.farbe;
+ const m=mischFarben(), f1=C64[m[0]], f2=C64[m[1]];
+ const vier=(z.weg?null:KACHEL4[z.id])||null;       // Zeichen je Unterfeld
+ const fvier=(z.weg?null:KACHEL_FARBE[z.id])||null;  // Farben je Unterfeld
  for(let k=0;k<4;k++){
   const cx=tx*2+(k%2), cy=ty*2+(k>>1);
-  const code=basis+k;
+  const code=vier?vier[k]:basis+k;
+  // Zweifarbige Kisten: untere Haelfte in der zweiten Farbe (am Original
+  // gemessen: ID 09 oben 10/unten 14, 0A 10/13, 0B 14/13).
+  const fk=fvier?fvier[k]:(z.farbe2!=null&&k>=2?z.farbe2:farbe);
   for(let y=0;y<8;y++){
    const byte=ZEICHENSATZ[(code*8+y)&0x7FF];
    for(let px=0;px<4;px++){
     const bits=(byte>>(6-2*px))&3;
-    const f=bits===0?"#000000":bits===1?C64[8]:bits===2?C64[9]:C64[farbe&15];
+    const f=bits===0?"#000000":bits===1?f1:bits===2?f2:C64[fk&15];
     g.fillStyle=f;
     g.fillRect(cx*8+px*2,cy*8+y,2,1);
    }
@@ -702,8 +767,8 @@ function bewege(s,h){
    // diagonal gegenueberliegenden Kachel. Leuchtet sie ($64/$6C), kostet sie ein
    // Leben - das Schiff erscheint wieder am Startkreuz.
    if(!(s.portalSperre>0)){
-    if(blinkPhase()===2)portalSprung(s,tx,ty);
-    else{getroffen(s);return;}
+    if(eckeLeuchtet(ty*SPALTEN+tx)){getroffen(s);return;}
+    portalSprung(s,tx,ty);
    }
   }else if(z.rolle==="wechsler"){
    if(SKALA_FARBE[z.farbe]&&s.farbe!==z.farbe){
@@ -773,16 +838,12 @@ function portalSprung(s,tx,ty){
  pops.push({x:(px+0.5)*16,y:(py+0.5)*16,text:"Sprung",leben:0.9});
 }
 
-function zeichnePortale(){
+function zeichnePortale(zeit){
  if(!portale.length)return;
- const ph=blinkPhase();
  for(const i of portale){
   const z=feld[i], tx=i%SPALTEN, ty=(i-tx)/SPALTEN;
-  let basis;
-  if(ph===2){ basis=0x40; }
-  else if(ph===0){ basis=z.basis; }
-  else basis=(z.partner>=0?feld[z.partner].basis:(z.basis===0x64?0x6C:0x64));
-  zeichneKachel(ctx,tx,ty,{basis:basis,farbe:ph===2?15:z.farbe,weg:false});
+  if(eckeLeuchtet(i,zeit))zeichneKachel(ctx,tx,ty,{basis:z.basis,farbe:z.farbe,weg:false});
+  else zeichneKachel(ctx,tx,ty,{basis:0x40,farbe:15,weg:false});
  }
 }
 
@@ -937,18 +998,22 @@ edIds=edLeer();
 function hex2(n){ n=n&0xFF; return (n<16?"0":"")+n.toString(16).toUpperCase(); }
 
 // Eine Kachel (2 x 2 Zeichen) malen – für das Feld und die Palettenbilder.
-function kachelMalen(g,basis,farbe,groesse){
+function kachelMalen(g,basis,farbe,groesse,id){
  const s=groesse/16;
+ const m=mischFarben(), f1=C64[m[0]], f2=C64[m[1]];
+ const vier=(id!=null?KACHEL4[id]:null)||null;
+ const fvier=(id!=null?KACHEL_FARBE[id]:null)||null;
  g.save(); g.scale(s,s);
  if(basis===0x00&&farbe===0x00){ g.fillStyle="#0d141a"; g.fillRect(0,0,16,16); }
  else{
   for(let k=0;k<4;k++){
-   const code=basis+k, cx=(k%2)*8, cy=(k>>1)*8;
+   const code=vier?vier[k]:basis+k, cx=(k%2)*8, cy=(k>>1)*8;
+   const fk=fvier?fvier[k]:farbe;
    for(let yy=0;yy<8;yy++){
     const byte=ZEICHENSATZ[(code*8+yy)&0x7FF];
     for(let px=0;px<4;px++){
      const bits=(byte>>(6-2*px))&3;
-     g.fillStyle=bits===0?"#000":bits===1?C64[8]:bits===2?C64[9]:C64[farbe&0x0F];
+     g.fillStyle=bits===0?"#000":bits===1?f1:bits===2?f2:C64[fk&0x0F];
      g.fillRect(cx+px*2,cy+yy,2,1);
     }
    }
@@ -962,7 +1027,7 @@ function edZeichnen(){
  for(let y=0;y<ZEILEN;y++)for(let x=0;x<SPALTEN;x++){
   const t=IDTAB[edIds[y*SPALTEN+x]]||IDTAB[0];
   edCtx.save(); edCtx.translate(x*EDK,y*EDK);
-  kachelMalen(edCtx,t[0],t[1],EDK);
+  kachelMalen(edCtx,t[0],t[1],EDK,edIds[y*SPALTEN+x]);
   edCtx.restore();
   edCtx.strokeStyle="rgba(255,255,255,.08)";
   edCtx.strokeRect(x*EDK+0.5,y*EDK+0.5,EDK-1,EDK-1);
@@ -1160,6 +1225,13 @@ window.__acia={
  kachel:(x,y)=>{const z=feld[y*SPALTEN+x];return z?z.rolle+":"+z.farbe+(z.stufe===1?"/1":"")+(z.weg?"/weg":""):null;},
  // nur fuer den Karten-Pruefstand: Kachel-ID, wie sie im Feld steht
  id:(x,y)=>{const z=feld[y*SPALTEN+x];return z?z.id:null;},
+ // nur fuer den Bildvergleich: Feldhintergrund ohne Sprites neu zeichnen,
+ // die Ecken im Blinkstand von Bild <zeit> (ohne Angabe: laufender Takt).
+ bild:(zeit)=>{grundNeu(); zeichnePortale(zeit);},
+ // nur fuer den Portaltest: Bildzahl setzen (Blinkstand der Portale) und
+ // Leben zuruecksetzen, damit mehrere Faelle in einem Lauf gehen
+ takt:(n)=>{if(n!=null)takt=n;return takt;},
+ leben:(n)=>{leben=[n||3,n||3];punkte=[0,0];},
  rolle:(basis)=>rolleVon(basis)
 };
 

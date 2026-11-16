@@ -17,6 +17,10 @@ let gameSeconds = 0;
 let gameTimer = null;
 let gameRunning = false;
 let currentLevel = 1;
+
+// Formensatz des laufenden Spiels (1 = Normal, 2 = Handy). Gehoert hierher,
+// weil es Spielzustand ist und nicht Teil der Layout-Daten.
+let FORMEN_SATZ = 1;
 let score = 0;
 let gameData = null;
 let levelWechselTimer = null;
@@ -34,49 +38,15 @@ function aktualisiereBrett() {
 // HTML-ELEMENTE
 // --------------------------------------------------
 
-function getElement(...ids) {
-    for (const id of ids) {
-        const element = document.getElementById(id);
-        if (element) return element;
-    }
-
-    return null;
+function getElement(id) {
+    return document.getElementById(id);
 }
 
-function setText(ids, value) {
-    const element = getElement(...ids);
+function setText(id, value) {
+    const element = getElement(id);
 
     if (element) {
         element.textContent = value;
-    }
-}
-
-// Fehlende Anzeigen automatisch ergänzen
-function createGameInformation() {
-    const board = getElement("board");
-
-    if (!board || !board.parentElement) return;
-
-    if (!getElement("gameStatus")) {
-        const status = document.createElement("div");
-
-        status.id = "gameStatus";
-        status.style.cssText =
-            "text-align:center;color:#f5edda;font-size:18px;" +
-            "font-weight:bold;margin:12px auto;min-height:28px;";
-
-        board.parentElement.insertBefore(status, board);
-    }
-
-    if (!getElement("scoreDisplay")) {
-        const scoreBox = document.createElement("div");
-
-        scoreBox.id = "scoreDisplay";
-        scoreBox.style.cssText =
-            "text-align:center;color:#c9ad7d;font-size:18px;" +
-            "font-weight:bold;margin:8px auto;";
-
-        board.parentElement.insertBefore(scoreBox, board);
     }
 }
 
@@ -94,7 +64,7 @@ function hoechstesLevel(satz = FORMEN_SATZ) {
 // Der Spielstand liegt getrennt vor: Formen 1 wie bisher ganz oben,
 // Formen 2 in einem eigenen Abschnitt mit eigenen Haken und Bestzeiten.
 function satzDaten(satz = FORMEN_SATZ) {
-    if (!gameData) return createDefaultStorage();
+    if (!gameData) gameData = createDefaultStorage();
 
     if (satz !== 2) return gameData;
 
@@ -159,6 +129,13 @@ function farbenName(runde) {
     return RUNDEN_FARBEN[(runde - 1) % RUNDEN_FARBEN.length];
 }
 
+// So heissen die beiden Levelsysteme - genau wie die Knoepfe am Umschalter.
+const SATZ_NAMEN = { 1: "Normal-Level", 2: "Handy-Level" };
+
+function satzName(satz = FORMEN_SATZ) {
+    return SATZ_NAMEN[satz === 2 ? 2 : 1];
+}
+
 // Letztes Level einer vollen Farbrunde? (Level 504, 1008, ...)
 // Kurzer Hinweis, wenn ein Level den Anfang einer neuen Farbrunde bildet.
 function rundeStartHinweis(level) {
@@ -190,180 +167,6 @@ function setzeRundenFarbe(runde) {
 
     // In der Regenbogen-Runde bekommt jeder Stein seine eigene Farbe.
     document.body.dataset.regenbogen = istRegenbogenRunde(runde) ? "ja" : "nein";
-}
-
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-
-    return (
-        String(minutes).padStart(2, "0") +
-        ":" +
-        String(rest).padStart(2, "0")
-    );
-}
-
-function updateStats() {
-    // Beide Level-Waehler zeigen ihren eigenen Formensatz: oben Gold (Formen 1),
-    // darunter Kupfer (Formen 2). Der laufende Satz steht auf dem aktuellen Wert.
-    const levelSatz1 = FORMEN_SATZ === 1 ? currentLevel : satzDaten(1).currentLevel || 1;
-    const levelSatz2 = FORMEN_SATZ === 2 ? currentLevel : satzDaten(2).currentLevel || 1;
-
-    setText(
-        ["level", "currentLevel", "levelDisplay"],
-        String(currentLevel).padStart(2, "0")
-    );
-
-    setText(["levelNumber"], String(levelSatz1).padStart(2, "0"));
-    setText(["levelNumber2"], String(levelSatz2).padStart(2, "0"));
-
-    const knopfSatz1 = getElement("levelButton");
-    const knopfSatz2 = getElement("levelButton2");
-
-    if (knopfSatz1) knopfSatz1.classList.toggle("aktiv", FORMEN_SATZ === 1);
-    if (knopfSatz2) knopfSatz2.classList.toggle("aktiv", FORMEN_SATZ === 2);
-
-    setText(
-        ["remainingTiles"],
-        144 - foundPairs * 2
-    );
-
-    setText(
-        ["remainingPairs", "pairs", "pairsDisplay"],
-        72 - foundPairs
-    );
-
-    setText(
-        ["gameTime", "timer", "gameTimer", "timeDisplay"],
-        formatTime(gameSeconds)
-    );
-
-    setText(
-        ["scoreDisplay"],
-        `Punkte: ${score}`
-    );
-
-    // Tipp-Knopf: unter 200 Punkten gibt es keinen Tipp - das sieht man
-    // schon am Knopf, nicht erst nach dem Klick.
-    const hintButton = getElement("hintButton");
-
-    if (hintButton) {
-        const keinTipp = score < TIPP_KOSTEN || !gameRunning;
-
-        hintButton.disabled = keinTipp;
-        hintButton.title = keinTipp
-            ? `Tipp erst ab ${TIPP_KOSTEN} Punkten`
-            : `Markiert ein Paar und kostet ${TIPP_KOSTEN} Punkte`;
-    }
-}
-
-// Was ein Tipp kostet und ab wann es ueberhaupt einen gibt.
-const TIPP_KOSTEN = 200;
-
-// Gut lesbare Farben auf dem dunklen Feld - fuer den Spruch nach einem Paar.
-const SPRUCH_FARBEN = [
-    "#ffd166",
-    "#8fe3ab",
-    "#9ad4ff",
-    "#ffb3c7",
-    "#c9b6ff",
-    "#ffe6a8",
-    "#8ee8dc",
-    "#ffc49a"
-];
-
-let letzteSpruchFarbe = "";
-
-// Zufaellige Spruchfarbe, aber nie zweimal dieselbe hintereinander.
-function spruchFarbe() {
-    const auswahl = SPRUCH_FARBEN.filter(farbe => farbe !== letzteSpruchFarbe);
-    const farbe = auswahl[Math.floor(Math.random() * auswahl.length)];
-
-    letzteSpruchFarbe = farbe;
-
-    return farbe;
-}
-
-// Warme Farben fuer den Spruch auf der Siegtafel - nie zweimal dieselbe.
-const SIEG_SPRUCH_FARBEN = [
-    "#ffa94d",
-    "#ffd166",
-    "#ffb347",
-    "#ff9c6e",
-    "#ff8fa3",
-    "#f6c177"
-];
-
-let letzteSiegSpruchFarbe = "";
-
-function siegSpruchFarbe() {
-    const auswahl = SIEG_SPRUCH_FARBEN.filter(
-        farbe => farbe !== letzteSiegSpruchFarbe
-    );
-    const farbe = auswahl[Math.floor(Math.random() * auswahl.length)];
-
-    letzteSiegSpruchFarbe = farbe;
-
-    return farbe;
-}
-
-// rot = true faerbt die Zeile rot (Fehlgriff), sonst normale Farbe.
-// punkte: Zusatz wie "+ 100 Punkte" - bleibt grau (bzw. rot beim Fehlgriff),
-// damit der Spruch davor allein die Farbe traegt.
-function setMessage(message, rot = false, punkte = "") {
-    const element = getElement(
-        "gameStatus",
-        "message",
-        "gameMessage",
-        "statusMessage"
-    );
-
-    if (!element) return;
-
-    element.classList.toggle("fehler", rot);
-    element.textContent = "";
-
-    const text = document.createElement("span");
-
-    text.className = "status-text";
-    text.textContent = message;
-
-    if (!rot && punkte) {
-        text.style.color = spruchFarbe();
-    }
-
-    element.appendChild(text);
-
-    if (punkte) {
-        const zusatz = document.createElement("span");
-
-        zusatz.className = "status-punkte";
-        zusatz.textContent = " " + punkte;
-
-        element.appendChild(zusatz);
-    }
-}
-
-// --------------------------------------------------
-// TIMER
-// --------------------------------------------------
-
-function startGameTimer() {
-    stopGameTimer();
-
-    gameTimer = setInterval(() => {
-        if (!gameRunning) return;
-
-        gameSeconds++;
-        updateStats();
-    }, 1000);
-}
-
-function stopGameTimer() {
-    if (gameTimer !== null) {
-        clearInterval(gameTimer);
-        gameTimer = null;
-    }
 }
 
 // --------------------------------------------------
@@ -404,6 +207,7 @@ function startGame() {
     stoppePunkteBlitz();
 
     setMessage("Spielbrett wird vorbereitet ...");
+    zeigeHinweis("");
     leereGewonnenSpruch();
     leereGewonnenSymbol();
     zeigeWeiterKnopf("");
@@ -427,7 +231,9 @@ function startGame() {
         renderBoard(currentBoard, null, handleTileClick);
 
         updateStats();
-        setMessage(rundeStartHinweis(currentLevel) || "Viel Spaß beim Spielen!");
+        // Runden-Hinweis, wenn es einen gibt (Farbe/Regenbogen), sonst ein
+        // Spruch aus der gemeinsamen Liste - wie nach einem Treffer.
+        setMessage(rundeStartHinweis(currentLevel) || lobText(true));
 
         startGameTimer();
 
@@ -499,7 +305,7 @@ function handleTileClick(tileId) {
         if (foundPairs === 72) {
             finishGame();
         } else {
-            setMessage(lobSpruch(true), false, "+100 Punkte");
+            setMessage(lobText(true), false, "+100 Punkte");
             pruefeFestgefahren();
         }
 
@@ -522,42 +328,11 @@ function handleTileClick(tileId) {
 
     if (abzugMoeglich) {
         blinkePunkte();
-        setMessage(pechSpruch(), true, "- 100 Punkte");
+        setMessage(pechText(), true, "- 100 Punkte");
     } else {
         // Bei 0 Punkten gibt es nichts mehr zu holen - dann sachlich bleiben.
         setMessage("Die 2 Steine passen nicht zusammen.");
     }
-}
-
-// Setzt die Punkteanzeige sofort wieder auf Gold.
-function stoppePunkteBlitz() {
-    clearTimeout(blinkePunkte.timer);
-
-    const anzeige = getElement("scoreDisplay");
-
-    if (anzeige) {
-        anzeige.classList.remove("punkte-fehler");
-    }
-}
-
-// Laesst die Punkteanzeige kurz rot aufleuchten (Fehlgriff).
-function blinkePunkte() {
-    const anzeige = getElement("scoreDisplay");
-
-    if (!anzeige) return;
-
-    anzeige.classList.remove("punkte-fehler");
-
-    // Kurz neu zeichnen lassen, damit die Animation neu startet.
-    void anzeige.offsetWidth;
-
-    anzeige.classList.add("punkte-fehler");
-
-    clearTimeout(blinkePunkte.timer);
-
-    blinkePunkte.timer = setTimeout(() => {
-        anzeige.classList.remove("punkte-fehler");
-    }, 750);
 }
 
 // --------------------------------------------------
@@ -691,7 +466,7 @@ function showHint() {
 
                 updateStats();
                 blinkePunkte();
-                setMessage(pechSpruch(), true, `- ${TIPP_KOSTEN} Punkte`);
+                setMessage(pechText(), true, `- ${TIPP_KOSTEN} Punkte`);
 
                 return;
             }
@@ -730,9 +505,8 @@ function finishGame() {
     zeigeSiegWerte();
     zeigeSiegEhrung(geschafftesLevel, score);
 
-    // Spielstand und Bestzeit speichern
-    let gespeichert = false;
-
+    // Spielstand und Bestzeit speichern. Scheitert das, sagt die Hinweiszeile
+    // darunter Bescheid - die Siegmeldung bleibt stehen.
     try {
         if (gameData) {
             saveLevelResult(gameData, currentLevel, gameSeconds, satzDaten());
@@ -745,21 +519,17 @@ function finishGame() {
                 score
             );
 
-            saveStorage(gameData);
+            speichereSpielstand(
+                "Der Spielstand lässt sich nicht speichern – der Sieg zählt nur " +
+                "für diese Sitzung."
+            );
 
             currentLevel = satzDaten().currentLevel;
 
             updateStats();
-
-            gespeichert = true;
         }
     } catch (error) {
         console.error("Spielstand konnte nicht gespeichert werden:", error);
-    }
-
-    if (!gespeichert) {
-        setMessage("Gewonnen! Der Spielstand konnte aber nicht gespeichert werden.");
-        return;
     }
 
     // Nach dem Sieg wartet das Spiel auf "Weiter", damit Meldung und Spruch in
@@ -796,6 +566,13 @@ function zeigeWeiterKnopf(beschriftung) {
 // SIEGEREHRUNG
 // --------------------------------------------------
 
+// Zeile auf der Sieg-Tafel: Levelsystem wie am Umschalter, Level, Runde, Farbe.
+function siegLevelText(level) {
+    const runde = rundeVon(level);
+
+    return `${satzName()} · Level ${level} · Runde ${runde} · ${farbenName(runde)}`;
+}
+
 // Zeigt die goldene Tafel mit Level, Punkten und Spruch.
 function zeigeSiegEhrung(level, punkte) {
     const tafel = getElement("siegEhrung");
@@ -806,9 +583,7 @@ function zeigeSiegEhrung(level, punkte) {
     const punkteFeld = getElement("siegPunkte");
 
     if (levelFeld) {
-        levelFeld.textContent = Number.isFinite(level)
-            ? `Level ${level} · Runde ${rundeVon(level)} · ${farbenName(rundeVon(level))}`
-            : "";
+        levelFeld.textContent = Number.isFinite(level) ? siegLevelText(level) : "";
     }
 
     if (punkteFeld) {
@@ -869,279 +644,17 @@ function zeigeSiegWerte() {
 }
 
 // --------------------------------------------------
-// LEVEL-AUSWAHL
-// --------------------------------------------------
-
-// Runde, die in der Level-Auswahl gerade angezeigt wird.
-let auswahlRunde = 1;
-
-// Formensatz, den die offene Level-Auswahl zeigt (1 oder 2).
-let auswahlSatz = 1;
-
-// Bestzeit eines Levels in Sekunden - null, wenn es noch nicht geschafft ist.
-function bestzeitVon(level, satz = FORMEN_SATZ) {
-    const daten = gameData ? satzDaten(satz) : null;
-    const wert = daten && daten.bestTimes ? daten.bestTimes[level] : undefined;
-
-    return Number.isFinite(wert) ? wert : null;
-}
-
-// Wie viele Level dieser Runde sind schon geschafft?
-function geschafftInRunde(runde, satz = FORMEN_SATZ) {
-    const formen = hoechstesLevel(satz);
-    const start = (runde - 1) * formen;
-    let anzahl = 0;
-
-    for (let form = 1; form <= formen; form++) {
-        if (bestzeitVon(start + form, satz) !== null) anzahl++;
-    }
-
-    return anzahl;
-}
-
-// --------------------------------------------------
-// STEIN-FORM UND ALTERUNG
-// --------------------------------------------------
-
-const STIL_FORMEN = ["rund", "eckig"];
-const STIL_ZUSTAENDE = ["neu", "alt"];
-
-// Setzt Form und Zustand der Steine (CSS: body[data-form], body[data-zustand]).
-function setzeStil(form, zustand, speichern = true) {
-    const formWert = STIL_FORMEN.includes(form) ? form : "rund";
-    const zustandWert = STIL_ZUSTAENDE.includes(zustand) ? zustand : "neu";
-
-    document.body.dataset.form = formWert;
-    document.body.dataset.zustand = zustandWert;
-
-    document.querySelectorAll(".stil-gruppe").forEach(gruppe => {
-        const aktiv =
-            gruppe.dataset.gruppe === "form" ? formWert : zustandWert;
-
-        gruppe.querySelectorAll("button").forEach(knopf => {
-            const an = knopf.dataset.wert === aktiv;
-
-            knopf.classList.toggle("aktiv", an);
-            knopf.setAttribute("aria-pressed", an ? "true" : "false");
-        });
-    });
-
-    if (speichern && gameData) {
-        gameData.settings.steinForm = formWert;
-        gameData.settings.steinZustand = zustandWert;
-
-        saveStorage(gameData);
-    }
-}
-
-function aktuellerStil() {
-    const settings = (gameData && gameData.settings) || {};
-
-    return {
-        form: STIL_FORMEN.includes(settings.steinForm) ? settings.steinForm : "rund",
-        zustand: STIL_ZUSTAENDE.includes(settings.steinZustand)
-            ? settings.steinZustand
-            : "neu"
-    };
-}
-
-function baueStilwahl() {
-    const leiste = getElement("stilLeiste");
-
-    if (!leiste) return;
-
-    leiste.querySelectorAll(".stil-gruppe").forEach(gruppe => {
-        const feld = gruppe.dataset.gruppe;
-
-        gruppe.querySelectorAll("button").forEach(knopf => {
-            knopf.addEventListener("click", () => {
-                const jetzt = aktuellerStil();
-
-                if (feld === "form") {
-                    setzeStil(knopf.dataset.wert, jetzt.zustand);
-                } else {
-                    setzeStil(jetzt.form, knopf.dataset.wert);
-                }
-            });
-        });
-    });
-}
-
-function baueLevelAuswahl(runde = auswahlRunde) {
-    const raster = getElement("levelGrid");
-
-    if (!raster) return;
-
-    auswahlRunde = Math.max(1, runde);
-
-    raster.innerHTML = "";
-
-    const formen = hoechstesLevel(auswahlSatz);
-    const start = (auswahlRunde - 1) * formen;
-
-    for (let form = 1; form <= formen; form++) {
-        const level = start + form;
-        const feld = document.createElement("button");
-        const bestzeit = bestzeitVon(level, auswahlSatz);
-
-        feld.type = "button";
-        feld.className = "level-feld";
-        feld.dataset.level = String(level);
-
-        const nummer = document.createElement("span");
-
-        nummer.className = "level-feld-nummer";
-        nummer.textContent = String(level).padStart(2, "0");
-        feld.appendChild(nummer);
-
-        if (bestzeit !== null) {
-            const zeit = document.createElement("span");
-
-            zeit.className = "level-feld-zeit";
-            zeit.textContent = formatTime(bestzeit);
-            feld.appendChild(zeit);
-
-            feld.classList.add("geschafft");
-        }
-
-        const name = formName(level, auswahlSatz);
-        const formTitel = name ? `Form ${form} · ${name}` : `Form ${form}`;
-
-        feld.title =
-            bestzeit !== null
-                ? `${formTitel} · Bestzeit ${formatTime(bestzeit)}`
-                : formTitel;
-
-        feld.addEventListener("click", () => waehleLevel(level));
-
-        raster.appendChild(feld);
-    }
-
-    const anzeige = getElement("rundeAnzeige");
-
-    if (anzeige) {
-        anzeige.textContent =
-            `Formen ${auswahlSatz} · Runde ${auswahlRunde} · ${farbenName(auswahlRunde)} · ` +
-            `${geschafftInRunde(auswahlRunde, auswahlSatz)} von ${formen}`;
-    }
-
-    baueFarbwahl();
-    markiereAktuellesLevel();
-}
-
-// Farbwahl am Ende der Level-Auswahl: jede Farbe ist eine Runde.
-function baueFarbwahl() {
-    const leiste = getElement("farbeLeiste");
-
-    if (!leiste) return;
-
-    leiste.innerHTML = "";
-
-    RUNDEN_FARBEN_SICHTBAR.forEach((name, index) => {
-        const runde = index + 1;
-        const abLevel = (runde - 1) * hoechstesLevel(auswahlSatz) + 1;
-
-        const feld = document.createElement("button");
-
-        feld.type = "button";
-        feld.className = "farbe-feld";
-        feld.dataset.farbe = String(runde);
-        const geschafft = geschafftInRunde(runde, auswahlSatz);
-
-        feld.title =
-            `Runde ${runde} · ${name} · ab Level ${abLevel} · ` +
-            `${geschafft} von ${hoechstesLevel(auswahlSatz)} geschafft`;
-        feld.setAttribute(
-            "aria-label",
-            `Runde ${runde}, ${name}, ab Level ${abLevel}`
-        );
-
-        feld.classList.toggle("aktiv", runde === auswahlRunde);
-
-        feld.addEventListener("click", () => baueLevelAuswahl(runde));
-
-        leiste.appendChild(feld);
-    });
-}
-
-function markiereAktuellesLevel() {
-    // Nur der laufende Formensatz hat ein aktuelles Level.
-    document.querySelectorAll(".level-feld").forEach(feld => {
-        feld.classList.toggle(
-            "aktuell",
-            auswahlSatz === FORMEN_SATZ &&
-                Number(feld.dataset.level) === currentLevel
-        );
-    });
-}
-
-function oeffneLevelAuswahl(satz = FORMEN_SATZ) {
-    const auswahl = getElement("levelPicker");
-
-    if (!auswahl) return;
-
-    auswahlSatz = satz === 2 ? 2 : 1;
-
-    const level = satzDaten(auswahlSatz).currentLevel || 1;
-
-    baueLevelAuswahl(rundeVon(level, auswahlSatz));
-
-    auswahl.hidden = false;
-
-    const aktuell =
-        auswahl.querySelector(".level-feld.aktuell") ||
-        auswahl.querySelector(".level-feld");
-
-    if (aktuell) {
-        aktuell.focus();
-        aktuell.scrollIntoView({ block: "center" });
-    }
-}
-
-function schliesseLevelAuswahl() {
-    const auswahl = getElement("levelPicker");
-
-    if (!auswahl) return;
-
-    auswahl.hidden = true;
-}
-
-function waehleLevel(level) {
-    // Level laufen endlos: nach Form 56 geht es in der naechsten Runde weiter.
-    const ziel = Math.max(1, Math.floor(level));
-    const satz = auswahlSatz === 2 ? 2 : 1;
-
-    FORMEN_SATZ = satz;
-
-    if (gameData) {
-        satzDaten(satz).currentLevel = ziel;
-
-        gameData.settings = gameData.settings || {};
-        gameData.settings.formenSatz = satz;
-
-        try {
-            saveStorage(gameData);
-        } catch (fehler) {}
-    }
-
-    currentLevel = ziel;
-
-    schliesseLevelAuswahl();
-    startGame();
-
-    setMessage(`Level ${ziel} gestartet.`);
-}
-
-// --------------------------------------------------
 // INITIALISIERUNG
 // --------------------------------------------------
 
 function initializeGame() {
-    createGameInformation();
 
     try {
         gameData = loadStorage();
-        FORMEN_SATZ = gameData.settings && gameData.settings.formenSatz === 2 ? 2 : 1;
+        // loadStorage ergaenzt fehlende Einstellungen aus den Standardwerten.
+        FORMEN_SATZ = gameData.settings.formenSatz === 2 ? 2 : 1;
+        // Ohne gespeicherte Wahl startet die Auswahl mit den Handy-Leveln.
+        auswahlSatz = gameData.settings.auswahlSatz === 1 ? 1 : 2;
         currentLevel = satzDaten().currentLevel || 1;
     } catch (error) {
         console.error("Speicherfehler:", error);
@@ -1176,80 +689,49 @@ function initializeGame() {
         hintButton.addEventListener("click", showHint);
     }
 
-    // Zurück zur Spiele-Übersicht (Connector).
+    // Zurück zur Spiele-Übersicht: die Online-Fassung auf Render, derselbe
+    // Link, den spiele.html im Eintrag "Trashygeckos Connector" verwendet.
+    const SPIELE_ONLINE = "https://trashygecko.onrender.com/connector";
+
     const backButton = getElement("backButton");
 
     if (backButton) {
         backButton.addEventListener("click", () => {
-            window.location.href = "../spiele.html";
+            window.location.href = SPIELE_ONLINE;
         });
     }
 
-    // Vollbild an und aus – Optik wie die übrigen Knöpfe.
-    const fullscreenButton = getElement("fullscreenButton");
+    // Nur in der Android-App: "Spiel verlassen" beendet die App ueber die
+    // native Bruecke (MainActivity). Im Browser gibt es kein Verlassen -
+    // dort bleibt der Knopf versteckt, er ist im HTML mit hidden angelegt.
+    const verlassenButton = getElement("verlassenButton");
+    const appBruecke = window.TMahjong;
 
-    if (fullscreenButton) {
-        const imVollbild = () =>
-            !!(document.fullscreenElement || document.webkitFullscreenElement);
-
-        const zeigeVollbild = () => {
-            fullscreenButton.textContent =
-                imVollbild() ? "⛶ VOLLBILD AUS" : "⛶ VOLLBILD";
-        };
-
-        fullscreenButton.addEventListener("click", () => {
-            try {
-                if (imVollbild()) {
-                    const beenden = document.exitFullscreen
-                        ? document.exitFullscreen()
-                        : (document.webkitExitFullscreen
-                            ? document.webkitExitFullscreen()
-                            : null);
-
-                    if (beenden && beenden.catch) beenden.catch(() => {});
-                } else {
-                    const ziel = document.documentElement;
-                    const start = ziel.requestFullscreen
-                        ? ziel.requestFullscreen()
-                        : (ziel.webkitRequestFullscreen
-                            ? ziel.webkitRequestFullscreen()
-                            : null);
-
-                    if (!start) {
-                        setMessage("Dieser Browser kann kein Vollbild.");
-                        return;
-                    }
-
-                    if (start.catch) {
-                        start.catch(() =>
-                            setMessage("Vollbild wurde vom Browser blockiert.")
-                        );
-                    }
-                }
-            } catch (error) {
-                setMessage("Vollbild ging nicht: " + error.message);
-            }
-
-            setTimeout(zeigeVollbild, 300);
-        });
-
-        document.addEventListener("fullscreenchange", zeigeVollbild);
-        document.addEventListener("webkitfullscreenchange", zeigeVollbild);
+    if (verlassenButton && appBruecke && typeof appBruecke.verlassen === "function") {
+        verlassenButton.hidden = false;
+        verlassenButton.addEventListener("click", () => appBruecke.verlassen());
     }
 
-    // Level-Auswahl öffnen und schließen.
+    // Level-Auswahl öffnen und schließen: ein Knopf, darin der Umschalter
+    // zwischen Handy- und Normal-Leveln.
     const levelButton = getElement("levelButton");
     const levelPicker = getElement("levelPicker");
     const levelPickerClose = getElement("levelPickerClose");
+    const satzUmschalter = getElement("satzUmschalter");
 
     if (levelButton) {
-        levelButton.addEventListener("click", () => oeffneLevelAuswahl(1));
+        levelButton.addEventListener("click", oeffneLevelAuswahl);
     }
 
-    const levelButton2 = getElement("levelButton2");
+    if (satzUmschalter) {
+        satzUmschalter.addEventListener("click", event => {
+            const knopf = event.target.closest("button[data-satz]");
 
-    if (levelButton2) {
-        levelButton2.addEventListener("click", () => oeffneLevelAuswahl(2));
+            if (!knopf) return;
+
+            setzeAuswahlSatz(Number(knopf.dataset.satz));
+            merkeSaetze();
+        });
     }
 
     if (levelPickerClose) {
@@ -1264,15 +746,40 @@ function initializeGame() {
         });
     }
 
+    // Einstellungen oeffnen und schliessen.
+    const settingsButton = getElement("settingsButton");
+    const einstellungen = getElement("einstellungen");
+    const einstellungenClose = getElement("einstellungenClose");
+
+    if (settingsButton) {
+        settingsButton.addEventListener("click", oeffneEinstellungen);
+    }
+
+    if (einstellungenClose) {
+        einstellungenClose.addEventListener("click", schliesseEinstellungen);
+    }
+
+    if (einstellungen) {
+        einstellungen.addEventListener("click", event => {
+            if (event.target === einstellungen) {
+                schliesseEinstellungen();
+            }
+        });
+    }
+
     document.addEventListener("keydown", event => {
         if (event.key === "Escape") {
             schliesseLevelAuswahl();
+            schliesseEinstellungen();
         }
     });
 
-    // Steinform und Alterung aus dem Spielstand uebernehmen.
+    // Steinform, Alterung und Hintergrund aus dem Spielstand uebernehmen.
     baueStilwahl();
+    baueHintergrundwahl();
+    zeigeAuswahlSatz();
     setzeStil(aktuellerStil().form, aktuellerStil().zustand, false);
+    setzeHintergrund(hintergrundWert(), false);
 
     updateStats();
 

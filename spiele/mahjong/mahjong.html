@@ -8,7 +8,11 @@
 
     <title>TrashyGecko Mahjong</title>
 
-    <link rel="stylesheet" href="css/mahjong.css">
+    <link rel="stylesheet" href="css/mahjong.css?v=17">
+
+    <!-- Setzt die Grundschrift vor dem ersten Aufbau: Knoepfe und Schrift
+         wachsen mit der Bildschirmgroesse (5 Zoll = 1,00, 7 Zoll = 1,22). -->
+    <script src="js/groesse.js?v=17"></script>
 </head>
 <body>
 
@@ -16,8 +20,9 @@
 
         <header class="topbar">
             <button id="levelButton" class="level-display" type="button"
-                    title="Level wählen – Formen 1" aria-haspopup="dialog">
-                LV <span id="levelNumber">01</span> <span class="level-pfeil">▾</span>
+                    aria-label="Levelauswahl" aria-haspopup="dialog">
+                <span class="level-wort">LEVELAUSWAHL</span>
+                <span id="levelNumber">01</span> <span class="level-pfeil">▾</span>
             </button>
 
             <div class="stats">
@@ -27,23 +32,19 @@
                 <span class="stat-box"><strong id="scoreDisplay">Punkte: 0</strong></span>
             </div>
 
-            <div class="knopf-zeile">
-                <button id="levelButton2" class="level-display kupfer" type="button"
-                        title="Level wählen – Formen 2" aria-haspopup="dialog">
-                    LV <span id="levelNumber2">01</span> <span class="level-pfeil">▾</span>
-                </button>
-
-                <div class="game-buttons">
+            <div class="game-buttons">
                 <button id="hintButton" type="button">TIPP</button>
                 <button id="newGameButton" type="button">NEU</button>
-                <button id="backButton" type="button" title="Zurück zur Spiele-Übersicht">◀ SPIELE</button>
-                <button id="fullscreenButton" type="button" title="Vollbild ein/aus" aria-label="Vollbild">⛶</button>
-                </div>
+                <button id="settingsButton" type="button" aria-haspopup="dialog">EINSTELLUNGEN</button>
             </div>
         </header>
 
-        <section class="board-area">
+        <section id="boardArea" class="board-area">
             <div id="gameStatus" class="status-line" aria-live="polite">Viel Spaß beim Spielen!</div>
+
+            <!-- Nebenmeldungen (z.B. Speicherproblem) - eigene Zeile, damit
+                 der Spruch bzw. der Siegtext in der Statuszeile stehen bleibt. -->
+            <div id="speicherHinweis" class="speicher-hinweis" role="status" hidden></div>
 
             <button id="mischenButton" type="button" class="mischen-knopf" hidden>NEU MISCHEN</button>
 
@@ -82,27 +83,17 @@
             </div>
         </section>
 
-        <div id="levelPicker" class="level-picker" hidden>
-            <div class="level-picker-panel" role="dialog" aria-modal="true"
-                 aria-label="Level auswählen">
-                <div class="level-picker-kopf">
-                    <h2>LEVEL WÄHLEN</h2>
+        <div id="levelPicker" class="dialog" hidden>
+            <div class="dialog-panel" role="dialog" aria-modal="true"
+                 aria-labelledby="levelPickerTitel">
+                <div class="dialog-kopf">
+                    <h2 id="levelPickerTitel">LEVEL WÄHLEN</h2>
                     <button id="levelPickerClose" type="button" aria-label="Schließen">×</button>
                 </div>
-                <div id="stilLeiste" class="stil-leiste"
-                     role="group" aria-label="Steinform und Zustand">
-                    <div class="stil-gruppe" data-gruppe="form" role="group"
-                         aria-label="Steinform">
-                        <span class="stil-titel">FORM</span>
-                        <button type="button" data-wert="rund" aria-pressed="true">RUND</button>
-                        <button type="button" data-wert="eckig" aria-pressed="false">ECKIG</button>
-                    </div>
-                    <div class="stil-gruppe" data-gruppe="zustand" role="group"
-                         aria-label="Steinzustand">
-                        <span class="stil-titel">ZUSTAND</span>
-                        <button type="button" data-wert="neu" aria-pressed="true">NEU</button>
-                        <button type="button" data-wert="alt" aria-pressed="false">ALT</button>
-                    </div>
+                <div id="satzUmschalter" class="satz-umschalter" role="group"
+                     aria-label="Levelsystem">
+                    <button type="button" data-satz="2" aria-pressed="false">HANDY-LEVEL</button>
+                    <button type="button" data-satz="1" aria-pressed="false">NORMAL-LEVEL</button>
                 </div>
                 <span id="rundeAnzeige" class="runde-anzeige">Runde 1 · Elfenbein</span>
                 <div id="levelGrid" class="level-grid"></div>
@@ -111,20 +102,66 @@
             </div>
         </div>
 
+        <div id="einstellungen" class="dialog" hidden>
+            <div class="dialog-panel" role="dialog" aria-modal="true"
+                 aria-labelledby="einstellungenTitel">
+                <div class="dialog-kopf">
+                    <h2 id="einstellungenTitel">EINSTELLUNGEN</h2>
+                    <button id="einstellungenClose" type="button" aria-label="Schließen">×</button>
+                </div>
+                <div class="dialog-koerper">
+                    <div id="stilLeiste" class="stil-leiste"
+                         role="group" aria-label="Steinform und Zustand">
+                        <div class="stil-gruppe" data-gruppe="form" role="group"
+                             aria-label="Steinform">
+                            <span class="stil-titel">FORM</span>
+                            <button type="button" data-wert="rund" aria-pressed="true">RUND</button>
+                            <button type="button" data-wert="eckig" aria-pressed="false">ECKIG</button>
+                        </div>
+                        <div class="stil-gruppe" data-gruppe="zustand" role="group"
+                             aria-label="Steinzustand">
+                            <span class="stil-titel">ZUSTAND</span>
+                            <button type="button" data-wert="neu" aria-pressed="true">NEU</button>
+                            <button type="button" data-wert="alt" aria-pressed="false">ALT</button>
+                        </div>
+                    </div>
+
+                    <div class="einstell-gruppe">
+                        <span class="einstell-titel">HINTERGRUND</span>
+                        <div id="hintergrundLeiste" class="hintergrund-leiste"
+                             role="group" aria-label="Hintergrundfarbe"></div>
+                    </div>
+
+                    <button id="backButton" class="zurueck-knopf" type="button">
+                        ◀ ZURÜCK ZU DEN SPIELEN
+                    </button>
+
+                    <!-- Nur in der Android-App sichtbar (JS prueft die Bruecke). -->
+                    <button id="verlassenButton" class="zurueck-knopf verlassen-knopf"
+                            type="button" hidden>
+                        SPIEL VERLASSEN
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
+    <!-- Versionszusatz ?v=17: nach dem Neuladen kommt garantiert die aktuelle
+         Datei statt der Browser-Kopie. Bei Aenderungen hochzaehlen. -->
     <!-- Klassische Skripte: funktionieren auch über file:// -->
-    <script src="js/board-layout.js"></script>
-    <script src="js/board-layout-2.js"></script>
-    <script src="js/board.js"></script>
-    <script src="js/solver.js"></script>
-    <script src="js/generator.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/renderer.js"></script>
-    <script src="/spiele/lob.js"></script>
-    <script src="js/pech.js"></script>
-    <script src="js/gewonnen.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/board-layout.js?v=17"></script>
+    <script src="js/board-layout-2.js?v=17"></script>
+    <script src="js/board.js?v=17"></script>
+    <script src="js/generator.js?v=17"></script>
+    <script src="js/storage.js?v=17"></script>
+    <script src="js/renderer.js?v=17"></script>
+    <script src="js/hud.js?v=17"></script>
+    <script src="js/dialoge.js?v=17"></script>
+    <script src="../lob.js?v=17"></script>
+    <script src="js/pech.js?v=17"></script>
+    <script src="js/gewonnen.js?v=17"></script>
+    <script src="js/main.js?v=17"></script>
 
 </body>
 </html>

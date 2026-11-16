@@ -27,16 +27,6 @@ function createBoard(level = 1) {
 // STEIN VORHANDEN?
 // --------------------------------------------------
 
-function isPresent(tile, board) {
-    return board.some(other =>
-        other.id !== tile.id &&
-        !other.removed &&
-        other.x === tile.x &&
-        other.y === tile.y &&
-        other.z > tile.z
-    );
-}
-
 // --------------------------------------------------
 // STEIN VON OBEN BLOCKIERT?
 // --------------------------------------------------
@@ -103,13 +93,6 @@ function getFreeTiles(board) {
 // --------------------------------------------------
 // STEINZUSTÄNDE
 // --------------------------------------------------
-
-function getTileStates(board) {
-    return board.map(tile => ({
-        ...tile,
-        free: isTileFree(tile, board)
-    }));
-}
 
 // --------------------------------------------------
 // PAAR ENTFERNEN
