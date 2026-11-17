@@ -598,6 +598,52 @@ func (r *Room) aktivesSpiel(id string) string {
 			}
 		}
 	}
+	// Spiele, die in keiner Liste standen: Sie laufen, sobald ein Tisch
+	// offen ist – also alles außer Einladung und Ende.
+	laeuft := func(status string) bool {
+		return status != "" && status != "invited" && status != "ende"
+	}
+	if g := r.Tetris; g != nil {
+		if s := zwei("tetris", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	fuerSitz := func(name string, status string, ids []string) string {
+		if laeuft(status) && enthaelt(ids, id) {
+			return name
+		}
+		return ""
+	}
+	if g := r.Poker; g != nil {
+		if s := fuerSitz("poker", g.Status, idsVon(g.Spieler, func(p PokerSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Cabo; g != nil {
+		if s := fuerSitz("cabo", g.Status, idsVon(g.Spieler, func(p CaboSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Baccara; g != nil {
+		if s := fuerSitz("baccara", g.Status, idsVon(g.Spieler, func(p BaccaraSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Schiffe; g != nil {
+		if s := fuerSitz("schiffe", g.Status, idsVon(g.Spieler, func(p SchiffeSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Siebzehn; g != nil {
+		if s := fuerSitz("siebzehn", g.Status, idsVon(g.Spieler, func(p SiebzehnSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Sechsundsechzig; g != nil {
+		if s := fuerSitz("sechsundsechzig", g.Status, idsVon(g.Spieler, func(p SechsundsechzigSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
 	if g := r.Rechen; g != nil && g.Status == "active" {
 		for _, p := range g.Players {
 			if p.ID == id {

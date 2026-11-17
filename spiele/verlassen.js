@@ -11,6 +11,12 @@
   var raum = p.get("room") || "";
   var id = p.get("id") || "";
   if (!raum || !id) return;
+  /* Seiten mit eigenem Verlassen-Knopf (Tetris, Sim, Käsekästchen,
+     Mensch ärgere dich) brauchen keinen zweiten, der ihn überdeckt. */
+  var eigene = document.querySelectorAll("button, a");
+  for (var i = 0; i < eigene.length; i++) {
+    if (/spiel\s*verlassen/i.test((eigene[i].textContent || "").replace(/\s+/g, " "))) return;
+  }
   var box = document.createElement("div");
   box.setAttribute("data-spiel-verlassen", "");
   box.style.cssText = "position:fixed;right:10px;bottom:10px;z-index:9999";
@@ -36,4 +42,12 @@
   };
   box.appendChild(b);
   document.body.appendChild(box);
+  /* Auf Seiten, die scrollen, unten Platz lassen – sonst liegt der Knopf
+     dauerhaft über dem letzten Inhalt. */
+  requestAnimationFrame(function () {
+    if (document.documentElement.scrollHeight > window.innerHeight + 40) {
+      var unten = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+      document.body.style.paddingBottom = (unten + 56) + "px";
+    }
+  });
 })();
