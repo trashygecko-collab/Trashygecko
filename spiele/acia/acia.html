@@ -159,7 +159,7 @@ a{color:#f2c76a}
   <summary>Regeln</summary>
   <ol>
    <li><b>Ziel:</b> Alle farbigen Blöcke abräumen und danach zum <b>Ausgang</b> fahren – wie im Original wird das Tor erst frei, wenn kein Block mehr steht.</li>
-   <li><b>Fahrzeug:</b> Es fährt <b>immer weiter</b> – du steuerst nur die Richtung. An Wänden und fremden Blöcken prallt es ab.</li>
+   <li><b>Fahrzeug:</b> Es fährt <b>immer weiter</b> – du steuerst nur die Richtung. An Wänden und fremden Blöcken prallt es ab: <b>Hältst du die Richtung in die Wand, bleibt es dort stehen</b>, und beim <b>Loslassen</b> fährt es in die Abprallrichtung weiter.</li>
    <li><b>Farbe:</b> Ein Block zerbricht nur, wenn das Fahrzeug dieselbe Farbe hat. An andersfarbigen Blöcken prallt es ab.</li>
    <li><b>Farbwechsler:</b> Die farbigen Kreise im Feld färben das Fahrzeug um – so kommst du an jede Blockfarbe.</li>
    <li><b>Blinkende Kacheln:</b> Sie wechseln alle halbe Sekunde ihr Aussehen. Sieht eine Kachel <b>wie Boden aus</b>, setzt sie das Fahrzeug auf die <b>diagonal gegenüberliegende</b> Kachel (unten links ↔ oben rechts, unten rechts ↔ oben links). <b>Leuchtet</b> sie dagegen, kostet die Berührung ein Leben – das Fahrzeug startet wieder am Startkreuz. Nach einem Sprung bleibt kurz Zeit, die Kachel zu verlassen.</li>
@@ -421,6 +421,7 @@ function eckeLeuchtet(i,zeit){
 }
 
 const TEMPO=6.25;       // Kacheln je Sekunde = 2 Pixel je Bild bei 50 Hz
+const BILDZEIT=1/50;    // ein Originalbild: 2 Pixel Fahrt, 0.02 s
                         // (fahrten_pruefen.js: Original genau 2.00 px/Bild)
 
 function feldAusZellen(f){
@@ -897,12 +898,17 @@ function update(dt){
   if(Math.ceil(zeit)!==Math.ceil(zeit+dt))zeigeStatus();
  }
 
+ // Das Schiff faehrt wie im Original in festen Bildern: 2 Pixel je 1/50 s.
+ // Feste Schritte halten die Position auf dem Pixelraster; an einer Wand steht
+ // das Schiff dadurch genau still, statt zwischen zwei Pixeln zu zittern.
  for(const s of schiffe){
-  if(s.pause>0)continue;        // Treffer-Pause: das Schiff steht still
-  const schritte=Math.max(1,Math.ceil(TEMPO*dt/0.08));
-  const h=dt/schritte;
-  for(let i=0;i<schritte;i++){
-   bewege(s,h);
+  if(s.pause>0){ s.rest=0; continue; }   // Treffer-Pause: das Schiff steht still
+  s.rest=(s.rest||0)+dt;
+  let n=0;
+  while(s.rest>=BILDZEIT&&n++<8){
+   s.rest-=BILDZEIT;
+   if(s.taste){ s.dx=s.taste[0]; s.dy=s.taste[1]; }   // wie der Joystick im Original
+   bewege(s,BILDZEIT);
    if(zustand!=="spiel"||levelWechsel)return;
   }
  }
@@ -924,20 +930,42 @@ function richtung(i,dx,dy){
  const s=schiffe[i]; if(!s)return;
  s.dx=dx; s.dy=dy;
 }
+// Wie der Joystick im Original: die gehaltene Richtung wird in jedem Bild neu
+// gesetzt (siehe update). Deshalb bleibt das Schiff an einer Wand stehen,
+// solange man hinein faehrt; loslassen schickt es in die abgeprallte
+// Richtung davon (Original, Feld 9 Ausgang).
+function halte(i,dx,dy){
+ const s=schiffe[i]; if(!s)return;
+ s.taste=[dx,dy];
+ richtung(i,dx,dy);
+}
+function loslassen(i,dx,dy){
+ const s=schiffe[i]; if(!s)return;
+ if(s.taste&&s.taste[0]===dx&&s.taste[1]===dy)s.taste=null;
+}
+const TASTEN1={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+const TASTEN2={w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
 window.addEventListener("keydown",e=>{
  const k=e.key;
- const p1={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
- const p2={w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
- if(p1[k]){ e.preventDefault(); richtung(0,...p1[k]); return; }
- if(p2[k]&&modus===2){ e.preventDefault(); richtung(1,...p2[k]); return; }
+ if(TASTEN1[k]){ e.preventDefault(); halte(0,...TASTEN1[k]); return; }
+ if(TASTEN2[k]&&modus===2){ e.preventDefault(); halte(1,...TASTEN2[k]); return; }
  if(k===" "||k==="Enter"){ e.preventDefault();
   if(!$("meldung").hidden)$("meldungKnopf").click(); }
 });
+window.addEventListener("keyup",e=>{
+ const k=e.key;
+ if(TASTEN1[k])loslassen(0,...TASTEN1[k]);
+ else if(TASTEN2[k]&&modus===2)loslassen(1,...TASTEN2[k]);
+});
+window.addEventListener("blur",()=>{for(const s of schiffe)s.taste=null;});
 function padBinden(el,index){
  el.querySelectorAll("button").forEach(b=>{
   const d=b.dataset.d;
   const v={o:[0,-1],u:[0,1],l:[-1,0],r:[1,0]}[d];
-  b.addEventListener("pointerdown",ev=>{ev.preventDefault();richtung(index,...v);});
+  b.addEventListener("pointerdown",ev=>{ev.preventDefault();halte(index,...v);});
+  b.addEventListener("pointerup",ev=>{ev.preventDefault();loslassen(index,...v);});
+  b.addEventListener("pointercancel",()=>loslassen(index,...v));
+  b.addEventListener("pointerleave",()=>loslassen(index,...v));
  });
 }
 padBinden($("pad1"),0);

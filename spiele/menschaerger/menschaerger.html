@@ -318,7 +318,8 @@ const TRACK=[
 /* Startfelder: oben, links, unten, rechts – jeweils zehn Felder auseinander. */
 const START_INDEX={green:0,yellow:10,blue:20,red:30};
 
-/* Vier Zielfelder jeder Farbe, gerade bis zur Brettmitte. */
+/* Vier Zielfelder jeder Farbe, gerade bis kurz vor die Brettmitte. Dort parken
+   die Figuren – ein Platz je Figur, in der Mitte ist nichts. */
 const HOME_LANES={
   green:[[5,1],[5,2],[5,3],[5,4]],
   yellow:[[1,5],[2,5],[3,5],[4,5]],
@@ -428,10 +429,7 @@ function drawBoard(){
     });
   });
 
-  /* Neutrales Mittelfeld – kein vierfarbiges Quadrat. */
-  boardDrawing.appendChild(svgElement("circle",{
-    cx:400,cy:400,r:CELL*.36,fill:"#0a211b",stroke:"#efe6d2","stroke-width":3.5
-  }));
+  /* Kein Loch in der Mitte: Die Figuren parken in den vier Zielfeldern. */
 }
 
 function renderSetup(){
@@ -531,11 +529,6 @@ function playerPosition(player,pieceIndex){
     const [x,y]=TRACK[index];
     return {home:false,coords:cellCenter(x,y),trackIndex:index};
   }
-  /* Im Ziel (44) steht die Figur in der Brettmitte. Ohne diesen Fall würde
-     lane[4] gelesen und das Zeichnen abstürzen. */
-  if(progress>=44){
-    return {home:false,coords:[400,400],lane:true};
-  }
   const lane=HOME_LANES[player.color];
   const [x,y]=lane[progress-40];
   return {home:false,coords:cellCenter(x,y),lane:true};
@@ -552,9 +545,10 @@ function legalMoves(){
       if(diceValue!==6)return;
       destination=0;
     }else{
-      if(progress===44)return;
+      /* Ab dem ersten Zielfeld ist die Figur geparkt und zieht nicht weiter. */
+      if(progress>=40)return;
       destination=progress+diceValue;
-      if(destination>44)return;
+      if(destination>43)return;
     }
 
     /* Auf einem Feld darf nur eine eigene Figur stehen. Überspringen ist erlaubt. */
@@ -571,7 +565,6 @@ function legalMoves(){
       );
       if(occupied)return;
     }
-    /* Im Ziel (44) dürfen mehrere Figuren stehen – sonst ist ein Sieg unmöglich. */
     result.push(pieceIndex);
   });
   return result;
@@ -640,7 +633,7 @@ function renderPlayerCards(){
     const pieces=document.createElement("div");
     pieces.className="pieces";
     const home=player.pieces.filter(value=>value===-1).length;
-    const goal=player.pieces.filter(value=>value===44).length;
+    const goal=player.pieces.filter(value=>value>=40).length;
     pieces.textContent="Haus: "+home+" · Ziel: "+goal;
     card.append(name,pieces);
     playersStatus.appendChild(card);
@@ -741,7 +734,7 @@ function rollDice(){
       updateTurn();
 
       const player=players[currentPlayer];
-      const hasPieceInPlay=player.pieces.some(value=>value>=0&&value<44);
+      const hasPieceInPlay=player.pieces.some(value=>value>=0&&value<40);
       if(diceValue!==6&&!hasPieceInPlay&&!extraRoll){
         rollAttempts++;
         if(rollAttempts<3){
@@ -803,7 +796,7 @@ function movePiece(pieceIndex){
   }
 
   canMove=false;
-  if(player.pieces.every(value=>value===44)){
+  if(player.pieces.every(value=>value>=40)){
     gameOver=true;
     message.textContent="";
     winnerElement.textContent="🏆 "+player.name+" GEWINNT! 🏆";

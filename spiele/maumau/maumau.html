@@ -78,21 +78,6 @@ main {
   color: var(--muted);
 }
 
-#setup input, #setup select {
-  width: 100%;
-  padding: 12px;
-  background: var(--panel2);
-  color: white;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-#nameFields {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-
 .primary {
   background: #184536;
   border-color: #d9bc7c99;
@@ -473,18 +458,7 @@ small,.muted,.hint{color:#a9c3b6}
 
 <section id="setup" class="panel">
   <h2>Neues Spiel</h2>
-
-  <label for="playerCount">Anzahl Spieler</label>
-  <select id="playerCount">
-    <option value="2">2 Spieler</option>
-    <option value="3">3 Spieler</option>
-    <option value="4" selected>4 Spieler</option>
-    <option value="5">5 Spieler</option>
-    <option value="6">6 Spieler</option>
-    <option value="7">7 Spieler</option>
-  </select>
-
-  <div id="nameFields"></div>
+  <p class="hint">Zwei Spieler an einem Gerät – nach jedem Zug wandert das Handy weiter.</p>
 
   <button class="primary" style="width:100%;margin-top:18px"
     onclick="startGame()">Spiel starten</button>
@@ -615,22 +589,6 @@ function setMessage(text){
   $("message").textContent = text;
 }
 
-function makeNames() {
-  if (ONLINE) return;
-  const count = Number($("playerCount").value);
-  $("nameFields").innerHTML = "";
-
-  for (let i=0; i<count; i++) {
-    const input = document.createElement("input");
-    input.placeholder = "Spieler " + (i+1);
-    input.value = i === 0 ? "Thomas" : "Spieler " + (i+1);
-    input.id = "name" + i;
-    $("nameFields").appendChild(input);
-  }
-}
-
-$("playerCount").addEventListener("change", makeNames);
-
 function createDeck() {
   let cards = [];
 
@@ -648,17 +606,13 @@ function createDeck() {
   return cards;
 }
 
+// Am selben Gerät spielen immer genau zwei: kein Auswahlfeld, keine Namenseingabe.
 function startGame() {
-  const count = Number($("playerCount").value);
-
-  players = [];
-  for (let i=0; i<count; i++) {
-    players.push({
-      name: $("name"+i).value.trim() || "Spieler "+(i+1),
-      color: colors[i],
-      hand: []
-    });
-  }
+  players = ["Spieler 1", "Spieler 2"].map((name, i) => ({
+    name,
+    color: colors[i],
+    hand: []
+  }));
 
   deck = createDeck();
   discard = [];
@@ -1094,9 +1048,8 @@ function newGame() {
     return;
   }
 
-  $("game").classList.add("hidden");
-  $("setup").classList.remove("hidden");
-  makeNames();
+  // Lokal beginnt sofort die nächste Runde für dieselben zwei Spieler.
+  startGame();
 }
 
 // ---- Knöpfe: lokal oder online ----
@@ -1282,8 +1235,6 @@ if (ONLINE) {
   postPresence().then(refreshOnline);
   setInterval(postPresence, 5000);
   setInterval(refreshOnline, 1500);
-} else {
-  makeNames();
 }
 </script>
 

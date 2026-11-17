@@ -35,9 +35,11 @@ main{max-width:820px;margin:auto}
 #p2Stand{color:#5ce0ff}
 .statuszeile .runde{font-size:12px}
 
-.tisch{padding:8px;background:#08120f}
-.leinwand{position:relative;max-width:640px;margin:auto}
-canvas{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #d9bc7c33;
+/* Das Feld bekommt die Größe, die in den Bildschirm passt – berechnet in
+   passeAn(), damit es weder winzig noch abgeschnitten ist. */
+.tisch{padding:8px;background:#08120f;display:flex;justify-content:center}
+.leinwand{position:relative;width:fit-content;max-width:100%;margin:0 auto}
+canvas{display:block;border-radius:8px;border:1px solid #d9bc7c33;
  background:#02080a;touch-action:none}
 
 .meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -56,6 +58,16 @@ canvas{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #
  font-family:Consolas,monospace;font-size:12px;color:#e8cd8e}
 
 .fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:24px}
+
+/* Auf flachen Bildschirmen (Handy quer) bleibt mehr Platz fürs Feld. */
+@media (max-height:560px){
+ .tasten{display:none}
+ .titelleiste{display:none}
+ .menueleiste{padding:4px 8px}
+ .menueleiste button{padding:5px 9px}
+ .statuszeile{padding:3px 10px;font-size:12px}
+ .fuss{padding:3px 10px 6px;min-height:0;font-size:12px}
+}
 #regeln{margin-top:12px;padding:0 10px 10px}
 #regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
 #regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
@@ -125,10 +137,14 @@ const $=id=>document.getElementById(id);
 const leinwand=$("leinwand");
 const ctx=leinwand.getContext("2d");
 
-const SPALTEN=44, ZEILEN=32, ZELLE=12;
-const W=SPALTEN*ZELLE, H=ZEILEN*ZELLE;   // 528 × 384
+/* Hochkant-Handy: hohes Feld (32 × 44), sonst das breite (44 × 32). Startplätze
+   und Zeichnen rechnen überall mit SPALTEN/ZEILEN, darum reicht das Umschalten. */
+const ZELLE=12;
+let SPALTEN=44, ZEILEN=32;
+let W=SPALTEN*ZELLE, H=ZEILEN*ZELLE;     // 528 × 384 bzw. 384 × 528
+let hochkant=null;
 const ZIEL=3;                            // Rundensiege für den Matchgewinn
-const TAKT=0.072;                        // Sekunden pro Feld
+const TAKT=0.12;                         // Sekunden pro Feld (gut 8 Felder/s)
 
 let raster=new Uint8Array(SPALTEN*ZEILEN);
 let spieler=[];
@@ -136,6 +152,13 @@ let zustand="bereit";                    // bereit | laeuft | runde | match
 let runde=1, sieg1=0, sieg2=0, unentschieden=false;
 let sammler=0, letzte=0, rundenEnde=null;
 let staub=[];
+
+function setzeFeld(hoch){
+ hochkant=hoch;
+ SPALTEN=hoch?32:44; ZEILEN=hoch?44:32;
+ W=SPALTEN*ZELLE; H=ZEILEN*ZELLE;
+ leinwand.width=W; leinwand.height=H;
+}
 
 function neuerRenner(nr){
  const start={x:nr===1?3:SPALTEN-4, y:nr===1?(ZEILEN>>1)-5:(ZEILEN>>1)+5, dx:nr===1?1:-1, dy:0};
@@ -399,6 +422,32 @@ leinwand.addEventListener("pointerup",e=>{
 });
 leinwand.addEventListener("pointercancel",e=>wisch.delete(e.pointerId));
 
+// ------------------------------------------------------------ Feldgröße
+/* Das Feld füllt den Platz, den der Bildschirm hergibt – Seitenverhältnis
+   bleibt, damit Kreise rund sind. */
+function passeAn(){
+ const jetztHoch=window.innerHeight>window.innerWidth;
+ if(hochkant===null){ setzeFeld(jetztHoch); }
+ else if(jetztHoch!==hochkant){
+  setzeFeld(jetztHoch);
+  neueRunde();
+  $("hinweis").textContent="Gedreht – die Runde startet neu.";
+ }
+ const tisch=leinwand.closest(".tisch");
+ const rand=8;
+ const platzB=Math.max(140,tisch.clientWidth-2*rand);
+ const oben=tisch.getBoundingClientRect().top+window.scrollY+rand;
+ const fuss=document.querySelector(".fuss");
+ const tasten=document.querySelector(".tasten");
+ const unten=(fuss?fuss.offsetHeight:0)+(tasten?tasten.offsetHeight:0)+14;
+ const platzH=Math.max(140,window.innerHeight-oben-unten);
+ const skala=Math.min(platzB/W,platzH/H,900/W);
+ leinwand.style.width=Math.round(W*skala)+"px";
+ leinwand.style.height=Math.round(H*skala)+"px";
+}
+window.addEventListener("resize",passeAn);
+window.addEventListener("orientationchange",()=>setTimeout(passeAn,150));
+
 // Meldung
 function meldung(titel,text,knopf){
  $("meldungTitel").textContent=titel;
@@ -413,6 +462,7 @@ $("meldungKnopf").onclick=()=>{
 };
 $("btnNeu").onclick=()=>{ neuePartie(); meldung("TRON","Neue Partie – drei Runden gewinnen das Match.","Starten"); };
 
+passeAn();
 neuePartie();
 meldung("TRON","Zwei Lichtrenner, zwei Spuren – wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.","Starten");
 requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });

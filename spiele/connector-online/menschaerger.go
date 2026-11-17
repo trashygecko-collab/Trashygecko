@@ -15,7 +15,7 @@ type MaenPlayer struct {
 	Name   string `json:"name"`
 	Color  string `json:"color"`
 	Ready  bool   `json:"ready"`
-	Pieces []int  `json:"pieces"` // 4 Figuren: -1 Haus, 0..39 Rundweg, 40..43 Ziellauf, 44 Ziel
+	Pieces []int  `json:"pieces"` // 4 Figuren: -1 Haus, 0..39 Rundweg, 40..43 Zielfeld (dort geparkt)
 }
 
 type MenschaergerGame struct {
@@ -66,11 +66,11 @@ func maenLegalMoves(pieces []int, color string, dice int) []int {
 			}
 			destination = 0
 		} else {
-			if progress >= 44 {
+			if progress >= 40 {
 				continue
 			}
 			destination = progress + dice
-			if destination > 44 {
+			if destination > 43 {
 				continue
 			}
 		}
@@ -87,7 +87,7 @@ func maenLegalMoves(pieces []int, color string, dice int) []int {
 				}
 			}
 		} else if destination <= 43 {
-			// Zielfelder: nur eine Figur pro Feld. Im Ziel (44) dürfen mehrere stehen.
+			// Zielfelder: ein Platz je Figur, keine Doppelbelegung.
 			for otherIndex, other := range pieces {
 				if otherIndex == index {
 					continue
@@ -114,9 +114,10 @@ func maenContains(list []int, value int) bool {
 	return false
 }
 
+// maenAllInGoal: Alle vier Figuren stehen in den vier Zielfeldern.
 func maenAllInGoal(pieces []int) bool {
 	for _, progress := range pieces {
-		if progress != 44 {
+		if progress < 40 {
 			return false
 		}
 	}
@@ -452,7 +453,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 
 		hasPieceInPlay := false
 		for _, progress := range player.Pieces {
-			if progress >= 0 && progress < 44 {
+			if progress >= 0 && progress < 40 {
 				hasPieceInPlay = true
 			}
 		}

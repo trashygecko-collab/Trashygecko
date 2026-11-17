@@ -94,6 +94,7 @@ a{color:#e8cd8e}
   <summary>Regeln</summary>
   <ol>
    <li><b>Ziel:</b> Die Schlange frisst Äpfel und wird dabei länger. Jeder Apfel gibt 10 Punkte, alle fünf Äpfel ein Level mehr und etwas mehr Tempo.</li>
+   <li><b>Tempo:</b> Gestartet wird mit 4 Schritten pro Sekunde, danach wird es je Apfel ein kleines Stück schneller – höchstens bis 10 Schritte pro Sekunde. So bleibt es mit dem Finger lenkbar.</li>
    <li><b>Steuern:</b> Mit dem Finger über das Feld wischen – nach oben, unten, links oder rechts. Am PC gehen auch die Pfeiltasten und W A S D.</li>
    <li><b>Vorsicht:</b> Die Schlange darf weder den Rand noch sich selbst berühren. Umkehren geht nicht, Richtungswechsel werden gesammelt und nacheinander ausgeführt.</li>
    <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
@@ -114,8 +115,12 @@ const W=SPALTEN*ZELLE, H=ZEILEN*ZELLE;
 canvas.width=W;
 canvas.height=H;
 
-const START_TEMPO=160;   // Millisekunden pro Schritt
-const MIN_TEMPO=62;
+// Millisekunden pro Schritt: 240 ms sind gut mit dem Finger zu schaffen,
+// und auch nach vielen Äpfeln bleibt es bei mindestens 100 ms (10 Schritte
+// pro Sekunde) – schneller ist am Touchscreen nicht zu lenken.
+const START_TEMPO=240;
+const MIN_TEMPO=100;
+const TEMPO_JE_APFEL=5;  // wird es schneller
 
 let zustand="start";     // start, laeuft, pause, ende
 let schlange=[];
@@ -129,7 +134,7 @@ let letzteZeit=0;
 let schrittRest=0;
 
 function tempoJetzt(){
- return Math.max(MIN_TEMPO,START_TEMPO-gefressen*4);
+ return Math.max(MIN_TEMPO,START_TEMPO-gefressen*TEMPO_JE_APFEL);
 }
 
 function rekordLaden(){

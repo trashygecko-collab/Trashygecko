@@ -44,7 +44,6 @@ main{max-width:760px;margin:auto}
  box-shadow:inset 0 1px 0 #ffffff1a}
 .platte:hover{background:linear-gradient(#22624e,#154034)}
 .platte.richtig{border-color:#e8cd8e;color:#fff3d2;box-shadow:inset 0 0 10px #e8cd8e33}
-.platte.leer{display:none}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
  background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
@@ -129,7 +128,7 @@ const STUFEN={
 let stufe="vier";
 let n=4;
 let feld=[];          // feld[index] = Zahl (1..n²-1) oder 0 für das Loch
-let plaetten=[];      // DOM-Elemente je Index
+let plaetten=new Map(); // DOM-Element je Plattenzahl (1..n²-1)
 let zuege=0;
 let startZeit=0, laeuft=false, uhrTimer=0;
 let fertig=false;
@@ -175,37 +174,37 @@ function geloest(){
  return feld[n*n-1]===0;
 }
 
+// Eine Platte gehört zu ihrer Zahl, nicht zu einer Position: Nur so rutscht
+// sie beim Zug sichtbar mit.
 function baue(){
  while (brett.firstChild) brett.removeChild(brett.firstChild);
- plaetten=[];
+ plaetten=new Map();
  const zelle=100/n;
- for(let i=0;i<n*n;i++){
-  const wert=feld[i];
+ for(let wert=1; wert<n*n; wert++){
   const el=document.createElement("button");
   el.type="button";
-  el.className="platte"+(wert===0?" leer":"");
-  el.dataset.index=i;
-  el.textContent=wert===0?"":String(wert);
+  el.className="platte";
+  el.dataset.wert=String(wert);
+  el.textContent=String(wert);
   el.style.width=(zelle-2)+"%";
   el.style.height=(zelle-2)+"%";
-  el.style.left=((i%n)*zelle+1)+"%";
-  el.style.top=(Math.floor(i/n)*zelle+1)+"%";
-  el.style.fontSize=Math.max(14,Math.round(brett.clientWidth/n*0.42))+"px";
-  if(wert!==0&&wert===i+1)el.classList.add("richtig");
   brett.appendChild(el);
-  plaetten.push(el);
+  plaetten.set(wert,el);
  }
+ setzePositionen();
 }
 
 function setzePositionen(){
  const zelle=100/n;
+ const groesse=Math.max(14,Math.round(brett.clientWidth/n*0.42))+"px";
  for(let i=0;i<n*n;i++){
-  const el=plaetten[i];
-  if(!el)continue;
+  const wert=feld[i];
+  if(wert===0)continue;
+  const el=plaetten.get(wert);
   el.style.left=((i%n)*zelle+1)+"%";
   el.style.top=(Math.floor(i/n)*zelle+1)+"%";
-  el.style.fontSize=Math.max(14,Math.round(brett.clientWidth/n*0.42))+"px";
-  el.classList.toggle("richtig",feld[i]!==0&&feld[i]===i+1);
+  el.style.fontSize=groesse;
+  el.classList.toggle("richtig",wert===i+1);
  }
 }
 
@@ -217,7 +216,7 @@ function zug(index){
  const lz=Math.floor(loch/n), ls=loch%n;
  const nachbar=(Math.abs(z-lz)+Math.abs(s-ls))===1;
  if(!nachbar){
-  const el=plaetten[index];
+  const el=plaetten.get(feld[index]);
   if(el){ el.animate?el.animate([{transform:"translateX(0)"},{transform:"translateX(-2px)"},{transform:"translateX(2px)"},{transform:"translateX(0)"}],{duration:180}):0; }
   $("hinweis").textContent="Diese Platte liegt nicht neben dem Loch.";
   return;
@@ -276,7 +275,7 @@ function meldungZu(){ $("meldung").hidden=true; }
 brett.addEventListener("click",e=>{
  const el=e.target.closest(".platte");
  if(!el)return;
- zug(Number(el.dataset.index));
+ zug(feld.indexOf(Number(el.dataset.wert)));
 });
 
 $("btnNeu").onclick=()=>neuesSpiel();

@@ -187,6 +187,18 @@ func muehleEndTurn(g *MuehleGame, color string) {
 	g.Current = next
 }
 
+// muehleAdvance: Sind alle 18 Steine gesetzt, beginnt die Zugphase – auch
+// dann, wenn der letzte Stein eine Mühle gebildet hat und noch geschlagen
+// wurde. Sonst wechselt nur der Zug.
+func muehleAdvance(g *MuehleGame, color string) {
+	if g.Phase == "placing" && g.PlacedRed == 9 && g.PlacedBlue == 9 {
+		g.Phase = "moving"
+		g.Current = muehleOther(color)
+		return
+	}
+	muehleEndTurn(g, color)
+}
+
 func muehleHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -351,12 +363,7 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			game.Note = player.Name + " setzt einen Stein."
-			if game.PlacedRed == 9 && game.PlacedBlue == 9 {
-				game.Phase = "moving"
-				game.Current = muehleOther(color)
-			} else {
-				game.Current = muehleOther(color)
-			}
+			muehleAdvance(game, color)
 
 		case "move":
 			if game.CapturePending {
@@ -427,7 +434,7 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 				muehleFinish(game, color)
 				break
 			}
-			muehleEndTurn(game, color)
+			muehleAdvance(game, color)
 		}
 
 	case "reset":
