@@ -23,6 +23,43 @@ const presenceTimeout = 150 * time.Second
 // noch so lange liegen und gehen erst danach verloren.
 const emptyRoomGameGrace = 5 * time.Minute
 
+// gameTimeout: Ein Teilnehmer einer laufenden Partie ohne Lebenszeichen gilt
+// nach dieser Frist als weg. Die Partie wird dann beendet und der verbliebene
+// Spieler erfährt es sofort – er soll nicht auf jemanden warten, der weg ist.
+//
+// Die Frist muss über der Drosselperiode des Browsers liegen: Ein Tab, der
+// lange im Hintergrund liegt, fragt nur noch etwa einmal pro Minute – bei 60 s
+// wurde die Partie gemessen fälschlich beendet. 90 s lässt diesen Takt zu und
+// meldet einen wirklich verschwundenen Spieler nach anderthalb Minuten.
+// Die Mitgliedschaft im Raum bleibt länger bestehen (presenceTimeout), damit
+// ein gesperrtes Handy niemanden aus dem Raum wirft.
+const gameTimeout = 90 * time.Second
+
+// spielSeiteFrist: Wie lange eine laufende Partie stehen bleiben darf, wenn
+// keine Spielseite mehr nach ihr fragt. Wer mit dem Zurück-Knopf in den Raum
+// geht, löst kein "Spiel verlassen" aus; ohne diese Frist bliebe die Partie
+// für immer stehen und würde jede neue Runde blockieren.
+const spielSeiteFrist = 90 * time.Second
+
+// verstecktFrist: Ein Spieltab, der in den Hintergrund geht, meldet sich mit
+// seite=versteckt. Solange dieses Signal nicht älter als die Frist ist, bleibt
+// der Spieler im Raum und seine Partie stehen – ein eingefrorener Tab ist von
+// einem geschlossenen nicht zu unterscheiden, und ein Handy im Hintergrund
+// kommt meist zurück. Danach gelten wieder die normalen Fristen.
+const verstecktFrist = 5 * time.Minute
+
+// pauseNach: So lange nach dem Verstecken erfahren die Mitspieler einmal, dass
+// die Partie steht. Sie sollen nicht ahnungslos auf ein stummes Gerät warten.
+const pauseNach = 90 * time.Second
+
+// Hinweis ist eine einmalige Nachricht an genau einen Spieler, zum Beispiel
+// "Anna hat das Spiel verlassen – Tic Tac Toe beendet." Die Spielseite holt
+// sie über /api/imspiel ab; dabei wird sie gelöscht (nur einmal).
+type Hinweis struct {
+	Text string
+	Zeit time.Time
+}
+
 // afkAfter: Wer so lange nichts tut (kein Chat, kein Klick, kein Zug), gilt
 // als kurz weg – das automatische Lebenszeichen zählt dabei nicht mit.
 const afkAfter = time.Minute
@@ -51,7 +88,26 @@ type Player struct {
 	// LastAction ist die letzte echte Aktion des Spielers, AfkWarned merkt
 	// sich, ob für ihn schon eine „ist wohl eingeschlafen“-Meldung kam.
 	LastAction time.Time `json:"-"`
-	AfkWarned  bool      `json:"-"`
+	// ImSpiel ist der letzte Abruf von einer Spielseite. Die Connector-Seite
+	// fragt mit seite=raum und setzt das nicht – daran erkennt der Raum, dass
+	// eine Partie ohne Spielseite zurückgeblieben ist.
+	ImSpiel time.Time `json:"-"`
+	// Versteckt ist der letzte Ruf mit seite=versteckt: Der Tab liegt im
+	// Hintergrund und darf einfrieren, ohne die Partie zu verlieren.
+	Versteckt time.Time `json:"-"`
+	// VerstecktSeit ist der Beginn dieser Hintergrundphase. Die Pause-Meldung
+	// zählt ab hier – ein weiterer versteckter Ruf darf sie nicht verschieben.
+	VerstecktSeit time.Time `json:"-"`
+	// PauseGemeldet merkt sich, ob die Mitspieler schon von dieser Pause
+	// gehört haben – die Meldung kommt je Hintergrundphase genau einmal.
+	PauseGemeldet bool `json:"-"`
+	AfkWarned     bool `json:"-"`
+}
+
+// verstecktAktiv meldet, ob dieser Spieler gerade mit einem Tab im Hintergrund
+// sitzt und die Frist dafür noch läuft.
+func (p Player) verstecktAktiv(now time.Time) bool {
+	return !p.Versteckt.IsZero() && now.Sub(p.Versteckt) <= verstecktFrist
 }
 
 type TicTacToeGame struct {
@@ -112,6 +168,9 @@ type Room struct {
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
 	Mutes           map[string]time.Time   // playerID -> unmute time
 	MsgTimes        map[string][]time.Time // for spam protection
+	// Hinweise sind einmalige Nachrichten an einzelne Spieler (Abgang eines
+	// Mitspielers). Sie werden beim Abholen gelöscht.
+	Hinweise map[string]Hinweis
 }
 
 type RoomInfo struct {
@@ -144,6 +203,14 @@ func (r *Room) cleanPlayers() {
 	now := time.Now()
 	for id, p := range r.Players {
 		if now.Sub(p.Last) > presenceTimeout {
+			// Ein Tab im Hintergrund darf einfrieren, ohne den Raum zu
+			// verlieren – solange die Versteckt-Frist läuft, bleibt der
+			// Spieler drin (Bildschirm gesperrt, App im Hintergrund).
+			if p.verstecktAktiv(now) {
+				continue
+			}
+			// Wer den Raum verlässt, darf keine Partie offen lassen.
+			r.abgangBeenden(id, p.Name, "verbindung")
 			delete(r.Players, id)
 			// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.
 			r.addMessage(Message{
@@ -161,6 +228,43 @@ func (r *Room) cleanPlayers() {
 			r.Angebot = nil
 		}
 	}
+	// Laufende Partien: Wer 60 s nichts mehr von sich hören lässt, ist weg.
+	// Die Partie wird beendet, damit der Mitspieler nicht endlos wartet.
+	for id, p := range r.Players {
+		if now.Sub(p.Last) > gameTimeout {
+			// Liegt der Tab im Hintergrund, ist Stille erwartbar: Die Partie
+			// bleibt bis zum Ende der Versteckt-Frist stehen.
+			if p.verstecktAktiv(now) {
+				continue
+			}
+			r.abgangBeenden(id, p.Name, "verbindung")
+		}
+	}
+	// Pause melden: Ein Spieltab im Hintergrund meldet sich eine Weile
+	// gedrosselt weiter und friert dann ein. Nach pauseNach erfahren die
+	// Mitspieler einmal, dass die Partie steht.
+	for id, p := range r.Players {
+		if p.PauseGemeldet || !p.verstecktAktiv(now) || now.Sub(p.VerstecktSeit) <= pauseNach {
+			continue
+		}
+		if r.aktivesSpiel(id) == "" {
+			continue
+		}
+		p.PauseGemeldet = true
+		r.Players[id] = p
+		r.addMessage(Message{
+			Text:   p.Name + " pausiert – das Gerät ist im Hintergrund. Die Partie bleibt stehen, bis " + p.Name + " zurück ist.",
+			Time:   now.Format("15:04:05"),
+			System: true,
+		})
+	}
+	// Alle wieder im Raum, aber die Partie steht noch (Zurück-Knopf): nach
+	// der Frist auflösen, damit sie keine neue Runde blockiert.
+	if r.hatLaufendesSpiel() && r.seitenAlleWeg(now) {
+		for id, p := range r.Players {
+			r.abgangBeenden(id, p.Name, "zurueck")
+		}
+	}
 	if len(r.Players) == 0 {
 		if r.EmptySince.IsZero() {
 			r.EmptySince = now
@@ -173,152 +277,10 @@ func (r *Room) cleanPlayers() {
 	if len(r.Players) == 0 && now.Sub(r.EmptySince) <= emptyRoomGameGrace {
 		return
 	}
-	// Eine Einladung an jemanden, der den Raum verlassen hat, ist wertlos und
-	// würde jede weitere Einladung blockieren.
-	if r.TicTacToe != nil && r.gameAbandoned(r.TicTacToe.Status, r.TicTacToe.XID, r.TicTacToe.OID) {
-		r.TicTacToe = nil
-	}
-	if r.VierGewinnt != nil && r.gameAbandoned(r.VierGewinnt.Status, r.VierGewinnt.RedID, r.VierGewinnt.BlueID) {
-		r.VierGewinnt = nil
-	}
-	if r.Dame != nil && r.gameAbandoned(r.Dame.Status, r.Dame.RedID, r.Dame.BlueID) {
-		r.Dame = nil
-	}
-	if r.Paare != nil && r.gameAbandoned(r.Paare.Status, r.Paare.RedID, r.Paare.BlueID) {
-		r.Paare = nil
-	}
-	// Ein Tisch mit bis zu vier Sitzen hat eigene Regeln: er lebt, solange
-	// der Gastgeber da ist.
-	if r.Menschaerger != nil && r.Menschaerger.abandoned(r) {
-		r.Menschaerger = nil
-	}
-	if r.Kaese != nil && r.gameAbandoned(r.Kaese.Status, r.Kaese.RedID, r.Kaese.BlueID) {
-		r.Kaese = nil
-	}
-	if r.Sim != nil && r.gameAbandoned(r.Sim.Status, r.Sim.RedID, r.Sim.BlueID) {
-		r.Sim = nil
-	}
-	if r.Tetris != nil && r.gameAbandoned(r.Tetris.Status, r.Tetris.RedID, r.Tetris.BlueID) {
-		r.Tetris = nil
-	}
-	if r.Kalaha != nil && r.gameAbandoned(r.Kalaha.Status, r.Kalaha.RedID, r.Kalaha.BlueID) {
-		r.Kalaha = nil
-	}
-	if r.Streichholz != nil && r.gameAbandoned(r.Streichholz.Status, r.Streichholz.RedID, r.Streichholz.BlueID) {
-		r.Streichholz = nil
-	}
-	if r.Muehle != nil && r.gameAbandoned(r.Muehle.Status, r.Muehle.RedID, r.Muehle.BlueID) {
-		r.Muehle = nil
-	}
-	if r.Reversi != nil && r.gameAbandoned(r.Reversi.Status, r.Reversi.RedID, r.Reversi.BlueID) {
-		r.Reversi = nil
-	}
-	if r.Hold != nil && r.gameAbandoned(r.Hold.Status, r.Hold.RedID, r.Hold.BlueID) {
-		r.Hold = nil
-	}
-	if r.Skyjo != nil && r.gameAbandoned(r.Skyjo.Status, r.Skyjo.RedID, r.Skyjo.BlueID) {
-		r.Skyjo = nil
-	}
-	if r.Schach != nil && r.gameAbandoned(r.Schach.Status, r.Schach.RedID, r.Schach.BlueID) {
-		r.Schach = nil
-	}
-	if r.Go != nil && r.gameAbandoned(r.Go.Status, r.Go.RedID, r.Go.BlueID) {
-		r.Go = nil
-	}
-	if r.Backgammon != nil && r.gameAbandoned(r.Backgammon.Status, r.Backgammon.RedID, r.Backgammon.BlueID) {
-		r.Backgammon = nil
-	}
-	if r.Kniffel != nil && r.Kniffel.Status != "finished" {
-		present := 0
-		for _, p := range r.Kniffel.Players {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Kniffel = nil
-		}
-	}
-	if r.MauMau != nil && r.MauMau.allGone(r) {
-		r.MauMau = nil
-	}
-	if r.Uno != nil && r.Uno.allGone(r) {
-		r.Uno = nil
-	}
-	if r.Poker != nil {
-		present := 0
-		for _, p := range r.Poker.Spieler {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Poker = nil
-		}
-	}
-	if r.Cabo != nil {
-		present := 0
-		for _, p := range r.Cabo.Spieler {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Cabo = nil
-		}
-	}
-	if r.Schiffe != nil {
-		present := 0
-		for _, p := range r.Schiffe.Spieler {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Schiffe = nil
-		}
-	}
-	if r.Baccara != nil {
-		present := 0
-		for _, p := range r.Baccara.Spieler {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Baccara = nil
-		}
-	}
-	if r.Siebzehn != nil {
-		present := 0
-		for _, p := range r.Siebzehn.Spieler {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Siebzehn = nil
-		}
-	}
-	if r.Schwimmen != nil && r.Schwimmen.allGone(r) {
-		r.Schwimmen = nil
-	}
-	if r.Arschloch != nil && r.Arschloch.allGone(r) {
-		r.Arschloch = nil
-	}
-	if r.Sechsundsechzig != nil {
-		present := 0
-		for _, p := range r.Sechsundsechzig.Spieler {
-			if _, ok := r.Players[p.ID]; ok {
-				present++
-			}
-		}
-		if present == 0 {
-			r.Sechsundsechzig = nil
-		}
-	}
-	if r.Rechen != nil && r.Rechen.allGone(r) {
-		r.Rechen = nil
+	// Niemand mehr da: Nach der Frist bleibt keine Partie zurück, die eine
+	// spätere Runde blockieren würde.
+	if len(r.Players) == 0 {
+		r.allePartienLoeschen()
 	}
 	// clean old timestamps for spam
 	for id, ts := range r.MsgTimes {
@@ -428,10 +390,9 @@ func (r *Room) gameSlotFree(status string, ids ...string) bool {
 	return r.gameAbandoned(status, ids...)
 }
 
-// gameAbandoned meldet, ob niemand mehr da ist, der die Partie spielen kann:
-// eine Einladung an einen abwesenden Spieler oder eine laufende Partie, aus
-// der beide Spieler verschwunden sind. Eine laufende Partie mit einem
-// anwesenden Spieler gilt weiter als belegt.
+// gameAbandoned meldet, ob die Partie keinen spielbaren Platz mehr hat: eine
+// Einladung an einen Abwesenden oder eine laufende Partie, aus der ein Spieler
+// verschwunden ist. Sie blockiert dann keine neue Runde (gameSlotFree).
 func (r *Room) gameAbandoned(status string, ids ...string) bool {
 	present := 0
 	for _, id := range ids {
@@ -439,10 +400,78 @@ func (r *Room) gameAbandoned(status string, ids ...string) bool {
 			present++
 		}
 	}
-	if status == "invited" {
-		return present < len(ids)
+	return present < len(ids)
+}
+
+// hatLaufendesSpiel meldet, ob irgendein Spieler des Raums in einer
+// laufenden Partie sitzt.
+func (r *Room) hatLaufendesSpiel() bool {
+	for id := range r.Players {
+		if r.aktivesSpiel(id) != "" {
+			return true
+		}
 	}
-	return present == 0
+	return false
+}
+
+// seitenAlleWeg meldet, ob alle, die je am Spielbrett saßen, seit der Frist
+// keine Spielseite mehr geöffnet haben. Wer nie gespielt hat (Zuschauer),
+// zählt nicht mit; gab es noch nie eine Spielseite, bleibt alles stehen.
+func (r *Room) seitenAlleWeg(now time.Time) bool {
+	gespielt := false
+	for _, p := range r.Players {
+		// Wer im Hintergrund sitzt, ist nicht "zurück im Raum": Die Partie
+		// bleibt stehen, solange die Versteckt-Frist läuft.
+		if p.verstecktAktiv(now) {
+			return false
+		}
+		if p.ImSpiel.IsZero() {
+			continue
+		}
+		gespielt = true
+		if now.Sub(p.ImSpiel) < spielSeiteFrist {
+			return false
+		}
+	}
+	return gespielt
+}
+
+// imSpielVergessen löscht die Marke "war auf einer Spielseite". Ohne das gälte
+// die nächste Partie sofort als zurückgelassen.
+func (r *Room) imSpielVergessen() {
+	for id, p := range r.Players {
+		if !p.ImSpiel.IsZero() {
+			p.ImSpiel = time.Time{}
+			r.Players[id] = p
+		}
+	}
+}
+
+// hinweisFuer hinterlegt eine einmalige Nachricht für genau diesen Spieler.
+func (r *Room) hinweisFuer(id, text string) {
+	if id == "" || text == "" {
+		return
+	}
+	if r.Hinweise == nil {
+		r.Hinweise = map[string]Hinweis{}
+	}
+	r.Hinweise[id] = Hinweis{Text: text, Zeit: time.Now()}
+}
+
+// hinweisNehmen liefert den Hinweis genau einmal und löscht ihn dabei.
+func (r *Room) hinweisNehmen(id string) string {
+	if id == "" || r.Hinweise == nil {
+		return ""
+	}
+	h, ok := r.Hinweise[id]
+	if !ok {
+		return ""
+	}
+	delete(r.Hinweise, id)
+	if time.Since(h.Zeit) > 2*time.Minute {
+		return ""
+	}
+	return h.Text
 }
 
 func (r *Room) isMuted(id string) (bool, time.Duration) {

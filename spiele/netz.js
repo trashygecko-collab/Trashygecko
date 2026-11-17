@@ -33,30 +33,41 @@
 })();
 
 /* --- Ein Spiel verlassen ---------------------------------------------------
-   Jede Spielseite bekommt einen kleinen Knopf "Spiel verlassen". Der trägt die
-   eigene Figur beziehungsweise die Karten auf dem Server aus, damit niemand auf
-   einen wartet, und geht danach zurück in den Raum. Die Mitspieler erfahren das
-   sofort im Chat.
+   "Spiel verlassen" trägt die eigene Figur beziehungsweise die Karten auf dem
+   Server aus, damit niemand auf einen wartet, und geht zurück in den Raum.
 
-   Zusätzlich fragt die Seite im Hintergrund, ob man noch in einer Partie sitzt.
-   Ist die eigene Partie vorbei (weil jemand gegangen ist), landet man von selbst
-   wieder im Raum – ohne langes Warten. */
+   Zusätzlich fragt die Seite im Hintergrund, ob man noch in einer Partie
+   sitzt. Ist die Partie vorbei (weil jemand gegangen ist oder die Verbindung
+   weg war), landet man von selbst wieder im Raum – mit dem Grund als Hinweis. */
 (function () {
   var params = new URLSearchParams(location.search);
   var room = params.get("room") || "";
   var id = params.get("id") || "";
 
-  function zurueckInDenRaum() {
-    location.href = "/connector" + (room ? "?room=" + encodeURIComponent(room) : "");
+  var unterwegs = false; // Rückleitung läuft
+  var laeuft = false; // eine Abfrage ist offen
+  var takt = 0; // Hintergrundabfrage
+
+  function zurueckInDenRaum(hinweis) {
+    if (unterwegs) {
+      return;
+    }
+    unterwegs = true;
+    clearInterval(takt);
+    var ziel = "/connector" + (room ? "?room=" + encodeURIComponent(room) : "");
+    if (hinweis) {
+      ziel += (room ? "&" : "?") + "hinweis=" + encodeURIComponent(hinweis);
+    }
+    location.href = ziel;
   }
-  window.tgRaumZurueck = zurueckInDenRaum;
+  window.tgRaumZurueck = function () { zurueckInDenRaum(""); };
 
   window.tgVerlassen = function () {
     if (!room || !id) {
-      zurueckInDenRaum();
+      zurueckInDenRaum("");
       return;
     }
-    var weg = function () { zurueckInDenRaum(); };
+    var weg = function () { zurueckInDenRaum(""); };
     var notbremse = setTimeout(weg, 1500); // schwaches WLAN darf nicht blockieren
     fetch("/api/leave?room=" + encodeURIComponent(room), {
       method: "POST",
@@ -86,22 +97,81 @@
     zeigeVerlassen();
   }
 
-  var warDrin = false;
+  // Kurze, deutliche Meldung über der Partie, danach zurück in den Raum.
+  function zeigeHinweis(text) {
+    var box = document.getElementById("tg-hinweis");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "tg-hinweis";
+      box.setAttribute("role", "status");
+      box.style.cssText =
+        "position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:2147483647;" +
+        "max-width:min(92vw,440px);padding:12px 18px;border-radius:10px;text-align:center;" +
+        "background:#14392f;color:#f4e6bd;border:1px solid #e0c37e;font:15px/1.45 Georgia,serif;" +
+        "box-shadow:0 8px 24px rgba(0,0,0,.35)";
+      document.body.appendChild(box);
+    }
+    box.textContent = text;
+    setTimeout(function () { zurueckInDenRaum(text); }, 1600);
+  }
+
+  var gesehen = false; // eigene Partie auf dieser Seite schon gesehen
+  var ohneSpiel = 0; // Abfragen ohne Partie, ohne je eine gesehen zu haben
+
+  // Im Hintergrund meldet sich die Seite mit seite=versteckt: Der Server hält
+  // die Partie dann stehen, statt sie nach 90 s zu beenden – ein eingefrorener
+  // Tab ist von einem geschlossenen nicht zu unterscheiden. Sichtbar wird das
+  // Signal beim nächsten Ruf wieder gelöscht.
+  function seite() {
+    return document.visibilityState === "hidden" ? "&seite=versteckt" : "";
+  }
+
   function wachen() {
     // Auch im Hintergrund fragen: sonst gilt man beim Wechsel in eine andere
     // App als weg und der Raum räumt die eigene Partie weg.
-    fetch("/api/imspiel?room=" + encodeURIComponent(room) + "&id=" + encodeURIComponent(id))
+    if (laeuft || unterwegs) {
+      return;
+    }
+    laeuft = true;
+    fetch("/api/imspiel?room=" + encodeURIComponent(room) + "&id=" + encodeURIComponent(id) + seite())
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (!d) return;
+        laeuft = false;
+        if (!d || unterwegs) {
+          return;
+        }
         if (d.inGame) {
-          warDrin = true;
-        } else if (warDrin) {
-          zurueckInDenRaum(); // Partie vorbei – zurück in den Raum
+          gesehen = true;
+          ohneSpiel = 0;
+          return;
+        }
+        if (d.hinweis) {
+          // Der Server hat die Partie für uns beendet – der Grund kommt mit.
+          clearInterval(takt);
+          zeigeHinweis(d.hinweis);
+          return;
+        }
+        if (gesehen) {
+          zurueckInDenRaum(""); // Partie vorbei – zurück in den Raum
+          return;
+        }
+        // Seite ohne Partie geöffnet (etwa nach einem Abbruch): Wer nie in
+        // einer Partie saß, wird nicht sofort verjagt – erst nach 15 s.
+        ohneSpiel += 1;
+        if (ohneSpiel >= 6) {
+          zurueckInDenRaum("");
         }
       })
-      .catch(function () {});
+      .catch(function () { laeuft = false; });
   }
-  setInterval(wachen, 2500);
+  takt = setInterval(wachen, 2500);
   setTimeout(wachen, 1200);
+
+  // Zurückgeholter Tab: sofort nachsehen statt bis zum nächsten Takt zu warten.
+  // Weggedrückter Tab: sofort versteckt melden, bevor das System ihn drosselt
+  // oder einfriert – sonst kommt das Signal nie an.
+  document.addEventListener("visibilitychange", function () {
+    wachen();
+  });
+  window.addEventListener("focus", wachen);
 })();

@@ -717,6 +717,7 @@ async function join(roomDisplayName){
   loadMutes();
   heartbeat();               // sofort "Verbunden" zeigen, nicht erst nach 5 s
   scrollZuDenSpielen();
+  zeigeHinweisAusUrl();
  }catch(e){
   try{ sessionStorage.removeItem("tg-room"); }catch(err){}
   setRoomStatus(e.message);
@@ -3081,7 +3082,9 @@ document.getElementById("message").addEventListener("keydown",e=>{
 async function pruefeSpielstart(){
  if(!activeRoom||!sessionID)return;
  try{
-  await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
+  // seite=raum: hält den Spieler im Raum, gilt aber nicht als lebende
+  // Spielseite – so erkennt der Server zurückgebliebene Partien.
+  await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID)+"&seite=raum",{cache:"no-store"});
  }catch(e){}
 }
 setInterval(pruefeSpielstart,2000);
@@ -3238,6 +3241,18 @@ async function ladeAlleinSpiele(){
   p.textContent="Die Spieleliste konnte nicht geladen werden.";
   liste.appendChild(p);
  }
+}
+
+// Ein Hinweis aus dem Spiel ("Anna hat das Spiel verlassen – …") wird genau
+// einmal in der Statuszeile angezeigt und danach aus der Adresse entfernt.
+function zeigeHinweisAusUrl(){
+ const p=new URLSearchParams(location.search);
+ const text=(p.get("hinweis")||"").trim().slice(0,200);
+ if(!text)return;
+ p.delete("hinweis");
+ history.replaceState(null,"",location.pathname+(p.toString()?"?"+p.toString():""));
+ setRoomStatus(text);
+ setTimeout(()=>{ if(document.getElementById("roomstatus").textContent===text)setRoomStatus(""); },12000);
 }
 
 loadStatus();

@@ -210,6 +210,9 @@ func presence(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if gewechselt, ok := other.Players[input.ID]; ok {
+			// Wer den Raum wechselt, löst hier seine Partien auf – sonst bliebe
+			// eine laufende Partie ohne Mitspieler zurück.
+			other.abgangBeenden(input.ID, gewechselt.Name, "verlassen")
 			delete(other.Players, input.ID)
 			// Wer in einen anderen Raum wechselt, verlässt diesen hier.
 			other.addMessage(Message{
