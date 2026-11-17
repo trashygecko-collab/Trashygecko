@@ -655,6 +655,55 @@ func (r *Room) playerInGame(id string) bool {
 	if g := r.Backgammon; g != nil && (g.RedID == id || g.BlueID == id) {
 		return true
 	}
+	if g := r.Tetris; g != nil && (g.RedID == id || g.BlueID == id) {
+		return true
+	}
+	// Kartenspiele mit Sitzliste: Ohne sie hielte sich die Spielseite für
+	// „nicht im Spiel“ und schickte den Spieler nach wenigen Sekunden
+	// zurück in den Raum, obwohl er noch am Tisch sitzt.
+	sitzliste := []func() []string{
+		func() []string {
+			if g := r.Baccara; g != nil {
+				return idsVon(g.Spieler, func(p BaccaraSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Cabo; g != nil {
+				return idsVon(g.Spieler, func(p CaboSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Poker; g != nil {
+				return idsVon(g.Spieler, func(p PokerSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Schiffe; g != nil {
+				return idsVon(g.Spieler, func(p SchiffeSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Siebzehn; g != nil {
+				return idsVon(g.Spieler, func(p SiebzehnSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Sechsundsechzig; g != nil {
+				return idsVon(g.Spieler, func(p SechsundsechzigSpieler) string { return p.ID })
+			}
+			return nil
+		},
+	}
+	for _, liste := range sitzliste {
+		if enthaelt(liste(), id) {
+			return true
+		}
+	}
 	if g := r.MauMau; g != nil {
 		for _, p := range g.Players {
 			if p.ID == id {
