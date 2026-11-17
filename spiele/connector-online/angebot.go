@@ -54,6 +54,7 @@ var spielApi = map[string]string{
 	"baccara":         "baccara",
 	"schiffe":         "schiffe",
 	"tetris":          "tetris",
+	"sechsundsechzig":  "sechsundsechzig",
 	"malen":            "malen",
 }
 
@@ -86,6 +87,7 @@ var spielAnzeige = map[string]string{
 	"siebzehn":         "17 und 4",
 	"baccara":         "Baccara",
 	"schiffe":         "Schiffe versenken",
+	"sechsundsechzig":  "Sechsundsechzig",
 	"tetris":          "Tetris",
 	"malen":            "Malen",
 }
@@ -103,6 +105,7 @@ var tischspiel = map[string]bool{
 	"siebzehn":  true,
 	"baccara":  true,
 	"schiffe":  true,
+	"sechsundsechzig": true,
 }
 
 // Gemeinsame Fläche: Malen hat kein Gegenüber und keinen Spielstand, der
