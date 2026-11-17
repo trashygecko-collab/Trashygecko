@@ -752,6 +752,14 @@ function initializeGame() {
 
     if (backButton) {
         backButton.addEventListener("click", () => {
+            // Gemeinsame Rückkehr: am PC nur den Rahmen schließen, am Handy
+            // den Tab. Fehlt die Datei, bleibt der bisherige Weg.
+            if (typeof window.tgZurueck === "function") {
+                window.tgZurueck();
+
+                return;
+            }
+
             window.location.href = SPIELE_ONLINE;
         });
     }
