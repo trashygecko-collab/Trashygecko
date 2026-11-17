@@ -365,7 +365,7 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
 			return
 		}
-		if len(room.Players) > 2 {
+		if room.anwesend() > 2 {
 			http.Error(w, "Es sind noch andere im Raum – das Angebot bleibt offen.", http.StatusConflict)
 			return
 		}

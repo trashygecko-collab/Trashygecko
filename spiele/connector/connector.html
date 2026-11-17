@@ -475,6 +475,12 @@ html:fullscreen body{padding:18px 1px}
 <script>
 let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null, selectedMenuSender=null;
 let currentPlayersList=[];
+// Wer zählt als da? Der Server markiert Spieler, die nur noch im Raum
+// stehen (kein Lebenszeichen mehr oder Tab im Hintergrund) mit
+// anwesend:false. Regeln wie „nur zu zweit“ rechnen damit.
+function anwesende(){
+ return currentPlayersList.filter(p=>p.anwesend!==false).length;
+}
 try {
  sessionID=sessionStorage.getItem("tg-player-id")||"";
  if(!sessionID){
@@ -2514,7 +2520,7 @@ function rundeInhalt(box,players){
    knoepfe.appendChild(mit);
    // Zu zweit gibt es kein „die anderen kommen noch“ – also auch ein
    // Ablehnen wie bei einer Einladung.
-   if(players.length===2){
+   if(players.filter(p=>p.anwesend!==false).length===2){
     const nein=document.createElement("button");
     nein.type="button";
     nein.className="sekundaer";
@@ -2769,7 +2775,7 @@ async function refresh(){
   // Nur neu zeichnen, wenn sich wirklich etwas geändert hat. Sonst klappt das
   // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
   const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId,m.tone||""].join("|")).join("`")
-   +"#"+isRoomOwner+"#"+selectedMuteSender+"#"+(angebot?angebot.id:"")+"#"+currentPlayersList.length
+   +"#"+isRoomOwner+"#"+selectedMuteSender+"#"+(angebot?angebot.id:"")+"#"+anwesende()
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
   lastChatSignature=signature;
@@ -2822,7 +2828,7 @@ async function refresh(){
      actions.appendChild(mit);
      // Zu zweit ist das Angebot eine Einladung an genau diesen einen
      // Spieler – deshalb gibt es dann auch ein „Ablehnen“.
-     if(currentPlayersList.length===2){
+     if(anwesende()===2){
       const nein=document.createElement("button");
       nein.textContent="Ablehnen";
       nein.onclick=()=>angebotAktion("ablehnen",m.game);

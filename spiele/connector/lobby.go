@@ -322,13 +322,16 @@ func playersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	room.cleanPlayers()
-	list := make([]map[string]string, 0, len(room.Players))
+	// Anwesend unterscheidet „ist da“ von „steht nur noch im Raum“ – der
+	// Connector braucht das zum Beispiel für die Zwei-Spieler-Regel.
+	jetzt := time.Now()
+	list := make([]SpielerZeile, 0, len(room.Players))
 	for id, player := range room.Players {
-		list = append(list, map[string]string{"id": id, "name": player.Name})
+		list = append(list, SpielerZeile{ID: id, Name: player.Name, Anwesend: player.anwesend(jetzt)})
 	}
 	ownerID := room.OwnerID
 	mu.Unlock()
-	sort.Slice(list, func(i, j int) bool { return strings.ToLower(list[i]["name"]) < strings.ToLower(list[j]["name"]) })
+	sort.Slice(list, func(i, j int) bool { return strings.ToLower(list[i].Name) < strings.ToLower(list[j].Name) })
 	w.Header().Set("X-Room-Owner", ownerID)
 	jsonResponse(w, list)
 }
