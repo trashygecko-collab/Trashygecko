@@ -122,6 +122,17 @@ func spielName(id string) string {
 // spielAufruf ruft einen Spiel-Endpunkt von innen auf – wie ein Klick eines
 // Spielers. So gelten beim Beitritt genau dieselben Prüfungen wie sonst.
 func spielAufruf(api, code, aktion string, felder map[string]any) (int, string) {
+	// Der Aufruf gilt als Klick des Spielers, also gehört sein Token dazu –
+	// sonst weist die Kennungsprüfung ihn als fremdes Gerät ab.
+	if id, ok := felder["id"].(string); ok && id != "" {
+		mu.Lock()
+		if room := rooms[code]; room != nil {
+			if p, gefunden := room.Players[id]; gefunden {
+				felder["token"] = p.Token
+			}
+		}
+		mu.Unlock()
+	}
 	body, _ := json.Marshal(felder)
 	ziel := "/api/" + api + "?room=" + url.QueryEscape(code) + "&action=" + url.QueryEscape(aktion)
 	req := httptest.NewRequest(http.MethodPost, ziel, bytes.NewReader(body))
@@ -323,6 +334,45 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+		return
+
+	case "ablehnen":
+		// Zu zweit ist ein Angebot eine Einladung an genau diesen einen
+		// Spieler – der darf sie auch ablehnen. Sind mehr im Raum, kann
+		// jemand anderes noch mitspielen; dann bleibt das Angebot stehen.
+		mu.Lock()
+		defer mu.Unlock()
+		room := rooms[code]
+		if room == nil {
+			http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
+			return
+		}
+		room.cleanPlayers()
+		player, ok := room.Players[input.ID]
+		if !ok {
+			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
+			return
+		}
+		if room.Angebot == nil {
+			http.Error(w, "Es steht gerade kein Angebot offen.", http.StatusConflict)
+			return
+		}
+		if room.Angebot.VonID == input.ID {
+			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
+			return
+		}
+		if len(room.Players) > 2 {
+			http.Error(w, "Es sind noch andere im Raum – das Angebot bleibt offen.", http.StatusConflict)
+			return
+		}
+		room.Angebot = nil
+		room.LastActive = time.Now()
+		room.addMessage(Message{
+			Text:   player.Name + " lehnt ab.",
+			Time:   time.Now().Format("15:04:05"),
+			System: true,
+		})
 		w.WriteHeader(http.StatusNoContent)
 		return
 

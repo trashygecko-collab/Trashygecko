@@ -183,6 +183,8 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		// Active meldet, ob der Spieler seit dem letzten Lebenszeichen etwas
 		// getan hat (Klick, Tastendruck). Ohne das zählt er als abwesend.
 		Active bool `json:"active"`
+		// Token ist das Geheimnis des Platzes; beim ersten Beitritt leer.
+		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -248,6 +250,13 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		room.Name = roomTitle(name)
 	}
 	player, known := room.Players[input.ID]
+	// Ein bekannter Platz gehört dem Gerät, das ihn angelegt hat: Wer die
+	// Kennung errät oder aus /api/players abschreibt, kommt hier nicht weiter.
+	if known && (player.Token == "" || player.Token != strings.TrimSpace(input.Token)) {
+		mu.Unlock()
+		http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
+		return
+	}
 	if !known {
 		// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.
 		text := "betritt den Raum."
@@ -281,6 +290,9 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	player.Name = name
+	if !known {
+		player.Token = zufallsToken()
+	}
 	player.Last = time.Now()
 	if player.LastAction.IsZero() || input.Active {
 		player.LastAction = time.Now()
@@ -291,7 +303,8 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	code := room.Code
 	mu.Unlock()
 	// Der vergebene Name geht zurück, damit die Seite ihn anzeigen kann.
-	jsonResponse(w, map[string]string{"name": name, "room": code})
+	// Das Token geht nur an dieses Gerät zurück – nie an andere Spieler.
+	jsonResponse(w, map[string]string{"name": name, "room": code, "token": player.Token})
 }
 
 // playersHandler returns list of players in a room and room meta (like ownerId).

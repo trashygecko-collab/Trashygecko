@@ -88,6 +88,10 @@ type Player struct {
 	// LastAction ist die letzte echte Aktion des Spielers, AfkWarned merkt
 	// sich, ob für ihn schon eine „ist wohl eingeschlafen“-Meldung kam.
 	LastAction time.Time `json:"-"`
+	// Token ist das Geheimnis dieses Platzes. Es entsteht beim Beitritt und
+	// muss bei jeder Änderung mitgeschickt werden – die Kennung allein (in
+	// /api/players für alle sichtbar) reicht damit zu nichts mehr.
+	Token string `json:"-"`
 	// ImSpiel ist der letzte Abruf von einer Spielseite. Die Connector-Seite
 	// fragt mit seite=raum und setzt das nicht – daran erkennt der Raum, dass
 	// eine Partie ohne Spielseite zurückgeblieben ist.

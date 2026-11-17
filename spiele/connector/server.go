@@ -21,22 +21,76 @@ func randomCode() string {
 	return "TG-" + strings.ToUpper(hex.EncodeToString(b))
 }
 
-// withActivity merkt sich, wer wirklich etwas tut: Jeder POST außer dem
+// zufallsToken erzeugt das Geheimnis, das ein Spieler beim Beitritt bekommt.
+// 16 Zufallsbytes als Hex sind nicht erratbar; geraten werden kann höchstens
+// die Spielerkennung, und die allein reicht damit zu nichts mehr.
+func zufallsToken() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
+}
+
+// withIdentity prüft bei jedem API-Aufruf mit Spielerkennung, ob das
+// mitgeschickte Token zu diesem Spieler gehört. Damit kann niemand mit einer
+// fremden (etwa aus /api/players ausgelesenen) Kennung einen anderen
+// umbenennen, aus einer Partie werfen oder für ihn ziehen. Das Token entsteht
+// beim Beitritt (/api/presence) und wird nur dem Gerät ausgegeben, das den
+// Platz angelegt hat.
+//
+// Nebenbei merkt sich die Hülle, wer wirklich etwas tut: Jeder POST außer dem
 // automatischen Lebenszeichen zählt als Aktion (Chat, Spielzug, Einladung).
-// Die Kennung steht bei allen diesen Aufrufen im JSON-Feld "id".
-func withActivity(next http.Handler) http.Handler {
+func withIdentity(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/api/") &&
-			r.URL.Path != "/api/presence" {
+		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
+		id := strings.TrimSpace(r.URL.Query().Get("id"))
+		token := strings.TrimSpace(r.URL.Query().Get("token"))
+
+		if r.Method == http.MethodPost {
 			body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 			if err == nil {
 				r.Body = io.NopCloser(bytes.NewReader(body))
 				var probe struct {
-					ID string `json:"id"`
+					Room  string `json:"room"`
+					ID    string `json:"id"`
+					Token string `json:"token"`
 				}
-				if json.Unmarshal(body, &probe) == nil && probe.ID != "" {
-					noteActivity(r.URL.Query().Get("room"), probe.ID)
+				if json.Unmarshal(body, &probe) == nil {
+					if code == "" {
+						code = strings.ToUpper(strings.TrimSpace(probe.Room))
+					}
+					if id == "" {
+						id = strings.TrimSpace(probe.ID)
+					}
+					if token == "" {
+						token = strings.TrimSpace(probe.Token)
+					}
+					if r.URL.Path != "/api/presence" && id != "" {
+						noteActivity(code, id)
+					}
 				}
+			}
+		}
+
+		if id != "" && code != "" {
+			mu.Lock()
+			gespeichert := ""
+			if room := rooms[code]; room != nil {
+				if p, ok := room.Players[id]; ok {
+					gespeichert = p.Token
+				}
+			}
+			mu.Unlock()
+			// Nur ein bereits bekannter Platz mit Token kann abgewiesen werden;
+			// ein neuer Spieler entsteht im Beitritt.
+			if gespeichert != "" && gespeichert != token {
+				http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
+				return
 			}
 		}
 		next.ServeHTTP(w, r)
@@ -112,5 +166,5 @@ func routes() http.Handler {
 	}
 	mux.Handle("/", frisch(http.FileServer(http.Dir(home))))
 
-	return withActivity(mux)
+	return withIdentity(mux)
 }

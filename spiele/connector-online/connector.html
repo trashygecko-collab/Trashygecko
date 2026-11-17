@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="de">
 <head>
+<script src="/spiele/token.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TrashyGecko Connector</title>
@@ -2511,6 +2512,16 @@ function rundeInhalt(box,players){
    mit.textContent="Mitspielen";
    mit.onclick=()=>beitreten(angebot.game);
    knoepfe.appendChild(mit);
+   // Zu zweit gibt es kein „die anderen kommen noch“ – also auch ein
+   // Ablehnen wie bei einer Einladung.
+   if(players.length===2){
+    const nein=document.createElement("button");
+    nein.type="button";
+    nein.className="sekundaer";
+    nein.textContent="Ablehnen";
+    nein.onclick=()=>angebotAktion("ablehnen",angebot.game);
+    knoepfe.appendChild(nein);
+   }
   }
   karte.appendChild(knoepfe);
   box.appendChild(karte);
@@ -2758,7 +2769,7 @@ async function refresh(){
   // Nur neu zeichnen, wenn sich wirklich etwas geändert hat. Sonst klappt das
   // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
   const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId,m.tone||""].join("|")).join("`")
-   +"#"+isRoomOwner+"#"+selectedMuteSender+"#"+(angebot?angebot.id:"")
+   +"#"+isRoomOwner+"#"+selectedMuteSender+"#"+(angebot?angebot.id:"")+"#"+currentPlayersList.length
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
   lastChatSignature=signature;
@@ -2809,6 +2820,14 @@ async function refresh(){
      mit.textContent=m.game==="malen"?"Mitmalen":"Mitspielen";
      mit.onclick=()=>beitreten(m.game);
      actions.appendChild(mit);
+     // Zu zweit ist das Angebot eine Einladung an genau diesen einen
+     // Spieler – deshalb gibt es dann auch ein „Ablehnen“.
+     if(currentPlayersList.length===2){
+      const nein=document.createElement("button");
+      nein.textContent="Ablehnen";
+      nein.onclick=()=>angebotAktion("ablehnen",m.game);
+      actions.appendChild(nein);
+     }
     }
     d.appendChild(actions);
     box.appendChild(d);
