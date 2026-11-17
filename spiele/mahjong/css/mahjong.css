@@ -1,15 +1,34 @@
+/* Atkinson Hyperlegible (SIL Open Font License, siehe css/fonts/OFL.txt):
+   lokal eingebunden, damit das Spiel auch offline und in der App laeuft.
+   Nur die beiden Schnitte, die im Spiel vorkommen - je 17 kB. */
+@font-face {
+    font-family: "Atkinson Hyperlegible";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("fonts/atkinson-hyperlegible-400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("fonts/atkinson-hyperlegible-700.woff2") format("woff2");
+}
+
 html {
     /* Grundgroesse; js/groesse.js hebt sie je Bildschirmgroesse an. */
     font-size: 16px;
 
-    /* In der Android-App beendet dieser Knopf die App; im Browser bleibt er
+    /* Verhindert weisse Flaechen beim Ueberziehen auf dem Handy. */
+    background: #0a211b;
+}
+
+/* In der Android-App beendet dieser Knopf die App; im Browser bleibt er
    versteckt, weil ein Tab sich nicht selbst schliessen kann. */
 .verlassen-knopf {
     margin-top: 0.5rem;
-}
-
-/* Verhindert weisse Flaechen beim Ueberziehen auf dem Handy. */
-    background: #0a211b;
 }
 
 
@@ -33,7 +52,7 @@ body {
     overscroll-behavior-y: contain;
     -webkit-text-size-adjust: 100%;
     color: var(--text);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: "Atkinson Hyperlegible", Arial, Helvetica, sans-serif;
     background:
         radial-gradient(ellipse at center, #1d4b3e 0%, #0a211b 78%);
 }
@@ -69,26 +88,24 @@ button {
     border-bottom: 1px solid rgba(201, 173, 125, 0.25);
 }
 
-/* Beide Level-Waehler sind gleich gross: gleiche Mindestbreite, Inhalt mittig. */
-.level-display {
+/* Die Level-Wahl ist der erste Knopf der Reihe und holt sich Hoehe, Polsterung,
+   Schrift und Rahmen aus ".game-buttons button".  Die ID schlaegt diese Regel,
+   deshalb bleiben hier nur die Unterschiede: drei Teile mittig nebeneinander
+   und goldene Schrift. */
+#levelButton {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Abstand der drei Teile (Wort, Nummer, Pfeil) - nur hier geregelt. */
+    /* Abstand zwischen Wort, Nummer und Pfeil. */
     gap: 0.375rem;
+    /* Gleiche Breite fuer "01" wie fuer "12": der Knopf springt nicht. */
     min-width: 4.5rem;
-    padding: 0.3125rem 0.5625rem;
-    background: rgba(255, 255, 255, 0.05);
     color: var(--gold);
-    font-family: inherit;
-    border: 1px solid rgba(201, 173, 125, 0.5);
-    border-radius: 0.375rem;
-    font-size: 0.6875rem;
-    font-weight: bold;
-    letter-spacing: 1px;
-    white-space: nowrap;
 }
 
+/* Groesse der Level-Nummer: hier die Grundgroesse, im 700er-Block eine Stufe
+   groesser fuer Handys.  Sonst steht sie nirgends - die 900er- und 480er-
+   Bloecke fassen die Nummer nicht mehr an. */
 #levelNumber {
     font-size: 0.875rem;
 }
@@ -103,7 +120,9 @@ button {
     min-width: 0;
 }
 
-.stats .stat-box:last-child {
+/* Nur das direkte Kind zaehlt: Steine/Paare stecken in .stat-paar und duerfen
+   nicht mitwandern, wenn Punkte nach rechts rueckt. */
+.stats > .stat-box:last-child {
     margin-left: auto;
 }
 
@@ -133,19 +152,62 @@ button {
     font-variant-numeric: tabular-nums;
 }
 
-.game-buttons {
+/* Steine und Paare bleiben zusammen, sobald die Zahlenzeile umgestellt wird.
+   Solange alles in einer Zeile steht, verhaelt sich die Klammer wie ihre
+   Kinder (display: contents). */
+.stat-paar {
+    display: contents;
+}
+
+/* Kleines Geraet: die Knopfreihe steht unter den Zahlen, die Klasse setzt
+   js/groesse.js.  Dann drei Zonen: Steine/Paare links, Uhrzeit in der Mitte,
+   Punkte rechts an der Uhrzeit. */
+.stats.gestapelt {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 0.5rem;
+}
+
+.stats.gestapelt .stat-paar {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    justify-self: start;
+}
+
+.stats.gestapelt > .stat-box:nth-child(2) {
+    justify-self: center;               /* Uhrzeit */
+}
+
+.stats.gestapelt > .stat-box:nth-child(3) {
+    justify-self: end;                  /* Punkte */
+}
+
+.game-buttons {
+    /* Level-Wahl links, TIPP in der Mitte, EINSTELLUNGEN rechts: drei Spalten,
+       die mittlere haengt an der Reihe und nicht an der Breite der Nachbarn.
+       Die Reihe nimmt den Platz neben den Zahlen; steht sie allein in einer
+       Zeile, spannt sie die ganze Breite. */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
     gap: 0.375rem;
-    /* Steht neben den Zahlen, solange die Kopfzeile Platz hat. Reicht er
-       nicht, rutscht die Gruppe in eine eigene Zeile und bleibt rechts. */
-    margin-left: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.game-buttons > :first-child {
+    justify-self: start;
+}
+
+.game-buttons > :last-child {
+    justify-self: end;
 }
 
 .game-buttons button {
-    /* Mindesthoehe wie in der Handy-Regel, damit grosse Geraete nicht
-       kleinere Knoepfe bekommen als kleine. */
+    /* Einzige Stelle fuer die Knopf-Groesse: gilt fuer die Level-Wahl, TIPP
+       und EINSTELLUNGEN. */
     min-height: 2.125rem;
     padding: 0.375rem 0.6875rem;
     color: var(--ivory);
@@ -270,12 +332,40 @@ button {
 }
 
 .status-line {
-    min-height: 1rem;
-    margin-bottom: 0.125rem;
+    /* Kein reservierter Platz: die Meldung liegt als transparente Textzeile
+       ueber dem Brett und laesst Tipps durch (pointer-events: none), damit sie
+       keine Steine blockiert. */
+    position: absolute;
+    top: 0.375rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    max-width: calc(100% - 1rem);
+    padding: 0.2em 0.4em;
+    /* Nur Text: lesbar bleibt sie durch den weichen Schatten, der auch auf
+       hellen Steinen traegt. */
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.95),
+        0 0 6px rgba(0, 0, 0, 0.85),
+        0 0 14px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1em;
     color: var(--muted);
-    font-size: 0.75rem;
+    /* Sprueche in der Statuszeile: 1.1875rem sind bei 16 px Grundschrift
+       19 px, bei 5 Zoll rund 16 px.  Die Groesse steht nur hier. */
+    font-size: 1.1875rem;
+    line-height: 1.3;
     letter-spacing: 1px;
     text-align: center;
+}
+
+/* Punkte (+100 / -100) stehen immer in einer eigenen Zeile unter dem Spruch. */
+.status-punkte {
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
 }
 
 /* Nebenmeldung unter der Statuszeile (z.B. wenn das Speichern scheitert).
@@ -294,6 +384,7 @@ button {
 
 /* Nimmt den kompletten Platz unter Kopfzeile und Knoepfen ein. */
 .board-area {
+    position: relative;
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
@@ -347,21 +438,44 @@ button {
     }
 }
 
-@media (max-width: 700px) {
-    .game-container {
-        width: 100%;
-        padding: 0.375rem;
-        gap: 0.5rem;
+/* Reihenfolge in dieser Datei: erst die breiten Bloecke (900 px), dann die
+   schmaleren (700, 480, 380, 340).  Innerhalb eines Bereichs gewinnt sonst
+   still die spaetere Regel - genau das hat die Level-Nummer-Regel hier unten
+   unbrauchbar gemacht. */
+@media (max-width: 900px) {
+    /* Flache Kopfzeile: Das Spielfeld bekommt die Hoehe. */
+    .topbar {
+        gap: 0.25rem;
+        padding: 0 0 0.25rem;
     }
 
+    .stats {
+        gap: 0.75rem;
+    }
+
+    .game-buttons {
+        gap: 0.375rem;
+    }
+
+    .game-buttons button {
+        padding: 0.25rem 0.6875rem;
+        letter-spacing: 0.5px;
+        border-radius: 0.5rem;
+    }
+
+    .weiter-knopf {
+        width: min(20rem, 100%);
+        padding: 0.8125rem 1.25rem;
+        font-size: 0.8125rem;
+    }
+}
+
+/* Schmale Geraete feinern die Kopfzeile nach: groessere Level-Nummer, mehr
+   Luft zwischen den Zahlen.  Steht bewusst nach dem 900er-Block. */
+@media (max-width: 700px) {
     .topbar {
         gap: 0.5rem;
         padding: 0.125rem 0 0.5rem;
-    }
-
-    .level-display {
-        padding: 0.5625rem 0.6875rem;
-        font-size: 0.6875rem;
     }
 
     #levelNumber {
@@ -384,21 +498,18 @@ button {
         font-size: 0.8125rem;
     }
 
-    .game-buttons {
-        width: auto;
-        justify-content: flex-end;
+    /* Das lange Wort faellt auf Handys weg: "HANDY 01" sagt dasselbe und haelt
+       die Knopfreihe neben den Zahlen in einer Zeile. */
+    .level-wort {
+        display: none;
     }
 
+    /* Knopfreihe: eine Schriftstufe groesser als die 900er-Vorgabe, dafuer
+       enger gepolstert - so bleibt sie in einer Zeile und neben den Zahlen. */
     .game-buttons button {
-        padding: 0.375rem 0.5rem;
-        font-size: 0.5625rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.625rem;
     }
-
-    .board-area {
-        min-height: 0;
-        padding: 8px;
-    }
-
 }
 
 /* =====================================
@@ -586,9 +697,10 @@ button {
     }
 }
 
-/* Noch nicht erreichbare Steine: dunkler mit tieferem Schatten */
+/* Noch nicht erreichbare Steine: deutlich dunkler und entsaettigt, damit sie
+   sich klar von den spielbaren absetzen - auf hellen wie auf dunklen Steinen. */
 .mahjong-tile.blocked {
-    filter: brightness(0.68) saturate(0.85);
+    filter: brightness(0.5) saturate(0.35);
     cursor: default;
     box-shadow:
         0 7px 0 var(--stein-sockel-dunkel),
@@ -611,16 +723,6 @@ button {
     font-size: 22px;
     font-weight: bold;
     text-align: center;
-}
-
-@media (max-width: 700px) {
-    .board-area {
-        justify-content: flex-start;
-        overflow: auto;
-    }
-
-    /* Der Rand der Buehne wuerde die Einpassung verfaelschen - bleibt 0. */
-
 }
 
 /* =====================================
@@ -664,52 +766,6 @@ button {
     }
 }
 
-@media (max-width: 900px) {
-    /* Flache Kopfzeile: Das Spielfeld bekommt die Hoehe. */
-    .topbar {
-        gap: 0.25rem;
-        padding: 0 0 0.25rem;
-    }
-
-    .level-display {
-        min-height: 0;
-        padding: 0.1875rem 0.5rem;
-    }
-
-    #levelNumber {
-        font-size: 0.8125rem;
-    }
-
-    .stats {
-        gap: 0.75rem;
-    }
-
-    .game-buttons {
-        gap: 0.375rem;
-    }
-
-    .game-buttons button {
-        padding: 0.25rem 0.6875rem;
-        letter-spacing: 0.5px;
-        border-radius: 0.5rem;
-    }
-
-    .status-line {
-        font-size: 0.75rem;
-        margin-bottom: 0;
-    }
-
-    .weiter-knopf {
-        width: min(20rem, 100%);
-        padding: 0.8125rem 1.25rem;
-        font-size: 0.8125rem;
-    }
-
-    .board-area {
-        padding: 8px;
-        border-radius: 14px;
-    }
-}
 
 /* Flache Fenster (5, 6 und 7 Zoll quer: 480, 540, 600 px hoch): Kopfbereich
    kompakt halten.  Sonst frisst die mitgewachsene Kopfleiste die gewonnene
@@ -729,11 +785,6 @@ button {
         gap: 0.625rem;
     }
 
-    .status-line {
-        font-size: 0.75rem;
-        margin-bottom: 0;
-    }
-
     .board-area {
         padding: 6px;
     }
@@ -750,6 +801,14 @@ button {
 /* =====================================
    LEVEL-AUSWAHL
 ===================================== */
+
+/* Kurzform des laufenden Satzes (HANDY / NORMAL) - klein, damit die
+   Level-Wahl in der Knopfreihe nicht breiter wird als noetig. */
+.level-satz {
+    font-size: 0.5rem;
+    letter-spacing: 0.0625rem;
+    opacity: 0.7;
+}
 
 .level-pfeil {
     font-size: 0.5625rem;
@@ -1147,7 +1206,7 @@ button {
     max-width: 40ch;
     margin: 0.5rem 0 0.375rem;
     padding: 1rem 0;
-    color: #ffa94d;
+    color: #ff9d33;
     font-size: 1.1875rem;
     font-weight: 500;
     line-height: 1.55;
@@ -1412,13 +1471,6 @@ body[data-runde="9"] .mahjong-tile {
     --stein-text: #f1f0ea;
 }
 
-/* Auf dunklen Steinen wuerde "noch dunkler" verschwinden - dort lieber
-   etwas zuruecknehmen und ueber die Deckkraft arbeiten. */
-body[data-runde="7"] .mahjong-tile.blocked {
-    filter: brightness(0.82) saturate(0.85);
-    opacity: 0.7;
-}
-
 /* Runde 8: freie Steine bekommen einen helleren Glanz an der Innenkante,
    damit sie sich klar von den gesperrten absetzen. */
 body[data-runde="8"] .mahjong-tile:not(.blocked):not(.selected):not(.hinweis) {
@@ -1429,23 +1481,17 @@ body[data-runde="8"] .mahjong-tile:not(.blocked):not(.selected):not(.hinweis) {
         inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
-/* Runde 8: deckend wie Runde 9, aber nur leicht abgedunkelt - die Steine
-   sind hell genug, um sich vom Brett zu loesen. */
+/* Runde 8: eigene Sockel- und Schattenwerte - die Abdunklung kommt aus der
+   Regel oben, damit gesperrte Steine in jeder Runde gleich aussehen. */
 body[data-runde="8"] .mahjong-tile.blocked {
-    filter: brightness(0.88) saturate(0.9);
-    opacity: 1;
     box-shadow:
         0 7px 0 var(--stein-sockel-dunkel),
         0 10px 15px rgba(0, 0, 0, 0.7),
         inset 0 2px 3px rgba(255, 255, 255, 0.5);
 }
 
-/* Runde 9 ist so dunkel, dass halb durchsichtige Steine wie Loecher im Brett
-   wirken - dort bleiben sie deckend und werden ueber Helligkeit und Sockel
-   unterschieden. */
+/* Runde 9: wie Runde 8 nur eigene Sockel- und Schattenwerte. */
 body[data-runde="9"] .mahjong-tile.blocked {
-    filter: brightness(0.78) saturate(0.8);
-    opacity: 1;
     box-shadow:
         0 7px 0 var(--stein-sockel-dunkel),
         0 10px 15px rgba(0, 0, 0, 0.8),
@@ -1504,6 +1550,15 @@ body[data-runde="9"] .mahjong-tile.blocked {
     border-color: rgba(255, 255, 255, 0.4);
 }
 
+/* Runde 10 - Regenbogen: alle Steinfarben gleichzeitig.  Der Punkt zeigt einen
+   Farbkreis, damit man ihn zwischen den neun einfarbigen Punkten findet. */
+.farbe-feld[data-farbe="10"] {
+    background: conic-gradient(
+        #f4c2c2, #f2c877, #b0dfc6, #b8d3ee, #c6b2e2, #f4c2c2
+    );
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
 @media (max-width: 900px) {
     .runde-anzeige {
         font-size: 0.625rem;
@@ -1550,30 +1605,6 @@ body[data-runde="9"] .mahjong-tile.blocked {
 /* Auf dem goldenen aktuellen Feld braucht die Zeit eine dunkle Farbe */
 .level-feld.aktuell .level-feld-zeit {
     color: rgba(27, 32, 41, 0.7);
-}
-
-/* Gratis-Mischen, wenn kein Zug mehr geht - im Fluss ueber dem Brett,
-   damit es keine Steine verdeckt. */
-.mischen-knopf {
-    align-self: center;
-    margin: 0.125rem 0 0.375rem;
-    padding: 0.5625rem 1.25rem;
-    color: var(--table-dark);
-    background: linear-gradient(180deg, #e0c28b, #c9ad7d);
-    border: 1px solid rgba(201, 173, 125, 0.95);
-    border-radius: 0.5625rem;
-    font-family: inherit;
-    font-size: 0.6875rem;
-    font-weight: bold;
-    letter-spacing: 0.125rem;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-}
-
-.mischen-knopf:hover,
-.mischen-knopf:focus-visible {
-    background: linear-gradient(180deg, #f0d3a0, #d9bd8b);
-    outline: none;
 }
 
 /* Eigene Tafel nach der letzten Steinfarbe einer vollen Runde */
@@ -1690,44 +1721,68 @@ body[data-form="eckig"] .mahjong-tile::before {
     pointer-events: none;
 }
 
-body[data-zustand="alt"] .tile-wear {
+[data-zustand="alt"] .tile-wear {
     display: block;
     z-index: 2;
     background-image: url("../assets/stein-alt-kanten-hell.webp");
+    /* Schmutz in den Poren statt aufgemalter Flecken: multiplizieren und
+       abschwaechen, dazu leicht weichzeichnen - harte Kanten wirken digital. */
+    mix-blend-mode: multiply;
+    opacity: 0.6;
+    filter: blur(0.5px);
 }
 
-body[data-zustand="alt"] .tile-risse {
+[data-zustand="alt"] .tile-risse {
     display: block;
     z-index: 3;
     background-image: url("../assets/stein-alt-hell.webp");
+    /* Feine Haarrisse, nicht schwarze Linien; in der Mitte ausgeduennt, weil
+       echte Kratzer an Kanten und Ecken sitzen.  Die -webkit-Fassung braucht
+       nur noch ein aelteres Android-WebView. */
     mix-blend-mode: multiply;
+    opacity: 0.85;
+    filter: blur(0.5px);
+    -webkit-mask-image: radial-gradient(ellipse 92% 96% at 50% 50%, transparent 0%, #000 65%);
+    mask-image: radial-gradient(ellipse 92% 96% at 50% 50%, transparent 0%, #000 65%);
+}
+
+/* Koernung: 50 % Grau mit Rauschen (werkzeuge/korn-erzeugen.mjs), weich
+   uebergelegt - die raue Materie, auf der Kratzer erst echt wirken. */
+[data-zustand="alt"] .mahjong-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border-radius: inherit;
+    background-image: url("../assets/stein-alt-korn.png");
+    background-size: 128px 128px;
+    mix-blend-mode: overlay;
+    opacity: 0.2;
+    pointer-events: none;
 }
 
 /* Runde 4-6 sind kuehl (Jade, Azur, Amethyst) - dort wirkt der warme braune
    Bruch wie Schmutz, also gibt es eine graugruene Variante. */
-body[data-runde="4"][data-zustand="alt"] .tile-wear,
-body[data-runde="5"][data-zustand="alt"] .tile-wear,
-body[data-runde="6"][data-zustand="alt"] .tile-wear {
+body[data-zustand="alt"]:is([data-runde="4"], [data-runde="5"], [data-runde="6"]) .tile-wear {
     background-image: url("../assets/stein-alt-kanten-kuehl.webp");
 }
 
 /* Runde 7-9: auf dunklen Steinen braucht es den harten Ausbruch und helle
-   Risse, sonst ist die Alterung unsichtbar. */
-body[data-runde="7"][data-zustand="alt"] .tile-wear,
-body[data-runde="8"][data-zustand="alt"] .tile-wear,
-body[data-runde="9"][data-zustand="alt"] .tile-wear {
+   Risse, sonst ist die Alterung unsichtbar.  Multiplizieren wuerde dort
+   verschwinden, deshalb bleibt der Ausbruch dort deckend. */
+body[data-zustand="alt"]:is([data-runde="7"], [data-runde="8"], [data-runde="9"]) .tile-wear {
     background-image: url("../assets/stein-alt-kanten.webp");
+    mix-blend-mode: normal;
+    opacity: 0.8;
 }
 
-body[data-runde="7"][data-zustand="alt"] .tile-risse,
-body[data-runde="8"][data-zustand="alt"] .tile-risse,
-body[data-runde="9"][data-zustand="alt"] .tile-risse {
+body[data-zustand="alt"]:is([data-runde="7"], [data-runde="8"], [data-runde="9"]) .tile-risse {
     background-image: url("../assets/stein-alt-dunkel.webp");
     mix-blend-mode: screen;
 }
 
 /* =====================================
-   REGENBOGEN-RUNDE (VERSTECKT)
+   REGENBOGEN-RUNDE (LEVEL 505-560, 1065-1120, ...)
 ===================================== */
 
 /* Runde 10 ist die Zugabe: dort traegt nicht das Brett eine Farbe, sondern
@@ -1840,48 +1895,19 @@ body[data-runde="9"][data-zustand="alt"] .tile-risse {
         inset 0 2px 3px rgba(255, 255, 255, 0.3);
 }
 
-/* Alterung: Ausbrueche und Risse je Steinfarbe, nicht je Runde. */
-body[data-zustand="alt"] .mahjong-tile[data-farbe="1"] .tile-wear,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="2"] .tile-wear,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="3"] .tile-wear {
-    display: block;
-    z-index: 2;
-    background-image: url("../assets/stein-alt-kanten-hell.webp");
-}
-
-body[data-zustand="alt"] .mahjong-tile[data-farbe="4"] .tile-wear,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="5"] .tile-wear,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="6"] .tile-wear {
-    display: block;
-    z-index: 2;
+/* Regenbogen-Runde: hier haengt die Steinfarbe am Stein, nicht an der Runde.
+   Anzeige, Blendmodus und Deckkraft kommen aus den Regeln oben; hier steht
+   nur, welche Bilder zu welcher Steinfarbe gehoeren.  Die hellen Farben 1-6
+   brauchen nichts - sie bekommen schon die Vorgabe. */
+body[data-zustand="alt"] .mahjong-tile:is([data-farbe="4"], [data-farbe="5"], [data-farbe="6"]) .tile-wear {
     background-image: url("../assets/stein-alt-kanten-kuehl.webp");
 }
 
-body[data-zustand="alt"] .mahjong-tile[data-farbe="7"] .tile-wear,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="8"] .tile-wear,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="9"] .tile-wear {
-    display: block;
-    z-index: 2;
+body[data-zustand="alt"] .mahjong-tile:is([data-farbe="7"], [data-farbe="8"], [data-farbe="9"]) .tile-wear {
     background-image: url("../assets/stein-alt-kanten.webp");
 }
 
-body[data-zustand="alt"] .mahjong-tile[data-farbe="1"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="2"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="3"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="4"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="5"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="6"] .tile-risse {
-    display: block;
-    z-index: 3;
-    background-image: url("../assets/stein-alt-hell.webp");
-    mix-blend-mode: multiply;
-}
-
-body[data-zustand="alt"] .mahjong-tile[data-farbe="7"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="8"] .tile-risse,
-body[data-zustand="alt"] .mahjong-tile[data-farbe="9"] .tile-risse {
-    display: block;
-    z-index: 3;
+body[data-zustand="alt"] .mahjong-tile:is([data-farbe="7"], [data-farbe="8"], [data-farbe="9"]) .tile-risse {
     background-image: url("../assets/stein-alt-dunkel.webp");
     mix-blend-mode: screen;
 }
@@ -1913,20 +1939,7 @@ body[data-zustand="alt"] .mahjong-tile[data-farbe="9"] .tile-risse {
         letter-spacing: 0;
     }
 
-    .level-display {
-        padding: 0.25rem 0.375rem;
-        letter-spacing: 0;
-    }
-
-    /* Auf schmalen Handys faellt das Wort weg, damit die Zahlen daneben in
-       einer Zeile bleiben. */
-    .level-wort {
-        display: none;
-    }
-
-    #levelNumber {
-        font-size: 0.75rem;
-    }
+    /* Die Nummer bleibt in der Groesse des 700er-Blocks. */
 }
 
 /* Sehr schmale Handys (320 px): noch etwas enger, damit die Zahlen neben der
@@ -1951,10 +1964,6 @@ body[data-zustand="alt"] .mahjong-tile[data-farbe="9"] .tile-risse {
     .stat-box strong {
         font-size: 0.75rem;
     }
-
-    .level-display {
-        padding: 0.25rem 0.3125rem;
-    }
 }
 
 /* Ganz schmale Handys (320 px): die Knopfreihe etwas enger, damit sie in eine
@@ -1964,8 +1973,9 @@ body[data-zustand="alt"] .mahjong-tile[data-farbe="9"] .tile-risse {
         gap: 0.25rem;
     }
 
+    /* Nur der Buchstabenabstand schrumpft; die Polsterung bleibt wie bei 700 px
+       (die Knopfhoehe kommt ohnehin aus min-height). */
     .game-buttons button {
-        padding: 0.375rem 0.5rem;
         letter-spacing: 0;
     }
 }

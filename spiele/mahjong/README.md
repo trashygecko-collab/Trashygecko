@@ -17,7 +17,7 @@ Es gibt keinen Build und keine Installation – reine statische Dateien.
   ```
   Danach `http://localhost:8765/mahjong/mahjong.html` aufrufen. Liegt der
   Server eine Ebene höher (in `Homepage`), heißt die Adresse
-  `http://localhost:8765/spiele/mahjong/mahjong.html`.
+  `http://localhost:8765/spiele/brettspiele/mahjong/mahjong.html`.
 
 Der Spielstand (Level, Punkte, Bestzeiten) liegt im `localStorage` des Browsers.
 
@@ -30,10 +30,8 @@ Der Spielstand (Level, Punkte, Bestzeiten) liegt im `localStorage` des Browsers.
 | Brett verschieben | mit einem Finger wischen bzw. mit gedrückter Maustaste ziehen |
 | Zoomen | zwei Finger auseinander/zusammen oder Mausrad |
 | Gesamtansicht | Doppelklick / Doppeltipp auf eine freie Stelle |
-| Level wählen | auf `LV 37 ▾` tippen, dann ein Feld im Raster; unten eine Farbe antippen, um in deren Runde zu springen |
+| Level wählen | auf `HANDY 37 ▾` tippen, dann ein Feld im Raster; oben zwischen HANDY-LEVEL und NORMAL-LEVEL umschalten, unten eine Farbe antippen, um in deren Runde zu springen |
 | Tipp | Knopf `TIPP` markiert ein freies Paar in Türkis – kostet 200 Punkte, erst ab 200 Punkten |
-| Neu mischen (nur wenn kein Zug geht) | Knopf `NEU MISCHEN` – einmal pro Level gratis |
-| Neu mischen | Knopf `NEU` startet das aktuelle Level neu |
 | Vollbild | Knopf `⛶` |
 
 Der Startzoom zeigt immer das ganze Muster; das Feld nutzt den gesamten Platz
@@ -50,7 +48,12 @@ Notch/Safe-Area bleibt zusätzlich frei).
   (Helligkeit 0,88) und gibt den freien Steinen einen helleren Glanz an der
   Innenkante, Runde 9 dunkelt kräftiger ab (0,78) und trennt zusätzlich über
   den Sockel.
-- **Gleiches Paar:** +100 Punkte, dazu ein zufälliger Spruch aus `lob.txt`. Der
+- **Statusmeldung:** Spruch und Punktzahl werden als Textzeile **über dem
+  Brett** eingeblendet (dunkler, halbtransparenter Kasten, `pointer-events:
+  none`), statt Platz zu reservieren – das Brett nutzt die volle Höhe. Tipps
+  gehen durch die Einblendung hindurch.
+- **Gleiches Paar:** +100 Punkte, dazu ein zufälliger Spruch aus `lob.txt`; die
+  Punktzahl steht in einer eigenen Zeile unter dem Spruch. Der
   Spruch erscheint jedes Mal in einer anderen, gut lesbaren Farbe (Gold, Mint,
   Himmelblau, Rosa, Lavendel, Sand, Aqua, Apricot, nie zweimal dieselbe
   hintereinander); die Punkteangabe dahinter bleibt grau.
@@ -58,6 +61,10 @@ Notch/Safe-Area bleibt zusätzlich frei).
   die Punkteanzeige leuchtet rot und es kommt ein Spruch aus `pech.txt`.
   Bei **0 Punkten** hört der Spott auf: dann steht dort nur
   „Die 2 Steine passen nicht zusammen." – ohne Abzug und ohne rote Punkte.
+- **Stein wieder abwählen:** nochmal auf denselben Stein tippen hebt die Auswahl
+  auf. Dafür kommt ein Spruch aus `pech.txt`, aber **ohne Punktabzug**, ohne
+  Blinken und ohne Fehlgriff-Zählung – ein zweiter Tipp auf denselben Stein ist
+  kein Fehler.
 - **Level geschafft:** Siegerehrung mit `Level · Runde · Farbe`
   (z. B. „Level 57 · Runde 2 · Bernstein"), Punkten, Spruch aus `gewonnen.txt`,
   Zeit, Highscore und „WEITER"-Knopf. Der Spruch wechselt bei jedem Sieg die
@@ -70,11 +77,10 @@ Notch/Safe-Area bleibt zusätzlich frei).
   Tipp mehr: Der Knopf `TIPP` ist dann ausgegraut und nicht drückbar
   (Tooltip „Tipp erst ab 200 Punkten").
 - **Kein Zug mehr möglich:** Nach jedem Paar prüft das Spiel, ob überhaupt noch
-  zwei freie Steine mit gleichem Motiv da sind. Wenn nicht, erscheint über dem
-  Brett der Knopf `NEU MISCHEN`. Einmal pro Level ist das gratis: die Form bleibt,
-  nur die Motive der restlichen Steine werden neu verteilt – wieder so, dass eine
-  Abbaureihenfolge garantiert existiert. Ist das Mischen verbraucht, hilft nur
-  noch `NEU` (Level neu starten).
+  zwei freie Steine mit gleichem Motiv da sind. Wenn nicht, verteilt es die
+  Motive der restlichen Steine still neu – ohne Knopf, ohne Meldung, ohne
+  Punkteabzug. Die Form des Bretts und die Zahl der abgeräumten Steine bleiben,
+  und die neue Verteilung geht garantiert wieder auf.
 - Der Timer pausiert, wenn der Tab im Hintergrund ist.
 
 ## Formen 1–56
@@ -117,11 +123,13 @@ Die Level 51–56 sind bewusst einfache Formen: Würfel (drei gleiche Ebenen),
 Rechteck, Ball, Pyramide, ein Feld aus zwölf Säulen und eine Brücke, deren Steg
 in der Mitte über einer Lücke liegt.
 
-## Formen 2 – die zweite Level-Auswahl
+## Formen 2 – die Handy-Level
 
-Unter dem goldenen Level-Knopf (`LV 01 ▾`) sitzt ein kupferner. Er öffnet
-dieselbe Level-Auswahl, aber mit **56 anderen Formen**: gleiche Runden, gleiche
-Steinfarben, gleiche Sprüche, gleiche Punktzahl – nur andere Muster.
+Der goldene Level-Knopf zeigt den laufenden Satz mit (`HANDY 01 ▾`); er öffnet die
+Level-Auswahl. Darin schaltet der Umschalter oben zwischen **HANDY-LEVEL** und
+**NORMAL-LEVEL** um: gleiche Runden, gleiche Steinfarben, gleiche Sprüche,
+gleiche Punktzahl – nur **56 andere Formen**. Jedes Spiel beginnt mit den
+Handy-Leveln, auch wenn zuletzt ein Normal-Level lief.
 
 - Jede Form ist **höchstens 6 Steine breit und 8 Steine hoch** (Handyformat) und
   hat trotzdem genau 144 Steine. Gestapelt wird immer genau übereinander, damit
@@ -149,9 +157,9 @@ spielt, ergibt sich aus `((Level − 1) mod 56) + 1`, die Runde aus
 | 7 | Schiefer (dunkel) | 337 |
 | 8 | Weinrot (dunkel) | 393 |
 | 9 | Tiefschwarz (richtiges Schwarz) | 449 |
-| 10 | Regenbogen (versteckt, alle Farben) | 505 |
+| 10 | Regenbogen (alle Farben, jedes Paar eine) | 505 |
 
-### Die Regenbogen-Runde (versteckt)
+### Die Regenbogen-Runde
 
 Nach dem letzten schwarzen Level kommt eine Zugabe: Level 505–560 zeigen alle
 neun Farben **gleichzeitig** – jedes Paar in einer eigenen Farbe. Die Farbe
@@ -161,9 +169,10 @@ werden genau 8 Paare je Farbe. In der Runde setzt nicht das Brett eine Farbe
 (`body[data-runde]`), sondern jeder Stein selbst (`.mahjong-tile[data-farbe]`,
 neun Paletten-Blöcke am Ende von `css/mahjong.css`).
 
-Die Runde ist absichtlich geheim: In der Farbwahl stehen nur die neun normalen
-Farben (`RUNDEN_FARBEN_SICHTBAR`), der zehnte Punkt fehlt. Beim Start steht in
-der Statuszeile „Runde 10 – alle Farben. Jedes Paar hat seine eigene Farbe."
+In der Farbwahl steht sie als zehnter Punkt (Farbkreis) und führt zu Level 505.
+Wer wenig sieht, kommt damit ohne Runden-Klettern direkt in die Runde, in der
+jedes Paar eine eigene Farbe hat. Beim Start steht in der Statuszeile
+„Runde 10 – alle Farben. Jedes Paar hat seine eigene Farbe."
 Danach geht es mit Elfenbein weiter (Level 561 = Runde 11), die Tafel „ALLE
 FARBEN DURCH" erscheint jetzt am Ende der Regenbogen-Runde (Level 560, 1120, …).
 
@@ -193,10 +202,18 @@ Ganz oben in der Auswahl stehen zwei Umschalter: **FORM** (`RUND` / `ECKIG`)
 und **ZUSTAND** (`NEU` / `ALT`). Sie wirken sofort auf das Brett und werden im
 Spielstand unter `settings.steinForm` und `settings.steinZustand` gespeichert.
 `ECKIG` setzt nur die Ecken des Steins auf 2 px (statt 8 px) und den inneren
-Rahmen auf 0. `ALT` legt zwei Ebenen über das Motiv: Ausbrüche am Rand
-(deckend, mit Schatten und heller Bruchkante) und feine Risse (geblendet).
+Rahmen auf 0. `ALT` legt drei Ebenen über das Motiv: den Schmutz in den Poren (Ausbrüche am
+Rand, `multiply`, 60 % Deckkraft, 0,5 px weichgezeichnet), feine Haarrisse
+(`multiply`, 85 %, 0,5 px weich, per `mask-image` zur Mitte hin ausgedünnt –
+echte Kratzer sitzen an Kanten und Ecken) und eine Körnung aus 50 % Grau mit
+Rauschen (`stein-alt-korn.png`, `overlay`, 20 %), die dem Stein die raue
+Oberfläche gibt, auf der die Risse erst echt wirken. Die Korn-Textur erzeugt
+`werkzeuge/korn-erzeugen.mjs` (128 × 128, deterministisch, 11 kB). Jeder Stein
+spiegelt die beiden Bild-Ebenen je nach Lage waagerecht und/oder senkrecht,
+damit nicht auf allen Steinen dasselbe Muster klebt.
 Die Risse nutzen `multiply` auf den hellen Runden und `screen` auf den dunklen,
-weil sie sonst im Schwarz verschwinden. Die Ausbrüche gibt es dreifach:
+weil sie sonst im Schwarz verschwinden; dort bleibt der Ausbruch deckend
+(80 %), weil Multiplizieren auf Schwarz unsichtbar wäre. Die Ausbrüche gibt es dreifach:
 warmbraun für Elfenbein, Bernstein und Rosé (`stein-alt-kanten-hell.webp`),
 graugrün für Jade, Azur und Amethyst (`stein-alt-kanten-kuehl.webp`) und
 tiefschwarz für die dunklen Runden (`stein-alt-kanten.webp`).
@@ -206,30 +223,39 @@ tiefschwarz für die dunklen Runden (`stein-alt-kanten.webp`).
 ```
 mahjong/
 ├── mahjong.html          Grundgerüst: Kopfzeile, Spielfeld, Level-Auswahl, Siegerehrung
+├── README.md             diese Beschreibung
 ├── css/mahjong.css       gesamte Optik (auch Handy/Tablet und Querformat)
+├── css/fonts/            Atkinson Hyperlegible 400/700 (woff2) + OFL-Lizenz
 ├── js/
 │   ├── board-layout.js   alle 56 Formen als Positionen (x, y, Ebene)
 │   ├── board-layout-2.js die 56 Formen des zweiten Satzes (6 × 8, gestapelt)
 │   ├── board.js          Regeln: freie Steine, Paare entfernen
-│   ├── generator.js      verteilt die 72 Motive und sorgt für Lösbarkeit
-│   ├── solver.js         prüft/ findet eine Abräum-Reihenfolge
-│   ├── storage.js        Spielstand und Bestzeiten (localStorage)
+│   ├── generator.js      verteilt die 72 Motive, findet die Abräum-Reihenfolge
 │   ├── renderer.js       Brett zeichnen, Zoom, Verschieben, Blinkeffekte
-│   ├── lob.js            476 Lob-Sprüche für ein gefundenes Paar
-│   ├── pech.js           396 Sprüche für einen Fehlgriff
-│   ├── gewonnen.js       362 Sprüche und Symbole für die Siegerehrung
+│   ├── hud.js            Punkte, Zeit, Meldungen und Sprüche
+│   ├── dialoge.js        Level-Auswahl und Einstellungen
+│   ├── groesse.js        Grundschrift je Bildschirmdiagonale
+│   ├── storage.js        Spielstand und Bestzeiten (localStorage)
+│   ├── pech.js           1379 Sprüche für einen Fehlgriff
+│   ├── gewonnen.js       624 Sprüche und Symbole für die Siegerehrung
 │   └── main.js           Ablauf: Timer, Punkte, Level, Siegerehrung
 └── assets/              72 Motive als WebP (160 × 160, verlustfrei)
 ```
 
+Die **Lob-Sprüche** liegen nicht bei den Spiel-Dateien, sondern zentral in
+`spiele/lob.js` (`LOB_SPRUECHE` plus der Mahjong-Zusatz `LOB_MAHJONG`) und
+werden von mehreren Spielen geteilt.
+
 ## Technische Hinweise
 
 - **144 Steine, garantiert lösbar:** `generator.js` baut das Brett so auf, dass
-  eine vollständige Abräum-Reihenfolge existiert; `solver.js` kann das prüfen.
+  eine vollständige Abräum-Reihenfolge existiert; `findRemovalOrder()` findet sie
+  und prüft damit das Brett.
   Unlösbare Stellungen entstehen dadurch nicht. Durch eigene Züge kann man sich
-  trotzdem festfahren; dafür gibt es das eine Gratis-Mischen pro Level, das die
-  restlichen Steine über `findRemovalOrder` neu verteilt (die Funktion arbeitet
-  auch auf einem angefangenen Brett).
+  trotzdem festfahren; dann verteilt `verteileMotiveNeu()` in `main.js` die
+  restlichen Motive über `findRemovalOrder` neu (die Funktion arbeitet auch auf
+  einem angefangenen Brett). Findet sie keine Reihenfolge, sagt die Statuszeile
+  es – das ist der einzige Fall, in dem noch ein Level-Neustart nötig ist.
 - **Formen:** Jede Form beschreibt nur Positionen (`x`, `y`, Ebene `z`). Höhere
   Ebenen liegen versetzt darüber, dadurch wirken die Steine dreidimensional.
   Neue Formen kommen als weiterer Eintrag in `BOARD_LAYOUTS` dazu.
@@ -237,6 +263,10 @@ mahjong/
   Pixel identisch). Im Startzoom sind sie je nach Form und Fenster rund
   38 × 45 px groß (gemessen bei 390 und 1280 px Breite), die 160 px Auflösung
   bleibt auch beim Hineinzoomen scharf.
+- **Schrift:** **Atkinson Hyperlegible** (Braille Institute, SIL Open Font
+  License) liegt lokal unter `css/fonts/` – 17 kB je Schnitt, eingebunden per
+  `@font-face` und im `body`-Stapel vor Arial. Das Spiel braucht dafür kein Netz,
+  auch die App nicht. Die Lizenz steht in `css/fonts/OFL.txt`.
 - **Sprüche:** kommen aus `lob.txt`, `pech.txt` und `gewonnen.txt`, alle drei
   alphabetisch sortiert und zeilenweise in `"…"` gesetzt (Umlaute zählen als
   Grundbuchstabe, also Ä wie A). Die JS-Dateien enthalten dieselben Sprüche in

@@ -6,31 +6,31 @@
 
 const STORAGE_KEY = "trashygecko_mahjong_save";
 
-// Standardwerte für einen neuen Spieler
-function createDefaultStorage() {
+// Ein Formensatz: eigener Fortschritt, eigene Bestzeiten.  Satz 1 liegt ganz
+// oben im Spielstand, Satz 2 in "satz2" - beide haben dieselbe Form.
+function neueSatzDaten() {
     return {
         currentLevel: 1,
         unlockedLevel: 1,
         gamesPlayed: 0,
         gamesWon: 0,
-        bestTimes: {},
+        bestTimes: {}
+    };
+}
+
+// Standardwerte für einen neuen Spieler
+function createDefaultStorage() {
+    return {
+        ...neueSatzDaten(),
         settings: {
             sound: true,
             animations: true,
             hints: true,
             steinForm: "rund",
             steinZustand: "neu",
-            formenSatz: 1,
             hintergrund: "gruen"
         },
-        // Zweiter Formensatz: eigener Fortschritt, eigene Bestzeiten.
-        satz2: {
-            currentLevel: 1,
-            unlockedLevel: 1,
-            gamesPlayed: 0,
-            gamesWon: 0,
-            bestTimes: {}
-        }
+        satz2: neueSatzDaten()
     };
 }
 
@@ -77,8 +77,6 @@ function saveStorage(data) {
         return false;
     }
 }
-
-// Speichert den erreichten Level
 
 // Speichert einen abgeschlossenen Level. Mit "ziel" landet der Fortschritt in
 // einem eigenen Abschnitt (zweiter Formensatz), gespeichert wird immer alles.

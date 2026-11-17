@@ -32,3 +32,38 @@
     // Drehen loest ebenfalls resize aus; ein zweiter Listener waere doppelt.
     window.addEventListener("resize", grundschriftSetzen);
 })();
+
+/* --- Kopfzeile auf kleinen Geraeten ---------------------------------------
+   Reicht der Platz nicht, rutscht die Knopfreihe unter die Zahlen.  Dann
+   bekommt die Zahlenzeile drei Zonen: Steine und Paare links, Uhrzeit in der
+   Mitte, Punkte rechts an der Uhrzeit.  Das CSS haengt an der Klasse
+   "gestapelt" - so gilt es genau dann, wenn wirklich gestapelt wird, egal ob
+   das an der Breite, an langen Zahlen (Punkte: 100.000) oder am Drehen liegt. */
+(function () {
+    function stapelPruefen() {
+        let stats = document.querySelector(".stats");
+        let knoepfe = document.querySelector(".game-buttons");
+
+        if (!stats || !knoepfe) return;
+
+        // 4 px Toleranz: dieselbe Zeile heisst (fast) dieselbe Oberkante.
+        let gestapelt =
+            knoepfe.getBoundingClientRect().top >
+            stats.getBoundingClientRect().top + 4;
+
+        stats.classList.toggle("gestapelt", gestapelt);
+    }
+
+    function start() {
+        stapelPruefen();
+        window.addEventListener("resize", stapelPruefen);
+        // Auch beim Aufbau des Bretts koennen andere Zahlen stehen.
+        window.addEventListener("load", stapelPruefen);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start);
+    } else {
+        start();
+    }
+})();

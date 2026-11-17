@@ -16,8 +16,8 @@
 let auswahlRunde = 1;
 
 // Formensatz, den die Level-Auswahl zeigt (1 = Normal, 2 = Handy).
-// Beim allerersten Start sind die Handy-Level vorgewaehlt, danach gilt die
-// zuletzt benutzte Auswahl (Spielstand: settings.auswahlSatz).
+// Jedes Spiel startet mit den Handy-Leveln, die Auswahl beginnt also dort
+// (Hauptsteuerung setzt auswahlSatz beim Start auf FORMEN_SATZ).
 let auswahlSatz = 2;
 
 // Fokus zurueck auf den Knopf, der den Dialog geoeffnet hat - sonst landet er
@@ -167,7 +167,7 @@ function baueFarbwahl() {
 
     leiste.innerHTML = "";
 
-    RUNDEN_FARBEN_SICHTBAR.forEach((name, index) => {
+    RUNDEN_FARBEN.forEach((name, index) => {
         const runde = index + 1;
         const abLevel = (runde - 1) * hoechstesLevel(auswahlSatz) + 1;
 
@@ -217,17 +217,6 @@ function setzeAuswahlSatz(satz) {
     zeigeAuswahlSatz();
 }
 
-// Schreibt laufenden Satz und zuletzt benutzte Auswahl in den Spielstand.
-function merkeSaetze() {
-    if (!gameData) return;
-
-    gameData.settings = gameData.settings || {};
-    gameData.settings.formenSatz = FORMEN_SATZ;
-    gameData.settings.auswahlSatz = auswahlSatz;
-
-    speichereSpielstand();
-}
-
 // Hebt den aktiven Umschalter hervor (Klasse wie bei der Steinform).
 function zeigeAuswahlSatz() {
     document.querySelectorAll("#satzUmschalter button").forEach(knopf => {
@@ -255,7 +244,7 @@ function waehleLevel(level) {
 
     if (gameData) {
         satzDaten(auswahlSatz).currentLevel = ziel;
-        merkeSaetze();
+        speichereSpielstand();
     }
 
     currentLevel = ziel;

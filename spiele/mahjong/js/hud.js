@@ -9,31 +9,46 @@
 // Was ein Tipp kostet und ab wann es ueberhaupt einen gibt.
 const TIPP_KOSTEN = 200;
 
-// Gut lesbare Farben auf dem dunklen Feld - fuer den Spruch nach einem Paar.
+// Kraeftige Farben fuer den Spruch nach einem Paar: satt genug, um ueber dem
+// Brett aufzufallen, und hell genug, um auf dem dunklen Feld zu tragen.
 const SPRUCH_FARBEN = [
-    "#ffd166",
-    "#8fe3ab",
-    "#9ad4ff",
-    "#ffb3c7",
-    "#c9b6ff",
-    "#ffe6a8",
-    "#8ee8dc",
-    "#ffc49a"
+    "#ffc22e",   // Gold
+    "#4ddc86",   // Mint
+    "#4fb6ff",   // Himmelblau
+    "#ff6f9c",   // Rosa
+    "#b48cff",   // Lavendel
+    "#ffb340",   // Sand
+    "#2fd6c6",   // Aqua
+    "#ff8f5e"    // Apricot
 ];
-
-let letzteSpruchFarbe = "";
 
 // Warme Farben fuer den Spruch auf der Siegtafel - nie zweimal dieselbe.
+// Kraeftiger als frueher (eine Stufe tiefer und dadurch mehr Farbkraft), aber
+// weiter hell genug: auf der Tafel bleibt jede Farbe bei mindestens 5.4:1.
 const SIEG_SPRUCH_FARBEN = [
-    "#ffa94d",
-    "#ffd166",
-    "#ffb347",
-    "#ff9c6e",
-    "#ff8fa3",
-    "#f6c177"
+    "#ff9d33",   // Orange
+    "#ffc94c",   // Gold
+    "#ffa82d",   // Amber
+    "#ff8b54",   // Coral
+    "#ff758e",   // Rosa
+    "#ffb854"    // Honig
 ];
 
-let letzteSiegSpruchFarbe = "";
+// Zieht eine Farbe aus der Liste, aber nie zweimal dieselbe hintereinander.
+function farbwahl(farben) {
+    let letzte = "";
+
+    return () => {
+        const auswahl = farben.filter(farbe => farbe !== letzte);
+
+        letzte = auswahl[Math.floor(Math.random() * auswahl.length)];
+
+        return letzte;
+    };
+}
+
+const spruchFarbe = farbwahl(SPRUCH_FARBEN);
+const siegSpruchFarbe = farbwahl(SIEG_SPRUCH_FARBEN);
 
 // --------------------------------------------------
 // TIMER
@@ -47,6 +62,16 @@ let timerStart = 0;
 function updateStats() {
     // Der eine Level-Waehler zeigt das Level des laufenden Formensatzes.
     setText("levelNumber", String(currentLevel).padStart(2, "0"));
+
+    // Ohne den Satz sieht man in der Taste nur "01" und weiss nicht, ob
+    // Handy- oder Normal-Level laufen.
+    setText("levelSatz", FORMEN_SATZ === 2 ? "HANDY" : "NORMAL");
+
+    const levelButton = getElement("levelButton");
+
+    if (levelButton) {
+        levelButton.setAttribute("aria-label", `Levelauswahl: ${satzName()}`);
+    }
 
     setText(
         "remainingTiles",
@@ -91,7 +116,6 @@ function setMessage(message, rot = false, punkte = "") {
     if (!element) return;
 
     element.classList.toggle("fehler", rot);
-    element.textContent = "";
 
     const text = document.createElement("span");
 
@@ -102,16 +126,17 @@ function setMessage(message, rot = false, punkte = "") {
         text.style.color = spruchFarbe();
     }
 
-    element.appendChild(text);
-
-    if (punkte) {
-        const zusatz = document.createElement("span");
-
-        zusatz.className = "status-punkte";
-        zusatz.textContent = " " + punkte;
-
-        element.appendChild(zusatz);
+    if (!punkte) {
+        element.replaceChildren(text);
+        return;
     }
+
+    const zusatz = document.createElement("span");
+
+    zusatz.className = "status-punkte";
+    zusatz.textContent = punkte;
+
+    element.replaceChildren(text, zusatz);
 }
 
 function formatTime(seconds) {
@@ -178,27 +203,6 @@ function blinkePunkte() {
     blinkePunkte.timer = setTimeout(() => {
         anzeige.classList.remove("punkte-fehler");
     }, 750);
-}
-
-// Zufaellige Spruchfarbe, aber nie zweimal dieselbe hintereinander.
-function spruchFarbe() {
-    const auswahl = SPRUCH_FARBEN.filter(farbe => farbe !== letzteSpruchFarbe);
-    const farbe = auswahl[Math.floor(Math.random() * auswahl.length)];
-
-    letzteSpruchFarbe = farbe;
-
-    return farbe;
-}
-
-function siegSpruchFarbe() {
-    const auswahl = SIEG_SPRUCH_FARBEN.filter(
-        farbe => farbe !== letzteSiegSpruchFarbe
-    );
-    const farbe = auswahl[Math.floor(Math.random() * auswahl.length)];
-
-    letzteSiegSpruchFarbe = farbe;
-
-    return farbe;
 }
 
 // Sprueche aus den gemeinsamen Listen. Fehlt eine Datei (etwa weil sie nicht

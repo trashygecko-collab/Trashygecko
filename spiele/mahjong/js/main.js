@@ -18,16 +18,13 @@ let gameTimer = null;
 let gameRunning = false;
 let currentLevel = 1;
 
-// Formensatz des laufenden Spiels (1 = Normal, 2 = Handy). Gehoert hierher,
-// weil es Spielzustand ist und nicht Teil der Layout-Daten.
-let FORMEN_SATZ = 1;
+// Formensatz des laufenden Spiels (1 = Normal, 2 = Handy). Jedes Spiel beginnt
+// mit den Handy-Leveln - auch wenn zuletzt ein Normal-Level gespielt wurde.
+let FORMEN_SATZ = 2;
 let score = 0;
 let gameData = null;
 let levelWechselTimer = null;
 let hinweisTiles = [];
-
-// Einmal pro Level darf kostenlos gemischt werden, wenn kein Zug mehr geht.
-let mischenMoeglich = true;
 
 // Zeichnet das bestehende Brett neu, ohne alle Steine zu ersetzen.
 function aktualisiereBrett() {
@@ -69,13 +66,7 @@ function satzDaten(satz = FORMEN_SATZ) {
     if (satz !== 2) return gameData;
 
     if (!gameData.satz2) {
-        gameData.satz2 = {
-            currentLevel: 1,
-            unlockedLevel: 1,
-            gamesPlayed: 0,
-            gamesWon: 0,
-            bestTimes: {}
-        };
+        gameData.satz2 = neueSatzDaten();
     }
 
     return gameData.satz2;
@@ -99,13 +90,10 @@ const RUNDEN_FARBEN = [
     "Schiefer",
     "Weinrot",
     "Tiefschwarz",
-    // Versteckte Zugabe: eine Runde mit allen Farben gleichzeitig.
+    // Zugabe: eine Runde mit allen Farben gleichzeitig - jedes Paar in eigener
+    // Farbe.  Steht wie die anderen Farben in der Farbwahl (Runde 10, ab 505).
     "Regenbogen"
 ];
-
-// Nur diese Farben stehen in der Farbwahl - die Regenbogen-Runde bleibt
-// eine Ueberraschung und taucht erst nach Level 504 auf.
-const RUNDEN_FARBEN_SICHTBAR = RUNDEN_FARBEN.slice(0, RUNDEN_FARBEN.length - 1);
 
 // Laeuft gerade die Regenbogen-Runde (Level 505-560, 1065-1120, ...)?
 function istRegenbogenRunde(runde) {
@@ -213,8 +201,6 @@ function startGame() {
     zeigeWeiterKnopf("");
     zeigeSiegel(false);
     versteckeSiegEhrung();
-    versteckeMischenKnopf();
-    mischenMoeglich = true;
 
     try {
         currentBoard = generateSolvableBoard(
@@ -268,11 +254,14 @@ function handleTileClick(tileId) {
         return;
     }
 
+    // Stein wieder abgewaehlt: ein Spruch aus pech.txt, aber kein Punktabzug -
+    // das ist ja nur ein zweiter Tipp auf denselben Stein, kein Fehlgriff.
     if (selectedTile === tileId) {
         selectedTile = null;
         hinweisTiles = [];
 
         aktualisiereBrett();
+        setMessage(pechText(), true);
 
         return;
     }
@@ -353,52 +342,10 @@ function gibtEsNochEinPaar() {
     return false;
 }
 
-function zeigeMischenKnopf() {
-    const knopf = getElement("mischenButton");
-
-    if (knopf) knopf.hidden = false;
-}
-
-function versteckeMischenKnopf() {
-    const knopf = getElement("mischenButton");
-
-    if (knopf) knopf.hidden = true;
-}
-
-// Nach jedem Treffer prüfen, ob das Brett noch spielbar ist.
-function pruefeFestgefahren() {
-    if (!gameRunning) return;
-    if (gibtEsNochEinPaar()) return;
-
-    if (mischenMoeglich) {
-        zeigeMischenKnopf();
-        setMessage(
-            "Kein passendes Paar mehr frei – du darfst einmal kostenlos mischen."
-        );
-    } else {
-        versteckeMischenKnopf();
-        setMessage(
-            "Kein passendes Paar mehr frei. Mit NEU startest du das Level neu."
-        );
-    }
-}
-
-// Verteilt die Motive der restlichen Steine neu - nach einer Reihenfolge, die
-// garantiert wieder aufgeht. Die Form des Bretts bleibt unverändert.
-function mischeBrett() {
-    let order;
-
-    try {
-        order = findRemovalOrder(currentBoard);
-    } catch (error) {
-        console.error("Mischen fehlgeschlagen:", error);
-
-        versteckeMischenKnopf();
-        setMessage("Mischen ging nicht – starte das Level mit NEU neu.");
-
-        return;
-    }
-
+// Verteilt die Motive der restlichen Steine still neu - nach einer Reihenfolge,
+// die garantiert wieder aufgeht. Die Form des Bretts und die Zahl der entfernten
+// Steine bleiben, wie sie sind.  Meldung: keine, das soll niemanden unterbrechen.
+function verteileMotiveNeu() {
     const motive = [
         ...new Set(
             currentBoard
@@ -407,12 +354,19 @@ function mischeBrett() {
         )
     ];
 
-    if (order.length !== motive.length) {
-        versteckeMischenKnopf();
-        setMessage("Mischen ging nicht – starte das Level mit NEU neu.");
+    let order;
 
-        return;
+    try {
+        order = findRemovalOrder(currentBoard);
+    } catch (error) {
+        console.error("Neuverteilen fehlgeschlagen:", error);
+
+        return false;
     }
+
+    // Jedes Motiv kommt doppelt vor, also ein Paar je Motiv.  Passt die Zahl
+    // nicht, bleibt das Brett lieber unangetastet.
+    if (order.length !== motive.length) return false;
 
     const nachId = new Map(currentBoard.map(tile => [tile.id, tile]));
 
@@ -423,13 +377,27 @@ function mischeBrett() {
         nachId.get(paar[1]).symbolId = symbolId;
     });
 
-    mischenMoeglich = false;
-    versteckeMischenKnopf();
     selectedTile = null;
     hinweisTiles = [];
 
     aktualisiereBrett();
-    setMessage("Neu gemischt – das war das eine Gratis-Mischen in diesem Level.");
+
+    return true;
+}
+
+// Nach jedem Treffer prüfen, ob das Brett noch spielbar ist.  Festfahren kann
+// man sich nur durch eigene Zuege - dann werden die restlichen Motive still neu
+// verteilt, damit das Level nicht verloren ist.
+function pruefeFestgefahren() {
+    if (!gameRunning) return;
+    if (gibtEsNochEinPaar()) return;
+    if (verteileMotiveNeu()) return;
+
+    // Notfall (etwa ein Brett, fuer das keine Reihenfolge gefunden wird):
+    // lieber sagen als stillschweigend das Level verlieren.
+    setMessage(
+        "Kein passendes Paar mehr frei. Über die Level-Taste neu starten."
+    );
 }
 
 // --------------------------------------------------
@@ -652,26 +620,13 @@ function initializeGame() {
     try {
         gameData = loadStorage();
         // loadStorage ergaenzt fehlende Einstellungen aus den Standardwerten.
-        FORMEN_SATZ = gameData.settings.formenSatz === 2 ? 2 : 1;
-        // Ohne gespeicherte Wahl startet die Auswahl mit den Handy-Leveln.
-        auswahlSatz = gameData.settings.auswahlSatz === 1 ? 1 : 2;
+        // Die Level-Auswahl zeigt denselben Satz wie das laufende Spiel.
+        auswahlSatz = FORMEN_SATZ;
         currentLevel = satzDaten().currentLevel || 1;
     } catch (error) {
         console.error("Speicherfehler:", error);
 
         gameData = createDefaultStorage();
-    }
-
-    const newGameButton = getElement("newGameButton");
-
-    if (newGameButton) {
-        newGameButton.addEventListener("click", startGame);
-    }
-
-    const mischenButton = getElement("mischenButton");
-
-    if (mischenButton) {
-        mischenButton.addEventListener("click", mischeBrett);
     }
 
     const continueButton = getElement("continueButton");
@@ -730,7 +685,6 @@ function initializeGame() {
             if (!knopf) return;
 
             setzeAuswahlSatz(Number(knopf.dataset.satz));
-            merkeSaetze();
         });
     }
 

@@ -33,11 +33,13 @@ function updateBoardTransform() {
 
 // Ein Grenzbereich fuer alle Wege - Einpassen, Mausrad und zwei Finger.
 // Die Obergrenze waechst mit dem Geraet, damit die Steine auf groesseren
-// Bildschirmen mitwachsen statt nur die Flaeche: 1,2 auf 5 Zoll.
+// Bildschirmen mitwachsen statt nur die Flaeche: 3 auf 5 Zoll, also gut das
+// Fuenffache der eingepassten Ansicht - genug, um einzelne Steine gross zu
+// sehen. Kleiner wird nicht begrenzt, dafuer sorgt ZOOM_MIN.
 const ZOOM_MIN = 0.3;
 
 function zoomObergrenze() {
-    return 1.2 * (typeof groesseFaktor === "function" ? groesseFaktor() : 1);
+    return 3 * (typeof groesseFaktor === "function" ? groesseFaktor() : 1);
 }
 
 function begrenzeZoom(zoom) {
@@ -508,6 +510,15 @@ function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = 
         risse.className = "tile-risse";
         risse.setAttribute("aria-hidden", "true");
         button.appendChild(risse);
+
+        // Gleiche Kratzer auf jedem Stein waeren sofort als Kopie zu erkennen:
+        // je nach Lage spiegeln (nur spiegeln, nicht drehen - die Steine sind
+        // hochkant, eine Drehung liesse Ecken offen).
+        const sx = (tile.x + tile.z) % 2 ? -1 : 1;
+        const sy = (tile.y + tile.z) % 2 ? -1 : 1;
+
+        wear.style.transform = `scale(${sx}, ${sy})`;
+        risse.style.transform = `scale(${sy}, ${sx})`;
 
         if (typeof onTileClick === "function") {
             button.addEventListener("click", () => {
