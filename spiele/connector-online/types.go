@@ -55,6 +55,14 @@ const pauseNach = 90 * time.Second
 // Hinweis ist eine einmalige Nachricht an genau einen Spieler, zum Beispiel
 // "Anna hat das Spiel verlassen – Tic Tac Toe beendet." Die Spielseite holt
 // sie über /api/imspiel ab; dabei wird sie gelöscht (nur einmal).
+// SpielerZeile ist ein Eintrag aus /api/players. Anwesend unterscheidet
+// „ist gerade da“ von „steht nur noch im Raum“.
+type SpielerZeile struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Anwesend bool   `json:"anwesend"`
+}
+
 type Hinweis struct {
 	Text string
 	Zeit time.Time
@@ -112,6 +120,27 @@ type Player struct {
 // sitzt und die Frist dafür noch läuft.
 func (p Player) verstecktAktiv(now time.Time) bool {
 	return !p.Versteckt.IsZero() && now.Sub(p.Versteckt) <= verstecktFrist
+}
+
+// anwesend sagt, ob dieser Spieler gerade wirklich da ist. Wer länger als
+// gameTimeout nichts geschickt hat oder dessen Tab im Hintergrund liegt,
+// zählt nicht mit – auch wenn sein Platz noch bis presenceTimeout
+// freigehalten wird. Für Regeln wie „nur zu zweit“ zählt, wer da ist,
+// nicht wer nur noch im Raum steht.
+func (p Player) anwesend(now time.Time) bool {
+	return now.Sub(p.Last) <= gameTimeout && !p.verstecktAktiv(now)
+}
+
+// anwesend zählt die wirklich anwesenden Spieler des Raums.
+func (r *Room) anwesend() int {
+	now := time.Now()
+	n := 0
+	for _, p := range r.Players {
+		if p.anwesend(now) {
+			n++
+		}
+	}
+	return n
 }
 
 type TicTacToeGame struct {
