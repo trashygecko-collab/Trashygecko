@@ -64,8 +64,12 @@ function updateStats() {
     setText("levelNumber", String(currentLevel).padStart(2, "0"));
 
     // Ohne den Satz sieht man in der Taste nur "01" und weiss nicht, ob
-    // Handy- oder Normal-Level laufen.
-    setText("levelSatz", FORMEN_SATZ === 2 ? "HANDY" : "NORMAL");
+    // Handy- oder Normal-Level laufen.  Im schweren Modus waehlt das Geraet die
+    // Formen - dann steht dort der Satz, der wirklich laeuft.
+    const imHandySatz =
+        spielModus === "schwer" ? istKleinesGeraet() : FORMEN_SATZ === 2;
+
+    setText("levelSatz", imHandySatz ? "HANDY" : "NORMAL");
 
     const levelButton = getElement("levelButton");
 

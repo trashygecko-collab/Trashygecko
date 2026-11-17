@@ -80,6 +80,11 @@ function satzDaten(satz = FORMEN_SATZ) {
 
 // Name der Form – im zweiten Satz hat jede Form einen.
 function formName(level, satz = FORMEN_SATZ) {
+    // Der schwere Modus hat eigene Formen - dort steht deren Name.
+    if (spielModus === "schwer" && typeof formNameSchwer === "function") {
+        return formNameSchwer(formVon(level, satz));
+    }
+
     return satz === 2 ? formNameSatz2(formVon(level, satz)) : "";
 }
 

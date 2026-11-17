@@ -8,9 +8,23 @@
 // SPIELBRETT ERSTELLEN
 // --------------------------------------------------
 
+// Welche Formen gelten?  Im leichten Modus wie bisher der gewaehlte
+// Formensatz (1 = Normal-Level, 2 = Handy-Level).  Der schwere Modus hat
+// eigene Sammlungen in board-layout-schwer.js - eine fuer den Rechner, eine
+// fuer das Handy.  Welche davon gilt, entscheidet istKleinesGeraet() mit
+// derselben Grenze wie das CSS (max-width: 900px).
+function formenSammlung() {
+    if (spielModus === "schwer" && typeof BOARD_LAYOUTS_SCHWER === "object") {
+        return istKleinesGeraet()
+            ? BOARD_LAYOUTS_SCHWER_HANDY
+            : BOARD_LAYOUTS_SCHWER;
+    }
+
+    return FORMEN_SATZ === 2 ? BOARD_LAYOUTS_2 : BOARD_LAYOUTS;
+}
+
 function createBoard(level = 1) {
-    // Formen 1 stehen in board-layout.js, Formen 2 in board-layout-2.js.
-    const formen = FORMEN_SATZ === 2 ? BOARD_LAYOUTS_2 : BOARD_LAYOUTS;
+    const formen = formenSammlung();
     const layout = formen[level] || formen[1] || BOARD_LAYOUT;
 
     return layout.positions.map((position, index) => ({

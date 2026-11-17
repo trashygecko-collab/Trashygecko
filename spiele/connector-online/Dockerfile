@@ -23,7 +23,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /aus/connect
 FROM alpine:3.20 AS webseite
 WORKDIR /web
 COPY . .
+# Der eigene Smiley-Bestand liegt im Betrieb unter spiele/connector/smilies
+# (der Server liest ihn relativ zur Webseite, SITE_DIR).  Der Ordner
+# spiele/connector selbst bleibt draussen - nur die Grafiken kommen mit.
+RUN if [ -d spiele/connector/smilies ]; then cp -a spiele/connector/smilies /tmp/smilies; fi
 RUN rm -rf .git spiele/connector spiele/connector-online
+RUN if [ -d /tmp/smilies ]; then mkdir -p spiele/connector && mv /tmp/smilies spiele/connector/smilies; fi
 
 # 3) Laufzeit
 FROM alpine:3.20
