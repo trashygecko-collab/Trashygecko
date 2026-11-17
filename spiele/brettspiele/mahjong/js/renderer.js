@@ -1,0 +1,649 @@
+
+/*
+ * TRASHYGECKO MAHJONG
+ * Spielbrett mit Zoom und Verschiebung
+ */
+
+const TILE_WIDTH = 64;
+const TILE_HEIGHT = 76;
+const STEP_X = 52;
+const STEP_Y = 62;
+const LAYER_OFFSET = 8;
+
+let boardZoom = 1;
+let boardOffsetX = 0;
+let boardOffsetY = 0;
+let boardViewport = null;
+let boardStage = null;
+let boardPointerStart = null;
+let boardInitialFit = true;
+let boardSpielerZoom = false;   // Zoom selbst gewaehlt? Dann bleibt er beim Resize.
+let letzteBuehne = "";
+let boardSuppressClick = false;
+let boardPinch = null;
+let letzteBreite = 0;
+let letzteHoehe = 0;
+
+function updateBoardTransform() {
+    if (!boardStage) return;
+
+    boardStage.style.transform =
+        `translate(${boardOffsetX}px, ${boardOffsetY}px) scale(${boardZoom})`;
+}
+
+// Ein Grenzbereich fuer alle Wege - Einpassen, Mausrad und zwei Finger.
+// Die Obergrenze waechst mit dem Geraet, damit die Steine auf groesseren
+// Bildschirmen mitwachsen statt nur die Flaeche: 3 auf 5 Zoll, also gut das
+// Fuenffache der eingepassten Ansicht - genug, um einzelne Steine gross zu
+// sehen. Kleiner wird nicht begrenzt, dafuer sorgt ZOOM_MIN.
+const ZOOM_MIN = 0.3;
+
+function zoomObergrenze() {
+    return 3 * (typeof groesseFaktor === "function" ? groesseFaktor() : 1);
+}
+
+function begrenzeZoom(zoom) {
+    return Math.min(zoomObergrenze(), Math.max(ZOOM_MIN, zoom));
+}
+
+// Zoom aendern und dabei den Brettpunkt halten, der bisher bei (ankerX, ankerY)
+// im Sichtfenster lag. Beim Zoomen ist das die Bildmitte, beim Resize die Mitte
+// der alten Groesse - so bleibt eine verschobene Ansicht stehen, statt um die
+// neue Mitte zu springen.
+function halteAnsicht(neuerZoom, ankerX, ankerY) {
+    const brettX = (ankerX - boardOffsetX) / boardZoom;
+    const brettY = (ankerY - boardOffsetY) / boardZoom;
+
+    boardZoom = neuerZoom;
+
+    boardOffsetX = boardViewport.clientWidth / 2 - brettX * neuerZoom;
+    boardOffsetY = boardViewport.clientHeight / 2 - brettY * neuerZoom;
+
+    updateBoardTransform();
+}
+
+// Zoomen um die aktuelle Bildmitte (Mausrad).
+function zoomeUmMitte(neuerZoom) {
+    halteAnsicht(
+        neuerZoom,
+        boardViewport.clientWidth / 2,
+        boardViewport.clientHeight / 2
+    );
+}
+
+function fitBoard() {
+    if (!boardViewport || !boardStage) return;
+
+    const width = parseFloat(boardStage.style.width);
+    const height = parseFloat(boardStage.style.height);
+
+    const availableWidth = boardViewport.clientWidth - 16;
+    const availableHeight = boardViewport.clientHeight - 16;
+
+    const breitenZoom = availableWidth / width;
+    const hoehenZoom = availableHeight / height;
+
+    // Beim Start und nach dem Drehen ist das ganze Muster zu sehen.
+    // Vergroessern geht mit zwei Fingern bzw. dem Mausrad.
+    boardZoom = begrenzeZoom(
+        Math.max(
+            Math.min(breitenZoom, hoehenZoom),
+            // Im Querformat ist die Hoehe sehr knapp - dann lieber groesser
+            // bleiben und wischen, statt auf Briefmarkengroesse zu schrumpfen.
+            Math.min(breitenZoom, 0.5)
+        )
+    );
+
+    // Einpassen ist die Voreinstellung - ab jetzt zaehlt wieder das Geraet.
+    boardSpielerZoom = false;
+
+
+    boardOffsetX =
+        (boardViewport.clientWidth - width * boardZoom) / 2;
+    boardOffsetY =
+        (boardViewport.clientHeight - height * boardZoom) / 2;
+
+    letzteBreite = boardViewport.clientWidth;
+    letzteHoehe = boardViewport.clientHeight;
+
+    updateBoardTransform();
+}
+
+// Nach Drehen des Geraets oder Groessenaenderung: ein selbst gewaehlter Zoom
+// bleibt stehen (nur auf die neuen Grenzen gestutzt), ohne eigenen Zoom wird
+// wieder eingepasst.
+let groessenTimer = null;
+
+function passeNachGroesseAn() {
+    if (!boardViewport || !boardStage) return;
+
+    const geaendert =
+        boardViewport.clientWidth !== letzteBreite ||
+        boardViewport.clientHeight !== letzteHoehe;
+
+    if (!geaendert) {
+        updateBoardTransform();
+        return;
+    }
+
+    if (boardSpielerZoom) {
+        halteAnsicht(
+            begrenzeZoom(boardZoom),
+            letzteBreite / 2,
+            letzteHoehe / 2
+        );
+    } else {
+        fitBoard();
+    }
+
+    letzteBreite = boardViewport.clientWidth;
+    letzteHoehe = boardViewport.clientHeight;
+}
+
+function planeGroessenPruefung() {
+    clearTimeout(groessenTimer);
+    groessenTimer = setTimeout(passeNachGroesseAn, 120);
+}
+
+window.addEventListener("resize", planeGroessenPruefung);
+window.addEventListener("orientationchange", planeGroessenPruefung);
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", planeGroessenPruefung);
+}
+
+function changeBoardZoom(amount) {
+    if (!boardViewport || !boardStage) return;
+
+    const neuerZoom = begrenzeZoom(boardZoom + amount);
+
+    if (neuerZoom === boardZoom) return;
+
+    boardSpielerZoom = true;
+    zoomeUmMitte(neuerZoom);
+}
+
+// Doppelklick / Doppeltipp: das ganze Brett ins Bild holen. Der Startzoom
+// fuellt die Flaeche, diese Ansicht zeigt alles auf einmal.
+function resetBoardView() {
+    if (!boardViewport || !boardStage) return;
+
+    const width = parseFloat(boardStage.style.width);
+    const height = parseFloat(boardStage.style.height);
+
+    const breitenZoom = (boardViewport.clientWidth - 16) / width;
+    const hoehenZoom = (boardViewport.clientHeight - 16) / height;
+
+    boardZoom = begrenzeZoom(Math.min(breitenZoom, hoehenZoom));
+
+    boardSpielerZoom = false;
+
+    boardOffsetX =
+        (boardViewport.clientWidth - width * boardZoom) / 2;
+    boardOffsetY =
+        (boardViewport.clientHeight - height * boardZoom) / 2;
+
+    updateBoardTransform();
+}
+
+function enableBoardMovement(viewport) {
+    const aktiveZeiger = new Map();
+
+    function kasten() {
+        return viewport.getBoundingClientRect();
+    }
+
+    function entfernung(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function mittelpunkt(a, b) {
+        return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+
+    viewport.addEventListener("pointerdown", event => {
+        // Neue Beruehrung: ein alter Sperrvermerk von einem Ziehen darf den
+        // naechsten Tipp nicht mehr schlucken.
+        boardSuppressClick = false;
+
+        aktiveZeiger.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY
+        });
+
+        if (aktiveZeiger.size === 1) {
+            boardPointerStart = {
+                x: event.clientX,
+                y: event.clientY,
+                offsetX: boardOffsetX,
+                offsetY: boardOffsetY,
+                moved: false
+            };
+
+            // Den Zeiger noch NICHT festhalten: Sonst landet der Klick beim
+            // Verschiebe-Bereich statt beim Stein. Erst beim echten Ziehen.
+            return;
+        }
+
+        // Ab dem zweiten Finger wird nicht mehr gewischt, sondern gezoomt.
+        boardPointerStart = null;
+
+        if (aktiveZeiger.size === 2) {
+            const [a, b] = [...aktiveZeiger.values()];
+            const rahmen = kasten();
+            const mitte = mittelpunkt(a, b);
+
+            boardPinch = {
+                abstand: Math.max(1, entfernung(a, b)),
+                zoom: boardZoom,
+                x: mitte.x - rahmen.left,
+                y: mitte.y - rahmen.top,
+                offsetX: boardOffsetX,
+                offsetY: boardOffsetY
+            };
+        }
+    });
+
+    viewport.addEventListener("pointermove", event => {
+        if (!aktiveZeiger.has(event.pointerId)) return;
+
+        aktiveZeiger.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY
+        });
+
+        // Zwei Finger: um den Mittelpunkt der Finger zoomen.
+        if (boardPinch && aktiveZeiger.size >= 2) {
+            const [a, b] = [...aktiveZeiger.values()];
+            const rahmen = kasten();
+            const mitte = mittelpunkt(a, b);
+            const faktor = entfernung(a, b) / boardPinch.abstand;
+
+            const neuerZoom = begrenzeZoom(boardPinch.zoom * faktor);
+
+            const brettX =
+                (boardPinch.x - boardPinch.offsetX) / boardPinch.zoom;
+            const brettY =
+                (boardPinch.y - boardPinch.offsetY) / boardPinch.zoom;
+
+            boardZoom = neuerZoom;
+            boardSpielerZoom = true;
+
+            boardOffsetX = (mitte.x - rahmen.left) - brettX * neuerZoom;
+            boardOffsetY = (mitte.y - rahmen.top) - brettY * neuerZoom;
+
+            updateBoardTransform();
+
+            boardSuppressClick = true;
+            return;
+        }
+
+        if (!boardPointerStart || aktiveZeiger.size > 1) return;
+
+        const dx = event.clientX - boardPointerStart.x;
+        const dy = event.clientY - boardPointerStart.y;
+
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+            if (!boardPointerStart.moved) {
+                boardPointerStart.moved = true;
+
+                // Jetzt ziehen wir wirklich: Zeiger uebernehmen, damit das
+                // Verschieben auch ausserhalb des Bretts weiterlaeuft.
+                try {
+                    viewport.setPointerCapture(event.pointerId);
+                } catch (fehler) {
+                    // Nicht jede Umgebung erlaubt das Festhalten - dann laeuft
+                    // das Ziehen eben nur innerhalb des Bretts weiter.
+                }
+            }
+        }
+
+        if (boardPointerStart.moved) {
+            // Letzte Verschiebung merken: erst ab einer klaren Strecke gilt
+            // der Zeiger als Ziehen und schluckt den Klick nicht.
+            boardPointerStart.dx = dx;
+            boardPointerStart.dy = dy;
+
+            boardOffsetX = boardPointerStart.offsetX + dx;
+            boardOffsetY = boardPointerStart.offsetY + dy;
+
+            updateBoardTransform();
+        }
+    });
+
+    function beendeBewegung(warAmZoomen = false) {
+        // Ein paar Pixel Wackeln beim schnellen Tippen sind noch ein Tipp -
+        // erst ab dieser Strecke gilt es als Ziehen.
+        const ZIEH_ABSTAND = 12;
+
+        const gezogen =
+            !!boardPointerStart &&
+            (Math.abs(boardPointerStart.dx || 0) > ZIEH_ABSTAND ||
+                Math.abs(boardPointerStart.dy || 0) > ZIEH_ABSTAND);
+
+        if (gezogen || warAmZoomen) {
+            boardSuppressClick = true;
+
+            setTimeout(() => {
+                boardSuppressClick = false;
+            }, 150);
+        }
+
+        boardPointerStart = null;
+    }
+
+    function zeigerWeg(event) {
+        aktiveZeiger.delete(event.pointerId);
+
+        const warAmZoomen = !!boardPinch;
+
+        if (aktiveZeiger.size < 2) {
+            boardPinch = null;
+        }
+
+        if (aktiveZeiger.size === 0) {
+            // Kurzer Tipp auf freie Flaeche? Dann auf Doppeltipp pruefen.
+            const warTipp =
+                !warAmZoomen &&
+                !(boardPointerStart && boardPointerStart.moved) &&
+                !(event.target.closest && event.target.closest(".mahjong-tile"));
+
+            beendeBewegung(warAmZoomen);
+
+            if (warTipp) merkeTipp(event);
+        }
+    }
+
+    // Echter Doppeltipp - der Browser meldet ihn nicht ueberall als dblclick.
+    const DOPPELTIPP_ZEIT = 320;
+    const DOPPELTIPP_ABSTAND = 28;
+
+    let letzterTipp = null;
+
+    function merkeTipp(event) {
+        const jetzt = Date.now();
+        const x = event.clientX;
+        const y = event.clientY;
+
+        if (
+            letzterTipp !== null &&
+            jetzt - letzterTipp.zeit <= DOPPELTIPP_ZEIT &&
+            Math.abs(x - letzterTipp.x) <= DOPPELTIPP_ABSTAND &&
+            Math.abs(y - letzterTipp.y) <= DOPPELTIPP_ABSTAND
+        ) {
+            letzterTipp = null;
+            resetBoardView();
+
+            return;
+        }
+
+        letzterTipp = { zeit: jetzt, x, y };
+    }
+
+    viewport.addEventListener("pointerup", zeigerWeg);
+    viewport.addEventListener("pointercancel", zeigerWeg);
+
+    viewport.addEventListener("click", event => {
+        if (boardSuppressClick) {
+            event.preventDefault();
+            event.stopPropagation();
+            boardSuppressClick = false;
+        }
+    }, true);
+
+    viewport.addEventListener("wheel", event => {
+        event.preventDefault();
+
+        changeBoardZoom(event.deltaY < 0 ? 0.1 : -0.1);
+    }, { passive: false });
+}
+
+function renderBoard(board, selectedId = null, onTileClick = null, hinweisIds = []) {
+    const container = document.getElementById("board");
+
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    if (!board || board.length === 0) return;
+
+    // Sind alle Steine weg (Sieg), bleibt nur die Meldung stehen.
+    if (!board.some(tile => !tile.removed)) {
+        container.style.display = "none";
+        setzeFeldGroesse(false);
+        return;
+    }
+
+    container.style.display = "";
+    setzeFeldGroesse(true);
+
+    const maxX = Math.max(...board.map(tile => tile.x));
+    const maxY = Math.max(...board.map(tile => tile.y));
+    const maxZ = Math.max(...board.map(tile => tile.z));
+
+    const boardWidth =
+        maxX * STEP_X + TILE_WIDTH + maxZ * LAYER_OFFSET;
+
+    const boardHeight =
+        maxY * STEP_Y + TILE_HEIGHT + maxZ * LAYER_OFFSET;
+
+    const viewport = document.createElement("div");
+
+    viewport.className = "board-viewport";
+
+    const stage = document.createElement("div");
+
+    stage.className = "board-stage";
+
+    // Alles Feste steht in css/mahjong.css; hier nur, was vom Brett abhaengt.
+    stage.style.width = boardWidth + "px";
+    stage.style.height = boardHeight + "px";
+
+    board.forEach(tile => {
+        if (tile.removed) return;
+
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "mahjong-tile";
+        button.dataset.tileId = tile.id;
+        button.setAttribute("aria-pressed", "false");
+
+        const free = isTileFree(tile, board);
+
+        if (!free) button.classList.add("blocked");
+
+        if (tile.id === selectedId) {
+            button.classList.add("selected");
+        }
+
+        if (hinweisIds.includes(tile.id)) {
+            button.classList.add("hinweis");
+        }
+
+        button.style.left =
+            `${tile.x * STEP_X + tile.z * LAYER_OFFSET}px`;
+
+        button.style.top =
+            `${tile.y * STEP_Y - tile.z * LAYER_OFFSET}px`;
+
+        button.style.zIndex =
+            String(tile.z * 100 + tile.y * 12 + tile.x);
+
+        button.disabled = !free;
+
+        // Regenbogen-Runde: Farbe aus dem Motiv, damit jedes Paar eine hat.
+        if (document.body.dataset.regenbogen === "ja") {
+            // symbolId ist "motiv-07" - die Zahl daraus zaehlt.
+            const nummer =
+                parseInt(String(tile.symbolId).replace(/\D/g, ""), 10) || 1;
+            const farbe = ((nummer - 1) % 9) + 1;
+
+            button.dataset.farbe = String(farbe);
+        }
+
+        const image = document.createElement("img");
+
+        image.className = "tile-symbol";
+        image.src =
+            `assets/stein (${parseInt(String(tile.symbolId).replace(/\D/g, ""), 10)}).webp`;
+
+        image.alt = `Mahjong-Stein ${tile.symbolId}`;
+        image.draggable = false;
+
+        image.onerror = () => {
+            image.replaceWith(document.createTextNode("?"));
+        };
+
+        button.appendChild(image);
+
+        // Alterung: Ausbrueche (deckend) und Risse (geblendet). Beide liegen
+        // ueber dem Motiv und tauchen nur bei body[data-zustand="alt"] auf.
+        const wear = document.createElement("span");
+
+        wear.className = "tile-wear";
+        wear.setAttribute("aria-hidden", "true");
+        button.appendChild(wear);
+
+        const risse = document.createElement("span");
+
+        risse.className = "tile-risse";
+        risse.setAttribute("aria-hidden", "true");
+        button.appendChild(risse);
+
+        // Gleiche Kratzer auf jedem Stein waeren sofort als Kopie zu erkennen:
+        // je nach Lage spiegeln (nur spiegeln, nicht drehen - die Steine sind
+        // hochkant, eine Drehung liesse Ecken offen).
+        const sx = (tile.x + tile.z) % 2 ? -1 : 1;
+        const sy = (tile.y + tile.z) % 2 ? -1 : 1;
+
+        wear.style.transform = `scale(${sx}, ${sy})`;
+        risse.style.transform = `scale(${sy}, ${sx})`;
+
+        if (typeof onTileClick === "function") {
+            button.addEventListener("click", () => {
+                onTileClick(tile.id);
+            });
+        }
+
+        stage.appendChild(button);
+    });
+
+    viewport.appendChild(stage);
+    container.appendChild(viewport);
+
+    boardViewport = viewport;
+    boardStage = stage;
+
+    enableBoardMovement(viewport);
+
+    const buehnenMass = boardStage.style.width + "x" + boardStage.style.height;
+
+    // Neu vermessen beim ersten Aufbau und immer dann, wenn sich die
+    // Brettgroesse aendert (z. B. nach einem Levelwechsel). Innerhalb eines
+    // Levels bleibt der Zoom des Spielers erhalten.
+    if (boardInitialFit || buehnenMass !== letzteBuehne) {
+        fitBoard();
+        boardInitialFit = false;
+    } else {
+        updateBoardTransform();
+    }
+
+    letzteBuehne = buehnenMass;
+
+    viewport.addEventListener("dblclick", event => {
+        if (!event.target.closest(".mahjong-tile")) {
+            resetBoardView();
+        }
+    });
+}
+
+// Aktualisiert ein bestehendes Brett, ohne alle Steine neu zu bauen.
+// Wichtig fuer Handys: Bei jedem Tipp wurden vorher 144 Steine ersetzt.
+// Nach dem Sieg schrumpft der Rahmen, sonst fuellt er den ganzen Platz.
+function setzeFeldGroesse(gross) {
+    const panel = document.querySelector(".board-area");
+
+    if (!panel) return;
+
+    panel.classList.toggle("kompakt", !gross);
+}
+
+function updateBoardView(board, selectedId = null, hinweisIds = [], onTileClick = null) {
+    const container = document.getElementById("board");
+
+    if (!container || !boardStage) {
+        renderBoard(board, selectedId, onTileClick, hinweisIds);
+        return;
+    }
+
+    // Sind alle Steine weg (Sieg), bleibt nur die Meldung stehen.
+    if (!board || !board.some(tile => !tile.removed)) {
+        container.style.display = "none";
+        setzeFeldGroesse(false);
+        return;
+    }
+
+    container.style.display = "";
+    setzeFeldGroesse(true);
+
+    const elemente = new Map();
+
+    boardStage.querySelectorAll(".mahjong-tile").forEach(element => {
+        elemente.set(Number(element.dataset.tileId), element);
+    });
+
+    board.forEach(tile => {
+        const element = elemente.get(tile.id);
+
+        if (!element) return;
+
+        if (tile.removed) {
+            element.remove();
+            return;
+        }
+
+        const frei = isTileFree(tile, board);
+
+        element.disabled = !frei;
+        element.setAttribute(
+            "aria-pressed",
+            tile.id === selectedId ? "true" : "false"
+        );
+        element.classList.toggle("blocked", !frei);
+        element.classList.toggle("selected", tile.id === selectedId);
+        element.classList.toggle("hinweis", hinweisIds.includes(tile.id));
+    });
+}
+
+// Laesst die beiden Steine eines Fehlgriffs kurz rot aufblinken.
+function blinkeFalscheSteine(ids, dauer = 700) {
+    if (!boardStage || !Array.isArray(ids)) return;
+
+    ids.forEach(id => {
+        const element = boardStage.querySelector(
+            `.mahjong-tile[data-tile-id="${id}"]`
+        );
+
+        if (!element) return;
+
+        element.classList.remove("falsch");
+
+        // Kurz neu zeichnen lassen, damit die Animation auch dann startet,
+        // wenn schnell hintereinander danebengegriffen wird.
+        void element.offsetWidth;
+
+        element.classList.add("falsch");
+    });
+
+    clearTimeout(blinkeFalscheSteine.timer);
+
+    blinkeFalscheSteine.timer = setTimeout(() => {
+        if (!boardStage) return;
+
+        boardStage.querySelectorAll(".mahjong-tile.falsch").forEach(element => {
+            element.classList.remove("falsch");
+        });
+    }, dauer);
+}
+

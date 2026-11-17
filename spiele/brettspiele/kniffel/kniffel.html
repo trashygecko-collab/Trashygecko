@@ -1,0 +1,923 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#184536">
+<title>KNiffel – C64 Neon</title>
+
+<style>
+:root {
+  --bg:#184536;
+  --panel:#184536;
+  --cyan:#e8cd8e;
+  --pink:#a9c3b6;
+  --yellow:#d9bc7c;
+  --green:#b9e3c6;
+  --white:#f6edda;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  padding:14px;
+  background:
+    repeating-linear-gradient(0deg,#ffffff05 0 1px,transparent 1px 4px),
+    radial-gradient(ellipse at top,#184536,#184536 65%);
+  color:var(--white);
+  font-family:Georgia,"Times New Roman",serif;
+}
+.app { max-width:1200px; margin:auto; }
+.panel {
+  min-width:0;
+  padding:17px;
+  border:2px solid #184536;
+  border-radius:12px;
+  background:linear-gradient(145deg,#184536,#184536);
+  box-shadow:0 0 18px #42f5ff35;
+}
+h2 { color:var(--pink); margin:0 0 14px; font-size:21px; }
+button,select { font-family:Georgia,"Times New Roman",serif; cursor:pointer; touch-action:manipulation; }
+.setup {
+  max-width:520px;
+  margin:25px auto;
+  text-align:center;
+}
+.setup label {
+  display:block;
+  margin:20px 0 10px;
+  color:var(--yellow);
+  font-weight:bold;
+  font-size:18px;
+}
+select {
+  width:100%;
+  min-height:58px;
+  padding:10px;
+  border:2px solid var(--cyan);
+  border-radius:9px;
+  background:#184536;
+  color:var(--cyan);
+  font-size:20px;
+  text-align:center;
+}
+.bigbtn {
+  min-height:60px;
+  padding:12px;
+  border:2px solid var(--cyan);
+  border-radius:10px;
+  background:#184536;
+  color:var(--cyan);
+  font:bold 17px "Courier New",monospace;
+  cursor:pointer;
+}
+.bigbtn.primary {
+  background:var(--cyan);
+  color:#184536;
+  box-shadow:0 0 18px #42f5ff66;
+}
+.bigbtn:disabled { opacity:.35; cursor:not-allowed; }
+.setup .bigbtn { width:100%; margin-top:20px; }
+.topbar {
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-bottom:13px;
+}
+.pill {
+  padding:9px 13px;
+  border:1px solid #184536;
+  border-radius:8px;
+  background:#184536;
+  color:var(--yellow);
+  font-weight:bold;
+}
+.players {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:8px;
+  margin-bottom:13px;
+}
+.player {
+  padding:10px 6px;
+  border:1px solid #184536;
+  border-radius:8px;
+  background:#184536;
+  text-align:center;
+  color:var(--muted,#e8cd8e);
+  font-size:12px;
+}
+.player strong {
+  display:block;
+  margin-bottom:5px;
+  font-size:14px;
+}
+.player.active {
+  border:2px solid var(--green);
+  color:var(--green);
+  box-shadow:0 0 12px #62ff9b55;
+}
+.player .points { color:var(--yellow); font-size:17px; font-weight:bold; }
+.layout {
+  display:grid;
+  grid-template-columns:minmax(300px,.9fr) minmax(440px,1.1fr);
+  gap:14px;
+  align-items:start;
+}
+.rollinfo {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin:12px 0;
+  color:var(--yellow);
+  font-weight:bold;
+}
+.dice-area {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px;
+  margin:15px 0;
+}
+.die {
+  aspect-ratio:1;
+  min-width:0;
+  display:grid;
+  place-items:center;
+  border:2px solid var(--cyan);
+  border-radius:12px;
+  background:#f6edda;
+  color:#184536;
+  font-size:clamp(32px,6vw,58px);
+  font-weight:bold;
+  box-shadow:0 0 12px #42f5ff55;
+}
+.die.kept {
+  background:var(--yellow);
+  border-color:white;
+  box-shadow:0 0 17px #ffe66d99;
+  transform:translateY(-3px);
+}
+.actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.actions #rollBtn { grid-column:1 / -1; }
+.status {
+  min-height:44px;
+  margin-top:12px;
+  padding:11px;
+  border:1px solid #184536;
+  border-radius:8px;
+  background:#184536;
+  color:var(--green);
+  text-align:center;
+  font-size:13px;
+  line-height:1.5;
+}
+.score-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+}
+.score-head h2 { margin:0; }
+.score-total { color:var(--yellow); font-weight:bold; }
+table {
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:14px;
+}
+th,td {
+  padding:8px 6px;
+  border-bottom:1px solid #184536;
+  text-align:center;
+}
+th {
+  color:var(--cyan);
+  background:#184536;
+  font-size:12px;
+}
+th:first-child,td:first-child { text-align:left; }
+td:first-child { font-weight:bold; }
+tr.group td {
+  padding-top:12px;
+  color:var(--pink);
+  background:#184536;
+  font-size:11px;
+  letter-spacing:2px;
+}
+.scorebtn {
+  width:100%;
+  min-height:38px;
+  border:1px solid #184536;
+  border-radius:7px;
+  background:#184536;
+  color:var(--yellow);
+  font:bold 15px "Courier New",monospace;
+}
+.scorebtn.ready { border-color:var(--green); color:var(--green); }
+  /* Gewertete Felder waren vorher fast ununterscheidbar von offenen (gleicher
+     Grund, gleicher Rand, nur andere Schriftfarbe). Jetzt eingesenkt dunkler
+     Grund plus gedämpfte Schrift. */
+  .scorebtn.done { background:#0d2a22; border-color:#1d4438; color:#8fb8a6; }
+.scorebtn:disabled { opacity:1; }
+tfoot td {
+  color:var(--yellow);
+  font-weight:bold;
+  border-top:1px solid var(--cyan);
+}
+.mobile-tabs { display:none; }
+.hidden { display:none!important; }
+.lobby-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 4px;
+  border-bottom:1px solid #184536;
+  font-size:16px;
+}
+.lobby-row strong { font-size:13px; letter-spacing:1px; }
+
+@media(max-width:760px) {
+  body { padding:8px; }
+  .topbar { gap:6px; }
+  .pill { padding:7px 9px; font-size:12px; }
+  .players { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+  .player { padding:8px 3px; font-size:11px; }
+  .player strong { font-size:12px; }
+  .player .points { font-size:15px; }
+  .layout { grid-template-columns:1fr; gap:10px; }
+  .panel { padding:13px; }
+  .mobile-tabs {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    margin-bottom:10px;
+  }
+  .tab {
+    min-height:58px;
+    border:2px solid var(--cyan);
+    border-radius:10px;
+    background:#184536;
+    color:var(--cyan);
+    font:bold 16px "Courier New",monospace;
+  }
+  .tab.active { background:var(--cyan); color:#184536; }
+  .layout[data-view="dice"] .score-panel { display:none; }
+  .layout[data-view="score"] .dice-panel { display:none; }
+  .dice-area { gap:6px; }
+  .die { font-size:clamp(35px,10vw,54px); }
+  .bigbtn { min-height:64px; font-size:16px; }
+  table { font-size:14px; }
+  th,td { padding:9px 6px; }
+  .scorebtn { min-height:47px; font-size:16px; }
+}
+@media(max-width:760px) and (orientation:landscape) {
+  body { padding:5px; }
+  .mobile-tabs { display:none; }
+  .players { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .layout { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:7px; }
+  .layout .dice-panel,.layout .score-panel { display:block!important; padding:8px; }
+  h2 { font-size:15px; margin-bottom:7px; }
+  .dice-area { gap:4px; margin:7px 0; }
+  .die { font-size:clamp(25px,6vh,38px); }
+  .bigbtn { min-height:43px; padding:6px; font-size:13px; }
+  .hint { font-size:10px; min-height:25px; }
+  .rollinfo { font-size:10px; margin:6px 0; }
+  .status { font-size:10px; min-height:28px; padding:5px; }
+  table { font-size:10px; }
+  th,td { padding:4px 3px; }
+  .scorebtn { min-height:27px; font-size:10px; }
+}
+
+/* ---- Farben des Connectors: Grün und Gold ---- */
+body{background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font-family:Georgia,"Times New Roman",serif}
+button{background:#0f2b23;border:1px solid #d9bc7c66;color:#e8cd8e;border-radius:7px;font-family:inherit}
+button:hover:not(:disabled){background:#184536}
+button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
+h1,h2,h3{color:#f1dca8;font-weight:normal}
+small,.muted,.hint{color:#a9c3b6}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<section class="panel setup" id="setup">
+  <h2 id="setupTitle">NEUES SPIEL</h2>
+  <div id="kniffelLobby" class="hidden"></div>
+  <label for="playerCount">WIE VIELE SPIELER?</label>
+  <select id="playerCount">
+    <option value="1">1 SPIELER</option>
+    <option value="2">2 SPIELER</option>
+    <option value="3">3 SPIELER</option>
+    <option value="4">4 SPIELER</option>
+    <option value="5">5 SPIELER</option>
+    <option value="6">6 SPIELER</option>
+  </select>
+  <button class="bigbtn" id="readyBtn" type="button" style="display:none">BEREIT</button>
+  <button class="bigbtn primary" id="startBtn">SPIEL STARTEN</button>
+  <div class="hint" id="lobbyHint" style="display:none">Mindestens 2 Spieler – und alle drücken BEREIT.</div>
+</section>
+
+<section id="game" class="hidden">
+
+  <div class="topbar">
+    <div class="pill" id="turnPill">SPIELER 1</div>
+    <div class="pill" id="roundPill">RUNDE 1 / 13</div>
+    <div class="pill" id="totalPill">PUNKTE: 0</div>
+  </div>
+
+  <div class="players" id="players"></div>
+
+  <nav class="mobile-tabs">
+    <button class="tab active" data-view="dice">🎲 WÜRFELN</button>
+    <button class="tab" data-view="score">📋 PUNKTE</button>
+  </nav>
+
+  <main class="layout" id="layout" data-view="dice">
+
+    <section class="panel dice-panel">
+      <h2 id="diceTitle">SPIELER 1 – WÜRFEL</h2>
+
+      <div class="rollinfo">
+        <span id="rollLabel">WÜRFE: 0 / 3</span>
+        <span id="keepLabel">GEHALTEN: 0</span>
+      </div>
+
+      <div class="dice-area" id="diceArea"></div>
+
+      <div class="actions">
+        <button class="bigbtn primary" id="rollBtn">WÜRFELN</button>
+        <button class="bigbtn" id="finishBtn" disabled>RUNDE BEENDEN</button>
+        <button class="bigbtn" id="strikeBtn" disabled>STREICHEN</button>
+      </div>
+
+      <div class="status" id="status">
+        Viel Glück! Drei Würfe pro Runde.
+      </div>
+    </section>
+
+    <section class="panel score-panel">
+      <div class="score-head">
+        <h2 id="scoreTitle">PUNKTEBLATT</h2>
+        <div class="score-total" id="scoreTotal">0 P.</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>KATEGORIE</th>
+            <th>PUNKTE</th>
+            <th>EINTRAGEN</th>
+          </tr>
+        </thead>
+        <tbody id="scoreBody"></tbody>
+        <tfoot>
+          <tr>
+            <td>GESAMT</td>
+            <td id="grandTotal">0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+  </main>
+
+</section>
+
+<section class="panel hidden" id="result">
+  <h2>★ SPIEL BEENDET ★</h2>
+  <div id="ranking"></div>
+  <button class="bigbtn primary" id="newGameBtn" style="width:100%;margin-top:18px">
+    NEUES SPIEL
+  </button>
+</section>
+
+</div>
+
+<script src="/spiele/netz.js"></script>
+<script>
+"use strict";
+
+const categories = [
+ {id:"ones",name:"Einser",group:"OBERER BLOCK",score:v=>sumFace(v,1)},
+ {id:"twos",name:"Zweier",score:v=>sumFace(v,2)},
+ {id:"threes",name:"Dreier",score:v=>sumFace(v,3)},
+ {id:"fours",name:"Vierer",score:v=>sumFace(v,4)},
+ {id:"fives",name:"Fünfer",score:v=>sumFace(v,5)},
+ {id:"sixes",name:"Sechser",score:v=>sumFace(v,6)},
+ {id:"three",name:"Dreierpasch",group:"UNTERER BLOCK",score:v=>sameAtLeast(v,3)?sum(v):0},
+ {id:"four",name:"Viererpasch",score:v=>sameAtLeast(v,4)?sum(v):0},
+ {id:"full",name:"Full House",score:v=>fullHouse(v)?25:0},
+ {id:"small",name:"Kleine Straße",score:v=>straight(v,4)?30:0},
+ {id:"large",name:"Große Straße",score:v=>straight(v,5)?40:0},
+ {id:"kniffel",name:"Kniffel",score:v=>sameAtLeast(v,5)?50:0},
+ {id:"chance",name:"Chance",score:v=>sum(v)}
+];
+
+const colors=["#e8cd8e","#a9c3b6","#d9bc7c","#b9e3c6","#a9c3b6","#d9bc7c"];
+const $=id=>document.getElementById(id);
+
+let players=[];
+let currentPlayer=0;
+let dice=[0,0,0,0,0];
+let kept=[false,false,false,false,false];
+let rolls=0;
+let finished=false;
+
+function sum(v){return v.reduce((a,b)=>a+b,0)}
+function sumFace(v,n){return v.filter(x=>x===n).length*n}
+function sameAtLeast(v,n){
+  return Math.max(...[1,2,3,4,5,6].map(n=>v.filter(x=>x===n).length))>=n;
+}
+function fullHouse(v){
+  const counts=[1,2,3,4,5,6]
+    .map(n=>v.filter(x=>x===n).length)
+    .filter(Boolean).sort();
+  return counts.join(",")==="2,3";
+}
+function straight(v,n){
+  const s=[...new Set(v)].sort();
+  let best=1,run=1;
+  for(let i=1;i<s.length;i++){
+    run=s[i]===s[i-1]+1?run+1:1;
+    best=Math.max(best,run);
+  }
+  return best>=n;
+}
+function playerTotal(player){
+  const upper=categories.slice(0,6)
+    .reduce((a,c)=>a+(player.scores[c.id]==null?0:player.scores[c.id]),0);
+  const lower=categories.slice(6)
+    .reduce((a,c)=>a+(player.scores[c.id]==null?0:player.scores[c.id]),0);
+  return upper+lower+(upper>=63?35:0)+player.kniffelBonus;
+}
+function upperTotal(player){
+  return categories.slice(0,6)
+    .reduce((a,c)=>a+(player.scores[c.id]==null?0:player.scores[c.id]),0);
+}
+function remaining(player){
+  return categories.filter(c=>player.scores[c.id]===null).length;
+}
+function current(){return players[currentPlayer]}
+function setStatus(text){$("status").textContent=text}
+
+function startGame(){
+  if(ONLINE){ kniffelAction("start",{}); return; }
+  const count=Number($("playerCount").value);
+  players=Array.from({length:count},(_,i)=>({
+    name:"SPIELER "+(i+1),
+    color:colors[i],
+    scores:Object.fromEntries(categories.map(c=>[c.id,null])),
+    kniffelBonus:0
+  }));
+  currentPlayer=0;
+  finished=false;
+  resetTurn();
+  $("setup").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  setStatus("Das Spiel beginnt! Viel Glück!");
+  render();
+}
+function resetTurn(){
+  dice=[0,0,0,0,0];
+  kept=[false,false,false,false,false];
+  rolls=0;
+}
+function renderPlayers(){
+  const area=$("players");
+  area.innerHTML="";
+  players.forEach((p,i)=>{
+    const div=document.createElement("div");
+    div.className="player"+(i===currentPlayer&&!finished?" active":"");
+    div.style.borderColor=i===currentPlayer&&!finished?p.color:"";
+    const done=13-remaining(p);
+    div.innerHTML=
+      `<strong>${p.name}</strong>`+
+      `<div class="points">${playerTotal(p)} P.</div>`+
+      `<div>${done}/13 Felder</div>`;
+    area.appendChild(div);
+  });
+}
+function renderDice(){
+  const area=$("diceArea");
+  area.innerHTML="";
+  dice.forEach((value,i)=>{
+    const b=document.createElement("button");
+    b.className="die"+(kept[i]?" kept":"");
+    b.textContent=value?["","⚀","⚁","⚂","⚃","⚄","⚅"][value]:"–";
+    b.disabled=rolls===0||finished;
+    b.setAttribute("aria-label",`Würfel ${i+1}: ${value}`);
+    b.addEventListener("click",()=>{
+      kept[i]=!kept[i];
+      renderDice();
+    });
+    area.appendChild(b);
+  });
+  $("rollLabel").textContent=`WÜRFE: ${rolls} / 3`;
+  $("keepLabel").textContent=`GEHALTEN: ${kept.filter(Boolean).length}`;
+  $("rollBtn").disabled=rolls>=3||finished;
+  $("finishBtn").disabled=rolls===0||finished;
+  $("strikeBtn").disabled=rolls===0||finished;
+}
+function renderScore(){
+  const p=current();
+  const body=$("scoreBody");
+  body.innerHTML="";
+  categories.forEach(c=>{
+    if(c.group){
+      const tr=document.createElement("tr");
+      tr.className="group";
+      const td=document.createElement("td");
+      td.colSpan=3;
+      td.textContent=c.group;
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+    const tr=document.createElement("tr");
+    const name=document.createElement("td");
+    name.textContent=c.name;
+    tr.appendChild(name);
+    const points=document.createElement("td");
+    points.textContent=p.scores[c.id]===null?"—":p.scores[c.id];
+    tr.appendChild(points);
+    const cell=document.createElement("td");
+    const btn=document.createElement("button");
+    btn.className="scorebtn"+
+      (p.scores[c.id]!==null?" done":(rolls>0?" ready":""));
+    btn.textContent=p.scores[c.id]===null
+      ?(rolls>0?c.score(dice)+" P.":"—"):"✓";
+    btn.disabled=p.scores[c.id]!==null||rolls===0||finished;
+    btn.addEventListener("click",()=>enterScore(c));
+    cell.appendChild(btn);
+    tr.appendChild(cell);
+    body.appendChild(tr);
+  });
+  $("scoreTotal").textContent=playerTotal(p)+" P.";
+  $("grandTotal").textContent=playerTotal(p)+
+    (upperTotal(p)>=63?" (+35 Bonus)":"");
+  $("scoreTitle").textContent=p.name+" – PUNKTE";
+}
+function render(){
+  const p=current();
+  $("turnPill").textContent=p.name;
+  $("turnPill").style.color=p.color;
+  $("roundPill").textContent=`RUNDE ${14-remaining(p)} / 13`;
+  $("totalPill").textContent="PUNKTE: "+playerTotal(p);
+  $("diceTitle").textContent=p.name+" – WÜRFEL";
+  renderPlayers();
+  renderDice();
+  renderScore();
+}
+function rollDice(){
+  if(ONLINE){ if(rolls<3&&!finished) kniffelAction("roll",{kept}); return; }
+  if(rolls>=3||finished)return;
+  dice=dice.map((v,i)=>kept[i]?v:1+Math.floor(Math.random()*6));
+  rolls++;
+  render();
+  setStatus(rolls===3
+    ?"Dritter Wurf! Jetzt Punkte eintragen."
+    :`Wurf ${rolls} von 3. Behalte Würfel durch Antippen.`
+  );
+}
+function enterScore(category,festWert){
+  if(ONLINE){
+    if(rolls>0&&!finished&&category){
+      kniffelAction("score",typeof festWert==="number"
+        ?{category:category.id,value:festWert}
+        :{category:category.id});
+    }
+    return;
+  }
+  const p=current();
+  if(p.scores[category.id]!==null||rolls===0||finished)return;
+  const points=typeof festWert==="number"?festWert:category.score(dice);
+  p.scores[category.id]=points;
+
+  // Zusatzbonus für weitere Kniffel nach einem bereits gewerteten Kniffel.
+  if(category.id!=="kniffel" &&
+     p.scores.kniffel===50 &&
+     sameAtLeast(dice,5)){
+    p.kniffelBonus+=100;
+  }
+
+  setStatus(`${p.name}: ${category.name} – ${points} Punkte.`);
+  resetTurn();
+
+  if(players.every(p=>remaining(p)===0)){
+    endGame();
+    return;
+  }
+
+  // Nächsten Spieler suchen, der noch Felder offen hat.
+  for(let step=1;step<=players.length;step++){
+    const next=(currentPlayer+step)%players.length;
+    if(remaining(players[next])>0){
+      currentPlayer=next;
+      break;
+    }
+  }
+
+  render();
+  setView("dice");
+}
+// Streichen: das offene Feld, das am wenigsten Punkte bringt, auf 0 setzen.
+function strikeRound(){
+  if(ONLINE){ if(rolls>0&&!finished) kniffelAction("score",{category:"",value:0}); return; }
+  if(rolls===0||finished)return;
+  let schlechteste=null;
+  let wenigste=Infinity;
+  for(const c of categories){
+    if(current().scores[c.id]!==null)continue;
+    const punkte=c.score(dice);
+    if(punkte<wenigste){
+      wenigste=punkte;
+      schlechteste=c;
+    }
+  }
+  if(schlechteste)enterScore(schlechteste,0);
+}
+function finishRound(){
+  if(ONLINE){ if(rolls>0&&!finished) kniffelAction("score",{category:""}); return; }
+  if(rolls===0||finished)return;
+  // Ohne Auswahl landet der Wurf dort, wo er am meisten Punkte bringt.
+  let beste=null;
+  let bestePunkte=-1;
+  for(const c of categories){
+    if(current().scores[c.id]!==null)continue;
+    const punkte=c.score(dice);
+    if(punkte>bestePunkte){
+      bestePunkte=punkte;
+      beste=c;
+    }
+  }
+  if(beste)enterScore(beste);
+}
+function endGame(){
+  finished=true;
+  $("game").classList.add("hidden");
+  $("result").classList.remove("hidden");
+
+  const ranking=[...players].sort((a,b)=>playerTotal(b)-playerTotal(a));
+  $("ranking").innerHTML="";
+  ranking.forEach((p,i)=>{
+    const row=document.createElement("div");
+    row.style.cssText=
+      "display:flex;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid #184536;font-size:18px;color:"+p.color;
+    const name=document.createElement("strong");
+    name.textContent=(i+1)+". "+p.name;
+    const points=document.createElement("strong");
+    points.textContent=playerTotal(p)+" PUNKTE";
+    row.append(name,points);
+    $("ranking").appendChild(row);
+  });
+}
+function setView(view){
+  $("layout").dataset.view=view;
+  document.querySelectorAll(".tab").forEach(b=>{
+    b.classList.toggle("active",b.dataset.view===view);
+  });
+}
+
+$("startBtn").addEventListener("click",startGame);
+$("readyBtn").addEventListener("click",()=>{
+ if(ONLINE){ kniffelAction("ready",{}); return; }
+});
+$("rollBtn").addEventListener("click",rollDice);
+$("finishBtn").addEventListener("click",finishRound);
+$("strikeBtn").addEventListener("click",strikeRound);
+$("newGameBtn").addEventListener("click",()=>{
+  if(ONLINE){ kniffelAction("reset",{}); return; }
+  $("result").classList.add("hidden");
+  $("setup").classList.remove("hidden");
+});
+document.querySelectorAll(".tab").forEach(b=>{
+  b.addEventListener("click",()=>setView(b.dataset.view));
+});
+
+// ---- Online über den Connector ----
+const params=new URLSearchParams(location.search);
+const ONLINE=params.has("room")&&params.has("id");
+const ROOM=params.get("room")||"";
+const PLAYER_ID=params.get("id")||"";
+const ONLINE_API="/api/kniffel";
+let onlineBusy=false;
+let onlineGame=null;
+
+function myTurn(){
+  if(!onlineGame||onlineGame.status!=="active") return false;
+  const p=onlineGame.players[onlineGame.current];
+  return !!p&&p.id===PLAYER_ID;
+}
+
+function applyOnlineState(game){
+  if(!game)return;
+  onlineGame=game;
+
+  players=game.players.map(p=>({
+    name:p.name,
+    color:p.color,
+    scores:p.scores,
+    kniffelBonus:p.kniffelBonus
+  }));
+  currentPlayer=game.current;
+  dice=(game.dice&&game.dice.length===5)?game.dice.slice():[0,0,0,0,0];
+  rolls=game.rolls;
+  if(rolls===0) kept=[false,false,false,false,false];
+
+  const label=document.querySelector('label[for="playerCount"]');
+  const select=$("playerCount");
+  const startBtn=$("startBtn");
+
+  if(game.status==="invited"){
+    $("setup").classList.remove("hidden");
+    $("game").classList.add("hidden");
+    $("result").classList.add("hidden");
+    finished=false;
+    select.style.display="none";
+    label.textContent="AM TISCH: "+game.players.length+" VON 6";
+
+    // Wer sitzt am Tisch und wer hat schon BEREIT gedrückt?
+    const lobby=$("kniffelLobby");
+    lobby.classList.remove("hidden");
+    lobby.innerHTML="";
+    game.players.forEach(p=>{
+      const row=document.createElement("div");
+      row.className="lobby-row";
+      const name=document.createElement("span");
+      name.textContent=p.name+(p.id===PLAYER_ID?" (Du)":"");
+      name.style.color=p.color;
+      const state=document.createElement("strong");
+      state.textContent=p.ready?"BEREIT":"WARTET";
+      state.style.color=p.ready?"#b9e3c6":"#d9bc7c";
+      row.append(name,state);
+      lobby.appendChild(row);
+    });
+
+    const me=game.players.find(p=>p.id===PLAYER_ID);
+    const readyBtn=$("readyBtn");
+    if(me){
+      readyBtn.style.display="";
+      readyBtn.textContent=me.ready?"DOCH NICHT BEREIT":"BEREIT";
+    }else{
+      readyBtn.style.display="none";
+    }
+
+    // Starten darf nur der Gastgeber – und erst, wenn alle bereit sind.
+    const allReady=game.players.length>=2&&game.players.every(p=>p.ready);
+    const hint=$("lobbyHint");
+    hint.style.display="";
+    if(game.hostId===PLAYER_ID){
+      startBtn.style.display="";
+      startBtn.disabled=!allReady;
+      startBtn.textContent=allReady?"SPIEL STARTEN":"ERST ALLE BEREIT";
+      hint.textContent=allReady
+        ?"Alle sind bereit – du kannst starten."
+        :"Mindestens 2 Spieler – und alle drücken BEREIT.";
+    }else{
+      startBtn.style.display="none";
+      hint.textContent="Der Gastgeber startet, sobald alle BEREIT gedrückt haben.";
+    }
+    if(game.note)setStatus(game.note);
+    return;
+  }
+
+  $("setup").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("kniffelLobby").classList.add("hidden");
+  $("readyBtn").style.display="none";
+  $("lobbyHint").style.display="none";
+
+  if(game.status==="finished"){
+    $("game").classList.add("hidden");
+    finished=true;
+    endGame();
+    return;
+  }
+
+  $("game").classList.remove("hidden");
+  finished=false;
+  render();
+
+  if(!myTurn()){
+    $("rollBtn").disabled=true;
+    $("finishBtn").disabled=true;
+    $("strikeBtn").disabled=true;
+    document.querySelectorAll(".scorebtn").forEach(b=>{ b.disabled=true; });
+    document.querySelectorAll(".die").forEach(b=>{ b.disabled=true; });
+    const p=onlineGame.players[onlineGame.current];
+    setStatus(p?("Warte auf "+p.name+" …"):"Warte …");
+  }else if(game.note){
+    setStatus(game.note);
+  }
+}
+
+async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
+  }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
+
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
+  }
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline(){
+  if(onlineBusy)return;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  }catch(e){
+    setStatus("Verbindung wackelt – die Seite versucht es weiter …");
+  }
+}
+
+async function kniffelAction(action,payload){
+  if(onlineBusy)return;
+  onlineBusy=true;
+  try{
+    const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:PLAYER_ID,...payload})
+    });
+    applyOnlineState(data.game);
+  }catch(e){
+    setStatus(e.message);
+  }finally{
+    onlineBusy=false;
+  }
+}
+
+// Ohne Lebenszeichen fliegt man nach 90 Sekunden aus dem Spielraum.
+let actedSincePing=false;
+["pointerdown","keydown","wheel","touchstart","scroll"].forEach(evt=>{
+  document.addEventListener(evt,()=>{ actedSincePing=true; },{passive:true});
+});
+
+async function postPresence(){
+  const me=onlineGame?onlineGame.players.find(p=>p.id===PLAYER_ID):null;
+  const active=actedSincePing;
+  actedSincePing=false;
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name:me?me.name:(params.get("name")||"Spieler"),active})
+    });
+  }catch(e){}
+}
+
+if(ONLINE){
+  players=[];
+  dice=[0,0,0,0,0];
+  kept=[false,false,false,false,false];
+  rolls=0;
+  setStatus("Verbinde mit dem Spielraum …");
+  $("setup").classList.remove("hidden");
+  $("game").classList.add("hidden");
+  $("result").classList.add("hidden");
+
+  const back=document.createElement("button");
+  back.type="button";
+  back.id="leaveBtn";
+  back.className="bigbtn";
+  back.textContent="Spiel verlassen";
+  back.style.width="100%";
+  back.style.marginTop="10px";
+  back.onclick = () => tgVerlassen();
+  $("startBtn").after(back);
+
+  // Erst den Platz im Raum sichern, dann den Spielstand holen.
+  postPresence().then(refreshOnline);
+  setInterval(postPresence,5000);
+  setInterval(refreshOnline,1500);
+}
+</script>
+</body>
+</html>

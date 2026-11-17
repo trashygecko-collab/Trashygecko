@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>T.Spiele – iPhone</title>
+
+<!-- iOS: eigenes Fenster ohne Safari-Leisten, Statusleiste im Tannengrün -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="T.Spiele">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a211b">
+<link rel="manifest" href="app.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+
+<style>
+/* Farben wie in der Android-App: tiefes Grün, Gold, Elfenbein. */
+:root {
+  --gold: #d9bc7c;
+  --gold-hell: #f1dca8;
+  --elfenbein: #efe6d2;
+  --gruen-tief: #0a211b;
+  --gruen-mittig: #1c4a3d;
+  --kasten: rgba(18, 51, 42, 0.95);
+
+  /* Größen wachsen mit dem Gerät: Handy → iPad ohne Umbau. */
+  --titel: clamp(1.9rem, 3vmin + 1.3rem, 3.3rem);
+  --knopf: clamp(1rem, 1.5vmin + 0.7rem, 1.6rem);
+  --klein: clamp(0.74rem, 0.85vmin + 0.5rem, 1rem);
+  --rand: clamp(1.1rem, 3.5vmin, 3rem);
+}
+
+* { box-sizing: border-box; }
+
+html, body { min-height: 100%; margin: 0; }
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding:
+    calc(var(--rand) + env(safe-area-inset-top))
+    calc(var(--rand) + env(safe-area-inset-right))
+    calc(var(--rand) + env(safe-area-inset-bottom))
+    calc(var(--rand) + env(safe-area-inset-left));
+  gap: clamp(0.8rem, 2vmin, 1.6rem);
+  color: var(--elfenbein);
+  font-family: Georgia, "Times New Roman", serif;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 22%, var(--gruen-mittig) 0%, #123329 42%, var(--gruen-tief) 78%),
+    var(--gruen-tief);
+  background-attachment: fixed;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Kopf */
+.schmuck {
+  margin: clamp(0.5rem, 3vmin, 2.5rem) 0 0;
+  color: var(--gold);
+  font-size: var(--klein);
+  letter-spacing: 0.42em;
+  opacity: 0.9;
+}
+
+h1 {
+  margin: 0;
+  color: var(--gold-hell);
+  font-size: var(--titel);
+  font-weight: normal;
+  letter-spacing: 0.08em;
+}
+
+.untertitel {
+  margin: 0;
+  color: var(--elfenbein);
+  font-size: var(--klein);
+  letter-spacing: 0.3em;
+  opacity: 0.85;
+}
+
+.strich {
+  width: clamp(5rem, 12vmin, 9rem);
+  height: 1px;
+  background: rgba(217, 188, 124, 0.55);
+}
+
+/* Wege */
+.wege {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.7rem, 1.6vmin, 1.2rem);
+  width: min(100%, 34rem);
+}
+
+a.weg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28em;
+  padding: clamp(0.85rem, 1.9vmin, 1.4rem) clamp(0.8rem, 2vmin, 1.3rem);
+  color: var(--gold-hell);
+  font-size: var(--knopf);
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  background: var(--kasten);
+  border: 1px solid rgba(217, 188, 124, 0.65);
+  border-radius: 0.4rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+a.weg:active,
+a.weg:focus-visible {
+  background: #1b4336;
+  border-color: var(--gold-hell);
+  outline: none;
+}
+
+a.weg .zusatz {
+  color: #c9bfa8;
+  font-size: 0.66em;
+  letter-spacing: 0.1em;
+}
+
+a.weg .netz {
+  color: #9a8f78;
+  font-size: 0.58em;
+  letter-spacing: 0.12em;
+}
+
+/* Spruch mit Datum und Uhrzeit, wie in der App */
+.spruch {
+  max-width: min(100%, 36rem);
+  margin: 0;
+  color: #e3d6b8;
+  font-size: clamp(0.78rem, 1vmin + 0.55rem, 1.05rem);
+  font-style: italic;
+  line-height: 1.55;
+}
+
+/* Anleitung und Dateien: ruhige Kästen auf dem grünen Grund */
+.kasten {
+  width: min(100%, 34rem);
+  padding: clamp(0.9rem, 2vmin, 1.6rem);
+  text-align: left;
+  background: rgba(9, 32, 26, 0.6);
+  border: 1px solid rgba(217, 188, 124, 0.28);
+  border-radius: 0.5rem;
+}
+
+.kasten h2 {
+  margin: 0 0 0.7em;
+  color: var(--gold);
+  font-size: clamp(0.82rem, 0.9vmin + 0.6rem, 1.05rem);
+  font-weight: normal;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+ol.schritte {
+  margin: 0;
+  padding-left: 1.5em;
+  color: #e8dcc0;
+  font-size: clamp(0.86rem, 1vmin + 0.6rem, 1.15rem);
+  line-height: 1.65;
+}
+
+ol.schritte li { margin-bottom: 0.55em; }
+ol.schritte li:last-child { margin-bottom: 0; }
+ol.schritte b { color: var(--gold-hell); font-weight: normal; }
+
+.hinweis {
+  margin: 0.9em 0 0;
+  color: #a99b80;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+
+ul.dateien {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: clamp(0.84rem, 0.95vmin + 0.58rem, 1.1rem);
+  line-height: 1.75;
+}
+
+ul.dateien li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 0.5em;
+  justify-content: space-between;
+  padding: 0.35em 0;
+  border-bottom: 1px dotted rgba(217, 188, 124, 0.2);
+}
+
+ul.dateien li:last-child { border-bottom: none; }
+
+ul.dateien a { color: var(--gold-hell); text-decoration: none; }
+ul.dateien a:active { color: #fff; }
+
+ul.dateien span {
+  color: #9a8f78;
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  align-self: center;
+}
+
+/* Fuß: Offline-Stand */
+.fuss {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 clamp(0.5rem, 2vmin, 1.5rem);
+  color: #9a8f78;
+  font-size: var(--klein);
+  letter-spacing: 0.06em;
+}
+
+.fuss .stand { color: #c9bfa8; }
+.fuss .stand.bereit { color: #9ed7ab; }
+.fuss .stand.fehler { color: #e6543c; }
+
+/* Nur solange im Browser geöffnet: der Weg zum Home-Bildschirm. */
+.einrichten { display: none; }
+@media (display-mode: browser) { .einrichten { display: block; } }
+</style>
+</head>
+<body>
+
+<p class="schmuck">✦&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;✦</p>
+<h1>T.Spiele</h1>
+<p class="untertitel">MAHJONG · CHAT · OFFLINE</p>
+<div class="strich"></div>
+
+<nav class="wege">
+  <a class="weg" href="../brettspiele/mahjong/mahjong.html">
+    Mahjong
+    <span class="zusatz">144 Steine, 56 Formen</span>
+    <span class="zusatz">funktioniert ohne Netz</span>
+  </a>
+
+  <a class="weg" href="https://trashygecko.onrender.com/connector">
+    Connector öffnen
+    <span class="zusatz">Chat und alle Spiele</span>
+    <span class="netz">braucht Internet</span>
+  </a>
+
+  <a class="weg" href="https://trashygecko-collab.github.io/Trashygecko/">
+    Meine Homepage
+    <span class="netz">braucht Internet</span>
+  </a>
+</nav>
+
+<p class="spruch" id="spruch"></p>
+
+<section class="kasten einrichten">
+  <h2>Aufs iPhone holen</h2>
+  <ol class="schritte">
+    <li>Er öffnet deinen Link in <b>Safari</b> – nicht in WhatsApp, Instagram oder Chrome, denn dort fehlt der Befehl.</li>
+    <li>Er tippt unten auf <b>Teilen</b> (das Viereck mit dem Pfeil nach oben).</li>
+    <li>Er wählt <b>„Zum Home-Bildschirm“</b> und bestätigt mit <b>Hinzufügen</b>.</li>
+    <li>Das Spiel erscheint als eigenes <b>App-Symbol</b> auf seinem iPhone: antippen, und es läuft ohne Adressleiste – Mahjong auch ohne Netz.</li>
+  </ol>
+  <p class="hinweis">
+    Beim ersten Öffnen muss einmal Internet da sein, damit sich das Spiel die Steine und Schriften
+    herunterlädt. Danach reicht der Flugmodus.
+  </p>
+</section>
+
+<section class="kasten">
+  <h2>Dateien in diesem Ordner</h2>
+  <ul class="dateien">
+    <li><a href="ios.html">ios.html</a> <span>diese Seite</span></li>
+    <li><a href="app.webmanifest">app.webmanifest</a> <span>Name, Symbol, eigenes Fenster</span></li>
+    <li><a href="icons/icon-180.png">icons/icon-180.png</a> <span>Symbol fürs iPhone</span></li>
+    <li><a href="icons/icon-512.png">icons/icon-512.png</a> <span>großes Symbol</span></li>
+    <li><a href="../sw.js">sw.js</a> <span>Offline-Speicher, eine Ebene höher</span></li>
+    <li><a href="../android/tspiele.apk">android/tspiele.apk</a> <span>für Android</span></li>
+    <li><a href="../android/tmahjong.apk">android/tmahjong.apk</a> <span>nur Mahjong, Android</span></li>
+  </ul>
+</section>
+
+<div class="fuss">
+  <span class="stand" id="offlineStand">wird für offline gespeichert …</span>
+</div>
+
+<script>
+// ---------------------------------------------------------------- Uhrzeile
+const spruch = document.getElementById("spruch");
+const monate = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+                "August", "September", "Oktober", "November", "Dezember"];
+const tage = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+
+function zeigeZeit() {
+  const jetzt = new Date();
+  const datum = `${tage[jetzt.getDay()]}, ${jetzt.getDate()}. ${monate[jetzt.getMonth()]} ${jetzt.getFullYear()}`;
+  const zeit = String(jetzt.getHours()).padStart(2, "0") + ":" + String(jetzt.getMinutes()).padStart(2, "0");
+
+  spruch.textContent = `Wenn die Zeiger am ${datum} auf ${zeit} Uhr stehen, erwacht unser Spiel zum Leben.`;
+}
+
+zeigeZeit();
+setInterval(zeigeZeit, 10000);
+
+// ------------------------------------------------------- Offline (Service Worker)
+const stand = document.getElementById("offlineStand");
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("../sw.js").then((registrierung) => {
+    const melde = (bereit) => {
+      stand.textContent = bereit
+        ? "Offline bereit – Mahjong läuft ohne Netz"
+        : "wird für offline gespeichert …";
+      stand.className = "stand" + (bereit ? " bereit" : "");
+    };
+
+    melde(Boolean(navigator.serviceWorker.controller) || Boolean(registrierung.active));
+
+    registrierung.addEventListener("updatefound", () => {
+      const neu = registrierung.installing;
+      if (!neu) return;
+      neu.addEventListener("statechange", () => melde(neu.state === "activated"));
+    });
+  }).catch(() => {
+    stand.textContent = "Offline-Speicher nicht verfügbar (nur über https oder localhost)";
+    stand.className = "stand fehler";
+  });
+} else {
+  stand.textContent = "Dieser Browser kann keine Offline-Kopie speichern";
+  stand.className = "stand fehler";
+}
+</script>
+
+</body>
+</html>

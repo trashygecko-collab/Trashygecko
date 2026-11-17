@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoll-Vergleich – wie groß ist alles?</title>
+<style>
+  :root {
+    --bg: #0b0b10;
+    --karte: #14141c;
+    --rand: #2c2c3a;
+    --text: #e9e9f2;
+    --leise: #9aa0b4;
+    --cyan: #00d5e0;
+    --gold: #ffd166;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 18px 20px 48px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  }
+  h1 { margin: 0 0 6px; font-size: 1.4rem; color: var(--cyan); }
+  .hinweis { margin: 0 0 16px; max-width: 80ch; color: var(--leise); font-size: .92rem; line-height: 1.55; }
+  .hinweis b { color: var(--text); }
+  .hinweis code { color: var(--gold); }
+
+  .leiste {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    align-items: center;
+    padding: 12px 16px;
+    border: 1px solid var(--rand);
+    border-radius: 10px;
+    background: var(--karte);
+  }
+  .leiste label { display: flex; align-items: center; gap: 6px; font-size: .88rem; color: var(--leise); }
+  .leiste select, .leiste input[type="number"], .leiste input[type="text"] {
+    padding: 5px 7px;
+    border: 1px solid var(--rand);
+    border-radius: 6px;
+    background: #0e0e15;
+    color: var(--text);
+    font: inherit;
+    font-size: .88rem;
+  }
+  .leiste input[type="text"] { width: 230px; }
+  .leiste input[type="range"] { width: 130px; accent-color: var(--cyan); }
+  #massstabWert { min-width: 3.2em; color: var(--text); }
+
+  .geraetezeile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 14px;
+  }
+  .geraetezeile .titel { font-size: .88rem; color: var(--leise); margin-right: 4px; }
+  .zollknopf {
+    min-width: 62px;
+    padding: 7px 10px;
+    border: 1px solid var(--rand);
+    border-radius: 8px;
+    background: #0e0e15;
+    color: var(--leise);
+    font: inherit;
+    font-size: .9rem;
+    cursor: pointer;
+  }
+  .zollknopf:hover { color: var(--text); border-color: var(--cyan); }
+  .zollknopf.aktiv {
+    color: #04121a;
+    background: var(--cyan);
+    border-color: var(--cyan);
+    font-weight: 700;
+  }
+
+  #raster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 22px;
+    margin-top: 20px;
+    overflow-x: auto;
+  }
+  .geraet { margin: 0; display: flex; flex-direction: column; gap: 7px; }
+  .geraet figcaption { font-size: .8rem; line-height: 1.5; color: var(--leise); }
+  .geraet figcaption b { color: var(--gold); font-size: .95rem; }
+  .geraet figcaption .schrift { color: var(--cyan); }
+  .geraet figcaption button {
+    margin-top: 5px;
+    margin-right: 6px;
+    padding: 2px 8px;
+    border: 1px solid var(--rand);
+    border-radius: 5px;
+    background: #0e0e15;
+    color: var(--leise);
+    font: inherit;
+    font-size: .75rem;
+    cursor: pointer;
+  }
+  .geraet figcaption button:hover { color: var(--text); border-color: var(--cyan); }
+  .rahmen {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #000;
+    box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, .55);
+  }
+  .rahmen iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 0;
+    transform-origin: top left;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+
+<h1>Zoll-Vergleich</h1>
+<p class="hinweis">
+  Zeigt eine Seite so, wie sie auf einem Gerät dieser Diagonale aussieht, und zwar im gleichen
+  Maßstab – so sieht man sofort, wo die Schrift zu klein wird. Unter jedem Gerät stehen die
+  Bildschirmgröße in CSS-Pixeln und die Grundschrift, die die Seite dort wirklich setzt.
+  Angenommen werden <b>160 CSS-Pixel je Zoll</b> (Android-dp) und <b>16:9 quer</b>; beides lässt
+  sich oben ändern, wenn ein Gerät anders ist.
+</p>
+<p class="hinweis">
+  <b>Höchstens zwei Geräte gleichzeitig:</b> alle Spiele laufen im selben Tab, und acht laufende
+  Spiele legen den Browser lahm (bei Mahjong war er nach über 30 Sekunden noch blockiert).
+  Mit den Zoll-Knöpfen schaltet man zwischen den Größen um. Die Seiten müssen über den Connector
+  oder einen Dateiserver laufen, nicht per Doppelklick – sonst fehlen ihnen Dateien wie
+  <code>lob.js</code>.
+</p>
+
+<div class="leiste">
+  <label>Seite
+    <select id="seite"></select>
+  </label>
+  <label>oder eigene Adresse
+    <input id="frei" type="text" placeholder="z. B. ../index.html">
+  </label>
+  <label>Pixel je Zoll
+    <input id="dpi" type="number" value="160" min="60" max="400" step="10">
+  </label>
+  <label>Format
+    <select id="format">
+      <option value="quer169">16:9 quer</option>
+      <option value="quer43">4:3 quer</option>
+      <option value="hoch169">16:9 hoch</option>
+      <option value="hoch43">4:3 hoch</option>
+    </select>
+  </label>
+  <label>Maßstab
+    <input id="massstab" type="range" min="10" max="100" step="5" value="35">
+    <span id="massstabWert">35 %</span>
+  </label>
+  <label><input id="einszu" type="checkbox"> 1:1</label>
+</div>
+
+<div class="geraetezeile" id="geraetezeile">
+  <span class="titel">Geräte (höchstens zwei):</span>
+</div>
+
+<main id="raster"></main>
+
+<script>
+(function () {
+  "use strict";
+
+  var ZOLLE = [5, 6, 7, 8, 9, 10, 11, 12];
+  var VOREINSTELLUNG = "spiele.html";
+  var HOECHSTENS = 2;
+
+  var raster = document.getElementById("raster");
+  var zeile = document.getElementById("geraetezeile");
+  var auswahl = document.getElementById("seite");
+  var frei = document.getElementById("frei");
+  var dpiFeld = document.getElementById("dpi");
+  var formatFeld = document.getElementById("format");
+  var massstabFeld = document.getElementById("massstab");
+  var massstabWert = document.getElementById("massstabWert");
+  var einszuFeld = document.getElementById("einszu");
+
+  var aktiv = [5, 12];        // welche Geräte gerade gezeigt werden
+
+  // ---------------------------------------------------------- Seitenauswahl
+  // Die Liste kommt aus spiele.html - neue Spiele stehen damit automatisch hier.
+  function seitenListe() {
+    var kopf = [
+      { href: "spiele.html", name: "Spiele-Übersicht (Kacheln)" },
+      { href: "../index.html", name: "Startseite der Homepage" }
+    ];
+    fetch("spiele.html")
+      .then(function (antwort) { return antwort.text(); })
+      .then(function (text) {
+        var doc = new DOMParser().parseFromString(text, "text/html");
+        var gesehen = {};
+        kopf.forEach(function (e) { gesehen[e.href] = true; });
+        var spiele = [];
+        doc.querySelectorAll(".spiele-kacheln a").forEach(function (a) {
+          var href = (a.getAttribute("href") || "").trim();
+          if (!/\.html$/i.test(href) || href === "zoll.html" || gesehen[href]) return;
+          gesehen[href] = true;
+          spiele.push({ href: href, name: a.textContent.trim() });
+        });
+        spiele.sort(function (a, b) { return a.name.localeCompare(b.name, "de"); });
+        fuelle(kopf.concat(spiele));
+      })
+      .catch(function () {
+        fuelle(kopf.concat([
+          { href: "brettspiele/dame/dame.html", name: "Dame" },
+          { href: "brettspiele/mahjong/mahjong.html", name: "Mahjong" },
+          { href: "kartenspiele/uno/uno.html", name: "UNO" }
+        ]));
+      });
+  }
+
+  function fuelle(eintraege) {
+    auswahl.innerHTML = "";
+    eintraege.forEach(function (e) {
+      var o = document.createElement("option");
+      o.value = e.href;
+      o.textContent = e.name + "  (" + e.href + ")";
+      auswahl.appendChild(o);
+    });
+    var treffer = eintraege.filter(function (e) { return e.href === VOREINSTELLUNG; })[0];
+    auswahl.value = treffer ? treffer.href : eintraege[0].href;
+    zeichne();
+  }
+
+  // ------------------------------------------------------------- Bildschirme
+  // Breite/Höhe in CSS-Pixeln aus Diagonale (Zoll), Pixeln je Zoll und Format.
+  function bildschirm(zoll) {
+    var dpi = Math.max(60, Math.min(400, Number(dpiFeld.value) || 160));
+    var diagonale = zoll * dpi;
+    var format = formatFeld.value;
+    var breite, hoehe;
+    if (format === "quer43" || format === "hoch43") {
+      breite = diagonale * 4 / 5;          // 3-4-5-Dreieck
+      hoehe = diagonale * 3 / 5;
+    } else {
+      breite = diagonale * 16 / Math.hypot(16, 9);
+      hoehe = diagonale * 9 / Math.hypot(16, 9);
+    }
+    if (format.indexOf("hoch") === 0) {
+      var tausch = breite;
+      breite = hoehe;
+      hoehe = tausch;
+    }
+    return { w: Math.round(breite), h: Math.round(hoehe) };
+  }
+
+  function ziel() {
+    return frei.value.trim() || auswahl.value || VOREINSTELLUNG;
+  }
+
+  // Zeigt die Grundschrift, die die Seite im Rahmen wirklich gesetzt hat.
+  function schriftMessen(rahmen, anzeige) {
+    try {
+      var doc = rahmen.contentDocument;
+      if (!doc || !doc.documentElement) return;
+      var px = rahmen.contentWindow.getComputedStyle(doc.documentElement).fontSize;
+      anzeige.innerHTML = "Grundschrift <span class='schrift'>" + px + "</span>";
+    } catch (fehler) {
+      anzeige.innerHTML = "Grundschrift <span class='schrift'>?</span>";
+    }
+  }
+
+  function geraeteKnopfSetzen() {
+    ZOLLE.forEach(function (zoll) {
+      var knopf = document.getElementById("knopf-" + zoll);
+      if (!knopf) return;
+      knopf.classList.toggle("aktiv", aktiv.indexOf(zoll) >= 0);
+    });
+  }
+
+  function umschalten(zoll) {
+    var stelle = aktiv.indexOf(zoll);
+    if (stelle >= 0) {
+      if (aktiv.length === 1) return;      // eines bleibt immer stehen
+      aktiv.splice(stelle, 1);
+    } else {
+      aktiv.push(zoll);
+      if (aktiv.length > HOECHSTENS) aktiv.shift();
+    }
+    aktiv.sort(function (a, b) { return a - b; });
+    zeichne();
+  }
+
+  function zeichne() {
+    raster.innerHTML = "";
+    var skala = einszuFeld.checked ? 1 : Number(massstabFeld.value) / 100;
+    var adresse = ziel();
+
+    aktiv.forEach(function (zoll, nummer) {
+      var m = bildschirm(zoll);
+
+      var figur = document.createElement("figure");
+      figur.className = "geraet";
+
+      var rahmen = document.createElement("div");
+      rahmen.className = "rahmen";
+      rahmen.style.width = (m.w * skala) + "px";
+      rahmen.style.height = (m.h * skala) + "px";
+
+      var rahmenInnen = document.createElement("iframe");
+      rahmenInnen.style.width = m.w + "px";
+      rahmenInnen.style.height = m.h + "px";
+      rahmenInnen.style.transform = "scale(" + skala + ")";
+      rahmenInnen.title = zoll + " Zoll: " + adresse;
+      rahmen.appendChild(rahmenInnen);
+
+      var text = document.createElement("figcaption");
+      text.innerHTML = "<b>" + zoll + " Zoll</b> · " + m.w + " × " + m.h + " px";
+      var schrift = document.createElement("div");
+      schrift.textContent = "Grundschrift wird gemessen …";
+      text.appendChild(schrift);
+
+      var weg = document.createElement("button");
+      weg.type = "button";
+      weg.textContent = "ausblenden";
+      weg.addEventListener("click", function () { umschalten(zoll); });
+      text.appendChild(weg);
+
+      rahmenInnen.addEventListener("load", function () { schriftMessen(rahmenInnen, schrift); });
+
+      figur.appendChild(rahmen);
+      figur.appendChild(text);
+      raster.appendChild(figur);
+
+      // Zwei gleichzeitig sind genug - gestaffelt, damit der erste Rahmen
+      // schneller steht.
+      window.setTimeout(function () { rahmenInnen.src = adresse; }, nummer * 150);
+    });
+
+    massstabWert.textContent = massstabFeld.value + " %";
+    geraeteKnopfSetzen();
+  }
+
+  // Zoll-Knöpfe einmal aufbauen
+  ZOLLE.forEach(function (zoll) {
+    var knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "zollknopf";
+    knopf.id = "knopf-" + zoll;
+    knopf.textContent = zoll + " Zoll";
+    knopf.title = "Gerät mit " + zoll + " Zoll Diagonale zeigen";
+    knopf.addEventListener("click", function () { umschalten(zoll); });
+    zeile.appendChild(knopf);
+  });
+
+  auswahl.addEventListener("change", function () { frei.value = ""; zeichne(); });
+  frei.addEventListener("change", zeichne);
+  dpiFeld.addEventListener("change", zeichne);
+  formatFeld.addEventListener("change", zeichne);
+  massstabFeld.addEventListener("input", zeichne);
+  einszuFeld.addEventListener("change", zeichne);
+
+  seitenListe();
+})();
+</script>
+
+</body>
+</html>

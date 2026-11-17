@@ -96,6 +96,7 @@ a{color:#f2c76a}
   <button id="btnNeu">Level neu</button>
   <button id="btnReset">Von vorn</button>
   <button id="btnEditor">Level-Editor</button>
+  <button id="ton" aria-pressed="true">Ton an</button>
   <span style="width:10px"></span>
   <button data-modus="1" class="aktiv">1 Spieler</button>
   <button data-modus="2">2 Spieler</button>
@@ -108,6 +109,7 @@ a{color:#f2c76a}
   <span id="bloecke">Blöcke <b>0</b></span>
   <span>Zeit <b id="zeit">–</b></span>
   <span id="leben">Leben <b>3</b></span>
+  <span id="schild">Schild <b>3</b></span>
  </div>
 
  <div class="tisch">
@@ -160,7 +162,8 @@ a{color:#f2c76a}
   <ol>
    <li><b>Ziel:</b> Alle farbigen Blöcke abräumen und danach zum <b>Ausgang</b> fahren – wie im Original wird das Tor erst frei, wenn kein Block mehr steht.</li>
    <li><b>Fahrzeug:</b> Es fährt <b>immer weiter</b> – du steuerst nur die Richtung. An Wänden und fremden Blöcken prallt es ab: <b>Hältst du die Richtung in die Wand, bleibt es dort stehen</b>, und beim <b>Loslassen</b> fährt es in die Abprallrichtung weiter.</li>
-   <li><b>Farbe:</b> Ein Block zerbricht nur, wenn das Fahrzeug dieselbe Farbe hat. An andersfarbigen Blöcken prallt es ab.</li>
+   <li><b>Farbe:</b> Ein Block zerbricht nur, wenn das Fahrzeug dieselbe Farbe hat. An andersfarbigen Blöcken prallt es ab. Der erste Treffer auf eine <b>zweifarbige Kiste</b> gibt 5 Punkte; danach steht sie einfarbig weiter und zählt wie ein normaler Block.</li>
+   <li><b>Schild:</b> Drei Schildpunkte schützen das Fahrzeug – jeder Treffer kostet ein Schild, erst ohne Schild kostet er ein Leben. Alle <b>1500 Punkte</b> kommt ein Schild dazu (höchstens 99).</li>
    <li><b>Farbwechsler:</b> Die farbigen Kreise im Feld färben das Fahrzeug um – so kommst du an jede Blockfarbe.</li>
    <li><b>Blinkende Kacheln:</b> Sie wechseln alle halbe Sekunde ihr Aussehen. Sieht eine Kachel <b>wie Boden aus</b>, setzt sie das Fahrzeug auf die <b>diagonal gegenüberliegende</b> Kachel (unten links ↔ oben rechts, unten rechts ↔ oben links). <b>Leuchtet</b> sie dagegen, kostet die Berührung ein Leben – das Fahrzeug startet wieder am Startkreuz. Nach einem Sprung bleibt kurz Zeit, die Kachel zu verlassen.</li>
    <li><b>Gegner:</b> Die schwebenden Objekte fahren ihre Bahnen aus dem Original (0,5 Pixel je Bild) und prallen an Blöcken und Rändern ab. Berührung kostet ein Leben.</li>
@@ -203,6 +206,76 @@ const FAHRTEN=[{"nr": 1, "spieler": {"x": 64, "y": 175, "bild": 44, "anim": [44]
 (() => {
 "use strict";
 const $=id=>document.getElementById(id);
+
+// ---- Ton: die Effekte des Originals ($2B00-$2CB0), am SID gemessen ----
+// Effekt 1 (Kiste) rauscht 17 Bilder, Effekt 3 (Ballverlust) 11 Bilder, Effekt 2
+// (Schild) ist ein kurzer Blip, Effekt 4 (Level) ein Sweep 145 Hz -> 66 Hz in 8
+// Stufen zu je 11 Bildern. Fuer Spielende ruft das Original nie $2B23 - dort
+// derselbe Sweep, nur schneller. Der Blip laege am SID bei 19 kHz und waere
+// unhörbar; er klingt hier bei 1320 Hz.
+let tonAn=true, tonFrei=false, tonCtx=null, tonRauschen=null;
+try{ tonAn=localStorage.getItem("acia.ton")!=="0"; }catch(e){}
+function tonFreiSchalten(){ tonFrei=true; tonBereit(); }
+window.addEventListener("pointerdown",tonFreiSchalten);
+window.addEventListener("keydown",tonFreiSchalten);
+function tonBereit(){              // AudioContext erst nach der ersten Beruehrung
+ if(!tonFrei)return null;
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC)return null;
+ if(!tonCtx)tonCtx=new AC();
+ if(tonCtx.state==="suspended")tonCtx.resume();
+ return tonCtx;
+}
+function tonHuelle(ctx,dauer,laut){
+ const g=ctx.createGain();
+ g.gain.setValueAtTime(laut,ctx.currentTime);
+ g.gain.exponentialRampToValueAtTime(0.0008,ctx.currentTime+dauer);
+ g.connect(ctx.destination);
+ return g;
+}
+function tonRausch(ctx,dauer,von,bis,laut){
+ if(!tonRauschen){                 // ein Rauschpuffer, mehrfach benutzt
+  tonRauschen=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
+  const d=tonRauschen.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ }
+ const q=ctx.createBufferSource(), f=ctx.createBiquadFilter();
+ q.buffer=tonRauschen; f.type="bandpass"; f.Q.value=1.5;
+ f.frequency.setValueAtTime(von,ctx.currentTime);
+ f.frequency.linearRampToValueAtTime(bis,ctx.currentTime+dauer);
+ q.connect(f); f.connect(tonHuelle(ctx,dauer,laut));
+ q.start(); q.stop(ctx.currentTime+dauer+0.02);
+}
+function tonSweep(ctx,von,bis,stufen,je,laut){
+ const o=ctx.createOscillator(), f=ctx.createBiquadFilter();
+ o.type="sawtooth"; f.type="lowpass"; f.frequency.value=900;
+ for(let i=0;i<=stufen;i++)o.frequency.setValueAtTime(von+(bis-von)*i/stufen,ctx.currentTime+i*je);
+ o.connect(f); f.connect(tonHuelle(ctx,(stufen+1)*je,laut));
+ o.start(); o.stop(ctx.currentTime+(stufen+1)*je);
+}
+function tonSpielen(was){
+ if(!tonAn)return;
+ const ctx=tonBereit(); if(!ctx)return;
+ if(was==="kiste")tonRausch(ctx,0.34,900,2600,0.16);
+ else if(was==="verlust")tonRausch(ctx,0.22,1800,220,0.26);
+ else if(was==="schild"){
+  const o=ctx.createOscillator(); o.type="square"; o.frequency.value=1320;
+  o.connect(tonHuelle(ctx,0.09,0.16)); o.start(); o.stop(ctx.currentTime+0.1);
+ }
+ else if(was==="level")tonSweep(ctx,145,66,8,0.22,0.20);
+ else if(was==="ende")tonSweep(ctx,145,66,8,0.055,0.26);
+}
+const tonKnopf=$("ton");
+function tonAnzeigen(){
+ tonKnopf.textContent=tonAn?"Ton an":"Ton aus";
+ tonKnopf.setAttribute("aria-pressed",String(tonAn));
+}
+tonAnzeigen();
+tonKnopf.onclick=()=>{
+ tonAn=!tonAn; tonAnzeigen();
+ try{ localStorage.setItem("acia.ton",tonAn?"1":"0"); }catch(e){}
+ if(tonAn){ tonFrei=true; tonSpielen("schild"); }   // hoerbare Probe
+};
 const SPALTEN=15, ZEILEN=12;                 // Kacheln
 const ZX=30, ZY=24;                          // Zeichen
 const PX=ZX*8, PY=ZY*8;                      // 240 x 192 Pixel
@@ -379,6 +452,10 @@ function alleLevel(){ return LEVELS.concat(eigene); }
 let feld=[];            // {basis, farbe, rolle, weg}
 let levelNr=0, zustand="start", modus=1;
 let punkte=[0,0], leben=[3,3];
+// Schild wie im Original: $2B1F startet mit 3, $2B21 zaehlt die Hunderter
+// des Punktestands und springt bei 15 auf 0 - dann ein Schild mehr (max $99).
+const SCHILD_START=3, SCHILD_MAX=99, HUNDERTER_JE_SCHILD=15;
+let schild=[SCHILD_START,SCHILD_START], hunderter=[0,0];
 let zeit=200, zeitMax=200, blockGesamt=0, blockWeg=0;
 let schiffe=[], teilchen=[], pops=[], letzte=0, wackeln=0;
  let KARTE=null;         // aktuelles Level (fuer Zeichnen)
@@ -485,12 +562,13 @@ function levelLaden(nr){
  gegnerBauen();
  const richt=startRichtung();
  schiffe.push({x:start.x,y:start.y,dx:richt.dx,dy:richt.dy,farbe:startfarbe,leben:leben[0],schutz:1.2,
-  blitz:0,blitzFarbe:startfarbe,portalSperre:0});
+  blitz:0,blitzFarbe:startfarbe,portalSperre:0,aus:leben[0]<=0});
  if(modus===2)schiffe.push({x:start.x,y:start.y,dx:-1,dy:0,farbe:startfarbe,leben:leben[1],schutz:1.2,
-  blitz:0,blitzFarbe:startfarbe,portalSperre:0});
+  blitz:0,blitzFarbe:startfarbe,portalSperre:0,aus:leben[1]<=0});
  grundNeu();
  $("levelName").textContent="Level "+(levelNr+1)+" · "+(L.name||"Eigenes");
  zeigeStatus();
+ tonSpielen("level");
 }
 function startOrt(){
  // Eine Quelle: die gemessene Startkachel aus dumps/startwerte.json.  Die Lage
@@ -637,12 +715,22 @@ function spriteZeichnen(g,x,y,bild,farbe){
 function fahrt(){ return FAHRTEN[levelNr]||null; }
 function bildVon(anim,takt){ return anim&&anim.length?anim[Math.floor(takt/6)%anim.length]:44; }
 
+// Treffer-Animation ($1BA5): je 5 Bilder ein Schritt, Tabelle $1C1C = $29, $2A, $2B,
+// $31 (leer); im Trefferzustand laeuft sie rueckwaerts weiter ($2B, $2A, $29, $31).
+// Gezaehlt wird in festen 1/50-s-Schritten wie im Original, nicht je Bildschirmbild;
+// null = leeres Bild, der Ball ist dann unsichtbar.
+const TREFFER_FOLGE=[41,42,43,null, 43,42,41,null, 43,42,41,null], TREFFER_SCHRITT=5;
+const TREFFER_DAUER=TREFFER_FOLGE.length*TREFFER_SCHRITT;   // 60 Bilder = 1,2 s Schonzeit
 function zeichneSchiff(s){
+ if(s.aus)return;                         // Spieler ohne Leben: Ball weg
  const f=fahrt();
  const anim=(f&&f.spieler.anim)||[44];
  const blitz=s.blitz>0&&Math.floor(takt/3)%2===0;
+ const bild=s.treffer>0&&s.treffer<TREFFER_DAUER
+   ?TREFFER_FOLGE[Math.floor((TREFFER_DAUER-s.treffer-1)/TREFFER_SCHRITT)]
+   :bildVon(anim,takt);
  spriteZeichnen(ctx,Math.round(s.x*16-12),Math.round(s.y*16-10),
-   bildVon(anim,takt),blitz?s.blitzFarbe:s.farbe);
+   bild,blitz?s.blitzFarbe:s.farbe);
 }
 
 // ---- Gegner ----------------------------------------------------------
@@ -733,12 +821,12 @@ function bewege(s,h){
     // verliert die obere Haelfte und steht danach einfarbig in der unteren
     // Farbe weiter - der Block zaehlt erst beim zweiten Treffer.
     z.stufe=2; z.farbe=z.farbe2;
-    pops.push({x:(tx+0.5)*16,y:(ty+0.5)*16-8,text:"2 Farben",leben:0.9});
+    pops.push({x:(tx+0.5)*16,y:(ty+0.5)*16-8,text:"+5",leben:0.9});
     for(let i=0;i<4;i++)teilchen.push({x:(tx+0.5)*16,y:(ty+0.5)*16,
       vx:(Math.random()-0.5)*50,vy:(Math.random()-0.5)*50,leben:0.3,farbe:C64[z.farbe]});
     zeichneKachelFeld(tx,ty);
     wackeln=0.4;
-    zeigeStatus();
+    punkteAdd(5,s);      // wie im Original ($1455): 5 Punkte fuer diesen Treffer
     // Die Kiste steht noch: das Schiff prallt ab wie an falscher Farbe.
     if(ox<oy){ s.x+=(s.x<tx+0.5?-ox:ox); s.dx=-s.dx; }
     else{ s.y+=(s.y<ty+0.5?-oy:oy); s.dy=-s.dy; }
@@ -751,7 +839,6 @@ function bewege(s,h){
       vx:(Math.random()-0.5)*60,vy:(Math.random()-0.5)*60,leben:0.4,farbe:C64[z.farbe]});
     zeichneKachelFeld(tx,ty);
     wackeln=0.4;
-    zeigeStatus();
     // Wie im Original ($148E): erst wenn kein Block mehr steht, wird der
     // Ausgang frei ($14BF) - das Level endet erst beim Beruehren des Tors.
     if(blockWeg>=blockGesamt){
@@ -772,7 +859,11 @@ function bewege(s,h){
     portalSprung(s,tx,ty);
    }
   }else if(z.rolle==="wechsler"){
-   if(SKALA_FARBE[z.farbe]&&s.farbe!==z.farbe){
+   // Am Original gemessen (Feld 9, Aufnahme lauf_06_feld9_ausgang_zu): der
+   // Wechsler wirkt erst, wenn das Schiff die Kachelmitte erreicht (Bild 76 der
+   // Aufnahme, logisch 40,39) - nicht schon beim Betreten der Kachel.
+   const mitte=Math.abs(s.x-(tx+0.5))<=0.0625&&Math.abs(s.y-(ty+0.5))<=0.0625;
+   if(mitte&&SKALA_FARBE[z.farbe]&&s.farbe!==z.farbe){
     s.farbe=z.farbe;
     pops.push({x:(tx+0.5)*16,y:(ty+0.5)*16-8,text:FARBNAME[z.farbe],leben:1.1});
     zeigeStatus();
@@ -808,17 +899,53 @@ function zeichneKachelFeld(tx,ty){
  zeichneKachel(g,tx,ty,feld[ty*SPALTEN+tx]);
 }
 
-function punkteAdd(w,s){ const i=s?Math.max(0,schiffe.indexOf(s)):0; punkte[i]+=w; }
+function schildNeu(){ schild=[SCHILD_START,SCHILD_START]; hunderter=[0,0]; }
+
+function punkteAdd(w,s){
+ const i=Math.max(0,schiffe.indexOf(s));
+ const alt=punkte[i];
+ punkte[i]+=w;
+ if(w===5||w===10)tonSpielen("kiste");
+ // Wie im Original ($1B64/$1B71): je 100 Punkte ein Hunderter, bei 15 ein Schild mehr.
+ let neue=Math.floor(punkte[i]/100)-Math.floor(alt/100);
+ while(neue-->0){
+  if(++hunderter[i]>=HUNDERTER_JE_SCHILD){
+   hunderter[i]=0;
+   if(schild[i]<SCHILD_MAX){
+    schild[i]++;
+    pops.push({x:s.x*16,y:s.y*16+8,text:"Schild "+schild[i],leben:1.1});
+    tonSpielen("schild");
+   }
+  }
+ }
+ zeigeStatus();
+}
 
 function getroffen(s){
  const i=schiffe.indexOf(s);
+ s.treffer=TREFFER_DAUER; s.trefferRest=0;   // Treffer-Animation ($1BF6,X) starten
+ tonSpielen("verlust");
+ // Schild zuerst ($1B50): ein Treffer kostet ein Schild, erst ohne Schild ein Leben.
+ if(schild[i]>0){
+  schild[i]--;
+  s.schutz=1.2;
+  wackeln=0.6;
+  pops.push({x:s.x*16,y:s.y*16+8,text:"Schild "+schild[i],leben:0.9});
+  zeigeStatus();
+  return;
+ }
  leben[i]=Math.max(0,leben[i]-1);
  zeigeStatus();
  wackeln=1;
  if(leben[i]<=0){
-  if(modus===2&&leben[1-i]>0){ /* anderer spielt weiter */ }
-  else{ zustand="ende"; meldung("VORBEI",
-   "Alle Leben verspielt – bis Level "+(levelNr+1)+". Punkte: "+punkte[0],"Von vorn"); return; }
+  if(modus===2&&leben[1-i]>0){            // der andere Spieler ist noch im Spiel
+   s.aus=true; s.treffer=0; s.schutz=0;   // Ball raus: kein Neustart, keine weiteren Treffer
+   pops.push({x:s.x*16,y:s.y*16+8,text:"P"+(i+1)+" aus",leben:1.5});
+   zeigeStatus();
+   return;
+  }
+  zustand="ende"; tonSpielen("ende"); meldung("VORBEI",
+   "Alle Leben verspielt – bis Level "+(levelNr+1)+". Punkte: "+punkte[0],"Von vorn"); return;
  }
  // neu starten
  const st=startOrt();
@@ -883,7 +1010,12 @@ function update(dt){
   for(let i=0;i<schritte;i++)gegnerSchritt(g,dt/schritte);
  }
  for(const s of schiffe){
+  if(s.aus)continue;                       // Spieler ohne Leben ist draussen
   if(s.blitz>0)s.blitz-=dt;
+  if(s.treffer>0){                          // Treffer-Animation in festen 1/50-s-Schritten
+   s.trefferRest=(s.trefferRest||0)+dt;
+   while(s.trefferRest>=BILDZEIT&&s.treffer>0){ s.trefferRest-=BILDZEIT; s.treffer--; }
+  }
   if(s.portalSperre>0)s.portalSperre-=dt;
   if(s.pause>0)s.pause=Math.max(0,s.pause-dt);
   if(s.schutz>0){ s.schutz-=dt; continue; }
@@ -892,7 +1024,7 @@ function update(dt){
 
  if(zeitMax>0){
   zeit-=dt;
-  if(zeit<=0){ zeit=0; zustand="ende";
+  if(zeit<=0){ zeit=0; zustand="ende"; tonSpielen("ende");
    meldung("ZEIT UM","Die Zeit ist abgelaufen – bis Level "+(levelNr+1)+". Punkte: "+punkte[0],"Von vorn");
    zeigeStatus(); return; }
   if(Math.ceil(zeit)!==Math.ceil(zeit+dt))zeigeStatus();
@@ -902,6 +1034,7 @@ function update(dt){
  // Feste Schritte halten die Position auf dem Pixelraster; an einer Wand steht
  // das Schiff dadurch genau still, statt zwischen zwei Pixeln zu zittern.
  for(const s of schiffe){
+  if(s.aus)continue;                       // Spieler ohne Leben faehrt nicht mehr
   if(s.pause>0){ s.rest=0; continue; }   // Treffer-Pause: das Schiff steht still
   s.rest=(s.rest||0)+dt;
   let n=0;
@@ -978,6 +1111,7 @@ function zeigeStatus(){
  $("bloecke").innerHTML="Blöcke <b>"+(blockGesamt-blockWeg)+"</b>";
  $("zeit").textContent=zeitMax===0?"–":String(Math.max(0,Math.ceil(zeit)));
  $("leben").innerHTML="Leben <b>"+(modus===1?leben[0]:leben[0]+" : "+leben[1])+"</b>";
+ $("schild").innerHTML="Schild <b>"+(modus===1?schild[0]:schild[0]+" : "+schild[1])+"</b>";
  const s=schiffe[0];
  $("farbe").innerHTML="Farbe <b style=\"color:"+(s?C64[s.farbe]:"#fff")+"\">"+(s&&FARBNAME[s.farbe]?FARBNAME[s.farbe]:"–")+"</b>";
 }
@@ -991,7 +1125,7 @@ function meldung(titel,text,knopf){
 }
 function meldungZu(){ $("meldung").hidden=true; }
 
-function allesNeu(){ punkte=[0,0]; leben=[3,3]; levelLaden(0); zustand="spiel"; }
+function allesNeu(){ punkte=[0,0]; leben=[3,3]; schildNeu(); levelLaden(0); zustand="spiel"; }
 
 $("meldungKnopf").onclick=()=>{
  meldungZu();
@@ -1151,7 +1285,7 @@ $("edSpeichern").onclick=()=>{
 $("edTesten").onclick=()=>{
  const lv={name:"Testlevel",zeit:Math.max(30,Math.min(999,Number($("edZeit").value)||200)),ids:edIds.slice()};
  const merke=eigene; eigene=eigene.concat([lv]);
- leben=[3,3];
+ leben=[3,3]; schildNeu();
  levelLaden(alleLevel().length-1);
  eigene=merke; zustand="spiel"; meldungZu(); zeigeStatus();
 };
@@ -1211,7 +1345,7 @@ function edListeNeu(){
   z.appendChild(s);
   const b1=document.createElement("button"); b1.textContent="Bearbeiten"; b1.onclick=()=>edLaden(lv);
   const b2=document.createElement("button"); b2.textContent="Spielen";
-  b2.onclick=()=>{ meldungZu(); leben=[3,3]; levelLaden(LEVELS.length+i); zustand="spiel"; zeigeStatus(); };
+  b2.onclick=()=>{ meldungZu(); leben=[3,3]; schildNeu(); levelLaden(LEVELS.length+i); zustand="spiel"; zeigeStatus(); };
   const b3=document.createElement("button"); b3.textContent="Löschen";
   b3.onclick=()=>{ eigene.splice(i,1); eigenesSpeichern(eigene); edListeNeu(); };
   z.appendChild(b1); z.appendChild(b2); z.appendChild(b3);
@@ -1259,7 +1393,7 @@ window.__acia={
  // nur fuer den Portaltest: Bildzahl setzen (Blinkstand der Portale) und
  // Leben zuruecksetzen, damit mehrere Faelle in einem Lauf gehen
  takt:(n)=>{if(n!=null)takt=n;return takt;},
- leben:(n)=>{leben=[n||3,n||3];punkte=[0,0];},
+ leben:(n)=>{leben=[n||3,n||3];punkte=[0,0];schildNeu();},
  rolle:(basis)=>rolleVon(basis)
 };
 

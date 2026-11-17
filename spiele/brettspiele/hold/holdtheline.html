@@ -1,0 +1,686 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HOLD THE LINE – Connector Edition</title>
+<style>
+:root {
+  --bg:#184536;
+  --panel:#0f2b23;
+  --cyan:#e8cd8e;
+  --violet:#12332a;
+  --violet-light:#a9c3b6;
+  --text:#f6edda;
+  --muted:#a9c3b6;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  padding:14px;
+  min-height:100vh;
+  background:radial-gradient(ellipse at top,#12332a,#184536 70%);
+  color:var(--text);
+  font-family:Georgia,"Times New Roman",serif;
+  text-align:center;
+}
+.game {
+  max-width:620px;
+  margin:auto;
+  padding:15px;
+  background:rgba(15,43,35,.96);
+  border:1px solid #2c5a49;
+  border-radius:18px;
+  box-shadow:0 0 30px #184536;
+}
+.players {
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.player {
+  background:#184536;
+  border:1px solid #184536;
+  border-radius:10px;
+  padding:10px 18px;
+  font-size:14px;
+  font-weight:bold;
+  color:#6f8f80;
+}
+.player.active.cyan {
+  color:var(--cyan);
+  border-color:var(--cyan);
+  box-shadow:0 0 12px #42e8ff55;
+}
+.player.active.violet {
+  color:var(--violet-light);
+  border-color:var(--violet);
+  box-shadow:0 0 12px #8529a055;
+}
+#status {
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#d9bc7c;
+  font-size:14px;
+  font-weight:bold;
+  padding:10px 0 5px;
+}
+#info {
+  color:var(--muted);
+  font-size:12px;
+  min-height:20px;
+  margin-bottom:8px;
+}
+.board-wrap {
+  width:100%;
+  max-width:540px;
+  margin:auto;
+  background:#184536;
+  border:1px solid #184536;
+  border-radius:12px;
+  padding:5px;
+  box-shadow:inset 0 0 20px #0a211b;
+}
+svg {
+  display:block;
+  width:100%;
+  height:auto;
+  touch-action:manipulation;
+}
+.grid-line {
+  stroke:#12332a;
+  stroke-width:1;
+}
+.dot {
+  fill:#efe6d2;
+  stroke:#f6edda;
+  stroke-width:1;
+  cursor:pointer;
+  transition:fill .12s,filter .12s;
+}
+.dot:hover {
+  fill:white;
+}
+.dot.selected {
+  fill:var(--gold,#d9bc7c);
+  stroke:white;
+  stroke-width:3;
+  filter:drop-shadow(0 0 8px #d9bc7c);
+}
+.dot.candidate {
+  fill:var(--cyan);
+  stroke:white;
+  filter:drop-shadow(0 0 7px var(--cyan));
+}
+.dot.hitarea {
+  fill:transparent;
+  stroke:none;
+}
+.game-line {
+  fill:none;
+  stroke-width:5;
+  stroke-linecap:round;
+}
+.game-line.cyan {
+  stroke:var(--cyan);
+  filter:drop-shadow(0 0 5px var(--cyan));
+}
+.game-line.violet {
+  stroke:#12332a;
+  filter:drop-shadow(0 0 5px #12332a);
+}
+.controls {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:9px;
+  margin-top:16px;
+}
+.control {
+  background:#0f2b23;
+  color:var(--cyan);
+  border:1px solid var(--cyan);
+  border-radius:9px;
+  padding:11px 17px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.control:hover {
+  background:#12332a;
+  box-shadow:0 0 12px #42e8ff55;
+}
+.control:disabled {
+  opacity:.35;
+  cursor:not-allowed;
+}
+.rules {
+  margin-top:17px;
+  padding:12px;
+  border-radius:10px;
+  background:#184536;
+  border:1px solid #184536;
+  text-align:left;
+  color:#a9c3b6;
+  font-size:12px;
+  line-height:1.7;
+}
+.rules strong {
+  color:var(--violet-light);
+  letter-spacing:1px;
+}
+/* Hochkant auf dem Handy: schlanke Ränder, damit das Brett die Breite bekommt */
+@media(max-width:560px){
+  body{padding:2px}
+  .game{max-width:none;padding:4px 2px;border-radius:12px}
+  .board-wrap{max-width:none;padding:2px}
+}
+
+/* ---- Farben des Connectors: Grün und Gold ---- */
+body{background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font-family:Georgia,"Times New Roman",serif}
+button{background:#0f2b23;border:1px solid #d9bc7c66;color:#e8cd8e;border-radius:7px;font-family:inherit}
+button:hover:not(:disabled){background:#184536}
+button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
+h1,h2,h3{color:#f1dca8;font-weight:normal}
+small,.muted,.hint{color:#a9c3b6}
+
+/* Linien und Punkte kontrastreicher */
+.grid-line{stroke:#3f7360;stroke-width:1;opacity:.55}
+.dot{fill:#f4e8cd;stroke:#8a6f3e;stroke-width:1.2}
+.dot:hover{fill:#fff8e7}
+.dot.selected{fill:#e8cd8e;stroke:#0b241d;stroke-width:2.5;filter:none}
+.dot.candidate{fill:#d9bc7c;stroke:#0b241d;filter:none}
+.game-line.cyan{stroke:#e8cd8e;filter:none}
+.game-line.violet{stroke:#c2765c;filter:none}
+</style>
+</head>
+<body>
+
+<div class="game">
+
+  <div class="players">
+    <div class="player cyan active" id="player1">● SPIELER 1</div>
+    <div class="player violet" id="player2">● SPIELER 2</div>
+  </div>
+
+  <div id="status">Spieler 1 beginnt!</div>
+  <div id="info">Wähle zwei Punkte, um eine Linie zu ziehen.</div>
+
+  <div class="board-wrap">
+    <svg id="board" viewBox="0 0 500 500"
+         xmlns="http://www.w3.org/2000/svg"
+         aria-label="Spielfeld mit 25 Punkten">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="controls">
+    <button class="control" id="undo">↶ Zug zurück</button>
+    <button class="control" id="restart">⟳ Neues Spiel</button>
+  </div>
+
+  <div class="rules">
+    <strong>SPIELREGELN</strong><br>
+    1. Jeder Spieler verbindet abwechselnd zwei beliebige Punkte.<br>
+    2. Linien dürfen waagerecht, senkrecht oder diagonal verlaufen.<br>
+    3. Du darfst auch über mehrere Punkte hinweg zeichnen.<br>
+    4. Neue Linien dürfen bestehende Linien weder kreuzen noch berühren.<br>
+    5. Wer keinen gültigen Zug mehr machen kann, verliert!
+  </div>
+
+</div>
+
+<script src="/spiele/netz.js"></script>
+<script>
+"use strict";
+
+const SIZE = 5;
+const START = 60;
+const STEP = 95;
+
+let lines = [];
+let turn = 0;
+let selected = null;
+let history = [];
+let gameOver = false;
+
+const board = document.getElementById("board");
+const statusEl = document.getElementById("status");
+const infoEl = document.getElementById("info");
+
+function point(index) {
+  return {
+    x: START + (index % SIZE) * STEP,
+    y: START + Math.floor(index / SIZE) * STEP
+  };
+}
+
+function playerClass(player) {
+  return player === 0 ? "cyan" : "violet";
+}
+
+function playerName(player) {
+  if (onlineNames.length === 2) return onlineNames[player];
+  return player === 0 ? "Spieler 1" : "Spieler 2";
+}
+
+function cross(a,b,c) {
+  return (b.x-a.x)*(c.y-a.y) -
+         (b.y-a.y)*(c.x-a.x);
+}
+
+function onSegment(a,b,p) {
+  return Math.abs(cross(a,b,p)) < 0.000001 &&
+    p.x >= Math.min(a.x,b.x)-0.000001 &&
+    p.x <= Math.max(a.x,b.x)+0.000001 &&
+    p.y >= Math.min(a.y,b.y)-0.000001 &&
+    p.y <= Math.max(a.y,b.y)+0.000001;
+}
+
+function segmentsTouch(a,b,c,d) {
+  const o1 = cross(a,b,c);
+  const o2 = cross(a,b,d);
+  const o3 = cross(c,d,a);
+  const o4 = cross(c,d,b);
+  const eps = 0.000001;
+
+  // Allgemeine Kreuzung
+  if (((o1 > eps && o2 < -eps) ||
+       (o1 < -eps && o2 > eps)) &&
+      ((o3 > eps && o4 < -eps) ||
+       (o3 < -eps && o4 > eps))) {
+    return true;
+  }
+
+  // Berührung oder Überlappung
+  if (Math.abs(o1)<eps && onSegment(a,b,c)) return true;
+  if (Math.abs(o2)<eps && onSegment(a,b,d)) return true;
+  if (Math.abs(o3)<eps && onSegment(c,d,a)) return true;
+  if (Math.abs(o4)<eps && onSegment(c,d,b)) return true;
+
+  return false;
+}
+
+function canDraw(start,end) {
+  if(start===end) return false;
+
+  const a=point(start);
+  const b=point(end);
+
+  for(const line of lines) {
+    const c=point(line.a);
+    const d=point(line.b);
+
+    if(segmentsTouch(a,b,c,d)) return false;
+  }
+
+  return true;
+}
+
+function getLegalMoves() {
+  const moves=[];
+
+  for(let a=0;a<SIZE*SIZE;a++) {
+    for(let b=a+1;b<SIZE*SIZE;b++) {
+      if(canDraw(a,b)) moves.push({a,b});
+    }
+  }
+
+  return moves;
+}
+
+function drawBoard() {
+  let html="";
+
+  // Dezentes Punktgitter
+  for(let i=0;i<SIZE;i++) {
+    const p1=point(i);
+    const p2=point((SIZE-1)*SIZE+i);
+    html+=`<line class="grid-line" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}"/>`;
+
+    const p3=point(i*SIZE);
+    const p4=point(i*SIZE+SIZE-1);
+    html+=`<line class="grid-line" x1="${p3.x}" y1="${p3.y}" x2="${p4.x}" y2="${p4.y}"/>`;
+  }
+
+  // Bereits gezeichnete Linien
+  for(const line of lines) {
+    const a=point(line.a);
+    const b=point(line.b);
+    html+=`
+      <line class="game-line ${playerClass(line.player)}"
+        x1="${a.x}" y1="${a.y}"
+        x2="${b.x}" y2="${b.y}"/>
+    `;
+  }
+
+  // Mögliche Zielpunkte hervorheben
+  let candidates=[];
+  if(selected!==null) {
+    for(let i=0;i<SIZE*SIZE;i++) {
+      if(canDraw(selected,i)) candidates.push(i);
+    }
+  }
+
+  // Punkte
+  for(let i=0;i<SIZE*SIZE;i++) {
+    const p=point(i);
+    let cls="dot";
+
+    if(i===selected) cls+=" selected";
+    else if(candidates.includes(i)) cls+=" candidate";
+
+    html+=`
+      <circle class="dot hitarea"
+        cx="${p.x}" cy="${p.y}" r="25"
+        data-point="${i}"/>
+      <circle class="${cls}"
+        cx="${p.x}" cy="${p.y}" r="9"
+        pointer-events="none"/>
+    `;
+  }
+
+  board.innerHTML=`
+    <defs>
+      <filter id="cyanGlow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="4" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="violetGlow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="4" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    ${html}
+  `;
+
+  board.querySelectorAll("[data-point]").forEach(el=>{
+    el.addEventListener("click",()=>{
+      handlePoint(Number(el.dataset.point));
+    });
+  });
+
+  updatePlayers();
+}
+
+function updatePlayers() {
+  document.getElementById("player1").classList.toggle(
+    "active",turn===0&&!gameOver
+  );
+  document.getElementById("player2").classList.toggle(
+    "active",turn===1&&!gameOver
+  );
+
+  document.getElementById("undo").disabled=history.length===0;
+}
+
+function updateInfo() {
+  const count=getLegalMoves().length;
+  infoEl.textContent=count+" mögliche Züge für "+playerName(turn);
+}
+
+function handlePoint(index) {
+  if(ONLINE){ handlePointOnline(index); return; }
+
+  if(gameOver) return;
+
+  if(selected===null) {
+    selected=index;
+    statusEl.textContent="Wähle jetzt den zweiten Punkt.";
+    drawBoard();
+    return;
+  }
+
+  if(selected===index) {
+    selected=null;
+    statusEl.textContent=playerName(turn)+" ist am Zug.";
+    drawBoard();
+    updateInfo();
+    return;
+  }
+
+  if(!canDraw(selected,index)) {
+    statusEl.textContent="Diese Linie ist nicht erlaubt!";
+    return;
+  }
+
+  // Zustand für Rückgängig sichern
+  history.push({
+    lines:lines.map(l=>({...l})),
+    turn:turn,
+    gameOver:gameOver
+  });
+
+  lines.push({
+    a:selected,
+    b:index,
+    player:turn
+  });
+
+  selected=null;
+  turn=1-turn;
+
+  const possible=getLegalMoves();
+
+  if(possible.length===0) {
+    gameOver=true;
+    statusEl.textContent=
+      "🏆 "+playerName(1-turn)+" GEWINNT!";
+    infoEl.textContent=
+      playerName(turn)+" hat keinen gültigen Zug mehr!";
+  } else {
+    statusEl.textContent=playerName(turn)+" ist am Zug.";
+    infoEl.textContent=possible.length+" mögliche Züge";
+  }
+
+  drawBoard();
+}
+
+function undo() {
+  if(ONLINE) return;
+  if(history.length===0) return;
+
+  const previous=history.pop();
+  lines=previous.lines;
+  turn=previous.turn;
+  gameOver=previous.gameOver;
+  selected=null;
+
+  statusEl.textContent=playerName(turn)+" ist am Zug.";
+  drawBoard();
+  updateInfo();
+}
+
+function restart() {
+  lines=[];
+  turn=0;
+  selected=null;
+  history=[];
+  gameOver=false;
+
+  statusEl.textContent="Spieler 1 beginnt!";
+  drawBoard();
+  updateInfo();
+}
+
+document.getElementById("undo").addEventListener("click",undo);
+
+document.getElementById("restart").addEventListener("click",()=>{
+  if(ONLINE){ holdAction("reset",{}); return; }
+  if(confirm("Möchtest du wirklich ein neues Spiel starten?")) {
+    restart();
+  }
+});
+
+// ---- Online über den Connector ----
+const params = new URLSearchParams(location.search);
+const ONLINE = params.has("room") && params.has("id");
+const ROOM = params.get("room") || "";
+const PLAYER_ID = params.get("id") || "";
+const ONLINE_API = "/api/hold";
+let onlineBusy = false;
+let onlineGame = null;
+let onlineNames = [];
+let onlineSignature = "";
+
+function applyOnlineState(game) {
+  if (!game) return;
+  onlineGame = game;
+  onlineNames = [game.redName, game.blueName];
+
+  lines = (game.lines || []).map(l => ({
+    a: l.a,
+    b: l.b,
+    player: l.color === "red" ? 0 : 1
+  }));
+  turn = game.current === "red" ? 0 : 1;
+  gameOver = game.status === "finished";
+
+  // Beim reinen Nachfragen bleibt der erste Klick ausgewählt.
+  const signature = lines.length + "|" + turn;
+  if(signature !== onlineSignature) selected = null;
+  onlineSignature = signature;
+
+  history = [];
+
+  drawBoard();
+
+  if (gameOver) {
+    const sieger = game.winner === "red" ? 0 : 1;
+    statusEl.textContent = "🏆 " + playerName(sieger) + " GEWINNT!";
+    infoEl.textContent = playerName(1 - sieger) + " hat keinen gültigen Zug mehr!";
+    return;
+  }
+
+  if (game.status === "invited") {
+    statusEl.textContent = "Warte auf die Antwort von " + game.blueName + " …";
+    return;
+  }
+
+  statusEl.textContent = game.note || (playerName(turn) + " ist am Zug.");
+  updateInfo();
+}
+
+async function rejoinRoom(){
+  let name = (typeof params !== "undefined" && params.get("name")) || "Spieler";
+  if (typeof G !== "undefined" && G && G.you >= 0 && G.seats && G.seats[G.you]) {
+    name = G.seats[G.you].name;
+  }
+  try{
+    await fetch("/api/presence",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({room:ROOM,id:PLAYER_ID,name,active:true})
+    });
+  }catch(e){}
+}
+
+async function onlineFetch(url, options){
+  let response = await fetch(url, options);
+  if (response.status === 403) {
+    const text = (await response.text()).trim();
+    // "Bitte zuerst dem Spielraum beitreten" heißt: das Lebenszeichen ist
+    // verloren gegangen (WLAN weg, Handy gesperrt). Einmal neu anmelden und
+    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
+    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+    await rejoinRoom();
+    response = await fetch(url, options);
+  }
+  if (!response.ok) throw Error((await response.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+  return response.json();
+}
+
+async function refreshOnline() {
+  if (onlineBusy) return;
+  try {
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+    applyOnlineState(data.game);
+  } catch (e) {}
+}
+
+async function holdAction(action, payload) {
+  if (onlineBusy) return;
+  onlineBusy = true;
+  try {
+    const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: PLAYER_ID, ...payload})
+    });
+    applyOnlineState(data.game);
+  } catch (e) {
+    statusEl.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+function handlePointOnline(index) {
+  if (gameOver || onlineBusy) return;
+
+  if (selected === null) {
+    selected = index;
+    statusEl.textContent = "Wähle jetzt den zweiten Punkt.";
+    drawBoard();
+    return;
+  }
+
+  if (selected === index) {
+    selected = null;
+    statusEl.textContent = playerName(turn) + " ist am Zug.";
+    drawBoard();
+    updateInfo();
+    return;
+  }
+
+  if (!canDraw(selected, index)) {
+    statusEl.textContent = "Diese Linie ist nicht erlaubt!";
+    return;
+  }
+
+  const a = selected;
+  selected = null;
+  holdAction("line", {a, b: index});
+}
+
+if (ONLINE) {
+  lines = [];
+  turn = 0;
+  selected = null;
+  history = [];
+  gameOver = false;
+  statusEl.textContent = "Verbinde mit dem Spielraum …";
+  drawBoard();
+  infoEl.textContent = "";
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.id = "leaveBtn";
+  back.className = document.getElementById("restart").className;
+  back.textContent="Spiel verlassen";
+  back.style.marginLeft = "8px";
+  back.onclick = () => tgVerlassen();
+  document.getElementById("restart").after(back);
+
+  document.getElementById("undo").disabled = true;
+
+  refreshOnline();
+  setInterval(refreshOnline, 1500);
+} else {
+  restart();
+}
+</script>
+</body>
+</html>

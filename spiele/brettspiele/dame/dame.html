@@ -1,0 +1,845 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DAME – Neon Duel</title>
+<style>
+:root{
+  --bg:#0a211b;
+  --red:#e8b3a6;
+  --blue:#e8cd8e;
+  --purple:#a9c3b6;
+  --gold:#d9bc7c;
+  --text:#f6edda;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  padding:12px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:
+    radial-gradient(ellipse at 15% 10%,#12332a 0%,transparent 40%),
+    radial-gradient(ellipse at 85% 90%,#184536 0%,transparent 45%),
+    var(--bg);
+  color:var(--text);
+  font-family:Georgia,"Times New Roman",serif;
+}
+.game{
+  width:min(680px,100%);
+  padding:clamp(12px,3vw,25px);
+  border:2px solid #12332a;
+  border-radius:22px;
+  background:linear-gradient(145deg,#0a211b,#0a211b);
+  box-shadow:0 0 25px #a52aff35,inset 0 0 25px #a52aff0c;
+}
+.subtitle{
+  text-align:center;
+  color:#a9c3b6;
+  font-size:13px;
+  letter-spacing:3px;
+  margin:5px 0 22px;
+}
+/* Leer = nichts anzeigen; im Online-Spiel steht hier der Raumname. */
+.subtitle:empty{
+  display:none;
+}
+.players{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.player{
+  text-align:center;
+  padding:12px 8px;
+  border:2px solid #184536;
+  border-radius:13px;
+  background:#0a211b;
+  color:#a9c3b6;
+  transition:.2s;
+}
+.player strong{display:block;font-size:21px;letter-spacing:2px}
+.player small{display:block;margin-top:5px}
+.player.red.active{
+  color:var(--red);
+  border-color:var(--red);
+  box-shadow:0 0 17px #ff315f55;
+}
+.player.blue.active{
+  color:var(--blue);
+  border-color:var(--blue);
+  box-shadow:0 0 17px #36dfff55;
+}
+.status{
+  text-align:center;
+  font-size:clamp(19px,4vw,25px);
+  font-weight:bold;
+  margin:20px 0 7px;
+  min-height:30px;
+}
+.status.red{color:var(--red);text-shadow:0 0 12px var(--red)}
+.status.blue{color:var(--blue);text-shadow:0 0 12px var(--blue)}
+.status.win{color:var(--gold);text-shadow:0 0 15px var(--gold)}
+.info{
+  min-height:20px;
+  text-align:center;
+  color:#a9c3b6;
+  font-size:13px;
+  margin-bottom:14px;
+}
+.board-wrap{
+  width:100%;
+  max-width:540px;
+  margin:auto;
+  padding:7px;
+  border:2px solid #6f8f80;
+  border-radius:12px;
+  background:#0a211b;
+  box-shadow:0 0 18px #a52aff25;
+}
+#board{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  width:100%;
+  aspect-ratio:1;
+  overflow:hidden;
+  border:2px solid #12332a;
+  border-radius:5px;
+}
+.cell{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  aspect-ratio:1;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.light{background:#efe6d2}
+.dark{
+  background:#0f2b23;
+  box-shadow:inset 0 0 8px #0008;
+}
+.cell.selected{
+  background:#12332a;
+  box-shadow:inset 0 0 0 4px #a9c3b6;
+}
+.cell.target::after{
+  content:"";
+  position:absolute;
+  width:28%;
+  height:28%;
+  border-radius:50%;
+  background:#a9c3b6;
+  box-shadow:0 0 8px #a9c3b6,0 0 15px #a9c3b6;
+  pointer-events:none;
+}
+.cell.target.capture::after{
+  width:42%;
+  height:42%;
+  background:transparent;
+  border:3px solid var(--gold);
+  box-shadow:0 0 10px var(--gold);
+}
+.piece{
+  position:relative;
+  z-index:2;
+  width:78%;
+  height:78%;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:3px solid #ffffff55;
+  transition:transform .12s;
+}
+.piece.red{
+  background:radial-gradient(circle at 35% 25%,#e8b3a6,#e8b3a6 48%,#12332a);
+  box-shadow:0 0 9px #e8b3a6, inset 0 -4px 7px #4a2f30;
+}
+.piece.blue{
+  background:radial-gradient(circle at 35% 25%,#e8cd8e,#e8cd8e 48%,#184536);
+  box-shadow:0 0 9px #e8cd8e,inset 0 -4px 7px #184536;
+}
+.piece.king::after{
+  content:"♛";
+  font-size:clamp(17px,4vw,29px);
+  color:var(--gold);
+  text-shadow:0 0 5px #f6edda,0 0 12px #d9bc7c;
+}
+.piece.selected-piece{
+  transform:scale(1.12);
+  border-color:white;
+}
+.cell.last-move{
+  box-shadow:inset 0 0 0 3px #f6edda;
+}
+.legend{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:18px;
+  margin:17px 0 5px;
+  color:#efe6d2;
+  font-size:13px;
+}
+.legend span{display:flex;align-items:center;gap:7px}
+.dot{width:11px;height:11px;border-radius:50%}
+.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot.blue{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.counter{
+  text-align:center;
+  color:#efe6d2;
+  margin-top:14px;
+  font-size:14px;
+}
+.counter strong{color:var(--gold);font-size:18px}
+.bottom{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  margin-top:20px;
+}
+.leave-btn{
+  background:transparent;
+  border:1px solid #12332a;
+  border-radius:8px;
+  color:#a9c3b6;
+  padding:8px 16px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+}
+.leave-btn:hover{
+  background:#12332a;
+  color:white;
+  border-color:var(--purple);
+}
+.reset{
+  padding:14px 28px;
+  border:2px solid var(--purple);
+  border-radius:12px;
+  background:#12332a;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 0 13px #a52aff44;
+}
+.reset:active{transform:scale(.96)}
+@media(max-width:430px){
+  body{padding:6px}
+  .game{padding:12px 8px;border-radius:16px}
+  .board-wrap{padding:4px}
+  .players{gap:7px}
+  .player{padding:10px 4px}
+  .piece{border-width:2px}
+}
+
+/* Hochkant auf dem Handy: Rahmen schlank, damit das Brett die Breite bekommt */
+@media(max-width:560px){
+  body{padding:2px;align-items:flex-start}
+  .game{width:100%;max-width:none;padding:4px 2px;border-width:1px;border-radius:12px}
+  .board-wrap{max-width:none;padding:2px;border-width:1px;border-radius:8px}
+  #board{border-width:1px}
+}
+
+/* ---- Farben des Connectors: Grün und Gold ---- */
+body{background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font-family:Georgia,"Times New Roman",serif}
+button{background:#0f2b23;border:1px solid #d9bc7c66;color:#e8cd8e;border-radius:7px;font-family:inherit}
+button:hover:not(:disabled){background:#184536}
+button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
+h1,h2,h3{color:#f1dca8;font-weight:normal}
+small,.muted,.hint{color:#a9c3b6}
+
+/* ---- Brett & Figuren im Grün-Gold-Look ---- */
+:root{--red:#d19471;--blue:#e8cd8e}
+.board-wrap{border-color:#d9bc7c55;background:radial-gradient(circle at 50% 0%,#194936,#0b241d 72%);box-shadow:0 8px 20px #0006}
+#board{border-color:#d9bc7c44;background:#0b241d}
+.light{background:#d9c7a0}
+.dark{background:#174034;box-shadow:inset 0 0 10px #0007}
+.cell.selected{background:#1d4a3a;box-shadow:inset 0 0 0 3px #e8cd8e}
+.cell.target::after{width:26%;height:26%;background:#e8cd8e;box-shadow:none;opacity:.9}
+.cell.target.capture::after{width:46%;height:46%;border:3px solid #e8cd8e;box-shadow:none}
+.piece{border:2px solid #0b241d;box-shadow:inset -2px -4px 8px #00000055,0 3px 5px #00000080}
+.piece.red{background:radial-gradient(circle at 34% 26%,#d99b78,#b06a4a 58%,#7d4530);box-shadow:inset -2px -4px 8px #4a2618,0 3px 5px #00000080}
+.piece.blue{background:radial-gradient(circle at 34% 26%,#f7e6b4,#d9bc7c 58%,#a8873f);box-shadow:inset -2px -4px 8px #6b5325,0 3px 5px #00000080}
+.piece.king::after{color:#4a3a14;text-shadow:none}
+.piece.blue.king::after{color:#3a2d0e}
+.piece.selected-piece{border-color:#f6edda;transform:scale(1.08)}
+.cell.last-move{box-shadow:inset 0 0 0 3px #d9bc7c}
+.dot.red{background:#b06a4a;box-shadow:none}
+.dot.blue{background:#d9bc7c;box-shadow:none}
+
+/* Kein Leuchten, dafür klare Schrift */
+.status.red,.status.blue{text-shadow:none}
+.player.red,.player.red .score{color:#d19471}
+.player.blue,.player.blue .score{color:#e8cd8e}
+</style>
+</head>
+<body>
+
+<main class="game">
+  <div class="subtitle"></div>
+
+  <section class="players">
+    <div class="player red active" id="redPlayer">
+      <strong>KUPFER</strong>
+      <small>12 Steine</small>
+    </div>
+    <div class="player blue" id="bluePlayer">
+      <strong>GOLD</strong>
+      <small>12 Steine</small>
+    </div>
+  </section>
+
+  <div class="status red" id="status">KUPFER IST AM ZUG</div>
+  <div class="info" id="info">Wähle einen deiner Spielsteine!</div>
+
+  <div class="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot red"></i> Kupfer</span>
+    <span><i class="dot blue"></i> Gold</span>
+    <span>♛ Dame</span>
+  </div>
+
+  <div class="counter" id="counter">
+    Kupfer: <strong>12</strong> &nbsp;|&nbsp; Gold: <strong>12</strong>
+  </div>
+
+  <div class="bottom">
+    <button class="reset" id="restart">↻ NEUES SPIEL</button>
+    <button class="leave-btn" id="leaveBtn" onclick="leaveGame()" style="display:none;">Spiel verlassen</button>
+  </div>
+
+</main>
+
+<script src="/spiele/netz.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const onlineRoom = (params.get("room") || "").trim().toUpperCase();
+const onlineName = (params.get("name") || "").trim() || "Spieler";
+// Der Connector schickt die Spieler-ID in der URL mit. Sonst gilt die des
+// Tabs, sonst wird eine neue erzeugt – ohne ID gäbe es kein Presence und der
+// Spieler würde nach 20 Sekunden aus dem Raum fallen.
+let onlineID = (params.get("id") || "").trim();
+if (!onlineID) {
+  try {
+    onlineID = sessionStorage.getItem("tg-player-id") || "";
+    if (!onlineID) {
+      onlineID = (crypto.randomUUID ? crypto.randomUUID() : "tg-" + Math.random().toString(36).slice(2) + Date.now());
+      sessionStorage.setItem("tg-player-id", onlineID);
+    }
+  } catch(e) {
+    onlineID = "tg-" + Math.random().toString(36).slice(2) + Date.now();
+  }
+}
+
+let onlineGame = null;
+let onlineColor = "";
+let onlineOpponent = "";
+
+function leaveGame(){ tgVerlassen(); }
+
+const boardEl=document.getElementById("board");
+
+let board=[];
+let current="red";
+let selected=null;
+let legalMoves=[];
+let mustContinue=false;
+let gameOver=false;
+let lastMove=null;
+
+function initialBoard(){
+  board=Array.from({length:8},()=>Array(8).fill(null));
+
+  for(let r=0;r<3;r++){
+    for(let c=0;c<8;c++){
+      if((r+c)%2===1) board[r][c]={color:"blue",king:false};
+    }
+  }
+
+  for(let r=5;r<8;r++){
+    for(let c=0;c<8;c++){
+      if((r+c)%2===1) board[r][c]={color:"red",king:false};
+    }
+  }
+}
+
+function inside(r,c){
+  return r>=0 && r<8 && c>=0 && c<8;
+}
+
+function directions(piece){
+  if(piece.king){
+    return [[-1,-1],[-1,1],[1,-1],[1,1]];
+  }
+  return piece.color==="red"
+    ? [[-1,-1],[-1,1]]
+    : [[1,-1],[1,1]];
+}
+
+function getMoves(r,c,capturesOnly=false){
+  const piece=board[r][c];
+  if(!piece) return [];
+
+  const moves=[];
+  const dirs=directions(piece);
+
+  for(const [dr,dc] of dirs){
+    if(piece.king){
+      let nr=r+dr;
+      let nc=c+dc;
+      let enemy=null;
+
+      while(inside(nr,nc)){
+        const target=board[nr][nc];
+
+        if(target){
+          if(!enemy && target.color!==piece.color){
+            enemy=[nr,nc];
+          }else{
+            break;
+          }
+        }else if(enemy){
+          moves.push({
+            r:nr,c:nc,
+            capture:enemy
+          });
+        }else if(!capturesOnly){
+          moves.push({
+            r:nr,c:nc,
+            capture:null
+          });
+        }
+
+        nr+=dr;
+        nc+=dc;
+      }
+    }else{
+      const nr=r+dr;
+      const nc=c+dc;
+
+      if(!inside(nr,nc)) continue;
+
+      const target=board[nr][nc];
+
+      if(!target && !capturesOnly){
+        moves.push({r:nr,c:nc,capture:null});
+      }
+
+      if(target && target.color!==piece.color){
+        const jr=nr+dr;
+        const jc=nc+dc;
+
+        if(inside(jr,jc) && !board[jr][jc]){
+          moves.push({
+            r:jr,c:jc,
+            capture:[nr,nc]
+          });
+        }
+      }
+    }
+  }
+
+  return moves;
+}
+
+function allCaptures(color){
+  const result=[];
+
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color===color){
+        const moves=getMoves(r,c,true);
+        if(moves.length) result.push({r,c,moves});
+      }
+    }
+  }
+
+  return result;
+}
+
+function hasAnyMove(color){
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color===color){
+        if(getMoves(r,c).length) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function canSelect(r,c){
+  if(mustContinue){
+    return selected && r===selected.r && c===selected.c;
+  }
+
+  const piece=board[r][c];
+  if(!piece || piece.color!==current) return false;
+
+  const captures=allCaptures(current);
+  if(captures.length){
+    return captures.some(item=>item.r===r && item.c===c);
+  }
+
+  return true;
+}
+
+function selectPiece(r,c){
+  if(onlineRoom && onlineColor && current !== onlineColor) return;
+  if(gameOver) return;
+
+  if(!mustContinue && board[r][c] &&
+     board[r][c].color===current){
+
+    if(!canSelect(r,c)) return;
+
+    selected={r,c};
+
+    const captures=allCaptures(current);
+    legalMoves=captures.length
+      ? getMoves(r,c,true)
+      : getMoves(r,c);
+
+    render();
+    return;
+  }
+
+  if(selected){
+    const move=legalMoves.find(m=>m.r===r && m.c===c);
+
+    if(move){
+      makeMove(move);
+      return;
+    }
+
+    if(!mustContinue){
+      selected=null;
+      legalMoves=[];
+      if(board[r][c] && board[r][c].color===current){
+        selectPiece(r,c);
+      }else{
+        render();
+      }
+    }
+  }
+}
+
+function makeMove(move){
+  const from={...selected};
+  const piece=board[from.r][from.c];
+
+  board[move.r][move.c]=piece;
+  board[from.r][from.c]=null;
+
+  if(move.capture){
+    board[move.capture[0]][move.capture[1]]=null;
+  }
+
+  lastMove={from,to:{r:move.r,c:move.c}};
+  selected={r:move.r,c:move.c};
+
+  // Umwandlung zur Dame
+  if(!piece.king &&
+     ((piece.color==="red" && move.r===0) ||
+      (piece.color==="blue" && move.r===7))){
+    piece.king=true;
+  }
+
+  if(move.capture){
+    const moreCaptures=getMoves(move.r,move.c,true);
+
+    if(moreCaptures.length){
+      mustContinue=true;
+      legalMoves=moreCaptures;
+      render();
+      document.getElementById("info").textContent=
+        "Weiter schlagen! Du bist noch einmal dran.";
+      return;
+    }
+  }
+
+  selected=null;
+  legalMoves=[];
+  mustContinue=false;
+
+  current=current==="red" ? "blue" : "red";
+
+  const enemyCount=countPieces(current);
+
+  if(enemyCount===0 || !hasAnyMove(current)){
+    gameOver=true;
+    render();
+    showWinner(current==="red" ? "blue" : "red");
+    return;
+  }
+
+  render();
+
+  if(onlineRoom){
+    syncMultiplayerMove();
+  }
+}
+
+function countPieces(color){
+  let count=0;
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      if(board[r][c] && board[r][c].color===color) count++;
+    }
+  }
+  return count;
+}
+
+function render(){
+  boardEl.innerHTML="";
+
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const cell=document.createElement("div");
+      cell.className="cell "+((r+c)%2===0?"light":"dark");
+
+      if(selected && selected.r===r && selected.c===c){
+        cell.classList.add("selected");
+      }
+
+      const target=legalMoves.find(m=>m.r===r && m.c===c);
+      if(target){
+        cell.classList.add("target");
+        if(target.capture) cell.classList.add("capture");
+      }
+
+      if(lastMove &&
+         lastMove.to.r===r && lastMove.to.c===c){
+        cell.classList.add("last-move");
+      }
+
+      const piece=board[r][c];
+
+      if(piece){
+        const stone=document.createElement("div");
+        stone.className="piece "+piece.color+
+          (piece.king?" king":"")+
+          (selected && selected.r===r && selected.c===c
+            ?" selected-piece":"");
+        cell.appendChild(stone);
+      }
+
+      cell.addEventListener("click",()=>selectPiece(r,c));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  updateInfo();
+  updateCounter();
+}
+
+function updateInfo(){
+  const status=document.getElementById("status");
+  const info=document.getElementById("info");
+
+  document.getElementById("redPlayer")
+    .classList.toggle("active",current==="red" && !gameOver);
+  document.getElementById("bluePlayer")
+    .classList.toggle("active",current==="blue" && !gameOver);
+
+  status.className="status "+current;
+  status.textContent=current==="red"
+    ?"KUPFER IST AM ZUG":"GOLD IST AM ZUG";
+
+  if(gameOver) return;
+
+  if(mustContinue){
+    info.textContent="Weiter schlagen! Du bist noch einmal dran.";
+  }else if(allCaptures(current).length){
+    info.textContent="Schlagzwang! Du musst einen Stein schlagen.";
+  }else if(selected){
+    info.textContent="Wähle ein leuchtendes Zielfeld.";
+  }else{
+    info.textContent="Wähle einen deiner Spielsteine!";
+  }
+}
+
+function updateCounter(){
+  const red=countPieces("red");
+  const blue=countPieces("blue");
+
+  document.getElementById("counter").innerHTML=
+    'Kupfer: <strong>'+red+'</strong> &nbsp;|&nbsp; Gold: <strong>'+blue+'</strong>';
+
+  document.querySelector("#redPlayer small").textContent=
+    red+" Steine";
+  document.querySelector("#bluePlayer small").textContent=
+    blue+" Steine";
+}
+
+function showWinner(winner){
+  const status=document.getElementById("status");
+  status.className="status win";
+  status.textContent=(winner==="red"?"KUPFER":"GOLD")+" GEWINNT! 🎉";
+  document.getElementById("info").textContent=
+    "Der Gegner hat keine Steine oder keinen gültigen Zug mehr.";
+  document.getElementById("redPlayer").classList.remove("active");
+  document.getElementById("bluePlayer").classList.remove("active");
+}
+
+function restart(){
+  initialBoard();
+  current="red";
+  selected=null;
+  legalMoves=[];
+  mustContinue=false;
+  gameOver=false;
+  lastMove=null;
+  render();
+}
+
+// "Neues Spiel": setzt lokal zurück. Online wird zusätzlich der Server gebeten
+// (er erlaubt eine neue Runde nur nach Spielende) – niemals ein Zug gesendet.
+document.getElementById("restart").addEventListener("click",()=>{
+  restart();
+  syncMultiplayerReset();
+});
+
+async function syncMultiplayerMove() {
+  if (!onlineRoom || !onlineID) return;
+  // Nur übertragen, wenn wirklich eine aktive Partie läuft und dieser Spieler
+  // am Zug ist. Beim Seitenaufbau ist der Serverstand noch nicht eingelesen –
+  // dann darf nichts gesendet werden.
+  if (!onlineGame || onlineGame.status !== "active" || onlineGame.current !== onlineColor) return;
+  try {
+    let winColor = "";
+    if (gameOver) {
+      winColor = (current === "red" ? "blue" : "red");
+    }
+    await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&action=move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: onlineID,
+        board: board,
+        current: current,
+        winner: winColor
+      })
+    });
+  } catch(e) {}
+}
+
+// Neue Runde im Online-Modus: dafür gibt es die Aktion "reset" am Server.
+async function syncMultiplayerReset() {
+  if (!onlineRoom || !onlineID) return;
+  if (!onlineGame || onlineGame.status !== "finished") return;
+  try {
+    const resp = await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&action=reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: onlineID })
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.game) renderMultiplayer(data.game);
+  } catch(e) {}
+}
+
+function renderMultiplayer(game) {
+  onlineGame = game;
+  onlineColor = (game.redId === onlineID) ? "red" : (game.blueId === onlineID) ? "blue" : "";
+  onlineOpponent = (onlineColor === "red") ? game.blueName : game.redName;
+
+  document.querySelector("#redPlayer strong").textContent = game.redName || "KUPFER";
+  document.querySelector("#bluePlayer strong").textContent = game.blueName || "GOLD";
+
+  if (game.board && Array.isArray(game.board)) {
+    // only update if not mid-capture jump
+    if (!mustContinue) {
+      board = game.board;
+      current = game.current || "red";
+      if (game.winner) {
+        gameOver = true;
+        showWinner(game.winner);
+      } else {
+        gameOver = (game.status === "finished");
+      }
+    }
+  }
+
+  render();
+
+  const restartBtn = document.getElementById("restart");
+  if (game.status === "finished") {
+    restartBtn.disabled = false;
+    restartBtn.textContent = "↻ NOCHMAL SPIELEN";
+  } else {
+    restartBtn.disabled = (onlineColor !== "red" && onlineColor !== "blue");
+    restartBtn.textContent = "↻ NEUES SPIEL";
+  }
+
+  if (onlineRoom && onlineColor) {
+    const isMyTurn = (current === onlineColor);
+    const info = document.getElementById("info");
+    if (!gameOver) {
+      if (isMyTurn) {
+        info.textContent = "Du bist dran! Wähle einen deiner Spielsteine.";
+      } else {
+        info.textContent = (onlineOpponent || "Gegner") + " ist am Zug...";
+      }
+    }
+  }
+}
+
+async function multiplayerHeartbeat() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    await fetch("/api/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room: onlineRoom, id: onlineID, name: onlineName })
+    });
+  } catch(e) {}
+}
+
+async function refreshMultiplayer() {
+  if (!onlineRoom || !onlineID) return;
+  try {
+    const resp = await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&id=" + encodeURIComponent(onlineID), { cache: "no-store" });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.game) renderMultiplayer(data.game);
+  } catch(e) {}
+}
+
+if (onlineRoom) {
+  const lb = document.getElementById("leaveBtn");
+  if (lb) lb.style.display = "inline-block";
+  document.querySelector(".subtitle").textContent = "ONLINE-MULTIPLAYER · " + onlineRoom + " · " + (onlineID ? "Verbunden" : "Spielerkennung fehlt");
+  // Reihenfolge ist entscheidend: erst anmelden, dann den echten Spielstand
+  // holen. Vorher wird weder gezeichnet noch gesendet; nur wenn im Raum noch
+  // keine Partie liegt, erscheint das lokale Startbrett.
+  (async () => {
+    await multiplayerHeartbeat();
+    await refreshMultiplayer();
+    if (!onlineGame) restart();
+    setInterval(multiplayerHeartbeat, 5000);
+    setInterval(refreshMultiplayer, 700);
+  })();
+} else {
+  restart();
+}
+</script>
+</body>
+</html>
