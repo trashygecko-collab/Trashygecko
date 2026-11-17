@@ -49,6 +49,8 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			ToID string `json:"toId"`
 			Name string `json:"name"`
 			Text string `json:"text"`
+			// Bild: Name einer Grafik aus dem eigenen Bestand (optional).
+			Bild string `json:"bild"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, "Ungültige Nachricht", http.StatusBadRequest)
@@ -59,7 +61,22 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		input.Name = strings.TrimSpace(input.Name)
 		input.Text = strings.TrimSpace(input.Text)
 		input.Name = limitName(input.Name)
-		if input.Text == "" || utf8.RuneCountInString(input.Text) > 1000 {
+		// Nur Grafiken aus dem eigenen Bestand: keine fremden Adressen, keine
+		// Pfade aus dem Ordner heraus, keine anderen Dateitypen.
+		input.Bild = strings.TrimSpace(input.Bild)
+		if input.Bild != "" {
+			name, ok := smileyErlaubt(input.Bild)
+			if !ok {
+				http.Error(w, "Diese Grafik gehört nicht zum Smiley-Bestand.", http.StatusBadRequest)
+				return
+			}
+			input.Bild = name
+		} else {
+			input.Bild = ""
+		}
+		// Eine Nachricht braucht Text oder eine Grafik – beides zusammen ist
+		// erlaubt, nur Text bleibt wie bisher.
+		if (input.Text == "" && input.Bild == "") || utf8.RuneCountInString(input.Text) > 1000 {
 			http.Error(w, "Nachricht leer oder zu lang", http.StatusBadRequest)
 			return
 		}
@@ -155,6 +172,7 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     sender.Name,
 			Text:     input.Text,
+			Bild:     input.Bild,
 			Time:     now.Format("15:04:05"),
 			SenderID: input.ID,
 			ToID:     input.ToID,

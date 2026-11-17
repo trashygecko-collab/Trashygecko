@@ -88,6 +88,10 @@ type Message struct {
 	System bool   `json:"system,omitempty"`
 	// Gone markiert "verlässt den Raum" – der Name ist dann nicht anklickbar.
 	Gone bool `json:"gone,omitempty"`
+	// Bild ist der Dateiname einer Grafik aus dem eigenen Smiley-Bestand
+	// ("katze.gif" oder "tiere/katze.gif"). Leer = reine Textnachricht;
+	// alte Nachrichten ohne dieses Feld bleiben unverändert lesbar.
+	Bild string `json:"bild,omitempty"`
 }
 
 type Player struct {

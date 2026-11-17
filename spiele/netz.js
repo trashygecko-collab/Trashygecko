@@ -45,6 +45,43 @@
   var id = params.get("id") || "";
 
   var unterwegs = false; // Rückleitung läuft
+
+  // Steckt die Seite im Spielrahmen des Connectors (PC)? Dann darf sie auf
+  // keinen Fall selbst einen Connector laden – sie meldet sich beim Rahmen und
+  // der schließt sie.
+  var imRahmen = false;
+  try {
+    imRahmen = !!(window.parent && window.parent !== window &&
+      window.parent.location && window.parent.location.origin === location.origin);
+  } catch (e) {
+    imRahmen = false;
+  }
+
+  function rahmenMelden(art, hinweis) {
+    try {
+      window.parent.postMessage({
+        tg: "spiel", art: art, hinweis: hinweis || "", room: room, id: id
+      }, location.origin);
+    } catch (e) {}
+  }
+
+  // Zurück in den Raum: im Rahmen den Rahmen schließen lassen, im eigenen Tab
+  // erst versuchen, den Tab zu schließen (er wurde vom Connector geöffnet) und
+  // sonst wie bisher auf den Connector umleiten.
+  function weg(hinweis) {
+    if (imRahmen) {
+      rahmenMelden("verlassen", hinweis);
+      return;
+    }
+    if (window.opener) {
+      try { window.close(); } catch (e) {}
+      setTimeout(function () {
+        if (!window.closed) zurueckInDenRaum(hinweis);
+      }, 400);
+      return;
+    }
+    zurueckInDenRaum(hinweis);
+  }
   var laeuft = false; // eine Abfrage ist offen
   var takt = 0; // Hintergrundabfrage
 
@@ -54,6 +91,11 @@
     }
     unterwegs = true;
     clearInterval(takt);
+    if (imRahmen) {
+      // Kein zweiter Connector im Rahmen: dort genügt die Meldung.
+      rahmenMelden("ende", hinweis);
+      return;
+    }
     var ziel = "/connector" + (room ? "?room=" + encodeURIComponent(room) : "");
     if (hinweis) {
       ziel += (room ? "&" : "?") + "hinweis=" + encodeURIComponent(hinweis);
@@ -64,18 +106,18 @@
 
   window.tgVerlassen = function () {
     if (!room || !id) {
-      zurueckInDenRaum("");
+      weg("");
       return;
     }
-    var weg = function () { zurueckInDenRaum(""); };
-    var notbremse = setTimeout(weg, 1500); // schwaches WLAN darf nicht blockieren
+    var jetztWeg = function () { weg(""); };
+    var notbremse = setTimeout(jetztWeg, 1500); // schwaches WLAN darf nicht blockieren
     fetch("/api/leave?room=" + encodeURIComponent(room), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: id })
     }).catch(function () {}).then(function () {
       clearTimeout(notbremse);
-      weg();
+      jetztWeg();
     });
   };
 
@@ -99,6 +141,13 @@
 
   // Kurze, deutliche Meldung über der Partie, danach zurück in den Raum.
   function zeigeHinweis(text) {
+    if (imRahmen) {
+      // Der Rahmen zeigt die Meldung in der Statuszeile, der Tab bleibt nicht
+      // mit einer halbfertigen Partie zurück.
+      clearInterval(takt);
+      rahmenMelden("ende", text);
+      return;
+    }
     var box = document.getElementById("tg-hinweis");
     if (!box) {
       box = document.createElement("div");

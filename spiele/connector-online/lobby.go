@@ -193,6 +193,12 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	input.Room = strings.ToUpper(strings.TrimSpace(input.Room))
 	input.ID = strings.TrimSpace(input.ID)
 	input.Name = strings.TrimSpace(input.Name)
+	// Das Gerät hängt sein Token an die Adresse (spiele/token.js), nicht in
+	// den Rumpf. Ohne diese Zeile galt jeder bekannte Platz als fremdes Gerät
+	// – jedes Lebenszeichen und jedes Neuladen lief in eine 403.
+	if input.Token == "" {
+		input.Token = strings.TrimSpace(r.URL.Query().Get("token"))
+	}
 	if input.ID == "" || input.Room == "" {
 		http.Error(w, "Spielraum oder Spielerkennung fehlt", http.StatusBadRequest)
 		return

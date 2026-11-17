@@ -162,5 +162,105 @@ function generateSolvableBoard(symbolIds, level = 1) {
         second.symbolId = symbolId;
     });
 
+    // Beweis der Loesbarkeit: diese Reihenfolge geht mit diesen Motiven auf.
+    board.loesung = removalOrder;
+
     return board;
+}
+
+// --------------------------------------------------
+// SCHWIERIGER MODUS: VIER KOPIEN JE MOTIV
+// --------------------------------------------------
+
+// Ein klassischer Mahjong-Satz hat 144 Steine aus 36 Motiven zu je vier
+// Exemplaren.  Genau daraus entsteht die Schwierigkeit: Welche zwei Steine ein
+// Paar bilden, entscheidet der Spieler, und eine unglueckliche Wahl kann zwei
+// Steine uebrig lassen, die nie gleichzeitig frei werden.  Die Motive selbst
+// bleiben dieselben - je Brett kommen 36 der vorhandenen 72 zum Einsatz.
+const HARTE_MOTIVE = 36;
+
+function createHardSymbolSet(symbolIds) {
+    if (!Array.isArray(symbolIds) || symbolIds.length < HARTE_MOTIVE) {
+        throw new Error(`Es werden mindestens ${HARTE_MOTIVE} Motive benoetigt.`);
+    }
+
+    if (new Set(symbolIds).size < HARTE_MOTIVE) {
+        throw new Error("Die Motive muessen unterschiedlich sein.");
+    }
+
+    return shuffle(symbolIds).slice(0, HARTE_MOTIVE);
+}
+
+// Gibt es einen Zug?  Nur fuer den Startschutz des schweren Aufbaus.
+function hatFreiesPaar(board) {
+    const frei = getFreeTiles(board);
+    const gesehen = new Set();
+
+    for (const tile of frei) {
+        if (gesehen.has(tile.symbolId)) return true;
+
+        gesehen.add(tile.symbolId);
+    }
+
+    return false;
+}
+
+// Anspruchsvoller Aufbau: 36 Motive zu je vier Steinen.  Jedes Motiv liegt auf
+// zwei Abbaustufen, also weit auseinander - die vier Steine muessen ueber
+// mehrere Schichten hinweg zusammengefuehrt werden.  Weil jede Stufe fuer sich
+// ein passendes Paar bildet, bleibt das Brett entlang dieser Reihenfolge
+// vollstaendig abbaubar; die Loesung liegt als Beweis am Brett (board.loesung).
+function generateHardBoard(symbolIds, level = 1) {
+    const board = createBoard(level);
+
+    if (board.length !== HARTE_MOTIVE * 4) {
+        throw new Error(
+            `Level ${level} enthaelt ${board.length} statt 144 Positionen.`
+        );
+    }
+
+    const order = findRemovalOrder(board);
+
+    if (order.length !== HARTE_MOTIVE * 2) {
+        throw new Error("Die Abbaureihenfolge ist unvollstaendig.");
+    }
+
+    const nachId = new Map(board.map(tile => [tile.id, tile]));
+
+    for (let versuch = 0; versuch < 5; versuch++) {
+        const motive = createHardSymbolSet(symbolIds);
+        const stufen = shuffle(order.map((_, index) => index));
+
+        motive.forEach((motiv, index) => {
+            for (const stufe of [stufen[index * 2], stufen[index * 2 + 1]]) {
+                for (const id of order[stufe]) {
+                    const tile = nachId.get(id);
+
+                    if (!tile) throw new Error("Ein Spielstein fehlt.");
+
+                    tile.symbolId = motiv;
+                }
+            }
+        });
+
+        // Kein Brett ausliefern, auf dem von Anfang an kein Zug moeglich ist.
+        if (hatFreiesPaar(board)) break;
+    }
+
+    board.loesung = order;
+
+    return board;
+}
+
+// Prueft eine Abbaureihenfolge mit den Regeln des Spiels: jedes Paar muss aus
+// zwei freien Steinen mit demselben Motiv bestehen, am Ende muss das Brett leer
+// sein.  Das ist der Beweis, dass die Verteilung loesbar ist.
+function pruefeAbbau(board, order) {
+    const kopie = board.map(tile => ({ ...tile }));
+
+    for (const paar of order) {
+        if (!removeTilePair(kopie, paar[0], paar[1])) return false;
+    }
+
+    return kopie.every(tile => tile.removed);
 }

@@ -424,3 +424,66 @@ function baueStilwahl() {
         });
     });
 }
+
+// --------------------------------------------------
+// SCHWIERIGKEIT
+// --------------------------------------------------
+
+// "leicht" ist das bisherige Spiel, "schwer" der anspruchsvollere Aufbau.
+const MODI = ["leicht", "schwer"];
+
+// Gespeicherte Wahl; ohne Eintrag bleibt es beim bisherigen Spiel.
+function modusWert() {
+    const gespeichert =
+        gameData && gameData.settings ? gameData.settings.schwierigkeit : null;
+
+    return gespeichert === "schwer" ? "schwer" : "leicht";
+}
+
+// Setzt den Grad fuer die laufende Partie und merkt ihn fuer die naechste.
+function setzeModus(wert, speichern = true) {
+    const neu = MODI.includes(wert) ? wert : "leicht";
+    const gewechselt = neu !== spielModus;
+
+    spielModus = neu;
+
+    // Das Stylesheet haengt die Knopfreihe daran: in Schwer steht dort ein
+    // vierter Knopf (MISCHEN), in Leicht bleibt die Reihe wie bisher.
+    document.body.dataset.modus = neu;
+
+    document.querySelectorAll("#modusLeiste button").forEach(knopf => {
+        const an = knopf.dataset.wert === neu;
+
+        knopf.classList.toggle("aktiv", an);
+        knopf.setAttribute("aria-pressed", an ? "true" : "false");
+    });
+
+    zeigeMixKnopf();
+    aktualisiereMixKnopf();
+
+    // Ein Wechsel mitten in der Partie laesst das Brett stehen und gilt sofort.
+    if (gewechselt && gameRunning) {
+        setMessage(
+            neu === "schwer"
+                ? "Schwierigkeit Schwer – das Brett bleibt, MISCHEN ist jetzt verfügbar."
+                : "Schwierigkeit Leicht – das Brett bleibt."
+        );
+    }
+
+    if (!speichern || !gameData) return;
+
+    gameData.settings = gameData.settings || {};
+    gameData.settings.schwierigkeit = neu;
+
+    speichereSpielstand();
+}
+
+function baueModuswahl() {
+    const leiste = getElement("modusLeiste");
+
+    if (!leiste) return;
+
+    leiste.querySelectorAll("button[data-wert]").forEach(knopf => {
+        knopf.addEventListener("click", () => setzeModus(knopf.dataset.wert));
+    });
+}

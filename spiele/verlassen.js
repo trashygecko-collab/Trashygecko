@@ -11,6 +11,36 @@
   var raum = p.get("room") || "";
   var id = p.get("id") || "";
   if (!raum || !id) return;
+  /* Im Spielrahmen des Connectors (PC) wird kein zweiter Connector geladen:
+     die Seite meldet sich beim Rahmen, der schließt sie. */
+  var imRahmen = false;
+  try {
+    imRahmen = !!(window.parent && window.parent !== window &&
+      window.parent.location && window.parent.location.origin === location.origin);
+  } catch (e) {
+    imRahmen = false;
+  }
+  function rahmenMelden() {
+    try {
+      window.parent.postMessage({ tg: "spiel", art: "verlassen", hinweis: "", room: raum, id: id }, location.origin);
+    } catch (e) {}
+  }
+  /* Im eigenen Tab: erst den Tab schließen (der Connector hat ihn geöffnet),
+     sonst wie bisher zurückleiten. Die Homepage bleibt in ihrem Tab stehen. */
+  function wegZurueck() {
+    if (imRahmen) {
+      rahmenMelden();
+      return;
+    }
+    if (window.opener) {
+      try { window.close(); } catch (e) {}
+      setTimeout(function () {
+        if (!window.closed) location.href = "/connector?room=" + encodeURIComponent(raum);
+      }, 400);
+      return;
+    }
+    location.href = "/connector?room=" + encodeURIComponent(raum);
+  }
   /* Seiten mit eigenem Verlassen-Knopf (Tetris, Sim, Käsekästchen,
      Mensch ärgere dich) brauchen keinen zweiten, der ihn überdeckt. */
   var eigene = document.querySelectorAll("button, a");
@@ -36,9 +66,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: id })
-    }).catch(function () {}).then(function () {
-      location.href = "/connector?room=" + encodeURIComponent(raum);
-    });
+    }).catch(function () {}).then(wegZurueck);
   };
   box.appendChild(b);
   document.body.appendChild(box);

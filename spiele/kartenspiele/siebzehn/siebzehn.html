@@ -11,7 +11,7 @@
 [hidden]{display:none !important}
 body{margin:0;padding:10px 12px 26px;color:#efe6d2;
  background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- font:16px Georgia,"Times New Roman",serif}
+ font:16px var(--tg-schrift)}
 main{max-width:720px;margin:auto}
 h1{color:#f1dca8;text-align:center;font-size:clamp(19px,4.4vw,26px);
  font-weight:normal;letter-spacing:.14em;margin:6px 0 16px}
@@ -82,6 +82,7 @@ a{color:#e8cd8e}
 #regeln li{margin-bottom:6px}
 #regeln b{color:#f1dca8;font-weight:normal}
 </style>
+<link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
 <main>
@@ -174,6 +175,7 @@ a{color:#e8cd8e}
 </section>
 </main>
 
+<script src="/spiele/netz.js"></script>
 <script>
 const params=new URLSearchParams(location.search);
 const ROOM=(params.get("room")||"").toUpperCase();
@@ -183,10 +185,14 @@ const ONLINE=!!(ROOM&&ID);
 
 const $=id=>document.getElementById(id);
 
-// Spiel verlassen: den Platz am Tisch aufgeben, damit niemand auf einen
-// wartet, und zurück in den Raum. Ohne diesen Knopf blieb die Partie
-// einfach stehen, wenn man nur „Zurück zum Connector“ benutzte.
+// Spiel verlassen: den Platz am Tisch aufgeben und zurück in den Raum – über
+// den gemeinsamen Weg aus netz.js. Der kennt Spielrahmen, eigenen Tab und
+// Hinweis und meldet dem Server alle 2,5 s, dass die Seite noch da ist (bzw.
+// im Hintergrund liegt) – sonst würde die 90-Sekunden-Frist eine laufende
+// Partie beenden, obwohl nur der Tab versteckt war. Der eigene Notweg bleibt
+// für den Fall, dass netz.js einmal fehlt.
 async function verlassen(){
+ if(typeof window.tgVerlassen==="function"){ window.tgVerlassen(); return; }
  try{
   await fetch("/api/leave?room="+encodeURIComponent(ROOM),{method:"POST",
    headers:{"Content-Type":"application/json"},body:JSON.stringify({id:ID})});
@@ -244,7 +250,13 @@ async function holen(){
  if(!ONLINE)return;
  try{
   const r=await fetch("/api/siebzehn?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
-  if(r.status===403){ $("startText").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen."; zeige("start",true); zeige("spiel",false); return; }
+  if(r.status===403){
+   // Kein Platz mehr am Tisch: über den gemeinsamen Weg zurück in den Raum,
+   // statt auf einer toten Seite stehen zu bleiben.
+   if(typeof window.tgRaumZurueck==="function"){ window.tgRaumZurueck(); return; }
+   $("startText").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen.";
+   zeige("start",true); zeige("spiel",false); return;
+  }
   if(!r.ok)throw Error();
   const d=await r.json();
   const roh=JSON.stringify(d.game);

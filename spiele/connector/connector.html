@@ -13,7 +13,7 @@
 body{margin:0;padding:8px 1px;color:#efe6d2;
  /* Wie in der App: helles Grün oben, dunkel zum Rand. */
  background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- font:16px Georgia,"Times New Roman",serif}
+ font:16px var(--tg-schrift)}
 main{max-width:760px;margin:auto}
 h1{color:#f1dca8;text-align:center;font-size:clamp(19px,4.4vw,27px);
  font-weight:normal;letter-spacing:.12em;margin:6px 0 14px}
@@ -34,7 +34,7 @@ input,select{background:#0b241d;color:white;max-width:100%;min-width:0}
 .msg{padding:9px 0;border-bottom:1px solid #d9bc7c3d;overflow-wrap:anywhere}
 .msg:last-child{border-bottom:none;padding-bottom:2px}
 /* Uhrzeit hinter der Nachricht: klein, in Serife, gedämpftes Gold. */
-.msg small{font-family:Georgia,"Times New Roman",serif;font-size:11px;
+.msg small{font-family:var(--tg-schrift);font-size:11px;
  font-weight:normal;letter-spacing:.08em;color:rgba(217,188,124,.55);
  white-space:nowrap}
 .msg-system{color:#a9c3b6;font-style:italic;text-align:center;border-bottom:none;padding:4px 0;font-size:13px}
@@ -124,6 +124,48 @@ small{color:#b3c6ba}
  letter-spacing:.04em;
 }
 .chat-send-row button:hover{filter:brightness(1.06);border-color:#fff3d4}
+/* --- Eigene Smilies und GIFs ---------------------------------------------
+   Der Knopf sitzt direkt vor „Senden“ und öffnet ein kleines Panel über der
+   Eingabezeile. Die Kacheln bleiben klein, damit viele Grafiken hineinpassen. */
+.chat-compose{position:relative}
+.chat-send-row button.smiley-btn{flex:0 0 auto;width:42px;min-width:42px;height:38px;padding:0;
+ font-size:19px;line-height:1;background:#0b241d;border:1px solid #d9bc7c66;
+ color:#e8cd8e;border-radius:7px;cursor:pointer}
+.smiley-btn:hover,.smiley-btn[aria-expanded="true"]{background:#184536;border-color:#e8cd8e}
+.smiley-btn:focus-visible{outline:2px solid #e8cd8e66;outline-offset:2px}
+.smiley-panel{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:30;
+ display:flex;flex-direction:column;gap:6px;max-height:min(50vh,340px);padding:8px;
+ background:#0b241d;border:1px solid #d9bc7c8c;border-radius:10px;box-shadow:0 10px 26px #0008}
+.smiley-panel[hidden]{display:none}
+.smiley-kopf{display:flex;gap:6px}
+.smiley-kopf input{flex:1;min-width:0;padding:7px 9px;font-size:14px;background:#08120f;
+ border:1px solid #3f7360;border-radius:6px;color:#f4efe2}
+.smiley-zu{flex:0 0 auto;width:30px;min-width:30px;padding:0;font-size:16px;background:#0b241d;
+ border:1px solid #3f7360;border-radius:6px;color:#e8cd8e;cursor:pointer}
+.smiley-zu:hover{background:#184536}
+.smiley-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px}
+.smiley-tab{flex:0 0 auto;padding:4px 10px;font-size:12px;border-radius:999px;
+ background:#0b241d;border:1px solid #3f7360;color:#b9c9bf;cursor:pointer;white-space:nowrap}
+.smiley-tab.aktiv{background:#184536;border-color:#e8cd8e;color:#f1dca8}
+.smiley-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;
+ overflow-y:auto;min-height:52px;padding-right:2px}
+.smiley-bild-btn{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;
+ padding:2px;background:#08120f;border:1px solid #2f5a4b;border-radius:7px;cursor:pointer}
+.smiley-bild-btn:hover,.smiley-bild-btn:focus-visible{border-color:#e8cd8e;background:#12332a}
+.smiley-bild-btn img{max-width:100%;max-height:100%;object-fit:contain}
+.smiley-hinweis{margin:2px 0 0;font-size:12px;line-height:1.35;color:#a9bfb2}
+.smiley-anhang{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:12px;
+ border:1px solid #d9bc7c66;border-radius:8px;background:#0b241d;color:#b9c9bf}
+.smiley-anhang[hidden]{display:none}
+.smiley-anhang img{max-width:34px;max-height:34px;border-radius:5px;background:#08120f}
+.smiley-anhang button{margin-left:auto;min-width:0;padding:1px 7px;font-size:13px;
+ background:none;border:1px solid #3f7360;border-radius:5px;color:#e8cd8e;cursor:pointer}
+.chat-bild{display:inline-block;max-width:132px;max-height:132px;margin-left:6px;
+ vertical-align:middle;border:1px solid #2f5a4b;border-radius:9px;background:#08120f}
+@media(max-width:430px){
+ .chat-send-row button.smiley-btn{width:40px;min-width:40px;height:40px;font-size:18px}
+ .chat-bild{max-width:112px;max-height:112px}
+}
 @media(max-width:430px){
  body{padding:4px 1px}
  section{padding:12px}
@@ -181,7 +223,7 @@ html:fullscreen body{padding:18px 1px}
 .game-invite-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .game-invite-actions button{flex:1 1 0;min-width:0;white-space:nowrap;padding:9px 10px}
 .chat-name-btn{background:none;border:none;padding:0;cursor:pointer;text-decoration:none;
- font-family:Georgia,"Times New Roman",serif;font-size:16px;font-weight:normal;
+ font-family:var(--tg-schrift);font-size:16px;font-weight:normal;
  letter-spacing:.05em;color:#f1dca8}
 .chat-name-btn:hover{text-decoration:underline;color:#fff3d4}
 /* Begrüßung für Neue: eigener kleiner Kasten mit genau einem Knopf. */
@@ -271,6 +313,24 @@ html:fullscreen body{padding:18px 1px}
 .solo-hinweis a{display:block;padding:9px 12px;text-align:center;text-decoration:none;
  border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;color:#f1dca8}
 .solo-hinweis a:hover{border-color:#d9bc7c8c;background:#17423a;color:#fff3d4}
+/* „Weitere Spielmöglichkeiten": steht als zweiter Knopf neben dem QR-Code und
+   klappt genauso auf und zu. Zugeklappt ist nur der Knopf zu sehen. */
+#addressbox{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+#addressbox details{flex:0 0 auto;min-width:0}
+#addressbox details[open]{flex:1 1 100%}
+#weitereBox summary{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;
+ border:1px solid #d9bc7c66;border-radius:7px;background:#0b241d;color:#e8cd8e;
+ font-size:14px;line-height:1.25;cursor:pointer;list-style:none;white-space:nowrap}
+#weitereBox summary::-webkit-details-marker{display:none}
+#weitereBox summary::after{content:"\25B8";font-size:11px;transition:transform .15s}
+#weitereBox[open] summary::after{transform:rotate(90deg)}
+#weitereBox summary:hover{background:#184536}
+#weitereBox summary:focus-visible{outline:2px solid #e8cd8e66;outline-offset:2px}
+#weitereInhalt{margin-top:12px}
+#weitereInhalt .solo-gruppe:first-child{margin-top:0}
+#weitereInhalt .empty{margin:8px 0 0;padding:9px 12px;text-align:center;
+ border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;color:#a9bfb2;
+ font-size:13px;line-height:1.35;font-style:italic}
 /* Ganz unten: leiser Hinweis, ohne eigene Karte. */
 .tone-btn:hover{filter:brightness(1.25)}
 .tone-mute{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:#b9c9bf;flex-wrap:wrap}
@@ -331,6 +391,22 @@ html:fullscreen body{padding:18px 1px}
  border:1px solid #d9bc7c8c;border-top:none;
  border-radius:0 0 6px 6px}
 .chat-send-row{border:none;padding:0;background:none}
+/* --- Handy: der Chat wird ein eigener großer Bildschirm -------------------
+   Nur Handys, Hoch- und Querformat (Querformat erkennt man an der geringen
+   Höhe). PC und Tablet behalten ihre 380 px unverändert.
+   Der ganze Chatkasten – Verlauf plus Eingabezeile – nimmt 72 % des sichtbaren
+   Bereichs ein; dvh folgt auch der eingeblendeten Tastatur, vh bleibt als
+   Rückfall für ältere Browser. Der Verlauf bekommt den Rest und scrollt selbst,
+   die Eingabezeile sitzt fest darunter und überdeckt keine Nachricht.
+   Die Seite behält ihr eigenes Scrollen: kein Festhalten von body oder main,
+   und overscroll-behavior bleibt ausdrücklich "auto" – am Anfang und Ende des
+   Verlaufs reicht der Wisch an die Seite weiter, statt zu hängen. */
+@media (max-width:600px), (max-width:1023px) and (max-height:520px){
+ #chatbox{display:flex;flex-direction:column;height:72vh;height:72dvh}
+ #chat{flex:1 1 auto;height:auto;min-height:0;
+  overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+ .chat-compose{flex:0 0 auto;position:relative}
+}
 /* --- Spiel neben dem Chat: nur auf großen Bildschirmen (PC) -------------- */
 #spielFenster{display:none}
 .spiel-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -367,6 +443,7 @@ html:fullscreen body{padding:18px 1px}
  .solo-pch{display:block;margin:10px 0 0;font-size:13px;color:#a9bfb2}
 }
 </style>
+<link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
 <main>
@@ -379,6 +456,13 @@ html:fullscreen body{padding:18px 1px}
 <div id="qrwrap"><img id="qrcode" alt="QR-Code" hidden></div>
 <div id="addresses">Adressen werden gesucht …</div>
 <button type="button" class="adresse-knopf" onclick="copyAddress()">Adresse kopieren</button>
+</details>
+<details id="weitereBox">
+<summary>Weitere Spielmöglichkeiten</summary>
+<div id="weitereInhalt">
+<div id="weitereZwei"></div>
+<div id="weitereExtras"></div>
+</div>
 </details>
 </section>
 
@@ -429,9 +513,25 @@ html:fullscreen body{padding:18px 1px}
 <div id="muteOverview" class="mute-list-tag" hidden></div>
 <div id="chat"></div>
 <div class="chat-compose">
+<div id="smileyAnhang" class="smiley-anhang" hidden>
+<img id="smileyAnhangBild" alt="">
+<span id="smileyAnhangName"></span>
+<button type="button" id="smileyAnhangWeg" aria-label="Grafik entfernen" title="Grafik entfernen">×</button>
+</div>
 <div class="chat-send-row">
 <input id="message" placeholder="Nachricht an alle" maxlength="1000">
+<button type="button" id="smileyBtn" class="smiley-btn" aria-label="Smilies und GIFs"
+        aria-expanded="false" title="Smilies und GIFs">🙂</button>
 <button onclick="send()">Senden</button>
+</div>
+<div id="smileyPanel" class="smiley-panel" hidden>
+<div class="smiley-kopf">
+<input id="smileySuche" type="search" placeholder="Smilies suchen …" aria-label="Smilies suchen">
+<button type="button" id="smileyZu" class="smiley-zu" aria-label="Auswahl schließen">×</button>
+</div>
+<div id="smileyTabs" class="smiley-tabs"></div>
+<div id="smileyRaster" class="smiley-raster"></div>
+<p id="smileyHinweis" class="smiley-hinweis" hidden></p>
 </div>
 </div>
 <div id="tonePicker" class="tone-picker" hidden>
@@ -462,11 +562,13 @@ html:fullscreen body{padding:18px 1px}
   <span class="spiel-knoepfe">
    <a id="spielTab" class="spiel-knopf" href="#" target="_blank" rel="noopener"
       title="In neuem Tab öffnen" aria-label="In neuem Tab öffnen">↗</a>
+   <button type="button" id="spielVoll" class="spiel-knopf"
+           title="Vollbild" aria-label="Vollbild">⛶</button>
    <button type="button" id="spielZu" class="spiel-knopf"
            title="Spiel schließen" aria-label="Spiel schließen">×</button>
   </span>
  </div>
- <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen"></iframe>
+ <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen" allowfullscreen></iframe>
 </aside>
 <div id="spielGriff" role="separator" aria-orientation="vertical" tabindex="0"
      aria-label="Breite von Chat und Spiel ziehen" title="Breite ziehen"></div>
@@ -767,6 +869,7 @@ const VERBINDUNG_TEXT={
 let verbindungStand="";
 let verbindungLaeuft=false;
 let verbindungNeuBis=0;   // "Wiederverbindung läuft" soll kurz sichtbar bleiben
+let verbindungFehlschlaege=0;  // Aussetzer hintereinander
 
 function verbindungZeigen(zustand){
  if(!VERBINDUNG_TEXT[zustand]||zustand===verbindungStand)return;
@@ -796,8 +899,17 @@ async function heartbeat(){
  verbindungLaeuft=false;
  // Ein erfolgreiches Lebenszeichen räumt einen alten Fehler von selbst weg – höchstens
  // eine Sekunde später, damit "Wiederverbindung läuft" überhaupt sichtbar wird.
- const rest=verbindungNeuBis-Date.now();
  const ziel=ok?"ok":"weg";
+ if(ok){
+  verbindungFehlschlaege=0;
+ }else{
+  verbindungFehlschlaege+=1;
+  // Ein einzelner Aussetzer ist noch keine Unterbrechung: ein kurzes Funkloch
+  // oder ein verschluckter Ruf darf eine laufende Partie nicht als kaputt
+  // anzeigen. Erst zwei Fehlschläge hintereinander (rund 10 s) heißen "weg".
+  if(verbindungFehlschlaege===1)return;
+ }
+ const rest=verbindungNeuBis-Date.now();
  if(rest>0)setTimeout(()=>verbindungZeigen(ziel),rest);
  else verbindungZeigen(ziel);
 }
@@ -1016,23 +1128,51 @@ function tttStatus(text, gameId){
  statusMerken(text, gameId||"", false);
 }
 
-function openGame(path){
- // id mitsenden: die Spielseite läuft im selben Tab, hat aber ihren eigenen
- // sessionStorage-Zugriff und muss denselben Spieler wiedererkennen.
- // v= ist ein Frische-Marker: damit kann kein Browser eine alte Spielseite
- // aus dem Zwischenspeicher zeigen (anderes Brett, alter Würfel).
- location.href=path+"?room="+encodeURIComponent(activeRoom)+
+// Adresse einer Partie: Raum, Name, Kennung und ein Frische-Marker, damit kein
+// Browser eine alte Spielseite aus dem Zwischenspeicher zeigt (anderes Brett,
+// alter Würfel). Die Kennung muss mit, weil die Spielseite ihren eigenen
+// sessionStorage-Zugriff hat und denselben Spieler wiedererkennen muss.
+function spielAdresse(path){
+ return path+"?room="+encodeURIComponent(activeRoom)+
   "&name="+encodeURIComponent(playerName())+
   "&id="+encodeURIComponent(sessionID)+
   "&v="+Date.now();
 }
 
-// Gemeinsame Malfläche im neuen Tab öffnen – der Chat bleibt daneben stehen.
+// Name für den Rahmenkopf: der Anzeigename aus der Spieleliste, sonst der
+// Ordnername ("/spiele/schach/schach.html" -> "schach").
+function spielAnzeigename(path){
+ const def=spielDef(path);
+ if(def)return def.name;
+ const teile=path.replace(/^\/spiele\//,"").split("/");
+ return teile[0]||"Spiel";
+}
+
+function spielDef(path){
+ return SUPPORTED_GAMES.find(g=>g.path===path)||null;
+}
+
+// Am PC läuft die Partie rechts neben dem Chat; Handy und Tablet bekommen
+// einen eigenen Tab, damit der Connector dort stehen bleibt. Blockiert der
+// Browser den Tab, geht es wie bisher im selben Tab weiter.
+function openGame(path){
+ const url=spielAdresse(path);
+ if(istPc()){
+  const def=spielDef(path);
+  spielOeffnen(spielAnzeigename(path),url,{mehrspieler:true,gameId:def?def.id:""});
+  return;
+ }
+ const tab=window.open(url,"_blank");
+ if(!tab)location.href=url;
+}
+
+// Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
 function openMalen(){
  if(!activeRoom||!sessionID)return;
- window.open("/spiele/malen/malen.html?room="+encodeURIComponent(activeRoom)
-  +"&name="+encodeURIComponent(playerName())
-  +"&id="+encodeURIComponent(sessionID),"_blank","noopener");
+ const url=spielAdresse("/spiele/malen/malen.html");
+ if(istPc()){ spielOeffnen("Malen",url,{mehrspieler:true,gameId:"malen"}); return; }
+ const tab=window.open(url,"_blank");
+ if(!tab)location.href=url;
 }
 
 async function gameApiAction(gameId, action, data={}){
@@ -2954,7 +3094,18 @@ async function refresh(){
     }
     const sm=document.createElement("small");
     sm.textContent="  "+m.time;
-    d.append(nameWrapper,t,sm);
+    d.append(nameWrapper,t);
+    // Grafik aus dem eigenen Bestand – nur, wenn der Name sauber ist.
+    const bildPfad=smileyAdresse(m.bild);
+    if(bildPfad){
+     const bild=document.createElement("img");
+     bild.className="chat-bild";
+     bild.src=bildPfad;
+     bild.alt="Smiley";
+     bild.loading="lazy";
+     d.appendChild(bild);
+    }
+    d.append(sm);
     // In der Begrüßung genau eine Aktion: der Weg zum eigenen Namen.
     if(m.name==="Der Raum" && m.whisper){
      const umbenennen=document.createElement("button");
@@ -3066,7 +3217,9 @@ function spielerMitNamen(name){
 async function send(){
  const field=document.getElementById("message");
  let text=field.value.trim();
- if(!text||!activeRoom)return;
+ // Eine Grafik aus dem eigenen Bestand darf allein oder mit Text mit.
+ const bild=smileyWahl?smileyWahl.name:"";
+ if((!text&&!bild)||!activeRoom)return;
 
  let toId="";
  const fluester=/^\/f\s+([^:]+):\s*([\s\S]*)$/i.exec(text);
@@ -3086,10 +3239,11 @@ async function send(){
 
  const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom),{
   method:"POST",headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({id:sessionID,name:playerName(),text,toId})
+  body:JSON.stringify({id:sessionID,name:playerName(),text,toId,bild})
  });
  if(r.ok){
   field.value="";
+  smileyWahlLoeschen();
   refresh();
  }else{
   setRoomStatus((await r.text()).trim()||"Nachricht konnte nicht gesendet werden.");
@@ -3100,12 +3254,168 @@ document.getElementById("message").addEventListener("keydown",e=>{
  if(e.key==="Enter")send();
 });
 
+// --- Eigene Smilies und GIFs ---------------------------------------------
+// Der Bestand liegt als Dateien in /spiele/connector/smilies/ (Unterordner =
+// Kategorie). Der Server liest ihn bei jeder Abfrage neu; hier wird er einmal
+// geholt, gesucht und gefiltert.
+let smileyBestand=null, smileyKategorie="", smileyWahl=null, smileyLaedt=false;
+
+// Nur Namen aus dem eigenen Bestand werden zu Adressen: ein relativer Pfad mit
+// erlaubter Endung, kein "..", keine fremde Domain. Umlaute und ß sind erlaubt
+// („icons8-wütend-48.png“), Pfad- und URL-Zeichen nicht.
+function smileyAdresse(name){
+ const roh=String(name||"");
+ if(!roh||roh.length>120||roh.indexOf("..")>=0||roh.charAt(0)==="/")return "";
+ if(!/\.(png|jpe?g|webp|gif)$/i.test(roh))return "";
+ if(/[\u0000-\u001f\u007f\:*?"<>|]/.test(roh))return "";
+ const teile=roh.split("/");
+ if(teile.length>2||teile.some(t=>!t))return "";
+ return "/spiele/connector/smilies/"+teile.map(encodeURIComponent).join("/");
+}
+
+function smileyHinweisSetzen(text){
+ const p=document.getElementById("smileyHinweis");
+ p.textContent=text||"";
+ p.hidden=!text;
+}
+
+async function ladeSmileyBestand(){
+ if(smileyBestand!==null)return smileyBestand;
+ if(smileyLaedt)return [];
+ smileyLaedt=true;
+ try{
+  const r=await fetch("/api/smilies",{cache:"no-store"});
+  if(!r.ok)throw Error("Status "+r.status);
+  const daten=await r.json();
+  smileyBestand=Array.isArray(daten)?daten:[];
+ }catch(e){
+  smileyBestand=[];
+  smileyHinweisSetzen("Der Smiley-Bestand konnte nicht geladen werden.");
+ }finally{ smileyLaedt=false; }
+ return smileyBestand;
+}
+
+function smileyPanelZeigen(zeigen){
+ const panel=document.getElementById("smileyPanel");
+ const knopf=document.getElementById("smileyBtn");
+ panel.hidden=!zeigen;
+ knopf.setAttribute("aria-expanded",zeigen?"true":"false");
+ if(!zeigen){
+  smileyHinweisSetzen("");
+  return;
+ }
+ ladeSmileyBestand().then(()=>smileyPanelZeichnen());
+ setTimeout(()=>{ try{ document.getElementById("smileySuche").focus(); }catch(e){} },30);
+}
+
+function smileyPanelUmschalten(){
+ smileyPanelZeigen(document.getElementById("smileyPanel").hidden);
+}
+
+function smileyPanelZeichnen(){
+ const raster=document.getElementById("smileyRaster");
+ const tabs=document.getElementById("smileyTabs");
+ if(!raster||!tabs)return;
+ const alle=smileyBestand||[];
+ const suche=(document.getElementById("smileySuche").value||"").trim().toLowerCase();
+ if(alle.length===0){
+  smileyHinweisSetzen("Noch keine eigenen Smilies. Lege PNG-, JPG-, WebP- oder GIF-Dateien in spiele/connector/smilies/ ab (Unterordner sind Kategorien).");
+ }else{
+  smileyHinweisSetzen("");
+ }
+ // Kategorien: "" (alle), jede Unterordner-Kategorie, danach „Ohne Ordner“.
+ const kategorien=[];
+ alle.forEach(s=>{ const k=s.kategorie||""; if(k&&kategorien.indexOf(k)<0)kategorien.push(k); });
+ tabs.innerHTML="";
+ const tabFuer=(wert,label)=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="smiley-tab"+(smileyKategorie===wert?" aktiv":"");
+  b.textContent=label;
+  // stopPropagation: der Klick darf das Panel nicht gleich wieder zumachen,
+  // obwohl der angeklickte Reiter beim Neuzeichnen ersetzt wird.
+  b.onclick=(e)=>{ e.stopPropagation(); smileyKategorie=wert; smileyPanelZeichnen(); };
+  tabs.appendChild(b);
+ };
+ if(kategorien.length){
+  tabFuer("","Alle");
+  kategorien.forEach(k=>tabFuer(k,k));
+  if(alle.some(s=>!s.kategorie))tabFuer(" ","Ohne Ordner");
+ }else{
+  tabs.hidden=true;
+ }
+ const sichtbar=alle.filter(s=>{
+  if(smileyKategorie===" "){ if(s.kategorie)return false; }
+  else if(smileyKategorie&&s.kategorie!==smileyKategorie)return false;
+  if(!suche)return true;
+  return (s.name+" "+(s.kategorie||"")).toLowerCase().indexOf(suche)>=0;
+ });
+ raster.innerHTML="";
+ if(!sichtbar.length){
+  if(alle.length)smileyHinweisSetzen("Kein Smiley passt zu „"+(document.getElementById("smileySuche").value||"").trim()+"“.");
+  return;
+ }
+ sichtbar.forEach(s=>{
+  const adresse=smileyAdresse(s.name);
+  if(!adresse)return;
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="smiley-bild-btn";
+  b.title=s.name;
+  const img=document.createElement("img");
+  img.src=adresse;
+  img.alt=s.name;
+  img.loading="lazy";
+  b.appendChild(img);
+  b.onclick=(e)=>{ e.stopPropagation(); smileyWaehlen(s); };
+  raster.appendChild(b);
+ });
+}
+
+function smileyWaehlen(s){
+ const adresse=smileyAdresse(s&&s.name);
+ if(!adresse)return;
+ smileyWahl={name:s.name,adresse:adresse};
+ document.getElementById("smileyAnhangBild").src=adresse;
+ document.getElementById("smileyAnhangName").textContent=String(s.name).split("/").pop();
+ document.getElementById("smileyAnhang").hidden=false;
+ smileyPanelZeigen(false);
+ try{ document.getElementById("message").focus(); }catch(e){}
+}
+
+function smileyWahlLoeschen(){
+ smileyWahl=null;
+ const anhang=document.getElementById("smileyAnhang");
+ if(anhang)anhang.hidden=true;
+ const img=document.getElementById("smileyAnhangBild");
+ if(img)img.removeAttribute("src");
+}
+
+document.getElementById("smileyBtn").addEventListener("click",smileyPanelUmschalten);
+document.getElementById("smileyZu").addEventListener("click",()=>smileyPanelZeigen(false));
+document.getElementById("smileyAnhangWeg").addEventListener("click",smileyWahlLoeschen);
+document.getElementById("smileySuche").addEventListener("input",smileyPanelZeichnen);
+// Klick daneben oder Esc schließt die Auswahl – wie bei den anderen Panels.
+document.addEventListener("click",e=>{
+ const panel=document.getElementById("smileyPanel");
+ if(!panel||panel.hidden)return;
+ if(panel.contains(e.target)||document.getElementById("smileyBtn").contains(e.target))return;
+ smileyPanelZeigen(false);
+});
+document.addEventListener("keydown",e=>{
+ const panel=document.getElementById("smileyPanel");
+ if(e.key==="Escape"&&panel&&!panel.hidden){ smileyPanelZeigen(false); }
+});
+
 // Lebenszeichen für den Raum: hält den Spieler anwesend (sonst fällt er nach
 // 150 s raus), verlässt die Seite aber nicht mehr von selbst. Ins Spiel geht
 // es über den Knopf im Statusfenster – sonst springt die Seite beim Annehmen
 // einer Einladung weg und der Knopf ist nicht mehr zu treffen.
 async function pruefeSpielstart(){
  if(!activeRoom||!sessionID)return;
+ // Läuft eine Partie im rechten Rahmen, meldet sich die Spielseite selbst.
+ // Der Connector darf ihren Hinweis nicht abholen – sonst ginge er verloren.
+ if(framePartie)return;
  try{
   // seite=raum: hält den Spieler im Raum, gilt aber nicht als lebende
   // Spielseite – so erkennt der Server zurückgebliebene Partien.
@@ -3115,24 +3425,137 @@ async function pruefeSpielstart(){
 setInterval(pruefeSpielstart,2000);
 
 // --- Spiel neben dem Chat -------------------------------------------------
-// Auf breiten Bildschirmen (PC) öffnet ein Einzelspieler-Spiel rechts neben
-// dem Chat, damit man weiterreden kann. Auf dem Handy bleibt es beim neuen Tab.
-const pcBreit=window.matchMedia("(min-width: 1024px)");
-const istPc=()=>pcBreit.matches;
+// Wo läuft eine Partie? Am PC rechts neben dem Chat, damit man weiterreden
+// kann. Handy und Tablet behalten die Tab-Ansicht: dort ist kein Platz für
+// zwei Spalten, und der Connector soll stehen bleiben.
+//
+// PC heißt: mindestens 1024 px breit, echter Zeiger (Maus statt Finger) und
+// ein Gerät, das überhaupt schweben kann. Ein breites Tablet mit Touch fällt
+// damit heraus. ?ansicht=pc oder ?ansicht=handy überstimmt die Erkennung und
+// gilt dauerhaft auf diesem Gerät.
+const ANSICHT_SCHLUESSEL="connector-ansicht";
+const ansichtFest=(function(){
+ let gewaehlt="";
+ try{ gewaehlt=(new URLSearchParams(location.search).get("ansicht")||"").toLowerCase(); }catch(e){}
+ if(gewaehlt==="pc"||gewaehlt==="handy"){
+  try{ localStorage.setItem(ANSICHT_SCHLUESSEL,gewaehlt); }catch(e){}
+  return gewaehlt;
+ }
+ try{ return localStorage.getItem(ANSICHT_SCHLUESSEL)||""; }catch(e){ return ""; }
+})();
 
-function spielOeffnen(name,url){
+function istPc(){
+ if(ansichtFest)return ansichtFest==="pc";
+ try{
+  if(navigator.userAgentData&&navigator.userAgentData.mobile)return false;
+ }catch(e){}
+ return window.matchMedia("(min-width: 1024px)").matches
+  && window.matchMedia("(hover: hover)").matches
+  && window.matchMedia("(pointer: fine)").matches;
+}
+
+// Welche Partie steckt gerade im Rahmen? null = Einzelspieler oder zu.
+let framePartie=null;
+
+function spielOeffnen(name,url,info){
  const rahmen=document.getElementById("spielRahmen");
  document.getElementById("spielName").textContent=name;
  document.getElementById("spielTab").href=url;
+ framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||""}:null;
  if(rahmen.getAttribute("src")!==url)rahmen.src=url;
  document.body.classList.add("spiel-offen");
 }
 
-function spielSchliessen(){
+// Rahmen leeren, ohne den Server zu fragen – die Partie ist schon vorbei oder
+// der Spieler hat sie selbst verlassen.
+function rahmenLeeren(){
  document.body.classList.remove("spiel-offen");
  const rahmen=document.getElementById("spielRahmen");
  if(rahmen.getAttribute("src")!=="about:blank")rahmen.src="about:blank";
+ framePartie=null;
 }
+
+// Den eigenen Platz in der Partie freigeben. Der Server beendet die Runde und
+// meldet den Mitspielern den Abgang – niemand wartet auf einen, der weg ist.
+async function partieVerlassen(){
+ if(!activeRoom||!sessionID)return false;
+ try{
+  const r=await fetch("/api/leave?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID})
+  });
+  return r.ok;
+ }catch(e){ return false; }
+}
+
+// Rahmen schließen. Eine laufende Partie wird dabei ausgetragen; keine Partie
+// läuft stillschweigend weiter.
+async function spielSchliessen(){
+ if(framePartie)await partieVerlassen();
+ rahmenLeeren();
+}
+
+// Hinweis aus dem Spiel ("Anna hat das Spiel verlassen – Schach beendet.").
+function zeigeSpielHinweis(text){
+ const sauber=String(text||"").trim().slice(0,200);
+ if(!sauber)return;
+ setRoomStatus(sauber);
+ setTimeout(()=>{
+  const el=document.getElementById("roomstatus");
+  if(el&&el.textContent===sauber)setRoomStatus("");
+ },12000);
+}
+
+// Die Partie im Rahmen meldet sich per postMessage: „ich bin raus" oder „meine
+// Partie ist vorbei". Der Rahmen wird dann geschlossen und der Grund in der
+// Statuszeile gezeigt – ein zweiter Connector im Rahmen entsteht nie.
+window.addEventListener("message",ev=>{
+ if(ev.origin!==location.origin)return;
+ const d=ev.data;
+ if(!d||d.tg!=="spiel")return;
+ const rahmen=document.getElementById("spielRahmen");
+ if(!rahmen||ev.source!==rahmen.contentWindow)return;
+ if(d.art!=="ende"&&d.art!=="verlassen")return;
+ rahmenLeeren();
+ zeigeSpielHinweis(d.hinweis);
+});
+
+// Sicherheitsnetz: Manche Spielseiten leiten von sich aus auf /connector um
+// (eigener Verlassen-Knopf). Im Rahmen wäre das ein zweiter Connector – er
+// wird sofort übernommen: Rahmen zu, Grund aus der Adresse in die Statuszeile.
+document.getElementById("spielRahmen").addEventListener("load",()=>{
+ const rahmen=document.getElementById("spielRahmen");
+ const src=rahmen.getAttribute("src")||"";
+ if(!src||src==="about:blank")return;
+ let pfad="";
+ let suche="";
+ try{
+  const innen=rahmen.contentWindow;
+  if(!innen||innen===window)return;
+  pfad=innen.location.pathname||"";
+  suche=innen.location.search||"";
+ }catch(e){
+  return; // fremde Seite: nicht anfassen
+ }
+ if(!/^\/connector(\/|$)/.test(pfad))return;
+ const p=new URLSearchParams(suche);
+ rahmenLeeren();
+ zeigeSpielHinweis(p.get("hinweis"));
+});
+
+// Vollbild gehört nur zur Ansicht: Esc verlässt das Vollbild, nicht die Partie.
+document.getElementById("spielVoll").addEventListener("click",()=>{
+ const rahmen=document.getElementById("spielRahmen");
+ try{
+  if(document.fullscreenElement){
+   const aus=document.exitFullscreen();
+   if(aus&&aus.catch)aus.catch(()=>{});
+  }else if(rahmen.requestFullscreen){
+   const an=rahmen.requestFullscreen();
+   if(an&&an.catch)an.catch(()=>{});
+  }
+ }catch(e){}
+});
 
 // --- Breite zwischen Chat und Spiel ziehen --------------------------------
 const griff=document.getElementById("spielGriff");
@@ -3183,89 +3606,167 @@ griff.addEventListener("keydown",e=>{
  if(e.key==="ArrowRight"){ breiteSetzen((linksBreite||window.innerWidth*0.42)+schritt,true); e.preventDefault(); }
 });
 
-document.getElementById("spielZu").addEventListener("click",spielSchliessen);
+// Das X im Rahmenkopf: erst fragen, dann austragen, dann schließen. Wer
+// abbricht, behält das Spiel vollständig offen.
+document.getElementById("spielZu").addEventListener("click",()=>{
+ if(framePartie&&!window.confirm("Möchtest du die Partie wirklich verlassen?"))return;
+ spielSchliessen();
+});
 // Fenster schmal machen: das Spiel würde sonst unsichtbar weiterlaufen.
-pcBreit.addEventListener("change",e=>{ if(!e.matches)spielSchliessen(); });
+const pcBreit=window.matchMedia("(min-width: 1024px)");
+pcBreit.addEventListener("change",e=>{
+ if(!e.matches&&document.body.classList.contains("spiel-offen"))spielSchliessen();
+});
 window.addEventListener("resize",()=>{
- if(!istPc())spielSchliessen();
+ if(document.body.classList.contains("spiel-offen")&&!istPc())spielSchliessen();
  if(linksBreite)breiteSetzen(linksBreite,false);
 });
 breiteLaden();
 
 // Die Spiele-Liste kommt aus der Spiele-Übersicht selbst – so bleibt sie
 // automatisch aktuell, wenn dort ein Spiel dazukommt.
-async function ladeAlleinSpiele(){
- const liste=document.getElementById("soloListe");
- if(!liste||liste.dataset.geladen==="1")return;
- liste.dataset.geladen="1";
- try{
-  const r=await fetch("/spiele/spiele.html",{cache:"no-store"});
-  if(!r.ok)throw Error("Status "+r.status);
-  const doc=new DOMParser().parseFromString(await r.text(),"text/html");
-  const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
-  if(!gruppen.length)throw Error("keine Gruppen");
-  // "Bubble Shooter (2 Spieler)" -> "Bubble Shooter": Spielerangaben wie
-  // "(2 Spieler)", "ab 3 Spieler" oder "2-4 Spieler" gehoeren nicht in die Kachel.
-  const ohneSpielerAngabe=text=>String(text)
-   .replace(/\s*[\(\[]\s*(?:ab\s+)?\d+(?:\s*(?:-|–|bis)\s*\d+)?\s*Spieler[^\)\]]*[\)\]]/gi,"")
-   .replace(/\s*[-–,]?\s*(?:ab\s+)?\d+(?:\s*(?:-|–|bis)\s*\d+)?\s*Spieler\b.*$/i,"")
-   .trim();
-  liste.innerHTML="";
-  const kaesten=[];
-  gruppen.forEach(gruppe=>{
-   const kasten=document.createElement("div");
-   kasten.className="solo-gruppe";
-   const titel=document.createElement("h3");
-   titel.textContent=(((gruppe.querySelector("h2")||{}).textContent)||"Spiele").trim();
-   // "Extras" (Rechner, Connector-Link …) ist kein Spiel und bleibt draußen.
-   if(/^extras$/i.test(titel.textContent))return;
-   // Mehrspieler-Spiele brauchen einen Raum: allein geöffnet sagen sie nur,
-   // dass sie über den Connector laufen. Sie stehen im Multiplayer-Reiter.
-   if(/^mehrspieler/i.test(titel.textContent))return;
-   const raster=document.createElement("div");
-   raster.className="solo-raster";
-   [...gruppe.querySelectorAll("a[href]")]
-    // Nur echte Spieldateien ("ordner/spiel.html"). Damit fällt der Verweis
-    // auf den Connector selbst heraus, der in der Übersicht mit in der Gruppe
-    // steht, hier aber kein Spiel wäre.
-    .filter(eintrag=>/^[^\/:]+\/[^\/:]+\.html$/i.test(eintrag.getAttribute("href")||""))
-    // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
-    .filter(eintrag=>! /^malen\//i.test(eintrag.getAttribute("href")||""))
-    .map(alt=>({ href:alt.getAttribute("href"), text:alt.textContent.trim() }))
-    // Nach Alphabet, damit man ein Spiel schnell findet.
-    .sort((a,b)=>a.text.localeCompare(b.text,"de",{numeric:true,sensitivity:"base"}))
-    .forEach(eintrag=>{
-    const name=ohneSpielerAngabe(eintrag.text);
-    const link=document.createElement("a");
-    link.className="solo-link";
-    link.href="/spiele/"+eintrag.href;
-    link.target="_blank";
-    link.rel="noopener";
-    link.textContent=name;
-    // Am PC rechts neben dem Chat öffnen, auf dem Handy im neuen Tab.
+//
+// Aufgeteilt wird nach den Gruppen der Übersicht:
+//   · Einzelspieler            -> Reiter „Einzelspieler"
+//   · 2 Spieler an einem Gerät -> „Weitere Spielmöglichkeiten"
+//   · Extras                   -> „Weitere Spielmöglichkeiten"
+//   · Mehrspieler über Connector -> Multiplayer-Reiter
+
+// "Bubble Shooter (2 Spieler)" -> "Bubble Shooter": Spielerangaben gehören
+// nicht in die Kachel.
+function ohneSpielerAngabe(text){
+ return String(text)
+  .replace(/\s*[\(\[]\s*(?:ab\s+)?\d+(?:\s*(?:-|–|bis)\s*\d+)?\s*Spieler[^\)\]]*[\)\]]/gi,"")
+  .replace(/\s*[-–,]?\s*(?:ab\s+)?\d+(?:\s*(?:-|–|bis)\s*\d+)?\s*Spieler\b.*$/i,"")
+  .trim();
+}
+
+// Eine Gruppe der Übersicht als Kachelraster. nurSpiele=true nimmt nur echte
+// Spieldateien ("ordner/spiel.html"); false nimmt alles mit, also auch die
+// .apk-Dateien und die fremde Adresse aus der Extras-Gruppe.
+function spielRaster(gruppe,nurSpiele){
+ const raster=document.createElement("div");
+ raster.className="solo-raster";
+ [...gruppe.querySelectorAll("a[href]")]
+  .filter(a=>{
+   const ziel=a.getAttribute("href")||"";
+   if(!nurSpiele)return true;
+   // Nur echte Spieldateien – so fällt der Verweis auf den Connector selbst
+   // heraus, der in der Übersicht mit in der Gruppe steht.
+   if(!/^[^\/:]+\/[^\/:]+\.html$/i.test(ziel))return false;
+   // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
+   return !/^malen\//i.test(ziel);
+  })
+  .map(a=>({ ziel:a.getAttribute("href"), text:a.textContent.trim() }))
+  // Nach Alphabet, damit man ein Spiel schnell findet.
+  .sort((a,b)=>a.text.localeCompare(b.text,"de",{numeric:true,sensitivity:"base"}))
+  .forEach(eintrag=>{
+   const name=ohneSpielerAngabe(eintrag.text);
+   const link=document.createElement("a");
+   link.className="solo-link";
+   link.href=/^https?:/i.test(eintrag.ziel)?eintrag.ziel:"/spiele/"+eintrag.ziel;
+   link.target="_blank";
+   link.rel="noopener";
+   link.textContent=name;
+   // Spiele am PC rechts neben dem Chat öffnen, auf dem Handy im neuen Tab.
+   if(/\.html($|\?)/i.test(eintrag.ziel)){
     link.addEventListener("click",ev=>{
      if(!istPc())return;
      if(ev.ctrlKey||ev.metaKey||ev.shiftKey||ev.altKey)return;
      ev.preventDefault();
      spielOeffnen(name,link.href);
     });
-    raster.appendChild(link);
-   });
-   if(raster.children.length){
-    kasten.append(titel,raster);
-    kaesten.push(kasten);
    }
+   raster.appendChild(link);
   });
-  // Reihenfolge wie in der Spiele-Übersicht: erst allein, dann zu zweit.
-  kaesten.forEach(kasten=>liste.appendChild(kasten));
+ return raster;
+}
+
+async function spieleGruppen(){
+ const r=await fetch("/spiele/spiele.html",{cache:"no-store"});
+ if(!r.ok)throw Error("Status "+r.status);
+ const doc=new DOMParser().parseFromString(await r.text(),"text/html");
+ const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
+ if(!gruppen.length)throw Error("keine Gruppen");
+ return gruppen.map(g=>({
+  titel:(((g.querySelector("h2")||{}).textContent)||"Spiele").trim(),
+  inhalt:g
+ }));
+}
+
+function gruppeBauen(titel,raster){
+ const kasten=document.createElement("div");
+ kasten.className="solo-gruppe";
+ const h=document.createElement("h3");
+ h.textContent=titel;
+ kasten.append(h,raster);
+ return kasten;
+}
+
+function fehlerKachel(ziel,text){
+ ziel.innerHTML="";
+ const p=document.createElement("p");
+ p.className="empty";
+ p.textContent=text;
+ ziel.appendChild(p);
+}
+
+async function ladeAlleinSpiele(){
+ const liste=document.getElementById("soloListe");
+ if(!liste||liste.dataset.geladen==="1")return;
+ liste.dataset.geladen="1";
+ try{
+  const gruppen=await spieleGruppen();
+  liste.innerHTML="";
+  // Hier bleiben nur die Einzelspieler-Spiele.
+  gruppen
+   .filter(g=>!/^extras$/i.test(g.titel))
+   .filter(g=>!/^mehrspieler/i.test(g.titel))
+   .filter(g=>!/spieler\s+(an|auf)\s+einem/i.test(g.titel))
+   .forEach(g=>{
+    const raster=spielRaster(g.inhalt,true);
+    if(raster.children.length)liste.appendChild(gruppeBauen(g.titel,raster));
+   });
  }catch(e){
   liste.dataset.geladen="0";
-  liste.innerHTML="";
-  const p=document.createElement("p");
-  p.className="empty";
-  p.textContent="Die Spieleliste konnte nicht geladen werden.";
-  liste.appendChild(p);
+  fehlerKachel(liste,"Die Spieleliste konnte nicht geladen werden.");
  }
+}
+
+// „Weitere Spielmöglichkeiten": zwei Spieler an einem Gerät und die Extras.
+// Geholt wird erst beim ersten Aufklappen – zugeklappt zeigt der Connector
+// nichts davon.
+async function ladeWeitere(){
+ const zwei=document.getElementById("weitereZwei");
+ const extra=document.getElementById("weitereExtras");
+ if(!zwei||!extra||zwei.dataset.geladen==="1")return;
+ zwei.dataset.geladen="1";
+ try{
+  const gruppen=await spieleGruppen();
+  zwei.innerHTML="";
+  extra.innerHTML="";
+  gruppen.forEach(g=>{
+   if(/spieler\s+(an|auf)\s+einem/i.test(g.titel)){
+    const raster=spielRaster(g.inhalt,true);
+    if(raster.children.length)zwei.appendChild(gruppeBauen("Zwei Spieler an einem Gerät",raster));
+   }
+   if(/^extras$/i.test(g.titel)){
+    const raster=spielRaster(g.inhalt,false);
+    if(raster.children.length)extra.appendChild(gruppeBauen("Extras",raster));
+   }
+  });
+  if(!zwei.children.length)fehlerKachel(zwei,"Keine Spiele gefunden.");
+  if(!extra.children.length)fehlerKachel(extra,"Keine Extras gefunden.");
+ }catch(e){
+  zwei.dataset.geladen="0";
+  fehlerKachel(zwei,"Die Liste konnte nicht geladen werden.");
+ }
+}
+
+// Auf-/Zuklappen wie beim QR-Code: dasselbe <details>-Verhalten, nichts weiter.
+const weitereBox=document.getElementById("weitereBox");
+if(weitereBox){
+ weitereBox.addEventListener("toggle",()=>{ if(weitereBox.open)ladeWeitere(); });
 }
 
 // Ein Hinweis aus dem Spiel ("Anna hat das Spiel verlassen – …") wird genau
