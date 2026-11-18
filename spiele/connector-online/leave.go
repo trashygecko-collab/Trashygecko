@@ -268,6 +268,62 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Arschloch = nil }),
+		sitz("Galgenmännchen",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Galgen; g != nil {
+					return galgenRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Galgen = nil }),
+		sitz("Bingo",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Bingo; g != nil {
+					return bingoRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Bingo = nil }),
+		sitz("Wortsuche",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Wortsuche; g != nil {
+					return wortsucheRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Wortsuche = nil }),
+		sitz("Domino",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Domino; g != nil {
+					return dominoRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Domino = nil }),
+		sitz("Schlangen und Leitern",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Schlangen; g != nil {
+					return schlangenRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Schlangen = nil }),
+		sitz("Pig",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Pig; g != nil {
+					return pigRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Pig = nil }),
+		sitz("Gänsespiel",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Gaense; g != nil {
+					return gaenseRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Gaense = nil }),
 		sitz("Mensch ärgere dich nicht",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Menschaerger; g != nil {
@@ -317,6 +373,14 @@ func (r *Room) partien() []partie {
 				return nil
 			},
 			func() { r.Baccara = nil }),
+		ohneSitz("Pong",
+			func() []string {
+				if g := r.Pong; g != nil {
+					return idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })
+				}
+				return nil
+			},
+			func() { r.Pong = nil }),
 		ohneSitz("Schiffe versenken",
 			func() []string {
 				if g := r.Schiffe; g != nil {
@@ -629,6 +693,11 @@ func (r *Room) aktivesSpiel(id string) string {
 			return s
 		}
 	}
+	if g := r.Pong; g != nil {
+		if s := fuerSitz("pong", g.Status, idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
 	if g := r.Schiffe; g != nil {
 		if s := fuerSitz("schiffe", g.Status, idsVon(g.Spieler, func(p SchiffeSpieler) string { return p.ID })); s != "" {
 			return s
@@ -641,6 +710,41 @@ func (r *Room) aktivesSpiel(id string) string {
 	}
 	if g := r.Sechsundsechzig; g != nil {
 		if s := fuerSitz("sechsundsechzig", g.Status, idsVon(g.Spieler, func(p SechsundsechzigSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Galgen; g != nil {
+		if s := fuerSitz("galgen", g.Status, galgenIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Bingo; g != nil {
+		if s := fuerSitz("bingo", g.Status, bingoIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Wortsuche; g != nil {
+		if s := fuerSitz("wortsuche", g.Status, wortsucheIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Domino; g != nil {
+		if s := fuerSitz("domino", g.Status, dominoIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Schlangen; g != nil {
+		if s := fuerSitz("schlangen", g.Status, schlangenIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Pig; g != nil {
+		if s := fuerSitz("pig", g.Status, pigIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Gaense; g != nil {
+		if s := fuerSitz("gaensespiel", g.Status, gaenseIDs(g)); s != "" {
 			return s
 		}
 	}
@@ -727,6 +831,12 @@ func (r *Room) playerInGame(id string) bool {
 			return nil
 		},
 		func() []string {
+			if g := r.Pong; g != nil {
+				return idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
 			if g := r.Schiffe; g != nil {
 				return idsVon(g.Spieler, func(p SchiffeSpieler) string { return p.ID })
 			}
@@ -787,6 +897,55 @@ func (r *Room) playerInGame(id string) bool {
 	}
 	if g := r.Menschaerger; g != nil {
 		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Galgen; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Bingo; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Wortsuche; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Domino; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Schlangen; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Pig; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Gaense; g != nil {
+		for _, p := range g.Spieler {
 			if p.ID == id {
 				return true
 			}

@@ -27,12 +27,15 @@ func TestBeitrittTokenRace(t *testing.T) {
 	}()
 
 	beitreten := func(id, token string) *httptest.ResponseRecorder {
-		rumpf, _ := json.Marshal(map[string]string{"room": code, "id": id, "name": "Anna", "token": token})
+		rumpf, _ := json.Marshal(map[string]any{"room": code, "id": id, "name": "Anna", "token": token, "neu": true})
 		req := httptest.NewRequest(http.MethodPost, "/api/presence", strings.NewReader(string(rumpf)))
 		req.Header.Set("Content-Type", "application/json")
 		req.RemoteAddr = "192.168.7.9:51234"
 		rec := httptest.NewRecorder()
-		presence(rec, req)
+		// Durch die echte Kette: die 403 für ein fremdes Token entsteht in
+		// withIdentity, nicht im Beitritt selbst. Ein Test, der die Hülle
+		// überspringt, würde einen Rückfall dort nicht bemerken.
+		withIdentity(http.HandlerFunc(presence)).ServeHTTP(rec, req)
 		return rec
 	}
 

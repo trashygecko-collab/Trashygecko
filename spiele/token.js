@@ -105,27 +105,108 @@
     return text;
   }
 
+  /* Gerätekennung: bleibt im Browser und überlebt ein verlorenes Token. Der
+     Server gibt damit denselben Platz zurück (zehn Minuten), statt einen
+     neuen mit Nummernanhang anzulegen. Sie ist ein eigenes Geheimnis je
+     Browser – ein geratener Name gibt damit keinen fremden Platz her. */
+  var geraeteMerker = "";
+  function geraetekennung() {
+    if (geraeteMerker) {
+      return geraeteMerker;
+    }
+    try {
+      var gespeichert = localStorage.getItem("tg-geraet");
+      if (gespeichert && gespeichert.length >= 16) {
+        geraeteMerker = gespeichert;
+        return geraeteMerker;
+      }
+    } catch (e) {
+      /* kein Speicher - dann gilt der Merker dieser Sitzung */
+    }
+    geraeteMerker = neuesToken();
+    try {
+      localStorage.setItem("tg-geraet", geraeteMerker);
+    } catch (e) {
+      /* privater Modus: die Kennung gilt nur für diese Sitzung */
+    }
+    return geraeteMerker;
+  }
+
   function mitToken(adresse, optionen) {
     var teile = ausAnfrage(adresse, optionen);
     var token = tokenFuer(teile.raum, teile.id);
+    var frisch = false;
     if (!token && adresse.indexOf("/api/presence") >= 0 && teile.raum && teile.id) {
       // Vor dem ersten Ruf erzeugen und merken: beide Rufe schicken dasselbe.
       token = neuesToken();
       merkeToken(teile.raum, teile.id, token);
+      frisch = true;
     }
-    if (!token || /[?&]token=/.test(adresse)) {
-      return adresse;
+    var ziel = adresse;
+    if (token && !/[?&]token=/.test(ziel)) {
+      ziel += (ziel.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(token);
     }
-    return adresse + (adresse.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(token);
+    if (adresse.indexOf("/api/presence") >= 0 && teile.raum && teile.id) {
+      // Nur der Beitritt kennt die Gerätekennung – sie holt einen Platz
+      // zurück, dessen Token verloren ging.
+      ziel += (ziel.indexOf("?") >= 0 ? "&" : "?") + "geraet=" + encodeURIComponent(geraetekennung());
+    }
+    return { ziel: ziel, frisch: frisch };
+  }
+
+  /* Ein unbekannter Platz entsteht nur noch mit ausdrücklichem "neu". Das setzt
+     hier nur, wer ihn wirklich anlegen will: das erste Lebenszeichen eines
+     Geräts und der Wiederholungsversuch nach einer 409 (der Server kennt den
+     Platz nach einem Neustart nicht mehr). */
+  function mitNeumarke(optionen) {
+    if (!optionen || typeof optionen.body !== "string") {
+      return optionen;
+    }
+    var rumpf;
+    try {
+      rumpf = JSON.parse(optionen.body);
+    } catch (e) {
+      return optionen;
+    }
+    if (!rumpf || typeof rumpf !== "object" || rumpf.neu) {
+      return optionen;
+    }
+    rumpf.neu = true;
+    var kopie = {};
+    for (var name in optionen) {
+      if (Object.prototype.hasOwnProperty.call(optionen, name)) {
+        kopie[name] = optionen[name];
+      }
+    }
+    kopie.body = JSON.stringify(rumpf);
+    return kopie;
   }
 
   window.fetchMitToken = function (adresse, optionen) {
     if (typeof adresse !== "string" || adresse.indexOf("/api/") < 0) {
       return original(adresse, optionen);
     }
-    var ziel = mitToken(adresse, optionen);
-    var laeuft = original(ziel, optionen);
+    var teile = mitToken(adresse, optionen);
+    var ziel = teile.ziel;
+    var gefragt = optionen;
+    if (teile.frisch && ziel.indexOf("/api/presence") >= 0) {
+      // Erster Ruf dieses Geräts: der Platz ist neu, das sagen wir auch.
+      gefragt = mitNeumarke(optionen);
+    }
+    var laeuft = original(ziel, gefragt);
     if (ziel.indexOf("/api/presence") >= 0 && laeuft && laeuft.then) {
+      // 409: Der Server kennt den Platz nicht mehr (Neustart). Denselben Platz
+      // einmal ausdrücklich neu anlegen – gleiche Kennung, gleiches Token.
+      laeuft = laeuft.then(function (antwort) {
+        if (!antwort || antwort.status !== 409) {
+          return antwort;
+        }
+        var neu = mitNeumarke(optionen);
+        if (neu === optionen) {
+          return antwort;
+        }
+        return original(ziel, neu);
+      });
       // Der Beitritt liefert das Token genau einmal für dieses Gerät.
       laeuft
         .then(function (antwort) {

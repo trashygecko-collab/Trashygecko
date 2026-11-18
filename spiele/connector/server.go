@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Diese Datei enthält alles, was die lokale und die Online-Fassung teilen:
@@ -50,15 +51,17 @@ func withIdentity(next http.Handler) http.Handler {
 		code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 		id := strings.TrimSpace(r.URL.Query().Get("id"))
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
+		geraet := strings.TrimSpace(r.URL.Query().Get("geraet"))
 
 		if r.Method == http.MethodPost {
 			body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 			if err == nil {
 				r.Body = io.NopCloser(bytes.NewReader(body))
 				var probe struct {
-					Room  string `json:"room"`
-					ID    string `json:"id"`
-					Token string `json:"token"`
+					Room   string `json:"room"`
+					ID     string `json:"id"`
+					Token  string `json:"token"`
+					Geraet string `json:"geraet"`
 				}
 				if json.Unmarshal(body, &probe) == nil {
 					if code == "" {
@@ -70,6 +73,9 @@ func withIdentity(next http.Handler) http.Handler {
 					if token == "" {
 						token = strings.TrimSpace(probe.Token)
 					}
+					if geraet == "" {
+						geraet = strings.TrimSpace(probe.Geraet)
+					}
 					if r.URL.Path != "/api/presence" && id != "" {
 						noteActivity(code, id)
 					}
@@ -80,17 +86,28 @@ func withIdentity(next http.Handler) http.Handler {
 		if id != "" && code != "" {
 			mu.Lock()
 			gespeichert := ""
+			var platz Player
+			bekannt := false
 			if room := rooms[code]; room != nil {
 				if p, ok := room.Players[id]; ok {
 					gespeichert = p.Token
+					platz = p
+					bekannt = true
 				}
 			}
 			mu.Unlock()
 			// Nur ein bereits bekannter Platz mit Token kann abgewiesen werden;
 			// ein neuer Spieler entsteht im Beitritt.
-			if gespeichert != "" && gespeichert != token {
-				http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
-				return
+			if bekannt && gespeichert != "" && gespeichert != token {
+				// Ein verlorenes Token erneuert allein der Beitritt: Dort wird
+				// die Gerätekennung geprüft und das neue Token gesetzt. Alle
+				// anderen Endpunkte bleiben streng.
+				darfErneuern := r.URL.Path == "/api/presence" &&
+					geraetPasst(platz, geraet, time.Now()) && tokenBrauchbar(token)
+				if !darfErneuern {
+					http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
+					return
+				}
 			}
 		}
 		next.ServeHTTP(w, r)
@@ -143,6 +160,7 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/siebzehn", siebzehnHandler)
 	mux.HandleFunc("/api/baccara", baccaraHandler)
 	mux.HandleFunc("/api/schiffe", schiffeHandler)
+	mux.HandleFunc("/api/pong", pongHandler)
 	mux.HandleFunc("/api/schwimmen", schwimmenHandler)
 	mux.HandleFunc("/api/arschloch", arschlochHandler)
 	mux.HandleFunc("/api/sechsundsechzig", sechsundsechzigHandler)

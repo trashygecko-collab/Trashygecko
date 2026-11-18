@@ -47,10 +47,12 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			ID   string `json:"id"`
 			ToID string `json:"toId"`
-			Name string `json:"name"`
 			Text string `json:"text"`
 			// Bild: Name einer Grafik aus dem eigenen Bestand (optional).
 			Bild string `json:"bild"`
+			// MsgID vergibt die Seite je Nachricht. Ein Wiederholungsversuch
+			// schickt dieselbe Kennung – der Raum erkennt die doppelte Zeile.
+			MsgID string `json:"msgId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, "Ungültige Nachricht", http.StatusBadRequest)
@@ -58,9 +60,11 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		}
 		input.ID = strings.TrimSpace(input.ID)
 		input.ToID = strings.TrimSpace(input.ToID)
-		input.Name = strings.TrimSpace(input.Name)
 		input.Text = strings.TrimSpace(input.Text)
-		input.Name = limitName(input.Name)
+		input.MsgID = strings.TrimSpace(input.MsgID)
+		if len(input.MsgID) > 64 {
+			input.MsgID = input.MsgID[:64]
+		}
 		// Nur Grafiken aus dem eigenen Bestand: keine fremden Adressen, keine
 		// Pfade aus dem Ordner heraus, keine anderen Dateitypen.
 		input.Bild = strings.TrimSpace(input.Bild)
@@ -95,16 +99,10 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		// Ohne eigenen Namen bleibt der vergebene ("Boss", "Spieler1" …).
-		if input.Name == "" {
-			input.Name = sender.Name
-		}
-		// Update sender name if changed – aber nie auf einen Namen, den schon
-		// jemand anderes im Raum benutzt.
-		if name := room.uniqueName(input.Name, input.ID); sender.Name != name {
-			sender.Name = name
-			room.Players[input.ID] = sender
-		}
+		// Der Name kommt allein aus dem Raum (Beitritt oder /api/umbenennen).
+		// Eine Seite, die noch den alten Namen kennt, macht ein Umbenennen sonst
+		// mit jeder Nachricht rückgängig – dieselbe Regel wie bei /api/presence:
+		// dort gilt für einen bekannten Platz ebenfalls nur der Raum.
 		sender.LastAction = time.Now()
 		sender.AfkWarned = false
 		room.Players[input.ID] = sender
@@ -139,6 +137,15 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Falsches Passwort für /Admin.", http.StatusForbidden)
 			return
 		}
+		// Dieselbe Nachricht kommt bei einem Wiederholungsversuch ein zweites
+		// Mal an. Die msgId der Seite entscheidet: einmal angenommen, danach
+		// nur noch die Bestätigung – so entsteht keine zweite Zeile im Verlauf.
+		if vorhanden, gefunden := room.nachrichtMitID(input.MsgID, input.ID); gefunden {
+			mu.Unlock()
+			jsonResponse(w, map[string]string{"msgId": input.MsgID, "time": vorhanden.Time})
+			return
+		}
+
 		// Spam protection: max 5 messages per 10 seconds
 		now := time.Now()
 		timestamps := room.MsgTimes[input.ID]
@@ -169,19 +176,22 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			recipientName = recipient.Name
 		}
 		// Append message
+		uhrzeit := now.Format("15:04:05")
 		room.addMessage(Message{
 			Name:     sender.Name,
 			Text:     input.Text,
 			Bild:     input.Bild,
-			Time:     now.Format("15:04:05"),
+			Time:     uhrzeit,
 			SenderID: input.ID,
 			ToID:     input.ToID,
 			ToName:   recipientName,
 			Whisper:  input.ToID != "",
+			MsgID:    input.MsgID,
 		})
 		room.LastActive = now
 		mu.Unlock()
-		w.WriteHeader(http.StatusNoContent)
+		// Empfangsbestätigung: die Seite hängt ihre Zeile erst daran ab.
+		jsonResponse(w, map[string]string{"msgId": input.MsgID, "time": uhrzeit})
 		return
 	}
 

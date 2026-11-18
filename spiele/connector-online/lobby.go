@@ -189,6 +189,14 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		// wirklich ändert. Ohne das Zeichen bleibt der Name stehen – sonst
 		// würde jedes Lebenszeichen eine Änderung des Admins zurücksetzen.
 		Umbenennen bool `json:"umbenennen"`
+		// Neu legt einen unbekannten Platz ausdrücklich an. Fehlt das Zeichen,
+		// weist der Server eine unbekannte Kennung ab (409), statt still einen
+		// weiteren Spieler in den Raum zu setzen.
+		Neu bool `json:"neu"`
+		// Geraet ist das zweite Geheimnis dieses Browsers (spiele/token.js).
+		// Geht das Token verloren, holt es denselben Platz zurück – aber nur
+		// innerhalb von zehn Minuten und nur für genau dieses Gerät.
+		Geraet string `json:"geraet"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -202,6 +210,9 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	// – jedes Lebenszeichen und jedes Neuladen lief in eine 403.
 	if input.Token == "" {
 		input.Token = strings.TrimSpace(r.URL.Query().Get("token"))
+	}
+	if input.Geraet == "" {
+		input.Geraet = strings.TrimSpace(r.URL.Query().Get("geraet"))
 	}
 	if input.ID == "" || input.Room == "" {
 		http.Error(w, "Spielraum oder Spielerkennung fehlt", http.StatusBadRequest)
@@ -244,8 +255,25 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	// Ein bekannter Platz gehört dem Gerät, das ihn angelegt hat: Wer die
 	// Kennung errät oder aus /api/players abschreibt, kommt hier nicht weiter.
 	if known && (player.Token == "" || player.Token != strings.TrimSpace(input.Token)) {
+		// Das Token kann verloren gehen (Speicher geleert, alter Tab, neues
+		// Browserfenster). Dann holt die Gerätekennung denselben Platz zurück:
+		// gleiche Kennung, gleicher Name, kein Nummernanhang. Ohne passende
+		// Gerätekennung bleibt es bei der Abweisung.
+		if !geraetPasst(player, input.Geraet, time.Now()) || !tokenBrauchbar(strings.TrimSpace(input.Token)) {
+			mu.Unlock()
+			http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
+			return
+		}
+		player.Token = strings.TrimSpace(input.Token)
+	}
+
+	// Ein unbekannter Platz entsteht nur auf ausdrücklichen Wunsch (neu).
+	// Sonst legte jeder Ruf mit einer alten oder erfundenen Kennung still einen
+	// weiteren Spieler an – nach einem Server-Neustart oder einem verlorenen
+	// Token sammelten sich so Plätze an, und der eigene Name war "vergeben".
+	if !known && !input.Neu {
 		mu.Unlock()
-		http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
+		http.Error(w, "Diese Spielerkennung ist hier nicht bekannt – bitte neu beitreten.", http.StatusConflict)
 		return
 	}
 	// Wer ohne eigenen Namen hereinkommt, bekommt einen: der Boss "Boss",
@@ -307,7 +335,20 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	}
 	player.Name = name
 	if !known {
-		player.Token = zufallsToken()
+		// Bringt das Gerät sein Geheimnis selbst mit (spiele/token.js erzeugt es
+		// vor dem ersten Ruf), gilt das. Zwei fast gleichzeitige Beitritte
+		// desselben Geräts schicken dann dasselbe Token – der zweite Ruf läuft
+		// nicht mehr in „gehört zu einem anderen Gerät“.
+		if mitgebracht := strings.TrimSpace(input.Token); tokenBrauchbar(mitgebracht) {
+			player.Token = mitgebracht
+		} else {
+			player.Token = zufallsToken()
+		}
+	}
+	// Die Gerätekennung gehört zum Platz, nicht zur Sitzung: Sie bleibt auch
+	// nach einem neuen Token stehen (gleiches Browser-Profil).
+	if geraetBrauchbar(input.Geraet) {
+		player.Geraet = input.Geraet
 	}
 	player.Last = time.Now()
 	if player.LastAction.IsZero() || input.Active {
@@ -321,6 +362,47 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	// Der vergebene Name geht zurück, damit die Seite ihn anzeigen kann.
 	// Das Token geht nur an dieses Gerät zurück – nie an andere Spieler.
 	jsonResponse(w, map[string]string{"name": name, "room": code, "token": player.Token})
+}
+
+// geraetFrist: so lange holt die Gerätekennung einen Platz zurück, dessen
+// Token verloren ging. Danach gilt nur noch das Token.
+const geraetFrist = 10 * time.Minute
+
+// geraetPasst sagt, ob dieses Gerät den Platz schon einmal benutzt hat und die
+// Rückgabefrist noch läuft. Die Kennung allein (für alle sichtbar) genügt nie.
+func geraetPasst(player Player, geraet string, now time.Time) bool {
+	if !geraetBrauchbar(geraet) || player.Geraet != geraet {
+		return false
+	}
+	return !player.Last.IsZero() && now.Sub(player.Last) <= geraetFrist
+}
+
+// geraetBrauchbar prüft eine Gerätekennung: nur Buchstaben und Ziffern, 16 bis
+// 128 Zeichen. Der Browser erzeugt sie wie ein Token.
+func geraetBrauchbar(geraet string) bool {
+	if len(geraet) < 16 || len(geraet) > 128 {
+		return false
+	}
+	for _, r := range geraet {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
+}
+
+// tokenBrauchbar prüft ein vom Gerät mitgebrachtes Geheimnis: nur Buchstaben
+// und Ziffern, 16 bis 64 Zeichen. Alles andere ersetzt der Server selbst.
+func tokenBrauchbar(token string) bool {
+	if len(token) < 16 || len(token) > 64 {
+		return false
+	}
+	for _, r := range token {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 // playersHandler returns list of players in a room and room meta (like ownerId).
@@ -343,7 +425,8 @@ func playersHandler(w http.ResponseWriter, r *http.Request) {
 	jetzt := time.Now()
 	list := make([]SpielerZeile, 0, len(room.Players))
 	for id, player := range room.Players {
-		list = append(list, SpielerZeile{ID: id, Name: player.Name, Anwesend: player.anwesend(jetzt)})
+		list = append(list, SpielerZeile{ID: id, Name: player.Name, Anwesend: player.anwesend(jetzt),
+			Spiel: room.aktivesSpiel(id)})
 	}
 	ownerID := room.OwnerID
 	mu.Unlock()

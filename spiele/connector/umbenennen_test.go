@@ -85,7 +85,7 @@ func TestUmbenennenWaehrendPartie(t *testing.T) {
 	// 3) Ein Lebenszeichen setzt den neuen Namen nicht zurück (Umbenennen-Flag).
 	presenceRuf := func(id, name string, umbenennen bool) *httptest.ResponseRecorder {
 		rumpf, _ := json.Marshal(map[string]any{"room": code, "id": id, "name": name, "token": map[string]string{
-			"a": "ta", "b": "tb", "c": "tc"}[id], "umbenennen": umbenennen})
+			"a": "ta", "b": "tb", "c": "tc"}[id], "umbenennen": umbenennen, "neu": true})
 		req := httptest.NewRequest(http.MethodPost, "/api/presence", strings.NewReader(string(rumpf)))
 		req.Header.Set("Content-Type", "application/json")
 		req.RemoteAddr = "192.168.9.4:4444"

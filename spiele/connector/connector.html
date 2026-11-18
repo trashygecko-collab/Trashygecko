@@ -32,6 +32,13 @@ input,select{background:#0b241d;color:white;max-width:100%;min-width:0}
 #chat{height:230px;overflow:auto;background:#0b241d;padding:10px;border-radius:8px}
 /* Jede Nachricht sitzt auf einer feinen Goldlinie, die letzte ohne. */
 .msg{padding:9px 0;border-bottom:1px solid #d9bc7c3d;overflow-wrap:anywhere}
+/* Eigene Zeile, die noch unterwegs ist: bleibt sichtbar, bis der Server sie
+   bestätigt – bei einem Fehler mit Knopf zum erneuten Senden. */
+.msg.ausgang{opacity:.7;font-style:italic}
+.msg.ausgang .sende-status{opacity:.85;font-style:normal}
+.msg.ausgang.fehler{opacity:1;font-style:normal}
+.msg.ausgang.fehler .sende-status{font-weight:700}
+.msg.ausgang .erneut-senden{margin-left:8px;padding:2px 8px}
 .msg:last-child{border-bottom:none;padding-bottom:2px}
 /* Uhrzeit hinter der Nachricht: klein, in Serife, gedämpftes Gold. */
 .msg small{font-family:var(--tg-schrift);font-size:11px;
@@ -501,10 +508,11 @@ html:fullscreen body{padding:18px 1px}
 <div id="namePanel" class="modus-panel" hidden>
 <div class="line" id="nameRow">
 <input id="player" placeholder="Dein Name" maxlength="24">
+<button type="button" id="nameSpeichern">Speichern</button>
 </div>
 <div id="nameKnown" class="name-known">
 <strong id="eigenerName" title="So siehst du für die anderen aus">…</strong>
-<small class="name-tipp">Neuen Namen tippen, Enter übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
+<small class="name-tipp">Neuen Namen tippen, Enter oder „Speichern“ übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
 </div>
 </div>
 </section>
@@ -614,30 +622,45 @@ let currentPlayersList=[];
 function anwesende(){
  return currentPlayersList.filter(p=>p.anwesend!==false).length;
 }
-try {
- sessionID=sessionStorage.getItem("tg-player-id")||"";
- if(!sessionID){
-  sessionID=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random());
-  sessionStorage.setItem("tg-player-id",sessionID);
- }
-} catch(e) {
- sessionID=String(Date.now())+Math.random();
+// Kennung und Name liegen auch im localStorage, nicht nur im sessionStorage:
+// Ein geschlossener Tab (Handy: eine Seite zu weit zurück, Fenster zu) verliert
+// den sessionStorage, der Platz im Raum bleibt aber stehen. Mit derselben
+// Kennung und demselben Token ist man beim Zurückkommen derselbe Spieler –
+// sonst wäre der eigene Name für einen selbst "vergeben".
+function neueKennung(){
+ return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random();
 }
+function kennungMerken(id){
+ try{ sessionStorage.setItem("tg-player-id",id); }catch(e){}
+ try{ localStorage.setItem("tg-player-id",id); }catch(e){}
+}
+sessionID="";
+try{ sessionID=sessionStorage.getItem("tg-player-id")||""; }catch(e){}
+if(!sessionID){ try{ sessionID=localStorage.getItem("tg-player-id")||""; }catch(e){} }
+if(!sessionID)sessionID=neueKennung();
+kennungMerken(sessionID);
 
 // Neue Spielerkennung: Wenn der Server den Platz an ein anderes Gerät bindet
 // (Token verloren – Speicher geleert, anderer Browser, privater Modus), kommt
 // man mit einer frischen Kennung sofort wieder hinein. Der alte Platz
 // verschwindet von selbst, sobald er nicht mehr anwesend ist.
 function neuerSpieler(){
- sessionID=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random());
- try{ sessionStorage.setItem("tg-player-id",sessionID); }catch(e){}
+ sessionID=neueKennung();
+ // Auch im localStorage ersetzen: sonst kehrte der nächste Tab zur alten,
+ // abgewiesenen Kennung zurück.
+ kennungMerken(sessionID);
 }
 
 const nameField=document.getElementById("player");
-try{
- const savedName=sessionStorage.getItem("tg-player-name");
- if(savedName)nameField.value=savedName;
-}catch(e){}
+// Der Name überlebt ein Schließen des Tabs genauso wie die Kennung.
+function nameMerken(wert){
+ try{ sessionStorage.setItem("tg-player-name",wert); }catch(e){}
+ try{ localStorage.setItem("tg-player-name",wert); }catch(e){}
+}
+let gespeicherterName="";
+try{ gespeicherterName=sessionStorage.getItem("tg-player-name")||""; }catch(e){}
+if(!gespeicherterName){ try{ gespeicherterName=localStorage.getItem("tg-player-name")||""; }catch(e){} }
+if(gespeicherterName)nameField.value=gespeicherterName;
 // Sobald ein Name bekannt ist, verschwindet das Eingabefeld und es bleibt nur
 // eine Zeile übrig – wie eine einmalige Namensabfrage.
 let nameFixiert=false;
@@ -652,7 +675,7 @@ function zeigeNamen(fixiert){
  if(eigener&&eigener.textContent!==wert)eigener.textContent=wert||"…";
 }
 nameField.addEventListener("input",()=>{
- try{ sessionStorage.setItem("tg-player-name",nameField.value.trim()); }catch(e){}
+ nameMerken(nameField.value.trim());
  if(nameFixiert)zeigeNamen();
 });
 zeigeNamen(!!nameField.value.trim());
@@ -787,7 +810,7 @@ async function nameUebernehmen(mitFokus){
   const vergeben=await p.json().catch(()=>({}));
   if(p.ok&&vergeben&&vergeben.name){
    nameField.value=vergeben.name;
-   try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+   nameMerken(vergeben.name);
   }
  }catch(e){}
  zeigeNamen(true);
@@ -850,27 +873,61 @@ function scrollZuDenSpielen(){
  setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
 
-function presenceRufen(code){
+function presenceRufen(code, neu){
  return mitWiederholung(()=>fetch("/api/presence",{
   method:"POST",headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({room:code,id:sessionID,name:playerName()})
+  body:JSON.stringify({room:code,id:sessionID,name:playerName(),neu:!!neu})
  }));
 }
 
-async function join(roomDisplayName){
+// Höchstens ein Neuversuch je 30 Sekunden: Ein Neustart des Servers oder ein
+// verlorenes Token darf keine Kette neuer Plätze erzeugen.
+let neuversuchBis=0;
+function neuversuchErlaubt(){
+ const jetzt=Date.now();
+ if(jetzt<neuversuchBis)return false;
+ neuversuchBis=jetzt+30000;
+ return true;
+}
+
+// Den Platz wiederbekommen: gleiche Kennung, gleiches Token, gleicher Name.
+// Ist der Raum weg (Server neu gestartet), wird der aktuelle Raum geholt.
+async function neuAnmelden(){
+ if(!activeRoom)return;
+ if(!neuversuchErlaubt())return;
+ verbindungZeigen("neu");
+ await join(undefined, true);
+ if(!activeRoom)await joinSingleRoom();
+}
+
+async function join(roomDisplayName, wieder){
  const code=document.getElementById("room").value.trim().toUpperCase();
  if(!code)return;
  try{
-  let p=await presenceRufen(code);
+  let p=await presenceRufen(code, !!wieder);
+  // 409: Der Server kennt den Platz nicht mehr (Neustart). Denselben Platz
+  // mit derselben Kennung anlegen – kein zweiter Spieler, kein neuer Name.
+  if(p.status===409&&!wieder){
+   p=await presenceRufen(code, true);
+  }
   // 403: Dieser Platz hängt an einem anderen Gerät – dem Browser fehlt sein
   // Token (Speicher geleert, anderer Browser, privater Modus). Mit frischer
-  // Kennung klappt der Beitritt, statt dauerhaft draußen zu bleiben.
+  // Kennung klappt der Beitritt, statt dauerhaft draußen zu bleiben – aber
+  // höchstens einmal je 30 Sekunden.
   if(p.status===403){
+   if(!wieder&&!neuversuchErlaubt())throw Error("Dieser Platz gehört zu einem anderen Gerät.");
    neuerSpieler();
-   p=await presenceRufen(code);
+   p=await presenceRufen(code, true);
   }
   if(!p.ok){
    const text=(await p.text()).trim();
+   // Raum weg (Server neu gestartet): den aktuellen Raum holen und dort
+   // wieder hinein, statt den Tab auf einem toten Raum stehen zu lassen.
+   if(p.status===404&&activeRoom){
+    activeRoom="";
+    await joinSingleRoom();
+    return;
+   }
    throw Error(text||(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen."));
   }
   // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
@@ -878,7 +935,7 @@ async function join(roomDisplayName){
   const vergeben=await p.json().catch(()=>({}));
   if(vergeben&&vergeben.name&&vergeben.name!==nameField.value.trim()){
    nameField.value=vergeben.name;
-   try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+   nameMerken(vergeben.name);
   }
   activeRoom=code;
   // Merken, damit ein neu geladener Tab (Handy im Hintergrund) direkt wieder
@@ -977,15 +1034,25 @@ async function heartbeat(){
   if(!ok&&r.status===403&&!verbindungHinweis){
    verbindungHinweis=true;
    const text=(await r.text().catch(()=>"")).trim();
-   setRoomStatus(text||"Dieser Platz gehört zu einem anderen Gerät – Seite neu laden.");
+   setRoomStatus(text||"Dieser Platz gehört zu einem anderen Gerät.");
+  }
+  if(!ok&&(r.status===403||r.status===404||r.status===409)){
+   // Platz weg oder einem anderen Gerät zugeordnet: einmal neu anmelden,
+   // statt den Tab tot stehen zu lassen. neuAnmelden bremst sich selbst auf
+   // einen Versuch je 30 Sekunden.
+   neuAnmelden();
   }
   if(ok){
    // Der Admin darf mitten in der Partie umbenennen: Der Name vom Server
    // gilt, auch wenn hier noch der alte steht.
    const vergeben=await r.json().catch(()=>null);
-   if(vergeben&&vergeben.name&&vergeben.name!==nameField.value){
+   // Nicht dazwischenfunken, solange der Name gerade eingetippt wird: Sonst
+   // setzt jedes Lebenszeichen (alle 5 s) das Feld auf den alten Namen zurück
+   // und zum Ändern blieben nur wenige Sekunden.
+   const nameOffen=!document.getElementById("nameRow").hidden||document.activeElement===nameField;
+   if(vergeben&&vergeben.name&&vergeben.name!==nameField.value&&!nameOffen){
     nameField.value=vergeben.name;
-    try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+    nameMerken(vergeben.name);
     zeigeNamen();
     refreshPlayers();
    }
@@ -1031,12 +1098,10 @@ async function refreshPlayers(){
   currentPlayersList=list;
   // Spieler stehen sofort beim Betreten des Raums im Chat.
   renderGamePicker(list);
-  // Ein offenes Angebot ist wichtiger als der Zustand einer alten Partie – es
-  // geht deshalb als Vorrang-Meldung in denselben Durchlauf. Vorher schrieb es
-  // danach noch einmal in die Box, sodass sich Meldung und Angebot bei jedem
-  // Takt abwechselten.
-  const vorrang=angebot?angebot.vonName+" bietet "+angebot.gameName+" an.":"";
-  await refreshGames(list, vorrang);
+  // Das offene Angebot steht einmal in der Karte unter der Spieleauswahl und
+  // einmal als Chatzeile. Die Statuszeile hält nur den Spielstand – sonst
+  // stünde dieselbe Einladung dreimal auf der Seite.
+  await refreshGames(list);
   // Nach dem Abgleich der Spielstände noch einmal: erst jetzt steht fest, wer
   // schon an einem Tisch sitzt.
   renderGamePicker(list);
@@ -1130,6 +1195,7 @@ let currentCaboGame=null;
 let currentSiebzehnGame=null;
 let currentBaccaraGame=null;
 let currentSchiffeGame=null;
+let currentPongGame=null;
 let currentSchachGame=null;
 let currentGoGame=null;
 let currentBackgammonGame=null;
@@ -1170,6 +1236,7 @@ const SUPPORTED_GAMES = [
  { id: "siebzehn", name: "17 und 4", path: "/spiele/kartenspiele/siebzehn/siebzehn.html", api: "/api/siebzehn" },
  { id: "baccara", name: "Baccara", path: "/spiele/kartenspiele/baccara/baccara.html", api: "/api/baccara" },
  { id: "schiffe", name: "Schiffe versenken", path: "/spiele/brettspiele/schiffe/schiffe.html", api: "/api/schiffe" },
+ { id: "pong", name: "Pong", path: "/spiele/pong/pong.html", api: "/api/pong" },
  { id: "cabo", name: "Cabo", path: "/spiele/kartenspiele/cabo/cabo.html", api: "/api/cabo" },
  { id: "poker", name: "Poker", path: "/spiele/kartenspiele/poker/poker.html", api: "/api/poker" },
  { id: "uno", name: "UNO", path: "/spiele/kartenspiele/uno/uno.html", api: "/api/uno" },
@@ -1347,7 +1414,7 @@ const SPIEL_ABFRAGEN={
  hold:refreshHold, skyjo:refreshSkyjo, kniffel:refreshKniffel,
  schach:refreshSchach, go:refreshGo, backgammon:refreshBackgammon,
  maumau:refreshMauMau, siebzehn:refreshSiebzehn, baccara:refreshBaccara,
- schiffe:refreshSchiffe, cabo:refreshCabo, poker:refreshPoker,
+ schiffe:refreshSchiffe, pong:refreshPong, cabo:refreshCabo, poker:refreshPoker,
  uno:refreshUno, schwimmen:refreshSchwimmen, arschloch:refreshArschloch,
  einsxeins:refreshEinsxeins, sechsundsechzig:refreshSechsundsechzig, galgen:refreshGalgen,
  bingo:refreshBingo, wortsuche:refreshWortsuche, domino:refreshDomino,
@@ -1369,7 +1436,7 @@ function zuschauerStatus(){
   gameId:"", leer:false, knoepfe:[]};
 }
 
-async function refreshGames(players, vorrang){
+async function refreshGames(players){
  // Läuft schon ein Durchlauf, reicht der. Sonst stapeln sich bei langsamer
  // Leitung die Runden und es bleiben immer mehr Abfragen offen.
  if(statusZyklus)return;
@@ -1400,19 +1467,19 @@ async function refreshGames(players, vorrang){
  // Ohne eigenes Spiel und ohne Angebot zählt die Partie der anderen; gibt es
  // auch die nicht, muss die alte Zeile weg - sie würde sonst bis zum Neuladen
  // "Spiel läuft" behaupten.
- if(!ids.size && !vorrang){
+ if(!ids.size){
   statusPuffer=zuschauerStatus()||{text:"", gameId:"", leer:true, knoepfe:[]};
  }
- // Einmal zeichnen. Läuft für mich schon eine Partie (oder sitze ich an einem
- // Tisch), steht deren Meldung samt Knopf vorn – das offene Angebot kommt als
- // kleine Zeile darunter. Sonst zählt das Angebot allein.
- if(statusPuffer && !statusPuffer.leer){
-  statusAnzeigen(Object.assign({},statusPuffer,{hinweis:vorrang||""}));
- }else if(vorrang){
-  statusAnzeigen({text:vorrang, gameId:"", leer:false, knoepfe:[], hinweis:""});
- }else if(statusPuffer){
-  statusAnzeigen(statusPuffer);
+ // Läuft eine Partie, deren Spielstand noch nicht da ist, sagt die Zeile das –
+ // statt weiter "Noch keine Runde offen" zu behaupten.
+ if(!statusPuffer&&aktivesSpielId){
+  statusPuffer={text:"Partie wird geöffnet …", gameId:aktivesSpielId, leer:false, knoepfe:[]};
  }
+ // Ohne Partie bleibt nichts stehen: die alte Zeile samt Knopf muss weg.
+ if(!statusPuffer){
+  statusPuffer={text:"", gameId:"", leer:true, knoepfe:[]};
+ }
+ statusAnzeigen(statusPuffer);
  statusPuffer=null; statusFrisch=false;
 }
 
@@ -1437,6 +1504,7 @@ function gameStateFor(gameId){
  if(gameId==="siebzehn")return currentSiebzehnGame;
  if(gameId==="baccara")return currentBaccaraGame;
  if(gameId==="schiffe")return currentSchiffeGame;
+ if(gameId==="pong")return currentPongGame;
  if(gameId==="schach")return currentSchachGame;
  if(gameId==="go")return currentGoGame;
  if(gameId==="backgammon")return currentBackgammonGame;
@@ -1888,6 +1956,53 @@ async function refreshSchiffe(players){
   addStatusButton("Neue Partie", async()=>{
    if(await gameApiAction("schiffe", "reset")){
     openGame(gamePath("schiffe"));
+   }
+  });
+ }
+}
+
+// Pong: Ball und Schläger führt der Server, damit beide denselben Ball sehen.
+async function refreshPong(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/pong?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentPongGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(" gegen ");
+ const meiner=game.du>=0;
+
+ if(game.status==="invited"){
+  tttStatus("Pong: "+namen+" – "+game.spieler.length+" von 2 Plätzen belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("pong")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("pong","join")){
+     openGame(gamePath("pong"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="spiel"){
+  const stand=game.spieler.map(p=>p.name+" "+p.punkte).join(" : ");
+  tttStatus("Pong läuft – "+stand+" · Rallye "+game.rallye+".", "pong");
+  return;
+ }
+
+ if(game.status==="ende"){
+  const stand=game.spieler.map(p=>p.punkte).join(" : ");
+  tttStatus("Pong beendet – "+(game.sieger||"niemand")+" gewinnt "+stand+".", "pong");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("pong","reset")){
+    openGame(gamePath("pong"));
    }
   });
  }
@@ -3307,6 +3422,8 @@ async function refreshTicTacToe(players){
 }
 let chatBusy=false;
 let lastChatSignature="";
+// Nachrichten, deren Bestätigung noch fehlt (siehe send()).
+let ausgang=[];
 /* Für den Sprung zum Chat: nur eine wirklich neue letzte Nachricht zählt,
    nicht jedes Neuzeichnen (Status, Stummschaltung, laufende Runde). */
 let letzteChatZeile="";
@@ -3334,6 +3451,7 @@ async function refresh(){
   // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
   const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId,m.tone||""].join("|")).join("`")
    +"#"+isRoomOwner+"#"+selectedMuteSender+"#"+(angebot?angebot.id:"")+"#"+anwesende()
+   +"#a"+ausgang.map(e=>e.msgId+":"+e.zustand).join(",")
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
   lastChatSignature=signature;
@@ -3558,6 +3676,47 @@ async function refresh(){
 
    box.appendChild(d);
   });
+  // Eigene Zeilen, die noch unterwegs sind: Sie verschwinden erst mit der
+  // Bestätigung des Servers – so sieht man sofort, dass etwas läuft, und
+  // eine verlorene Nachricht bleibt sichtbar statt unbemerkt zu verschwinden.
+  ausgang.forEach(e=>{
+   const d=document.createElement("div");
+   d.className="msg ausgang"+(e.zustand==="fehler"?" fehler":"");
+   const nm=document.createElement("b");
+   nm.textContent=playerName()+": ";
+   d.appendChild(nm);
+   if(e.text){
+    const t=document.createElement("span");
+    t.textContent=e.text;
+    d.appendChild(t);
+   }
+   if(e.bild){
+    const adresse=smileyAdresse(e.bild);
+    if(adresse){
+     const img=document.createElement("img");
+     img.src=adresse; img.alt=""; img.className="chat-bild";
+     d.appendChild(img);
+    }
+   }
+   const st=document.createElement("small");
+   st.className="sende-status";
+   st.textContent=e.zustand==="fehler"?"  Nicht gesendet":"  wird gesendet …";
+   d.appendChild(st);
+   if(e.zustand==="fehler"){
+    const nochmal=document.createElement("button");
+    nochmal.type="button";
+    nochmal.className="erneut-senden";
+    nochmal.textContent="Erneut senden";
+    nochmal.onclick=()=>{
+     e.zustand="sendet"; e.grund="";
+     lastChatSignature="";
+     refresh();
+     nachrichtZustellen(e).then(()=>refresh());
+    };
+    d.appendChild(nochmal);
+   }
+   box.appendChild(d);
+  });
   if(atBottom)box.scrollTop=box.scrollHeight;
   // Neue Nachricht: am Handy steht der Chat unter der Spielauswahl – die Seite
   // holt ihn ins Bild, sobald er nicht ohnehin zu sehen ist. Beim ersten
@@ -3676,17 +3835,52 @@ async function send(){
   }
  }
 
- const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom),{
-  method:"POST",headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({id:sessionID,name:playerName(),text,toId,bild})
- });
- if(r.ok){
-  field.value="";
-  smileyWahlLoeschen();
-  refresh();
- }else{
-  setRoomStatus((await r.text()).trim()||"Nachricht konnte nicht gesendet werden.");
+ // Die Nachricht wandert zuerst in den Ausgang: Sie ist damit sofort sichtbar
+ // und geht nicht verloren, wenn die Antwort unterwegs verloren geht.
+ const eintrag={msgId:neueMsgId(), text, bild, toId, zustand:"sendet", grund:""};
+ ausgang.push(eintrag);
+ field.value="";
+ smileyWahlLoeschen();
+ lastChatSignature="";
+ refresh();
+ nachrichtZustellen(eintrag).then(()=>refresh());
+}
+
+// --- Ausgang: Nachrichten, die noch nicht bestätigt sind -------------------
+// Jede Nachricht trägt eine eigene Kennung. Bleibt die Antwort aus, wird sie
+// genau einmal automatisch wiederholt – der Server legt dieselbe Kennung nicht
+// zweimal an. Danach steht sie sichtbar als "Nicht gesendet" da und lässt sich
+// mit einem Knopf erneut schicken.
+function neueMsgId(){
+ try{ return crypto.randomUUID(); }catch(e){}
+ return "m"+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+}
+async function sendeEintrag(eintrag){
+ try{
+  const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,text:eintrag.text,toId:eintrag.toId,bild:eintrag.bild,msgId:eintrag.msgId})
+  });
+  if(r.ok)return true;
+  eintrag.grund=(await r.text()).trim();
+  return false;
+ }catch(e){
+  eintrag.grund="Netzwerkfehler";
+  return false;
  }
+}
+async function nachrichtZustellen(eintrag){
+ if(!await sendeEintrag(eintrag)){
+  await new Promise(r=>setTimeout(r,1200));
+  if(!await sendeEintrag(eintrag)){
+   eintrag.zustand="fehler";
+   setRoomStatus("Nachricht nicht gesendet"+(eintrag.grund?" ("+eintrag.grund+")":"")+" – im Chat erneut senden.");
+   return false;
+  }
+ }
+ ausgang=ausgang.filter(x=>x!==eintrag);
+ lastChatSignature="";
+ return true;
 }
 
 document.getElementById("message").addEventListener("keydown",e=>{
@@ -3868,11 +4062,11 @@ async function pruefeSpielstart(){
    aktivesSpielId=neu;
    // Sofort zeichnen, damit Statuszeile und Knöpfe nicht bis zum nächsten
    // Sekundentakt warten.
-   refreshGames(currentPlayersList,"");
+   refreshGames(currentPlayersList);
   }
  }catch(e){}
 }
-setInterval(pruefeSpielstart,2000);
+setInterval(()=>{ if(!document.hidden)pruefeSpielstart(); },2000);
 
 // --- Spiel neben dem Chat -------------------------------------------------
 // Wo läuft eine Partie? Am PC rechts neben dem Chat, damit man weiterreden
@@ -4103,7 +4297,11 @@ function spielRaster(gruppe,nurSpiele){
    if(!nurSpiele)return true;
    // Nur echte Spieldateien – so fällt der Verweis auf den Connector selbst
    // heraus, der in der Übersicht mit in der Gruppe steht.
-   if(!/^[^\/:]+\/[^\/:]+\.html$/i.test(ziel))return false;
+   // Ein bis drei Ordner tief: „brettspiele/bingo/bingo.html“ ist ein Spiel,
+   // „../x“ oder eine fremde Adresse nicht. Vorher war nur eine Ebene erlaubt,
+   // dadurch fehlten alle Spiele in Unterordnern (Bingo, Mahjong, Memory, …).
+   if(ziel.indexOf("..")>=0)return false;
+   if(!/^(?:[^\/:]+\/){1,3}[^\/:]+\.html$/i.test(ziel))return false;
    // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
    return !/^malen\//i.test(ziel);
   })
@@ -4234,10 +4432,34 @@ function zeigeHinweisAusUrl(){
 loadStatus();
 // Ohne gespeicherten Raum direkt hinein – ohne Klick und ohne Namen.
 restoreRoom().finally(()=>{ if(!activeRoom)joinSingleRoom(); });
-setInterval(heartbeat,5000);
-setInterval(refresh,1000);
-setInterval(refreshPlayers,3000);
-setInterval(loadMutes,3000);
+// Im Hintergrund (Handy in der Tasche, anderer Tab) laufen die schnellen
+// Abfragen nicht mit – das kostet Akku und Daten. Der Herzschlag bleibt
+// gedrosselt, damit der Platz nicht verfällt.
+let letzterHerzschlag=0;
+function imVordergrund(){ return !document.hidden; }
+setInterval(()=>{
+ if(imVordergrund()){
+  letzterHerzschlag=Date.now();
+  heartbeat();
+  return;
+ }
+ if(Date.now()-letzterHerzschlag>=25000){
+  letzterHerzschlag=Date.now();
+  heartbeat();
+ }
+},5000);
+setInterval(()=>{ if(imVordergrund()) refresh(); },1000);
+setInterval(()=>{ if(imVordergrund()) refreshPlayers(); },3000);
+setInterval(()=>{ if(imVordergrund()) loadMutes(); },3000);
+// Zurück im sichtbaren Tab: sofort ein Durchlauf, ohne einen zweiten Timer.
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden)return;
+ letzterHerzschlag=Date.now();
+ heartbeat();
+ refreshPlayers();
+ pruefeSpielstart();
+ refresh();
+});
 
 document.getElementById("player").addEventListener("keydown",e=>{
  if(e.key==="Enter"){
@@ -4248,10 +4470,23 @@ document.getElementById("player").addEventListener("keydown",e=>{
   zeigeNamen(true);
  }
 });
+// Wegtippen übernimmt keinen Namen: am Handy steht schnell etwas Halbfertiges
+// im Feld, und der Name soll nur auf ausdrücklichen Wunsch wechseln. blur
+// schließt deshalb nur das Feld – übernommen wird per Enter oder Speichern.
 document.getElementById("player").addEventListener("blur",()=>{
- // Klick irgendwo hin zählt als "fertig" – aber nur, wenn das Feld offen war.
- if(!document.getElementById("nameRow").hidden)nameUebernehmen();
+ setTimeout(()=>{
+  if(document.activeElement===document.getElementById("nameSpeichern"))return;
+  // Halbfertiges verwerfen: das Feld zeigt wieder den Namen, der wirklich
+  // gilt (der Server kennt ihn, die Spielerliste bringt ihn mit).
+  const eigener=(currentPlayersList||[]).find(p=>p.id===sessionID);
+  if(eigener&&eigener.name){
+   document.getElementById("player").value=eigener.name;
+   nameMerken(eigener.name);
+  }
+  zeigeNamen(true);
+ },150);
 });
+document.getElementById("nameSpeichern").onclick=()=>nameUebernehmen(true);
 
 const params=new URLSearchParams(location.search);
 if(params.get("room")){

@@ -38,6 +38,7 @@ var spielFeld = map[string]string{
 	"siebzehn":         "Siebzehn",
 	"baccara":          "Baccara",
 	"schiffe":          "Schiffe",
+	"pong":             "Pong",
 	"cabo":             "Cabo",
 	"poker":            "Poker",
 	"uno":              "Uno",

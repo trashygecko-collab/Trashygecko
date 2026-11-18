@@ -182,8 +182,32 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.Baccara; g != nil {
 		benenne(g.Spieler, id, neu, func(p *BaccaraSpieler) string { return p.ID }, func(p *BaccaraSpieler) *string { return &p.Name })
 	}
+	if g := r.Pong; g != nil {
+		benenne(g.Spieler, id, neu, func(p *PongSpieler) string { return p.ID }, func(p *PongSpieler) *string { return &p.Name })
+	}
 	if g := r.Schiffe; g != nil {
 		benenne(g.Spieler, id, neu, func(p *SchiffeSpieler) string { return p.ID }, func(p *SchiffeSpieler) *string { return &p.Name })
+	}
+	if g := r.Galgen; g != nil {
+		benenne(g.Spieler, id, neu, func(p *GalgenSpieler) string { return p.ID }, func(p *GalgenSpieler) *string { return &p.Name })
+	}
+	if g := r.Bingo; g != nil {
+		benenne(g.Spieler, id, neu, func(p *BingoSpieler) string { return p.ID }, func(p *BingoSpieler) *string { return &p.Name })
+	}
+	if g := r.Wortsuche; g != nil {
+		benenne(g.Spieler, id, neu, func(p *WortsucheSpieler) string { return p.ID }, func(p *WortsucheSpieler) *string { return &p.Name })
+	}
+	if g := r.Domino; g != nil {
+		benenne(g.Spieler, id, neu, func(p *DominoSpieler) string { return p.ID }, func(p *DominoSpieler) *string { return &p.Name })
+	}
+	if g := r.Schlangen; g != nil {
+		benenne(g.Spieler, id, neu, func(p *SchlangenSpieler) string { return p.ID }, func(p *SchlangenSpieler) *string { return &p.Name })
+	}
+	if g := r.Pig; g != nil {
+		benenne(g.Spieler, id, neu, func(p *PigSpieler) string { return p.ID }, func(p *PigSpieler) *string { return &p.Name })
+	}
+	if g := r.Gaense; g != nil {
+		benenne(g.Spieler, id, neu, func(p *GaenseSpieler) string { return p.ID }, func(p *GaenseSpieler) *string { return &p.Name })
 	}
 	if g := r.Sechsundsechzig; g != nil {
 		benenne(g.Spieler, id, neu, func(p *SechsundsechzigSpieler) string { return p.ID }, func(p *SechsundsechzigSpieler) *string { return &p.Name })

@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="de">
 <head>
+<script src="/spiele/token.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0b241d">
@@ -9,66 +10,126 @@
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
-.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+/* Drei Stile, ein Spiel: Klassisch (Grün und Gold), Mädchen-Pong (sanftes
+   Rosa) und Männer-Pong (Stahl und Kanten). Die Stile färben die ganze Seite
+   und das Spielfeld – im Menü umschaltbar, die Wahl bleibt gespeichert. */
+body[data-stil="klassisch"]{
+ --bg1:#1d4b3e;--bg2:#123329;--bg3:#0a211b;
+ --rahmen:#d9bc7c66;--rahmen-hell:#d9bc7c;--akzent:#e8cd8e;--akzent-text:#0b241d;
+ --feld:#0f2b23;--feld-dunkel:#08120f;--leiste:#0b241d;
+ --text:#efe6d2;--text-leise:#a9c3b6;
+ --radius:8px;--radius-klein:6px;--schrift-titel:1px;
+}
+body[data-stil="maedchen"]{
+ --bg1:#ffeaf2;--bg2:#ffe0ec;--bg3:#f7d8e8;
+ --rahmen:#f3a8c6;--rahmen-hell:#ff9ec4;--akzent:#ff8fbd;--akzent-text:#4a2233;
+ --feld:#fff6fa;--feld-dunkel:#ffeef5;--leiste:#fff6fa;
+ --text:#5c3a4c;--text-leise:#a1748c;
+ --radius:18px;--radius-klein:14px;--schrift-titel:2px;
+}
+body[data-stil="maenner"]{
+ --bg1:#272d34;--bg2:#151a1f;--bg3:#080a0c;
+ --rahmen:#7d8892;--rahmen-hell:#c8d2da;--akzent:#d7e0e8;--akzent-text:#12171c;
+ --feld:#12161a;--feld-dunkel:#080a0c;--leiste:#0f1316;
+ --text:#e4ebf0;--text-leise:#8f9ba5;
+ --radius:0px;--radius-klein:0px;--schrift-titel:4px;
+}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
-.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
-.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+.fenster{border:1px solid var(--rahmen);border-radius:var(--radius);overflow:hidden;
+ background:var(--feld);box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(var(--bg1),var(--bg2));
+ border-bottom:1px solid var(--rahmen)}
+.titelleiste .titel{color:var(--akzent);font-size:14px;letter-spacing:calc(.06em + var(--schrift-titel)*.01em);
+ text-transform:uppercase}
+.titelleiste .kreuz{color:var(--akzent);border:1px solid var(--rahmen);border-radius:var(--radius-klein);
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rahmen)}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:var(--radius-klein);
+ border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
+.menueleiste button:hover{filter:brightness(1.15);border-color:var(--rahmen-hell)}
+.menueleiste button.aktiv{background:var(--akzent);color:var(--akzent-text);
+ border-color:var(--akzent);font-weight:bold}
+
+.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;
+ background:var(--leiste);border-bottom:1px solid var(--rahmen)}
+.stilwahl .stil-titel{font-size:12px;color:var(--text-leise);letter-spacing:.08em;
+ text-transform:uppercase;margin-right:2px}
+.stilwahl button{font-family:inherit;font-size:13px;padding:6px 11px;border-radius:var(--radius-klein);
+ border:1px solid var(--rahmen);background:var(--feld);color:var(--text);cursor:pointer}
+.stilwahl button:hover{border-color:var(--rahmen-hell)}
+/* Der gewählte Stil zeigt schon seine eigene Farbe – man sieht, was man bekommt. */
+.stilwahl button[data-stil="maedchen"].aktiv{background:#ff9ec4;border-color:#ff9ec4;color:#4a2233;font-weight:bold}
+.stilwahl button[data-stil="maenner"].aktiv{background:linear-gradient(#e8eef3,#9aa5af);border-color:#e8eef3;color:#12171c;font-weight:bold}
+.stilwahl button[data-stil="klassisch"].aktiv{background:var(--akzent);border-color:var(--akzent);color:var(--akzent-text);font-weight:bold}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--text-leise);background:var(--leiste);
+ border-bottom:1px solid var(--rahmen)}
+.statuszeile b{color:var(--akzent);font-weight:normal}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
-canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px #00000088}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--feld-dunkel)}
+canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:var(--radius);touch-action:none;
+ box-shadow:inset 0 0 40px #00000055}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ background:rgba(8,18,15,.82);
+ background:color-mix(in srgb,var(--feld-dunkel) 82%,transparent);border-radius:var(--radius);padding:14px;text-align:center}
+.meldung .kasten{background:var(--feld);border:1px solid var(--rahmen-hell);border-radius:var(--radius);
+ padding:16px 18px;max-width:330px}
+.meldung h2{margin:0 0 6px;color:var(--akzent);font-weight:normal;letter-spacing:.14em;font-size:19px;
+ text-transform:uppercase}
+.meldung p{margin:0 0 12px;color:var(--text);font-size:14px;line-height:1.5}
+.meldung .knoepfe{display:flex;flex-direction:column;gap:7px}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:var(--radius-klein);cursor:pointer;
+ border:1px solid var(--rahmen-hell);background:var(--akzent);color:var(--akzent-text);font-weight:bold;width:100%}
+.meldung button.still{background:var(--feld);color:var(--text);font-weight:normal}
+.meldung button:hover{filter:brightness(1.08)}
+#meldungListe{margin:0 0 10px;padding:0;list-style:none;display:grid;gap:5px;font-size:14px;color:var(--text)}
+#meldungListe li{display:flex;justify-content:space-between;gap:10px;
+ border-bottom:1px solid var(--rahmen);padding:4px 0}
+#meldungListe li:last-child{border-bottom:none}
+#meldungListe small{color:var(--text-leise)}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--text-leise);min-height:28px}
+.fuss .fehler{color:#e88a7a;display:block;margin-top:3px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--akzent);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--text)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--akzent);font-weight:normal}
+.klein{color:var(--text-leise);font-size:13px}
+a{color:var(--akzent)}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
-<body>
+<body data-stil="klassisch">
 <main class="fenster">
  <div class="titelleiste">
   <span class="titel">Pong</span>
   <span class="kreuz">×</span>
  </div>
 
- <div class="menueleiste">
+ <div class="menueleiste" id="menueleiste">
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnSolo" class="aktiv">1 Spieler</button>
   <button id="btnDuell">2 Spieler</button>
+ </div>
+
+ <div class="stilwahl" id="stilwahl">
+  <span class="stil-titel">Stil</span>
+  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
+  <button type="button" data-stil="maedchen">Mädchen-Pong</button>
+  <button type="button" data-stil="maenner">Männer-Pong</button>
  </div>
 
  <div class="statuszeile">
@@ -82,14 +143,16 @@ a{color:#e8cd8e}
   <div class="meldung" id="meldung">
    <div class="kasten">
     <h2 id="meldungTitel">PONG</h2>
-    <p id="meldungText">Du spielst unten, der Computer oben. Wer zuerst 7 Punkte hat, gewinnt.</p>
-    <button id="meldungKnopf">Starten</button>
+    <ul id="meldungListe" hidden></ul>
+    <p id="meldungText"></p>
+    <div class="knoepfe" id="meldungKnoepfe"></div>
    </div>
   </div>
  </div>
 
  <div class="fuss">
-  <span id="hinweis">Finger in deiner Hälfte ziehen: der Schläger folgt.</span>
+  <span id="hinweis"></span>
+  <span class="fehler" id="fehler" hidden></span>
  </div>
 
  <details id="regeln">
@@ -97,9 +160,10 @@ a{color:#e8cd8e}
   <ol>
    <li><b>Ziel:</b> Den Ball am eigenen Rand vorbeispielen lassen. Wer zuerst 7 Punkte hat, gewinnt.</li>
    <li><b>Steuern:</b> Finger in der eigenen Bildschirmhälfte ziehen – der Schläger folgt waagerecht. Am PC: Pfeiltasten oder A/D.</li>
-   <li><b>Zwei Spieler:</b> Spieler 1 spielt unten, Spieler 2 oben – jeder mit dem eigenen Finger in seiner Hälfte.</li>
-   <li><b>Ball:</b> Der Ball wird mit jedem Schlägertreffer schneller. Wo er den Schläger trifft, bestimmt den Winkel.</li>
-   <li><b>Modus:</b> Bei „1 Spieler" übernimmt der Computer die obere Seite und wird mit jeder Rallye sicherer.</li>
+   <li><b>Zwei Spieler an einem Gerät:</b> Spieler 1 spielt unten, Spieler 2 oben – jeder in seiner Hälfte.</li>
+   <li><b>Über den Connector:</b> Runde anbieten, Karte im Chat antippen, beide drücken BEREIT – dann startet der Gastgeber. Jeder sieht sich selbst unten, der Server führt den Ball.</li>
+   <li><b>Stil:</b> Klassisch (Grün und Gold), Mädchen-Pong (sanftes Rosa mit Herzen) oder Männer-Pong (Stahl, Kanten, Schrauben). Der Stil ist reine Anzeige – gespielt wird überall dasselbe.</li>
+   <li><b>Ball:</b> Mit jedem Schlägertreffer wird er schneller. Wo er den Schläger trifft, bestimmt den Winkel.</li>
   </ol>
   <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
  </details>
@@ -107,63 +171,437 @@ a{color:#e8cd8e}
 
 <script>
 (() => {
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get("room")||"").toUpperCase();
+const ID=params.get("id")||"";
+const NAME=params.get("name")||"Spieler";
+const ONLINE=!!(ROOM&&ID);
+
 const canvas=document.getElementById("feld");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
 
 const W=400, H=600;
-canvas.width=W;
-canvas.height=H;
+/* In Gerätepixeln zeichnen: sonst wirken Ball, Schläger und Zahlen auf dem
+   Handy weichgezeichnet. Gezeichnet wird weiter in 400 × 600 Einheiten. */
+const DPR=Math.min(2,window.devicePixelRatio||1);
+canvas.width=Math.round(W*DPR);
+canvas.height=Math.round(H*DPR);
+ctx.setTransform(DPR,0,0,DPR,0,0);
 
 const SIEGPUNKTE=7;
 const BALL_R=9;
-const TEMPO_START=5.4;
-const TEMPO_MAX=11.5;
+const TEMPO_START=324;       // Pixel je Sekunde
+const TEMPO_MAX=690;
 const SCHLAEGER_W=78;
 const SCHLAEGER_H=13;
 const SPIELFELD_OBEN=24;
 const SPIELFELD_UNTEN=H-24;
+const TAKT=1/120;
 
-let modus="solo";            // solo, duell
+/* ---------------------------------------------------------------- Stile */
+
+/* Jeder Stil bringt seine Farben für das Spielfeld mit. Gezeichnet wird mit
+   denselben Maßen, nur Form, Farbe und Schmuck ändern sich. */
+const STILE={
+ klassisch:{
+  name:"Klassisch",
+  hintergrund(g){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#0f3a2c");
+   v.addColorStop(.5,"#0b2a21");
+   v.addColorStop(1,"#071912");
+   g.fillStyle=v; g.fillRect(0,0,W,H);
+  },
+  mittellinie(g){
+   g.save();
+   g.setLineDash([12,14]);
+   g.strokeStyle="#d9bc7c55";
+   g.lineWidth=3;
+   g.beginPath(); g.moveTo(0,H/2); g.lineTo(W,H/2); g.stroke();
+   g.restore();
+  },
+  rahmen(g){
+   g.strokeStyle="#d9bc7c33"; g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(0,SPIELFELD_OBEN-6); g.lineTo(W,SPIELFELD_OBEN-6);
+   g.moveTo(0,SPIELFELD_UNTEN+6); g.lineTo(W,SPIELFELD_UNTEN+6);
+   g.stroke();
+  },
+  zahl:"rgba(232,205,142,.09)",
+  zahlGroesse:150,
+  text:"#a9c3b6",
+  ball(g,x,y,r){
+   g.fillStyle="rgba(232,205,142,.20)";
+   g.beginPath(); g.arc(x,y,r*1.9,0,Math.PI*2); g.fill();
+   const v=g.createRadialGradient(x-3,y-3,1,x,y,r);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(1,"#e8cd8e");
+   g.fillStyle=v;
+   g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+   g.strokeStyle="#7a5a1c"; g.lineWidth=1.5; g.stroke();
+  },
+  schlaeger(g,x,y,farbe,eigen){
+   const v=g.createLinearGradient(x,y,x,y+SCHLAEGER_H);
+   v.addColorStop(0,farbe);
+   v.addColorStop(1,"#0b241d");
+   g.fillStyle=v;
+   g.beginPath(); g.roundRect(x-SCHLAEGER_W/2,y,SCHLAEGER_W,SCHLAEGER_H,6); g.fill();
+   g.strokeStyle="#06141099"; g.lineWidth=2; g.stroke();
+   g.fillStyle="#ffffff2e";
+   g.fillRect(x-SCHLAEGER_W/2+8,y+2,SCHLAEGER_W-16,3);
+  },
+  eigen:"#4fb3a0",
+  gegner:"#e8cd8e"
+ },
+
+ maedchen:{
+  name:"Mädchen-Pong",
+  hintergrund(g){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#fff7fb");
+   v.addColorStop(.45,"#ffe9f2");
+   v.addColorStop(1,"#fbd8e9");
+   g.fillStyle=v; g.fillRect(0,0,W,H);
+   /* Sanfte Kreise wie Seifenblasen */
+   const blasen=[[70,90,54,.30],[330,150,38,.24],[110,430,66,.20],[300,520,44,.26],[352,286,58,.14]];
+   for(const [bx,by,br,a] of blasen){
+    const b=g.createRadialGradient(bx-br*.3,by-br*.3,2,bx,by,br);
+    b.addColorStop(0,"rgba(255,255,255,"+(a+.25)+")");
+    b.addColorStop(1,"rgba(255,175,210,0)");
+    g.fillStyle=b;
+    g.beginPath(); g.arc(bx,by,br,0,Math.PI*2); g.fill();
+   }
+   /* Kleine Herzen, ganz leise */
+   for(const [hx,hy,s,a] of [[40,180,.9,.20],[356,330,1.2,.16],[80,520,1,.18],[300,70,1.1,.17]]){
+    herz(g,hx,hy,s*9,"rgba(255,140,185,"+a+")");
+   }
+  },
+  mittellinie(g){
+   g.save();
+   g.strokeStyle="rgba(255,158,196,.55)";
+   g.lineWidth=3;
+   g.setLineDash([1,13]);
+   g.lineCap="round";
+   g.beginPath(); g.moveTo(0,H/2); g.lineTo(W,H/2); g.stroke();
+   g.restore();
+   herz(g,W/2,H/2,7,"rgba(255,140,185,.55)");
+  },
+  rahmen(g){
+   g.strokeStyle="rgba(255,158,196,.35)"; g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(0,SPIELFELD_OBEN-6); g.lineTo(W,SPIELFELD_OBEN-6);
+   g.moveTo(0,SPIELFELD_UNTEN+6); g.lineTo(W,SPIELFELD_UNTEN+6);
+   g.stroke();
+  },
+  zahl:"rgba(255,140,185,.22)",
+  zahlGroesse:112,
+  text:"#a1748c",
+  ball(g,x,y,r){
+   g.save();
+   g.shadowColor="rgba(255,120,170,.55)";
+   g.shadowBlur=18;
+   const v=g.createRadialGradient(x-4,y-4,1,x,y,r);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.55,"#ffc2da");
+   v.addColorStop(1,"#ff8fbd");
+   g.fillStyle=v;
+   g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+   g.restore();
+   g.fillStyle="rgba(255,255,255,.9)";
+   g.beginPath(); g.arc(x-r*.35,y-r*.35,r*.28,0,Math.PI*2); g.fill();
+  },
+  schlaeger(g,x,y,farbe,eigen){
+   g.save();
+   g.shadowColor=eigen?"rgba(255,140,185,.55)":"rgba(181,140,240,.45)";
+   g.shadowBlur=12;
+   const v=g.createLinearGradient(x,y,x,y+SCHLAEGER_H);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.45,farbe);
+   v.addColorStop(1,farbe);
+   g.fillStyle=v;
+   g.beginPath(); g.roundRect(x-SCHLAEGER_W/2,y,SCHLAEGER_W,SCHLAEGER_H,SCHLAEGER_H/2); g.fill();
+   g.restore();
+   g.fillStyle="rgba(255,255,255,.75)";
+   g.beginPath(); g.roundRect(x-SCHLAEGER_W/2+10,y+3,SCHLAEGER_W-20,3,1.5); g.fill();
+   if(eigen)herz(g,x,y+SCHLAEGER_H/2,4.4,"rgba(255,255,255,.85)");
+  },
+  eigen:"#ff8fbd",
+  gegner:"#b58cf0"
+ },
+
+ maenner:{
+  name:"Männer-Pong",
+  hintergrund(g){
+   const v=g.createLinearGradient(0,0,W,H);
+   v.addColorStop(0,"#1b2026");
+   v.addColorStop(.5,"#10151a");
+   v.addColorStop(1,"#080b0e");
+   g.fillStyle=v; g.fillRect(0,0,W,H);
+   /* Gebürstetes Metall: feine Schrägstriche */
+   g.save();
+   g.strokeStyle="rgba(255,255,255,.035)";
+   g.lineWidth=1;
+   for(let i=-H;i<W;i+=7){ g.beginPath(); g.moveTo(i,0); g.lineTo(i+H,H); g.stroke(); }
+   g.restore();
+   /* Nieten in den Ecken des Feldes */
+   for(const [nx,ny] of [[14,SPIELFELD_OBEN-14],[W-14,SPIELFELD_OBEN-14],[14,SPIELFELD_UNTEN+14],[W-14,SPIELFELD_UNTEN+14]]){
+    niete(g,nx,ny);
+   }
+  },
+  mittellinie(g){
+   g.save();
+   g.strokeStyle="rgba(200,214,224,.22)";
+   g.lineWidth=1;
+   g.beginPath(); g.moveTo(0,H/2-4); g.lineTo(W,H/2-4); g.stroke();
+   g.strokeStyle="rgba(200,214,224,.10)";
+   g.beginPath(); g.moveTo(0,H/2+4); g.lineTo(W,H/2+4); g.stroke();
+   /* Mittelmarke: harte Kerben */
+   g.strokeStyle="rgba(215,224,232,.55)"; g.lineWidth=3;
+   for(let x=0;x<W;x+=22){
+    g.beginPath(); g.moveTo(x,H/2-9); g.lineTo(x+8,H/2-9); g.stroke();
+    g.beginPath(); g.moveTo(x,H/2+9); g.lineTo(x+8,H/2+9); g.stroke();
+   }
+   g.restore();
+  },
+  rahmen(g){
+   g.strokeStyle="rgba(200,214,224,.28)"; g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(0,SPIELFELD_OBEN-6); g.lineTo(W,SPIELFELD_OBEN-6);
+   g.moveTo(0,SPIELFELD_UNTEN+6); g.lineTo(W,SPIELFELD_UNTEN+6);
+   g.stroke();
+  },
+  zahl:"rgba(200,214,224,.10)",
+  zahlGroesse:158,
+  text:"#8f9ba5",
+  ball(g,x,y,r){
+   const v=g.createRadialGradient(x-r*.4,y-r*.45,r*.1,x,y,r*1.05);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.35,"#e3ebf1");
+   v.addColorStop(.7,"#a9b5bf");
+   v.addColorStop(1,"#5f6a74");
+   g.fillStyle=v;
+   g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+   g.strokeStyle="#20262c"; g.lineWidth=1.4; g.stroke();
+   g.fillStyle="rgba(255,255,255,.85)";
+   g.beginPath(); g.arc(x-r*.32,y-r*.36,r*.22,0,Math.PI*2); g.fill();
+  },
+  schlaeger(g,x,y,farbe,eigen){
+   const v=g.createLinearGradient(x,y,x,y+SCHLAEGER_H);
+   v.addColorStop(0,"#f2f6f9");
+   v.addColorStop(.35,farbe);
+   v.addColorStop(.62,"#69737c");
+   v.addColorStop(1,"#2b3238");
+   g.fillStyle=v;
+   g.fillRect(x-SCHLAEGER_W/2,y,SCHLAEGER_W,SCHLAEGER_H);
+   g.strokeStyle="#0a0d10"; g.lineWidth=1.5;
+   g.strokeRect(x-SCHLAEGER_W/2+.75,y+.75,SCHLAEGER_W-1.5,SCHLAEGER_H-1.5);
+   g.fillStyle="rgba(255,255,255,.65)";
+   g.fillRect(x-SCHLAEGER_W/2+3,y+2,SCHLAEGER_W-6,1.5);
+   /* Schraubköpfe an beiden Enden */
+   for(const kx of [x-SCHLAEGER_W/2+6,x+SCHLAEGER_W/2-6]) {
+    g.fillStyle="#8d99a3";
+    g.beginPath(); g.arc(kx,y+SCHLAEGER_H/2,2.2,0,Math.PI*2); g.fill();
+    g.strokeStyle="#20262c"; g.lineWidth=1; g.stroke();
+   }
+  },
+  eigen:"#d7e0e8",
+  gegner:"#8f9ba5"
+ }
+};
+
+function herz(g,x,y,s,farbe){
+ g.save();
+ g.translate(x,y);
+ g.scale(s/10,s/10);
+ g.beginPath();
+ g.moveTo(0,3);
+ g.bezierCurveTo(-6,-3,-10,2,0,9);
+ g.bezierCurveTo(10,2,6,-3,0,3);
+ g.closePath();
+ g.fillStyle=farbe;
+ g.fill();
+ g.restore();
+}
+
+function niete(g,x,y){
+ const v=g.createRadialGradient(x-1,y-1,.5,x,y,4);
+ v.addColorStop(0,"#e8eef3");
+ v.addColorStop(.6,"#8b969f");
+ v.addColorStop(1,"#2a3137");
+ g.fillStyle=v;
+ g.beginPath(); g.arc(x,y,4,0,Math.PI*2); g.fill();
+ g.strokeStyle="rgba(0,0,0,.5)"; g.lineWidth=1; g.stroke();
+}
+
+/* ---------------------------------------------------------------- Zustand */
+
+let stil="klassisch";
+try{ const gespeichert=localStorage.getItem("pong-stil"); if(STILE[gespeichert])stil=gespeichert; }catch(e){}
+
+let modus="solo";            // solo, duell (nur ohne Connector)
 let zustand="start";         // start, laeuft, pause, ende
 let ball={x:W/2,y:H/2,vx:0,vy:0,r:BALL_R};
-let schlaeger1={x:W/2,y:SPIELFELD_UNTEN-SCHLAEGER_H,w:SCHLAEGER_W,h:SCHLAEGER_H};
-let schlaeger2={x:W/2,y:SPIELFELD_OBEN,w:SCHLAEGER_W,h:SCHLAEGER_H};
+let schlaeger1={x:W/2};      // unten
+let schlaeger2={x:W/2};      // oben
 let punkte1=0, punkte2=0;
-let rallye=0;
-let beste=0;
-let pauseTimer=0;
-let aufschlagRichtung=-1;    // -1 = nach oben, 1 = nach unten
-let letzteZeit=0;
-let akku=0;
-let zugGewinner=null;        // welcher Schläger zuletzt traf (für Effekt)
+let rallye=0, beste=0, pauseTimer=0, aufschlagRichtung=-1;
+let letzteZeit=0, akku=0;
+let letzterZeigerTyp="mouse";
 
 const rnd=(a,b)=>a+Math.random()*(b-a);
+const begrenzeX=x=>Math.max(SCHLAEGER_W/2,Math.min(W-SCHLAEGER_W/2,x));
 
-// ---------------------------------------------------------------- Aufbau
+/* ---------------------------------------------------------------- Anzeige */
+
+function stilSetzen(neu){
+ if(!STILE[neu])neu="klassisch";
+ stil=neu;
+ document.body.dataset.stil=neu;
+ document.querySelectorAll("#stilwahl button").forEach(b=>{
+  b.classList.toggle("aktiv",b.dataset.stil===neu);
+ });
+ try{ localStorage.setItem("pong-stil",neu); }catch(e){}
+ zeichne();
+}
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.onclick=()=>stilSetzen(b.dataset.stil);
+});
+
+// Punkte, Rallye und Rekord in der Statuszeile.
+function aktualisiere(){
+ if(ONLINE){
+  const s=fern&&fern.spieler?fern.spieler:[];
+  const meiner=fern&&fern.du>=0?s[fern.du]:null;
+  const anderer=fern&&fern.du>=0?s[1-fern.du]:null;
+  $("punkte").textContent=(meiner?meiner.punkte:0)+" : "+(anderer?anderer.punkte:0);
+  $("rallye").textContent=fern?fern.rallye:0;
+  $("statusBest").hidden=true;
+  $("statusPunkte").firstChild.nodeValue="Punkte ";
+  return;
+ }
+ $("punkte").textContent=punkte1+" : "+punkte2;
+ $("rallye").textContent=rallye;
+ $("best").textContent=Math.max(beste,rekordLaden());
+}
 
 function rekordLaden(){
  try{ return Number(localStorage.getItem("pong-rallye")||0); }catch(e){ return 0; }
 }
 
+/* ---------------------------------------------------------------- Zeichnen */
+
+/* Ein Bild für beide Betriebsarten: lokal kommt der Stand aus dem eigenen
+   Rechner, online vom Server. sitz 0 heißt unten, 1 oben (der Server sieht
+   Spieler 0 unten). Wer oben sitzt, bekommt das Feld gespiegelt – jeder sieht
+   sich selbst unten. */
+function zeichneBild(stand){
+ const st=STILE[stil];
+ const spiegel=stand.sitz===1;
+ const sx=x=>spiegel?W-x:x;
+ const sy=y=>spiegel?H-y:y;
+
+ st.hintergrund(ctx);
+ st.mittellinie(ctx);
+
+ // Große Punkte im Hintergrund – oben der Gegner, unten das eigene Konto.
+ ctx.save();
+ ctx.textAlign="center";
+ ctx.font=stil==="maenner"?("bold "+st.zahlGroesse+"px Arial Narrow, Arial, sans-serif")
+  :(stil==="maedchen"?("600 "+st.zahlGroesse+"px Georgia,serif"):("bold "+st.zahlGroesse+"px Georgia,serif"));
+ ctx.fillStyle=st.zahl;
+ ctx.fillText(String(stand.oben),W/2,H*0.36);
+ ctx.fillText(String(stand.unten),W/2,H*0.80);
+ ctx.restore();
+
+ st.rahmen(ctx);
+
+ // Schläger: eigener unten, Gegner oben.
+ st.schlaeger(ctx,stand.eigenX,SPIELFELD_UNTEN-SCHLAEGER_H,st.eigen,true);
+ st.schlaeger(ctx,stand.gegnerX,SPIELFELD_OBEN,st.gegner,false);
+
+ // Ball mit kleinem Schweif
+ if(stand.ball){
+  const bx=sx(stand.ball.x), by=sy(stand.ball.y);
+  const vx=spiegel?-stand.ball.vx:stand.ball.vx;
+  const vy=spiegel?-stand.ball.vy:stand.ball.vy;
+  if(stand.ball.ruhig!==true){
+   for(let i=1;i<=3;i++){
+    ctx.fillStyle=stil==="maenner"?"rgba(200,214,224,.13)":stil==="maedchen"?"rgba(255,158,196,.22)":"rgba(232,205,142,.20)";
+    ctx.beginPath();
+    ctx.arc(bx-vx*i*0.012,by-vy*i*0.012,Math.max(2,stand.ball.r-i*1.8),0,Math.PI*2);
+    ctx.fill();
+   }
+  }
+  st.ball(ctx,bx,by,stand.ball.r);
+ }
+
+ // Beschriftung
+ ctx.font=stil==="maenner"?"bold 12px Arial, sans-serif":"12px Georgia,serif";
+ ctx.fillStyle=st.text;
+ ctx.textAlign="left";
+ ctx.fillText(stand.obenName,W/2+24,SPIELFELD_OBEN-12);
+ ctx.fillText(stand.untenName,W/2+24,SPIELFELD_UNTEN+22);
+
+ ctx.strokeStyle=stil==="maenner"?"rgba(200,214,224,.25)":"rgba(217,188,124,.28)";
+ ctx.lineWidth=3;
+ if(stil==="maenner")ctx.strokeRect(1.5,1.5,W-3,H-3);
+ else{ ctx.beginPath(); ctx.roundRect(1.5,1.5,W-3,H-3,8); ctx.stroke(); }
+}
+
+// Lokales Bild aus dem eigenen Spielstand.
+function zeichne(){
+ if(ONLINE){
+  const s=fern;
+  if(!s){
+   zeichneBild({sitz:0,eigenX:meineX,gegnerX:W/2,unten:0,oben:0,
+    untenName:"Du",obenName:"Gegner",ball:{x:W/2,y:H/2,vx:0,vy:0,r:BALL_R,ruhig:true}});
+   return;
+  }
+  const sitz=s.du>=0?s.du:0;
+  const b=ballJetzt();
+  zeichneBild({
+   sitz:sitz,
+   eigenX:s.du>=0?spiegeln(meineX):W/2,
+   gegnerX:s.du>=0?spiegeln(s.schlaeger[1-s.du]||W/2):W/2,
+   unten:s.du>=0?s.spieler[s.du].punkte:0,
+   oben:s.du>=0?(s.spieler[1-s.du]?s.spieler[1-s.du].punkte:0):0,
+   untenName:"Du",
+   obenName:s.du>=0&&s.spieler[1-s.du]?s.spieler[1-s.du].name:"Gegner",
+   ball:b
+  });
+  return;
+ }
+
+ zeichneBild({
+  sitz:0,
+  eigenX:schlaeger1.x,
+  gegnerX:schlaeger2.x,
+  unten:punkte1,
+  oben:punkte2,
+  untenName:modus==="solo"?"Du":"Spieler 1",
+  obenName:modus==="solo"?"Computer":"Spieler 2",
+  ball:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,r:BALL_R,ruhig:zustand!=="laeuft"}
+ });
+}
+
+/* ---------------------------------------------------------------- Lokal */
+
 function neuesSpiel(){
+ if(ONLINE){ tu("reset"); return; }
  zustand="start";
- punkte1=0; punkte2=0;
- rallye=0;
+ punkte1=0; punkte2=0; rallye=0;
  ball={x:W/2,y:H/2,vx:0,vy:0,r:BALL_R};
- schlaeger1.x=W/2;
- schlaeger2.x=W/2;
- pauseTimer=0;
- aufschlagRichtung=-1;
- akku=0;
+ schlaeger1.x=W/2; schlaeger2.x=W/2;
+ pauseTimer=0; aufschlagRichtung=-1; akku=0;
  aktualisiere();
- $("meldung").hidden=false;
- $("meldungTitel").textContent="PONG";
- $("meldungText").textContent=modus==="solo"
-  ?"Du spielst unten, der Computer oben. Wer zuerst 7 Punkte hat, gewinnt."
-  :"Spieler 1 unten, Spieler 2 oben. Jeder zieht mit dem Finger in seiner Hälfte.";
- $("meldungKnopf").textContent=modus==="solo"?"Starten":"Duell starten";
- $("meldungKnopf").onclick=starten;
+ zeigeMeldung({
+  titel:"PONG",
+  text:modus==="solo"
+   ?"Du spielst unten, der Computer oben. Wer zuerst 7 Punkte hat, gewinnt."
+   :"Spieler 1 unten, Spieler 2 oben. Jeder zieht mit dem Finger in seiner Hälfte.",
+  knoepfe:[{label:modus==="solo"?"Starten":"Duell starten",haupt:true,aktion:starten}]
+ });
  $("hinweis").textContent=modus==="solo"
   ?"Finger in der unteren Hälfte ziehen: der Schläger folgt."
   :"Unten Spieler 1, oben Spieler 2 – jeder in seiner Hälfte ziehen.";
@@ -172,7 +610,7 @@ function neuesSpiel(){
 
 function starten(){
  zustand="laeuft";
- $("meldung").hidden=true;
+ meldungZu();
  aufschlag(-1);
  letzteZeit=performance.now();
  akku=0;
@@ -182,75 +620,52 @@ function aufschlag(richtung){
  ball.x=W/2+rnd(-40,40);
  ball.y=H/2;
  const winkel=rnd(-0.5,0.5);
- const tempo=TEMPO_START;
- ball.vx=Math.sin(winkel)*tempo;
- ball.vy=Math.cos(winkel)*tempo*richtung;
+ ball.vx=Math.sin(winkel)*TEMPO_START;
+ ball.vy=Math.cos(winkel)*TEMPO_START*richtung;
  rallye=0;
  aktualisiere();
 }
 
-function aktualisiere(){
- $("punkte").textContent=punkte1+" : "+punkte2;
- $("rallye").textContent=rallye;
- $("best").textContent=Math.max(beste,rekordLaden());
-}
-
-// ---------------------------------------------------------------- Physik
-
-function schritt(){
+function lokalerSchritt(dt){
  if(zustand==="pause"){
-  pauseTimer-=1/60;
-  if(pauseTimer<=0){
-   zustand="laeuft";
-   aufschlag(aufschlagRichtung);
-  }
+  pauseTimer-=dt;
+  if(pauseTimer<=0){ zustand="laeuft"; aufschlag(aufschlagRichtung); }
   return;
  }
  if(zustand!=="laeuft")return;
 
  // Computer oben
  if(modus==="solo"){
-  const ziel=ball.x+(ball.y<H*0.45?ball.vx*6:0);
-  const maxTempo=4.1+Math.min(2.4,rallye*0.12);
+  const ziel=ball.x+(ball.y<H*0.45?ball.vx*0.1:0);
+  const maxTempo=250+Math.min(150,rallye*7);
   const d=ziel-schlaeger2.x;
-  if(Math.abs(d)>4)schlaeger2.x+=Math.sign(d)*Math.min(maxTempo,Math.abs(d));
-  begrenze(schlaeger2);
+  if(Math.abs(d)>4)schlaeger2.x+=Math.sign(d)*Math.min(maxTempo*dt,Math.abs(d));
+  schlaeger2.x=begrenzeX(schlaeger2.x);
  }
 
- // Ball in kleinen Schritten bewegen (kein Durchrutschen)
- const speed=Math.hypot(ball.vx,ball.vy);
- const schritte=Math.max(1,Math.ceil(speed/3));
- const sx=ball.vx/schritte, sy=ball.vy/schritte;
- for(let i=0;i<schritte;i++){
-  ball.x+=sx;
-  ball.y+=sy;
-  // Seitenwände
-  if(ball.x-ball.r<0){ ball.x=ball.r; ball.vx=Math.abs(ball.vx); }
-  if(ball.x+ball.r>W){ ball.x=W-ball.r; ball.vx=-Math.abs(ball.vx); }
-  // Schläger unten
-  if(ball.vy>0&&ball.y+ball.r>=schlaeger1.y&&ball.y+ball.r<=schlaeger1.y+schlaeger1.h+10){
-   if(Math.abs(ball.x-schlaeger1.x)<schlaeger1.w/2+ball.r*0.6){
-    treffer(schlaeger1,-1);
-   }
-  }
-  // Schläger oben
-  if(ball.vy<0&&ball.y-ball.r<=schlaeger2.y+schlaeger2.h&&ball.y-ball.r>=schlaeger2.y-10){
-   if(Math.abs(ball.x-schlaeger2.x)<schlaeger2.w/2+ball.r*0.6){
-    treffer(schlaeger2,1);
-   }
-  }
-  // Punkt
-  if(ball.y-ball.r>H){ punkt(2); return; }
-  if(ball.y+ball.r<0){ punkt(1); return; }
+ ball.x+=ball.vx*dt;
+ ball.y+=ball.vy*dt;
+
+ if(ball.x-ball.r<0){ ball.x=ball.r; ball.vx=Math.abs(ball.vx); }
+ if(ball.x+ball.r>W){ ball.x=W-ball.r; ball.vx=-Math.abs(ball.vx); }
+
+ if(ball.vy>0&&ball.y+ball.r>=SPIELFELD_UNTEN-SCHLAEGER_H&&ball.y+ball.r<=SPIELFELD_UNTEN+2){
+  if(Math.abs(ball.x-schlaeger1.x)<SCHLAEGER_W/2+ball.r*0.6)treffer(schlaeger1,-1);
  }
+ if(ball.vy<0&&ball.y-ball.r<=SPIELFELD_OBEN+SCHLAEGER_H&&ball.y-ball.r>=SPIELFELD_OBEN-2){
+  if(Math.abs(ball.x-schlaeger2.x)<SCHLAEGER_W/2+ball.r*0.6)treffer(schlaeger2,1);
+ }
+
+ if(ball.y-ball.r>H){ punkt(2); return; }
+ if(ball.y+ball.r<0){ punkt(1); }
 }
 
 function treffer(schl,richtung){
- const versatz=(ball.x-schl.x)/(schl.w/2);
- const speed=Math.min(TEMPO_MAX,Math.hypot(ball.vx,ball.vy)*1.045);
- ball.vx=versatz*speed*0.72;
- ball.vy=richtung*Math.sqrt(Math.max(1,speed*speed-ball.vx*ball.vx));
- ball.y=richtung<0?schl.y-ball.r:schl.y+schl.h+ball.r;
+ const versatz=(ball.x-schl.x)/(SCHLAEGER_W/2);
+ const tempo=Math.min(TEMPO_MAX,Math.hypot(ball.vx,ball.vy)*1.045);
+ ball.vx=versatz*tempo*0.72;
+ ball.vy=richtung*Math.sqrt(Math.max(1,tempo*tempo-ball.vx*ball.vx));
+ ball.y=richtung<0?SPIELFELD_UNTEN-SCHLAEGER_H-ball.r:SPIELFELD_OBEN+SCHLAEGER_H+ball.r;
  rallye++;
  if(rallye>beste)beste=rallye;
  if(beste>rekordLaden()){
@@ -262,7 +677,7 @@ function treffer(schl,richtung){
 function punkt(wer){
  if(wer===1)punkte1++; else punkte2++;
  rallye=0;
- aufschlagRichtung=wer===1?-1:1;   // Aufschlag geht zum Verlierer
+ aufschlagRichtung=wer===1?-1:1;
  aktualisiere();
  if(punkte1>=SIEGPUNKTE||punkte2>=SIEGPUNKTE){ ende(); return; }
  zustand="pause";
@@ -271,197 +686,364 @@ function punkt(wer){
  ball.x=W/2; ball.y=H/2;
 }
 
-function begrenze(schl){
- const halb=schl.w/2;
- if(schl.x<halb)schl.x=halb;
- if(schl.x>W-halb)schl.x=W-halb;
-}
-
 function ende(){
  zustand="ende";
  const sieger=punkte1>punkte2?1:2;
- let titel;
- if(modus==="solo")titel=sieger===1?"Gewonnen":"Verloren";
- else titel="Spieler "+sieger+" gewinnt";
- $("meldungTitel").textContent=titel;
- $("meldungText").textContent="Endstand "+punkte1+" : "+punkte2+" · Längste Rallye: "+beste;
- $("meldungKnopf").textContent="Nochmal";
- $("meldungKnopf").onclick=()=>{ neuesSpiel(); starten(); };
- $("meldung").hidden=false;
+ const titel=modus==="solo"?(sieger===1?"Gewonnen":"Verloren"):"Spieler "+sieger+" gewinnt";
+ zeigeMeldung({
+  titel:titel,
+  text:"Endstand "+punkte1+" : "+punkte2+" · Längste Rallye: "+beste,
+  knoepfe:[{label:"Nochmal",haupt:true,aktion:()=>{ neuesSpiel(); starten(); }}]
+ });
 }
 
-// ---------------------------------------------------------------- Steuerung
+/* ---------------------------------------------------------------- Meldung */
 
-function ziehen(clientX,clientY){
- const r=canvas.getBoundingClientRect();
- const x=(clientX-r.left)/r.width*W;
- const y=(clientY-r.top)/r.height*H;
- const unten=y>H/2;
- if(modus==="solo"){
-  schlaeger1.x=x;
-  begrenze(schlaeger1);
+let meldungAktionen={};
+
+function zeigeMeldung(inhalt){
+ $("meldung").hidden=false;
+ $("meldungTitel").textContent=inhalt.titel||"";
+ $("meldungText").textContent=inhalt.text||"";
+ const liste=$("meldungListe");
+ liste.innerHTML="";
+ if(inhalt.liste&&inhalt.liste.length){
+  liste.hidden=false;
+  for(const eintrag of inhalt.liste){
+   const li=document.createElement("li");
+   const links=document.createElement("span");
+   links.textContent=eintrag;
+   li.appendChild(links);
+   if(eintrag.hinweis){
+    const klein=document.createElement("small");
+    klein.textContent=eintrag.hinweis;
+    li.appendChild(klein);
+   }
+   liste.appendChild(li);
+  }
+ }else{
+  liste.hidden=true;
+ }
+ const box=$("meldungKnoepfe");
+ box.innerHTML="";
+ meldungAktionen={};
+ (inhalt.knoepfe||[]).forEach((k,index)=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=k.label;
+  if(!k.haupt)b.className="still";
+  b.disabled=!!k.aus;
+  b.onclick=()=>{
+   if(meldungAktionen[index])meldungAktionen[index]();
+  };
+  meldungAktionen[index]=k.aktion;
+  box.appendChild(b);
+ });
+}
+
+function meldungZu(){ $("meldung").hidden=true; }
+
+function fehlerZeigen(text){
+ const el=$("fehler");
+ el.textContent=text||"";
+ el.hidden=!text;
+ if(text)setTimeout(()=>{ el.textContent=""; el.hidden=true; },6000);
+}
+
+/* Hinweiszeile: im Online-Spiel auch als Lobby-Liste nutzbar. */
+
+/* ---------------------------------------------------------------- Online */
+
+let fern=null;              // letzter Stand vom Server
+let fernBall={x:W/2,y:H/2,vx:0,vy:0,t:0};
+let meineX=W/2;
+let letzteEingabe=0;
+let sendeUhr=0;
+let sendeWartet=false;
+let holeLaeuft=false;
+let holeTimer=0;
+let endstandGezeigt="";
+
+// Wo steht der Ball jetzt? Der Server antwortet nur alle paar Millisekunden –
+// dazwischen rechnen wir mit seiner Geschwindigkeit weiter und prallen an den
+// Seitenwänden ab. Das fühlt sich flüssig an, ohne dass der Server 60-mal je
+// Sekunde gefragt werden muss.
+/* Wer oben sitzt (Sitz 1), sieht das Feld gespiegelt. Die Spiegelung ist
+   ihre eigene Umkehrung – dieselbe Rechnung gilt fürs Zeichnen und fürs
+   Schicken der Schlägerposition. */
+function spiegeln(x){ return fern&&fern.du===1?W-x:x; }
+
+function ballJetzt(){
+ if(!fern||!fern.ball)return {x:W/2,y:H/2,vx:0,vy:0,r:BALL_R,ruhig:true};
+ const ruhig=fern.status!=="spiel"||fern.pause>0;
+ if(ruhig)return {x:fernBall.x,y:fernBall.y,vx:0,vy:0,r:BALL_R,ruhig:true};
+ let dt=Math.min(0.15,(performance.now()-fernBall.t)/1000);
+ if(dt<0)dt=0;
+ let x=fernBall.x+fernBall.vx*dt;
+ let y=fernBall.y+fernBall.vy*dt;
+ // Seitenwände spiegeln, damit der Ball nicht durch die Wand läuft.
+ let vx=fernBall.vx;
+ if(x<BALL_R){ x=BALL_R+(BALL_R-x); vx=Math.abs(vx); }
+ if(x>W-BALL_R){ x=(W-BALL_R)-(x-(W-BALL_R)); vx=-Math.abs(vx); }
+ if(y<BALL_R)y=BALL_R;
+ if(y>H-BALL_R)y=H-BALL_R;
+ return {x:x,y:y,vx:vx,vy:fernBall.vy,r:BALL_R,ruhig:false};
+}
+
+async function holen(){
+ if(!ONLINE||holeLaeuft)return;
+ holeLaeuft=true;
+ try{
+  const r=await fetch("/api/pong?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
+  if(r.status===403){
+   fehlerZeigen("Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen.");
+   holeLaeuft=false;
+   holeTimer=setTimeout(holen,3000);
+   return;
+  }
+  if(!r.ok)throw Error();
+  const d=await r.json();
+  fern=d.game||null;
+  if(fern&&fern.ball){
+   fernBall={x:fern.ball.x,y:fern.ball.y,vx:fern.ball.vx,vy:fern.ball.vy,t:performance.now()};
+   if(fern.du>=0&&performance.now()-letzteEingabe>500){
+    meineX=begrenzeX(fern.schlaeger[fern.du]);
+   }
+  }
+  onlineAnzeigen();
+  zeichne();
+  aktualisiere();
+ }catch(e){
+  fehlerZeigen("Verbindung sucht …");
+ }finally{
+  holeLaeuft=false;
+  const schnell=fern&&fern.status==="spiel";
+  clearTimeout(holeTimer);
+  holeTimer=setTimeout(holen,schnell?45:700);
+ }
+}
+
+async function tu(aktion,daten){
+ if(!ONLINE)return null;
+ try{
+  const r=await fetch("/api/pong?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:ID},daten||{}))
+  });
+  const text=await r.text();
+  if(!r.ok){ fehlerZeigen(text.trim()||("Fehler "+r.status)); return null; }
+  const d=JSON.parse(text);
+  fern=d.game||null;
+  if(fern&&fern.ball)fernBall={x:fern.ball.x,y:fern.ball.y,vx:fern.ball.vx,vy:fern.ball.vy,t:performance.now()};
+  if(fern&&fern.du>=0&&fern.schlaeger)meineX=begrenzeX(fern.schlaeger[fern.du]);
+  endstandGezeigt="";
+  onlineAnzeigen();
+  zeichne();
+  aktualisiere();
+  return fern;
+ }catch(e){
+  fehlerZeigen("Verbindung fehlgeschlagen.");
+  return null;
+ }
+}
+
+// Schlägerposition schicken – gedrosselt, damit die Leitung nicht zuläuft.
+function schlaegerSenden(){
+ if(!ONLINE||!fern||fern.status!=="spiel"||fern.du<0)return;
+ const jetzt=performance.now();
+ if(jetzt-sendeUhr<55){
+  if(!sendeWartet){
+   sendeWartet=true;
+   setTimeout(()=>{ sendeWartet=false; schlaegerSenden(); },60);
+  }
   return;
  }
- if(unten){ schlaeger1.x=x; begrenze(schlaeger1); }
- else{ schlaeger2.x=x; begrenze(schlaeger2); }
+ sendeUhr=jetzt;
+ fetch("/api/pong?room="+encodeURIComponent(ROOM)+"&action=schlaeger",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({id:ID,x:Math.round(meineX*10)/10})
+ }).then(r=>r.ok?r.json():null).then(d=>{
+  if(d&&d.game&&d.game.ball){
+   fernBall={x:d.game.ball.x,y:d.game.ball.y,vx:d.game.ball.vx,vy:d.game.ball.vy,t:performance.now()};
+   fern=d.game;
+  }
+ }).catch(()=>{});
+}
+
+// Lobby, Spiel und Ende im selben Kasten über dem Feld.
+function onlineAnzeigen(){
+ if(!ONLINE)return;
+ if(!fern){
+  zeigeMeldung({
+   titel:"PONG",text:"Noch kein Tisch in diesem Raum.",
+   knoepfe:[{label:"Tisch eröffnen",haupt:true,aktion:()=>tu("create")}]
+  });
+  $("hinweis").textContent="Über den Connector eine Runde Pong anbieten – die anderen steigen über die Spielkarte ein.";
+  return;
+ }
+
+ const meiner=fern.du>=0?fern.spieler[fern.du]:null;
+ const anderer=fern.du>=0?fern.spieler[1-fern.du]:null;
+
+ if(fern.status==="invited"){
+  const liste=fern.spieler.map(p=>p.name+(p.id===fern.hostId?" · Gastgeber":"")+(p.ready?" · bereit":""));
+  const knoepfe=[];
+  if(!meiner){
+   knoepfe.push({label:"Mitspielen",haupt:true,aktion:()=>tu("join")});
+  }else{
+   knoepfe.push({label:meiner.ready?"Doch nicht bereit":"Bereit",haupt:!meiner.ready,aktion:()=>tu("ready")});
+   if(fern.hostId===ID){
+    knoepfe.push({
+     label:"Partie starten",
+     aus:fern.spieler.length<2||!fern.spieler.every(p=>p.ready),
+     aktion:()=>tu("start")
+    });
+   }
+  }
+  zeigeMeldung({
+   titel:"PONG",
+   liste:liste,
+   text:fern.spieler.length<2
+    ?"Ein Platz ist noch frei – wer mitspielen will, drückt MITSPIELEN."
+    :(fern.spieler.every(p=>p.ready)?"Beide sind bereit – der Gastgeber startet.":"Beide drücken BEREIT, dann startet der Gastgeber."),
+   knoepfe:knoepfe
+  });
+  $("hinweis").textContent=fern.note||"";
+  return;
+ }
+
+ if(fern.status==="spiel"){
+  meldungZu();
+  $("hinweis").textContent=fern.pause>0
+   ?"Punkt! Aufschlag kommt gleich …"
+   :(fern.note||"Finger in deiner Hälfte ziehen – der Schläger folgt.");
+  return;
+ }
+
+ if(fern.status==="ende"){
+  const siegerText=fern.sieger?fern.sieger+" gewinnt":(fern.meldung||"Partie beendet");
+  const gewonnen=meiner&&fern.sieger===meiner.name;
+  const kennung=fern.id+"|"+fern.sieger+"|"+fern.meldung;
+  if(kennung===endstandGezeigt)return;
+  endstandGezeigt=kennung;
+  zeigeMeldung({
+   titel:gewonnen?"Gewonnen":"Partie beendet",
+   text:(fern.meldung||siegerText)+" · "+fern.spieler.map(p=>p.name+" "+p.punkte).join(" : "),
+   knoepfe:[{label:"Neue Partie",haupt:true,aktion:()=>tu("reset")}]
+  });
+  $("hinweis").textContent=fern.note||"";
+ }
+}
+
+/* ---------------------------------------------------------------- Steuerung */
+
+function zeigerX(clientX){
+ const r=canvas.getBoundingClientRect();
+ const x=(clientX-r.left)/r.width*W;
+ return begrenzeX(x);
+}
+
+function ziehen(clientX,clientY){
+ const x=zeigerX(clientX);
+ if(ONLINE){
+  if(!fern||fern.status!=="spiel"||fern.du<0)return;
+  meineX=spiegeln(x);
+  letzteEingabe=performance.now();
+  schlaegerSenden();
+  return;
+ }
+ const r=canvas.getBoundingClientRect();
+ const y=(clientY-r.top)/r.height*H;
+ const unten=y>H/2;
+ if(modus==="solo"){ schlaeger1.x=x; return; }
+ if(unten)schlaeger1.x=x; else schlaeger2.x=x;
 }
 
 canvas.addEventListener("pointerdown",e=>{
- if(zustand==="start"){ starten(); return; }
+ letzterZeigerTyp=e.pointerType||"mouse";
+ if(!ONLINE&&zustand==="start"){ starten(); return; }
  ziehen(e.clientX,e.clientY);
  e.preventDefault();
 });
 canvas.addEventListener("pointermove",e=>{
+ letzterZeigerTyp=e.pointerType||"mouse";
  ziehen(e.clientX,e.clientY);
 });
 canvas.addEventListener("pointerup",e=>{ e.preventDefault(); });
 
 window.addEventListener("keydown",e=>{
  const k=e.key;
+ if(ONLINE){
+  const richtung=fern&&fern.du===1?-1:1;
+  if(k==="ArrowLeft"||k==="a"||k==="A"){ meineX=begrenzeX(meineX-26*richtung); letzteEingabe=performance.now(); schlaegerSenden(); e.preventDefault(); }
+  if(k==="ArrowRight"||k==="d"||k==="D"){ meineX=begrenzeX(meineX+26*richtung); letzteEingabe=performance.now(); schlaegerSenden(); e.preventDefault(); }
+  return;
+ }
  if(k===" "&&zustand==="start"){ starten(); e.preventDefault(); return; }
  if(k==="ArrowLeft"||k==="a"||k==="A"){
   const ziel=modus==="duell"?(k==="a"||k==="A"?schlaeger2:schlaeger1):schlaeger1;
-  ziel.x-=26; begrenze(ziel); e.preventDefault();
+  ziel.x=begrenzeX(ziel.x-26); e.preventDefault();
  }
  if(k==="ArrowRight"||k==="d"||k==="D"){
   const ziel=modus==="duell"?(k==="d"||k==="D"?schlaeger2:schlaeger1):schlaeger1;
-  ziel.x+=26; begrenze(ziel); e.preventDefault();
+  ziel.x=begrenzeX(ziel.x+26); e.preventDefault();
  }
 });
 
-// ---------------------------------------------------------------- Zeichnen
-
-function zeichne(){
- const g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,"#0f3a2c");
- g.addColorStop(.5,"#0b2a21");
- g.addColorStop(1,"#071912");
- ctx.fillStyle=g;
- ctx.fillRect(0,0,W,H);
-
- // Mittellinie
- ctx.save();
- ctx.setLineDash([12,14]);
- ctx.strokeStyle="#d9bc7c55";
- ctx.lineWidth=3;
- ctx.beginPath();
- ctx.moveTo(0,H/2);
- ctx.lineTo(W,H/2);
- ctx.stroke();
- ctx.restore();
-
- // große Punkte im Hintergrund
- ctx.save();
- ctx.textAlign="center";
- ctx.font="bold 150px Georgia,serif";
- ctx.fillStyle="#e8cd8e14";
- ctx.fillText(String(punkte2),W/2,H*0.36);
- ctx.fillText(String(punkte1),W/2,H*0.80);
- ctx.restore();
-
- // Spielfeldränder
- ctx.strokeStyle="#d9bc7c33";
- ctx.lineWidth=2;
- ctx.beginPath();
- ctx.moveTo(0,SPIELFELD_OBEN-6);
- ctx.lineTo(W,SPIELFELD_OBEN-6);
- ctx.moveTo(0,SPIELFELD_UNTEN+6);
- ctx.lineTo(W,SPIELFELD_UNTEN+6);
- ctx.stroke();
-
- // Schläger
- schlaegerZeichnen(schlaeger2,"#e8cd8e");
- schlaegerZeichnen(schlaeger1,"#4fb3a0");
-
- // Ball mit Schweif
- if(zustand!=="pause"){
-  ctx.fillStyle="#e8cd8e33";
-  for(let i=1;i<=3;i++){
-   ctx.beginPath();
-   ctx.arc(ball.x-ball.vx*i*0.5,ball.y-ball.vy*i*0.5,ball.r-i*1.6,0,Math.PI*2);
-   ctx.fill();
-  }
-  const bg=ctx.createRadialGradient(ball.x-3,ball.y-3,1,ball.x,ball.y,ball.r);
-  bg.addColorStop(0,"#ffffff");
-  bg.addColorStop(1,"#e8cd8e");
-  ctx.fillStyle=bg;
-  ctx.beginPath();
-  ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle="#7a5a1c";
-  ctx.lineWidth=1.5;
-  ctx.stroke();
- }
-
- // Spielerbeschriftung
- ctx.font="12px Georgia,serif";
- ctx.fillStyle="#a9c3b6";
- ctx.textAlign="left";
- ctx.fillText(modus==="solo"?"Computer":"Spieler 2",10,SPIELFELD_OBEN-12);
- ctx.fillText(modus==="solo"?"Du":"Spieler 1",10,SPIELFELD_UNTEN+22);
-
- ctx.strokeStyle="#d9bc7c44";
- ctx.lineWidth=3;
- ctx.strokeRect(1.5,1.5,W-3,H-3);
-}
-
-function schlaegerZeichnen(schl,farbe){
- const g=ctx.createLinearGradient(schl.x,schl.y,schl.x,schl.y+schl.h);
- g.addColorStop(0,farbe);
- g.addColorStop(1,"#0b241d");
- ctx.fillStyle=g;
- ctx.beginPath();
- ctx.roundRect(schl.x-schl.w/2,schl.y,schl.w,schl.h,6);
- ctx.fill();
- ctx.strokeStyle="#06141099";
- ctx.lineWidth=2;
- ctx.stroke();
- ctx.fillStyle="#ffffff2e";
- ctx.fillRect(schl.x-schl.w/2+8,schl.y+2,schl.w-16,3);
-}
-
-// ---------------------------------------------------------------- Schleife
+/* ---------------------------------------------------------------- Schleife */
 
 function schleife(zeit){
  const dt=Math.min(0.05,(zeit-letzteZeit)/1000||0.016);
  letzteZeit=zeit;
- akku+=dt;
- let schutz=0;
- while(akku>=1/60&&schutz<5){
-  akku-=1/60;
-  schritt();
-  schutz++;
+ if(!ONLINE){
+  akku+=dt;
+  let schutz=0;
+  while(akku>=TAKT&&schutz<40){ akku-=TAKT; lokalerSchritt(TAKT); schutz++; }
+  if(schutz>=40)akku=0;
+  zeichne();
+ }else{
+  zeichne();
  }
- if(schutz>=5)akku=0;
- zeichne();
  requestAnimationFrame(schleife);
 }
 
-// ---------------------------------------------------------------- Start
+/* ---------------------------------------------------------------- Start */
 
-$("btnNeu").onclick=()=>{ neuesSpiel(); };
-$("btnSolo").onclick=()=>{
- if(modus==="solo")return;
- modus="solo";
- $("btnSolo").classList.add("aktiv");
- $("btnDuell").classList.remove("aktiv");
+function modusSetzen(neu){
+ if(modus===neu)return;
+ modus=neu;
+ $("btnSolo").classList.toggle("aktiv",neu==="solo");
+ $("btnDuell").classList.toggle("aktiv",neu==="duell");
  neuesSpiel();
-};
-$("btnDuell").onclick=()=>{
- if(modus==="duell")return;
- modus="duell";
- $("btnDuell").classList.add("aktiv");
- $("btnSolo").classList.remove("aktiv");
- neuesSpiel();
-};
+}
 
-beste=rekordLaden();
-neuesSpiel();
+$("btnNeu").onclick=()=>neuesSpiel();
+$("btnSolo").onclick=()=>modusSetzen("solo");
+$("btnDuell").onclick=()=>modusSetzen("duell");
+
+stilSetzen(stil);
+
+if(ONLINE){
+ $("menueleiste").hidden=true;
+ $("statusBest").hidden=true;
+ $("statusPunkte").firstChild.nodeValue="Punkte ";
+ meineX=W/2;
+ holen();
+ setInterval(()=>{
+  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
+ },30000);
+}else{
+ beste=rekordLaden();
+ neuesSpiel();
+}
+
+letzteZeit=performance.now();
 requestAnimationFrame(schleife);
-
 
 })();
 </script>
+<script src="/spiele/verlassen.js"></script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
 </body>
 </html>

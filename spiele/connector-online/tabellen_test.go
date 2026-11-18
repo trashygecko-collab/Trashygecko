@@ -38,6 +38,7 @@ var spielFeld = map[string]string{
 	"siebzehn":         "Siebzehn",
 	"baccara":          "Baccara",
 	"schiffe":          "Schiffe",
+	"pong":             "Pong",
 	"cabo":             "Cabo",
 	"poker":            "Poker",
 	"uno":              "Uno",
@@ -45,6 +46,13 @@ var spielFeld = map[string]string{
 	"arschloch":        "Arschloch",
 	"einsxeins":        "Rechen",
 	"sechsundsechzig":  "Sechsundsechzig",
+	"galgen":           "Galgen",
+	"bingo":            "Bingo",
+	"wortsuche":        "Wortsuche",
+	"domino":           "Domino",
+	"schlangen":        "Schlangen",
+	"pig":              "Pig",
+	"gaensespiel":      "Gaense",
 	"malen":            "Mal",
 }
 
@@ -196,6 +204,17 @@ func TestSpieltabellenVollstaendig(t *testing.T) {
 	for _, id := range schluesselBool(gemeinsam) {
 		if !inSeite[id] {
 			t.Errorf("gemeinsam hat %q, SUPPORTED_GAMES nicht", id)
+		}
+	}
+	// Auch das Umbenennen während einer Partie muss jedes Spiel kennen.
+	umbenennen := funktionstext(t, "umbenennen.go", "func (r *Room) spielerUmbenennen(")
+	for _, id := range schluessel(spielFeld) {
+		feld := spielFeld[id]
+		if feld == "" || id == "malen" {
+			continue
+		}
+		if !strings.Contains(umbenennen, "r."+feld) {
+			t.Errorf("%s: spielerUmbenennen kennt r.%s nicht – Namen bleiben in der Partie alt", id, feld)
 		}
 	}
 	if len(spielFeld) != len(spiele) {

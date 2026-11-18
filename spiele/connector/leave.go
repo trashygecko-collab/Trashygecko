@@ -373,6 +373,14 @@ func (r *Room) partien() []partie {
 				return nil
 			},
 			func() { r.Baccara = nil }),
+		ohneSitz("Pong",
+			func() []string {
+				if g := r.Pong; g != nil {
+					return idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })
+				}
+				return nil
+			},
+			func() { r.Pong = nil }),
 		ohneSitz("Schiffe versenken",
 			func() []string {
 				if g := r.Schiffe; g != nil {
@@ -685,6 +693,11 @@ func (r *Room) aktivesSpiel(id string) string {
 			return s
 		}
 	}
+	if g := r.Pong; g != nil {
+		if s := fuerSitz("pong", g.Status, idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
 	if g := r.Schiffe; g != nil {
 		if s := fuerSitz("schiffe", g.Status, idsVon(g.Spieler, func(p SchiffeSpieler) string { return p.ID })); s != "" {
 			return s
@@ -814,6 +827,12 @@ func (r *Room) playerInGame(id string) bool {
 		func() []string {
 			if g := r.Poker; g != nil {
 				return idsVon(g.Spieler, func(p PokerSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Pong; g != nil {
+				return idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })
 			}
 			return nil
 		},

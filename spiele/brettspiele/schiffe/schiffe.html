@@ -1333,6 +1333,10 @@ $("btnNeu").onclick=()=>tu("reset");
 /* Flottenanzeige: Schiff wählen – auf dem Desktop lässt es sich von dort aufs Feld ziehen */
 let zieht=false;
 let gewaehltUm=0;
+/* Welche Art Eingabe war das? Klick-Ereignisse tragen selbst kein pointerType,
+   deshalb wird die letzte Zeigerart mitgeschrieben. */
+let letzterZeigerTyp="mouse";
+document.addEventListener("pointerdown",e=>{ letzterZeigerTyp=e.pointerType||"mouse"; },true);
 function chipWaehlen(e){
  const chip=e.target.closest(".schiff-chip");
  if(!chip||istFest())return null;
@@ -1357,8 +1361,22 @@ document.addEventListener("pointermove",e=>{
  if(!z||!gitter||!gitter.contains(z))return;
  vorschauAuf(Number(z.dataset.x),Number(z.dataset.y));
 });
-document.addEventListener("pointerup",()=>{ zieht=false; });
+/* Über dem Feld loslassen setzt das gezogene Schiff fest – das ist die Geste
+   am PC („von der Flotte aufs Feld ziehen“). Vorher blieb nur der Geist am
+   Zeiger hängen und nichts wurde gesetzt. */
+document.addEventListener("pointerup",e=>{
+ if(!zieht)return;
+ zieht=false;
+ if(letzterZeigerTyp==="touch")return;
+ const z=e.target&&e.target.closest?e.target.closest(".zelle"):null;
+ const gitter=$("gitter-setzen");
+ if(!z||!gitter||!gitter.contains(z)||istFest())return;
+ if(vorschauOk())setzenBestaetigen();
+});
 document.addEventListener("pointercancel",()=>{ zieht=false; });
+/* Geht das Fenster weg, endet das Ziehen – sonst hängt der Geist nach dem
+   Zurückkehren weiter am Zeiger, ohne dass eine Taste gedrückt ist. */
+window.addEventListener("blur",()=>{ zieht=false; });
 
 /* Feld: Position wählen – bewusst ohne sofortiges Festsetzen */
 $("setzBrett").addEventListener("pointerdown",e=>{
@@ -1376,6 +1394,9 @@ $("setzBrett").addEventListener("click",e=>{
  const z=e.target.closest(".zelle");
  if(!z||istFest())return;
  vorschauAuf(Number(z.dataset.x),Number(z.dataset.y));
+ // Mit der Maus setzt der Klick die gültige Position gleich fest – am Handy
+ // bleibt es beim Antippen und dem Knopf „Schiff setzen“.
+ if(letzterZeigerTyp!=="touch"&&vorschauOk())setzenBestaetigen();
 });
 document.addEventListener("keydown",e=>{
  if((e.key==="r"||e.key==="R")&&sichtbar("setzen")&&!istFest()){ drehen(); }

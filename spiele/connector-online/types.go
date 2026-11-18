@@ -61,6 +61,10 @@ type SpielerZeile struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Anwesend bool   `json:"anwesend"`
+	// Spiel ist die Kennung der laufenden Partie dieses Spielers (leer, wenn er
+	// an keinem Tisch sitzt). Damit kann der Connector auch Zuschauern den
+	// Spielstand nennen, ohne die Spiele einzeln abzufragen.
+	Spiel string `json:"spiel,omitempty"`
 }
 
 type Hinweis struct {
@@ -92,6 +96,10 @@ type Message struct {
 	// ("katze.gif" oder "tiere/katze.gif"). Leer = reine Textnachricht;
 	// alte Nachrichten ohne dieses Feld bleiben unverändert lesbar.
 	Bild string `json:"bild,omitempty"`
+	// MsgID ist die Kennung, die die Seite beim Senden vergibt. Kommt dieselbe
+	// Nachricht durch einen Wiederholungsversuch ein zweites Mal an, erkennt
+	// der Raum sie daran und legt keine zweite Zeile an.
+	MsgID string `json:"msgId,omitempty"`
 }
 
 type Player struct {
@@ -104,6 +112,10 @@ type Player struct {
 	// muss bei jeder Änderung mitgeschickt werden – die Kennung allein (in
 	// /api/players für alle sichtbar) reicht damit zu nichts mehr.
 	Token string `json:"-"`
+	// Geraet ist das zweite Geheimnis dieses Browsers. Geht das Token
+	// verloren, holt es den Platz innerhalb von zehn Minuten zurück – aber
+	// nur für genau dieses Gerät, nie für eine geratene Kennung.
+	Geraet string `json:"-"`
 	// ImSpiel ist der letzte Abruf von einer Spielseite. Die Connector-Seite
 	// fragt mit seite=raum und setzt das nicht – daran erkennt der Raum, dass
 	// eine Partie ohne Spielseite zurückgeblieben ist.
@@ -197,11 +209,19 @@ type Room struct {
 	Siebzehn        *SiebzehnGame
 	Baccara         *BaccaraGame
 	Schiffe         *SchiffeGame
+	Pong            *PongGame              // Pong (Online-Duell)
 	Schwimmen       *SchwimmenGame
 	Arschloch       *ArschlochGame
 	Sechsundsechzig *SechsundsechzigGame
 	Rechen          *RechenGame
 	Mal             *Malbrett              // gemeinsame Zeichenfläche
+	Galgen          *GalgenGame            // Galgenmännchen
+	Bingo           *BingoGame             // Bingo
+	Wortsuche       *WortsucheGame         // Wortsuche
+	Domino          *DominoGame            // Domino
+	Schlangen       *SchlangenGame         // Schlangen und Leitern
+	Pig             *PigGame               // Pig
+	Gaense          *GaenseGame            // Gänsespiel
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
 	Mutes           map[string]time.Time   // playerID -> unmute time
 	MsgTimes        map[string][]time.Time // for spam protection
@@ -529,6 +549,21 @@ func (r *Room) addMessage(msg Message) {
 	if len(r.Messages) > 100 {
 		r.Messages = r.Messages[len(r.Messages)-100:]
 	}
+}
+
+// nachrichtMitID sucht eine bereits angenommene Nachricht derselben Seite.
+// Der Chat schickt bei einem Netzwerkfehler dieselbe msgId noch einmal – ohne
+// diese Prüfung stünde die Zeile zweimal im Verlauf.
+func (r *Room) nachrichtMitID(msgID, senderID string) (Message, bool) {
+	if msgID == "" {
+		return Message{}, false
+	}
+	for i := len(r.Messages) - 1; i >= 0; i-- {
+		if r.Messages[i].MsgID == msgID && r.Messages[i].SenderID == senderID {
+			return r.Messages[i], true
+		}
+	}
+	return Message{}, false
 }
 
 func (r *Room) gameStatus() string {
