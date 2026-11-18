@@ -753,8 +753,16 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden&&zustand==
 /* Spielfeld so groß wie möglich, aber immer ganz sichtbar (Hoch- und Querformat). */
 function passeAn(){
  if(bildschirmDichte()!==dichte)backingSetzen();
+ /* Rahmenhöhe messen statt schätzen: Leinwand kurz auf 0 setzen und den
+    Rest messen (Titel, Menü, Status, Tasten, Fuß, Regeln, Seitenrand).
+    documentElement.scrollHeight ist dafür untauglich, weil er nie kleiner
+    als das Fenster wird. */
+ const altH=canvas.style.height;
+ canvas.style.height="0px";
+ const rahmen=document.body.getBoundingClientRect().height;
+ canvas.style.height=altH;
  const platzB=Math.min(window.innerWidth-16,520);
- const platzH=Math.max(200,window.innerHeight-225);
+ const platzH=Math.max(180,window.innerHeight-rahmen-2);
  const skala=Math.min(platzB/W,platzH/H,1.35);
  canvas.style.width=Math.floor(W*skala)+"px";
  canvas.style.height=Math.floor(H*skala)+"px";
