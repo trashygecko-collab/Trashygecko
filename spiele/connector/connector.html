@@ -575,6 +575,27 @@ html:fullscreen body{padding:18px 1px}
 
 <script src="/spiele/netz.js"></script>
 <script>
+// Harte Obergrenze für jeden API-Ruf. Ohne sie kann ein einziger hängender
+// Request die Seite dauerhaft blockieren: refresh() setzt chatBusy und würde
+// nie wieder freigeben – Chat und Spielstatus blieben für immer stehen, bis
+// man die Seite neu lädt.
+(function(){
+ const vorher=window.fetch;
+ if(!vorher||window.fetchMitZeit)return;
+ window.fetchMitZeit=true;
+ window.fetch=function(adresse,optionen){
+  if(typeof adresse!=="string"||adresse.indexOf("/api/")<0)return vorher(adresse,optionen);
+  if(!("AbortController" in window))return vorher(adresse,optionen);
+  const steuerung=new AbortController();
+  const eigene=Object.assign({},optionen||{},{signal:steuerung.signal});
+  const lauf=vorher(adresse,eigene);
+  const uhr=setTimeout(()=>steuerung.abort(),10000);
+  const fertig=()=>clearTimeout(uhr);
+  if(lauf&&lauf.then)lauf.then(fertig,fertig);
+  return lauf;
+ };
+})();
+
 let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null, selectedMenuSender=null;
 let currentPlayersList=[];
 // Wer zählt als da? Der Server markiert Spieler, die nur noch im Raum
@@ -1304,47 +1325,31 @@ async function dameAction(action,data={}){
  return gameApiAction("dame", action, data);
 }
 
+// Alle Spielabfragen eines Durchlaufs. Sie laufen gleichzeitig: nacheinander
+// summierte sich pro Runde rund vier Sekunden (36 Rufe à ~0,1 s) - Chat und
+// Spielstatus standen dadurch dauerhaft Sekunden hinterher. Der Server
+// verkraftet das locker, jede Abfrage ist nur ein Blick in die Raumstruktur.
+function spielAbfragen(){
+ return [
+  refreshTicTacToe, refreshVierGewinnt, refreshDame, refreshPaare, refreshMaen, refreshKaese,
+  refreshSim, refreshTetris, refreshKalaha, refreshStreichholz, refreshMuehle, refreshReversi,
+  refreshHold, refreshSkyjo, refreshKniffel, refreshPoker, refreshCabo, refreshSiebzehn,
+  refreshSechsundsechzig, refreshBaccara, refreshSchiffe, refreshSchach, refreshGo, refreshBackgammon,
+  refreshMauMau, refreshUno, refreshSchwimmen, refreshArschloch, refreshEinsxeins, refreshGalgen,
+  refreshBingo, refreshWortsuche, refreshDomino, refreshSchlangen, refreshPig, refreshGaense
+ ];
+}
+
 async function refreshGames(players, vorrang){
+ // Läuft schon ein Durchlauf, reicht der. Sonst stapeln sich bei langsamer
+ // Leitung die Runden und es bleiben immer mehr Abfragen offen.
+ if(statusZyklus)return;
  // Ein Durchlauf: alle Spiele sammeln, gezeichnet wird erst am Ende (siehe
  // statusMerken).
  statusZyklus=true; statusPuffer=null; statusFrisch=false;
  try{
- await refreshTicTacToe(players);
- await refreshVierGewinnt(players);
- await refreshDame(players);
- await refreshPaare(players);
- await refreshMaen(players);
- await refreshKaese(players);
- await refreshSim(players);
- await refreshTetris(players);
- await refreshKalaha(players);
- await refreshStreichholz(players);
- await refreshMuehle(players);
- await refreshReversi(players);
- await refreshHold(players);
- await refreshSkyjo(players);
- await refreshKniffel(players);
- await refreshPoker(players);
- await refreshCabo(players);
- await refreshSiebzehn(players);
- await refreshSechsundsechzig(players);
- await refreshBaccara(players);
- await refreshSchiffe(players);
- await refreshSchach(players);
- await refreshGo(players);
- await refreshBackgammon(players);
- await refreshMauMau(players);
- await refreshUno(players);
- await refreshSchwimmen(players);
- await refreshArschloch(players);
- await refreshEinsxeins(players);
- await refreshGalgen(players);
- await refreshBingo(players);
- await refreshWortsuche(players);
- await refreshDomino(players);
- await refreshSchlangen(players);
- await refreshPig(players);
- await refreshGaense(players);
+  // Ein einzelnes Spiel darf den Durchlauf nicht aufhalten.
+  await Promise.all(spielAbfragen().map(abfrage => abfrage(players).catch(()=>{})));
  }finally{
   // Ab hier darf wieder sofort gezeichnet werden (z. B. aus einem Knopf).
   statusZyklus=false;

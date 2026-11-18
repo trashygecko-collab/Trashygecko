@@ -883,15 +883,24 @@ async function postPresence(){
     body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
   });
 }
+// Obergrenze für jede Abfrage: bleibt eine Anfrage hängen, löst sie nach
+// acht Sekunden ab. Ohne das blieb onlineBusy für immer true – der Würfel
+// drehte endlos und der Abgleich stand still.
+function zeitgrenze(ms){
+  if(!("AbortController" in window))return {};
+  const steuerung=new AbortController();
+  setTimeout(()=>steuerung.abort(),ms);
+  return {signal:steuerung.signal};
+}
 async function fetchOnlineGame(){
-  const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store"});
+  const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store",...zeitgrenze(8000)});
   if(!r.ok)throw new Error("Spielstand nicht erreichbar ("+r.status+").");
   return (await r.json()).game;
 }
 async function onlineAction(action,payload={}){
   const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&action="+encodeURIComponent(action),{
     method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id:onlineID,...payload})
+    body:JSON.stringify({id:onlineID,...payload}),...zeitgrenze(8000)
   });
   if(!r.ok)throw new Error((await r.text()).trim()||"Aktion fehlgeschlagen.");
   return (await r.json()).game;
