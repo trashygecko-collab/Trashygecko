@@ -742,7 +742,7 @@ async function nameUebernehmen(mitFokus){
  try{
   const p=await fetch("/api/presence",{
    method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName()})
+   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),umbenennen:true})
   });
   const vergeben=await p.json().catch(()=>({}));
   if(p.ok&&vergeben&&vergeben.name){
@@ -803,7 +803,7 @@ async function join(roomDisplayName){
   // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
   // "Spieler1" …). Den zeigen wir an und behalten ihn.
   const vergeben=await p.json().catch(()=>({}));
-  if(vergeben&&vergeben.name&&!nameField.value.trim()){
+  if(vergeben&&vergeben.name&&vergeben.name!==nameField.value.trim()){
    nameField.value=vergeben.name;
    try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
   }
@@ -812,6 +812,8 @@ async function join(roomDisplayName){
   // im Raum landet, statt den Namen erneut zu verlangen.
   try{ sessionStorage.setItem("tg-room",code); }catch(e){}
   lastChatSignature="";
+  letzteChatZeile="";
+  chatSprungBereit=false;
   // Kein "Verbunden · …" mehr – der Status bleibt für Hinweise frei.
   setRoomStatus("");
   document.getElementById("modusbox").hidden=false;
@@ -895,6 +897,17 @@ async function heartbeat(){
    body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),active})
   });
   ok=r.ok;
+  if(ok){
+   // Der Admin darf mitten in der Partie umbenennen: Der Name vom Server
+   // gilt, auch wenn hier noch der alte steht.
+   const vergeben=await r.json().catch(()=>null);
+   if(vergeben&&vergeben.name&&vergeben.name!==nameField.value){
+    nameField.value=vergeben.name;
+    try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+    zeigeNamen();
+    refreshPlayers();
+   }
+  }
  }catch(e){ ok=false; }
  verbindungLaeuft=false;
  // Ein erfolgreiches Lebenszeichen räumt einen alten Fehler von selbst weg – höchstens
@@ -968,6 +981,31 @@ async function mutePlayer(targetId, minutes){
   }
  }catch(e){
   alert("Fehler beim Stummschalten.");
+ }
+}
+
+// Der Admin ändert den Namen eines Spielers – auch mitten in einer laufenden
+// Partie. Der Server schreibt ihn sofort in den Raum und in alle Partien,
+// die Spielseiten zeigen ihn beim nächsten Abruf.
+async function spielerUmbenennen(zielID, alt){
+ if(!activeRoom||!isRoomOwner)return;
+ const neu=prompt("Neuer Name für "+alt+":",alt);
+ if(neu===null)return;
+ const name=neu.trim();
+ if(!name||name===alt)return;
+ try{
+  const r=await fetch("/api/umbenennen",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:activeRoom,id:sessionID,targetId:zielID,name})
+  });
+  if(!r.ok){
+   alert((await r.text())||"Umbenennen fehlgeschlagen.");
+   return;
+  }
+  await refresh();
+  await refreshPlayers();
+ }catch(e){
+  alert("Umbenennen fehlgeschlagen.");
  }
 }
 
@@ -2627,6 +2665,21 @@ function rundeInhalt(box,players){
   zeile.textContent="Im Raum: "+wer;
   box.appendChild(zeile);
  }
+ // Der Admin kann jeden umbenennen – auch während einer Partie.
+ if(isRoomOwner){
+  const namen=document.createElement("p");
+  namen.className="runde-info";
+  players.filter(p=>p.id!==sessionID).forEach(p=>{
+   const b=document.createElement("button");
+   b.type="button";
+   b.className="sekundaer";
+   b.textContent="✎ "+p.name;
+   b.title="Namen ändern (Admin)";
+   b.onclick=()=>spielerUmbenennen(p.id,p.name);
+   namen.appendChild(b);
+  });
+  if(namen.children.length)box.appendChild(namen);
+ }
 
  // Malen wird wie jedes andere Spiel angeboten. Wer beitritt, malt auf der
  // gemeinsamen Fläche mit; die Karte im Chat öffnet das Brett.
@@ -2898,6 +2951,10 @@ async function refreshTicTacToe(players){
 }
 let chatBusy=false;
 let lastChatSignature="";
+/* Für den Sprung zum Chat: nur eine wirklich neue letzte Nachricht zählt,
+   nicht jedes Neuzeichnen (Status, Stummschaltung, laufende Runde). */
+let letzteChatZeile="";
+let chatSprungBereit=false;
 
 async function refresh(){
  if(!activeRoom||chatBusy)return;
@@ -2919,6 +2976,10 @@ async function refresh(){
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
   lastChatSignature=signature;
+  // Kennung der letzten Nachricht – daran hängt der Sprung zum Chat.
+  const letzteNachricht=msgs.length?msgs[msgs.length-1]:null;
+  const zeile=letzteNachricht?[letzteNachricht.senderId||"",letzteNachricht.time||"",
+   letzteNachricht.text||"",letzteNachricht.gameId||"",letzteNachricht.toId||""].join("|"):"";
   const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
   box.innerHTML="";
   msgs.forEach(m=>{
@@ -3137,6 +3198,19 @@ async function refresh(){
    box.appendChild(d);
   });
   if(atBottom)box.scrollTop=box.scrollHeight;
+  // Neue Nachricht: am Handy steht der Chat unter der Spielauswahl – die Seite
+  // holt ihn ins Bild, sobald er nicht ohnehin zu sehen ist. Beim ersten
+  // Zeichnen nach dem Beitritt bleibt die Ansicht, wo sie ist.
+  if(chatSprungBereit&&zeile&&zeile!==letzteChatZeile){
+   const chatbox=document.getElementById("chatbox");
+   if(chatbox&&!chatbox.hidden){
+    const rect=chatbox.getBoundingClientRect();
+    const imBild=rect.top>=-8&&rect.bottom<=window.innerHeight+8;
+    if(!imBild)chatbox.scrollIntoView({behavior:"smooth",block:"start"});
+   }
+  }
+  letzteChatZeile=zeile;
+  chatSprungBereit=true;
  }catch(e){
  }finally{
   chatBusy=false;

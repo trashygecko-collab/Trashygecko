@@ -185,6 +185,10 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		Active bool `json:"active"`
 		// Token ist das Geheimnis des Platzes; beim ersten Beitritt leer.
 		Token string `json:"token"`
+		// Umbenennen setzt die Seite nur, wenn der Spieler seinen Namen
+		// wirklich ändert. Ohne das Zeichen bleibt der Name stehen – sonst
+		// würde jedes Lebenszeichen eine Änderung des Admins zurücksetzen.
+		Umbenennen bool `json:"umbenennen"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -235,26 +239,7 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	room.cleanPlayers()
-	// Wer ohne eigenen Namen hereinkommt, bekommt einen: der Boss "Boss",
-	// alle anderen "Spieler1", "Spieler2", … – umbenennen geht jederzeit.
 	amServer := bossErkennen(r, room)
-	if input.Name == "" {
-		if amServer {
-			input.Name = "Boss"
-		} else {
-			input.Name = room.freierName("Spieler")
-		}
-	}
-	// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder als der
-	// Admin ausgeben.
-	name := room.uniqueName(input.Name, input.ID)
-	// Admin ist der Spieler am Server-PC. Seine Anfrage kommt von einer lokalen
-	// Adresse, egal ob über localhost oder die LAN-IP aufgerufen wird.
-	if room.OwnerID == "" || (room.OwnerID != input.ID && amServer) {
-		room.OwnerID = input.ID
-		room.OwnerName = name
-		room.Name = roomTitle(name)
-	}
 	player, known := room.Players[input.ID]
 	// Ein bekannter Platz gehört dem Gerät, das ihn angelegt hat: Wer die
 	// Kennung errät oder aus /api/players abschreibt, kommt hier nicht weiter.
@@ -262,6 +247,31 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		mu.Unlock()
 		http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
 		return
+	}
+	// Wer ohne eigenen Namen hereinkommt, bekommt einen: der Boss "Boss",
+	// alle anderen "Spieler1", "Spieler2", … – umbenennen geht jederzeit.
+	// Ein bekannter Spieler behält seinen Namen; geändert wird er nur, wenn
+	// er es selbst verlangt (umbenennen) oder der Admin ihn umbenannt hat.
+	name := player.Name
+	if !known || input.Umbenennen {
+		wunsch := input.Name
+		if wunsch == "" {
+			if amServer {
+				wunsch = "Boss"
+			} else {
+				wunsch = room.freierName("Spieler")
+			}
+		}
+		// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder als
+		// der Admin ausgeben.
+		name = room.uniqueName(wunsch, input.ID)
+	}
+	// Admin ist der Spieler am Server-PC. Seine Anfrage kommt von einer lokalen
+	// Adresse, egal ob über localhost oder die LAN-IP aufgerufen wird.
+	if room.OwnerID == "" || (room.OwnerID != input.ID && amServer) {
+		room.OwnerID = input.ID
+		room.OwnerName = name
+		room.Name = roomTitle(name)
 	}
 	if !known {
 		// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.

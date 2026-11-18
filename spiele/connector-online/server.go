@@ -117,6 +117,7 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/smilies", smiliesHandler)
 	mux.HandleFunc("/api/tone", toneHandler)
 	mux.HandleFunc("/api/moderation", moderationHandler)
+	mux.HandleFunc("/api/umbenennen", umbenennenHandler)
 	mux.HandleFunc("/api/tictactoe", ticTacToeHandler)
 	mux.HandleFunc("/api/viergewinnt", vierGewinntHandler)
 	mux.HandleFunc("/api/dame", dameHandler)

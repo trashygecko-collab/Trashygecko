@@ -135,7 +135,7 @@ function satzName(satz = FORMEN_SATZ) {
     return SATZ_NAMEN[satz === 2 ? 2 : 1];
 }
 
-// Letztes Level einer vollen Farbrunde? (Level 504, 1008, ...)
+// Letztes Level einer vollen Farbrunde? (Level 1000, 2000, ...)
 // Kurzer Hinweis, wenn ein Level den Anfang einer neuen Farbrunde bildet.
 function rundeStartHinweis(level) {
     const runde = rundeVon(level);
@@ -778,6 +778,15 @@ function initializeGame() {
     if (verlassenButton && appBruecke && typeof appBruecke.verlassen === "function") {
         verlassenButton.hidden = false;
         verlassenButton.addEventListener("click", () => appBruecke.verlassen());
+
+        // In der App gibt es keinen Connector: "ZURUECK ZUM CONNECTOR" wuerde
+        // nur einen Browser oeffnen und belegt den Platz, den der
+        // Beenden-Knopf braucht.  Dort bleibt er deshalb weg.
+        const zurueckButton = getElement("backButton");
+
+        if (zurueckButton) {
+            zurueckButton.hidden = true;
+        }
     }
 
     // Level-Auswahl öffnen und schließen: ein Knopf, darin der Umschalter

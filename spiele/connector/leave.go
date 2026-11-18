@@ -268,6 +268,30 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Arschloch = nil }),
+		sitz("Galgenmännchen",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Galgen; g != nil {
+					return galgenRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Galgen = nil }),
+		sitz("Bingo",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Bingo; g != nil {
+					return bingoRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Bingo = nil }),
+		sitz("Wortsuche",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Wortsuche; g != nil {
+					return wortsucheRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Wortsuche = nil }),
 		sitz("Mensch ärgere dich nicht",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Menschaerger; g != nil {
@@ -644,6 +668,21 @@ func (r *Room) aktivesSpiel(id string) string {
 			return s
 		}
 	}
+	if g := r.Galgen; g != nil {
+		if s := fuerSitz("galgen", g.Status, galgenIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Bingo; g != nil {
+		if s := fuerSitz("bingo", g.Status, bingoIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Wortsuche; g != nil {
+		if s := fuerSitz("wortsuche", g.Status, wortsucheIDs(g)); s != "" {
+			return s
+		}
+	}
 	if g := r.Rechen; g != nil && g.Status == "active" {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -787,6 +826,27 @@ func (r *Room) playerInGame(id string) bool {
 	}
 	if g := r.Menschaerger; g != nil {
 		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Galgen; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Bingo; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Wortsuche; g != nil {
+		for _, p := range g.Spieler {
 			if p.ID == id {
 				return true
 			}

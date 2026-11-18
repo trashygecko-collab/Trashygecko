@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Galgenmännchen</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+:root{
+  --bg:#0a211b; --panel:#0f2b23; --line:#1d4a3a; --gold:#e8cd8e; --ink:#f6edda;
+  --muted:#a9c3b6; --rot:#e04b3f; --gruen:#4fbf72;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;padding:10px;background:radial-gradient(ellipse at 20% 0%,#12332a 0%,transparent 45%),var(--bg);
+  color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
+}
+.app{width:min(1120px,100%);display:flex;flex-direction:column;gap:10px;height:100%;min-height:0}
+.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
+.titel{font-size:clamp(17px,2.4vw,24px);color:var(--gold);letter-spacing:1px}
+.kopf small{color:var(--muted)}
+.mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:10px;flex:1 1 auto;min-height:0}
+@media(max-width:820px){.mitte{grid-template-columns:1fr}}
+/* Querformat am Handy: die Zeichnung darf schrumpfen, damit die Tastatur
+   ohne Scrollbalken erreichbar bleibt. */
+@media(max-height:460px) and (orientation:landscape){
+  body{padding:4px}
+  .app{gap:4px}
+  .mitte{gap:4px}
+  .karte{padding:7px}
+  .zeichnung{flex:0 0 clamp(40px,15vh,80px);min-height:0}
+  .taste{padding:5px 0}
+  .wort{gap:4px}
+  .buch{height:clamp(24px,4.2vh,36px)}
+}
+/* Ganz flache Geräte: die Zeichnung weicht, Wort und Tastatur bleiben. */
+@media(max-height:420px) and (orientation:landscape){
+  .zeichnung{display:none}
+}
+.karte{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;padding:10px}
+.buehne{display:flex;flex-direction:column;gap:8px;min-height:0}
+.zeichnung{position:relative;flex:1 1 auto;min-height:120px;border-radius:12px;background:#081914;overflow:hidden}
+.zeichnung svg{width:100%;height:100%;display:block}
+.wort{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.buch{width:clamp(24px,4.2vw,38px);height:clamp(32px,5.2vw,46px);display:flex;align-items:center;justify-content:center;
+  font-size:clamp(16px,3vw,24px);font-weight:bold;border-bottom:3px solid var(--line);color:var(--ink);transition:color .2s,border-color .2s}
+.buch.offen{color:var(--gold);border-color:var(--gold)}
+.buch.leer{color:#2f5a49}
+.tastatur{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
+@media(max-width:520px){.tastatur{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.taste{padding:9px 0;font-size:clamp(13px,2vw,17px);font-weight:bold;background:#14382d;color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;cursor:pointer;font-family:inherit;transition:transform .08s,background .15s}
+.taste:hover:not(:disabled){background:#1b4a3a}
+.taste:active:not(:disabled){transform:scale(.95)}
+.taste.treffer{background:#1f5d43;color:var(--gruen);border-color:var(--gruen)}
+.taste.daneben{background:#3a1a17;color:var(--rot);border-color:#7a2c25;text-decoration:line-through}
+.taste:disabled{opacity:.55;cursor:default}
+.seite{display:flex;flex-direction:column;gap:8px;min-height:0}
+.leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.leiste label{color:var(--muted);font-size:13px}
+select,button.aktion{font-family:inherit;background:#14382d;color:var(--ink);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;cursor:pointer}
+button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;font-weight:bold}
+.herzen{display:flex;gap:4px;font-size:20px;letter-spacing:2px}
+.spieler{display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0}
+.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;
+  border:1px solid var(--line);border-radius:9px;background:#0b241d;font-size:14px}
+.sp.dran{border-color:var(--gold);box-shadow:0 0 12px #e8cd8e44}
+.sp b{color:var(--gold)}
+.notiz{color:var(--muted);font-size:13px;min-height:18px}
+.log{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:96px;overflow:auto}
+.log .ok{color:var(--gruen)}
+.log .nein{color:var(--rot)}
+.ende{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.versteckt{display:none!important}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="kopf">
+    <div class="titel">GALGENMÄNNCHEN</div>
+    <small id="lage">Bereit</small>
+    <div class="leiste" id="startLeiste">
+      <label for="variante">Variante</label>
+      <select id="variante">
+        <option value="klassisch">Klassisch (8 Fehler)</option>
+        <option value="streng">Streng (6 Fehler)</option>
+        <option value="ohnehilfe">Ohne Hinweis</option>
+        <option value="leicht">Leicht (kurze Wörter)</option>
+      </select>
+      <button class="aktion haupt" id="btnStart">Spiel starten</button>
+    </div>
+    <div class="leiste versteckt" id="onlineLeiste">
+      <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="aktion" id="btnBereit">Bereit</button>
+      <button class="aktion" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="mitte">
+    <div class="karte buehne">
+      <div class="zeichnung">
+        <svg viewBox="0 0 220 200" aria-label="Galgen" role="img">
+          <g stroke="#7a6242" stroke-width="6" stroke-linecap="round" fill="none">
+            <line x1="20" y1="188" x2="120" y2="188"/>
+            <line x1="60" y1="188" x2="60" y2="20"/>
+            <line x1="60" y1="20" x2="150" y2="20"/>
+            <line x1="150" y1="20" x2="150" y2="42"/>
+          </g>
+          <g id="figur" stroke="#e8cd8e" stroke-width="5" fill="none" stroke-linecap="round">
+            <circle id="tKopf" cx="150" cy="56" r="14" style="opacity:0"/>
+            <line id="tKoerper" x1="150" y1="70" x2="150" y2="118" style="opacity:0"/>
+            <line id="tArmL" x1="150" y1="84" x2="128" y2="104" style="opacity:0"/>
+            <line id="tArmR" x1="150" y1="84" x2="172" y2="104" style="opacity:0"/>
+            <line id="tBeinL" x1="150" y1="118" x2="130" y2="146" style="opacity:0"/>
+            <line id="tBeinR" x1="150" y1="118" x2="170" y2="146" style="opacity:0"/>
+          </g>
+        </svg>
+      </div>
+      <div class="wort" id="wort"></div>
+      <div class="leiste">
+        <span class="herzen" id="herzen" title="verbleibende Leben"></span>
+        <span class="notiz" id="hinweis"></span>
+      </div>
+      <div class="tastatur" id="tastatur"></div>
+    </div>
+
+    <aside class="karte seite">
+      <div class="leiste"><b id="rundenTitel">Runde 1</b><span class="notiz" id="zugText"></span></div>
+      <div class="spieler" id="spieler"></div>
+      <div class="log" id="log"></div>
+      <div class="notiz" id="notiz"></div>
+      <div class="ende versteckt" id="ende">
+        <button class="aktion haupt" id="btnNochmal">Nächste Runde</button>
+        <button class="aktion" id="btnNeu">Neue Runde eröffnen</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+(() => {
+"use strict";
+/* ------------------------------------------------------------------ */
+/* Online oder lokal: gleiche Oberfläche, zwei Antriebe.               */
+/* ------------------------------------------------------------------ */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const ALPHABET = "abcdefghijklmnopqrstuvwxyzäöüß".split("");
+const VARIANTEN = {
+  klassisch: { fehler: 8, hinweis: true, stufe: 3 },
+  streng: { fehler: 6, hinweis: true, stufe: 3 },
+  ohnehilfe: { fehler: 8, hinweis: false, stufe: 3 },
+  leicht: { fehler: 10, hinweis: true, stufe: 1 }
+};
+const WORTE = [
+  ["sonne","Natur",1],["wolke","Natur",1],["blume","Natur",1],["fluss","Natur",1],["wiese","Natur",1],
+  ["apfel","Essen",1],["brot","Essen",1],["kaese","Essen",1],["milch","Essen",1],["salat","Essen",1],
+  ["tisch","Haus",1],["stuhl","Haus",1],["fenster","Haus",2],["garten","Haus",1],["teppich","Haus",2],
+  ["fahrrad","Technik",2],["schraube","Technik",2],["batterie","Technik",2],["lautsprecher","Technik",3],
+  ["gitarre","Musik",2],["trommel","Musik",2],["klavier","Musik",2],["konzert","Musik",2],
+  ["planet","Weltraum",2],["rakete","Weltraum",2],["galaxie","Weltraum",3],["teleskop","Weltraum",3],
+  ["schwimmen","Sport",2],["springen","Sport",2],["torwart","Sport",2],["stadion","Sport",2],
+  ["lehrer","Beruf",1],["baecker","Beruf",2],["gaertner","Beruf",2],["pilot","Beruf",1],
+  ["himmel","Wetter",2],["gewitter","Wetter",3],["sonnenschein","Wetter",3],["nebel","Wetter",1],
+  ["insel","Reisen",1],["strand","Reisen",2],["koffer","Reisen",2],["urlaub","Reisen",2],
+  ["bibliothek","Orte",3],["brunnen","Orte",2],["bahnhof","Orte",2],["museum","Orte",2],
+  ["elefant","Tiere",2],["pinguin","Tiere",2],["schmetterling","Tiere",3],["eichhoernchen","Tiere",3],
+  ["zitrone","Obst",2],["banane","Obst",2],["kirsche","Obst",2],["erdbeere","Obst",2],
+  ["schokolade","Suess",3],["marmelade","Suess",3],["kuchen","Suess",1],["keks","Suess",1],
+  ["fernseher","Wohnen",3],["vorhang","Wohnen",2],["kissen","Wohnen",2],["schrank","Wohnen",2],
+  ["zeitung","Alltag",2],["schluessel","Alltag",3],["brille","Alltag",2],["tasche","Alltag",2]
+];
+
+const $ = (id) => document.getElementById(id);
+const elWort = $("wort"), elTastatur = $("tastatur"), elSpieler = $("spieler"),
+      elLog = $("log"), elNotiz = $("notiz"), elHerzen = $("herzen"),
+      elHinweis = $("hinweis"), elLage = $("lage"), elZug = $("zugText"),
+      elRunde = $("rundenTitel"), elEnde = $("ende");
+
+/* ---------------------------- lokal ------------------------------- */
+let lokal = null;
+
+function localNeueRunde(variante) {
+  const v = VARIANTEN[variante] || VARIANTEN.klassisch;
+  const passend = WORTE.filter((w) => w[2] <= v.stufe);
+  const [wort, kategorie] = passend[Math.floor(Math.random() * passend.length)];
+  lokal = {
+    wort, kategorie, variante, maxFehler: v.fehler, hinweis: v.hinweis,
+    anzeige: Array.from(wort, () => ""), buchstaben: [], fehler: 0,
+    geloest: false, verloren: false, runde: 1, punkte: 0, treffer: 0, letzte: []
+  };
+}
+function localRaten(b) {
+  if (!lokal || lokal.geloest || lokal.verloren) return;
+  if (lokal.buchstaben.includes(b)) return;
+  lokal.buchstaben.push(b);
+  let n = 0;
+  for (let i = 0; i < lokal.wort.length; i++) {
+    if (lokal.wort[i] === b) { lokal.anzeige[i] = b; n++; }
+  }
+  if (n > 0) {
+    lokal.punkte += n; lokal.treffer++;
+    lokal.letzte.push("✔ " + b.toUpperCase() + " – " + n + " Buchstabe(n)");
+    if (lokal.anzeige.every((x) => x !== "")) lokal.geloest = true;
+  } else {
+    lokal.fehler++;
+    lokal.letzte.push("✖ " + b.toUpperCase() + " – daneben");
+    if (lokal.fehler >= lokal.maxFehler) lokal.verloren = true;
+  }
+  if (lokal.letzte.length > 8) lokal.letzte = lokal.letzte.slice(-8);
+  zeichne();
+}
+
+function zeichneLokal() {
+  const w = lokal;
+  elRunde.textContent = "Runde " + w.runde;
+  elLage.textContent = w.geloest ? "Gelöst!" : w.verloren ? "Verloren" : "Läuft";
+  elHerzen.textContent = "♥".repeat(Math.max(0, w.maxFehler - w.fehler)) +
+    "♡".repeat(Math.min(w.maxFehler, w.fehler));
+  elHinweis.textContent = w.hinweis ? "Kategorie: " + w.kategorie : "Ohne Hinweis";
+  elZug.textContent = w.geloest ? "Wort: " + w.wort.toUpperCase()
+    : w.verloren ? "Wort war: " + w.wort.toUpperCase() : "Du bist dran";
+  elSpieler.innerHTML = "";
+  const zeile = document.createElement("p");
+  zeile.className = "sp dran";
+  const n = document.createElement("span"); n.textContent = MYNAME;
+  const p = document.createElement("b"); p.textContent = w.punkte + " Punkte · " + w.treffer + " Treffer";
+  zeile.append(n, p);
+  elSpieler.appendChild(zeile);
+  elLog.innerHTML = "";
+  w.letzte.forEach((z) => {
+    const d = document.createElement("div");
+    d.className = z.startsWith("✔") ? "ok" : "nein";
+    d.textContent = z;
+    elLog.appendChild(d);
+  });
+  elNotiz.textContent = w.geloest ? "Geschafft – " + w.punkte + " Punkte." : "";
+  elEnde.classList.toggle("versteckt", !(w.geloest || w.verloren));
+  $("btnNochmal").textContent = "Nächste Runde";
+  zeichneWort(w.anzeige);
+  zeichneTastatur(w.buchstaben, w.anzeige, w.geloest || w.verloren);
+  zeichneGalgen(w.fehler, w.maxFehler);
+}
+
+/* ---------------------------- gemeinsam --------------------------- */
+function zeichneWort(anzeige) {
+  elWort.innerHTML = "";
+  anzeige.forEach((b) => {
+    const d = document.createElement("div");
+    d.className = "buch " + (b ? "offen" : "leer");
+    d.textContent = b ? b.toUpperCase() : "_";
+    elWort.appendChild(d);
+  });
+}
+/* aufgedeckt: Buchstaben, die im Wort stehen; geraten: schon versucht.
+   Treffer und Fehlgriff lassen sich damit allein aus der Anzeige ableiten. */
+function zeichneTastatur(geraten, aufgedeckt, fertig) {
+  elTastatur.innerHTML = "";
+  const treffer = new Set((aufgedeckt || []).filter(Boolean));
+  ALPHABET.forEach((b) => {
+    const t = document.createElement("button");
+    t.type = "button";
+    t.className = "taste";
+    t.textContent = b.toUpperCase();
+    t.dataset.b = b;
+    if (geraten.includes(b)) {
+      t.classList.add(treffer.has(b) ? "treffer" : "daneben");
+      t.disabled = true;
+    } else if (fertig) {
+      t.disabled = true;
+    }
+    elTastatur.appendChild(t);
+  });
+}
+function zeichneGalgen(fehler, max) {
+  const teile = ["tKopf", "tKoerper", "tArmL", "tArmR", "tBeinL", "tBeinR"];
+  const sichtbar = Math.min(6, Math.round((fehler / Math.max(1, max)) * 6));
+  teile.forEach((id, i) => {
+    const el = $(id);
+    if (!el) return;
+    el.style.opacity = i < sichtbar ? "1" : "0";
+    el.style.transition = "opacity .25s";
+  });
+}
+
+/* ---------------------------- online ------------------------------ */
+let onlineGame = null, onlineBusy = false;
+
+async function api(aktion, koerper) {
+  /* Beim Lesen steht die Kennung in der Adresse, beim Schreiben im Rumpf –
+     genau da, wo der Server sie erwartet. */
+  const url = "/api/galgen?room=" + encodeURIComponent(ROOM) +
+    (aktion ? "&action=" + encodeURIComponent(aktion) : "&id=" + encodeURIComponent(MYID));
+  const r = await fetch(url, aktion ? {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ id: MYID }, koerper || {}))
+  } : { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.text()).trim() || "Aktion fehlgeschlagen.");
+  return r.json();
+}
+
+async function hole() {
+  if (!ONLINE || onlineBusy) return;
+  onlineBusy = true;
+  try {
+    const d = await api(null);
+    onlineGame = d.game || null;
+    zeichneOnline();
+  } catch (e) {
+    elLage.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+async function schicke(aktion, koerper) {
+  if (onlineBusy) return false;
+  onlineBusy = true;
+  try {
+    const d = await api(aktion, koerper);
+    onlineGame = d.game || null;
+    zeichneOnline();
+    return true;
+  } catch (e) {
+    elNotiz.textContent = e.message;
+    return false;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+function zeichneOnline() {
+  const g = onlineGame;
+  $("startLeiste").classList.add("versteckt");
+  $("onlineLeiste").classList.remove("versteckt");
+  if (!g) {
+    elLage.textContent = "Keine Runde";
+    elRunde.textContent = "—";
+    elWort.innerHTML = "";
+    elTastatur.innerHTML = "";
+    elSpieler.innerHTML = "";
+    elLog.innerHTML = "";
+    elNotiz.textContent = "Eröffne eine Runde – Mitspieler treten im Raum bei.";
+    elEnde.classList.add("versteckt");
+    $("btnErstellen").classList.remove("versteckt");
+    $("btnBereit").classList.add("versteckt");
+    $("btnLos").classList.add("versteckt");
+    zeichneGalgen(0, 1);
+    return;
+  }
+  const anzeige = g.anzeige || [];
+  const ich = g.spieler.find((s) => s.id === MYID);
+  const dran = g.status === "spiel" && ich && g.spieler[g.zug] && g.spieler[g.zug].id === MYID;
+  elRunde.textContent = "Runde " + g.runde + " · " + g.varianteName;
+  elLage.textContent = g.status === "invited" ? "Warte auf Mitspieler"
+    : g.status === "ende" ? (g.geloest ? "Gelöst" : "Verloren") : "Läuft";
+  elHerzen.textContent = "♥".repeat(Math.max(0, g.maxFehler - g.fehler)) +
+    "♡".repeat(Math.min(g.maxFehler, g.fehler));
+  elHinweis.textContent = g.hinweisZeigen && g.kategorie ? "Kategorie: " + g.kategorie : "Ohne Hinweis";
+  elZug.textContent = g.status === "spiel"
+    ? (dran ? "Du bist dran" : g.spieler[g.zug].name + " ist dran")
+    : "";
+  elNotiz.textContent = g.note || "";
+
+  elSpieler.innerHTML = "";
+  g.spieler.forEach((s, i) => {
+    const p = document.createElement("p");
+    p.className = "sp" + (g.status === "spiel" && i === g.zug ? " dran" : "");
+    const n = document.createElement("span");
+    n.textContent = s.name + (s.id === MYID ? " (du)" : "") + (s.ready ? "" : " · nicht bereit");
+    const b = document.createElement("b");
+    b.textContent = s.punkte + " Punkte";
+    p.append(n, b);
+    elSpieler.appendChild(p);
+  });
+
+  elLog.innerHTML = "";
+  (g.letzte || []).forEach((z) => {
+    const d = document.createElement("div");
+    d.className = z.startsWith("✔") ? "ok" : "nein";
+    d.textContent = z;
+    elLog.appendChild(d);
+  });
+
+  $("btnErstellen").classList.toggle("versteckt", !!g);
+  $("btnBereit").classList.toggle("versteckt", !g || g.status !== "invited");
+  $("btnLos").classList.toggle("versteckt", !g || g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+  elEnde.classList.toggle("versteckt", g.status !== "ende");
+
+  zeichneWort(anzeige);
+  /* Gesperrt ist die Tastatur, sobald die Runde nicht läuft oder ein anderer
+     dran ist; vorbei ist sie ohnehin gesperrt. */
+  const gesperrt = g.status !== "spiel" || !dran;
+  zeichneTastatur(g.buchstaben || [], anzeige, gesperrt);
+  zeichneGalgen(g.fehler, g.maxFehler);
+}
+
+/* ---------------------------- Bedienung --------------------------- */
+elTastatur.addEventListener("click", (e) => {
+  const t = e.target.closest(".taste");
+  if (!t || t.disabled) return;
+  const b = t.dataset.b;
+  if (ONLINE) { schicke("raten", { buchstabe: b }); }
+  else { localRaten(b); }
+});
+
+$("btnStart").addEventListener("click", () => {
+  localNeueRunde($("variante").value);
+  zeichne();
+});
+$("btnNochmal").addEventListener("click", () => {
+  if (ONLINE) schicke("naechste");
+  else { const v = lokal.variante; localNeueRunde(v); lokal.runde++; zeichne(); }
+});
+$("btnNeu").addEventListener("click", () => {
+  if (ONLINE) schicke("reset");
+  else { const v = $("variante").value; localNeueRunde(v); zeichne(); }
+});
+$("btnErstellen").addEventListener("click", () => schicke("create", { variante: $("variante").value }));
+$("btnBereit").addEventListener("click", () => schicke("ready"));
+$("btnLos").addEventListener("click", () => schicke("start"));
+
+function zeichne() {
+  if (ONLINE) zeichneOnline();
+  else if (lokal) zeichneLokal();
+  else {
+    /* Vor dem ersten Start: leeres Gerüst mit Hinweis. */
+    elWort.innerHTML = "";
+    zeichneTastatur([], [], true);
+    elHerzen.textContent = "";
+    elHinweis.textContent = "Wähle eine Variante und starte.";
+    elNotiz.textContent = "";
+    elSpieler.innerHTML = "";
+    elLog.innerHTML = "";
+    elEnde.classList.add("versteckt");
+    elLage.textContent = ONLINE ? "Verbinde …" : "Bereit";
+    zeichneGalgen(0, 1);
+  }
+}
+
+if (ONLINE) {
+  hole();
+  setInterval(hole, 1500);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
+} else {
+  zeichne();
+}
+})();
+</script>
+</body>
+</html>

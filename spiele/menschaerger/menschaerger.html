@@ -297,11 +297,14 @@ if(ONLINE&&!onlineID)onlineID="tg-"+Math.random().toString(36).slice(2)+Date.now
 let onlineGame=null;
 let onlineBusy=false;
 
+/* Die vier klassischen Spielfiguren-Farben: Rot, Gelb, Grün, Blau.
+   ink ist die Schriftfarbe der Figurennummer, damit sie auf jedem Ton
+   lesbar bleibt. */
 const COLORS = {
-  red:{name:"Koralle",hex:"#c2765c",dark:"#6d3a29"},
-  blue:{name:"Gold",hex:"#e3c07a",dark:"#7a5f24"},
-  yellow:{name:"Salbei",hex:"#9fbf9a",dark:"#3f5a44"},
-  green:{name:"Minze",hex:"#7fd3b0",dark:"#24594a"}
+  red:{name:"Rot",hex:"#e04b3f",dark:"#7a2118",ink:"#f6edda"},
+  yellow:{name:"Gelb",hex:"#f2c94c",dark:"#7a5f10",ink:"#0b241d"},
+  green:{name:"Grün",hex:"#3fae55",dark:"#1d5628",ink:"#0b241d"},
+  blue:{name:"Blau",hex:"#3f7fd6",dark:"#1f3f78",ink:"#f6edda"}
 };
 
 const ORDER=["red","green","yellow","blue"];
@@ -499,8 +502,10 @@ function clearTimers(){
 
 function startGame(){
   clearTimers();
+  /* Offizielle Startaufstellung: eine Figur steht schon auf dem A-Feld
+     (Startfeld), die drei übrigen warten auf den B-Feldern. */
   players=chosenColors.map(color=>({
-    color,name:COLORS[color].name,pieces:[-1,-1,-1,-1]
+    color,name:COLORS[color].name,pieces:[0,-1,-1,-1]
   }));
   currentPlayer=0;
   diceValue=null;
@@ -518,7 +523,7 @@ function startGame(){
   drawBoard();
   updateAll();
   showDie(null);
-  message.textContent="Würfle eine Sechs, um eine Figur herauszubringen!";
+  message.textContent="Du bist am Zug – würfle!";
 }
 
 function playerPosition(player,pieceIndex){
@@ -536,6 +541,19 @@ function playerPosition(player,pieceIndex){
   return {home:false,coords:cellCenter(x,y),lane:true};
 }
 
+/* Offizielle Regeln: Eigene und fremde Figuren dürfen übersprungen werden,
+   besetzte Felder zählen mit – nur das Zielfeld muss frei sein. */
+function ownFieldBlocked(player,pieceIndex,destination){
+  if(destination<=39){
+    const target=(START_INDEX[player.color]+destination)%40;
+    return player.pieces.some((other,otherIndex)=>
+      otherIndex!==pieceIndex&&other>=0&&other<=39&&
+      (START_INDEX[player.color]+other)%40===target
+    );
+  }
+  return player.pieces.some((other,otherIndex)=>otherIndex!==pieceIndex&&other===destination);
+}
+
 function legalMoves(){
   if(diceValue===null||!players.length)return [];
   const player=players[currentPlayer];
@@ -547,28 +565,24 @@ function legalMoves(){
       if(diceValue!==6)return;
       destination=0;
     }else{
-      /* Ab dem ersten Zielfeld ist die Figur geparkt und zieht nicht weiter. */
-      if(progress>=40)return;
+      /* Zielfelder a–d werden einzeln gezählt und brauchen den passenden Wurf. */
       destination=progress+diceValue;
       if(destination>43)return;
     }
 
-    /* Auf einem Feld darf nur eine eigene Figur stehen. Überspringen ist erlaubt. */
-    if(destination<=39){
-      const target=(START_INDEX[player.color]+destination)%40;
-      const occupied=player.pieces.some((other,otherIndex)=>
-        otherIndex!==pieceIndex&&other>=0&&other<=39&&
-        (START_INDEX[player.color]+other)%40===target
-      );
-      if(occupied)return;
-    }else if(destination<=43){
-      const occupied=player.pieces.some((other,otherIndex)=>
-        otherIndex!==pieceIndex&&other===destination
-      );
-      if(occupied)return;
-    }
+    if(ownFieldBlocked(player,pieceIndex,destination))return;
     result.push(pieceIndex);
   });
+
+  /* Solange Figuren auf den B-Feldern warten, darf keine eigene Figur auf dem
+     A-Feld stehen bleiben. Mit einer 6 kommt zuerst eine neue Figur heraus;
+     steht dort schon eine eigene Figur, muss diese die 6 ziehen. */
+  if(player.pieces.includes(-1)){
+    const homeMove=result.find(index=>player.pieces[index]===-1);
+    const startMove=result.find(index=>player.pieces[index]===0);
+    if(diceValue===6&&homeMove!==undefined)return [homeMove];
+    if(startMove!==undefined)return [startMove];
+  }
   return result;
 }
 
@@ -612,7 +626,8 @@ function renderTokens(){
       circle.appendChild(title);
       tokensGroup.appendChild(circle);
 
-      const number=svgElement("text",{x:cx,y:cy,class:"token-number"});
+      const number=svgElement("text",{x:cx,y:cy,class:"token-number",
+        style:"fill:"+COLORS[player.color].ink});
       number.textContent=pieceIndex+1;
       tokensGroup.appendChild(number);
     });
@@ -736,8 +751,11 @@ function rollDice(){
       updateTurn();
 
       const player=players[currentPlayer];
-      const hasPieceInPlay=player.pieces.some(value=>value>=0&&value<40);
-      if(diceValue!==6&&!hasPieceInPlay&&!extraRoll){
+      /* Dreimal würfeln nur, wenn keine Figur auf der Laufbahn steht und auch
+         keine Figur im Ziel noch vorrücken könnte. */
+      const onTrack=player.pieces.some(value=>value>=0&&value<=39);
+      const laneCanAdvance=player.pieces.some(value=>value>=40&&value<43);
+      if(diceValue!==6&&!onTrack&&!laneCanAdvance&&!extraRoll){
         rollAttempts++;
         if(rollAttempts<3){
           message.textContent="Keine Sechs! Noch "+(3-rollAttempts)+" Wurfversuch(e).";
@@ -830,7 +848,7 @@ function nextPlayer(){
   rollAttempts=0;
   rolling=false;
   turnLocked=false;
-  message.textContent="Würfle eine Sechs, um eine Figur herauszubringen!";
+  message.textContent="Du bist am Zug – würfle!";
   showDie(null);
   updateAll();
 }

@@ -70,9 +70,35 @@
     return { raum: raum, id: id };
   }
 
+  /* Ein frisches Geheimnis, bevor der erste Beitritt hinausgeht. Ohne das
+     legte der Server den Platz mit einem eigenen Token an; ein zweiter,
+     fast gleichzeitiger Ruf (Lebenszeichen direkt nach dem Beitritt) kannte
+     es noch nicht und lief in eine 403. */
+  function neuesToken() {
+    var text = "";
+    try {
+      var puffer = new Uint8Array(16);
+      (window.crypto || window.msCrypto).getRandomValues(puffer);
+      for (var i = 0; i < puffer.length; i++) {
+        text += ("0" + puffer[i].toString(16)).slice(-2);
+      }
+    } catch (e) {
+      text = "";
+    }
+    if (text.length < 16) {
+      text = String(Date.now()) + Math.random().toString(36).slice(2);
+    }
+    return text;
+  }
+
   function mitToken(adresse, optionen) {
     var teile = ausAnfrage(adresse, optionen);
     var token = tokenFuer(teile.raum, teile.id);
+    if (!token && adresse.indexOf("/api/presence") >= 0 && teile.raum && teile.id) {
+      // Vor dem ersten Ruf erzeugen und merken: beide Rufe schicken dasselbe.
+      token = neuesToken();
+      merkeToken(teile.raum, teile.id, token);
+    }
     if (!token || /[?&]token=/.test(adresse)) {
       return adresse;
     }

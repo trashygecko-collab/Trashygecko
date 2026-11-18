@@ -742,7 +742,7 @@ async function nameUebernehmen(mitFokus){
  try{
   const p=await fetch("/api/presence",{
    method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName()})
+   body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),umbenennen:true})
   });
   const vergeben=await p.json().catch(()=>({}));
   if(p.ok&&vergeben&&vergeben.name){
@@ -803,7 +803,7 @@ async function join(roomDisplayName){
   // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
   // "Spieler1" …). Den zeigen wir an und behalten ihn.
   const vergeben=await p.json().catch(()=>({}));
-  if(vergeben&&vergeben.name&&!nameField.value.trim()){
+  if(vergeben&&vergeben.name&&vergeben.name!==nameField.value.trim()){
    nameField.value=vergeben.name;
    try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
   }
@@ -812,6 +812,8 @@ async function join(roomDisplayName){
   // im Raum landet, statt den Namen erneut zu verlangen.
   try{ sessionStorage.setItem("tg-room",code); }catch(e){}
   lastChatSignature="";
+  letzteChatZeile="";
+  chatSprungBereit=false;
   // Kein "Verbunden · …" mehr – der Status bleibt für Hinweise frei.
   setRoomStatus("");
   document.getElementById("modusbox").hidden=false;
@@ -895,6 +897,17 @@ async function heartbeat(){
    body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),active})
   });
   ok=r.ok;
+  if(ok){
+   // Der Admin darf mitten in der Partie umbenennen: Der Name vom Server
+   // gilt, auch wenn hier noch der alte steht.
+   const vergeben=await r.json().catch(()=>null);
+   if(vergeben&&vergeben.name&&vergeben.name!==nameField.value){
+    nameField.value=vergeben.name;
+    try{ sessionStorage.setItem("tg-player-name",vergeben.name); }catch(e){}
+    zeigeNamen();
+    refreshPlayers();
+   }
+  }
  }catch(e){ ok=false; }
  verbindungLaeuft=false;
  // Ein erfolgreiches Lebenszeichen räumt einen alten Fehler von selbst weg – höchstens
@@ -971,6 +984,31 @@ async function mutePlayer(targetId, minutes){
  }
 }
 
+// Der Admin ändert den Namen eines Spielers – auch mitten in einer laufenden
+// Partie. Der Server schreibt ihn sofort in den Raum und in alle Partien,
+// die Spielseiten zeigen ihn beim nächsten Abruf.
+async function spielerUmbenennen(zielID, alt){
+ if(!activeRoom||!isRoomOwner)return;
+ const neu=prompt("Neuer Name für "+alt+":",alt);
+ if(neu===null)return;
+ const name=neu.trim();
+ if(!name||name===alt)return;
+ try{
+  const r=await fetch("/api/umbenennen",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:activeRoom,id:sessionID,targetId:zielID,name})
+  });
+  if(!r.ok){
+   alert((await r.text())||"Umbenennen fehlgeschlagen.");
+   return;
+  }
+  await refresh();
+  await refreshPlayers();
+ }catch(e){
+  alert("Umbenennen fehlgeschlagen.");
+ }
+}
+
 async function loadMutes(){
  if(!activeRoom)return;
  const overview=document.getElementById("muteOverview");
@@ -1019,6 +1057,9 @@ let currentSchwimmenGame=null;
 let currentArschlochGame=null;
 let currentEinsxeinsGame=null;
 let currentSechsundsechzigGame=null;
+let currentGalgenGame=null;
+let currentBingoGame=null;
+let currentWortsucheGame=null;
 
 const SUPPORTED_GAMES = [
  { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/brettspiele/tictac/tictactoe.html", api: "/api/tictactoe" },
@@ -1050,6 +1091,9 @@ const SUPPORTED_GAMES = [
  { id: "arschloch", name: "Arschloch", path: "/spiele/kartenspiele/arschloch/arschloch.html", api: "/api/arschloch" },
  { id: "einsxeins", name: "1×1-Rennen", path: "/spiele/1x1/1x1.html", api: "/api/einsxeins" },
  { id: "sechsundsechzig", name: "Sechsundsechzig", path: "/spiele/kartenspiele/sechsundsechzig/sechsundsechzig.html", api: "/api/sechsundsechzig" },
+ { id: "galgen", name: "Galgenmännchen", path: "/spiele/brettspiele/galgen/galgen.html", api: "/api/galgen" },
+ { id: "bingo", name: "Bingo", path: "/spiele/brettspiele/bingo/bingo.html", api: "/api/bingo" },
+ { id: "wortsuche", name: "Wortsuche", path: "/spiele/brettspiele/wortsuche/wortsuche.html", api: "/api/wortsuche" },
  // Malen braucht keine Einladung: alle im Raum landen auf derselben Fläche.
  { id: "malen", name: "Malen", path: "/spiele/malen/malen.html", api: "" }
 ];
@@ -1236,6 +1280,9 @@ async function refreshGames(players, vorrang){
  await refreshSchwimmen(players);
  await refreshArschloch(players);
  await refreshEinsxeins(players);
+ await refreshGalgen(players);
+ await refreshBingo(players);
+ await refreshWortsuche(players);
  }finally{
   // Ab hier darf wieder sofort gezeichnet werden (z. B. aus einem Knopf).
   statusZyklus=false;
@@ -1283,6 +1330,9 @@ function gameStateFor(gameId){
  if(gameId==="arschloch")return currentArschlochGame;
  if(gameId==="einsxeins")return currentEinsxeinsGame;
  if(gameId==="sechsundsechzig")return currentSechsundsechzigGame;
+ if(gameId==="galgen")return currentGalgenGame;
+ if(gameId==="bingo")return currentBingoGame;
+ if(gameId==="wortsuche")return currentWortsucheGame;
  return currentTTTGame;
 }
 
@@ -2297,6 +2347,96 @@ async function refreshMuehle(players){
  }
 }
 
+// Galgenmännchen: ein gemeinsames Wort, reihum Buchstaben raten.
+async function refreshGalgen(players){
+ let game=null;
+ try{
+  const r=await fetch("/api/galgen?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!r.ok)throw Error();
+  game=(await r.json()).game;
+ }catch(e){
+  return;
+ }
+ currentGalgenGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  tttStatus(game.status==="spiel"
+   ? "Galgenmännchen läuft – "+game.spieler[game.zug].name+" rät, "+game.fehler+"/"+game.maxFehler+" Fehler."
+   : (game.note||"Galgenmännchen beendet."),"galgen");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("galgen")));
+  return;
+ }
+ tttStatus("Galgenmännchen: "+game.spieler.length+" am Tisch ("+game.varianteName+") – warte auf Bereitschaft.","galgen");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("galgen","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("galgen","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("galgen","start"))openGame(gamePath("galgen")); });
+ }
+}
+
+// Bingo: gemeinsame Karten, reihum zieht einer, wer zuerst eine Reihe hat, ruft Bingo.
+async function refreshBingo(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/bingo?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentBingoGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  tttStatus(game.status==="spiel"
+   ? "Bingo läuft – "+game.gezogen.length+" Zahlen gezogen, "+game.spieler[game.zug].name+" zieht als Nächstes."
+   : (game.note||"Bingo beendet."),"bingo");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("bingo")));
+  return;
+ }
+ tttStatus("Bingo: "+game.spieler.length+" am Tisch – warte auf Bereitschaft.","bingo");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("bingo","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("bingo","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("bingo","start"))openGame(gamePath("bingo")); });
+ }
+}
+
+// Wortsuche: gemeinsames Gitter, wer ein Wort zuerst findet, bekommt die Punkte.
+async function refreshWortsuche(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/wortsuche?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentWortsucheGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  tttStatus(game.status==="spiel"
+   ? "Wortsuche läuft – "+game.funde.length+"/"+game.worte.length+" Wörter, noch "+game.rest+" s."
+   : "Wortsuche beendet – "+game.funde.length+"/"+game.worte.length+" Wörter. "+(game.note||""),"wortsuche");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("wortsuche")));
+  return;
+ }
+ tttStatus("Wortsuche: "+game.spieler.length+" am Tisch – warte auf Bereitschaft.","wortsuche");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("wortsuche","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("wortsuche","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("wortsuche","start"))openGame(gamePath("wortsuche")); });
+ }
+}
+
 // Streichhölzer: abwechselnd 1 bis 3 nehmen, wer das letzte nimmt, verliert.
 async function refreshStreichholz(players){
  let game=null;
@@ -2627,6 +2767,21 @@ function rundeInhalt(box,players){
   zeile.textContent="Im Raum: "+wer;
   box.appendChild(zeile);
  }
+ // Der Admin kann jeden umbenennen – auch während einer Partie.
+ if(isRoomOwner){
+  const namen=document.createElement("p");
+  namen.className="runde-info";
+  players.filter(p=>p.id!==sessionID).forEach(p=>{
+   const b=document.createElement("button");
+   b.type="button";
+   b.className="sekundaer";
+   b.textContent="✎ "+p.name;
+   b.title="Namen ändern (Admin)";
+   b.onclick=()=>spielerUmbenennen(p.id,p.name);
+   namen.appendChild(b);
+  });
+  if(namen.children.length)box.appendChild(namen);
+ }
 
  // Malen wird wie jedes andere Spiel angeboten. Wer beitritt, malt auf der
  // gemeinsamen Fläche mit; die Karte im Chat öffnet das Brett.
@@ -2687,7 +2842,17 @@ function rundeInhalt(box,players){
  los.type="button";
  los.className="runde-starten";
  los.textContent="Runde anbieten";
- los.onclick=()=>angebotAktion("bieten",selectedGame);
+ los.onclick=async()=>{
+  const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
+  // Am Handy lässt der Browser einen neuen Tab nur im Klick selbst zu.
+  const tab=(!istPc()&&def)?window.open("","_blank"):null;
+  const ok=await angebotAktion("bieten",selectedGame);
+  if(ok&&def){
+   // Wer die Runde anbietet, sitzt schon am Tisch und bekommt das Feld gleich.
+   if(tab){ try{ tab.location.href=spielAdresse(def.path); }catch(e){} tab.focus&&tab.focus(); }
+   else openGame(def.path);
+  }else if(tab){ try{ tab.close(); }catch(e){} }
+ };
  box.appendChild(los);
 
  // Malen lässt sich zusätzlich ohne Angebot öffnen (gemeinsame Fläche).
@@ -2898,6 +3063,10 @@ async function refreshTicTacToe(players){
 }
 let chatBusy=false;
 let lastChatSignature="";
+/* Für den Sprung zum Chat: nur eine wirklich neue letzte Nachricht zählt,
+   nicht jedes Neuzeichnen (Status, Stummschaltung, laufende Runde). */
+let letzteChatZeile="";
+let chatSprungBereit=false;
 
 async function refresh(){
  if(!activeRoom||chatBusy)return;
@@ -2919,6 +3088,10 @@ async function refresh(){
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
   lastChatSignature=signature;
+  // Kennung der letzten Nachricht – daran hängt der Sprung zum Chat.
+  const letzteNachricht=msgs.length?msgs[msgs.length-1]:null;
+  const zeile=letzteNachricht?[letzteNachricht.senderId||"",letzteNachricht.time||"",
+   letzteNachricht.text||"",letzteNachricht.gameId||"",letzteNachricht.toId||""].join("|"):"";
   const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
   box.innerHTML="";
   msgs.forEach(m=>{
@@ -3137,6 +3310,19 @@ async function refresh(){
    box.appendChild(d);
   });
   if(atBottom)box.scrollTop=box.scrollHeight;
+  // Neue Nachricht: am Handy steht der Chat unter der Spielauswahl – die Seite
+  // holt ihn ins Bild, sobald er nicht ohnehin zu sehen ist. Beim ersten
+  // Zeichnen nach dem Beitritt bleibt die Ansicht, wo sie ist.
+  if(chatSprungBereit&&zeile&&zeile!==letzteChatZeile){
+   const chatbox=document.getElementById("chatbox");
+   if(chatbox&&!chatbox.hidden){
+    const rect=chatbox.getBoundingClientRect();
+    const imBild=rect.top>=-8&&rect.bottom<=window.innerHeight+8;
+    if(!imBild)chatbox.scrollIntoView({behavior:"smooth",block:"start"});
+   }
+  }
+  letzteChatZeile=zeile;
+  chatSprungBereit=true;
  }catch(e){
  }finally{
   chatBusy=false;

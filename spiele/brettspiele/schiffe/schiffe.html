@@ -12,7 +12,7 @@
 body{margin:0;padding:10px 12px 26px;color:#e6f0f6;
  background:radial-gradient(circle 900px at 50% -6%,#1c4a66 0%,#123a52 46%,#0a2433 100%) fixed;
  font:16px var(--tg-schrift)}
-main{max-width:720px;margin:auto}
+main{max-width:900px;margin:auto}
 h1{color:#dceef8;text-align:center;font-size:clamp(19px,4.4vw,26px);
  font-weight:normal;letter-spacing:.14em;margin:6px 0 14px}
 h2{font-size:17px;margin:0 0 10px;color:#dceef8;font-weight:normal;letter-spacing:.08em}
@@ -29,31 +29,117 @@ button.still{background:#0f3346;border-color:#8fc0d766}
 small,.klein{color:#a6c6d6;font-size:13px}
 a{color:#d8ecf6}
 
-/* Felder */
+/* Raster */
 .brett-block{margin-top:6px}
 .brett-kopf{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
 .brett-kopf .wer{color:#dceef8}
 .brett-kopf .wer b{color:#f0d59a;font-weight:normal}
-.spalten,.feld-zeile{display:grid;grid-template-columns:16px repeat(10,1fr);gap:2px}
-.spalten{margin-bottom:2px}
-.spalten span{font-size:10px;color:#8fb3c6;text-align:center}
-.feld-zeile{margin-bottom:2px}
-.feld-zeile .nr{font-size:10px;color:#8fb3c6;display:flex;align-items:center;justify-content:center}
-.zelle{aspect-ratio:1;border:1px solid #0c2c3e;border-radius:3px;background:#174d68;
- display:flex;align-items:center;justify-content:center;font-size:13px;color:#a6c6d6;padding:0;
- font-family:inherit;cursor:default;transition:background .12s}
-.zelle.schiff{background:#b9d3e2;border-color:#8fb3c6}
+.brett-rahmen{width:100%;max-width:min(520px,calc(100vh - 250px));max-width:min(520px,calc(100svh - 250px));
+ margin:0 auto}
+.spalten{display:grid;grid-template-columns:14px 1fr}
+.buchstaben{display:grid;grid-template-columns:repeat(10,1fr);font-size:10px;color:#8fb3c6;text-align:center}
+.brett-zeile{display:grid;grid-template-columns:14px 1fr}
+.nr-spalte{display:grid;grid-template-rows:repeat(10,1fr);font-size:10px;color:#8fb3c6}
+.nr-spalte span{display:flex;align-items:center;justify-content:center}
+.brett{position:relative;aspect-ratio:1/1;width:100%;touch-action:manipulation}
+.gitter{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);
+ background:#0c2c3e;border:1px solid #0c2c3e;border-radius:5px;overflow:hidden}
+.zelle{background:#174d68;border:0;border-right:1px solid #0c2c3e;border-bottom:1px solid #0c2c3e;
+ border-radius:0;padding:0;margin:0;font:inherit;color:#a6c6d6;display:flex;align-items:center;justify-content:center;cursor:default}
 .zelle.ziel{cursor:pointer}
 .zelle.ziel:hover{background:#24708f}
-.zelle.treffer{background:#e2634f;border-color:#b23a2c;color:#fff}
-.zelle.wasser{background:#0f3346;color:#5c8296}
-.zelle.wasser:after{content:"•";font-size:18px;line-height:1}
-.zelle.versenkt{background:#a8392b;border-color:#7d2a20;color:#fff}
-.zelle.marker{outline:2px solid #f0d59a;outline-offset:-2px}
-.zelle.versenkt:after{content:"✕";font-size:13px;line-height:1;color:#ffe2da}
-.zelle.treffer:after{content:"●";font-size:11px;line-height:1;color:#fff2ee}
+.zelle.belegt{background:#2a6d8b}
+.zelle.treffer{background:#e2634f}
+.zelle.wasser{background:#0f3346}
+.zelle.versenkt{background:#a8392b}
+.zelle.vorschau-ok{background:#1f7a4d}
+.zelle.vorschau-nein{background:#8c2f24}
+.lage,.marken,.linien{position:absolute;inset:0;pointer-events:none}
+.lage{z-index:2;overflow:hidden;border-radius:5px}
+/* Rasterlinien über den Schiffen, damit die Kästchen immer erkennbar bleiben */
+.linien{z-index:3;background-image:
+ repeating-linear-gradient(to right,#0c2c3e 0 1px,transparent 1px 10%),
+ repeating-linear-gradient(to bottom,#0c2c3e 0 1px,transparent 1px 10%)}
+.marken{z-index:4}
+.schiff{position:absolute;transform-origin:center center}
+.schiff img{width:100%;height:100%;object-fit:contain;display:block;
+ filter:drop-shadow(0 1px 2px #0009)}
+.schiff.ghost{opacity:.6}
+.schiff.ghost.ungueltig{opacity:.45}
+.schiff.gesetztbild{filter:none}
+.schiff.versenkt img{filter:grayscale(.6) brightness(.6) drop-shadow(0 1px 2px #0009)}
+.marke{position:absolute;width:10%;height:10%;display:flex;align-items:center;justify-content:center;
+ font-size:12px;line-height:1;font-weight:bold;text-shadow:0 0 3px #05141d,0 1px 2px #05141d}
+.marke.wasser{color:#7fa6ba}
+.marke.treffer{color:#fff4f0}
+.marke.versenkt{color:#ffe2da}
 
-/* Flotte */
+/* Spielphase: Gegnerfeld oben, eigenes Feld unten, Sprüche dazwischen.
+   Die Höhe bestimmt die Feldgröße, damit beide Felder samt Spruchband sichtbar bleiben. */
+#spiel{display:flex;flex-direction:column;align-items:center}
+#spiel .brett-block{margin-top:10px;width:100%}
+#spiel .brett-block.feind{margin-top:4px}
+#spiel .brett-rahmen{max-width:min(520px,calc((100svh - 300px)/2),100%)}
+
+/* Spruchband */
+.spruch{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+ max-width:min(520px,calc((100svh - 300px)/2),100%);height:76px;margin:10px auto 0;
+ padding:8px 12px;border-radius:9px;border:1px solid #8fc0d74d;
+ background:linear-gradient(180deg,#10445c,#0a2c3e);color:#eaf6fc;text-align:center;
+ box-shadow:0 1px 0 #ffffff10 inset,0 3px 12px #02101855;overflow:hidden;
+ transition:opacity .55s ease}
+.spruch.alt{opacity:.62}
+.spruch-emoji{font-size:21px;line-height:1;flex:0 0 auto;filter:drop-shadow(0 1px 2px #0009)}
+.spruch-text{font-size:clamp(12.5px,calc(.55vw + 10px),15.5px);line-height:1.34;
+ display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.spruch-text.neu{animation:spruchRein .36s ease-out}
+@keyframes spruchRein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* Querformat (Handy): Felder links und rechts, die Sprüche dazwischen */
+@media (orientation:landscape) and (max-height:560px){
+ h1{font-size:18px;margin:2px 0 6px}
+ #spiel{display:grid;grid-template-columns:1fr minmax(110px,.55fr) 1fr;gap:6px 12px;align-items:start}
+ #spiel .brett-block{margin-top:0;width:100%}
+ .brett-rahmen,#spiel .brett-rahmen,#setzBrett .brett-rahmen{max-width:min(calc(100vh - 120px),42vw);max-width:min(calc(100svh - 120px),42vw)}
+ .spruch{grid-column:2;grid-row:1;flex-direction:column;gap:6px;height:calc(100svh - 200px);
+  max-width:100%;min-height:90px;margin-top:0;padding:8px}
+ .spruch-text{font-size:12.5px;line-height:1.3}
+ #spiel .meldung,#spiel .note,#spiel .fehler,#spiel .legende{grid-column:1 / -1}
+ .brett-block{margin-top:0}
+}
+
+/* Flottenaufstellung */
+.setz-layout{display:flex;flex-direction:column;gap:12px}
+.setz-palette{order:0}
+.setz-brett{order:1;width:100%}
+@media(min-width:800px){
+ .setz-layout{flex-direction:row;align-items:flex-start;justify-content:center;gap:18px}
+ .setz-brett{order:0;flex:1 1 auto}
+ .setz-palette{order:1;flex:0 0 300px}
+}
+.palette-kopf{font-size:13px;letter-spacing:.06em;color:#dceef8;margin-bottom:6px;display:flex;
+ justify-content:space-between;gap:8px;align-items:baseline}
+.flotte-liste{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
+@media(min-width:800px){.flotte-liste{flex-direction:column;overflow:visible}}
+.schiff-chip{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;
+ border:1px solid #8fc0d766;background:#0f334699;color:#e6f0f6;font:inherit;font-size:13px;
+ min-height:52px;text-align:left;cursor:pointer}
+.schiff-chip:hover:not(:disabled){background:#1b5673}
+.schiff-chip.wahl{border-color:#f0d59a;background:#1b5673;box-shadow:0 0 0 2px #f0d59a55 inset}
+.schiff-chip.gesetzt{border-color:#7fd8a8}
+.schiff-chip img{height:30px;width:auto;max-width:72px;object-fit:contain;flex:0 0 auto;
+ filter:drop-shadow(0 1px 2px #0008)}
+.chip-text{display:flex;flex-direction:column;gap:1px;line-height:1.15}
+.chip-name{white-space:nowrap}
+.chip-text .stand{font-size:11px;color:#a6c6d6}
+.schiff-chip.gesetzt .stand{color:#9ce6bf}
+.chip-text .laenge{color:#f0d59a}
+.palette-knoepfe{margin-top:8px}
+.hinweis-klein{margin-top:8px;font-size:12px;color:#a6c6d6;min-height:16px}
+.fest-banner{margin-top:10px;padding:8px 12px;border-radius:7px;border:1px solid #7fd8a8;
+ background:#0f3a2e88;color:#c8f4dd;font-size:14px}
+
+/* Flotte (Bestandsliste) */
 .flotte{display:grid;gap:5px;margin:10px 0 0}
 .flotte div{display:flex;justify-content:space-between;gap:8px;font-size:14px;
  border-bottom:1px solid #8fc0d733;padding:5px 0}
@@ -112,51 +198,60 @@ a{color:#d8ecf6}
 </section>
 
 <section id="setzen" hidden>
- <div class="brett-block">
-  <div class="brett-kopf">
-   <span class="wer">Dein Feld – <b>Schiffe setzen</b></span>
-   <span class="klein" id="setzHinweis"></span>
+ <div class="brett-kopf">
+  <span class="wer">Dein Feld – <b>Flotte aufstellen</b></span>
+  <span class="klein" id="setzHinweis"></span>
+ </div>
+ <div class="setz-layout">
+  <div class="setz-brett" id="setzBrett"></div>
+  <div class="setz-palette">
+   <div class="palette-kopf"><span>Flotte</span><span class="klein" id="flottenZaehler"></span></div>
+   <div class="flotte-liste" id="flotteListe"></div>
+   <div class="zeile palette-knoepfe">
+    <button id="btnDrehen" class="still" type="button">Drehen (R)</button>
+    <button id="btnSetzenSchiff" class="haupt" type="button" disabled>Schiff setzen</button>
+   </div>
+   <div class="hinweis-klein" id="auswahlInfo"></div>
   </div>
-  <div class="spalten" id="spaltenOben"></div>
-  <div id="feldEigenSetzen"></div>
  </div>
- <div class="flotte" id="flotteListe"></div>
- <div class="zeile" style="margin-top:10px">
-  <button id="btnDrehen" class="still">Drehen (R)</button>
-  <button id="btnLeeren" class="still">Zurücksetzen</button>
-  <button id="btnFertig" class="haupt">Flotte bestätigen</button>
+ <div class="zeile" style="margin-top:12px">
+  <button id="btnLeeren" class="still" type="button">Zurücksetzen</button>
+  <button id="btnFertig" class="haupt" type="button" disabled>Flotte fertig – Spiel bereit</button>
  </div>
+ <div id="festBanner" class="fest-banner" hidden></div>
  <div class="note" id="setzNote"></div>
  <div class="fehler" id="fehlerSetzen"></div>
 </section>
 
 <section id="spiel" hidden>
- <div class="brett-block">
+ <div class="brett-block feind">
   <div class="brett-kopf">
    <span class="wer">Gegner: <b id="feindName">–</b></span>
    <span class="klein" id="feindInfo"></span>
   </div>
-  <div class="spalten" id="spaltenFeind"></div>
-  <div id="feldFeind"></div>
+  <div id="spielFeind"></div>
  </div>
 
- <div class="brett-block" style="margin-top:16px">
+ <div class="spruch" id="spruch" aria-live="polite">
+  <span class="spruch-emoji" id="spruchEmoji" aria-hidden="true">💬</span>
+  <span class="spruch-text" id="spruchText">Die Sprüche stehen bereit – schieß los!</span>
+ </div>
+
+ <div class="brett-block eigen">
   <div class="brett-kopf">
    <span class="wer">Dein Feld</span>
    <span class="klein" id="eigenInfo"></span>
   </div>
-  <div class="spalten" id="spaltenEigen"></div>
-  <div id="feldEigen"></div>
+  <div id="spielEigen"></div>
  </div>
 
  <div class="meldung" id="meldung" hidden></div>
  <div class="note" id="note"></div>
  <div class="fehler" id="fehlerSpiel"></div>
  <div class="legende">
-  <span><i class="punkt" style="background:#b9d3e2"></i>eigenes Schiff</span>
+  <span><i class="punkt" style="background:#0f3346;border:1px solid #5c8296"></i>Wasser</span>
   <span><i class="punkt" style="background:#e2634f"></i>Treffer</span>
   <span><i class="punkt" style="background:#a8392b"></i>versenkt</span>
-  <span><i class="punkt" style="background:#0f3346;border:1px solid #5c8296"></i>Wasser</span>
  </div>
 </section>
 
@@ -173,9 +268,9 @@ a{color:#d8ecf6}
  <h2>Regeln</h2>
  <ol>
   <li><b>Ziel:</b> Als Erster alle fünf Schiffe des Gegners versenken. Gespielt wird zu zweit über den Connector, jeder auf seinem eigenen 10 × 10-Feld.</li>
-  <li><b>Flotte:</b> Ein Schlachtschiff (5 Felder), ein Kreuzer (4), zwei Zerstörer (3) und ein U-Boot (2) – insgesamt 17 Trefferflächen.</li>
-  <li><b>Setzen:</b> Erst setzt jeder seine Schiffe auf das untere, eigene Feld. Mit <b>Drehen</b> (oder der Taste R) wechselt die Richtung zwischen waagerecht und senkrecht, mit <b>Zurücksetzen</b> fängst du neu an. Schiffe dürfen sich nicht berühren und nicht über den Rand ragen.</li>
-  <li><b>Start:</b> Das Gefecht beginnt, sobald beide Flotten bestätigt sind. Der Gastgeber schießt zuerst.</li>
+  <li><b>Flotte:</b> Flugzeugträger (5 Felder), Schlachtschiff (4), Zerstörer (3), Patrouillenboot (3) und Badeente (2) – insgesamt 17 Trefferflächen.</li>
+  <li><b>Setzen:</b> Erst stellt jeder seine Flotte auf. Schiff in der Flottenanzeige antippen, mit <b>Drehen</b> (oder der Taste R) die Richtung wechseln, auf dem Feld die Position wählen – grün heißt gültig, rot geht nicht – und dann <b>Schiff setzen</b> drücken. Ein gesetztes Schiff lässt sich erneut antippen und verschieben. Ganz zum Schluss <b>Flotte fertig – Spiel bereit</b>. Schiffe dürfen sich nicht überschneiden und nicht über den Rand ragen.</li>
+  <li><b>Start:</b> Das Gefecht beginnt, sobald beide Flotten fertig sind. Der Gastgeber schießt zuerst.</li>
   <li><b>Schießen:</b> Du klickst auf ein Feld im oberen, gegnerischen Raster. Ein <b>Treffer</b> bringt eine Lobrede und du darfst sofort noch einmal schießen; bei <b>Wasser</b> gibt es einen Pech-Spruch und der Gegner ist dran.</li>
   <li><b>Aufdecken:</b> Treffer siehst du als einzelne rote Felder. Erst wenn ein Schiff <b>komplett versenkt</b> ist, wird es ganz aufgedeckt und du erfährst seinen Namen.</li>
   <li><b>Ende:</b> Wer zuerst alle Schiffe des Gegners versenkt hat, gewinnt. „Neue Partie" setzt beide Flotten zurück.</li>
@@ -192,32 +287,33 @@ const NAME=params.get("name")||"Spieler";
 const ONLINE=!!(ROOM&&ID);
 
 const GROESSE=10;
-const FLOTTE=[
- {laenge:5,name:"Schlachtschiff"},
- {laenge:4,name:"Kreuzer"},
- {laenge:3,name:"Zerstörer"},
- {laenge:3,name:"Zerstörer"},
- {laenge:2,name:"U-Boot"}
-];
 const SPALTEN="ABCDEFGHIJ".split("");
+const BILDER="bilder/";
+/* Flotte wie auf dem Server: 5, 4, 3, 3, 2 – insgesamt 17 Trefferflächen. */
+const SCHIFFE=[
+ {laenge:5,name:"Flugzeugträger",bild:"flugzeugtraeger.png"},
+ {laenge:4,name:"Schlachtschiff",bild:"schlachtschiff.png"},
+ {laenge:3,name:"Zerstörer",bild:"zerstoerer.png"},
+ {laenge:3,name:"Patrouillenboot",bild:"patrouillenboot.png"},
+ {laenge:2,name:"Badeente",bild:"ente.png"}
+];
+const NACH_LAENGE={5:["flugzeugtraeger.png"],4:["schlachtschiff.png"],3:["zerstoerer.png","patrouillenboot.png"],2:["ente.png"]};
 
 const $=id=>document.getElementById(id);
 let game=null;
 let letzteDaten="";
 let fehlerTimer=0;
 
-// Setzphase (lokal, bis der Server die Flotte kennt)
-let platzierung=[];      // [{x,y,laenge,waagerecht}]
-let waagerecht=true;
+/* Aufstellung (lokal, bis der Server die Flotte kennt) */
+let setzung=SCHIFFE.map(()=>null);   // je Schiff {x,y,waagerecht} oder null
+let auswahl=0;                        // ausgewähltes Schiff
+let richtung=true;                    // true = waagerecht
+let vorschau=null;                    // {x,y}
 
 function zeige(id,an){ $(id).hidden=!an; }
 function sichtbar(id){ return !$(id).hidden; }
 function escapeHtml(t){
- return String(t||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-}
-function schiffName(laenge){
- const s=FLOTTE.find(f=>f.laenge===laenge);
- return s?s.name:"Schiff";
+ return String(t||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 }
 
 function fehler(text){
@@ -226,6 +322,8 @@ function fehler(text){
  clearTimeout(fehlerTimer);
  fehlerTimer=setTimeout(()=>{box.textContent="";},7000);
 }
+
+/* ---------------------------------------------------------- Server */
 
 async function holen(){
  if(!ONLINE)return;
@@ -238,7 +336,10 @@ async function holen(){
   if(roh===letzteDaten)return;
   letzteDaten=roh;
   game=d.game||null;
-  if(game&&game.status!=="setzen"&&game.status!=="invited"){ platzierung=[]; }
+  if(!game||(game.status!=="setzen"&&game.status!=="invited")){
+   setzung=SCHIFFE.map(()=>null); vorschau=null;
+   try{ sessionStorage.removeItem(entwurfSchluessel()); }catch(e){}
+  }
   zeichne();
  }catch(e){
   $("note").textContent="Verbindung sucht …";
@@ -266,57 +367,839 @@ async function tu(aktion,daten){
 }
 
 function meinSitz(){
- if(!game)return -1;
+ if(!game||!game.spieler)return -1;
  return game.spieler.findIndex(p=>p.id===ID);
 }
 function ich(){ const s=meinSitz(); return s<0?null:game.spieler[s]; }
 function meinZug(){ return game&&game.status==="spiel"&&game.zugId===ID; }
+function istFest(){ return !!(game&&game.eigen&&game.eigen.fertig); }
 
-// ---------------------------------------------------------------- Raster
+/* ---------------------------------------------------------- Aufstellung */
 
-function spaltenHtml(){
- return '<span></span>'+SPALTEN.map(b=>"<span>"+b+"</span>").join("");
+function zellenVon(laenge,x,y,waagerecht){
+ const out=[];
+ for(let k=0;k<laenge;k++) out.push(waagerecht?[x+k,y]:[x,y+k]);
+ return out;
 }
+function zellen(i,x,y,waagerecht){ return zellenVon(SCHIFFE[i].laenge,x,y,waagerecht); }
 
-function rasterHtml(cls, inhalt, klickbar){
- let html="";
- for(let y=0;y<GROESSE;y++){
-  html+='<div class="feld-zeile"><span class="nr">'+(y+1)+'</span>';
-  for(let x=0;x<GROESSE;x++){
-   const art=inhalt(x,y);
-   const ziel=klickbar?" ziel":"";
-   html+='<button class="zelle '+art+ziel+'" data-x="'+x+'" data-y="'+y+'"'+(klickbar?'':" disabled")+'></button>';
-  }
-  html+='</div>';
+/* Ist die Position frei? Geprüft werden Rand und die bereits festgelegten Schiffe. */
+function frei(i,x,y,waagerecht){
+ const z=zellen(i,x,y,waagerecht);
+ for(const [zx,zy] of z){
+  if(zx<0||zy<0||zx>=GROESSE||zy>=GROESSE)return false;
  }
- return html;
+ for(let j=0;j<SCHIFFE.length;j++){
+  if(j===i||!setzung[j])continue;
+  const s=setzung[j];
+  for(const [zx,zy] of zellen(j,s.x,s.y,s.waagerecht)){
+   for(const [ax,ay] of z){ if(ax===zx&&ay===zy)return false; }
+  }
+ }
+ return true;
+}
+function vorschauOk(){
+ return !!(vorschau&&frei(auswahl,vorschau.x,vorschau.y,richtung));
+}
+function alleGesetzt(){ return setzung.every(Boolean); }
+
+function entwurfSchluessel(){ return "tg-schiffe:"+ROOM+":"+ID; }
+function entwurfSichern(){
+ try{ sessionStorage.setItem(entwurfSchluessel(),JSON.stringify({setzung,auswahl,richtung})); }catch(e){}
+}
+function entwurfLaden(){
+ try{
+  const d=JSON.parse(sessionStorage.getItem(entwurfSchluessel())||"null");
+  if(!d||!Array.isArray(d.setzung)||d.setzung.length!==SCHIFFE.length)return;
+  const neu=SCHIFFE.map(()=>null);
+  let gut=true;
+  d.setzung.forEach((s,i)=>{
+   if(!s)return;
+   if(typeof s.x!=="number"||typeof s.y!=="number"){ gut=false; return; }
+   const w=s.waagerecht!==false;
+   const z=zellenVon(SCHIFFE[i].laenge,s.x,s.y,w);
+   for(const [x,y] of z){ if(x<0||y<0||x>=GROESSE||y>=GROESSE)gut=false; }
+   neu[i]={x:s.x,y:s.y,waagerecht:w};
+  });
+  /* doppelte Belegung entsorgt den Entwurf */
+  if(gut){
+   const belegt={};
+   neu.forEach((s,i)=>{
+    if(!s)return;
+    for(const [x,y] of zellenVon(SCHIFFE[i].laenge,s.x,s.y,s.waagerecht)){
+     if(belegt[x+","+y])gut=false;
+     belegt[x+","+y]=1;
+    }
+   });
+  }
+  if(!gut)return;
+  setzung=neu;
+  auswahl=Math.min(Math.max(0,d.auswahl|0),SCHIFFE.length-1);
+  richtung=d.richtung!==false;
+ }catch(e){}
 }
 
-// Eigenes Feld während des Setzens: platzierte Schiffe + Vorschau
-function rasterSetzenHtml(){
- const belegt={};
- platzierung.forEach((s,i)=>{
-  for(let k=0;k<s.laenge;k++){
-   const x=s.waagerecht?s.x+k:s.x;
-   const y=s.waagerecht?s.y:s.y+k;
-   belegt[x+","+y]=i;
+/* ---------------------------------------------------------- Brett aufbauen */
+
+function rahmenHtml(feld){
+ let s='<div class="brett-rahmen">';
+ s+='<div class="spalten"><span></span><div class="buchstaben">'+SPALTEN.map(b=>"<span>"+b+"</span>").join("")+"</div></div>";
+ s+='<div class="brett-zeile"><div class="nr-spalte">';
+ for(let i=1;i<=GROESSE;i++)s+="<span>"+i+"</span>";
+ s+='</div><div class="brett" id="brett-'+feld+'">';
+ s+='<div class="gitter" id="gitter-'+feld+'"></div>';
+ s+='<div class="lage" id="lage-'+feld+'"></div>';
+ s+='<div class="linien"></div>';
+ s+='<div class="marken" id="marken-'+feld+'"></div>';
+ s+='</div></div></div>';
+ return s;
+}
+
+function gitterFuellen(feld,klasseFn,klickbar){
+ const g=$("gitter-"+feld); if(!g)return;
+ let h="";
+ for(let y=0;y<GROESSE;y++){
+  for(let x=0;x<GROESSE;x++){
+   const extra=klasseFn?klasseFn(x,y):"";
+   h+='<button type="button" class="zelle'+(klickbar?" ziel":"")+(extra?" "+extra:"")+'" data-x="'+x+'" data-y="'+y+'"></button>';
   }
+ }
+ g.innerHTML=h;
+}
+
+function zelleBei(feld,x,y){
+ return $("gitter-"+feld).querySelector('.zelle[data-x="'+x+'"][data-y="'+y+'"]');
+}
+
+/* Seitenverhältnis der Grafiken (Breite/Höhe) – daraus folgt, wie hoch ein Schiff im Feld wird. */
+const SEITEN={
+ "flugzeugtraeger.png":914/340,
+ "schlachtschiff.png":579/350,
+ "zerstoerer.png":633/249,
+ "patrouillenboot.png":339/162,
+ "patrouillenboot-11.png":372/150,
+ "uboot.png":451/240,
+ "ente.png":154/110,
+ "kleines-boot.png":195/110
+};
+/* So viele Kästchen darf ein Schiff nach oben überstehen (Aufbauten). */
+const MAX_HOEHE=2.2;
+
+/* Schiff als Bild: Länge = Kästchenzahl, Höhe aus dem Seitenverhältnis.
+   Die Wasserlinie sitzt unten im Kästchen, Aufbauten ragen nach oben darüber.
+   Senkrecht wird die Grafik um 90° gedreht (Wasserlinie links, Aufbauten rechts). */
+function schiffPlatzieren(feld,x,y,laenge,waagerecht,bild,klasse){
+ const lage=$("lage-"+feld); if(!lage)return null;
+ const seite=SEITEN[bild]||2.5;
+ let dicke=laenge/seite;
+ let lang=laenge;
+ if(dicke>MAX_HOEHE){ dicke=MAX_HOEHE; lang=Math.min(laenge,dicke*seite); }
+ const d=document.createElement("div");
+ d.className="schiff"+(klasse?" "+klasse:"");
+ if(waagerecht){
+  d.style.left=(x*10+(laenge-lang)*5)+"%";
+  d.style.width=(lang*10)+"%";
+  d.style.height=(dicke*10)+"%";
+  d.style.top=((y+1)*10-dicke*10)+"%";
+ }else{
+  /* Senkrecht: Wasserlinie an die Spaltenkante, Aufbauten zeigen zur Spielfeldmitte,
+     damit an den Rändern nichts abgeschnitten wird. */
+  const nachLinks=x>=GROESSE/2;
+  const cx=nachLinks?((x+1)*10-dicke*5):(x*10+dicke*5);
+  const cy=(y+laenge/2)*10;
+  d.style.left=(cx-lang*5)+"%";
+  d.style.top=(cy-dicke*5)+"%";
+  d.style.width=(lang*10)+"%";
+  d.style.height=(dicke*10)+"%";
+  d.style.transform=nachLinks?"rotate(-90deg)":"rotate(90deg)";
+ }
+ const img=document.createElement("img");
+ img.src=BILDER+bild; img.alt=""; img.draggable=false;
+ d.appendChild(img);
+ lage.appendChild(d);
+ return d;
+}
+
+function markeSetzen(feld,x,y,art){
+ const box=$("marken-"+feld); if(!box)return;
+ const d=document.createElement("div");
+ d.className="marke "+art;
+ d.style.left=(x*10)+"%"; d.style.top=(y*10)+"%";
+ d.textContent=art==="wasser"?"•":(art==="treffer"?"●":"✕");
+ box.appendChild(d);
+}
+
+/* ---------------------------------------------------------- Setzphase */
+
+function vorschauWeg(){
+ const g=$("gitter-setzen"); if(!g)return;
+ g.querySelectorAll(".vorschau-ok,.vorschau-nein").forEach(c=>c.classList.remove("vorschau-ok","vorschau-nein"));
+ const lage=$("lage-setzen"); if(!lage)return;
+ lage.querySelectorAll(".ghost").forEach(e=>e.remove());
+}
+
+function vorschauZeichnen(){
+ if(!vorschau||istFest())return;
+ const ok=vorschauOk();
+ schiffPlatzieren("setzen",vorschau.x,vorschau.y,SCHIFFE[auswahl].laenge,richtung,
+  SCHIFFE[auswahl].bild,"ghost"+(ok?"":" ungueltig"));
+ zellen(auswahl,vorschau.x,vorschau.y,richtung).forEach(([x,y])=>{
+  const c=zelleBei("setzen",x,y);
+  if(c)c.classList.add(ok?"vorschau-ok":"vorschau-nein");
  });
- const inhalt=(x,y)=>belegt[x+","+y]!==undefined?"schiff":"";
- let html="";
- for(let y=0;y<GROESSE;y++){
-  html+='<div class="feld-zeile"><span class="nr">'+(y+1)+'</span>';
-  for(let x=0;x<GROESSE;x++){
-   const art=inhalt(x,y);
-   const cls=art==="schiff"?"schiff":"";
-   html+='<button class="zelle '+cls+' ziel" data-x="'+x+'" data-y="'+y+'"></button>';
-  }
-  html+='</div>';
- }
- return html;
 }
 
-// ---------------------------------------------------------------- Zeichnen
+function vorschauAuf(x,y){
+ if(istFest())return;
+ const len=SCHIFFE[auswahl].laenge;
+ let px=x, py=y;
+ if(richtung)px=Math.min(Math.max(0,x),GROESSE-len);
+ else py=Math.min(Math.max(0,y),GROESSE-len);
+ vorschau={x:px,y:py};
+ vorschauWeg();
+ vorschauZeichnen();
+ knopfZustand();
+}
+
+function paletteFuellen(){
+ const box=$("flotteListe"); if(!box)return;
+ const fest=istFest();
+ box.innerHTML=SCHIFFE.map((s,i)=>{
+  const gesetzt=!!setzung[i];
+  const wahl=(i===auswahl&&!fest);
+  return '<button type="button" class="schiff-chip'+(wahl?" wahl":"")+(gesetzt?" gesetzt":"")+'" data-i="'+i+'"'+(fest?" disabled":"")+">"+
+   '<img src="'+BILDER+s.bild+'" alt="">'+
+   '<span class="chip-text"><span class="chip-name">'+s.name+"</span>"+
+   '<span class="stand">'+(gesetzt?"platziert":"offen")+' · <span class="laenge">'+s.laenge+" Kästchen</span></span></span></button>";
+ }).join("");
+ $("flottenZaehler").textContent=setzung.filter(Boolean).length+" / "+SCHIFFE.length+" platziert";
+}
+
+function knopfZustand(){
+ const fest=istFest();
+ const setzenKnopf=$("btnSetzenSchiff");
+ setzenKnopf.disabled=fest||!vorschauOk();
+ $("btnDrehen").disabled=fest;
+ $("btnLeeren").disabled=fest||!setzung.some(Boolean);
+ const fertig=$("btnFertig");
+ fertig.disabled=fest||!alleGesetzt();
+ fertig.textContent=fest?"Flotte steht":"Flotte fertig – Spiel bereit";
+ $("btnLeeren").hidden=fest;
+ $("btnSetzenSchiff").hidden=fest;
+ $("btnDrehen").hidden=fest;
+ $("auswahlInfo").textContent=fest?("Gesetzt: "+setzung.filter(Boolean).length+" Schiffe"):
+  (vorschau?(vorschauOk()?"Gültige Position – „Schiff setzen“ drückt sie fest.":"Rot: dort liegt schon ein Schiff."):
+  ("Schiff antippen, Position wählen, dann „Schiff setzen“."));
+}
+
+function zeichneSetzen(){
+ const beh=$("setzBrett"); if(!beh)return;
+ const fest=istFest();
+
+ /* Ist die Flotte beim Server, gilt seine Aufstellung. */
+ if(fest&&game.eigen&&game.eigen.schiffe){
+  const schiffe=game.eigen.schiffe;
+  setzung=SCHIFFE.map(()=>null);
+  schiffe.forEach(s=>{
+   const k=SCHIFFE.findIndex((f,idx)=>f.laenge===s.laenge&&!setzung[idx]);
+   if(k>=0)setzung[k]={x:s.x,y:s.y,waagerecht:s.waagerecht};
+  });
+ }
+
+ beh.innerHTML=rahmenHtml("setzen");
+
+ const belegt={};
+ setzung.forEach((s,i)=>{
+  if(!s)return;
+  zellen(i,s.x,s.y,s.waagerecht).forEach(([x,y])=>{belegt[x+","+y]=i;});
+ });
+ gitterFuellen("setzen",(x,y)=>belegt[x+","+y]!==undefined?"belegt":"",!fest);
+
+ setzung.forEach((s,i)=>{
+  if(!s)return;
+  schiffPlatzieren("setzen",s.x,s.y,SCHIFFE[i].laenge,s.waagerecht,SCHIFFE[i].bild,"gesetztbild");
+ });
+
+ if(!fest)vorschauZeichnen();
+
+ paletteFuellen();
+ knopfZustand();
+
+ $("festBanner").hidden=!fest;
+ if(fest){
+  const feind=(game.spieler||[]).find(p=>p.id!==ID);
+  $("festBanner").textContent=(feind&&feind.fertig)
+   ?"Beide Flotten stehen – das Gefecht beginnt gleich."
+   :"Deine Flotte steht. Warte, bis der Gegner fertig ist.";
+ }
+ $("setzHinweis").textContent=fest?"Flotte bestätigt":(setzung.filter(Boolean).length+" von "+SCHIFFE.length);
+ $("setzNote").textContent=(game&&game.note)?game.note:"";
+}
+
+/* ---------------------------------------------------------- Sprüche */
+
+/* 400 Sprüche für Schiffe versenken – fünf strikt getrennte Kategorien.
+   100 Treffer · 50 versenkt · 100 eigener Treffer · 50 eigenes Schiff versenkt · 100 daneben */
+const SPRUECHE = {
+treffer: [
+"Volltreffer – die haben wohl nicht aufgepasst!",
+"Da hat jemand seine Schwimmweste vergessen.",
+"Ein kleiner Kratzer in der Seeflotte.",
+"Die Post ist angekommen. Leider mit Sprengkopf.",
+"Na, wer schwimmt denn da nicht mehr ganz sicher?",
+"Das Schiff hat jetzt eine zusätzliche Lüftungsöffnung.",
+"Rauchzeichen vom Gegner – sehr aufmerksam.",
+"Ein Loch mehr, ein Problem weniger. Für mich.",
+"Der Rumpf hat jetzt Charakter.",
+"Handwerker gesucht: ein Loch, dringend.",
+"Das war ein Gruß aus der Küche. Mit Feuer.",
+"Die Mannschaft sucht jetzt einen Eimer.",
+"Direkt ins Wohnzimmer der Offiziere.",
+"Der Kapitän hat sich erschrocken. Sehr.",
+"Ein Treffer, der sitzt wie ein nasser Sack.",
+"Die Bilge hat jetzt Seeblick.",
+"Dieses Schiff lernt gerade schwimmen. Von innen.",
+"Pünktlich geliefert, gut verpackt, explodiert.",
+"Damit hatte die Reiseleitung nicht gerechnet.",
+"Der Rumpf ist jetzt ein Sieb mit Aussicht.",
+"Kleiner Rempler, große Wirkung.",
+"Die Motorenabteilung schickt liebe Grüße.",
+"Ein Einschlag, der noch Jahre erzählt wird.",
+"Das Deck hat jetzt ein Loch zum Staunen.",
+"Die Schiffsärztin hat alle Hände voll zu tun.",
+"Das war kein Kratzer, das war eine Meinung.",
+"Ein bisschen Dampf ablassen – wortwörtlich.",
+"Der Maschinenraum meldet ein lautes Au.",
+"Mitten in die Teeküche.",
+"Die Kombüse hat jetzt eine Dachluke.",
+"Da ist der Lack ab. Und ein bisschen Stahl.",
+"Ein Treffer für die Statistik, ein Loch für die Crew.",
+"Das Schiff hat jetzt eine kleine Macke. Optisch und strukturell.",
+"Die Reparaturabteilung arbeitet jetzt am Wochenende.",
+"Ein Gruß an die Werft.",
+"Das wird eine hübsche Rechnung.",
+"Direkt unter dem Kapitänsstuhl.",
+"Die Möwen fanden das auch nicht witzig.",
+"Das Schiff trägt jetzt eine Erkennungsmarke aus Blech.",
+"Ein Loch, das sich sehen lassen kann.",
+"Treffer! Die Bilge macht jetzt Überstunden.",
+"Der Steuermann schielt jetzt ein bisschen.",
+"Die Mannschaft singt – aber nicht freiwillig.",
+"Das Schiff hat drei neue Fenster. Leider unten.",
+"Ein Volltreffer mit Ansage.",
+"Die Feuerlöscher sind leer. Das Schiff fast auch.",
+"Da hat jemand die Karte falsch gelesen.",
+"Direkt in die Vorratskammer. Die Konserven sind hin.",
+"Der Rumpf hält dicht. Noch.",
+"Ein Loch nach Maß.",
+"Das Schiff hat jetzt eine Privattoilette mit Seeblick.",
+"Die Reisegruppe protestiert schon.",
+"Ein Treffer, der die Stimmung hebt. Meine.",
+"Die Mannschaft übt jetzt Schwimmen.",
+"Der Motor hustet, qualmt und jammert.",
+"Das war der Weckruf für die Nachtschicht.",
+"Ein Loch, ganz ohne Termin.",
+"Die Segel sind heil, der Rest eher nicht.",
+"Der Kapitän hat jetzt einen neuen Lieblingsfeind.",
+"Der Rumpf ist jetzt ein Kunstwerk mit Durchblick.",
+"Ein Treffer direkt vor dem Frühstück.",
+"Die Mannschaft hat heute frei. Unfreiwillig.",
+"Das Schiff nimmt Wasser. Aber höflich.",
+"Ein kleines Feuerwerk zur Begrüßung.",
+"Die Werft schickt schon den Kostenvoranschlag.",
+"Der Rumpf ist jetzt offen für neue Ideen.",
+"Ein Loch, das auch der Koch bemerkt hat.",
+"Die Taue halten, das Blech eher nicht.",
+"Das war ein sehr direkter Vorschlag.",
+"Ein Treffer mit Handschrift. Meiner.",
+"Die Mannschaft flüstert schon.",
+"Der Bug sieht jetzt interessanter aus.",
+"Ein Loch für die Durchlüftung. Sehr modern.",
+"Das Schiff hat jetzt eine Regenrinne. Innen.",
+"Die Ladung ist jetzt etwas leichter.",
+"Der Rudergänger hat jetzt was zu erzählen.",
+"Ein Treffer, bei dem die Gläser klirren.",
+"Das Schiff hat jetzt ein Loch mehr als geplant.",
+"Die Offiziere streiten, wer schuld ist.",
+"Ein Gruß direkt in die Teestunde.",
+"Der Rumpf knirscht jetzt im Takt.",
+"Die Mannschaft sucht den Notausgang.",
+"Ein Loch an einer sehr unhöflichen Stelle.",
+"Das Schiff winkt jetzt mit Rauch.",
+"Das war ein Treffer mit Schleife drum.",
+"Die Bilgenpumpe läuft jetzt im Dauerbetrieb.",
+"Ein neuer Wasserhahn, direkt im Rumpf.",
+"Das Schiff ist jetzt leichter als vorher.",
+"Die Reisekasse wurde auch getroffen.",
+"Ein Treffer, der die Laune des Kochers senkt.",
+"Der Rumpf hat jetzt einen Notausgang zum Meer.",
+"Die Mannschaft hat jetzt zwei Chefs: mich und das Wasser.",
+"Ein Loch, das die Möwen beeindruckt.",
+"Das Schiff ist jetzt offiziell in Reparatur.",
+"Ein Treffer, den man bis zum Hafen hört.",
+"Die Wäsche ist auch nass geworden. Sehr nass.",
+"Der Rumpf singt jetzt. Falsch.",
+"Ein Loch mit Aussicht auf den Meeresgrund.",
+"Das Schiff hat jetzt eine Sollbruchstelle. Ohne Soll.",
+"Ein Treffer – und die Mannschaft sucht den Reißverschluss."
+],
+versenkt: [
+"Gute Reise! Grüß Neptun von uns.",
+"Ein Schiff weniger auf der Gehaltsliste.",
+"Das war wohl die letzte Kreuzfahrt.",
+"Ab sofort nur noch U-Boot ohne Auftrieb.",
+"Bitte einmal Abschleppdienst auf Position.",
+"Tiefgang: unendlich.",
+"Die Fische haben jetzt ein neues Wohnzimmer.",
+"Volle Fahrt voraus – nach unten.",
+"Der Kapitän geht jetzt zu Fuß weiter.",
+"Das Schiff ist jetzt Teil des Riffs.",
+"Ein Schiff, ein Loch zu viel.",
+"Die Mannschaft übt gerade Tauchen. Ungeplant.",
+"Neptun zahlt heute Überstunden.",
+"Abwärts ist auch eine Richtung.",
+"Das war es dann mit der Seefahrt.",
+"Die Reederei streicht die Prämie.",
+"Ein Schiff für die Fischbestandsaufnahme.",
+"Das Deck ist jetzt das Dach der Fische.",
+"Bitte nicht nachtreten. Es sinkt schon.",
+"Der Anker ist jetzt das Einzige, was noch hält.",
+"Ein Schiff weniger – mehr Platz im Hafen.",
+"Die Versicherung schickt Kondolenzen.",
+"Die Mannschaft hat jetzt einen Tauchschein.",
+"Das Schiff ist jetzt künstliches Riff. Sehr künstlich.",
+"Karriereende mit Blubbern.",
+"Der Kapitän sucht jetzt eine neue Karte. Eine Landkarte.",
+"Sinkflug ohne Wiederkehr.",
+"Ein Schiff, das jetzt von unten bewundert wird.",
+"Die Ladeluke steht offen – als Grundstück.",
+"Da hilft auch kein Flickzeug mehr.",
+"Die Bilge hat gewonnen.",
+"Das Schiff macht jetzt Strandurlaub. Auf dem Grund.",
+"Die Reederei sucht einen neuen Kapitän. Und ein Schiff.",
+"Ein Hoch auf die Schwerkraft.",
+"Die Möwen ziehen weiter.",
+"Ein Schiff, das jetzt Geschichte ist. Wörtlich.",
+"Der Rumpf ist jetzt ein Aquarium.",
+"Die Mannschaft hat fertig mit Arbeiten. Und Atmen.",
+"Ab ins Archiv der Seefahrt.",
+"Ein Schiff weniger, ein Rätsel mehr für die Werft.",
+"Dieser Untergang hatte heute keinen Plan.",
+"Das Schiff bewirbt sich als Wrack.",
+"Die Fische klatschen Beifall.",
+"Land in Sicht – leider unten.",
+"Ein Schiff, das jetzt am Meeresgrund parkt.",
+"Der letzte Logbucheintrag war kurz.",
+"Die Rettungsringe wurden auch nicht mehr gebraucht.",
+"Das Schiff ist jetzt ein Geheimtipp für Taucher.",
+"Ein Schiff weniger, der Ozean bleibt ruhig.",
+"Der Hafen meldet: Platz frei."
+],
+eigentreffer: [
+"Autsch! Das hat gesessen.",
+"Wer hat denn da die Tür offengelassen?",
+"Das war nicht im Reiseprogramm!",
+"Kapitän, wir haben ein kleines Problem.",
+"Hoffentlich ist die Versicherung bezahlt.",
+"Das Schiff hat jetzt eine Belüftung. Ohne Bestellung.",
+"Meine Mannschaft beschwert sich gerade.",
+"Treffer am Rumpf – und an meiner Laune.",
+"Das war ein unhöflicher Gruß.",
+"Ich hätte die Schwimmweste anziehen sollen.",
+"Ein Loch mehr in meiner Sammlung.",
+"Die Bilge meldet sich zu Wort.",
+"Ich höre Wasser. Das ist kein gutes Zeichen.",
+"Mein Schiff hat jetzt Charakter. Leider.",
+"Der Koch hat vor Schreck die Suppe verschüttet.",
+"Das war ein Direktflug ins Wohnzimmer.",
+"Meine Mannschaft sucht gerade den Eimer.",
+"Ein Rempler mit Ansage.",
+"Ich hätte den Kurs ändern sollen.",
+"Der Steuermann schwört, er war es nicht.",
+"Mein Deck hat jetzt ein Guckloch.",
+"Das Schiff qualmt – aber es lebt noch.",
+"Ein Treffer, der meine Pläne durcheinanderbringt.",
+"Mein Rumpf schickt einen Hilferuf.",
+"Das war knapp. Knapp am Ausflippen vorbei.",
+"Die Feuerlöscher sind jetzt gefragt.",
+"Ich hatte gerade alles so schön sortiert.",
+"Mein Maschinenraum hustet.",
+"Das Schiff macht Geräusche, die ich nicht mag.",
+"Ein Loch, direkt neben dem anderen.",
+"Meine Teeküche ist jetzt offen für alle.",
+"Das Schiff nimmt Wasser auf. Wie ein Schwamm.",
+"Ein Treffer für den Gegner, ein Ärgernis für mich.",
+"Die Mannschaft rennt im Kreis. Immerhin schnell.",
+"Ich sollte die Werkstatt anrufen. Sofort.",
+"Mein Rumpf hat jetzt eine Meinung.",
+"Das war der teuerste Kratzer der Woche.",
+"Ich höre Blubbern. Das ist schlecht.",
+"Das Schiff hat jetzt eine Sonnenluke. Unterwasser.",
+"Mein Steuermann ist jetzt ein bisschen blass.",
+"Ein Treffer, den ich nicht bestellt habe.",
+"Meine Kombüse hat jetzt Durchzug.",
+"Das war die Abkürzung, die keiner wollte.",
+"Mein Schiff protestiert mit Rauch.",
+"Ich habe da so ein Loch entdeckt.",
+"Der Kapitän – also ich – bleibt ruhig. Ganz ruhig.",
+"Mein Logbuch ist jetzt nass.",
+"Ein Treffer – und mein Plan hat ein Loch.",
+"Die Mannschaft singt jetzt. Aus Angst.",
+"Mein Deck hat jetzt eine Sollbruchstelle.",
+"Das war kein Kratzer, das war ein Kommentar.",
+"Ich hätte mehr Panzerung kaufen sollen.",
+"Mein Schiff hat jetzt eine Belüftung mit Meerblick.",
+"Der Rumpf meldet sich mit Knirschen.",
+"Ein Volltreffer auf meine Nerven.",
+"Meine Bilge macht jetzt Überstunden.",
+"Ich sehe Wasser, wo vorher Stahl war.",
+"Ein Treffer, der die Stimmung trübt.",
+"Meine Mannschaft fragt, ob das normal ist. Ist es nicht.",
+"Das Schiff hat jetzt ein Guckloch zum Nachbarn.",
+"Ich hätte mich lieber versteckt.",
+"Mein Rumpf ist jetzt offiziell undicht.",
+"Ein Treffer, direkt neben meine gute Laune.",
+"Die Wäsche ist hin. Alles nass.",
+"Mein Schiff ist jetzt ein bisschen leichter.",
+"Ich höre das Wasser. Es kommt näher.",
+"Meine Reparaturabteilung ist jetzt wach.",
+"Ein Loch mit meinem Namen drauf.",
+"Der Gegner hat gute Augen. Leider.",
+"Mein Deck biegt sich – als Gruß.",
+"Ein Treffer, der mich innerlich fluchen lässt.",
+"Mein Steuermann fordert Gefahrenzulage.",
+"Das Schiff hat jetzt eine Dachterrasse. Im Keller.",
+"Ich sollte öfter ausweichen.",
+"Mein Rumpf hat jetzt einen Wasserhahn.",
+"Ein Treffer ohne Rücksicht auf meine Pläne.",
+"Meine Mannschaft hat einen neuen Lieblingsalbtraum.",
+"Das Schiff knirscht im Takt meines Herzschlags.",
+"Ein Loch mehr, ein Fass Wasser weniger.",
+"Mein Boot hat jetzt eine Zusatzöffnung.",
+"Ich hätte die Karte anders herum halten sollen.",
+"Der Motor stottert – und ich auch.",
+"Ein Treffer, den ich lieber verpasst hätte.",
+"Meine Mannschaft übt jetzt Panik. Sehr überzeugend.",
+"Das Schiff hat jetzt ein Fenster mit Aussicht auf Wasser.",
+"Ich höre die Bilgenpumpe weinen.",
+"Mein Rumpf hält – noch so gerade.",
+"Ein Treffer direkt ins Vertrauen.",
+"Mein Deck hat jetzt eine Kuhle. Sehr modern.",
+"Die Kombüse kocht jetzt unter Wasser.",
+"Ich sollte schwimmen lernen. Nur für den Fall.",
+"Das Schiff hat jetzt eine Badewanne. Ungeplant.",
+"Ein Treffer, der meine Pläne um ein Loch ergänzt.",
+"Meine Mannschaft fragt nach dem Notausgang. Ich zeige auf das Loch.",
+"Das war ein sehr lauter Wecker.",
+"Mein Logbuch hat jetzt Löcher. Passend.",
+"Ein Treffer, der mich über Panzerung nachdenken lässt.",
+"Meine Mannschaft hat eine neue Sportart: Leckschließen.",
+"Das Schiff riecht jetzt nach Seeluft. Von innen.",
+"Ich hätte doch das größere Boot nehmen sollen."
+],
+eigenversenkt: [
+"Und wieder ein treuer Mitarbeiter weniger.",
+"Alle Mann von Bord! Ach, zu spät.",
+"Das war eine ausgesprochen kurze Kreuzfahrt.",
+"Die Fische haben jetzt ein neues Zuhause.",
+"Die Marine meldet einen etwas größeren Wasserschaden.",
+"Mein Schiff ist jetzt ein Tauchboot. Endgültig.",
+"Der Kapitän sucht einen neuen Job.",
+"Ein Schiff weniger in meiner Sammlung.",
+"Ich sollte mir einen Anwalt nehmen. Und ein Boot.",
+"Die Reederei schickt Beileid. Und eine Rechnung.",
+"Mein bestes Schiff! Naja. War.",
+"Das Wrack ist jetzt Gemeingut.",
+"Die Mannschaft ist schon im Schwimmkurs.",
+"Ich höre nur noch Blubbern.",
+"Ein Schiff, das jetzt von unten bewundert wird. Von mir.",
+"Die Versicherung wird sich freuen. Ich nicht.",
+"Mein Flaggschiff ist jetzt ein Fischgrundstück.",
+"Ein Loch zu viel, ein Schiff zu wenig.",
+"Die Mannschaft hat jetzt Freizeit. Für immer.",
+"Ich hätte die Rettungsboote prüfen sollen.",
+"Das Schiff macht jetzt Tiefseeforschung.",
+"Neptun hat heute zugeschlagen. Bei mir.",
+"Ein trauriger Tag für meine Flotte.",
+"Mein Schiff ist jetzt ein Geheimtipp für Taucher.",
+"Die Bilge hat endgültig gewonnen.",
+"Ich schieße kurz auf etwas. Und dann schwimme ich.",
+"Ein Schiff weniger, ein Loch mehr im Plan.",
+"Mein Flaggschiff schickt nur noch Blasen.",
+"Das Deck ist jetzt der Meeresboden. So ähnlich.",
+"Die Mannschaft hat einen neuen Wohnort: unten.",
+"Ein Schluck Wasser für die ganze Crew.",
+"Mein Schiff ist jetzt ein Kunstwerk unter Wasser.",
+"Ich melde: ein Schiff, ein Loch, kein Plan.",
+"Die Werft schickt schon die Kondolenzkarte.",
+"Ein Schiff weniger, ein Weinen mehr.",
+"Ich hätte den Rückwärtsgang nehmen sollen.",
+"Mein Stolz sinkt mit dem Schiff.",
+"Das war der letzte Sturz des Tages. Wahrscheinlich.",
+"Meine Flotte hat jetzt eine Lücke.",
+"Die Fischer danken für den Fischgrund.",
+"Ein Schiff, das jetzt am Grund parkt. Ohne Parkschein.",
+"Ich hätte den Notknopf drücken sollen. Welchen auch immer.",
+"Mein Schiff ist jetzt Teil des Riffs. Sehr exklusiv.",
+"Die Möwen sind schon auf dem Weg.",
+"Ein Untergang mit Ansage. Leider meiner.",
+"Mein Rumpf hat sich verabschiedet. Höflich, aber endgültig.",
+"Das Schiff hat die letzte Fahrt gemacht.",
+"Ich höre noch ein letztes Gluck.",
+"Mein Kiel hat jetzt Bodenkontakt. Dauerhaft.",
+"Ein Schiff weniger, eine Anekdote mehr."
+],
+daneben: [
+"Wasser! Viel Wasser! Aber kein Schiff.",
+"War das ein Angriff oder eine Bewässerungsanlage?",
+"Der Fisch hat sich gerade totgelacht.",
+"Trefferquote wie ein betrunkener Leuchtturmwärter.",
+"Vielleicht solltest du die Brille aufsetzen.",
+"Das war knapp. Also ungefähr drei Ozeane daneben.",
+"Die Fische klatschen, die Offiziere nicht.",
+"Ein Einschlag. Nur eben ohne Schiff.",
+"Du hast den Ozean verwundet.",
+"Die Möwe bedankt sich für die Dusche.",
+"Neptun gähnt.",
+"Wasser gibt es hier wirklich genug.",
+"Du hast die Stelle getroffen, an der kein Schiff ist. Präzise.",
+"Das war eine Zielübung für die Fische.",
+"Die Wellen fanden das lustig.",
+"Fast! Wenn das Schiff zwei Felder weiter gefahren wäre.",
+"Du könntest Gärtner werden. So gut wie du wässerst.",
+"Der Ozean hat jetzt ein Loch. Glückwunsch.",
+"Daneben ist auch eine Kunstform.",
+"Die Fische ziehen um. Wegen Baulärm.",
+"Du hast eine Welle versenkt. Immerhin.",
+"Ein Schuss, ein Platscher, kein Treffer.",
+"Der Kompass sagt: andersherum.",
+"Vielleicht suchst du das Schiff im richtigen Ozean?",
+"Die Seekarte ist nicht zum Ausmalen gedacht.",
+"Du hast Wasser getroffen. Wasser war schon da.",
+"Ein Gruß an die Tiefsee. Ohne Antwort.",
+"Der Ozean ist offiziell dein Lieblingsziel.",
+"Das war ein sehr nasser Fehlschlag.",
+"Die Fische nennen dich jetzt den mit dem Loch.",
+"Zielen ist auch nur eine Meinung.",
+"Der Wellenbrecher ist stolz auf dich.",
+"Du hast den Horizont verfehlt. Den Horizont!",
+"Wasser, Wasser, Wasser – aber kein Stück Schiff.",
+"Die Tiefe ist beeindruckt. Nicht der Gegner.",
+"Du hast die Stelle erwischt, wo gestern noch ein Schiff war. Gestern.",
+"Das war ein Schuss für die Umwelt.",
+"Der Ozean schickt eine Rechnung für die Delle.",
+"Fast wie ein Treffer. Nur ohne Treffer.",
+"Die Möwen haben sich erschrocken. Die Fische nicht.",
+"Du hast ein Feld getroffen. Nur nicht das richtige.",
+"Der Gegner lacht. Ich höre es bis hier.",
+"Vielleicht wolltest du nur Hallo sagen?",
+"Ein Loch im Wasser sieht man nicht. Aber es war eins.",
+"Du hast den Nebel getroffen. Gut gemacht.",
+"Das war eine Duftmarke. Weit daneben.",
+"Die Wellen haben sich erschrocken und sind weggelaufen.",
+"Deine Kanone schießt, dein Ziel schwimmt woanders.",
+"Der Ozean ist jetzt ein bisschen sauer. Auf dich.",
+"Ein Schuss, der die Fischbestände nicht gefährdet.",
+"Du hast die Stelle unter Wasser getroffen. Sehr beeindruckend.",
+"Die Karte sagt: da ist nichts. Die Karte hat recht.",
+"Wasser geschlagen, Wasser getroffen, Wasser bleibt Wasser.",
+"Das war ein Weckruf für die Seepferdchen.",
+"Die Seekuh ist verwirrt.",
+"Du bist der Grund, warum der Ozean keine Angst mehr hat.",
+"Eine Welle, ein Loch, keine Punkte.",
+"Der Schuss war schön. Nur der Treffer fehlt.",
+"Du hast den Ort getroffen, wo niemand war.",
+"Die Fische notieren: hier wohnt man, hier nicht schießen.",
+"Der Ozean bedankt sich für die Abkühlung.",
+"Das war die freundlichste Art zu verlieren.",
+"Ein Schuss ins Wasser – mit Anlauf.",
+"Der Gegner hat einen Namen. Deine Kanone hat einen anderen Plan.",
+"Die Möwen haben jetzt einen Brunnen.",
+"Treffer im Nichts. Das Nichts gratuliert.",
+"Du hast dich um ein Feld vertan. Oder um zehn.",
+"Selbst das Wasser war überrascht.",
+"Ein Platscher mit Anspruch.",
+"Der Ozean hat jetzt eine kleine Beule. Sehr klein.",
+"Du zielst auf alles, was schwimmt. Außer auf Schiffe.",
+"Die Tiefsee würde applaudieren, wenn sie könnte.",
+"Das war der schnellste Weg, nichts zu treffen.",
+"Du hast einen neuen Fisch ins Leben gerufen. Mit Loch.",
+"Deine Kanone schießt gerade für die Wissenschaft.",
+"Ein Schuss, der jedem Ozean schmeichelt.",
+"Der Feind schickt ein Dankeschön für die Blasen.",
+"Du hast den Regen gemacht. Sehr nützlich auf dem Meer.",
+"Daneben, daneben, wieder daneben – fast eine Serie.",
+"Die Fische spielen jetzt Verstecken. Du auch.",
+"Der Kapitän sagt neuer Kurs. Du sagst Wasser.",
+"Ein Loch im Meer ist auch ein Loch. Irgendwie.",
+"Du hast den Horizont angeschossen. Der steht noch.",
+"Die Seekarten führen dich jetzt als Naturphänomen.",
+"Deine Kanone ist ein guter Schwimmer.",
+"Der Ozean hat nur ein Schulterklopfen übrig.",
+"Ein Schuss wie ein Seufzen.",
+"Du bist der Beweis, dass Wasser geduldig ist.",
+"Wasser getroffen, Wasser erschrocken, alles gut.",
+"Das war nah dran an weit weg.",
+"Die Wellen haben sich über dich kaputtgelacht.",
+"Ein Schuss – und kein einziger Matrose in Gefahr.",
+"Der Gegner hat dich zuletzt bei B4 gesehen. Vor Wochen.",
+"Du hast den Ozean gefragt, wo das Schiff ist. Der Ozean schweigt.",
+"Deine Zielwasser-Quote ist erschreckend wörtlich.",
+"Die Tiefe sagt: danke für nichts.",
+"Ein Loch in der Landschaft, die zufällig Wasser ist.",
+"Das war ein Schuss mit viel Hingabe. Und ohne Ziel.",
+"Du hast fast das Schiff getroffen. Fast. Nicht. Ganz. Und dann gar nicht.",
+"Der Ozean bittet um eine kurze Pause."
+]
+};
+
+const SPRUCH_EMOJI={treffer:"🎯",versenkt:"🔥",eigentreffer:"😱",eigenversenkt:"💀",daneben:"💦"};
+const spruchVorrat={};
+const spruchZuletzt={};
+let spruchStand=null;
+let spruchTimer=0;
+
+function mischen(a){
+ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+ return a;
+}
+
+/* Zieht ohne Zurücklegen; erst wenn der Vorrat leer ist, wird neu gemischt. */
+function naechsterSpruch(art){
+ const alle=SPRUECHE[art];
+ if(!alle||!alle.length)return "";
+ if(!spruchVorrat[art]||!spruchVorrat[art].length){
+  spruchVorrat[art]=mischen(alle.slice());
+  const v=spruchVorrat[art];
+  if(v.length>1&&v[v.length-1]===spruchZuletzt[art]){ const t=v[v.length-1]; v[v.length-1]=v[0]; v[0]=t; }
+ }
+ const s=spruchVorrat[art].pop();
+ spruchZuletzt[art]=s;
+ return s;
+}
+
+function spruchZeigen(art){
+ const box=$("spruch"); if(!box||!SPRUECHE[art])return;
+ const text=naechsterSpruch(art);
+ box.dataset.art=art;
+ const emoji=$("spruchEmoji"); if(emoji)emoji.textContent=SPRUCH_EMOJI[art]||"💬";
+ const t=$("spruchText"); if(!t)return;
+ t.textContent=text;
+ box.classList.remove("alt");
+ t.classList.remove("neu");
+ void t.offsetWidth;                 /* Animation neu starten */
+ t.classList.add("neu");
+ clearTimeout(spruchTimer);
+ /* 2,6 – 3,9 Sekunden sichtbar, danach dezent abblenden */
+ spruchTimer=setTimeout(()=>{ box.classList.add("alt"); },2600+Math.random()*1300);
+}
+
+function wasserZellen(feld){
+ let n=0;
+ if(!feld||!feld.length)return 0;
+ for(const zeile of feld){ if(!zeile)continue; for(const v of zeile){ if(v===1)n++; } }
+ return n;
+}
+
+/* Ereignisse aus dem Serverstand ableiten: pro Browser genau einmal je Änderung.
+   meinTreffer = Treffer, die ich gelandet habe (stehen beim Gegner), usw. */
+function spruchPruefen(){
+ if(!game||game.status!=="spiel"||!game.spieler)return;
+ const me=ich();
+ const geg=game.spieler.find(p=>p.id!==ID);
+ if(!me||!geg)return;
+ const jetzt={
+  meinTreffer:geg.treffer||0,
+  meinVersenkt:geg.versenkt||0,
+  meinSchuesse:(geg.treffer||0)+wasserZellen(game.feind&&game.feind.beschuss),
+  eigenTreffer:me.treffer||0,
+  eigenVersenkt:me.versenkt||0
+ };
+ const vor=spruchStand;
+ spruchStand=jetzt;
+ if(!vor)return;                                   /* erster Stand: nur merken */
+ if(jetzt.meinVersenkt<vor.meinVersenkt||jetzt.eigenVersenkt<vor.eigenVersenkt||
+    jetzt.meinSchuesse<vor.meinSchuesse||jetzt.eigenTreffer<vor.eigenTreffer)return;  /* neue Partie */
+ let art=null;
+ if(jetzt.meinVersenkt>vor.meinVersenkt)art="versenkt";
+ else if(jetzt.meinTreffer>vor.meinTreffer)art="treffer";
+ else if(jetzt.meinSchuesse>vor.meinSchuesse)art="daneben";
+ /* Schüsse des Gegners kommen nach meinem Zug – sie gewinnen die Anzeige. */
+ if(jetzt.eigenVersenkt>vor.eigenVersenkt)art="eigenversenkt";
+ else if(jetzt.eigenTreffer>vor.eigenTreffer)art="eigentreffer";
+ if(art)spruchZeigen(art);
+}
+
+/* ---------------------------------------------------------- Spielphase */
+
+
+function spriteFuer(schiffe,i){
+ const s=schiffe[i];
+ const liste=NACH_LAENGE[s.laenge]||["ente.png"];
+ const gleich=schiffe.slice(0,i).filter(t=>t.laenge===s.laenge).length;
+ return liste[Math.min(gleich,liste.length-1)];
+}
+
+function zeichneSpiel(){
+ const zug=meinZug();
+
+ /* Gegnerfeld */
+ $("spielFeind").innerHTML=rahmenHtml("feind");
+ gitterFuellen("feind",(x,y)=>{
+  const v=game.feind&&game.feind.beschuss[y]?game.feind.beschuss[y][x]:0;
+  return v===3?"versenkt":v===2?"treffer":v===1?"wasser":"";
+ },zug);
+ for(let y=0;y<GROESSE;y++){
+  for(let x=0;x<GROESSE;x++){
+   const v=game.feind&&game.feind.beschuss[y]?game.feind.beschuss[y][x]:0;
+   if(v===3)markeSetzen("feind",x,y,"versenkt");
+   else if(v===2)markeSetzen("feind",x,y,"treffer");
+   else if(v===1)markeSetzen("feind",x,y,"wasser");
+  }
+ }
+ if(zug){
+  document.querySelectorAll("#gitter-feind .zelle").forEach(b=>{
+   b.onclick=()=>schiessen(Number(b.dataset.x),Number(b.dataset.y));
+  });
+ }
+
+ /* Eigenes Feld */
+ const schiffe=game.eigen.schiffe||[];
+ const eigenZellen={};
+ schiffe.forEach(s=>{
+  zellenVon(s.laenge,s.x,s.y,s.waagerecht).forEach(([x,y])=>{eigenZellen[x+","+y]=1;});
+ });
+ $("spielEigen").innerHTML=rahmenHtml("eigen");
+ gitterFuellen("eigen",(x,y)=>{
+  const v=game.eigen.beschuss[y]?game.eigen.beschuss[y][x]:0;
+  if(v===3)return "versenkt";
+  if(v===2)return "treffer";
+  if(v===1)return "wasser";
+  return eigenZellen[x+","+y]?"belegt":"";
+ },false);
+ schiffe.forEach((s,i)=>{
+  schiffPlatzieren("eigen",s.x,s.y,s.laenge,s.waagerecht,spriteFuer(schiffe,i),s.versenkt?"versenkt":"gesetztbild");
+ });
+ for(let y=0;y<GROESSE;y++){
+  for(let x=0;x<GROESSE;x++){
+   const v=game.eigen.beschuss[y]?game.eigen.beschuss[y][x]:0;
+   if(v===2)markeSetzen("eigen",x,y,"treffer");
+   else if(v===3)markeSetzen("eigen",x,y,"versenkt");
+   else if(v===1)markeSetzen("eigen",x,y,"wasser");
+  }
+ }
+
+ $("feindName").textContent=(game.feind&&game.feind.name)||"Gegner";
+ $("feindInfo").textContent=zug?"Du bist dran – klick auf ein Feld":"Der Gegner ist dran";
+ const treffer=(game.eigen.beschuss||[]).reduce((n,zeile)=>n+zeile.filter(v=>v>0).length,0);
+ $("eigenInfo").textContent="Treffer am eigenen Feld: "+treffer;
+
+ zieheMeldung();
+ spruchPruefen();
+ $("note").textContent=game.note||"";
+}
+
+/* ---------------------------------------------------------- Zeichnen */
 
 function zeichne(){
  if(!ONLINE){
@@ -335,9 +1218,9 @@ function zeichne(){
  if(game.status==="invited"){
   zeige("start",false); zeige("lobby",true); zeige("setzen",false); zeige("spiel",false); zeige("ende",false);
   const drin=meinSitz()>=0;
-  $("lobbyListe").innerHTML=game.spieler.map(p=>
-   '<div><span>'+escapeHtml(p.name)+(p.id===game.hostId?' <small>· Gastgeber</small>':"")+'</span>'+
-   '<span class="klein">'+(p.ready?"bereit":(p.id===ID?"du":""))+'</span></div>').join("");
+  $("lobbyListe").innerHTML=(game.spieler||[]).map(p=>
+   "<div><span>"+escapeHtml(p.name)+(p.id===game.hostId?" <small>· Gastgeber</small>":"")+"</span>"+
+   '<span class="klein">'+(p.ready?"bereit":(p.id===ID?"du":""))+"</span></div>").join("");
   $("btnBereit").textContent=!drin?"Mitspielen":(ich().ready?"Doch nicht bereit":"Bereit");
   $("btnBereit").onclick=()=>tu(drin?"ready":"join");
   $("btnStart").hidden=!(drin&&game.spieler[meinSitz()].id===game.hostId);
@@ -346,84 +1229,15 @@ function zeichne(){
   return;
  }
 
- if(game.status==="setzen"&&!game.eigen.fertig){
-  zeige("start",false); zeige("lobby",false); zeige("setzen",true); zeige("spiel",false); zeige("ende",false);
-  $("spaltenOben").innerHTML=spaltenHtml();
-  $("feldEigenSetzen").innerHTML=rasterSetzenHtml();
-  const naechste=FLOTTE[platzierung.length];
-  $("setzHinweis").textContent=naechste
-   ? (platzierung.length+1)+" von "+FLOTTE.length+" · "+schiffName(naechste.laenge)+" ("+naechste.laenge+" Felder)"
-   : "Flotte komplett";
-  $("flotteListe").innerHTML=FLOTTE.map((f,i)=>{
-   const gesetzt=i<platzierung.length;
-   return '<div><span>'+f.name+' ('+f.laenge+')</span><span class="'+(gesetzt?"gesetzt":"offen")+'">'+
-    (gesetzt?"gesetzt":"offen")+'</span></div>';
-  }).join("");
-  $("setzNote").textContent=game.note||"";
-  $("btnDrehen").disabled=false;
-  $("btnLeeren").disabled=false;
-  $("btnFertig").disabled=platzierung.length<FLOTTE.length;
-  $("btnFertig").textContent="Flotte bestätigen";
-  document.querySelectorAll("#feldEigenSetzen .zelle").forEach(b=>{
-   b.onclick=()=>setzenAn(Number(b.dataset.x),Number(b.dataset.y));
-  });
-  zieheMeldung();
-  return;
- }
-
  if(game.status==="setzen"){
-  // Eigene Flotte steht, Gegner setzt noch
   zeige("start",false); zeige("lobby",false); zeige("setzen",true); zeige("spiel",false); zeige("ende",false);
-  $("spaltenOben").innerHTML=spaltenHtml();
-  const beschuss=game.eigen.beschuss;
-  $("feldEigenSetzen").innerHTML=rasterHtml("",(x,y)=>{
-   return game.eigen.schiffe.some(s=>inSchiff(s,x,y))?"schiff":"";
-  },false);
-  $("setzHinweis").textContent="Flotte steht – warte auf den Gegner";
-  $("flotteListe").innerHTML=FLOTTE.map((f,i)=>{
-   const s=game.eigen.schiffe[i];
-   return '<div><span>'+f.name+' ('+f.laenge+')</span><span class="gesetzt">gesetzt</span></div>';
-  }).join("");
-  $("setzNote").textContent=game.note||"";
-  $("btnFertig").disabled=true;
-  $("btnDrehen").disabled=true;
-  $("btnLeeren").disabled=true;
-  zieheMeldung();
+  zeichneSetzen();
   return;
  }
 
  if(game.status==="spiel"){
   zeige("start",false); zeige("lobby",false); zeige("setzen",false); zeige("spiel",true); zeige("ende",false);
-  $("spaltenFeind").innerHTML=spaltenHtml();
-  $("spaltenEigen").innerHTML=spaltenHtml();
-  $("feindName").textContent=game.feind.name||"Gegner";
-  const zug=meinZug();
-  $("feindInfo").textContent=zug?"Du bist dran – klick auf ein Feld":"Der Gegner ist dran";
-  $("eigenInfo").textContent="Treffer am eigenen Feld: "+ game.eigen.beschuss.flat().filter(v=>v>0).length;
-
-  $("feldFeind").innerHTML=rasterHtml("",(x,y)=>{
-   const v=game.feind.beschuss[y]?game.feind.beschuss[y][x]:0;
-   if(v===3)return "versenkt";
-   if(v===2)return "treffer";
-   if(v===1)return "wasser";
-   return "";
-  },zug);
-  document.querySelectorAll("#feldFeind .zelle").forEach(b=>{
-   if(b.classList.contains("ziel"))b.onclick=()=>schiessen(Number(b.dataset.x),Number(b.dataset.y));
-  });
-
-  $("feldEigen").innerHTML=rasterHtml("",(x,y)=>{
-   const schiff=game.eigen.schiffe.find(s=>inSchiff(s,x,y));
-   const v=game.eigen.beschuss[y]?game.eigen.beschuss[y][x]:0;
-   if(v===3)return "versenkt";
-   if(v===2)return "treffer";
-   if(schiff)return "schiff";
-   if(v===1)return "wasser";
-   return "";
-  },false);
-
-  zieheMeldung();
-  $("note").textContent=game.note||"";
+  zeichneSpiel();
   return;
  }
 
@@ -432,15 +1246,11 @@ function zeichne(){
   const gewonnen=game.sieger===NAME||(game.sieger&&ich()&&game.sieger===ich().name);
   $("endeTitel").textContent=gewonnen?"Gewonnen!":"Versunkene Flotte";
   $("endeInhalt").innerHTML=
-   '<div class="meldung versenkt">'+escapeHtml(game.meldung||"")+'</div>'+
-   '<div class="note">'+escapeHtml(game.note||"")+'</div>';
+   '<div class="meldung versenkt">'+escapeHtml(game.meldung||"")+"</div>"+
+   '<div class="note">'+escapeHtml(game.note||"")+"</div>";
   $("btnNeu").onclick=()=>tu("reset");
+  return;
  }
-}
-
-function inSchiff(s,x,y){
- if(s.waagerecht)return y===s.y&&x>=s.x&&x<s.x+s.laenge;
- return x===s.x&&y>=s.y&&y<s.y+s.laenge;
 }
 
 function zieheMeldung(){
@@ -452,23 +1262,56 @@ function zieheMeldung(){
  box.textContent=game.meldung;
 }
 
-// ---------------------------------------------------------------- Aktionen
+/* ---------------------------------------------------------- Aktionen */
 
-function setzenAn(x,y){
- if(!game||game.status!=="setzen"||game.eigen.fertig)return;
- const f=FLOTTE[platzierung.length];
- if(!f)return;
- const schiff={x:x,y:y,laenge:f.laenge,waagerecht:waagerecht};
- for(let k=0;k<f.laenge;k++){
-  const px=waagerecht?x+k:x;
-  const py=waagerecht?y:y+k;
-  if(px>=GROESSE||py>=GROESSE){ fehler("Das Schiff ragt über den Rand – mit Drehen die Richtung wechseln."); return; }
-  if(platzierung.some(s=>inSchiff(s,px,py))){ fehler("Dort liegt schon ein Schiff."); return; }
+function waehle(i){
+ if(istFest())return;
+ auswahl=i;
+ if(setzung[i]){
+  /* Alte Position wird frei, das Schiff folgt wieder der Vorschau. */
+  vorschau={x:setzung[i].x,y:setzung[i].y};
+  richtung=setzung[i].waagerecht;
+  setzung[i]=null;
+  entwurfSichern();
+ }else{
+  vorschau=null;
  }
- platzierung.push(schiff);
- if(platzierung.length===FLOTTE.length){
-  $("setzHinweis").textContent="Flotte komplett – jetzt bestätigen";
+ zeichneSetzen();
+}
+
+function drehen(){
+ if(istFest())return;
+ richtung=!richtung;
+ const len=SCHIFFE[auswahl].laenge;
+ if(vorschau){
+  vorschau.x=Math.max(0,Math.min(vorschau.x,GROESSE-(richtung?len:1)));
+  vorschau.y=Math.max(0,Math.min(vorschau.y,GROESSE-(richtung?1:len)));
  }
+ zeichneSetzen();
+}
+
+function setzenBestaetigen(){
+ if(istFest()||!vorschauOk())return;
+ setzung[auswahl]={x:vorschau.x,y:vorschau.y,waagerecht:richtung};
+ richtung=setzung[auswahl].waagerecht;
+ vorschau=null;
+ const naechstes=setzung.findIndex(s=>!s);
+ if(naechstes>=0)auswahl=naechstes;
+ entwurfSichern();
+ zeichneSetzen();
+}
+
+async function flotteFertig(){
+ if(istFest()||!alleGesetzt())return;
+ $("btnFertig").disabled=true;
+ const schiffe=setzung.map((s,i)=>({x:s.x,y:s.y,laenge:SCHIFFE[i].laenge,waagerecht:!!s.waagerecht}));
+ const erg=await tu("setzen",{schiffe});
+ if(!erg||!erg.eigen||!erg.eigen.fertig){
+  knopfZustand();
+  return;
+ }
+ try{ sessionStorage.removeItem(entwurfSchluessel()); }catch(e){}
+ vorschau=null;
  zeichne();
 }
 
@@ -477,23 +1320,74 @@ function schiessen(x,y){
  tu("schiessen",{x:x,y:y});
 }
 
+/* ---------------------------------------------------------- Bedienung */
+
 $("btnCreate").onclick=()=>tu("create");
-$("btnBereit").onclick=()=>tu(meinSitz()>=0?"ready":"join");
 $("btnStart").onclick=()=>tu("start");
-$("btnDrehen").onclick=()=>{ waagerecht=!waagerecht; zeichne(); };
-$("btnLeeren").onclick=()=>{ platzierung=[]; zeichne(); };
-$("btnFertig").onclick=()=>tu("setzen",{schiffe:platzierung});
+$("btnDrehen").onclick=drehen;
+$("btnSetzenSchiff").onclick=setzenBestaetigen;
+$("btnLeeren").onclick=()=>{ if(istFest())return; setzung=SCHIFFE.map(()=>null); vorschau=null; auswahl=0; richtung=true; entwurfSichern(); zeichneSetzen(); };
+$("btnFertig").onclick=flotteFertig;
 $("btnNeu").onclick=()=>tu("reset");
-document.addEventListener("keydown",e=>{
- if(e.key==="r"||e.key==="R"){
-  if(sichtbar("setzen")&&!(game&&game.eigen&&game.eigen.fertig)){ waagerecht=!waagerecht; zeichne(); }
- }
+
+/* Flottenanzeige: Schiff wählen – auf dem Desktop lässt es sich von dort aufs Feld ziehen */
+let zieht=false;
+let gewaehltUm=0;
+function chipWaehlen(e){
+ const chip=e.target.closest(".schiff-chip");
+ if(!chip||istFest())return null;
+ gewaehltUm=Date.now();
+ const i=Number(chip.dataset.i);
+ waehle(i);
+ return i;
+}
+$("flotteListe").addEventListener("pointerdown",e=>{
+ if(chipWaehlen(e)===null)return;
+ if(e.pointerType==="mouse")zieht=true;
 });
+$("flotteListe").addEventListener("click",e=>{
+ if(Date.now()-gewaehltUm<600)return;   /* schon beim Drücken gewählt */
+ chipWaehlen(e);
+});
+document.addEventListener("pointermove",e=>{
+ if(!zieht||istFest())return;
+ const el=document.elementFromPoint(e.clientX,e.clientY);
+ const z=el&&el.closest?el.closest(".zelle"):null;
+ const gitter=$("gitter-setzen");
+ if(!z||!gitter||!gitter.contains(z))return;
+ vorschauAuf(Number(z.dataset.x),Number(z.dataset.y));
+});
+document.addEventListener("pointerup",()=>{ zieht=false; });
+document.addEventListener("pointercancel",()=>{ zieht=false; });
+
+/* Feld: Position wählen – bewusst ohne sofortiges Festsetzen */
+$("setzBrett").addEventListener("pointerdown",e=>{
+ const z=e.target.closest(".zelle");
+ if(!z||istFest())return;
+ vorschauAuf(Number(z.dataset.x),Number(z.dataset.y));
+});
+$("setzBrett").addEventListener("pointermove",e=>{
+ if(e.pointerType==="touch")return;
+ const z=e.target.closest(".zelle");
+ if(!z||istFest())return;
+ vorschauAuf(Number(z.dataset.x),Number(z.dataset.y));
+});
+$("setzBrett").addEventListener("click",e=>{
+ const z=e.target.closest(".zelle");
+ if(!z||istFest())return;
+ vorschauAuf(Number(z.dataset.x),Number(z.dataset.y));
+});
+document.addEventListener("keydown",e=>{
+ if((e.key==="r"||e.key==="R")&&sichtbar("setzen")&&!istFest()){ drehen(); }
+});
+
+/* ---------------------------------------------------------- Start */
 
 if(!ONLINE){
  $("startText").textContent="Schiffe versenken läuft über den Connector: Raum öffnen, „Schiffe versenken“ anbieten, Karte im Chat antippen.";
  zeige("start",true);
 }else{
+ entwurfLaden();
  holen();
  setInterval(holen,1300);
  setInterval(()=>{

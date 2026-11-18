@@ -161,6 +161,7 @@ const $=id=>document.getElementById(id);
 let game=null;
 let ziel=0;              // geplanter Einsatz beim Erhöhen (Cent)
 let fehlerZeit=0;
+let serverHinweis="";   // Grund, wenn der Raum die Partie beendet hat
 
 function euro(cent){
  if(cent==null)return "—";
@@ -226,9 +227,14 @@ function zeichne(){
   zeige("start",true); zeige("lobby",false); zeige("spieltisch",false);
   $("btnCreate").hidden=false;
   $("btnJoin").hidden=true;
-  $("startText").textContent="Noch kein Tisch in diesem Raum. Eröffne einen – die anderen steigen über die Spielkarte ein.";
+  // Wurde die Partie vom Raum beendet, steht der Grund hier – sonst wirkt es
+  // wie ein Rauswurf ohne Erklärung.
+  $("startText").textContent=serverHinweis
+   ?serverHinweis+" Eröffne einen neuen Tisch – die anderen steigen über die Spielkarte ein."
+   :"Noch kein Tisch in diesem Raum. Eröffne einen – die anderen steigen über die Spielkarte ein.";
   return;
  }
+ serverHinweis="";
 
  zeige("start",false);
 
@@ -391,6 +397,29 @@ if(!ONLINE){
   fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
    body:JSON.stringify({room:ROOM,id:ID,name:(ich()&&ich().name)||NAME,active:true})}).catch(()=>{});
  },30000);
+
+ // Dem Server melden, dass hier wirklich ein Spielbrett offen ist. Ohne diese
+ // Meldung hielt der Raum die Partie nach 90 s für zurückgelassen und beendete
+ // sie für alle („niemand war mehr am Spielbrett“).
+ // Im Hintergrund geht seite=versteckt mit: Dann bleibt die Partie bis zu fünf
+ // Minuten stehen, auch wenn das Handy den Tab einfriert.
+ async function amBrett(){
+  let zusatz="";
+  try{ if(document.visibilityState==="hidden")zusatz="&seite=versteckt"; }catch(e){}
+  try{
+   const r=await fetch("/api/imspiel?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID)+zusatz,{cache:"no-store"});
+   if(!r.ok)return;
+   const d=await r.json();
+   if(d&&d.hinweis&&d.hinweis!==serverHinweis){
+    serverHinweis=d.hinweis;
+    zeichne();
+   }
+  }catch(e){}
+ }
+ amBrett();
+ setInterval(amBrett,5000);
+ document.addEventListener("visibilitychange",amBrett);
+ window.addEventListener("focus",amBrett);
 }
 </script>
 <script src="/spiele/verlassen.js"></script>

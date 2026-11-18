@@ -1,6 +1,6 @@
 # TrashyGecko Mahjong
 
-Mahjong-Solitär mit 56 Formen, 72 Motiven und deutschen Sprüchen. Jedes Level hat
+Mahjong-Solitär mit 100 Formen, 72 Motiven und deutschen Sprüchen. Jedes Level hat
 genau 144 Steine (72 Paare) und ist garantiert lösbar. Nach der letzten Form
 beginnt die nächste Runde mit Form 1 – in einer anderen Steinfarbe, endlos.
 
@@ -66,7 +66,7 @@ Notch/Safe-Area bleibt zusätzlich frei).
   Blinken und ohne Fehlgriff-Zählung – ein zweiter Tipp auf denselben Stein ist
   kein Fehler.
 - **Level geschafft:** Siegerehrung mit `Level · Runde · Farbe`
-  (z. B. „Level 57 · Runde 2 · Bernstein"), Punkten, Spruch aus `gewonnen.txt`,
+  (z. B. „Level 101 · Runde 2 · Bernstein"), Punkten, Spruch aus `gewonnen.txt`,
   Zeit, Highscore und „WEITER"-Knopf. Der Spruch wechselt bei jedem Sieg die
   Farbe (warme Palette: Orange, Gold, Amber, Coral, Rosa, Honig, nie zweimal
   dieselbe hintereinander). Am Ende zählen ein Zeitbonus
@@ -83,10 +83,11 @@ Notch/Safe-Area bleibt zusätzlich frei).
   und die neue Verteilung geht garantiert wieder auf.
 - Der Timer pausiert, wenn der Tab im Hintergrund ist.
 
-## Formen 1–56
+## Formen 1–100
 
-Dieselben 56 Formen kommen in jeder Runde wieder, nur in einer anderen
-Steinfarbe (siehe unten).
+Dieselben 100 Formen kommen in jeder Runde wieder, nur in einer anderen
+Steinfarbe (siehe unten). Die Level 1–56 sind unverändert; 57–100 sind 44 neue
+Formen (siehe unten).
 
 | Level | Form | Level | Form |
 |---|---|---|---|
@@ -118,6 +119,28 @@ Steinfarbe (siehe unten).
 | 26 | Mondsichel | 54 | Pyramide |
 | 27 | Herz mit Flügeln | 55 | Säulen |
 | 28 | Kirschblüte | 56 | Brücke |
+| 57 | Fahrrad | 79 | Apfel |
+| 58 | Zug | 80 | Birne |
+| 59 | Bus | 81 | Traube |
+| 60 | Flugzeug | 82 | Erdbeere |
+| 61 | U-Boot | 83 | Ananas |
+| 62 | Fledermaus | 84 | Kürbis |
+| 63 | Fuchs | 85 | Kuchen |
+| 64 | Bär | 86 | Kanne |
+| 65 | Elefant | 87 | Gabel |
+| 66 | Giraffe | 88 | Schere |
+| 67 | Pferd | 89 | Brille |
+| 68 | Hund | 90 | Hut |
+| 69 | Frosch | 91 | Schuh |
+| 70 | Schildkröte | 92 | Tasche |
+| 71 | Krake | 93 | Koffer |
+| 72 | Wal | 94 | Bleistift |
+| 73 | Delfin | 95 | Welle |
+| 74 | Biene | 96 | Berg |
+| 75 | Libelle | 97 | Zelt |
+| 76 | Kaktus | 98 | Windmühle |
+| 77 | Palme | 99 | Riesenrad |
+| 78 | Blatt | 100 | Tempel |
 
 Die Level 51–56 sind bewusst einfache Formen: Würfel (drei gleiche Ebenen),
 Rechteck, Ball, Pyramide, ein Feld aus zwölf Säulen und eine Brücke, deren Steg
@@ -128,40 +151,47 @@ in der Mitte über einer Lücke liegt.
 Der goldene Level-Knopf zeigt den laufenden Satz mit (`HANDY 01 ▾`); er öffnet die
 Level-Auswahl. Darin schaltet der Umschalter oben zwischen **HANDY-LEVEL** und
 **NORMAL-LEVEL** um: gleiche Runden, gleiche Steinfarben, gleiche Sprüche,
-gleiche Punktzahl – nur **56 andere Formen**. Jedes Spiel beginnt mit den
-Handy-Leveln, auch wenn zuletzt ein Normal-Level lief.
+gleiche Punktzahl – nur **100 andere Formen** (6 × 8 statt 12 × 8). Jedes Spiel
+beginnt mit den Handy-Leveln, auch wenn zuletzt ein Normal-Level lief.
 
 - Jede Form ist **höchstens 6 Steine breit und 8 Steine hoch** (Handyformat) und
   hat trotzdem genau 144 Steine. Gestapelt wird immer genau übereinander, damit
   unten am Rand von jedem Stein ein Streifen sichtbar bleibt; die Tiefe ist frei.
 - Die Formen stehen als kleine Bilder (8 Zeilen mit je 6 Zeichen, `#` = Stein)
-  in `js/board-layout-2.js`; daraus werden die 144 Steine gleichmäßig gestapelt.
+  in `js/board-layout-2.js` (Level 1–56) und `js/board-layout-100.js`
+  (Level 57–100); daraus werden die 144 Steine gleichmäßig gestapelt.
 - Fortschritt, Häkchen und Bestzeiten der beiden Sätze sind **getrennt**: Satz 1
   liegt wie bisher ganz oben im Spielstand, Satz 2 in `satz2`.
+- Der schwere Modus hat eigene Sammlungen: **100 Formen für den Rechner**
+  (12 × 8, höchstens vier Ebenen) und **100 für das Handy** (6 × 8, höchstens
+  sieben Ebenen). Beide bestehen aus 25 Umrissen zu je vier Höhenprofilen
+  (Kuppe, Grat, Terrassen, Mulde); die Level 57–100 bringen elf neue Umrisse je
+  Sammlung. Leicht und Schwer bleiben damit deutlich verschieden: hier liegen
+  36 Motive zu je vier Steinen aus.
 
 ## Runden und Steinfarben
 
-Die Formen wiederholen sich, die Steinfarbe nicht: Level 1–56 sind Runde 1,
-Level 57–112 sind dieselben 56 Formen in Runde 2, usw. Welche Form ein Level
-spielt, ergibt sich aus `((Level − 1) mod 56) + 1`, die Runde aus
-`floor((Level − 1) / 56) + 1`.
+Die Formen wiederholen sich, die Steinfarbe nicht: Level 1–100 sind Runde 1,
+Level 101–200 sind dieselben 100 Formen in Runde 2, usw. Welche Form ein Level
+spielt, ergibt sich aus `((Level − 1) mod 100) + 1`, die Runde aus
+`floor((Level − 1) / 100) + 1`.
 
 | Runde | Steinfarbe | ab Level |
 |---|---|---|
 | 1 | Elfenbein (hell, klassisch) | 1 |
-| 2 | Bernstein (warm) | 57 |
-| 3 | Rosé | 113 |
-| 4 | Jade | 169 |
-| 5 | Azur | 225 |
-| 6 | Amethyst | 281 |
-| 7 | Schiefer (dunkel) | 337 |
-| 8 | Weinrot (dunkel) | 393 |
-| 9 | Tiefschwarz (richtiges Schwarz) | 449 |
-| 10 | Regenbogen (alle Farben, jedes Paar eine) | 505 |
+| 2 | Bernstein (warm) | 101 |
+| 3 | Rosé | 201 |
+| 4 | Jade | 301 |
+| 5 | Azur | 401 |
+| 6 | Amethyst | 501 |
+| 7 | Schiefer (dunkel) | 601 |
+| 8 | Weinrot (dunkel) | 701 |
+| 9 | Tiefschwarz (richtiges Schwarz) | 801 |
+| 10 | Regenbogen (alle Farben, jedes Paar eine) | 901 |
 
 ### Die Regenbogen-Runde
 
-Nach dem letzten schwarzen Level kommt eine Zugabe: Level 505–560 zeigen alle
+Nach dem letzten schwarzen Level kommt eine Zugabe: Level 901–1000 zeigen alle
 neun Farben **gleichzeitig** – jedes Paar in einer eigenen Farbe. Die Farbe
 kommt aus dem Motiv (`((Motivnummer − 1) mod 9) + 1`), und weil beide Steine
 eines Paares dasselbe Motiv haben, passen sie immer farblich zusammen; es
@@ -169,14 +199,14 @@ werden genau 8 Paare je Farbe. In der Runde setzt nicht das Brett eine Farbe
 (`body[data-runde]`), sondern jeder Stein selbst (`.mahjong-tile[data-farbe]`,
 neun Paletten-Blöcke am Ende von `css/mahjong.css`).
 
-In der Farbwahl steht sie als zehnter Punkt (Farbkreis) und führt zu Level 505.
+In der Farbwahl steht sie als zehnter Punkt (Farbkreis) und führt zu Level 901.
 Wer wenig sieht, kommt damit ohne Runden-Klettern direkt in die Runde, in der
 jedes Paar eine eigene Farbe hat. Beim Start steht in der Statuszeile
 „Runde 10 – alle Farben. Jedes Paar hat seine eigene Farbe."
-Danach geht es mit Elfenbein weiter (Level 561 = Runde 11), die Tafel „ALLE
-FARBEN DURCH" erscheint jetzt am Ende der Regenbogen-Runde (Level 560, 1120, …).
+Danach geht es mit Elfenbein weiter (Level 1001 = Runde 11), die Tafel „ALLE
+FARBEN DURCH" erscheint jetzt am Ende der Regenbogen-Runde (Level 1000, 2000, …).
 
-Bildet ein Level den Anfang einer neuen Runde (57, 113, …, 505), steht beim
+Bildet ein Level den Anfang einer neuen Runde (101, 201, …, 901), steht beim
 Start in der Statuszeile der Rundenhinweis.
 
 Die Farben sind zurückhaltend gewählt, damit die Motive gut lesbar bleiben;
@@ -192,11 +222,11 @@ sie über `body[data-runde]` in `main.js`. Weitere Farben brauchen nur einen
 zusätzlichen Block in `css/mahjong.css` und einen Namen in `RUNDEN_FARBEN`.
 
 In der Level-Auswahl steht über dem Raster die gewählte Runde mit Farbname
-und Fortschritt („Runde 9 · Tiefschwarz · 12 von 56"), darunter die 56 Formen
+und Fortschritt („Runde 9 · Tiefschwarz · 12 von 100"), darunter die 100 Formen
 dieser Runde mit ihren Level-Nummern. Geschaffte Level tragen ein grünes
 Häkchen und darunter ihre Bestzeit (mm:ss); die Tooltips der Farbpunkte nennen
 den Fortschritt der jeweiligen Runde. Am Ende der Auswahl steht die Farbwahl – eine Farbe
-antippen springt an den Anfang dieser Runde (Level 1, 57, 113, …).
+antippen springt an den Anfang dieser Runde (Level 1, 101, 201, …).
 
 Ganz oben in der Auswahl stehen zwei Umschalter: **FORM** (`RUND` / `ECKIG`)
 und **ZUSTAND** (`NEU` / `ALT`). Sie wirken sofort auf das Brett und werden im
@@ -227,8 +257,10 @@ mahjong/
 ├── css/mahjong.css       gesamte Optik (auch Handy/Tablet und Querformat)
 ├── css/fonts/            Atkinson Hyperlegible 400/700 (woff2) + OFL-Lizenz
 ├── js/
-│   ├── board-layout.js   alle 56 Formen als Positionen (x, y, Ebene)
-│   ├── board-layout-2.js die 56 Formen des zweiten Satzes (6 × 8, gestapelt)
+│   ├── board-layout.js   Level 1–56 (PC, 12 × 8) als Positionen (x, y, Ebene)
+│   ├── board-layout-2.js Level 1–56 des Handy-Satzes (6 × 8, gestapelt)
+│   ├── board-layout-schwer.js schwere Formen 1–56 (PC 12 × 8, Handy 6 × 8)
+│   ├── board-layout-100.js Level 57–100 aller vier Sammlungen
 │   ├── board.js          Regeln: freie Steine, Paare entfernen
 │   ├── generator.js      verteilt die 72 Motive, findet die Abräum-Reihenfolge
 │   ├── renderer.js       Brett zeichnen, Zoom, Verschieben, Blinkeffekte
@@ -258,7 +290,9 @@ werden von mehreren Spielen geteilt.
   es – das ist der einzige Fall, in dem noch ein Level-Neustart nötig ist.
 - **Formen:** Jede Form beschreibt nur Positionen (`x`, `y`, Ebene `z`). Höhere
   Ebenen liegen versetzt darüber, dadurch wirken die Steine dreidimensional.
-  Neue Formen kommen als weiterer Eintrag in `BOARD_LAYOUTS` dazu.
+  Neue Formen kommen als weiterer Eintrag in `js/board-layout-100.js` dazu:
+  PC-Leicht als 12-x-8-Bild, Handy-Leicht als 6-x-8-Bild, Schwer als Umriss mit
+  vier Höhenprofilen.
 - **Steine:** 72 WebP-Dateien, verlustfrei aus PNG umgewandelt (2,72 → 2,06 MB,
   Pixel identisch). Im Startzoom sind sie je nach Form und Fenster rund
   38 × 45 px groß (gemessen bei 390 und 1280 px Breite), die 160 px Auflösung

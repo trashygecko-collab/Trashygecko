@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>Space Invaders</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 18px;
+ background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+ color:#efe6d2;font:15px var(--tg-schrift);
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
+main{max-width:760px;margin:auto}
+
+.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+ box-shadow:0 6px 18px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
+.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
+ border-bottom:1px solid #d9bc7c33}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
+ border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
+.menueleiste button:hover{background:#184536}
+
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+.statuszeile b{color:#e8cd8e;font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#040c09}
+canvas{display:block;margin:0 auto;border-radius:8px;touch-action:none;
+ background:#040c09;box-shadow:inset 0 0 60px #00000099}
+
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:330px}
+.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 8px 4px;background:#08120f}
+.pad button{font-family:inherit;font-size:16px;padding:12px 0;border-radius:8px;cursor:pointer;
+ border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
+.pad button:active{background:#1e5645}
+.pad .feuer{grid-column:2 / 4;font-size:14px;letter-spacing:.08em}
+
+.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+
+#regeln{margin-top:12px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln li{margin-bottom:5px}
+#regeln b{color:#f1dca8;font-weight:normal}
+.klein{color:#a9c3b6;font-size:13px}
+a{color:#e8cd8e}
+.mitte{text-align:center}
+
+/* Kleine Fenster (800x480, Handy quer): weniger Rahmen, Spielfeld bleibt sichtbar */
+@media (max-height:560px){
+ body{padding:2px 4px 8px}
+ .titelleiste{padding:4px 8px}
+ .menueleiste{padding:4px 6px}
+ .statuszeile{padding:4px 8px;font-size:12px}
+ .buehne{padding:4px}
+ .fuss{padding:2px 8px;min-height:0;font-size:12px}
+ .pad{padding:4px 6px 2px}
+ .pad button{padding:8px 0}
+ #regeln{display:none}
+}
+</style>
+<link rel="stylesheet" href="/spiele/schrift.css">
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span class="titel">Space Invaders</span>
+  <span class="kreuz">×</span>
+ </div>
+
+ <div class="menueleiste">
+  <button id="btnNeu">Neues Spiel</button>
+  <button id="btnPause">Pause</button>
+ </div>
+
+ <div class="statuszeile">
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>Welle <b id="welle">1</b></span>
+  <span>Leben <b id="leben">●●●</b></span>
+  <span>Rekord <b id="rekord">0</b></span>
+ </div>
+
+ <div class="buehne">
+  <canvas id="feld" width="440" height="520"></canvas>
+  <div class="meldung" id="meldung">
+   <div class="kasten">
+    <h2 id="meldungTitel">SPACE INVADERS</h2>
+    <p id="meldungText">Die Flotte landet oben. Halte sie auf und triff sie, bevor sie unten ankommt.</p>
+    <button id="meldungKnopf">Starten</button>
+   </div>
+  </div>
+ </div>
+
+ <div class="pad">
+  <button class="links" data-dir="links">◀</button>
+  <button class="rechts" data-dir="rechts">▶</button>
+  <button class="feuer" id="btnFeuer">FEUER</button>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Pfeiltasten oder A/D steuern, Leertaste schießt.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln</summary>
+  <ol>
+   <li><b>Ziel:</b> Alle Invasoren einer Welle abschießen. Fünf Reihen zu elf Stück, jede Welle wird schneller und startet tiefer.</li>
+   <li><b>Steuern:</b> Am PC mit den Pfeiltasten oder A/D, schießen mit der Leertaste. Am Handy unten links/rechts tippen oder mit dem Finger über das Feld ziehen, „FEUER“ schießt.</li>
+   <li><b>Punkte:</b> Tintenfisch 30, Krebs 20, Oktopus 10. Das rote Ufo oben gibt 50, 100 oder 150.</li>
+   <li><b>Deckung:</b> Die vier grünen Bunker halten Schüsse auf – aber sie bröckeln. Hinter ihnen ist es sicherer.</li>
+   <li><b>Leben:</b> Drei Kanonen. Ein Bombentreffer kostet ein Leben, danach gibt es kurz Schutz.</li>
+   <li><b>Verloren:</b> Wenn die Invasoren unten ankommen oder alle Leben weg sind. Pro Schuss fliegt nur eine Kugel.</li>
+   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+  </ol>
+  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script>
+(() => {
+const canvas=document.getElementById("feld");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+
+const W=440, H=520;
+canvas.width=W;
+canvas.height=H;
+
+/* Feldaufteilung: elf Invasoren je Reihe, Zellen 32 x 28 Pixel. */
+const START_X=44, START_Y=66;
+const ZELLE_X=32, ZELLE_Y=28, INV_B=24, INV_H=24;
+const SPALTEN=11, REIHEN=5;
+const SPIELER_B=32, SPIELER_H=14, SPIELER_Y=470;
+const SCHUSS_B=3, SCHUSS_H=12;
+const BOMBE_B=3, BOMBE_H=11;
+const UFO_B=40, UFO_H=16, UFO_Y=34;
+const BUNKER_Y=404, BUNKER_B=48, BUNKER_H=30, BUNKER_Z=3;
+/* Startplatz der Kanone: genau in der Lücke zwischen Bunker 2 und 3,
+   damit der erste Schuss frei nach oben geht. */
+const START_KANONE=224;
+
+/* ---------------------------------------------------------------- Pixelbilder */
+
+const BILDER={
+ tinten:[
+  ["...##...","..####..",".######.","##.##.##","########","..#..#..",".#.##.#.","#.#..#.#"],
+  ["...##...","..####..",".######.","##.##.##","########",".#.##.#.","#......#",".#....#."]
+ ],
+ krebs:[
+  ["#......#",".#....#.","..#..#..",".######.","##.##.##","########","#.####.#","#.#..#.#"],
+  ["#......#","#.#..#.#","#.####.#","########","##.##.##",".######.","..#..#..","..#..#.."]
+ ],
+ oktopus:[
+  ["..####..",".######.","##.##.##","########","..#..#..",".#.##.#.","#......#",".#....#."],
+  ["..####..",".######.","##.##.##","########",".#.##.#.","#..##..#","#.#..#.#","..#..#.."]
+ ],
+ ufo:[
+  ["....####....","..########..",".##########.","##.##..##.##","############","..###..###..","...##..##..."],
+  ["....####....","..########..",".##########.","##.##..##.##","############","...#....#...","..#.#..#.#.."]
+ ],
+ kanone:[[".....#.....","....###....","....###....",".##########.","###########","###########","###########","###########"]]
+};
+
+const PUNKTE={tinten:30,krebs:20,oktopus:10};
+const REIHEN_ART=["tinten","krebs","krebs","oktopus","oktopus"];
+const REIHEN_FARBE={tinten:"#f16fa4",krebs:"#7fe0c8",oktopus:"#ffd479"};
+
+/* ---------------------------------------------------------------- Zustand */
+
+let zustand="start";                 /* start, laeuft, pause, treffer, ende */
+let punkte=0, welle=1, leben=3;
+let inv=[];                          /* {x,y,art,lebt} */
+let kanone={x:START_KANONE,y:SPIELER_Y};
+let schuss=null, bomben=[], bunker=[], ufo=null;
+let richtung=1, schrittZeit=0, schrittDauer=0.55, frame=0;
+let bombenZeit=0, ufoZeit=14, schutz=0, wellePause=0;
+let sterne=[], letzteZeit=0, hinweisGrund="";
+
+const rnd=Math.random;
+
+/* Sterne mit festem Startwert – der erste Bildaufbau ist damit immer gleich. */
+function sterneBauen(){
+ let saat=20261118;
+ const zufall=()=>{ saat=(saat*1103515245+12345)&0x7fffffff; return saat/0x7fffffff; };
+ sterne=[];
+ for(let i=0;i<48;i++)sterne.push({x:Math.floor(zufall()*W),y:Math.floor(zufall()*(H-40)),g:0.25+zufall()*0.65});
+}
+
+/* ---------------------------------------------------------------- Aufbau */
+
+function bunkerBauen(){
+ bunker=[];
+ for(let b=0;b<4;b++){
+  const x=Math.round(28+b*(BUNKER_B+24));
+  const zellen=[];
+  for(let y=0;y<BUNKER_H/BUNKER_Z;y++){
+   const zeile=[];
+   for(let x2=0;x2<BUNKER_B/BUNKER_Z;x2++)zeile.push(1);
+   zellen.push(zeile);
+  }
+  /* Bogen unten in der Mitte ausschneiden */
+  const mitte=BUNKER_B/BUNKER_Z/2;
+  for(let y=Math.floor(zellen.length*0.55);y<zellen.length;y++){
+   const luecke=Math.max(0,(y-zellen.length*0.55))*0.9;
+   for(let x2=0;x2<zellen[0].length;x2++){
+    if(Math.abs(x2+0.5-mitte)<(3.6+luecke))zellen[y][x2]=0;
+   }
+  }
+  /* Ecken oben abschrägen */
+  [[0,0],[0,1],[1,0],[zellen[0].length-1,0],[zellen[0].length-2,0],[zellen[0].length-1,1]].forEach(([x2,y])=>{
+   if(zellen[y])zellen[y][x2]=0;
+  });
+  bunker.push({x:x,y:BUNKER_Y,zellen:zellen});
+ }
+}
+
+function welleBauen(){
+ inv=[];
+ const versatz=(welle-1)*8;
+ for(let r=0;r<REIHEN;r++){
+  for(let c=0;c<SPALTEN;c++){
+   inv.push({x:START_X+c*ZELLE_X, y:START_Y+versatz+r*ZELLE_Y, art:REIHEN_ART[r], lebt:true});
+  }
+ }
+ richtung=1; schrittZeit=0; frame=0;
+ schrittDauer=schrittDauerFuer(inv.filter(i=>i.lebt).length);
+ bomben=[]; schuss=null; ufo=null; ufoZeit=14;
+}
+
+function schrittDauerFuer(anzahl){
+ const grund=0.52-((welle-1)*0.05);
+ const faktor=Math.max(0.12,anzahl/(SPALTEN*REIHEN));
+ return Math.max(0.055,grund*faktor);
+}
+
+function neuesSpiel(){
+ punkte=0; welle=1; leben=3; schutz=0; wellePause=0;
+ kanone={x:START_KANONE,y:SPIELER_Y};
+ sterneBauen();
+ bunkerBauen();
+ welleBauen();
+ zahlenZeigen();
+ zustand="start";
+ $("btnPause").textContent="Pause";
+ $("hinweis").textContent="Pfeiltasten oder A/D steuern, Leertaste schießt.";
+ zeigeMeldung("SPACE INVADERS","Die Flotte landet oben. Halte sie auf und triff sie, bevor sie unten ankommt.","Starten");
+ $("meldungKnopf").onclick=starten;
+ zeichne();
+}
+
+function rekordLaden(){
+ try{ return Number(localStorage.getItem("invaders-rekord")||0); }catch(e){ return 0; }
+}
+function rekordPruefen(){
+ if(punkte>rekordLaden()){
+  try{ localStorage.setItem("invaders-rekord",String(punkte)); }catch(e){}
+ }
+ $("rekord").textContent=Math.max(punkte,rekordLaden());
+}
+
+function zahlenZeigen(){
+ $("punkte").textContent=punkte;
+ $("welle").textContent=welle;
+ $("leben").textContent="●".repeat(Math.max(0,leben))+"○".repeat(Math.max(0,3-leben));
+ $("rekord").textContent=rekordLaden();
+}
+
+function starten(){
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ letzteZeit=performance.now();
+ $("hinweis").textContent="Pfeiltasten oder A/D steuern, Leertaste schießt.";
+}
+
+/* ---------------------------------------------------------------- Spielzüge */
+
+function schiessen(){
+ if(zustand!=="laeuft"||schuss)return;
+ schuss={x:kanone.x+SPIELER_B/2-SCHUSS_B/2,y:kanone.y-10};
+}
+
+function spielerTreffer(){
+ if(zustand!=="laeuft"||schutz>0)return;
+ leben--;
+ zahlenZeigen();
+ schutz=1.6;
+ bomben=[];
+ hinweisGrund="Bombentreffer!";
+ $("hinweis").textContent="Bombentreffer – noch "+Math.max(0,leben)+" Leben.";
+ if(leben<=0)ende("GAME OVER","Punkte: "+punkte+" · Welle "+welle);
+}
+
+function ende(titel,text){
+ zustand="ende";
+ rekordPruefen();
+ zeigeMeldung(titel,text,"Nochmal");
+ $("meldungKnopf").onclick=neuesSpiel;
+}
+
+function welleGeschafft(){
+ welle++;
+ zahlenZeigen();
+ zustand="laeuft";
+ wellePause=1.1;
+ bomben=[]; schuss=null;
+ $("hinweis").textContent="Welle "+welle+" – die Flotte kommt tiefer und schneller.";
+ welleBauen();
+ zustand="laeuft";
+ letzteZeit=performance.now();
+}
+
+/* ---------------------------------------------------------------- Bunker */
+
+function bunkerZelle(bx,by){
+ for(const b of bunker){
+  if(bx<b.x||bx>=b.x+BUNKER_B||by<b.y||by>=b.y+BUNKER_H)continue;
+  const zx=Math.floor((bx-b.x)/BUNKER_Z), zy=Math.floor((by-b.y)/BUNKER_Z);
+  if(b.zellen[zy]&&b.zellen[zy][zx])return {b:b,zx:zx,zy:zy};
+ }
+ return null;
+}
+
+function bunkerSchaden(bx,by,radius){
+ const b=bunkerZelle(bx,by);
+ if(!b)return false;
+ const zx0=b.zx-radius, zx1=b.zx+radius, zy0=b.zy-radius, zy1=b.zy+radius;
+ for(let y=zy0;y<=zy1;y++){
+  for(let x=zx0;x<=zx1;x++){
+   if(Math.hypot(x-b.zx,y-b.zy)>radius)continue;
+   if(b.b.zellen[y]&&b.b.zellen[y][x]!==undefined)b.b.zellen[y][x]=0;
+  }
+ }
+ return true;
+}
+
+/* ---------------------------------------------------------------- Ablauf */
+
+function update(dt){
+ if(zustand!=="laeuft")return;
+ if(schutz>0)schutz=Math.max(0,schutz-dt);
+ if(wellePause>0){ wellePause=Math.max(0,wellePause-dt); return; }
+
+ /* Kanone */
+ let richtungX=0;
+ if(tasten.links)richtungX-=1;
+ if(tasten.rechts)richtungX+=1;
+ if(ziehZiel!==null){
+  const ziel=Math.max(0,Math.min(W-SPIELER_B,ziehZiel-SPIELER_B/2));
+  const d=ziel-kanone.x;
+  if(Math.abs(d)>1.5)richtungX=Math.sign(d);
+ }
+ kanone.x=Math.max(6,Math.min(W-6-SPIELER_B,kanone.x+richtungX*230*dt));
+
+ /* eigener Schuss */
+ if(schuss){
+  schuss.y-=430*dt;
+  if(schuss.y<-14)schuss=null;
+ }
+
+ /* Invasoren im Takt */
+ const lebende=inv.filter(i=>i.lebt);
+ if(lebende.length===0){ welleGeschafft(); return; }
+ schrittDauer=schrittDauerFuer(lebende.length);
+ schrittZeit+=dt;
+ if(schrittZeit>=schrittDauer){
+  schrittZeit-=schrittDauer;
+  frame=1-frame;
+  const links=Math.min(...lebende.map(i=>i.x));
+  const rechts=Math.max(...lebende.map(i=>i.x+INV_B));
+  let runter=false;
+  if(richtung>0&&rechts+6>W-8)runter=true;
+  if(richtung<0&&links-6<8)runter=true;
+  if(runter){
+   richtung*=-1;
+   lebende.forEach(i=>{ i.y+=9; });
+  }else{
+   lebende.forEach(i=>{ i.x+=richtung*6; });
+  }
+  /* Invasoren fressen die Bunker weg */
+  lebende.forEach(i=>{
+   if(i.y+INV_H>BUNKER_Y-4){
+    for(let y=BUNKER_Y;y<Math.min(BUNKER_Y+BUNKER_H,i.y+INV_H+6);y+=BUNKER_Z){
+     for(let x=i.x;x<i.x+INV_B;x+=BUNKER_Z)bunkerSchaden(x,y,1);
+    }
+   }
+  });
+  /* Wenn sie unten ankommen, ist es vorbei */
+  if(lebende.some(i=>i.y+INV_H>SPIELER_Y-4)){ ende("GAME OVER","Die Flotte ist unten angekommen. Punkte: "+punkte); return; }
+ }
+
+ /* Bomben der Invasoren */
+ bombenZeit-=dt;
+ if(bombenZeit<=0){
+  bombenZeit=Math.max(0.22,0.95-welle*0.07)*(0.6+0.8*rnd());
+  const spalten={};
+  lebende.forEach(i=>{ const k=Math.round(i.x/8); if(!spalten[k]||spalten[k].y<i.y)spalten[k]=i; });
+  const kandidaten=Object.values(spalten);
+  if(kandidaten.length){
+   const i=kandidaten[Math.floor(rnd()*kandidaten.length)];
+   bomben.push({x:i.x+INV_B/2-BOMBE_B/2,y:i.y+INV_H,speed:120+welle*12+rnd()*40});
+  }
+ }
+
+ bomben.forEach(b=>{ b.y+=b.speed*dt; });
+
+ /* Ufo */
+ ufoZeit-=dt;
+ if(!ufo&&ufoZeit<=0){
+  const vonLinks=rnd()<0.5;
+  ufo={x:vonLinks?-UFO_B:W,y:UFO_Y,vx:(vonLinks?1:-1)*92,frame:0,t:0};
+  ufoZeit=17+rnd()*10;
+ }
+ if(ufo){
+  ufo.x+=ufo.vx*dt;
+  ufo.t+=dt;
+  ufo.frame=Math.floor(ufo.t*8)%2;
+  if(ufo.x<-UFO_B-10||ufo.x>W+10)ufo=null;
+ }
+
+ /* Treffer: eigener Schuss */
+ if(schuss){
+  for(const i of lebende){
+   if(schuss.x+SCHUSS_B>i.x&&schuss.x<i.x+INV_B&&schuss.y<i.y+INV_H&&schuss.y+SCHUSS_H>i.y){
+    i.lebt=false;
+    punkte+=PUNKTE[i.art]||10;
+    zahlenZeigen();
+    rekordPruefen();
+    schuss=null;
+    break;
+   }
+  }
+ }
+ if(schuss&&bunkerSchaden(schuss.x+SCHUSS_B/2,schuss.y,1))schuss=null;
+ if(schuss){
+  /* Ufo */
+  if(ufo&&schuss.x+SCHUSS_B>ufo.x&&schuss.x<ufo.x+UFO_B&&schuss.y<ufo.y+UFO_H&&schuss.y+SCHUSS_H>ufo.y){
+   const beute=[50,100,150][Math.floor(rnd()*3)];
+   punkte+=beute;
+   $("hinweis").textContent="Ufo abgeschossen: "+beute+" Punkte!";
+   zahlenZeigen(); rekordPruefen();
+   ufo=null; schuss=null;
+  }
+ }
+
+ /* Treffer: Bomben */
+ for(let bi=bomben.length-1;bi>=0;bi--){
+  const b=bomben[bi];
+  if(b.y>H){ bomben.splice(bi,1); continue; }
+  if(bunkerSchaden(b.x+BOMBE_B/2,b.y+BOMBE_H,1.6)){ bomben.splice(bi,1); continue; }
+  if(schutz<=0&&b.x+BOMBE_B>kanone.x&&b.x<kanone.x+SPIELER_B&&b.y+BOMBE_H>kanone.y&&b.y<kanone.y+SPIELER_H){
+   bomben.splice(bi,1);
+   spielerTreffer();
+   if(zustand!=="laeuft")return;
+  }
+ }
+}
+
+/* ---------------------------------------------------------------- Zeichnen */
+
+function bildZeichnen(art,f,x,y,farbe){
+ const zeilen=BILDER[art][f%2];
+ const px=INV_B/8, py=INV_H/8;
+ ctx.fillStyle=farbe;
+ for(let r=0;r<zeilen.length;r++){
+  const z=zeilen[r];
+  for(let c=0;c<z.length;c++){
+   if(z[c]==="#")ctx.fillRect(Math.round(x+c*px),Math.round(y+r*py),Math.ceil(px),Math.ceil(py));
+  }
+ }
+}
+
+function zeichne(){
+ /* Hintergrund */
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#071a14");
+ g.addColorStop(1,"#020a08");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ ctx.fillStyle="#cfe9dc";
+ sterne.forEach(s=>{
+  ctx.globalAlpha=s.g;
+  ctx.fillRect(s.x,s.y,1,1);
+ });
+ ctx.globalAlpha=1;
+
+ /* Bunker */
+ ctx.fillStyle="#5fd89a";
+ bunker.forEach(b=>{
+  b.zellen.forEach((zeile,y)=>{
+   zeile.forEach((wert,x)=>{
+    if(wert)ctx.fillRect(b.x+x*BUNKER_Z,b.y+y*BUNKER_Z,BUNKER_Z,BUNKER_Z);
+   });
+  });
+ });
+
+ /* Invasoren */
+ inv.forEach(i=>{
+  if(!i.lebt)return;
+  bildZeichnen(i.art,frame,i.x,i.y,REIHEN_FARBE[i.art]);
+ });
+
+ /* Ufo */
+ if(ufo)bildZeichnen("ufo",ufo.frame,ufo.x,ufo.y,"#ff6b5e");
+
+ /* Kanone */
+ if(zustand==="ende"||schutz>0&&Math.floor(schutz*8)%2===0){
+  ctx.globalAlpha=0.45;
+ }
+ bildZeichnen("kanone",0,kanone.x,kanone.y,"#9ff2a5");
+ ctx.globalAlpha=1;
+
+ /* Schüsse */
+ if(schuss){
+  ctx.fillStyle="#f7f4d0";
+  ctx.fillRect(schuss.x,schuss.y,SCHUSS_B,SCHUSS_H);
+ }
+ ctx.fillStyle="#ff9a6b";
+ bomben.forEach(b=>{
+  ctx.fillRect(b.x,b.y,BOMBE_B,BOMBE_H);
+ });
+
+ /* Trennlinie oben */
+ ctx.fillStyle="#1e5645";
+ ctx.fillRect(0,20,W,1);
+
+ /* Hinweise im Feld */
+ if(wellePause>0){
+  ctx.fillStyle="#e8cd8e";
+  ctx.font="bold 20px "+schrift();
+  ctx.textAlign="center";
+  ctx.fillText("WELLE "+welle,W/2,H/2-20);
+  ctx.font="13px "+schrift();
+  ctx.fillStyle="#a9c3b6";
+  ctx.fillText("Die Flotte rückt tiefer ein",W/2,H/2+6);
+  ctx.textAlign="left";
+ }
+}
+
+function schrift(){
+ return getComputedStyle(document.body).fontFamily||"sans-serif";
+}
+
+/* ---------------------------------------------------------------- Meldung */
+
+function zeigeMeldung(titel,text,knopf){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").textContent=knopf;
+ $("meldung").hidden=false;
+}
+
+/* ---------------------------------------------------------------- Schleife */
+
+function schleife(zeitJetzt){
+ const dt=Math.min(0.05,(zeitJetzt-letzteZeit)/1000||0.016);
+ letzteZeit=zeitJetzt;
+ update(dt);
+ zeichne();
+ requestAnimationFrame(schleife);
+}
+
+/* ---------------------------------------------------------------- Eingabe */
+
+const tasten={links:false,rechts:false};
+let ziehZiel=null;
+
+window.addEventListener("keydown",e=>{
+ const k=e.key;
+ if(k==="ArrowLeft"||k==="a"||k==="A"){ tasten.links=true; e.preventDefault(); }
+ else if(k==="ArrowRight"||k==="d"||k==="D"){ tasten.rechts=true; e.preventDefault(); }
+ else if(k===" "||k==="ArrowUp"||k==="w"||k==="W"){
+  e.preventDefault();
+  if(zustand==="start")starten();
+  else if(zustand==="ende")neuesSpiel();
+  else schiessen();
+ }else if(k==="p"||k==="P"){ pauseUmschalten(); }
+});
+window.addEventListener("keyup",e=>{
+ const k=e.key;
+ if(k==="ArrowLeft"||k==="a"||k==="A")tasten.links=false;
+ if(k==="ArrowRight"||k==="d"||k==="D")tasten.rechts=false;
+});
+
+canvas.addEventListener("pointerdown",e=>{
+ canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);
+ const r=canvas.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width*W;
+ if(zustand==="start"){ starten(); return; }
+ if(zustand==="ende"){ neuesSpiel(); return; }
+ ziehZiel=x;
+ e.preventDefault();
+});
+canvas.addEventListener("pointermove",e=>{
+ if(ziehZiel===null)return;
+ const r=canvas.getBoundingClientRect();
+ ziehZiel=(e.clientX-r.left)/r.width*W;
+ e.preventDefault();
+});
+["pointerup","pointercancel","pointerleave"].forEach(art=>{
+ canvas.addEventListener(art,()=>{ ziehZiel=null; });
+});
+
+document.querySelectorAll(".pad button[data-dir]").forEach(knopf=>{
+ const dir=knopf.dataset.dir;
+ const an=()=>{ if(dir==="links")tasten.links=true; else tasten.rechts=true; };
+ const aus=()=>{ if(dir==="links")tasten.links=false; else tasten.rechts=false; };
+ knopf.addEventListener("pointerdown",e=>{ e.preventDefault(); an(); });
+ ["pointerup","pointercancel","pointerleave"].forEach(art=>knopf.addEventListener(art,aus));
+ knopf.addEventListener("click",()=>{ if(zustand==="start")starten(); });
+});
+
+$("btnFeuer").addEventListener("click",()=>{
+ if(zustand==="start"){ starten(); return; }
+ if(zustand==="ende"){ neuesSpiel(); return; }
+ schiessen();
+});
+
+function pauseUmschalten(){
+ if(zustand==="laeuft"){
+  zustand="pause";
+  $("btnPause").textContent="Weiter";
+  $("hinweis").textContent="Pause – tippe auf Weiter.";
+ }else if(zustand==="pause"){
+  zustand="laeuft";
+  $("btnPause").textContent="Pause";
+  letzteZeit=performance.now();
+  $("hinweis").textContent="Pfeiltasten oder A/D steuern, Leertaste schießt.";
+ }
+}
+
+$("btnPause").onclick=pauseUmschalten;
+$("btnNeu").onclick=neuesSpiel;
+document.addEventListener("visibilitychange",()=>{ if(document.hidden&&zustand==="laeuft")pauseUmschalten(); });
+
+/* Spielfeld so groß wie möglich, aber immer ganz sichtbar (Hoch- und Querformat). */
+function passeAn(){
+ const platzB=Math.min(window.innerWidth-16,520);
+ const platzH=Math.max(200,window.innerHeight-225);
+ const skala=Math.min(platzB/W,platzH/H,1.35);
+ canvas.style.width=Math.floor(W*skala)+"px";
+ canvas.style.height=Math.floor(H*skala)+"px";
+}
+window.addEventListener("resize",passeAn);
+window.addEventListener("orientationchange",()=>setTimeout(passeAn,120));
+passeAn();
+
+neuesSpiel();
+requestAnimationFrame(schleife);
+
+})();
+</script>
+<script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+</body>
+</html>

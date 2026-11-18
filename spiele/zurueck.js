@@ -33,6 +33,11 @@
 (function () {
     "use strict";
 
+    // In der Android-App (WebView mit Bruecke TMahjong) gibt es weder Connector
+    // noch Rahmen: die App hat ihren eigenen Knopf "SPIEL VERLASSEN".  Hier also
+    // gar nichts tun - kein Knopf, kein window.tgZurueck.
+    if (window.TMahjong) return;
+
     // Nie zwei Knöpfe in einer Seite.
     if (document.querySelector(".tg-zurueck")) return;
 

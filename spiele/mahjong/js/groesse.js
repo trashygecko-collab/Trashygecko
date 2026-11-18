@@ -10,6 +10,14 @@
     let GRUND = 16;                 // Grundschrift in Pixeln bei Faktor 1
     let MIN = 0.85;
     let MAX = 1.8;
+    // Handy-Untergrenze: Ein Handy liegt quer bei etwa 872 x 392 CSS-Pixeln,
+    // also Diagonale 956 gegen den Bezug 980 = Faktor 0,98.  Damit waere die
+    // Schrift dort kleiner als die Grundgroesse von 16 px - obwohl genau dort
+    // gelesen wird.  Geraete mit Touchscreen bekommen deshalb mindestens 1,2
+    // (19,2 px).  Am Rechner mit Maus bleibt allein die Diagonale massgeblich -
+    // auch in einem kleinen Fenster, das die Untergrenze nicht braucht.
+    let HANDY_MIN = 1.2;
+    let HANDY = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
     let zuletzt = 0;
 
     // Liefert den Faktor, den auch renderer.js fuer die Zoom-Obergrenze nutzt.
@@ -17,6 +25,13 @@
         let w = window.innerWidth || document.documentElement.clientWidth || 854;
         let h = window.innerHeight || document.documentElement.clientHeight || 480;
         let f = Math.sqrt(w * w + h * h) / BEZUG;
+
+        // Auf Touchgeraeten nicht unter die Handy-Untergrenze fallen - sonst
+        // wird die Schrift dort kleiner als die Grundgroesse.
+        if (HANDY) {
+            f = Math.max(f || 0, HANDY_MIN);
+        }
+
         return Math.max(MIN, Math.min(MAX, f || 1));
     }
 

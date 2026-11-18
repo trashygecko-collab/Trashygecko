@@ -42,13 +42,16 @@ var maenColorsByCount = map[int][]string{
 	4: {"red", "green", "yellow", "blue"},
 }
 
+// Offizielle Startaufstellung: eine Figur steht auf dem A-Feld, drei warten.
 func maenNewPieces() []int {
-	return []int{-1, -1, -1, -1}
+	return []int{0, -1, -1, -1}
 }
 
 // maenLegalMoves liefert die Figuren, die mit diesem Wurf ziehen dürfen.
-// Regeln wie im lokalen Spiel: Rauskommen nur mit einer Sechs, nicht über das
-// Ziel hinaus, und nie zwei eigene Figuren auf demselben Feld.
+// Regeln wie im lokalen Spiel (Schmidt-Anleitung): Rauskommen nur mit einer
+// Sechs, überspringen ist erlaubt, nie zwei eigene Figuren auf einem Feld,
+// Zielfelder a–d zählen einzeln und brauchen den passenden Wurf, und solange
+// Figuren auf den B-Feldern warten, muss das A-Feld geräumt werden.
 func maenLegalMoves(pieces []int, color string, dice int) []int {
 	if dice < 1 || dice > 6 || len(pieces) != 4 {
 		return nil
@@ -66,9 +69,6 @@ func maenLegalMoves(pieces []int, color string, dice int) []int {
 			}
 			destination = 0
 		} else {
-			if progress >= 40 {
-				continue
-			}
 			destination = progress + dice
 			if destination > 43 {
 				continue
@@ -86,7 +86,7 @@ func maenLegalMoves(pieces []int, color string, dice int) []int {
 					break
 				}
 			}
-		} else if destination <= 43 {
+		} else {
 			// Zielfelder: ein Platz je Figur, keine Doppelbelegung.
 			for otherIndex, other := range pieces {
 				if otherIndex == index {
@@ -100,6 +100,32 @@ func maenLegalMoves(pieces []int, color string, dice int) []int {
 		}
 		if !blocked {
 			moves = append(moves, index)
+		}
+	}
+
+	// Warten noch Figuren auf den B-Feldern, muss das A-Feld frei werden.
+	waiting := false
+	for _, progress := range pieces {
+		if progress == -1 {
+			waiting = true
+			break
+		}
+	}
+	if waiting {
+		homeMove, startMove := -1, -1
+		for _, index := range moves {
+			if pieces[index] == -1 && homeMove == -1 {
+				homeMove = index
+			}
+			if pieces[index] == 0 && startMove == -1 {
+				startMove = index
+			}
+		}
+		if dice == 6 && homeMove != -1 {
+			return []int{homeMove}
+		}
+		if startMove != -1 {
+			return []int{startMove}
 		}
 	}
 	return moves
@@ -451,13 +477,18 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		game.LastDice = dice
 		game.Note = ""
 
-		hasPieceInPlay := false
+		// Dreimal würfeln nur, wenn keine Figur auf der Laufbahn steht und auch
+		// keine Figur im Ziel noch vorrücken könnte.
+		onTrack, laneCanAdvance := false, false
 		for _, progress := range player.Pieces {
 			if progress >= 0 && progress < 40 {
-				hasPieceInPlay = true
+				onTrack = true
+			}
+			if progress >= 40 && progress < 43 {
+				laneCanAdvance = true
 			}
 		}
-		if dice != 6 && !hasPieceInPlay && !game.ExtraRoll {
+		if dice != 6 && !onTrack && !laneCanAdvance && !game.ExtraRoll {
 			game.RollAttempts++
 			if game.RollAttempts < 3 {
 				game.Dice = 0

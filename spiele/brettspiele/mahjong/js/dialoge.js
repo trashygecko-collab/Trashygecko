@@ -228,7 +228,7 @@ function zeigeAuswahlSatz() {
 }
 
 function waehleLevel(level) {
-    // Level laufen endlos: nach Form 56 geht es in der naechsten Runde weiter.
+    // Level laufen endlos: nach der letzten Form geht es in der naechsten Runde weiter.
     const ziel = Math.floor(Number(level));
 
     // Ungueltige Angaben (etwa aus einem alten Spielstand) nicht stillschweigend

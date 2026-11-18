@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Bingo</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+:root{
+  --bg:#0a211b; --panel:#0f2b23; --line:#1d4a3a; --gold:#e8cd8e; --ink:#f6edda;
+  --muted:#a9c3b6; --gruen:#4fbf72; --rot:#e04b3f;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;padding:10px;background:radial-gradient(ellipse at 20% 0%,#12332a 0%,transparent 45%),var(--bg);
+  color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
+}
+.app{width:min(1120px,100%);display:flex;flex-direction:column;gap:10px;height:100%;min-height:0}
+.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
+.titel{font-size:clamp(17px,2.4vw,24px);color:var(--gold);letter-spacing:2px}
+.kopf small{color:var(--muted)}
+.mitte{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:10px;flex:1 1 auto;min-height:0}
+@media(max-width:820px){.mitte{grid-template-columns:1fr}}
+/* Flache Fenster (Handy quer): weniger Rand, kleinere Zellen – die Karte muss
+   ohne Scrollbalken ganz sichtbar bleiben. */
+@media(max-height:520px){
+  body{padding:5px}
+  .app{gap:5px}
+  .mitte{gap:5px}
+  .karte-flaeche{padding:6px}
+  .zelle{font-size:clamp(11px,3.4vh,18px)}
+  .kopf{font-size:12px}
+}
+.karte-flaeche{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;
+  padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0}
+/* Eine Regel für die Brettgröße: die Kante folgt dem kleineren Maß aus Breite
+   und Höhe, damit Karte und Bedienleisten zusammen ins Fenster passen. */
+.karte{
+  --rand:min(230px, 42vh);
+  width:min(100%, 520px, calc(100dvh - var(--rand)));
+  margin:0 auto;aspect-ratio:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-rows:repeat(5,minmax(0,1fr));gap:clamp(3px,.6vh,6px);
+}
+.spalten{width:min(100%,520px,calc(100dvh - var(--rand)));margin:0 auto;display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(3px,.6vh,6px);text-align:center;
+  color:var(--gold);font-weight:bold;font-size:clamp(12px,2vh,16px);letter-spacing:2px}
+.zelle{border:1px solid var(--line);border-radius:9px;background:#14382d;color:var(--ink);
+  font-family:inherit;font-weight:bold;font-size:clamp(13px,3.6vh,22px);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0;min-height:0;transition:background .15s,transform .08s}
+.zelle:hover:not(:disabled){background:#1b4a3a}
+.zelle:active:not(:disabled){transform:scale(.96)}
+.zelle.markiert{background:#3b3221;border-color:var(--gold);color:var(--gold)}
+.zelle.frei{background:#0c2a22;border-style:dashed;color:var(--muted);font-size:clamp(9px,1.7vh,12px)}
+.zelle.fertig{box-shadow:0 0 12px #e8cd8e88}
+.zelle:disabled{cursor:default}
+.karte.aus .zelle{opacity:.6}
+.leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+select,button.aktion{font-family:inherit;background:#14382d;color:var(--ink);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;cursor:pointer}
+button.aktion:disabled{opacity:.45;cursor:default}
+button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;font-weight:bold}
+button.aktion.bingo{background:#7a2c25;border-color:#a8382e;font-weight:bold;letter-spacing:1px}
+button.aktion.bingo:not(:disabled){color:#ffd9d2}
+.seite{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;
+  padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.zahlen{display:flex;flex-wrap:wrap;gap:4px;overflow:auto;max-height:76px}
+.chip{background:#14382d;border:1px solid var(--line);border-radius:7px;padding:3px 7px;font-size:13px}
+.chip.neu{border-color:var(--gold);color:var(--gold);font-weight:bold}
+.spieler{display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0}
+.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 9px;
+  border:1px solid var(--line);border-radius:9px;background:#0b241d;font-size:14px}
+.sp.dran{border-color:var(--gold);box-shadow:0 0 12px #e8cd8e44}
+.sp.raus{opacity:.55;text-decoration:line-through}
+.sp b{color:var(--gold)}
+.notiz{color:var(--muted);font-size:13px;min-height:18px}
+.log{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:76px;overflow:auto}
+.versteckt{display:none!important}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="kopf">
+    <div class="titel">BINGO</div>
+    <small id="lage">Bereit</small>
+    <div class="leiste" id="startLeiste">
+      <button class="aktion haupt" id="btnStart">Spiel starten</button>
+    </div>
+    <div class="leiste versteckt" id="onlineLeiste">
+      <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="aktion" id="btnBereit">Bereit</button>
+      <button class="aktion" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="mitte">
+    <div class="karte-flaeche">
+      <div class="spalten"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
+      <div class="karte aus" id="karte"></div>
+      <div class="leiste">
+        <button class="aktion haupt" id="btnZiehen" disabled>Ziehen</button>
+        <button class="aktion bingo" id="btnBingo" disabled>Bingo!</button>
+        <span class="notiz" id="notiz"></span>
+      </div>
+    </div>
+
+    <aside class="seite">
+      <div class="leiste"><b id="rundenTitel">Runde 1</b><span class="notiz" id="zugText"></span></div>
+      <div class="zahlen" id="zahlen"></div>
+      <div class="spieler" id="spieler"></div>
+      <div class="log" id="log"></div>
+      <div class="leiste versteckt" id="ende">
+        <button class="aktion haupt" id="btnNochmal">Nächste Runde</button>
+        <button class="aktion" id="btnNeu">Neue Runde</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+(() => {
+"use strict";
+/* Online oder lokal: gleiche Oberfläche, zwei Antriebe. Die lokale Runde
+   führt dieselben Regeln wie der Server nach, damit sich nichts anders
+   anfühlt – gezogen wird ohne Wiederholung, ein Bingo prüft die Marken. */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const BUCHSTABEN = ["B", "I", "N", "G", "O"];
+const SPALTEN = 15, FELDER = 25, FREI = 12, MAXZAHL = 75;
+
+const $ = (id) => document.getElementById(id);
+const elKarte = $("karte"), elZahlen = $("zahlen"), elSpieler = $("spieler"),
+      elLog = $("log"), elNotiz = $("notiz"), elLage = $("lage"), elZug = $("zugText"),
+      elRunde = $("rundenTitel"), elEnde = $("ende");
+
+const zahlText = (zahl) => zahl < 1 || zahl > MAXZAHL ? String(zahl)
+  : BUCHSTABEN[Math.floor((zahl - 1) / SPALTEN)] + zahl;
+
+/* ---------------------------- lokal ------------------------------- */
+function karteBauen() {
+  const karte = new Array(FELDER);
+  for (let spalte = 0; spalte < 5; spalte++) {
+    const zahlen = [];
+    for (let i = 0; i < SPALTEN; i++) zahlen.push(spalte * SPALTEN + i + 1);
+    for (let i = zahlen.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [zahlen[i], zahlen[j]] = [zahlen[j], zahlen[i]];
+    }
+    for (let zeile = 0; zeile < 5; zeile++) karte[zeile * 5 + spalte] = zahlen[zeile];
+  }
+  karte[FREI] = 0;
+  return karte;
+}
+function linienZaehlen(marken) {
+  let linien = 0;
+  for (let zeile = 0; zeile < 5; zeile++) {
+    let voll = true;
+    for (let spalte = 0; spalte < 5; spalte++) if (!marken[zeile * 5 + spalte]) voll = false;
+    if (voll) linien++;
+  }
+  for (let spalte = 0; spalte < 5; spalte++) {
+    let voll = true;
+    for (let zeile = 0; zeile < 5; zeile++) if (!marken[zeile * 5 + spalte]) voll = false;
+    if (voll) linien++;
+  }
+  let abwaerts = true, aufwaerts = true;
+  for (let i = 0; i < 5; i++) {
+    if (!marken[i * 5 + i]) abwaerts = false;
+    if (!marken[i * 5 + (4 - i)]) aufwaerts = false;
+  }
+  if (abwaerts) linien++;
+  if (aufwaerts) linien++;
+  return linien;
+}
+
+let lokal = null;
+
+function lokalNeueRunde(weiter) {
+  const marken = new Array(FELDER).fill(false);
+  marken[FREI] = true;
+  lokal = lokal && weiter ? lokal : { id: MYID || "ich", name: MYNAME, runde: 0 };
+  lokal.runde++;
+  lokal.karte = karteBauen();
+  lokal.marken = marken;
+  lokal.gezogen = [];
+  lokal.letzte = [];
+  lokal.fehlgriff = 0;
+  lokal.verpasst = false;
+  lokal.gewonnen = false;
+  lokal.status = "spiel";
+  lokal.note = "Neue Karte – zieh die erste Zahl.";
+  lokal.sieger = "";
+  lokalAuffrischen();
+}
+function lokalAuffrischen() {
+  if (!lokal) return;
+  lokal.anzahl = lokal.marken.filter(Boolean).length;
+  lokal.linien = linienZaehlen(lokal.marken);
+  lokal.rest = MAXZAHL - lokal.gezogen.length;
+}
+function lokalZiehen() {
+  if (!lokal || lokal.status !== "spiel") return;
+  const offen = [];
+  for (let zahl = 1; zahl <= MAXZAHL; zahl++) if (!lokal.gezogen.includes(zahl)) offen.push(zahl);
+  if (!offen.length) {
+    lokal.status = "ende";
+    lokal.note = "Alle 75 Zahlen sind gezogen – kein Bingo.";
+    return;
+  }
+  const zahl = offen[Math.floor(Math.random() * offen.length)];
+  lokal.gezogen.push(zahl);
+  lokal.letzte.push(zahlText(zahl));
+  if (lokal.letzte.length > 8) lokal.letzte = lokal.letzte.slice(-8);
+  lokal.note = "Gezogen: " + zahlText(zahl) + ".";
+  lokalAuffrischen();
+}
+function lokalMarkieren(zahl) {
+  if (!lokal || lokal.status !== "spiel" || lokal.verpasst) return;
+  const feld = lokal.karte.indexOf(zahl);
+  if (feld < 0 || feld === FREI) return;
+  lokal.marken[feld] = !lokal.marken[feld];
+  lokalAuffrischen();
+  zeichne();
+}
+function lokalBingo() {
+  if (!lokal || lokal.status !== "spiel" || lokal.verpasst) return;
+  if (lokal.linien === 0) {
+    lokal.verpasst = true;
+    lokal.fehlgriff++;
+    lokal.note = "Bingo – daneben: noch keine volle Reihe.";
+    lokal.status = "ende";
+    return;
+  }
+  const offen = lokal.karte.find((zahl, feld) => lokal.marken[feld] && feld !== FREI && !lokal.gezogen.includes(zahl));
+  if (offen !== undefined) {
+    lokal.verpasst = true;
+    lokal.fehlgriff++;
+    lokal.note = "Bingo – daneben: " + zahlText(offen) + " wurde noch nicht gezogen.";
+    lokal.status = "ende";
+    return;
+  }
+  lokal.status = "ende";
+  lokal.gewonnen = true;
+  lokal.sieger = lokal.id;
+  lokal.note = "Bingo! Alle Marken waren gezogen – gewonnen.";
+}
+
+/* ---------------------------- gemeinsam --------------------------- */
+let onlineGame = null, onlineBusy = false;
+
+async function api(aktion, koerper) {
+  const url = "/api/bingo?room=" + encodeURIComponent(ROOM) +
+    (aktion ? "&action=" + encodeURIComponent(aktion) : "&id=" + encodeURIComponent(MYID));
+  const r = await fetch(url, aktion ? {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ id: MYID }, koerper || {}))
+  } : { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.text()).trim() || "Aktion fehlgeschlagen.");
+  return r.json();
+}
+
+async function hole() {
+  if (!ONLINE || onlineBusy) return;
+  onlineBusy = true;
+  try {
+    const d = await api(null);
+    onlineGame = d.game || null;
+    zeichne();
+  } catch (e) {
+    elLage.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+async function schicke(aktion, koerper) {
+  if (onlineBusy) return false;
+  onlineBusy = true;
+  try {
+    const d = await api(aktion, koerper);
+    onlineGame = d.game || null;
+    zeichne();
+    return true;
+  } catch (e) {
+    elNotiz.textContent = e.message;
+    return false;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+/* ---------------------------- Zeichnen ---------------------------- */
+function zelleKlickbar() {
+  if (ONLINE) {
+    const g = onlineGame;
+    return !!(g && g.status === "spiel" && g.spieler.some((s) => s.id === MYID && !s.verpasst));
+  }
+  return !!(lokal && lokal.status === "spiel" && !lokal.verpasst);
+}
+
+function zeichneKarte(karte, marken) {
+  elKarte.innerHTML = "";
+  elKarte.classList.toggle("aus", !zelleKlickbar());
+  (karte || []).forEach((zahl, feld) => {
+    const z = document.createElement("button");
+    z.type = "button";
+    z.className = "zelle";
+    z.dataset.feld = feld;
+    if (feld === FREI || zahl === 0) {
+      z.classList.add("frei");
+      z.textContent = "FREI";
+      z.disabled = true;
+      elKarte.appendChild(z);
+      return;
+    }
+    z.dataset.zahl = zahl;
+    z.textContent = zahl;
+    if (marken && marken[feld]) z.classList.add("markiert");
+    z.disabled = !zelleKlickbar();
+    elKarte.appendChild(z);
+  });
+}
+
+function zeichneAlles({ status, runde, gezogen, rest, spieler, note, letzte, zug, sieger }) {
+  elRunde.textContent = "Runde " + runde;
+  elLage.textContent = status === "invited" ? "Warte auf Mitspieler"
+    : status === "ende" ? (sieger ? "Gewonnen" : "Runde vorbei") : "Läuft";
+  elNotiz.textContent = note || "";
+
+  elZahlen.innerHTML = "";
+  const neueste = (gezogen || []).slice(-1)[0];
+  (gezogen || []).forEach((zahl) => {
+    const c = document.createElement("span");
+    c.className = "chip" + (zahl === neueste ? " neu" : "");
+    c.textContent = zahlText(zahl);
+    elZahlen.appendChild(c);
+  });
+  if (!gezogen || !gezogen.length) {
+    const c = document.createElement("span");
+    c.className = "notiz";
+    c.textContent = "Noch keine Zahl gezogen (" + rest + " im Beutel).";
+    elZahlen.appendChild(c);
+  }
+
+  elSpieler.innerHTML = "";
+  (spieler || []).forEach((s, i) => {
+    const p = document.createElement("p");
+    p.className = "sp" + (status === "spiel" && i === zug ? " dran" : "") +
+      (s.verpasst ? " raus" : "");
+    const n = document.createElement("span");
+    n.textContent = s.name + (s.id === MYID ? " (du)" : "") +
+      (s.gewonnen ? " · Bingo!" : s.verpasst ? " · daneben" : "");
+    const b = document.createElement("b");
+    b.textContent = s.anzahl + " Marken · " + s.linien + " Linien";
+    p.append(n, b);
+    elSpieler.appendChild(p);
+  });
+
+  elLog.innerHTML = "";
+  (letzte || []).forEach((z) => {
+    const d = document.createElement("div");
+    d.textContent = z;
+    elLog.appendChild(d);
+  });
+
+  const ich = (spieler || []).find((s) => s.id === MYID || (!ONLINE && s.id === (lokal && lokal.id)));
+  const dran = status === "spiel" && (ONLINE ? spieler[zug] && spieler[zug].id === MYID : true);
+  $("btnZiehen").disabled = !(status === "spiel" && dran);
+  $("btnBingo").disabled = !(status === "spiel" && ich && !ich.verpasst);
+  elZug.textContent = status === "spiel"
+    ? (ONLINE ? (dran ? "Du ziehst als Nächstes" : spieler[zug].name + " zieht als Nächstes")
+              : "Du bist dran")
+    : "";
+  elEnde.classList.toggle("versteckt", status !== "ende");
+  return ich;
+}
+
+function zeichneLokal() {
+  const markiert = lokal.karte.map((_, feld) => lokal.marken[feld]);
+  zeichneAlles({
+    status: lokal.status, runde: lokal.runde, gezogen: lokal.gezogen, rest: lokal.rest,
+    spieler: [{
+      id: lokal.id, name: lokal.id === (MYID || "ich") ? MYNAME : lokal.name,
+      anzahl: lokal.anzahl, linien: lokal.linien, verpasst: lokal.verpasst,
+      gewonnen: lokal.gewonnen, fehlgriff: lokal.fehlgriff
+    }],
+    note: lokal.note, letzte: lokal.letzte, zug: 0, sieger: lokal.sieger
+  });
+  zeichneKarte(lokal.karte, markiert);
+}
+
+function zeichneOnline() {
+  const g = onlineGame;
+  $("startLeiste").classList.add("versteckt");
+  $("onlineLeiste").classList.remove("versteckt");
+  if (!g) {
+    elLage.textContent = "Keine Runde";
+    elRunde.textContent = "—";
+    elKarte.innerHTML = "";
+    elKarte.classList.add("aus");
+    elZahlen.innerHTML = "";
+    elSpieler.innerHTML = "";
+    elLog.innerHTML = "";
+    elNotiz.textContent = "Eröffne eine Runde – Mitspieler treten im Raum bei.";
+    elEnde.classList.add("versteckt");
+    $("btnZiehen").disabled = true;
+    $("btnBingo").disabled = true;
+    $("btnErstellen").classList.remove("versteckt");
+    $("btnBereit").classList.add("versteckt");
+    $("btnLos").classList.add("versteckt");
+    return;
+  }
+  const ich = zeichneAlles(g);
+  zeichneKarte(ich ? ich.karte : [], ich ? ich.karte.map((zahl) => (ich.markiert || []).includes(zahl)) : []);
+  $("btnErstellen").classList.toggle("versteckt", true);
+  $("btnBereit").classList.toggle("versteckt", g.status !== "invited");
+  $("btnLos").classList.toggle("versteckt", g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+function zeichne() {
+  if (ONLINE) zeichneOnline();
+  else if (lokal) zeichneLokal();
+}
+
+/* ---------------------------- Bedienung --------------------------- */
+elKarte.addEventListener("click", (e) => {
+  const z = e.target.closest(".zelle");
+  if (!z || z.disabled) return;
+  const zahl = Number(z.dataset.zahl);
+  if (!zahl) return;
+  if (ONLINE) schicke("markieren", { zahl });
+  else lokalMarkieren(zahl);
+});
+
+$("btnZiehen").addEventListener("click", () => {
+  if (ONLINE) schicke("ziehen");
+  else { lokalZiehen(); zeichne(); }
+});
+$("btnBingo").addEventListener("click", () => {
+  if (ONLINE) schicke("bingo");
+  else { lokalBingo(); zeichne(); }
+});
+$("btnStart").addEventListener("click", () => { lokalNeueRunde(false); zeichne(); });
+$("btnNochmal").addEventListener("click", () => {
+  if (ONLINE) schicke("naechste");
+  else { lokalNeueRunde(true); zeichne(); }
+});
+$("btnNeu").addEventListener("click", () => {
+  if (ONLINE) schicke("reset");
+  else { lokal = null; zeichne(); $("startLeiste").classList.remove("versteckt"); }
+});
+$("btnErstellen").addEventListener("click", () => schicke("create"));
+$("btnBereit").addEventListener("click", () => schicke("ready"));
+$("btnLos").addEventListener("click", () => schicke("start"));
+
+if (ONLINE) {
+  hole();
+  setInterval(hole, 1500);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
+} else {
+  zeichneKarte([], []);
+  elNotiz.textContent = "Starte eine Runde – die Karte wird gemischt.";
+}
+})();
+</script>
+</body>
+</html>

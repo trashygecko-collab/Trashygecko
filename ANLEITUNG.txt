@@ -178,6 +178,11 @@ chat.go
 moderation.go
   Stummschalten für 1–3 Minuten (/api/moderation). Darf nur der Admin.
 
+umbenennen.go
+  Namen ändern (/api/umbenennen). Darf nur der Admin und geht auch mitten in
+  einer laufenden Partie: Der neue Name steht sofort im Raum, in allen Partien
+  und damit auf den Spielseiten. Die Partie läuft unverändert weiter.
+
 leave.go
   "Spiel verlassen": beendet die laufende Partie für alle (/api/leave).
 
@@ -244,18 +249,42 @@ Jeder Ordner enthält die Seite des Spiels (meist eine HTML-Datei mit allem
 drin: Aussehen, Regeln, Zeichnen). Spiele mit Server-Verbindung fragen die
 passende /api/...-Adresse des Connectors.
 
+Brett- und Legespiele liegen im Sammelordner brettspiele\, Kartenspiele in
+kartenspiele\ - jeweils mit ihrem eigenen Ordner darin. Alle übrigen Spiele
+liegen direkt unter spiele\. Für Links heißt das:
+
+  spiele\brettspiele\dame\dame.html    (vorher spiele\dame\dame.html)
+  spiele\kartenspiele\uno\uno.html     (vorher spiele\uno\uno.html)
+
+Die Kachel-Liste (spiele.html), die Spielliste beider Connector-Seiten und die
+Referenzbilder der Tests (tests\spiele.spec.js-snapshots) benutzen dieselben
+Pfade; beim Umbenennen also alle drei Stellen mitziehen.
+
   1x1\1x1.html                     Einmaleins, Zahlen merken, Zahlenketten,
                                    Rennen gegen Mitspieler
-  arschloch\arschloch.html         Arschloch
-  backgammon\backgammon.html       Backgammon
-  dame\dame.html                   Dame
+  brettspiele\backgammon\backgammon.html   Backgammon
+  brettspiele\dame\dame.html       Dame
+  brettspiele\go\go.html           Go
+  brettspiele\hold\holdtheline.html Hold the Line
+  brettspiele\kaesekaestche\kaesekaestche.html Käsekästchen
+  brettspiele\kalaha\kalaha.html   Kalaha
+  brettspiele\kniffel\kniffel.html Kniffel
+  brettspiele\mahjong\mahjong.html Mahjong-Solitaire (eigenes js/ und assets/)
+  brettspiele\menschaerger\menschaerger.html Mensch ärgere dich nicht
+  brettspiele\muehle\muehle.html   Mühle
+  brettspiele\paare\paare.html     Memory/Paare
+  brettspiele\reversi\reversi.html Reversi
+  brettspiele\schach\schach.html   Schach
+  brettspiele\sim\sim.html         Sim
+  brettspiele\streichholzspiel\streichholzspiel.html Streichholzspiel
+  brettspiele\tictac\tictactoe.html Tic-Tac-Toe
+  brettspiele\viergewinnt\viergewinnt.html Vier gewinnt
   durst\durst.html                 Trinkspiel (Bilder im Unterordner)
-  go\go.html                       Go
-  hold\holdtheline.html            Hold the Line
-  kaesekaestche\kaesekaestche.html Käsekästchen
-  kalaha\kalaha.html               Kalaha
-  kniffel\kniffel.html             Kniffel
-  mahjong\mahjong.html             Mahjong-Solitaire (eigenes js/ und assets/)
+  kartenspiele\arschloch\arschloch.html Arschloch
+  kartenspiele\maumau\maumau.html  Mau-Mau
+  kartenspiele\schwimmen\schwimmen.html Schwimmen
+  kartenspiele\skyjo\skyjo.html    Skyjo
+  kartenspiele\uno\uno.html        Uno
   malen\malen.html                 Malen (4 Bildschirme groß, mit Zoom).
                                    Im Connector wird Malen wie ein Spiel
                                    angeboten; wer im Chat "Mitmalen" drückt,
@@ -265,22 +294,9 @@ passende /api/...-Adresse des Connectors.
                                    Brett steht, wer mitschreibt – jede Person
                                    mit eigenem Farbpunkt, und um jeden Strich
                                    liegt ein schmaler Saum in dieser Farbe.
-  maumau\maumau.html               Mau-Mau
-  menschaerger\menschaerger.html   Mensch ärgere dich nicht
-  muehle\muehle.html               Mühle
-  paare\paare.html                 Memory/Paare
   pimmel\spimmel.html              Spiel mit Leveleditor
   rechner\rechner.html             Taschenrechner
-  reversi\reversi.html             Reversi
   sanduhr\sanduhr.html             Sanduhr/Timer
-  schach\schach.html               Schach
-  schwimmen\schwimmen.html         Schwimmen
-  sim\sim.html                     Sim
-  skyjo\skyjo.html                 Skyjo
-  streichholzspiel\...html         Streichholzspiel
-  tictac\tictactoe.html            Tic-Tac-Toe
-  uno\uno.html                     Uno
-  viergewinnt\viergewinnt.html     Vier gewinnt
   wuerfel\wuerfel.html             Würfel
   zone\voigtzone.html              Zone/eigene Seite
   spiele.html                      Übersicht mit allen Kacheln
@@ -376,6 +392,8 @@ Im Nachrichtenfeld:
 Der Admin darf:
   - die Malfläche leeren (Knopf "ZURÜCKSETZEN" bei Malen)
   - Spieler für 1–3 Minuten stummschalten (Namensklick → Stummschalten)
+  - Spieler umbenennen (Multiplayer-Ansicht → „✎ Name“); geht auch während
+    einer Partie, ohne dass sie neu beginnt
 
 Unabhängig vom Admin kann jeder, der mitspielt, mit "Spiel verlassen" die
 laufende Partie für alle beenden – die Mitspieler landen wieder im Raum.
@@ -488,7 +506,8 @@ Neu bauen, ohne Android Studio:
   bash bauen.sh
 
 Beim ersten Mal lädt das Skript JDK 17 und die Android-Werkzeuge nach
-.werkzeuge (etwa 350 MB), danach dauert ein Bau wenige Sekunden.
+..\..\..rbeit\werkzeuge	-spiele (etwa 350 MB), danach dauert ein Bau
+wenige Sekunden. Die Homepage bleibt dadurch schlank.
 
 
 11. KURZ MERKEN

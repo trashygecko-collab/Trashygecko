@@ -315,17 +315,20 @@ function zeichne(){
 
  // Hand
  const meine=ich();
- const dran=game.zug===ichSitz&&!game.tisch.length;
- $("handTitel").textContent="Deine Hand"+(dran?" – du spielst aus":(game.zug===ichSitz?" – du bist dran":""));
+ // Wer am Zug ist, darf legen – auch als Zweiter in einen laufenden Stich.
+ const binDran=game.zug===ichSitz;
+ // Ansagen und Zudrehen gehen nur, wenn man selbst ausspielt.
+ const fuehrt=binDran&&!game.tisch.length;
+ $("handTitel").textContent="Deine Hand"+(fuehrt?" – du spielst aus":(binDran?" – du bist dran":""));
  $("handAugen").textContent=meine?("Stiche: "+meine.stiche+" · "+(meine.augen+meine.ansage)+" Augen"+(meine.ansage?" (inkl. Ansage "+meine.ansage+")":"")):"";
  const hand=$("hand");
  hand.innerHTML="";
  (meine?meine.hand:[]).forEach(karte=>{
   const wert=document.createElement("div");
-  wert.innerHTML=karteHtml(karte, dran?" spielbar":"");
+  wert.innerHTML=karteHtml(karte, binDran?" spielbar":"");
   const el=wert.firstChild;
-  if(dran){ el.onclick=()=>tu("spielen",{karte:karte}); }
-  if(game.ansagePflicht===Math.floor(karte/100)&&dran){ el.classList.add("gesagt"); }
+  if(binDran){ el.onclick=()=>tu("spielen",{karte:karte}); }
+  if(game.ansagePflicht===Math.floor(karte/100)&&binDran){ el.classList.add("gesagt"); }
   hand.appendChild(el);
  });
  if(!meine||!meine.hand.length){ hand.innerHTML='<span class="klein">Keine Karten auf der Hand.</span>'; }
@@ -333,7 +336,7 @@ function zeichne(){
  // Aktionen
  const aktionen=$("aktionen");
  aktionen.innerHTML="";
- if(dran&&meine){
+ if(fuehrt&&meine){
   (meine.ansagbar||[]).forEach(farbe=>{
    const b=document.createElement("button");
    b.className="still";
@@ -356,7 +359,7 @@ function zeichne(){
   aktionen.appendChild(m);
  }
  if(!aktionen.children.length){
-  aktionen.innerHTML='<span class="klein">'+(dran?"Spiele eine Karte.":"Der andere ist am Zug.")+'</span>';
+  aktionen.innerHTML='<span class="klein">'+(binDran?"Spiele eine Karte.":"Der andere ist am Zug.")+'</span>';
  }
 
  $("note").textContent=game.note||"";

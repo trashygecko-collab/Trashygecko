@@ -202,6 +202,9 @@ type Room struct {
 	Sechsundsechzig *SechsundsechzigGame
 	Rechen          *RechenGame
 	Mal             *Malbrett              // gemeinsame Zeichenfläche
+	Galgen          *GalgenGame            // Galgenmännchen
+	Bingo           *BingoGame             // Bingo
+	Wortsuche       *WortsucheGame         // Wortsuche
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
 	Mutes           map[string]time.Time   // playerID -> unmute time
 	MsgTimes        map[string][]time.Time // for spam protection
