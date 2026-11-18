@@ -33,6 +33,16 @@ main{max-width:760px;margin:auto}
 .statuszeile b{color:#e8cd8e;font-weight:normal}
 
 .buehne{position:relative;background:#08120f}
+@keyframes ruckeln{
+ 0%,100%{transform:translate(0,0)}
+ 20%{transform:translate(-5px,3px)}
+ 40%{transform:translate(4px,-3px)}
+ 60%{transform:translate(-3px,-2px)}
+ 80%{transform:translate(3px,2px)}
+}
+.buehne.rummst canvas{animation:ruckeln .3s ease-in-out}
+.pauseZeichen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#04100ccc;z-index:4;color:#f1dca8;font-size:20px;letter-spacing:.2em}
 canvas{display:block;width:100%;aspect-ratio:3/4;max-height:78vh;touch-action:manipulation}
 
 .meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -66,10 +76,13 @@ a{color:#e8cd8e}
  <div class="menueleiste">
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnAblegen">Ablegen</button>
+  <button id="btnPause">Pause</button>
  </div>
 
  <div class="statuszeile">
   <span>Etage <b id="etage">0</b></span>
+  <span>Stufe <b id="stufe">1</b></span>
+  <span>Serie <b id="serie">0</b></span>
   <span>Punkte <b id="punkte">0</b></span>
   <span>Rekord <b id="rekord">–</b></span>
  </div>
@@ -95,7 +108,9 @@ a{color:#e8cd8e}
    <li><b>Ziel:</b> So viele Etagen wie möglich stapeln, ohne dass der Turm kippt.</li>
    <li><b>Ablegen:</b> Der Block schwingt am Kran. Tippen (oder Leertaste) lässt ihn fallen.</li>
    <li><b>Treffer:</b> Der Block muss auf dem Block darunter aufliegen. Hängt er zu weit über (mehr als zwei Drittel daneben), rutscht er ab und der Turm ist hin.</li>
-   <li><b>Punkte:</b> 10 pro Etage, 25 extra für einen perfekten Sitz (fast mittig).</li>
+   <li><b>Punkte:</b> 10 pro Etage (ab Stufe 2 mehr) und ein Bonus für einen perfekten Sitz (fast mittig). Mehrere perfekte Sitze hintereinander zählen als Serie und bringen 25, 50, 75 … Punkte.</li>
+   <li><b>Stufe:</b> Alle fünf Etagen eine Stufe höher – der Block schwingt dann schneller.</li>
+   <li><b>Pause:</b> Der Knopf „Pause“ oder die Taste P hält den Turm an.</li>
    <li><b>Tempo:</b> Je höher der Turm, desto schneller schwingt der Block.</li>
    <li><b>Rekord:</b> Die meisten Etagen merkt sich der Browser.</li>
   </ol>
@@ -120,9 +135,26 @@ let block=null;         // aktueller Block {x, y, vy}
 let zustand="wartet";   // wartet | schwingen | fallen | sturz | vorbei
 let winkel=0, zeit=0, tempo=1.1;
 let versatz=0, versatzZiel=0;
-let punkte=0, etage=0, rekord=0;
+let punkte=0, etage=0, rekord=0, besteSerie=0;
+let serie=0;              // Folge perfekter Treffer
+let pausiert=false;
+let teilchen=[];          // Staub beim Aufsetzen
+let schwebetexte=[];      // "+25" und "PERFEKT" über dem Block
 let letzteZeit=0;
 let meldungTimer=0;
+
+function stufeJetzt(){ return 1+Math.floor(etage/5); }
+
+function staub(x,y,anzahl,farbe){
+ for(let i=0;i<anzahl;i++){
+  teilchen.push({x,y,vx:(Math.random()-0.5)*90,vy:-Math.random()*70,
+   leben:0.55+Math.random()*0.45,max:1,farbe});
+ }
+}
+
+function schwebe(text,x,y,farbe){
+ schwebetexte.push({text,x,y,leben:1.2,farbe});
+}
 
 // ------------------------------------------------------------------ Zeichnen
 function messen(){
@@ -169,11 +201,21 @@ function zeichne(){
  ctx.fillStyle=himmel;
  ctx.fillRect(0,0,W,H);
 
- // Sterne als kleine Punkte
- ctx.fillStyle="#e8cd8e22";
- for(let i=0;i<26;i++){
+ // Sterne als kleine Punkte, ein paar davon heller
+ for(let i=0;i<34;i++){
   const sx=(i*97)%W, sy=(i*53)%(H*0.6);
-  ctx.fillRect(sx,sy,2,2);
+  ctx.fillStyle=(i%5===0)?"#f4e6c255":"#e8cd8e1f";
+  const gr=(i%7===0)?3:2;
+  ctx.fillRect(sx,sy,gr,gr);
+ }
+
+ // Ferne Skyline: gibt dem Turm eine Umgebung
+ ctx.fillStyle="#0a1d2a";
+ const fusspunkt=grundY()+versatz;
+ for(let i=0;i<16;i++){
+  const breite=W/16;
+  const hoehe=((i*37)%5+2)*9;
+  ctx.fillRect(i*breite,fusspunkt-hoehe,breite-2,hoehe);
  }
 
  // Kran
@@ -210,6 +252,23 @@ function zeichne(){
   }
   zeichneBlock(block.x,block.y,BW,BH,block.farbe);
  }
+
+ // Staub beim Aufsetzen
+ ctx.save();
+ for(const t of teilchen){
+  ctx.globalAlpha=Math.max(0,Math.min(1,t.leben));
+  ctx.fillStyle=t.farbe;
+  ctx.fillRect(t.x-1.5,t.y-1.5,3,3);
+ }
+ // Schwebende Punkte über dem Block
+ ctx.textAlign="center";
+ ctx.font="bold 15px system-ui,sans-serif";
+ for(const s of schwebetexte){
+  ctx.globalAlpha=Math.max(0,Math.min(1,s.leben));
+  ctx.fillStyle=s.farbe;
+  ctx.fillText(s.text,s.x,s.y);
+ }
+ ctx.restore();
 }
 
 // ------------------------------------------------------------------ Spiellogik
@@ -223,13 +282,17 @@ function neuerBlock(){
  block={x:W/2-BW/2,y:54+SEIL,vy:0,farbe};
  zustand="schwingen";
  winkel=0;
- tempo=1.1+Math.min(1.1,etage*0.035);
+ tempo=1.05+Math.min(1.5,etage*0.028);
 }
 
 function start(){
  bloecke=[];
  versatz=0; versatzZiel=0;
  punkte=0; etage=0; zeit=0;
+ serie=0; besteSerie=0;
+ teilchen=[]; schwebetexte=[];
+ pausiert=false;
+ $("btnPause").textContent="Pause";
  // Fundament
  bloecke.push({x:W/2-72,y:grundY()-BH,w:144,h:BH,farbe:"#1c4a3d"});
  neuerBlock();
@@ -238,7 +301,7 @@ function start(){
 }
 
 function ablegen(){
- if(zustand!=="schwingen")return;
+ if(pausiert||zustand!=="schwingen")return;
  zustand="fallen";
  block.vy=0;
 }
@@ -257,7 +320,14 @@ function landen(){
   // Abgerutscht
   zustand="sturz";
   block.vy=60;
+  serie=0;
+  zeigeZahlen();
   $("hinweis").textContent="Der Block ist abgerutscht – der Turm ist eingestürzt.";
+  const buehne=document.querySelector(".buehne");
+  buehne.classList.remove("rummst");
+  void buehne.offsetWidth;
+  buehne.classList.add("rummst");
+  staub(block.x+BW/2,block.y+BH,16,"#ffd0a8");
   return;
  }
 
@@ -268,13 +338,24 @@ function landen(){
 
  const versatzMitte=block.x+BW/2, obenMitte=oben.x+oben.w/2;
  const genau=Math.abs(versatzMitte-obenMitte);
+ const grund=10+Math.floor(etage/5)*5;
+ let bonus=0;
  if(genau<7){
-  punkte+=25;
-  $("hinweis").textContent="Perfekt! +25 Punkte extra.";
+  serie+=1;
+  besteSerie=Math.max(besteSerie,serie);
+  bonus=25*Math.min(5,serie);
+  schwebe("PERFEKT +"+bonus,block.x+BW/2,neuerY-6,"#f6e2ae");
+  $("hinweis").textContent=serie>1
+   ? "Perfekt! Serie "+serie+" – "+bonus+" Punkte extra."
+   : "Perfekt! +"+bonus+" Punkte extra.";
  }else{
+  serie=0;
+  schwebe("+"+grund,block.x+BW/2,neuerY-6,"#d8edd8");
   $("hinweis").textContent="Etage "+etage+" steht.";
  }
- punkte+=10;
+ punkte+=grund+bonus;
+ staub(block.x+6,neuerY+BH,7,"#ffffff");
+ staub(block.x+BW-6,neuerY+BH,7,"#ffffff");
  zeigeZahlen();
 
  // Kamera nachziehen, damit der Turm oben Platz hat
@@ -288,6 +369,8 @@ function landen(){
 
 function zeigeZahlen(){
  $("etage").textContent=etage;
+ $("stufe").textContent=stufeJetzt();
+ $("serie").textContent=serie;
  $("punkte").textContent=punkte;
 }
 
@@ -299,7 +382,8 @@ function vorbei(){
  }
  $("rekord").textContent=rekord>0?rekord:"–";
  meldung("EINGESTÜRZT",
-  "Der Turm steht bei "+etage+(etage===1?" Etage":" Etagen")+" und "+punkte+" Punkten. Rekord: "+rekord+".",
+  "Der Turm steht bei "+etage+(etage===1?" Etage":" Etagen")+" und "+punkte+" Punkten."+
+  (besteSerie>1?" Beste Serie: "+besteSerie+".":"")+" Rekord: "+rekord+".",
   "Nochmal");
 }
 
@@ -332,9 +416,23 @@ function rechnen(dt){
 function schritt(ms){
  const dt=Math.min(0.05,(ms-letzteZeit)/1000||0);
  letzteZeit=ms;
- rechnen(dt);
+ if(!pausiert){
+  rechnen(dt);
+  // Staub und Schwebetexte leben nur kurz
+  for(const t of teilchen){ t.x+=t.vx*dt; t.y+=t.vy*dt; t.vy+=220*dt; t.leben-=dt; }
+  teilchen=teilchen.filter(t=>t.leben>0);
+  for(const s of schwebetexte){ s.y-=26*dt; s.leben-=dt; }
+  schwebetexte=schwebetexte.filter(s=>s.leben>0);
+ }
  zeichne();
  requestAnimationFrame(schritt);
+}
+
+function pauseUmschalten(){
+ if(zustand==="vorbei"||zustand==="wartet")return;
+ pausiert=!pausiert;
+ $("btnPause").textContent=pausiert?"Weiter":"Pause";
+ $("hinweis").textContent=pausiert?"Pause – der Block wartet.":"Tippen oder Leertaste legt den Block ab.";
 }
 
 // ------------------------------------------------------------------ Meldung
@@ -349,6 +447,7 @@ function meldungZu(){ $("meldung").hidden=true; }
 // ------------------------------------------------------------------ Bedienung
 flaeche.addEventListener("pointerdown",e=>{ e.preventDefault(); ablegen(); });
 $("btnAblegen").onclick=()=>ablegen();
+$("btnPause").onclick=()=>pauseUmschalten();
 $("btnNeu").onclick=()=>start();
 $("meldungKnopf").onclick=()=>start();
 window.addEventListener("keydown",e=>{
@@ -357,6 +456,7 @@ window.addEventListener("keydown",e=>{
   else ablegen();
   e.preventDefault();
  }
+ if(e.key==="p"||e.key==="P"){ pauseUmschalten(); e.preventDefault(); }
 });
 window.addEventListener("resize",()=>{ messen(); });
 

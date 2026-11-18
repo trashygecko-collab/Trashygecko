@@ -33,6 +33,7 @@ body{
   margin:0 auto;aspect-ratio:1;display:grid;
   grid-template-columns:repeat(10,minmax(0,1fr));grid-template-rows:repeat(10,minmax(0,1fr));
   gap:clamp(2px,.5vh,4px);
+  touch-action:none;
 }
 @media(max-width:820px){
   .gitter{--rand:min(320px, 40vh)}
@@ -44,6 +45,8 @@ body{
 .zelle:hover:not(:disabled){background:#1b4a3a}
 .zelle:active{transform:scale(.95)}
 .zelle.wahl{background:#3b3221;border-color:var(--gold);color:var(--gold)}
+.zelle.linie{background:#2f5340;border-color:var(--gold);color:#f4e6c2;
+  box-shadow:inset 0 0 0 1px #e8cd8e88;transform:none}
 .zelle.gef{background:#1f5d43;border-color:var(--gruen);color:#dff7e6}
 .zelle:disabled{cursor:default}
 .karte{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;
@@ -447,7 +450,81 @@ function zeichneOnline() {
 }
 
 /* ---------------------------- Bedienung --------------------------- */
+/* Wortsuche: entweder Anfang und Ende anklicken (wie bisher) oder mit Maus
+   bzw. Finger vom ersten bis zum letzten Buchstaben ziehen. Gezogen wird nur
+   gerade – waagerecht, senkrecht oder diagonal; alles andere wird ignoriert. */
+let ziehStart = null, ziehLinie = [], ziehAktiv = false, klickSperre = 0;
+
+function zelleUnter(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const b = el && el.closest ? el.closest(".zelle") : null;
+  return b && !b.disabled ? b : null;
+}
+
+function geradeLinie(von, bis) {
+  const dz = Math.sign(bis.z - von.z), ds = Math.sign(bis.s - von.s);
+  const gerade = von.z === bis.z || von.s === bis.s ||
+    Math.abs(bis.z - von.z) === Math.abs(bis.s - von.s);
+  if (!gerade) return null;
+  const laenge = Math.max(Math.abs(bis.z - von.z), Math.abs(bis.s - von.s));
+  const linie = [];
+  for (let i = 0; i <= laenge; i++) linie.push({ z: von.z + dz * i, s: von.s + ds * i });
+  return linie;
+}
+
+function linieMalen(linie) {
+  for (const b of elGitter.children) b.classList.remove("linie");
+  for (const c of linie) {
+    const b = elGitter.children[c.z * KANTE + c.s];
+    if (b) b.classList.add("linie");
+  }
+}
+
+elGitter.addEventListener("pointerdown", (e) => {
+  const b = e.target.closest(".zelle");
+  if (!b || b.disabled) return;
+  ziehStart = { z: Number(b.dataset.z), s: Number(b.dataset.s) };
+  ziehLinie = [ziehStart];
+  ziehAktiv = false;
+  try { elGitter.setPointerCapture(e.pointerId); } catch (err) {}
+});
+
+elGitter.addEventListener("pointermove", (e) => {
+  if (!ziehStart) return;
+  const b = zelleUnter(e.clientX, e.clientY);
+  if (!b) return;
+  const bis = { z: Number(b.dataset.z), s: Number(b.dataset.s) };
+  const linie = geradeLinie(ziehStart, bis);
+  if (!linie || linie.length < 2) return;
+  ziehAktiv = true;
+  ziehLinie = linie;
+  linieMalen(linie);
+});
+
+elGitter.addEventListener("pointerup", () => {
+  if (!ziehStart) return;
+  const von = ziehStart;
+  const linie = ziehAktiv ? ziehLinie : null;
+  ziehStart = null;
+  ziehAktiv = false;
+  linieMalen([]);
+  if (!linie || linie.length < 2) return;      // kurzer Tipp: alter Klickweg
+  klickSperre = performance.now();             // der Klick danach zählt nicht mehr
+  wahl = null;
+  const bis = linie[linie.length - 1];
+  if (ONLINE) onlineFinden(von, bis);
+  else lokalFinden(von, bis);
+  zeichne();
+});
+
+elGitter.addEventListener("pointercancel", () => {
+  ziehStart = null;
+  ziehAktiv = false;
+  linieMalen([]);
+});
+
 elGitter.addEventListener("click", (e) => {
+  if (performance.now() - klickSperre < 400) return;
   const b = e.target.closest(".zelle");
   if (!b || b.disabled) return;
   const z = Number(b.dataset.z), s = Number(b.dataset.s);

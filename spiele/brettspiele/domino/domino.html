@@ -9,79 +9,130 @@
 <link rel="stylesheet" href="/spiele/schrift.css">
 <style>
 :root{
-  --bg:#0a211b; --panel:#0f2b23; --line:#1d4a3a; --gold:#e8cd8e; --ink:#f6edda;
-  --muted:#a9c3b6; --gruen:#4fbf72; --rot:#e04b3f;
-  --elfenbein:#f4ead3; --elfenbein-rand:#bfa87b; --punkt:#2b211a;
-  --k:clamp(26px,6.2vh,50px); --kh:clamp(30px,8.2vh,56px);
+  --bg:#081d18; --panel:#0f2b23; --panel2:#0b241d; --line:#1d4a3a; --gold:#e8cd8e;
+  --ink:#f6edda; --muted:#a9c3b6; --gruen:#4fbf72; --rot:#e04b3f;
+  --elfenbein:#f7efdb; --elfenbein2:#e6d9ba; --elfenbein-rand:#b9a273; --punkt:#241c14;
+  --k:clamp(26px,6.2vh,54px); --kh:clamp(30px,8.4vh,60px);
 }
 *{box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{
-  margin:0;padding:8px;background:radial-gradient(ellipse at 20% 0%,#12332a 0%,transparent 45%),var(--bg);
+  margin:0;padding:8px;background:radial-gradient(ellipse at 18% -10%,#16443a 0%,transparent 52%),var(--bg);
   color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
 }
 .app{width:min(1180px,100%);height:100%;display:flex;flex-direction:column;gap:8px;min-height:0}
-.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
-.titel{font-size:clamp(16px,2.2vw,22px);color:var(--gold);letter-spacing:2px}
-.kopf small{color:var(--muted)}
-.mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,290px);gap:8px;flex:1 1 auto;min-height:0}
-@media(max-width:880px){.mitte{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(70px,1fr) auto}}
-.brett{background:linear-gradient(160deg,#123a2d,#0b2a20);border:1px solid var(--line);border-radius:14px;
-  padding:6px;display:flex;flex-direction:column;gap:4px;min-height:0;overflow:hidden}
+
+/* ---------- Kopf ---------- */
+.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between}
+.marke{display:flex;align-items:baseline;gap:8px}
+.marke b{font-size:clamp(16px,2.2vw,24px);color:var(--gold);letter-spacing:4px}
+.marke small{color:var(--muted);font-size:12px}
+.lage{color:var(--muted);font-size:13px}
+.lage.lauft{color:var(--gruen)}
+.stand{font-size:14px;color:var(--gold);border:1px solid var(--line);border-radius:9px;
+  padding:5px 10px;background:var(--panel2);letter-spacing:1px}
+.stand.aus{display:none}
+
+/* ---------- Mitte ---------- */
+.mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,270px);gap:8px;flex:1 1 auto;min-height:0}
+@media(max-width:880px){.mitte{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(90px,1fr) auto}}
+
+.brett{background:linear-gradient(165deg,#12402f,#0a2a20 62%,#082019);border:1px solid var(--line);
+  border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:hidden;
+  position:relative;box-shadow:inset 0 1px 0 #2c6b52}
+.brett::before{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 120%,#1c5c4599,transparent 60%)}
+.kappen{flex:1 1 auto;min-height:0;display:flex;align-items:center;gap:6px}
 .kette{flex:1 1 auto;min-height:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;
-  gap:4px;overflow:auto;padding:2px}
+  gap:5px;overflow:auto;padding:4px}
 .leer{color:var(--muted);font-size:13px;align-self:center}
-.enden{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
-.ende-knopf{font-family:inherit;background:#1b4a3a;color:var(--gold);border:1px solid var(--gold);
-  border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px}
-.ende-knopf:hover{background:#245c48}
-.stein{display:inline-flex;background:var(--elfenbein);border:1px solid var(--elfenbein-rand);border-radius:5px;
-  box-shadow:0 2px 0 rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.35);cursor:default;
-  width:calc(var(--k)*2);height:var(--k);flex:0 0 auto;padding:2px;gap:0}
-.haelfte{flex:1 1 0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:9%}
-.haelfte:first-child{border-right:1px solid var(--elfenbein-rand)}
+
+/* Endkappen: die offenen Enden als anklickbare Marken */
+.kappe{flex:0 0 auto;font-family:inherit;background:linear-gradient(180deg,#123a2c,#0b241d);
+  color:var(--muted);border:1px dashed #2b5f49;border-radius:12px;padding:6px 8px;cursor:default;
+  display:flex;flex-direction:column;align-items:center;gap:1px;min-width:46px;transition:.15s}
+.kappe small{font-size:9px;letter-spacing:1px;color:#6f9384;text-transform:uppercase}
+.kappe b{font-size:20px;color:var(--ink);line-height:1}
+.kappe:not(:disabled){color:var(--gold);border:1px solid var(--gold);background:linear-gradient(180deg,#3d3320,#241d0f);
+  box-shadow:0 0 14px #e8cd8e55;cursor:pointer;animation:locken 1.3s ease-in-out infinite}
+.kappe:not(:disabled) b{color:var(--gold)}
+.kappe:not(:disabled):hover{transform:translateY(-1px) scale(1.04)}
+@keyframes locken{0%,100%{box-shadow:0 0 0 0 #e8cd8e44}50%{box-shadow:0 0 0 6px #e8cd8e00}}
+
+/* ---------- Steine ---------- */
+.stein{display:inline-flex;background:linear-gradient(160deg,var(--elfenbein),var(--elfenbein2));
+  border:1px solid var(--elfenbein-rand);border-radius:7px;cursor:default;
+  box-shadow:0 3px 0 rgba(0,0,0,.45),0 4px 10px rgba(0,0,0,.35),inset 0 1px 0 #fff;
+  width:calc(var(--k)*2);height:var(--k);flex:0 0 auto;padding:2px;position:relative;overflow:hidden}
+.stein::after{content:"";position:absolute;inset:0;border-radius:6px;pointer-events:none;
+  background:linear-gradient(200deg,#ffffff55,transparent 45%)}
+.haelfte{flex:1 1 0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:7%}
+.haelfte:first-child{border-right:1px solid #8d7a5299}
 .punkt{display:block;width:100%;height:100%;border-radius:50%}
-.punkt.an{background:var(--punkt);transform:scale(.78)}
-.karte{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;
-  padding:8px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:hidden}
+.punkt.an{background:radial-gradient(circle at 35% 30%,#5a4736,var(--punkt) 62%);transform:scale(.8)}
+/* Rückseite: verdeckte Steine des Gegners */
+.stein.rueck{background:linear-gradient(160deg,#1b4a3a,#0f2b23);border-color:#2b5f49;
+  box-shadow:0 3px 0 rgba(0,0,0,.45),inset 0 1px 0 #3c7a60}
+.stein.rueck .haelfte:first-child{border-right-color:#2b5f49}
+.stein.rueck .punkt{background:#35705a66;transform:scale(.5)}
+
+/* ---------- Seite ---------- */
+.karte{background:linear-gradient(165deg,#123328,#0a211b);border:1px solid var(--line);border-radius:16px;
+  padding:10px;display:flex;flex-direction:column;gap:7px;min-height:0;overflow:hidden}
+.karte h3{margin:0;font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:normal}
 .leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 button.aktion{font-family:inherit;background:#14382d;color:var(--ink);border:1px solid var(--line);
-  border-radius:8px;padding:7px 10px;cursor:pointer;font-size:13px}
+  border-radius:9px;padding:8px 11px;cursor:pointer;font-size:13px}
 button.aktion:disabled{opacity:.4;cursor:default}
 button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;font-weight:bold}
-.spieler{display:flex;flex-direction:column;gap:4px;min-height:0;overflow:auto}
-.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px;
-  border:1px solid var(--line);border-radius:8px;background:#0b241d;font-size:13px}
-.sp.dran{border-color:var(--gold);background:#1b3a2c}
-.sp b{color:var(--gold);font-weight:normal}
+.spieler{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:auto}
+.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 9px;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:13px}
+.sp.dran{border-color:var(--gold);background:#1b3a2c;box-shadow:0 0 12px #e8cd8e33}
+.sp b{color:var(--gold);font-weight:normal;font-size:12px}
 .notiz{color:var(--muted);font-size:12px;min-height:16px;overflow:hidden}
 .hinweis{color:var(--rot);font-size:12px;min-height:16px}
 .versteckt{display:none!important}
-.hand-fach{flex:0 0 auto;background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);
-  border-radius:14px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;min-height:0}
+
+/* Ergebnisbanner auf dem Brett */
+.ergebnis{position:absolute;left:50%;top:10px;transform:translateX(-50%);pointer-events:none;
+  background:#0a211bee;border:1px solid var(--gold);border-radius:11px;padding:7px 14px;color:var(--gold);
+  font-size:14px;letter-spacing:1px;box-shadow:0 8px 24px #00000066;animation:auf 2.4s ease forwards}
+@keyframes auf{0%{opacity:0;transform:translate(-50%,-8px)}15%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:.85}}
+
+/* ---------- Hand ---------- */
+.hand-fach{flex:0 0 auto;background:linear-gradient(165deg,#123328,#0a211b);border:1px solid var(--line);
+  border-radius:16px;padding:7px 9px;display:flex;flex-direction:column;gap:5px;min-height:0;
+  box-shadow:inset 0 1px 0 #2c6b52}
 .hand-kopf{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
 .hand{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:center;min-height:calc(var(--kh) + 4px)}
-.hand .stein{width:calc(var(--kh)*2);height:var(--kh);cursor:pointer;transition:transform .1s}
-.hand .stein:hover:not(.gesperrt){transform:translateY(-2px)}
-.hand .stein.passt{box-shadow:0 0 0 2px var(--gruen),0 2px 0 rgba(0,0,0,.4)}
-.hand .stein.wahl{box-shadow:0 0 0 3px var(--gold),0 2px 0 rgba(0,0,0,.4)}
-.hand .stein.gesperrt{opacity:.5;cursor:default}
-.gabe{position:fixed;inset:0;background:rgba(6,24,19,.94);display:flex;flex-direction:column;
+.hand .stein{width:calc(var(--kh)*2);height:var(--kh);cursor:pointer;transition:transform .12s,box-shadow .15s}
+.hand .stein:hover:not(.gesperrt){transform:translateY(-3px)}
+.hand .stein.passt{box-shadow:0 0 0 2px var(--gruen),0 3px 0 rgba(0,0,0,.45),0 0 14px #4fbf7255}
+.hand .stein.wahl{box-shadow:0 0 0 3px var(--gold),0 3px 0 rgba(0,0,0,.45),0 0 16px #e8cd8e55;
+  transform:translateY(-4px)}
+.hand .stein.gesperrt{opacity:.45;cursor:default;filter:saturate(.6)}
+.hand .stein .tipp{position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:9px;
+  color:#3b2c1a;letter-spacing:1px}
+
+/* Geräteübergabe (zu zweit) */
+.gabe{position:fixed;inset:0;background:rgba(6,24,19,.95);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:16px;z-index:30;text-align:center;padding:20px}
 .gabe b{color:var(--gold);font-size:clamp(20px,3vw,30px);letter-spacing:1px}
-.gabe span{color:var(--muted);font-size:14px}
+.gabe span{color:var(--muted);font-size:14px;max-width:34ch}
 @media(max-height:520px){
-  :root{--k:clamp(22px,5.4vh,40px);--kh:clamp(26px,6.8vh,44px)}
-  .karte{padding:6px}
+  :root{--k:clamp(22px,5.4vh,42px);--kh:clamp(26px,6.8vh,46px)}
+  .karte{padding:7px}
   .notiz,.hinweis{font-size:11px}
+  .kappe b{font-size:16px}
 }
 </style>
 </head>
 <body>
 <main class="app">
   <header class="kopf">
-    <div class="titel">DOMINO</div>
-    <small id="lage">Bereit</small>
+    <div class="marke"><b>DOMINO</b><small>Doppelsechs · 2 Spieler</small></div>
+    <span class="lage" id="lage">Bereit</span>
     <div class="leiste" id="startLeiste">
       <button class="aktion haupt" id="btnComputer">Gegen Computer</button>
       <button class="aktion" id="btnZweit">Zu zweit</button>
@@ -91,23 +142,36 @@ button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;fo
       <button class="aktion" id="btnBereit">Bereit</button>
       <button class="aktion" id="btnLos">Los</button>
     </div>
+    <div class="stand aus" id="stand"></div>
   </header>
 
   <section class="mitte">
     <div class="brett">
-      <div class="kette" id="kette"><span class="leer">Noch kein Stein auf dem Tisch.</span></div>
-      <div class="enden" id="enden"></div>
+      <div class="ergebnis versteckt" id="ergebnis"></div>
+      <div class="kappen" id="enden">
+        <button class="kappe ende-knopf" type="button" data-seite="links" disabled>
+          <small>links</small><b>–</b>
+        </button>
+        <div class="kette" id="kette"><span class="leer">Noch kein Stein auf dem Tisch.</span></div>
+        <button class="kappe ende-knopf" type="button" data-seite="rechts" disabled>
+          <small>rechts</small><b>–</b>
+        </button>
+      </div>
     </div>
 
     <aside class="karte">
       <div class="leiste"><b id="rundenTitel">Runde 1</b><span class="notiz" id="zugText"></span></div>
-      <div class="spieler" id="spieler"></div>
+      <div>
+        <h3>SPIELER</h3>
+        <div class="spieler" id="spieler"></div>
+      </div>
       <div class="hinweis" id="hinweis"></div>
       <div class="notiz" id="notiz"></div>
       <div class="leiste">
         <button class="aktion" id="btnZiehen" disabled>Ziehen</button>
         <button class="aktion" id="btnPassen" disabled>Passen</button>
       </div>
+      <div class="notiz" style="font-size:11px">Tipp: passenden Stein anklicken · Z ziehen · P passen</div>
       <div class="leiste versteckt" id="ende">
         <button class="aktion haupt" id="btnNochmal">Nächste Runde</button>
       </div>
@@ -148,7 +212,8 @@ const elKette = $("kette"), elHand = $("hand"), elSpieler = $("spieler"),
       elHinweis = $("hinweis"), elNotiz = $("notiz"), elLage = $("lage"),
       elZug = $("zugText"), elRunde = $("rundenTitel"), elEnde = $("ende"),
       elEnden = $("enden"), elHandTitel = $("handTitel"), elTalon = $("talonText"),
-      elGabe = $("gabe"), elGabeText = $("gabeText"),
+      elGabe = $("gabe"), elGabeText = $("gabeText"), elStand = $("stand"),
+      elErgebnis = $("ergebnis"),
       btnZiehen = $("btnZiehen"), btnPassen = $("btnPassen");
 const melde = (text) => { elHinweis.textContent = text || ""; };
 const notiz = (text) => { elNotiz.textContent = text || ""; };
@@ -424,28 +489,32 @@ function steinEl(stein, klasse) {
   d.dataset.stein = stein[0] + "-" + stein[1];
   return d;
 }
+// Verdeckter Stein für die Gegnerhand
+function rueckEl() {
+  return steinEl([0, 0], "rueck");
+}
 
 function zeichneKette(kette) {
   elKette.innerHTML = "";
   if (!kette || !kette.length) {
-    elKette.innerHTML = "<span class=\"leer\">Noch kein Stein auf dem Tisch.</span>";
+    const l = document.createElement("span");
+    l.className = "leer";
+    l.textContent = "Noch kein Stein auf dem Tisch.";
+    elKette.appendChild(l);
     return;
   }
   for (const stein of kette) elKette.appendChild(steinEl(stein));
 }
 
-// Knöpfe für die Seitenwahl, wenn ein Stein an beide Enden passt.
-function zeichneEnden(moeglich) {
-  elEnden.innerHTML = "";
-  if (!wahl || !moeglich || moeglich.length < 2) return;
-  for (const seite of moeglich) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "ende-knopf";
-    b.dataset.seite = seite;
-    b.textContent = seite === "links" ? "◀ links anlegen" : "rechts anlegen ▶";
-    elEnden.appendChild(b);
-  }
+/* Bedienung über die beiden Endkappen: sie zeigen den offenen Wert und werden
+   nur dann anklickbar, wenn der gewählte Stein an dieses Ende passt. */
+function kappenSetzen(enden, moeglich) {
+  elEnden.querySelectorAll(".ende-knopf").forEach((b) => {
+    const seite = b.dataset.seite;
+    const wert = enden && enden[0] >= 0 ? (seite === "links" ? enden[0] : enden[1]) : -1;
+    b.querySelector("b").textContent = wert >= 0 ? String(wert) : "–";
+    b.disabled = !(wahl && moeglich && moeglich.includes(seite));
+  });
 }
 
 function zeichneHand(hand, darf, passt, text) {
@@ -459,11 +528,18 @@ function zeichneHand(hand, darf, passt, text) {
   }
   for (const stein of hand) {
     const klasse = !darf ? "gesperrt" : (wahl && gleich(wahl, stein) ? "wahl" : (passt(stein) ? "passt" : ""));
-    elHand.appendChild(steinEl(stein, klasse));
+    const d = steinEl(stein, klasse);
+    if (klasse === "wahl") {
+      const t = document.createElement("span");
+      t.className = "tipp";
+      t.textContent = "◀ oder ▶";
+      d.appendChild(t);
+    }
+    elHand.appendChild(d);
   }
 }
 
-function spielerZeile(name, punkte, steine, dran, ich) {
+function spielerZeile(name, punkte, steine, dran, ich, hand) {
   const p = document.createElement("p");
   p.className = "sp" + (dran ? " dran" : "");
   const n = document.createElement("span");
@@ -471,7 +547,33 @@ function spielerZeile(name, punkte, steine, dran, ich) {
   const b = document.createElement("b");
   b.textContent = punkte + " Punkte · " + steine + (steine === 1 ? " Stein" : " Steine");
   p.append(n, b);
+  if (hand && hand.length && !ich) {
+    // Verdeckte Steine des Gegners als kleine Rückseiten andeuten
+    const rueck = document.createElement("span");
+    rueck.style.cssText = "display:flex;gap:2px";
+    for (let i = 0; i < Math.min(hand.length, 7); i++) {
+      const r = document.createElement("i");
+      r.style.cssText = "width:7px;height:12px;border-radius:2px;background:#2b5f49;display:block";
+      rueck.appendChild(r);
+    }
+    p.appendChild(rueck);
+  }
   return p;
+}
+
+function standZeigen(wer, punkte, runden) {
+  if (!punkte || !punkte.length) { elStand.classList.add("aus"); return; }
+  elStand.classList.remove("aus");
+  elStand.textContent = wer.map((n, i) => n + " " + punkte[i] + (runden ? " (" + runden[i] + " Siege)" : ""))
+    .join("  ·  ");
+}
+
+function ergebnisZeigen(text, gut) {
+  if (!text) { elErgebnis.classList.add("versteckt"); elErgebnis.textContent = ""; return; }
+  elErgebnis.textContent = text;
+  elErgebnis.style.borderColor = gut ? "var(--gold)" : "#a8382e";
+  elErgebnis.style.color = gut ? "var(--gold)" : "#ffd9d2";
+  elErgebnis.classList.remove("versteckt");
 }
 
 function zeichneLokal() {
@@ -481,28 +583,34 @@ function zeichneLokal() {
   const darf = sp.status === "spiel" && sichtbar && sp.zug === sitz;
   elRunde.textContent = "Runde " + lokal.runde;
   elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
+  elLage.className = "lage" + (sp.status === "spiel" ? " lauft" : "");
   elZug.textContent = sp.status === "spiel"
     ? (lokal.modus === "computer" && sp.zug === 0 ? "· du bist dran" : "· " + wer[sp.zug] + " ist dran")
     : "";
   zeichneKette(sp.kette);
-  zeichneEnden(wahl ? seiten(sp, wahl) : null);
+  kappenSetzen(sp.enden, wahl ? seiten(sp, wahl) : null);
   elSpieler.innerHTML = "";
   wer.forEach((name, i) => {
     elSpieler.appendChild(spielerZeile(name, sp.punkte[i], sp.haende[i].length,
-      sp.status === "spiel" && sp.zug === i, false));
+      sp.status === "spiel" && sp.zug === i, lokal.modus === "computer" && i === 0, sp.haende[i]));
   });
+  standZeigen(wer, sp.punkte, sp.runden);
   notiz(sp.note);
   elTalon.textContent = "Vorrat: " + sp.vorrat.length;
   elHandTitel.textContent = lokal.modus === "computer"
     ? "Deine Steine" + (sp.zug === 1 && sp.status === "spiel" ? " – der Computer ist dran" : "")
     : "Steine von " + wer[sp.zug];
-  zeichneHand(sichtbar ? sp.haende[sp.zug] : [], darf, (k) => passtAn(sp, k),
+  zeichneHand(sichtbar ? sp.haende[lokal.modus === "computer" ? 0 : sp.zug] : [], darf, (k) => passtAn(sp, k),
     "Hand verdeckt – Gerät weitergeben.");
   const keinStein = darf && !kannLegen(sp, sitz);
   btnZiehen.disabled = !(keinStein && sp.vorrat.length > 0);
   btnPassen.disabled = !(keinStein && sp.vorrat.length === 0);
   btnZiehen.textContent = "Ziehen (" + sp.vorrat.length + ")";
   elEnde.classList.toggle("versteckt", sp.status !== "ende");
+  if (sp.status === "ende") {
+    const gut = sp.gewinner === sitz;
+    ergebnisZeigen(sp.gewinner >= 0 ? wer[sp.gewinner] + " gewinnt" : "Unentschieden", gut);
+  } else ergebnisZeigen("");
   if (lokal.modus === "zweit" && sp.status === "spiel" && !lokal.handOffen) {
     elGabeText.textContent = wer[sp.zug] + " ist dran";
     elGabe.classList.remove("versteckt");
@@ -539,8 +647,10 @@ function zeichneOnline() {
     elSpieler.innerHTML = "";
     notiz("Eröffne eine Runde – Mitspieler treten im Raum bei.");
     elEnde.classList.add("versteckt");
-    elEnden.innerHTML = "";
+    kappenSetzen(null, null);
     elTalon.textContent = "";
+    elStand.classList.add("aus");
+    ergebnisZeigen("");
     btnZiehen.disabled = true;
     btnPassen.disabled = true;
     $("btnErstellen").classList.remove("versteckt");
@@ -555,13 +665,17 @@ function zeichneOnline() {
   elRunde.textContent = "Runde " + g.runde;
   elLage.textContent = g.status === "invited" ? "Warte auf Mitspieler"
     : g.status === "spiel" ? "Läuft" : "Runde vorbei";
+  elLage.className = "lage" + (g.status === "spiel" ? " lauft" : "");
   elZug.textContent = dran ? "· " + (dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
   zeichneKette(g.kette);
-  zeichneEnden(wahl ? onlineSeiten(wahl) : null);
+  kappenSetzen(g.enden, wahl ? onlineSeiten(wahl) : null);
   elSpieler.innerHTML = "";
   for (const s of g.spieler || []) {
-    elSpieler.appendChild(spielerZeile(s.name, s.punkte, s.anzahl, !!(dran && dran.id === s.id), s.id === MYID));
+    elSpieler.appendChild(spielerZeile(s.name, s.punkte, s.anzahl, !!(dran && dran.id === s.id),
+      s.id === MYID, null));
   }
+  standZeigen((g.spieler || []).map((s) => s.name), (g.spieler || []).map((s) => s.punkte),
+    (g.spieler || []).map((s) => s.runden || 0));
   notiz(g.note);
   elTalon.textContent = "Vorrat: " + g.talon;
   elHandTitel.textContent = "Deine Steine";
@@ -572,6 +686,9 @@ function zeichneOnline() {
   btnPassen.disabled = !(keinStein && g.talon === 0);
   btnZiehen.textContent = "Ziehen (" + g.talon + ")";
   elEnde.classList.toggle("versteckt", g.status !== "ende");
+  if (g.status === "ende" && g.gewinner >= 0) {
+    ergebnisZeigen(g.spieler[g.gewinner].name + " gewinnt", g.spieler[g.gewinner].id === MYID);
+  } else ergebnisZeigen("");
   $("btnErstellen").classList.toggle("versteckt", true);
   $("btnBereit").classList.toggle("versteckt", g.status !== "invited");
   $("btnLos").classList.toggle("versteckt", g.status !== "invited");
@@ -587,6 +704,7 @@ function zeichne() {
   else {
     zeichneKette([]);
     elHand.innerHTML = "";
+    kappenSetzen(null, null);
   }
 }
 
@@ -608,8 +726,8 @@ elHand.addEventListener("click", (e) => {
   const moeglich = ONLINE ? onlineSeiten(stein) : seiten(lokal.sp, stein);
   if (!moeglich.length) { melde("Dieser Stein passt an keine Seite."); return; }
   if (moeglich.length > 1) {
-    wahl = stein;
-    melde("Beide Seiten passen – links oder rechts?");
+    wahl = gleich(wahl || [-1, -1], stein) ? null : stein;
+    melde(wahl ? "Beide Enden passen – links oder rechts wählen." : "");
     zeichne();
     return;
   }
@@ -618,7 +736,7 @@ elHand.addEventListener("click", (e) => {
 
 elEnden.addEventListener("click", (e) => {
   const b = e.target.closest(".ende-knopf");
-  if (!b || !wahl) return;
+  if (!b || b.disabled || !wahl) return;
   const stein = wahl;
   spielen(stein, b.dataset.seite);
 });
@@ -644,6 +762,13 @@ $("btnGabe").addEventListener("click", () => {
 $("btnErstellen").addEventListener("click", () => schicke("create"));
 $("btnBereit").addEventListener("click", () => schicke("ready"));
 $("btnLos").addEventListener("click", () => schicke("start"));
+
+// Tastatur: Z ziehen, P passen, Escape hebt die Seitenwahl auf.
+window.addEventListener("keydown", (e) => {
+  if (e.key === "z" || e.key === "Z") { if (!btnZiehen.disabled) btnZiehen.click(); }
+  if (e.key === "p" || e.key === "P") { if (!btnPassen.disabled) btnPassen.click(); }
+  if (e.key === "Escape" && wahl) { wahl = null; melde(""); zeichne(); }
+});
 
 if (ONLINE) {
   hole();
