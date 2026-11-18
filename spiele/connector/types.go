@@ -61,6 +61,10 @@ type SpielerZeile struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Anwesend bool   `json:"anwesend"`
+	// Spiel ist die Kennung der laufenden Partie dieses Spielers (leer, wenn er
+	// an keinem Tisch sitzt). Damit kann der Connector auch Zuschauern den
+	// Spielstand nennen, ohne die Spiele einzeln abzufragen.
+	Spiel string `json:"spiel,omitempty"`
 }
 
 type Hinweis struct {

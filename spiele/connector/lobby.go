@@ -365,7 +365,8 @@ func playersHandler(w http.ResponseWriter, r *http.Request) {
 	jetzt := time.Now()
 	list := make([]SpielerZeile, 0, len(room.Players))
 	for id, player := range room.Players {
-		list = append(list, SpielerZeile{ID: id, Name: player.Name, Anwesend: player.anwesend(jetzt)})
+		list = append(list, SpielerZeile{ID: id, Name: player.Name, Anwesend: player.anwesend(jetzt),
+			Spiel: room.aktivesSpiel(id)})
 	}
 	ownerID := room.OwnerID
 	mu.Unlock()

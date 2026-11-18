@@ -878,12 +878,14 @@ function myTurnOnline(){
 }
 async function postPresence(){
   if(!onlineRoom||!onlineID)return;
-  await fetch("/api/presence",{
+  // Auch hier die Zeitgrenze: ein hängendes Lebenszeichen soll nicht alle
+  // fünf Sekunden eine weitere offene Anfrage hinterlassen.
+  await onlineRufen("/api/presence",{
     method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
   });
 }
-// Obergrenze für jede Abfrage: bleibt eine Anfrage hängen, löst sie nach
+// Obergrenze für jede Abfrage: bleibt eine Anfrage hängen, bricht sie nach
 // acht Sekunden ab. Ohne das blieb onlineBusy für immer true – der Würfel
 // drehte endlos und der Abgleich stand still.
 function zeitgrenze(ms){
@@ -892,15 +894,25 @@ function zeitgrenze(ms){
   setTimeout(()=>steuerung.abort(),ms);
   return {signal:steuerung.signal};
 }
+// Ein Abruf mit Zeitgrenze. Nach dem Abbruch steht sonst "signal is aborted
+// without reason" in der Meldungszeile – englisch und ohne Rat.
+async function onlineRufen(url,optionen){
+  try{
+    return await fetch(url,{...optionen,...zeitgrenze(8000)});
+  }catch(e){
+    if(e&&e.name==="AbortError")throw new Error("Der Connector antwortet nicht (Zeitüberschreitung nach 8 Sekunden).");
+    throw e;
+  }
+}
 async function fetchOnlineGame(){
-  const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store",...zeitgrenze(8000)});
+  const r=await onlineRufen("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&id="+encodeURIComponent(onlineID),{cache:"no-store"});
   if(!r.ok)throw new Error("Spielstand nicht erreichbar ("+r.status+").");
   return (await r.json()).game;
 }
 async function onlineAction(action,payload={}){
-  const r=await fetch("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&action="+encodeURIComponent(action),{
+  const r=await onlineRufen("/api/menschaerger?room="+encodeURIComponent(onlineRoom)+"&action="+encodeURIComponent(action),{
     method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id:onlineID,...payload}),...zeitgrenze(8000)
+    body:JSON.stringify({id:onlineID,...payload})
   });
   if(!r.ok)throw new Error((await r.text()).trim()||"Aktion fehlgeschlagen.");
   return (await r.json()).game;
@@ -947,13 +959,19 @@ function applyOnlineState(game){
   showDie(game.lastDice||game.dice||null);
   message.textContent=game.note||onlineMessage();
 }
+let abgleichLaeuft=false;
 async function pollOnline(){
-  if(!onlineRoom||!onlineID||onlineBusy)return;
+  // Ein hängender Abruf darf keine zweite Runde starten: sonst stapeln sich
+  // bei langsamer Leitung die Abgleiche. onlineBusy bleibt fürs Würfeln und
+  // Ziehen frei – der Abgleich darf beides nicht blockieren.
+  if(!onlineRoom||!onlineID||abgleichLaeuft)return;
+  abgleichLaeuft=true;
   try{
-    const game=await fetchOnlineGame();
-    if(!onlineBusy)applyOnlineState(game);
+    applyOnlineState(await fetchOnlineGame());
   }catch(e){
-    message.textContent="Verbindung zum Connector verloren …";
+    message.textContent=e.message||"Verbindung zum Connector verloren …";
+  }finally{
+    abgleichLaeuft=false;
   }
 }
 async function rollDiceOnline(){

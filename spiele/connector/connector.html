@@ -584,19 +584,29 @@ html:fullscreen body{padding:18px 1px}
  if(!vorher||window.fetchMitZeit)return;
  window.fetchMitZeit=true;
  window.fetch=function(adresse,optionen){
-  if(typeof adresse!=="string"||adresse.indexOf("/api/")<0)return vorher(adresse,optionen);
-  if(!("AbortController" in window))return vorher(adresse,optionen);
+  if(typeof adresse!=="string"||adresse.indexOf("/api/")<0||!("AbortController" in window))
+   return vorher(adresse,optionen);
   const steuerung=new AbortController();
-  const eigene=Object.assign({},optionen||{},{signal:steuerung.signal});
-  const lauf=vorher(adresse,eigene);
   const uhr=setTimeout(()=>steuerung.abort(),10000);
-  const fertig=()=>clearTimeout(uhr);
-  if(lauf&&lauf.then)lauf.then(fertig,fertig);
-  return lauf;
+  // Ohne eigene Meldung stünde in der Statuszeile "signal is aborted without
+  // reason" – englisch und ohne Hinweis, was zu tun ist.
+  return vorher(adresse,Object.assign({},optionen||{},{signal:steuerung.signal})).then(
+   antwort=>{clearTimeout(uhr);return antwort;},
+   fehler=>{
+    clearTimeout(uhr);
+    if(steuerung.signal.aborted)throw Error("Der Connector antwortet nicht (Zeitüberschreitung nach 10 Sekunden).");
+    throw fehler;
+   }
+  );
  };
 })();
 
 let activeRoom="", address="", sessionID="", isRoomOwner=false, selectedMuteSender=null, selectedMenuSender=null;
+// Welches Spiel läuft gerade? /api/imspiel meldet es (Feld "aktiv") - damit
+// muss der Connector nicht mehr alle Spiele abfragen. Offene Einladungen
+// stehen ohnehin in den Chatzeilen; sie kommen ohne Zusatzruf mit.
+let aktivesSpielId="";
+let einladungsSpiele=new Set();
 let currentPlayersList=[];
 // Wer zählt als da? Der Server markiert Spieler, die nur noch im Raum
 // stehen (kein Lebenszeichen mehr oder Tab im Hintergrund) mit
@@ -840,24 +850,24 @@ function scrollZuDenSpielen(){
  setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
 
+function presenceRufen(code){
+ return mitWiederholung(()=>fetch("/api/presence",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({room:code,id:sessionID,name:playerName()})
+ }));
+}
+
 async function join(roomDisplayName){
  const code=document.getElementById("room").value.trim().toUpperCase();
  if(!code)return;
  try{
-  let p=await mitWiederholung(()=>fetch("/api/presence",{
-   method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:code,id:sessionID,name:playerName()})
-  }));
+  let p=await presenceRufen(code);
   // 403: Dieser Platz hängt an einem anderen Gerät – dem Browser fehlt sein
-  // Token (Speicher geleert, anderer Browser, privater Modus) oder die Kennung
-  // stammt aus einer Kopie. Mit frischer Kennung klappt der Beitritt, statt
-  // dauerhaft draußen zu bleiben.
+  // Token (Speicher geleert, anderer Browser, privater Modus). Mit frischer
+  // Kennung klappt der Beitritt, statt dauerhaft draußen zu bleiben.
   if(p.status===403){
    neuerSpieler();
-   p=await mitWiederholung(()=>fetch("/api/presence",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({room:code,id:sessionID,name:playerName()})
-   }));
+   p=await presenceRufen(code);
   }
   if(!p.ok){
    const text=(await p.text()).trim();
@@ -890,6 +900,7 @@ async function join(roomDisplayName){
   await refreshPlayers();
   loadMutes();
   heartbeat();               // sofort "Verbunden" zeigen, nicht erst nach 5 s
+ pruefeSpielstart();        // und wissen, welches Spiel gerade läuft
   scrollZuDenSpielen();
   zeigeHinweisAusUrl();
  }catch(e){
@@ -1325,34 +1336,72 @@ async function dameAction(action,data={}){
  return gameApiAction("dame", action, data);
 }
 
-// Alle Spielabfragen eines Durchlaufs. Sie laufen gleichzeitig: nacheinander
-// summierte sich pro Runde rund vier Sekunden (36 Rufe à ~0,1 s) - Chat und
-// Spielstatus standen dadurch dauerhaft Sekunden hinterher. Der Server
-// verkraftet das locker, jede Abfrage ist nur ein Blick in die Raumstruktur.
-function spielAbfragen(){
- return [
-  refreshTicTacToe, refreshVierGewinnt, refreshDame, refreshPaare, refreshMaen, refreshKaese,
-  refreshSim, refreshTetris, refreshKalaha, refreshStreichholz, refreshMuehle, refreshReversi,
-  refreshHold, refreshSkyjo, refreshKniffel, refreshPoker, refreshCabo, refreshSiebzehn,
-  refreshSechsundsechzig, refreshBaccara, refreshSchiffe, refreshSchach, refreshGo, refreshBackgammon,
-  refreshMauMau, refreshUno, refreshSchwimmen, refreshArschloch, refreshEinsxeins, refreshGalgen,
-  refreshBingo, refreshWortsuche, refreshDomino, refreshSchlangen, refreshPig, refreshGaense
- ];
+// Zuordnung Kennung -> Abfrage. Die Kennung ist dieselbe, die der Raum über
+// /api/imspiel als "aktiv" meldet und die in den Einladungen der Chatzeilen
+// steht (siehe SUPPORTED_GAMES).
+const SPIEL_ABFRAGEN={
+ tictactoe:refreshTicTacToe, viergewinnt:refreshVierGewinnt, dame:refreshDame,
+ paare:refreshPaare, menschaerger:refreshMaen, kaesekaestche:refreshKaese,
+ sim:refreshSim, tetris:refreshTetris, kalaha:refreshKalaha,
+ streichholzspiel:refreshStreichholz, muehle:refreshMuehle, reversi:refreshReversi,
+ hold:refreshHold, skyjo:refreshSkyjo, kniffel:refreshKniffel,
+ schach:refreshSchach, go:refreshGo, backgammon:refreshBackgammon,
+ maumau:refreshMauMau, siebzehn:refreshSiebzehn, baccara:refreshBaccara,
+ schiffe:refreshSchiffe, cabo:refreshCabo, poker:refreshPoker,
+ uno:refreshUno, schwimmen:refreshSchwimmen, arschloch:refreshArschloch,
+ einsxeins:refreshEinsxeins, sechsundsechzig:refreshSechsundsechzig, galgen:refreshGalgen,
+ bingo:refreshBingo, wortsuche:refreshWortsuche, domino:refreshDomino,
+ schlangen:refreshSchlangen, pig:refreshPig, gaensespiel:refreshGaense
+};
+
+// Sitze ich nur zu, sagt die Spielerliste, wer worin spielt (/api/players
+// liefert je Spieler die Kennung seiner Partie mit). Die Zuschauerzeile kostet
+// damit keinen einzigen Spielabruf.
+function zuschauerStatus(){
+ const andere=currentPlayersList.filter(p=>p.spiel&&p.id!==sessionID);
+ if(!andere.length)return null;
+ const spiel=andere[0].spiel;
+ const namen=andere.filter(p=>p.spiel===spiel).map(p=>p.name).filter(Boolean);
+ if(!namen.length)return null;
+ const wer=namen.length===1?namen[0]
+  :namen.slice(0,-1).join(", ")+" und "+namen[namen.length-1];
+ return {text:wer+(namen.length>1?" spielen gerade ":" spielt gerade ")+gameName(spiel)+".",
+  gameId:"", leer:false, knoepfe:[]};
 }
 
 async function refreshGames(players, vorrang){
  // Läuft schon ein Durchlauf, reicht der. Sonst stapeln sich bei langsamer
  // Leitung die Runden und es bleiben immer mehr Abfragen offen.
  if(statusZyklus)return;
+ // Nur das laufende Spiel und Spiele mit einer offenen Einladung: 36 Rufe je
+ // Sekunde hielten Chat und Spielstatus dauerhaft hinter dem Geschehen.
+ const ids=new Set(einladungsSpiele);
+ if(aktivesSpielId)ids.add(aktivesSpielId);
  // Ein Durchlauf: alle Spiele sammeln, gezeichnet wird erst am Ende (siehe
  // statusMerken).
  statusZyklus=true; statusPuffer=null; statusFrisch=false;
  try{
   // Ein einzelnes Spiel darf den Durchlauf nicht aufhalten.
-  await Promise.all(spielAbfragen().map(abfrage => abfrage(players).catch(()=>{})));
+  await Promise.all([...ids].map(id=>{
+   const abfrage=SPIEL_ABFRAGEN[id];
+   return abfrage?abfrage(players).catch(()=>{}):null;
+  }));
+  // Eine Einladung, deren Spiel vorbei, abgelehnt oder verschwunden ist, wird
+  // nicht ewig weiter abgefragt - die Chatzeile bleibt trotzdem stehen.
+  for(const id of ids){
+   const stand=gameStateFor(id);
+   if(id===aktivesSpielId||!stand||stand.status==="finished"||stand.status==="declined")
+    einladungsSpiele.delete(id);
+  }
  }finally{
   // Ab hier darf wieder sofort gezeichnet werden (z. B. aus einem Knopf).
   statusZyklus=false;
+ }
+ // Ohne eigenes Spiel und ohne Angebot zählt die Partie der anderen; gibt es
+ // auch die nicht, muss die alte Zeile weg - sie würde sonst bis zum Neuladen
+ // "Spiel läuft" behaupten.
+ if(!ids.size && !vorrang){
+  statusPuffer=zuschauerStatus()||{text:"", gameId:"", leer:true, knoepfe:[]};
  }
  // Einmal zeichnen. Läuft für mich schon eine Partie (oder sitze ich an einem
  // Tisch), steht deren Meldung samt Knopf vorn – das offene Angebot kommt als
@@ -3267,15 +3316,20 @@ async function refresh(){
  if(!activeRoom||chatBusy)return;
  chatBusy=true;
  try{
-  // Erst das offene Angebot holen: die Chat-Karte hängt davon ab.
-  await ladeAngebot();
-  const r=await fetch("/api/messages?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  // Angebot und Chatzeilen gleichzeitig holen: die Chat-Karte braucht beides,
+  // aber nacheinander hing im Fehlerfall jede Abfrage einzeln an ihrer
+  // Zeitgrenze - der Chat stand dann zwanzig Sekunden statt zehn.
+  const [,r]=await Promise.all([ladeAngebot(),
+   fetch("/api/messages?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID))]);
   if(!r.ok){
    // Anzeige statt Hinweiszeile: #roomstatus bleibt für Meldungen der Seite frei.
    verbindungZeigen("weg");
    return;
   }
   const msgs=await r.json(),box=document.getElementById("chat");
+  // Offene Einladungen stehen als Chatzeile da - also ohne Zusatzruf bekannt.
+  // Genau diese Spiele werden zusätzlich zum laufenden abgefragt.
+  einladungsSpiele=new Set(msgs.filter(m=>m.gameInvite&&m.game).map(m=>m.game));
   // Nur neu zeichnen, wenn sich wirklich etwas geändert hat. Sonst klappt das
   // Stummschalt-Popover zu und der Chat springt jede Sekunde nach unten.
   const signature=msgs.map(m=>[m.senderId,m.time,m.text,m.gameId,m.gameInvite?"i":"",m.toId,m.tone||""].join("|")).join("`")
@@ -3519,6 +3573,10 @@ async function refresh(){
   letzteChatZeile=zeile;
   chatSprungBereit=true;
  }catch(e){
+  // Zeitgrenze oder Netzfehler: ohne diesen Hinweis stünde oben weiter
+  // "Verbunden", während der Chat schon steht. Das nächste Lebenszeichen
+  // meldet sich von selbst wieder als verbunden.
+  verbindungZeigen("weg");
  }finally{
   chatBusy=false;
  }
@@ -3800,7 +3858,18 @@ async function pruefeSpielstart(){
  try{
   // seite=raum: hält den Spieler im Raum, gilt aber nicht als lebende
   // Spielseite – so erkennt der Server zurückgebliebene Partien.
-  await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID)+"&seite=raum",{cache:"no-store"});
+  const r=await fetch("/api/imspiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID)+"&seite=raum",{cache:"no-store"});
+  if(!r||!r.ok)return;
+  // "aktiv" ist die Kennung der Partie, in der ich gerade sitze. Nur die wird
+  // abgefragt - der Rest der Spiele kostet keinen einzigen Ruf mehr.
+  const daten=await r.json().catch(()=>null);
+  const neu=(daten&&daten.aktiv)||"";
+  if(neu!==aktivesSpielId){
+   aktivesSpielId=neu;
+   // Sofort zeichnen, damit Statuszeile und Knöpfe nicht bis zum nächsten
+   // Sekundentakt warten.
+   refreshGames(currentPlayersList,"");
+  }
  }catch(e){}
 }
 setInterval(pruefeSpielstart,2000);
