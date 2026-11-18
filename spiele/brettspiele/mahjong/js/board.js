@@ -8,14 +8,15 @@
 // SPIELBRETT ERSTELLEN
 // --------------------------------------------------
 
-// Welche Formen gelten?  Im leichten Modus wie bisher der gewaehlte
-// Formensatz (1 = Normal-Level, 2 = Handy-Level).  Der schwere Modus hat
-// eigene Sammlungen in board-layout-schwer.js - eine fuer den Rechner, eine
-// fuer das Handy.  Welche davon gilt, entscheidet istKleinesGeraet() mit
-// derselben Grenze wie das CSS (max-width: 900px).
+// Welche Formen gelten?  Der Umschalter am Kopf entscheidet: "HANDY-LEVEL"
+// nimmt die Handy-Formen, "PC-LEVEL" die PC-Formen - in Leicht wie in
+// Schwer.  Frueher hing die schwere Sammlung an der Fensterbreite; damit zeigte
+// derselbe Levelstand auf Rechner und Handy verschiedene Bretter.  Jetzt sind
+// die vier Varianten unabhaengig: PC-Leicht, Handy-Leicht, PC-Schwer,
+// Handy-Schwer, jede mit eigenem Fortschritt.
 function formenSammlung() {
     if (spielModus === "schwer" && typeof BOARD_LAYOUTS_SCHWER === "object") {
-        return istKleinesGeraet()
+        return FORMEN_SATZ === 2
             ? BOARD_LAYOUTS_SCHWER_HANDY
             : BOARD_LAYOUTS_SCHWER;
     }

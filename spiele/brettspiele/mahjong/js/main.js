@@ -18,8 +18,8 @@ let gameTimer = null;
 let gameRunning = false;
 let currentLevel = 1;
 
-// Formensatz des laufenden Spiels (1 = Normal, 2 = Handy). Jedes Spiel beginnt
-// mit den Handy-Leveln - auch wenn zuletzt ein Normal-Level gespielt wurde.
+// Formensatz des laufenden Spiels (1 = PC, 2 = Handy).  Beim Start gilt der
+// zuletzt gespielte; ohne Eintrag im Spielstand bleiben es die Handy-Level.
 let FORMEN_SATZ = 2;
 
 // Schwierigkeitsgrad: "leicht" ist das bisherige Spiel (72 Motive zu je zwei
@@ -29,6 +29,15 @@ let spielModus = "leicht";
 
 let score = 0;
 let gameData = null;
+
+// Abschnitt des laufenden Bretts (Formensatz + Schwierigkeit beim Start).
+// Ein Wechsel mitten in der Partie laesst das Brett stehen - der Sieg zaehlt
+// dann weiter fuer die Variante, die man spielt.
+let laufendeDaten = null;
+
+// Schwierigkeit des laufenden Bretts - fuer die Anzeige, waehrend ein Wechsel
+// mitten in der Partie erst beim naechsten Brett greift.
+let laufendeStufe = "leicht";
 let levelWechselTimer = null;
 let hinweisTiles = [];
 
@@ -64,25 +73,34 @@ function hoechstesLevel(satz = FORMEN_SATZ) {
     return Math.max(...Object.keys(formen).map(Number));
 }
 
-// Der Spielstand liegt getrennt vor: Formen 1 wie bisher ganz oben,
-// Formen 2 in einem eigenen Abschnitt mit eigenen Haken und Bestzeiten.
-function satzDaten(satz = FORMEN_SATZ) {
+// Zuletzt gespielter Formensatz aus dem Spielstand - ohne Eintrag Handy.
+function gespeicherterSatz() {
+    const wert = gameData && gameData.settings ? gameData.settings.satz : null;
+
+    return wert === 1 ? 1 : 2;
+}
+
+// Der Spielstand liegt in vier Abschnitten: Satz 1 (PC) und Satz 2 (Handy),
+// je fuer Leicht und Schwer getrennt - eigene Level, Haken und Bestzeiten.
+function satzDaten(satz = FORMEN_SATZ, stufe = stufenWert()) {
     if (!gameData) gameData = createDefaultStorage();
 
-    if (satz !== 2) return gameData;
+    if (!gameData.fortschritt) gameData.fortschritt = neuerFortschritt();
 
-    if (!gameData.satz2) {
-        gameData.satz2 = neueSatzDaten();
-    }
+    const saetze = gameData.fortschritt;
+    const nummer = satz === 2 ? 2 : 1;
 
-    return gameData.satz2;
+    if (!saetze[nummer]) saetze[nummer] = neuerFortschritt()[nummer];
+    if (!saetze[nummer][stufe]) saetze[nummer][stufe] = neueSatzDaten();
+
+    return saetze[nummer][stufe];
 }
 
 // Name der Form – im zweiten Satz hat jede Form einen.
 function formName(level, satz = FORMEN_SATZ) {
     // Der schwere Modus hat eigene Formen - dort steht deren Name.
     if (spielModus === "schwer" && typeof formNameSchwer === "function") {
-        return formNameSchwer(formVon(level, satz));
+        return formNameSchwer(formVon(level, satz), satz === 2);
     }
 
     return satz === 2 ? formNameSatz2(formVon(level, satz)) : "";
@@ -128,11 +146,17 @@ function farbenName(runde) {
     return RUNDEN_FARBEN[(runde - 1) % RUNDEN_FARBEN.length];
 }
 
-// So heissen die beiden Levelsysteme - genau wie die Knoepfe am Umschalter.
-const SATZ_NAMEN = { 1: "Normal-Level", 2: "Handy-Level" };
+// Geraetename der Levelsysteme: Grundlage fuer "PC-Level" am Umschalter und
+// fuer die Varianten-Anzeige ("PC · Leicht").
+const GERAETE_NAMEN = { 1: "PC", 2: "Handy" };
 
+function geraeteName(satz = FORMEN_SATZ) {
+    return GERAETE_NAMEN[satz === 2 ? 2 : 1];
+}
+
+// So heissen die beiden Levelsysteme - genau wie die Knoepfe am Umschalter.
 function satzName(satz = FORMEN_SATZ) {
-    return SATZ_NAMEN[satz === 2 ? 2 : 1];
+    return `${geraeteName(satz)}-Level`;
 }
 
 // Letztes Level einer vollen Farbrunde? (Level 1000, 2000, ...)
@@ -172,6 +196,61 @@ function setzeRundenFarbe(runde) {
 // SPIEL STARTEN
 // --------------------------------------------------
 
+// --------------------------------------------------
+// FREISCHALTUNG UND WEITER
+// --------------------------------------------------
+
+// Alle Level einer Variante: zehn Farbrunden zu je einer vollen Formenrunde.
+function hoechstesLevelGesamt(satz = FORMEN_SATZ) {
+    return hoechstesLevel(satz) * RUNDEN_FARBEN.length;
+}
+
+// Hoechstes Level, das gespielt werden darf: mindestens 1, hoechstens das
+// letzte der Variante.  Einzige Stelle, die unlockedLevel auswertet.
+function freiesLevel(daten, satz = FORMEN_SATZ) {
+    const wert = Number(daten && daten.unlockedLevel) || 1;
+
+    return Math.min(Math.max(1, wert), hoechstesLevelGesamt(satz));
+}
+
+// Naechstes Level, das gespielt werden darf: das erste freie Level ohne
+// Bestzeit.  0 bedeutet: in dieser Variante ist alles geschafft.
+function naechstesLevel(daten, satz = FORMEN_SATZ) {
+    const frei = freiesLevel(daten, satz);
+    const zeiten = (daten && daten.bestTimes) || {};
+
+    for (let level = 1; level <= frei; level++) {
+        if (zeiten[level] === undefined) return level;
+    }
+
+    return 0;
+}
+
+// WEITER: startet das naechste offene Level einer Variante.  Gibt es keines,
+// bleibt es bei einer Meldung - so landet niemand in einem gesperrten Level.
+function weiterSpielen(satz = FORMEN_SATZ, stufe = laufendeStufe) {
+    const eigeneStufe = stufenWert(stufe);
+    const ziel = naechstesLevel(satzDaten(satz, eigeneStufe), satz);
+
+    if (!ziel) {
+        setMessage(
+            `Alle ${hoechstesLevelGesamt(satz)} Level in ${satzName(satz)} · ` +
+            `${STUFEN_WORTE[eigeneStufe]} sind geschafft.`
+        );
+
+        return false;
+    }
+
+    if (eigeneStufe !== spielModus) setzeModus(eigeneStufe, false);
+
+    // Derselbe Weg wie ein Klick im Raster: prueft die Sperre, merkt das Level,
+    // schliesst die Auswahl und startet das Brett.
+    auswahlSatz = satz === 1 ? 1 : 2;
+    waehleLevel(ziel);
+
+    return true;
+}
+
 function startGame() {
     stopGameTimer();
 
@@ -190,7 +269,12 @@ function startGame() {
     score = 0;
 
     if (gameData) {
-        currentLevel = satzDaten().currentLevel || 1;
+        laufendeStufe = spielModus;
+        laufendeDaten = satzDaten();
+
+        // freischalten() in storage.js zieht unlockedLevel mindestens auf
+        // currentLevel nach - das gespeicherte Level ist deshalb immer frei.
+        currentLevel = laufendeDaten.currentLevel || 1;
     }
 
     if (!Number.isFinite(currentLevel) || currentLevel < 1) {
@@ -576,7 +660,7 @@ function finishGame() {
     // darunter Bescheid - die Siegmeldung bleibt stehen.
     try {
         if (gameData) {
-            saveLevelResult(gameData, currentLevel, gameSeconds, satzDaten());
+            saveLevelResult(gameData, currentLevel, gameSeconds, laufendeDaten || satzDaten());
 
             gameData.totalScore =
                 (gameData.totalScore || 0) + score;
@@ -591,7 +675,7 @@ function finishGame() {
                 "für diese Sitzung."
             );
 
-            currentLevel = satzDaten().currentLevel;
+            currentLevel = (laufendeDaten || satzDaten()).currentLevel;
 
             updateStats();
         }
@@ -606,7 +690,15 @@ function finishGame() {
         `GEWONNEN! ${score} Punkte – Zeit: ${formatTime(gameSeconds)}`
     );
 
-    zeigeWeiterKnopf(`WEITER · LEVEL ${currentLevel}`);
+    // Beschriftung aus derselben Quelle wie in der Levelauswahl - sonst nennt
+    // der Knopf ein anderes Level, als WEITER dann startet.
+    const naechsteAufgabe = naechstesLevel(laufendeDaten || satzDaten(), FORMEN_SATZ);
+
+    zeigeWeiterKnopf(
+        naechsteAufgabe
+            ? `WEITER · LEVEL ${String(naechsteAufgabe).padStart(2, "0")}`
+            : "ALLES GESCHAFFT"
+    );
 }
 
 // --------------------------------------------------
@@ -718,6 +810,11 @@ function initializeGame() {
 
     try {
         gameData = loadStorage();
+        // Die Schwierigkeit zuerst: Fortschritt und Bestzeiten liegen getrennt
+        // nach Leicht und Schwer, der Abschnitt haengt also daran.
+        spielModus = modusWert();
+        // Dasselbe fuer die Variante: PC oder Handy, wie zuletzt gespielt.
+        FORMEN_SATZ = gespeicherterSatz();
         // loadStorage ergaenzt fehlende Einstellungen aus den Standardwerten.
         // Die Level-Auswahl zeigt denselben Satz wie das laufende Spiel.
         auswahlSatz = FORMEN_SATZ;
@@ -732,8 +829,9 @@ function initializeGame() {
 
     if (continueButton) {
         continueButton.addEventListener("click", () => {
-            continueButton.hidden = true;
-            startGame();
+            // Nach dem Sieg ist das naechste Level bereits freigeschaltet; der
+            // Knopf fuehrt deshalb ueber dieselbe Funktion wie in der Auswahl.
+            weiterSpielen();
         });
     }
 
@@ -790,7 +888,7 @@ function initializeGame() {
     }
 
     // Level-Auswahl öffnen und schließen: ein Knopf, darin der Umschalter
-    // zwischen Handy- und Normal-Leveln.
+    // zwischen Handy- und PC-Leveln.
     const levelButton = getElement("levelButton");
     const levelPicker = getElement("levelPicker");
     const levelPickerClose = getElement("levelPickerClose");

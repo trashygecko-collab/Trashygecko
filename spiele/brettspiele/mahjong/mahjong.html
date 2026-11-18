@@ -8,11 +8,25 @@
 
     <title>TrashyGecko Mahjong</title>
 
-    <link rel="stylesheet" href="css/mahjong.css?v=55">
+    <!-- Cache-Schutz ohne Handarbeit: alle eigenen Dateien werden beim Laden
+         mit dem Zeitstempel dieses Seitenaufrufs als ?v=... angefordert.
+         Damit kann der Browser nie eine alte Kopie zeigen, und niemand muss
+         eine Versionsnummer hochzaehlen.  document.write setzt die Dateien an
+         genau diese Stelle, damit Reihenfolge und Sperrverhalten bleiben wie
+         bei festen Tags. -->
+    <script>
+        (function () {
+            var stand = "?v=" + Date.now();
 
-    <!-- Setzt die Grundschrift vor dem ersten Aufbau: Knoepfe und Schrift
-         wachsen mit der Bildschirmgroesse (5 Zoll = 1,00, 7 Zoll = 1,22). -->
-    <script src="js/groesse.js?v=55"></script>
+            document.write(
+                '<link rel="stylesheet" href="css/mahjong.css' + stand + '">'
+            );
+
+            // Setzt die Grundschrift vor dem ersten Aufbau: Knoepfe und Schrift
+            // wachsen mit der Bildschirmgroesse (5 Zoll = 1,00, 7 Zoll = 1,22).
+            document.write('<script src="js/groesse.js' + stand + '"><\/script>');
+        }());
+    </script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
@@ -37,9 +51,11 @@
                 <button id="levelButton" type="button"
                         aria-label="Levelauswahl" aria-haspopup="dialog">
                     <span class="level-wort">LEVELAUSWAHL</span>
-                    <!-- Kurzform des laufenden Formensatzes: "HANDY 01" bzw.
-                         "NORMAL 01" statt nur der Nummer. -->
-                    <span id="levelSatz" class="level-satz">HANDY</span>
+                    <!-- Variante des laufenden Spiels: Geraet und Schwierigkeit,
+                         z. B. "PC · Leicht" oder "Handy · Schwer".  Das Skript
+                         fuellt den Text beim Start - hier steht bewusst kein
+                         fester Wert. -->
+                    <span id="levelSatz" class="level-satz">–</span>
                     <span id="levelNumber">01</span><span class="level-pfeil">▾</span>
                 </button>
                 <button id="hintButton" type="button">TIPP</button>
@@ -101,8 +117,17 @@
                 <div id="satzUmschalter" class="satz-umschalter" role="group"
                      aria-label="Levelsystem">
                     <button type="button" data-satz="2" aria-pressed="false">HANDY-LEVEL</button>
-                    <button type="button" data-satz="1" aria-pressed="false">NORMAL-LEVEL</button>
+                    <button type="button" data-satz="1" aria-pressed="false">PC-LEVEL</button>
                 </div>
+                <!-- Schwierigkeit an derselben Stelle: zusammen mit dem
+                     Umschalter oben sind alle vier Varianten hier erreichbar
+                     (PC/Handy x Leicht/Schwer). -->
+                <div id="stufenUmschalter" class="satz-umschalter stufen-umschalter" role="group"
+                     aria-label="Schwierigkeit">
+                    <button type="button" data-wert="leicht" aria-pressed="false">LEICHT</button>
+                    <button type="button" data-wert="schwer" aria-pressed="false">SCHWER</button>
+                </div>
+                <button id="weiterButton" type="button" class="weiter-knopf-picker">WEITER</button>
                 <span id="rundeAnzeige" class="runde-anzeige">Runde 1 · Elfenbein</span>
                 <div id="levelGrid" class="level-grid"></div>
                 <div id="farbeLeiste" class="farbe-leiste" role="group"
@@ -166,24 +191,42 @@
 
     </main>
 
-    <!-- Versionszusatz ?v=55: nach dem Neuladen kommt garantiert die aktuelle
-         Datei statt der Browser-Kopie. Bei Aenderungen hochzaehlen. -->
-    <!-- Klassische Skripte: funktionieren auch über file:// -->
-    <script src="js/board-layout.js?v=55"></script>
-    <script src="js/board-layout-2.js?v=55"></script>
-    <script src="js/board-layout-schwer.js?v=55"></script>
-    <script src="js/board-layout-100.js?v=55"></script>
-    <script src="js/board.js?v=55"></script>
-    <script src="js/generator.js?v=55"></script>
-    <script src="js/storage.js?v=55"></script>
-    <script src="js/renderer.js?v=55"></script>
-    <script src="js/hud.js?v=55"></script>
-    <script src="js/dialoge.js?v=55"></script>
-    <script src="../../lob.js?v=55"></script>
-    <script src="js/pech.js?v=55"></script>
-    <script src="js/gewonnen.js?v=55"></script>
-    <script src="js/main.js?v=55"></script>
+    <!-- Klassische Skripte in fester Reihenfolge.  Der Zeitstempel vom Kopf
+         gilt auch hier: nach jeder Aenderung laeuft sofort der neue Code,
+         ohne dass jemand eine Version hochzaehlen muss. -->
+    <script>
+        (function () {
+            var stand = "?v=" + Date.now();
+            var dateien = [
+                "js/board-layout.js",
+                "js/board-layout-2.js",
+                "js/board-layout-schwer.js",
+                "js/board-layout-100.js",
+                "js/board.js",
+                "js/generator.js",
+                "js/storage.js",
+                "js/renderer.js",
+                "js/hud.js",
+                "js/dialoge.js",
+                "../../lob.js",
+                "js/pech.js",
+                "js/gewonnen.js",
+                "js/main.js"
+            ];
 
-<script src="../../zurueck.js" data-ziel=".topbar"></script>
+            dateien.forEach(function (pfad) {
+                document.write('<script src="' + pfad + stand + '"><\/script>');
+            });
+
+            // Mahjong hat den Rueckweg selbst: der Knopf sitzt in den
+            // Einstellungen.  data-kein-knopf haelt nur window.tgZurueck()
+            // bereit, statt zusaetzlich einen schwebenden Knopf ueber die
+            // Leiste zu legen.
+            document.write(
+                '<script src="../../zurueck.js' + stand +
+                '" data-kein-knopf="1"><\/script>'
+            );
+        }());
+    </script>
 </body>
 </html>

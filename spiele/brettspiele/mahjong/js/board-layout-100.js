@@ -5,10 +5,10 @@
  * Die Level 1-56 der drei vorhandenen Dateien bleiben unangetastet; hier kommen
  * nur Einträge 57-100 dazu:
  *
- *   BOARD_LAYOUTS              PC / Normal-Level: 12 x 8, höchstens 4 Ebenen
+ *   BOARD_LAYOUTS              PC-Level: 12 x 8, höchstens 4 Ebenen
  *   BOARD_LAYOUTS_2            Handy-Level: 6 x 8, gestapelt wie bisher
  *   BOARD_LAYOUTS_SCHWER       44 Felder aus 11 neuen Umrissen x 4 Profilen
- *   BOARD_LAYOUTS_SCHWER_HANDY dasselbe für das Handy (6 x 8)
+ *   BOARD_LAYOUTS_SCHWER_HANDY 25 Umrisse (8 x 10) x 4 Profile = 100 Felder
  *
  * Gebaut wird mit denselben Bausteinen wie die vorhandenen Formen:
  *   - Leicht PC: Umriss als 12-x-8-Bild, Höhen über SCHWER_PROFILE
@@ -27,7 +27,7 @@
 // Wie bei den Handy-Formen trägt jede Zelle des Bildes eine Säule.  Die 144
 // Steine werden nach Höhenprofil verteilt; die oberste Reihe bleibt flach,
 // damit oben nichts aus dem Feld ragt.  Höchstens vier Ebenen – genau der
-// Bereich der Normal-Formen aus board-layout.js.
+// Bereich der PC-Formen aus board-layout.js.
 const PC_LEICHT_HOECHSTE = 4;
 
 function pcLeichtForm(level, name, bild, profilName) {
@@ -1197,120 +1197,6 @@ const NEUE_SCHWER_PC = [
 
 ];
 
-// Elf neue Umrisse für das Handy (6 x 8, höchstens sieben Ebenen).
-const NEUE_SCHWER_HANDY = [
-    ["Kanal", [
-        "######",
-        "##..##",
-        "##..##",
-        "######",
-        "##..##",
-        "##..##",
-        "######",
-        "......"
-    ]],
-    ["Bollwerk", [
-        "##..##",
-        "######",
-        "#.##.#",
-        "######",
-        "#.##.#",
-        "######",
-        ".####.",
-        "......"
-    ]],
-    ["Sichel", [
-        "...###",
-        "..####",
-        ".####.",
-        "####..",
-        "###...",
-        "####..",
-        ".####.",
-        "...###"
-    ]],
-    ["Zinnen", [
-        "#.##.#",
-        "#.##.#",
-        "######",
-        "######",
-        "#.##.#",
-        "#.##.#",
-        "######",
-        "......"
-    ]],
-    ["Klaue", [
-        "#....#",
-        "##..##",
-        ".####.",
-        "..##..",
-        "..##..",
-        ".####.",
-        "#....#",
-        "##..##"
-    ]],
-    ["Steg", [
-        "######",
-        "######",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "######"
-    ]],
-    ["Fallgitter", [
-        "#.#.#.",
-        "######",
-        "#.#.#.",
-        "######",
-        "#.#.#.",
-        "######",
-        "######",
-        "......"
-    ]],
-    ["Wehrgang", [
-        "######",
-        "#....#",
-        "#.##.#",
-        "#.##.#",
-        "#....#",
-        "######",
-        "######",
-        "......"
-    ]],
-    ["Faecher", [
-        "..##..",
-        ".####.",
-        "######",
-        "#.##.#",
-        "#....#",
-        "#....#",
-        "######",
-        "......"
-    ]],
-    ["Wendel", [
-        "######",
-        ".....#",
-        "#####.",
-        "#..##.",
-        "#.####",
-        "#..#..",
-        "######",
-        "......"
-    ]],
-    ["Pforte", [
-        "######",
-        "#....#",
-        "#.##.#",
-        "#.##.#",
-        "#....#",
-        "######",
-        "..##..",
-        "..##.."
-    ]]
-
-];
 
 // --------------------------------------------------
 // ZUSAMMENFÜHREN
@@ -1349,4 +1235,3 @@ function ergaenzeSchwereSammlung(sammlung, umrisse, breite, hoechste, startLevel
 }
 
 ergaenzeSchwereSammlung(BOARD_LAYOUTS_SCHWER, NEUE_SCHWER_PC, 12, 4, 57);
-ergaenzeSchwereSammlung(BOARD_LAYOUTS_SCHWER_HANDY, NEUE_SCHWER_HANDY, 6, 7, 57);

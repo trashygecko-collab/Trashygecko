@@ -846,12 +846,25 @@ body[data-modus="schwer"] .game-buttons {
    LEVEL-AUSWAHL
 ===================================== */
 
-/* Kurzform des laufenden Satzes (HANDY / NORMAL) - klein, damit die
+/* Kurzform der laufenden Variante (z. B. "HANDY · SCHWER") - klein, damit die
    Level-Wahl in der Knopfreihe nicht breiter wird als noetig. */
 .level-satz {
-    font-size: 0.5rem;
+    font-size: 0.5625rem;
     letter-spacing: 0.0625rem;
-    opacity: 0.7;
+    white-space: nowrap;
+}
+
+/* Varianten-Anzeige (Geraet + Schwierigkeit): Leicht hellgruen, Schwer rot.
+   Beide Farben sind auf dem dunklen Grund gut lesbar; ohne Stufe bleibt die
+   neutrale Steinfarbe stehen. */
+.level-satz[data-stufe="leicht"],
+.runde-anzeige[data-stufe="leicht"] {
+    color: #7ee787;
+}
+
+.level-satz[data-stufe="schwer"],
+.runde-anzeige[data-stufe="schwer"] {
+    color: #ff7062;
 }
 
 .level-pfeil {
@@ -877,6 +890,7 @@ body[data-modus="schwer"] .game-buttons {
 
 .dialog-panel {
     width: min(36.25rem, 100%);
+    /* Grundhoehe beider Dialoge: die Einstellungen brauchen nicht mehr. */
     max-height: min(82dvh, 40rem);
     display: flex;
     flex-direction: column;
@@ -885,6 +899,13 @@ body[data-modus="schwer"] .game-buttons {
     border: 1px solid rgba(201, 173, 125, 0.5);
     border-radius: 1rem;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+/* Nur die Levelauswahl ist hoeher: zwei Umschaltreihen und WEITER kosten
+   Platz, das Raster soll trotzdem mehrere Levelreihen zeigen.  Die
+   Einstellungen bleiben bei der Grundhoehe. */
+#levelPicker .dialog-panel {
+    max-height: min(88dvh, 46rem);
 }
 
 .dialog-kopf {
@@ -903,7 +924,39 @@ body[data-modus="schwer"] .game-buttons {
     letter-spacing: 0.125rem;
 }
 
-/* Umschalter zwischen Handy- und Normal-Leveln, ganz oben im Dialog. */
+/* Umschalter zwischen Handy- und PC-Leveln, ganz oben im Dialog; die zweite
+   Reihe darunter waehlt die Schwierigkeit. */
+.stufen-umschalter {
+    padding-top: 0.375rem;
+}
+
+/* WEITER direkt in der Auswahl: das Ziel steht in der Beschriftung. */
+.weiter-knopf-picker {
+    margin: 0.5rem 0.875rem 0;
+    padding: 0.4375rem 0.625rem;
+    color: var(--table-dark);
+    background: linear-gradient(180deg, #e0c28b, #c9ad7d);
+    border: 1px solid rgba(201, 173, 125, 0.95);
+    border-radius: 0.3125rem;
+    font-family: inherit;
+    font-size: 0.625rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.weiter-knopf-picker:hover,
+.weiter-knopf-picker:focus-visible {
+    background: linear-gradient(180deg, #e8cfa0, #d3b687);
+    outline: none;
+}
+
+.weiter-knopf-picker:disabled {
+    color: rgba(240, 236, 224, 0.45);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(201, 173, 125, 0.28);
+}
+
 .satz-umschalter {
     display: flex;
     gap: 0.375rem;
@@ -1589,6 +1642,7 @@ body[data-runde="9"] .mahjong-tile.blocked {
     padding: 0.625rem 0.75rem 0.125rem;
     color: var(--gold);
     font-size: 0.6875rem;
+    font-weight: 700;
     letter-spacing: 0.125rem;
     text-align: center;
     text-transform: uppercase;
@@ -1647,8 +1701,14 @@ body[data-runde="9"] .mahjong-tile.blocked {
 
 @media (max-width: 900px) {
     .runde-anzeige {
-        font-size: 0.625rem;
+        font-size: 0.75rem;
         letter-spacing: 1px;
+    }
+
+    /* Auf dem Handy bleibt die Varianten-Anzeige knapp, aber lesbar. */
+    .level-satz {
+        font-size: 0.6875rem;
+        letter-spacing: 0.03125rem;
     }
 
     .farbe-leiste {
@@ -1692,6 +1752,81 @@ body[data-runde="9"] .mahjong-tile.blocked {
 .level-feld.aktuell .level-feld-zeit {
     color: rgba(27, 32, 41, 0.7);
 }
+
+/* Naechstes offenes Level: dezente Umrandung, kein Grell. */
+.level-feld.naechstes {
+    border-color: rgba(201, 173, 125, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(201, 173, 125, 0.35);
+}
+
+/* Gesperrt: abgedunkelt, Schloss, Rundenfarbe bleibt dezent sichtbar. */
+.level-feld.gesperrt,
+.level-feld.gesperrt:hover,
+.level-feld.gesperrt:focus-visible {
+    color: rgba(240, 236, 224, 0.34);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(201, 173, 125, 0.14);
+    box-shadow: none;
+    cursor: default;
+    transform: none;
+}
+
+/* Die Rundenfarbe an gesperrten Feldern kommt aus --runde-sicht (mittlerer
+   Farbton).  Das fast weisse --runde-hell verschwand bei Elfenbein, Bernstein
+   und Azur im Dunkel; ein mittlerer Ton derselben Runde bleibt erkennbar,
+   ohne heller zu wirken als die freien Felder. */
+.level-feld.gesperrt::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--runde-sicht, #d9bc7c);
+    opacity: 0.12;
+}
+
+.level-feld.gesperrt .level-feld-nummer {
+    color: var(--runde-sicht, #d9bc7c);
+    opacity: 0.8;
+}
+
+/* Schloss aus zwei Teilen - monochrom, skaliert mit der Schrift. */
+.level-feld-schloss {
+    position: absolute;
+    top: 0.3125rem;
+    right: 0.3125rem;
+    width: 0.4375rem;
+    height: 0.34375rem;
+    border-radius: 0.0625rem;
+    background: currentColor;
+    opacity: 0.7;
+}
+
+.level-feld-schloss::before {
+    content: "";
+    position: absolute;
+    top: -0.21875rem;
+    left: 0.09375rem;
+    width: 0.25rem;
+    height: 0.21875rem;
+    border: 1px solid currentColor;
+    border-bottom: 0;
+    border-radius: 0.125rem 0.125rem 0 0;
+}
+
+/* Rundenfarbe an gesperrten Leveln: je Runde ein mittlerer Ton ihrer Steinfarbe.
+   Die hellen Runden liegen hier dunkler (sonst unsichtbar im Dunkel), die
+   dunklen Runden heller - der Abstand zum dunklen Feld bleibt in jeder Runde
+   gleich gross.  Runde 10 (Regenbogen) traegt das Gold der Bedienung. */
+.level-feld[data-farbe="1"] { --runde-sicht: #e3d3a8; }
+.level-feld[data-farbe="2"] { --runde-sicht: #e8b95e; }
+.level-feld[data-farbe="3"] { --runde-sicht: #e0a3a3; }
+.level-feld[data-farbe="4"] { --runde-sicht: #8fcaa9; }
+.level-feld[data-farbe="5"] { --runde-sicht: #9cbfe0; }
+.level-feld[data-farbe="6"] { --runde-sicht: #bda6dd; }
+.level-feld[data-farbe="7"] { --runde-sicht: #a0a9ba; }
+.level-feld[data-farbe="8"] { --runde-sicht: #d99aa9; }
+.level-feld[data-farbe="9"] { --runde-sicht: #a8a8b4; }
+.level-feld[data-farbe="10"] { --runde-sicht: #d9bc7c; }
 
 /* Eigene Tafel nach der letzten Steinfarbe einer vollen Runde */
 .sieg-runde {
@@ -2070,7 +2205,8 @@ body[data-zustand="alt"] .mahjong-tile:is([data-farbe="7"], [data-farbe="8"], [d
    in der App blieb dadurch zu wenig Hoehe fuer die Einstellungen.  Der Rand des
    Overlays (0.875rem) bleibt als Abstand erhalten. */
 @media (max-height: 520px) {
-    .dialog-panel {
+    .dialog-panel,
+    #levelPicker .dialog-panel {
         max-height: 100%;
     }
 }

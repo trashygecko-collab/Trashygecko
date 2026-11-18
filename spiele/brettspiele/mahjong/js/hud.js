@@ -59,23 +59,49 @@ const siegSpruchFarbe = farbwahl(SIEG_SPRUCH_FARBEN);
 // weder Spielzeit noch Bestzeiten.
 let timerStart = 0;
 
+// --------------------------------------------------
+// VARIANTE: GERAET UND SCHWIERIGKEIT
+// --------------------------------------------------
+
+// Die Schwierigkeit einmal als Wert ("leicht"/"schwer") und als Wort.  Text
+// und Farbe der Anzeige haengen damit an derselben Quelle.
+const STUFEN_WORTE = { leicht: "Leicht", schwer: "Schwer" };
+
+function stufenWert(wert = spielModus) {
+    return wert === "schwer" ? "schwer" : "leicht";
+}
+
+// Kurzform der laufenden Variante: "PC · Leicht", "Handy · Schwer".  Das
+// Geraet steht vorn, die Stufe dahinter - "Handy" verdraengt die Schwierigkeit
+// also nicht, sondern steht daneben.
+function variantenText(satz = FORMEN_SATZ, stufe = laufendeStufe) {
+    return `${geraeteName(satz)} · ${STUFEN_WORTE[stufenWert(stufe)]}`;
+}
+
+// Text, Farbe und Vorlesetext der Varianten-Anzeige in einem Zug.  Sie nennt
+// das laufende Brett: wer die Schwierigkeit mitten in der Partie umstellt,
+// sieht das alte Brett bis zum naechsten Start richtig beschriftet.
+function setzeVariantenAnzeige() {
+    const marke = getElement("levelSatz");
+    const knopf = getElement("levelButton");
+    const text = variantenText();
+
+    if (marke) {
+        marke.textContent = text;
+        marke.dataset.stufe = stufenWert(laufendeStufe);
+    }
+
+    if (knopf) {
+        knopf.setAttribute("aria-label", `Levelauswahl: ${text}`);
+    }
+}
+
 function updateStats() {
     // Der eine Level-Waehler zeigt das Level des laufenden Formensatzes.
     setText("levelNumber", String(currentLevel).padStart(2, "0"));
 
-    // Ohne den Satz sieht man in der Taste nur "01" und weiss nicht, ob
-    // Handy- oder Normal-Level laufen.  Im schweren Modus waehlt das Geraet die
-    // Formen - dann steht dort der Satz, der wirklich laeuft.
-    const imHandySatz =
-        spielModus === "schwer" ? istKleinesGeraet() : FORMEN_SATZ === 2;
-
-    setText("levelSatz", imHandySatz ? "HANDY" : "NORMAL");
-
-    const levelButton = getElement("levelButton");
-
-    if (levelButton) {
-        levelButton.setAttribute("aria-label", `Levelauswahl: ${satzName()}`);
-    }
+    // Geraet und Schwierigkeit stehen zusammen in der Taste.
+    setzeVariantenAnzeige();
 
     setText(
         "remainingTiles",
@@ -236,6 +262,11 @@ function zeigeHinweis(text) {
 // Einstellungen und Fortschritt waeren weg, ohne dass es auffaellt.
 function speichereSpielstand(hinweis) {
     if (!gameData) return false;
+
+    // Der laufende Formensatz gehoert in den Spielstand: nach dem Neuladen
+    // soll es mit derselben Variante weitergehen.
+    gameData.settings = gameData.settings || {};
+    gameData.settings.satz = FORMEN_SATZ === 2 ? 2 : 1;
 
     if (saveStorage(gameData)) {
         // Ein alter Hinweis gilt nicht mehr, sobald es wieder geht.

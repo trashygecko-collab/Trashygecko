@@ -15,7 +15,7 @@
 // Runde, die in der Level-Auswahl gerade angezeigt wird.
 let auswahlRunde = 1;
 
-// Formensatz, den die Level-Auswahl zeigt (1 = Normal, 2 = Handy).
+// Formensatz, den die Level-Auswahl zeigt (1 = PC, 2 = Handy).
 // Jedes Spiel startet mit den Handy-Leveln, die Auswahl beginnt also dort
 // (Hauptsteuerung setzt auswahlSatz beim Start auf FORMEN_SATZ).
 let auswahlSatz = 2;
@@ -105,10 +105,19 @@ function baueLevelAuswahl(runde = auswahlRunde) {
     const formen = hoechstesLevel(auswahlSatz);
     const start = (auswahlRunde - 1) * formen;
 
+    // Drei Zustaende: freigeschaltet, naechstes Level, gesperrt.  Gesperrte
+    // Level bleiben stehen - abgedunkelt, mit Schloss und Rundenfarbe.
+    const daten = satzDaten(auswahlSatz, spielModus);
+    const frei = freiesLevel(daten, auswahlSatz);
+    const naechstes = naechstesLevel(daten, auswahlSatz);
+
     for (let form = 1; form <= formen; form++) {
         const level = start + form;
         const feld = document.createElement("button");
         const bestzeit = bestzeitVon(level, auswahlSatz);
+        // Das Raster zeigt genau eine Runde - levelRunde ist die gewaehlte.
+        const levelRunde = auswahlRunde;
+        const gesperrt = level > frei;
 
         feld.type = "button";
         feld.className = "level-feld";
@@ -128,35 +137,73 @@ function baueLevelAuswahl(runde = auswahlRunde) {
             feld.appendChild(zeit);
 
             feld.classList.add("geschafft");
+        } else if (level === naechstes) {
+            // Das naechste offene Level: dezente Umrandung statt Goldfuellung.
+            feld.classList.add("naechstes");
+        }
+
+        if (gesperrt) {
+            feld.classList.add("gesperrt");
+            feld.dataset.farbe = String(levelRunde);
+
+            // Nicht anklickbar - und ohne Fokus, damit die Tastatur nicht auf
+            // einem gesperrten Feld haengen bleibt.
+            feld.disabled = true;
+            feld.tabIndex = -1;
+
+            const schloss = document.createElement("span");
+
+            schloss.className = "level-feld-schloss";
+            schloss.setAttribute("aria-hidden", "true");
+            feld.appendChild(schloss);
         }
 
         // Tooltip in derselben Sprache wie der Umschalter: System, Runde, Farbe.
-        const levelRunde = rundeVon(level, auswahlSatz);
         const titel = [
             satzName(auswahlSatz),
             `Runde ${levelRunde}`,
             farbenName(levelRunde),
             formName(level, auswahlSatz),
             bestzeit !== null ? `Bestzeit ${formatTime(bestzeit)}` : null,
+            gesperrt ? `gesperrt · ab Level ${frei} spielbar` : null,
         ];
 
         feld.title = titel.filter(Boolean).join(" · ");
 
-        feld.addEventListener("click", () => waehleLevel(level));
+        if (!gesperrt) feld.addEventListener("click", () => waehleLevel(level));
 
         raster.appendChild(feld);
     }
+
+    setzeWeiterKnopf();
 
     const anzeige = getElement("rundeAnzeige");
 
     if (anzeige) {
         anzeige.textContent =
-            `${satzName(auswahlSatz)} · Runde ${auswahlRunde} · ${farbenName(auswahlRunde)} · ` +
+            `${variantenText(auswahlSatz, spielModus)} · Runde ${auswahlRunde} · ${farbenName(auswahlRunde)} · ` +
             `${geschafftInRunde(auswahlRunde, auswahlSatz)} von ${formen}`;
+        anzeige.dataset.stufe = stufenWert(spielModus);
     }
 
     baueFarbwahl();
     markiereAktuellesLevel();
+}
+
+// Beschriftung des WEITER-Knopfs in der Auswahl: nennt das Ziel direkt, damit
+// man vor dem Klick weiss, welches Level kommt.
+function setzeWeiterKnopf() {
+    const knopf = getElement("weiterButton");
+
+    if (!knopf) return;
+
+    const daten = satzDaten(auswahlSatz, spielModus);
+    const ziel = naechstesLevel(daten, auswahlSatz);
+
+    knopf.disabled = ziel === 0;
+    knopf.textContent = ziel
+        ? `WEITER · LEVEL ${String(ziel).padStart(2, "0")}`
+        : "ALLES GESCHAFFT";
 }
 
 // Farbwahl am Ende der Level-Auswahl: jede Farbe ist eine Runde.
@@ -239,13 +286,18 @@ function waehleLevel(level) {
         return;
     }
 
+    // Gesperrte Level sind auch hier zu: der Knopf ist zwar abgeschaltet, die
+    // Pruefung bleibt trotzdem, falls das Feld anders ausgeloest wird.
+    if (ziel > freiesLevel(satzDaten(auswahlSatz, spielModus), auswahlSatz)) {
+        setMessage("Dieses Level ist noch gesperrt.");
+
+        return;
+    }
+
     // Gewaehlt wird immer im Satz, den die Auswahl gerade zeigt.
     FORMEN_SATZ = auswahlSatz;
-
-    if (gameData) {
-        satzDaten(auswahlSatz).currentLevel = ziel;
-        speichereSpielstand();
-    }
+    satzDaten(auswahlSatz).currentLevel = ziel;
+    speichereSpielstand();
 
     currentLevel = ziel;
 
@@ -451,7 +503,7 @@ function setzeModus(wert, speichern = true) {
     // vierter Knopf (MISCHEN), in Leicht bleibt die Reihe wie bisher.
     document.body.dataset.modus = neu;
 
-    document.querySelectorAll("#modusLeiste button").forEach(knopf => {
+    document.querySelectorAll("#modusLeiste button, #stufenUmschalter button").forEach(knopf => {
         const an = knopf.dataset.wert === neu;
 
         knopf.classList.toggle("aktiv", an);
@@ -460,6 +512,9 @@ function setzeModus(wert, speichern = true) {
 
     zeigeMixKnopf();
     aktualisiereMixKnopf();
+
+    // Die Varianten-Anzeige nennt die Stufe - sie wechselt mit.
+    setzeVariantenAnzeige();
 
     // Ein Wechsel mitten in der Partie laesst das Brett stehen und gilt sofort.
     if (gewechselt && gameRunning) {
@@ -478,12 +533,28 @@ function setzeModus(wert, speichern = true) {
     speichereSpielstand();
 }
 
+// LEICHT/SCHWER gibt es an zwei Stellen: in den Einstellungen und - fuer alle
+// vier Varianten an einer Stelle - direkt in der Levelauswahl.  Beide Knoepfe
+// rufen denselben Wechsel auf; in der Auswahl wird danach das Raster neu
+// gebaut, damit Haken und Bestzeiten zur gewaehlten Stufe gehoeren.
 function baueModuswahl() {
-    const leiste = getElement("modusLeiste");
+    const leisten = [getElement("modusLeiste"), getElement("stufenUmschalter")];
 
-    if (!leiste) return;
+    leisten.forEach(leiste => {
+        if (!leiste) return;
 
-    leiste.querySelectorAll("button[data-wert]").forEach(knopf => {
-        knopf.addEventListener("click", () => setzeModus(knopf.dataset.wert));
+        leiste.querySelectorAll("button[data-wert]").forEach(knopf => {
+            knopf.addEventListener("click", () => {
+                setzeModus(knopf.dataset.wert);
+
+                if (leiste.id === "stufenUmschalter") baueLevelAuswahl(auswahlRunde);
+            });
+        });
     });
+
+    const weiter = getElement("weiterButton");
+
+    if (weiter) {
+        weiter.addEventListener("click", () => weiterSpielen(auswahlSatz, spielModus));
+    }
 }

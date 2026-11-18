@@ -5,21 +5,21 @@
  * Der schwere Modus (36 Motive zu je vier Steinen) bekommt eigene Spielfelder.
  * Es gibt zwei Sammlungen, die unabhaengig voneinander arbeiten:
  *
- *   BOARD_LAYOUTS_SCHWER        PC / Normal-Level: 12 Spalten, 8 Reihen,
+ *   BOARD_LAYOUTS_SCHWER        PC-Level: 12 Spalten, 8 Reihen,
  *                               hoechstens vier Ebenen (z 0..3) - genau der
- *                               Bereich, den die Normal-Formen aus
+ *                               Bereich, den die PC-Formen aus
  *                               board-layout.js belegen (12 x 8, maxZ 3).
  *
- *   BOARD_LAYOUTS_SCHWER_HANDY  Handy-Level: 6 Spalten, 8 Reihen, hoechstens
- *                               sieben Ebenen (z 0..6).  Damit bleibt jedes
- *                               Feld in den Massen der Handy-Formen aus
- *                               board-layout-2.js (6 x 8, maxZ 7).
+ *   BOARD_LAYOUTS_SCHWER_HANDY  Handy-Level: 8 Spalten, bis zu 10 Reihen,
+ *                               hoechstens fuenf Ebenen (z 0..4).  25 Umrisse
+ *                               zu je vier Profilen ergeben 100 Felder.
  *
- * Welche Sammlung gilt, entscheidet istKleinesGeraet(): dieselbe Grenze, die
- * das CSS fuer Handy und Rechner benutzt (@media (max-width: 900px)).
+ * Welche Sammlung gilt, entscheidet der Formen-Umschalter (FORMEN_SATZ):
+ * Satz 1 (PC-LEVEL) nimmt die PC-Sammlung, Satz 2 (HANDY-LEVEL) die
+ * Handy-Sammlung - unabhaengig von der Fensterbreite.
  *
  * Gebaut wird jede Form aus zwei Teilen:
- *   - dem Umriss (ein Bild aus 12x8 bzw. 6x8 Zeichen, "#" = Stein)
+ *   - dem Umriss (ein Bild aus 12 Spalten bzw. 8 Spalten, "#" = Stein)
  *   - einem Hoehenprofil, das bestimmt, wo die Steine uebereinander liegen
  * Jede Zelle eines Umrisses traegt mindestens eine Ebene; die restlichen der
  * 144 Steine kommen nach Profil nach oben.  So geht die Steinzahl immer genau
@@ -368,149 +368,252 @@ const SCHWER_UMRISSE_PC = [
 ];
 
 // --------------------------------------------------
-// HANDY: 14 UMRISSE, JE VIER PROFILE = 56 FELDER
+// --------------------------------------------------
+// --------------------------------------------------
+// --------------------------------------------------
+// HANDY: 25 UMRISSE (8 x 10), JE VIER PROFILE = 100 FELDER
 // --------------------------------------------------
 
+// Die Handy-Masse sind 8 Spalten und bis zu 10 Reihen - dieselbe Flaeche, auf
+// der auch die Handy-Level im leichten Modus liegen.  Jeder Umriss traegt eine
+// Saeule je "#", die Hoehe kommt aus dem Profil (hoechstens vier Ebenen).
 const SCHWER_UMRISSE_HANDY = [
-    ["Schnecke", [
-        "######",
-        "######",
-        "#....#",
-        "#.##.#",
-        "#.#..#",
-        "#.#.##",
-        "#.####",
-        "######"
+    ["Herz", [
+        "...##...",
+        ".######.",
+        "########",
+        "########",
+        ".######.",
+        "..####..",
+        "..####..",
+        "...##..."
     ]],
-    ["Treppe", [
-        "##....",
-        "####..",
-        "######",
-        "######",
-        ".#####",
-        "..####",
-        "...###",
-        "....##"
+    ["Stern", [
+        "...##...",
+        ".######.",
+        "########",
+        "####.###",
+        "########",
+        ".######.",
+        "...##..."
     ]],
-    ["Doppelbogen", [
-        "##..##",
-        "######",
-        "######",
-        "##..##",
-        "##..##",
-        "######",
-        "######",
-        "..##.."
+    ["Baum", [
+        "...##...",
+        "..####..",
+        ".######.",
+        "########",
+        ".######.",
+        "..####..",
+        ".######.",
+        "##.##.##"
     ]],
-    ["Sanduhr", [
-        "######",
-        "######",
-        ".####.",
-        "..##..",
-        "..##..",
-        ".####.",
-        "######",
-        "######"
+    ["Haus", [
+        "...##...",
+        "..####..",
+        ".######.",
+        "########",
+        "##....##",
+        "##.##.##",
+        "##.##.##",
+        "########"
     ]],
-    ["Kamm", [
-        "#.##.#",
-        "######",
-        "#.##.#",
-        "######",
-        "#.##.#",
-        "######",
-        "#.##.#",
-        "######"
+    ["Fisch", [
+        "..#####.",
+        ".#######",
+        "########",
+        "########",
+        ".#####.#",
+        "..######",
+        "..####.."
     ]],
-    ["Hufeisen", [
-        ".##...",
-        ".##...",
-        ".####.",
-        ".####.",
-        ".####.",
-        ".####.",
-        "######",
-        "######"
+    ["Vogel", [
+        "..###...",
+        ".######.",
+        "########",
+        "########",
+        ".######.",
+        "..####..",
+        ".######."
     ]],
-    ["Pfeilerhalle", [
-        "######",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "#.##.#",
-        "######"
+    ["Katze", [
+        "##....##",
+        "########",
+        "########",
+        ".######.",
+        ".######.",
+        "##.##.##",
+        "##....##"
     ]],
-    ["Graben", [
-        "#####.",
-        "######",
-        "##..##",
-        "##..##",
-        "##..##",
-        "######",
-        "######",
-        ".####."
+    ["Hund", [
+        "##....##",
+        "########",
+        "########",
+        "########",
+        ".######.",
+        "##.##.##",
+        ".######."
+    ]],
+    ["Schmetterling", [
+        "##....##",
+        "########",
+        "########",
+        ".######.",
+        ".######.",
+        "########",
+        "##....##"
+    ]],
+    ["Blume", [
+        "...##...",
+        "..####..",
+        ".######.",
+        "########",
+        ".######.",
+        "...##...",
+        "##.##.##",
+        ".######."
+    ]],
+    ["Pilz", [
+        "..####..",
+        ".######.",
+        "########",
+        "########",
+        "..####..",
+        "..####..",
+        "..####..",
+        ".######."
+    ]],
+    ["Krone", [
+        "##.##.##",
+        "########",
+        "########",
+        ".######.",
+        ".######.",
+        "########"
     ]],
     ["Kelch", [
-        "#....#",
-        "##..##",
-        "######",
-        "######",
-        ".####.",
-        "..##..",
-        "..##..",
-        ".####."
+        "########",
+        "########",
+        "########",
+        ".######.",
+        "...##...",
+        "...##...",
+        "..####..",
+        ".######."
     ]],
-    ["Zickzack", [
-        "###...",
-        "###...",
-        "######",
-        "..####",
-        "..####",
-        "######",
-        "...###",
-        "...###"
+    ["Rakete", [
+        "...##...",
+        "..####..",
+        "..####..",
+        ".######.",
+        ".######.",
+        "########",
+        ".######.",
+        "..####..",
+        "...##..."
     ]],
-    ["Festung", [
-        "######",
-        "######",
-        "#.##.#",
-        "#.##.#",
-        "######",
-        "######",
-        ".####.",
-        "..##.."
+    ["Segelboot", [
+        "...##...",
+        "..####..",
+        ".#####..",
+        "#######.",
+        ".######.",
+        "########",
+        "########",
+        ".######."
     ]],
-    ["Diagonale", [
-        "##....",
-        "###...",
-        "####..",
-        "#####.",
-        ".#####",
-        "..####",
-        "...###",
-        "....##"
+    ["Auto", [
+        "..####..",
+        ".######.",
+        "########",
+        "########",
+        ".######.",
+        "##.##.##",
+        "########"
     ]],
-    ["Achteck", [
-        ".####.",
-        "######",
-        "######",
-        "######",
-        "######",
-        "######",
-        "######",
-        ".####."
+    ["Gitarre", [
+        ".######.",
+        "########",
+        ".######.",
+        ".######.",
+        "..####..",
+        "..####..",
+        ".######.",
+        "########"
     ]],
-    ["Schlange", [
-        "######",
-        ".....#",
-        "#####.",
-        "#.....",
-        "#.####",
-        "#.....",
-        "######",
-        "######"
+    ["Kamera", [
+        "..####..",
+        ".######.",
+        "########",
+        "########",
+        "##.##.##",
+        "########",
+        "########"
+    ]],
+    ["Tasse", [
+        ".######.",
+        ".######.",
+        ".######.",
+        ".######.",
+        "########",
+        ".######.",
+        "..####..",
+        "########"
+    ]],
+    ["Kerze", [
+        "..####..",
+        "########",
+        "########",
+        ".######.",
+        ".######.",
+        "########",
+        "..####.."
+    ]],
+    ["Mond", [
+        ".######.",
+        "########",
+        "#####...",
+        "####....",
+        "####....",
+        "#####...",
+        "########",
+        ".######."
+    ]],
+    ["Wolke", [
+        "..####..",
+        ".######.",
+        "########",
+        "########",
+        "########",
+        ".######.",
+        "..####.."
+    ]],
+    ["Burg", [
+        "#.####.#",
+        "########",
+        "########",
+        "########",
+        "##.##.##",
+        "##.##.##",
+        "########"
+    ]],
+    ["Leiter", [
+        "###..###",
+        "###..###",
+        "########",
+        "###..###",
+        "###..###",
+        "########",
+        "###..###",
+        "########"
+    ]],
+    ["Wuerfel", [
+        "########",
+        "########",
+        "##.##.##",
+        "########",
+        "##.##.##",
+        "########",
+        "########"
     ]]
 ];
 
@@ -544,14 +647,14 @@ function baueSammlung(umrisse, breite, hoechste) {
 // 56 Felder fuer den Rechner (12 x 8, bis Ebene 4).
 const BOARD_LAYOUTS_SCHWER = baueSammlung(SCHWER_UMRISSE_PC, 12, 4);
 
-// 56 Felder fuer das Handy (6 x 8, bis Ebene 7 - innerhalb der Handy-Masse).
-const BOARD_LAYOUTS_SCHWER_HANDY = baueSammlung(SCHWER_UMRISSE_HANDY, 6, 7);
+// 100 Felder fuer das Handy (8 x 10, bis Ebene 5 - die Handy-Masse).
+const BOARD_LAYOUTS_SCHWER_HANDY = baueSammlung(SCHWER_UMRISSE_HANDY, 8, 5);
 
 // --------------------------------------------------
 // NAME DER FORM (fuer Hinweise und die Level-Liste)
 // --------------------------------------------------
 
-function formNameSchwer(level, klein = istKleinesGeraet()) {
+function formNameSchwer(level, klein = (typeof FORMEN_SATZ === "number" ? FORMEN_SATZ === 2 : istKleinesGeraet())) {
     const sammlung = klein ? BOARD_LAYOUTS_SCHWER_HANDY : BOARD_LAYOUTS_SCHWER;
     const felder = Object.keys(sammlung).map(Number).sort((a, b) => a - b);
     const form = felder[(Math.max(1, level) - 1) % felder.length];
