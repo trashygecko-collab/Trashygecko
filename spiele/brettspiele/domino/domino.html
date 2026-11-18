@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Domino</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+:root{
+  --bg:#0a211b; --panel:#0f2b23; --line:#1d4a3a; --gold:#e8cd8e; --ink:#f6edda;
+  --muted:#a9c3b6; --gruen:#4fbf72; --rot:#e04b3f;
+  --elfenbein:#f4ead3; --elfenbein-rand:#bfa87b; --punkt:#2b211a;
+  --k:clamp(26px,6.2vh,50px); --kh:clamp(30px,8.2vh,56px);
+}
+*{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  margin:0;padding:8px;background:radial-gradient(ellipse at 20% 0%,#12332a 0%,transparent 45%),var(--bg);
+  color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
+}
+.app{width:min(1180px,100%);height:100%;display:flex;flex-direction:column;gap:8px;min-height:0}
+.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
+.titel{font-size:clamp(16px,2.2vw,22px);color:var(--gold);letter-spacing:2px}
+.kopf small{color:var(--muted)}
+.mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,290px);gap:8px;flex:1 1 auto;min-height:0}
+@media(max-width:880px){.mitte{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(70px,1fr) auto}}
+.brett{background:linear-gradient(160deg,#123a2d,#0b2a20);border:1px solid var(--line);border-radius:14px;
+  padding:6px;display:flex;flex-direction:column;gap:4px;min-height:0;overflow:hidden}
+.kette{flex:1 1 auto;min-height:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;
+  gap:4px;overflow:auto;padding:2px}
+.leer{color:var(--muted);font-size:13px;align-self:center}
+.enden{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.ende-knopf{font-family:inherit;background:#1b4a3a;color:var(--gold);border:1px solid var(--gold);
+  border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px}
+.ende-knopf:hover{background:#245c48}
+.stein{display:inline-flex;background:var(--elfenbein);border:1px solid var(--elfenbein-rand);border-radius:5px;
+  box-shadow:0 2px 0 rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.35);cursor:default;
+  width:calc(var(--k)*2);height:var(--k);flex:0 0 auto;padding:2px;gap:0}
+.haelfte{flex:1 1 0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:9%}
+.haelfte:first-child{border-right:1px solid var(--elfenbein-rand)}
+.punkt{display:block;width:100%;height:100%;border-radius:50%}
+.punkt.an{background:var(--punkt);transform:scale(.78)}
+.karte{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;
+  padding:8px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:hidden}
+.leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button.aktion{font-family:inherit;background:#14382d;color:var(--ink);border:1px solid var(--line);
+  border-radius:8px;padding:7px 10px;cursor:pointer;font-size:13px}
+button.aktion:disabled{opacity:.4;cursor:default}
+button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;font-weight:bold}
+.spieler{display:flex;flex-direction:column;gap:4px;min-height:0;overflow:auto}
+.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px;
+  border:1px solid var(--line);border-radius:8px;background:#0b241d;font-size:13px}
+.sp.dran{border-color:var(--gold);background:#1b3a2c}
+.sp b{color:var(--gold);font-weight:normal}
+.notiz{color:var(--muted);font-size:12px;min-height:16px;overflow:hidden}
+.hinweis{color:var(--rot);font-size:12px;min-height:16px}
+.versteckt{display:none!important}
+.hand-fach{flex:0 0 auto;background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);
+  border-radius:14px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.hand-kopf{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.hand{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:center;min-height:calc(var(--kh) + 4px)}
+.hand .stein{width:calc(var(--kh)*2);height:var(--kh);cursor:pointer;transition:transform .1s}
+.hand .stein:hover:not(.gesperrt){transform:translateY(-2px)}
+.hand .stein.passt{box-shadow:0 0 0 2px var(--gruen),0 2px 0 rgba(0,0,0,.4)}
+.hand .stein.wahl{box-shadow:0 0 0 3px var(--gold),0 2px 0 rgba(0,0,0,.4)}
+.hand .stein.gesperrt{opacity:.5;cursor:default}
+.gabe{position:fixed;inset:0;background:rgba(6,24,19,.94);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;z-index:30;text-align:center;padding:20px}
+.gabe b{color:var(--gold);font-size:clamp(20px,3vw,30px);letter-spacing:1px}
+.gabe span{color:var(--muted);font-size:14px}
+@media(max-height:520px){
+  :root{--k:clamp(22px,5.4vh,40px);--kh:clamp(26px,6.8vh,44px)}
+  .karte{padding:6px}
+  .notiz,.hinweis{font-size:11px}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="kopf">
+    <div class="titel">DOMINO</div>
+    <small id="lage">Bereit</small>
+    <div class="leiste" id="startLeiste">
+      <button class="aktion haupt" id="btnComputer">Gegen Computer</button>
+      <button class="aktion" id="btnZweit">Zu zweit</button>
+    </div>
+    <div class="leiste versteckt" id="onlineLeiste">
+      <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="aktion" id="btnBereit">Bereit</button>
+      <button class="aktion" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="mitte">
+    <div class="brett">
+      <div class="kette" id="kette"><span class="leer">Noch kein Stein auf dem Tisch.</span></div>
+      <div class="enden" id="enden"></div>
+    </div>
+
+    <aside class="karte">
+      <div class="leiste"><b id="rundenTitel">Runde 1</b><span class="notiz" id="zugText"></span></div>
+      <div class="spieler" id="spieler"></div>
+      <div class="hinweis" id="hinweis"></div>
+      <div class="notiz" id="notiz"></div>
+      <div class="leiste">
+        <button class="aktion" id="btnZiehen" disabled>Ziehen</button>
+        <button class="aktion" id="btnPassen" disabled>Passen</button>
+      </div>
+      <div class="leiste versteckt" id="ende">
+        <button class="aktion haupt" id="btnNochmal">Nächste Runde</button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="hand-fach">
+    <div class="hand-kopf"><span id="handTitel">Meine Steine</span><span id="talonText"></span></div>
+    <div class="hand" id="hand"></div>
+  </section>
+</main>
+
+<div class="gabe versteckt" id="gabe">
+  <b id="gabeText">Spieler 2 ist dran</b>
+  <span>Gib das Gerät weiter – die Hand bleibt bis dahin verdeckt.</span>
+  <button class="aktion haupt" id="btnGabe">Hand zeigen</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+/* Domino für zwei: lokal gegen den Computer oder zu zweit an einem Gerät,
+   online über den Connector. Die Regeln sind in beiden Fällen dieselben:
+   sieben Steine, an die offenen Enden anlegen, sonst ziehen, sonst passen.
+   Wer zuerst alle Steine weg hat, bekommt die Augen des Gegners als Punkte;
+   können beide nicht mehr legen, gewinnt die kleinere Augensumme. */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const HAND = 7, AUGEN = 6;
+const PUNKTE = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
+
+const $ = (id) => document.getElementById(id);
+const elKette = $("kette"), elHand = $("hand"), elSpieler = $("spieler"),
+      elHinweis = $("hinweis"), elNotiz = $("notiz"), elLage = $("lage"),
+      elZug = $("zugText"), elRunde = $("rundenTitel"), elEnde = $("ende"),
+      elEnden = $("enden"), elHandTitel = $("handTitel"), elTalon = $("talonText"),
+      elGabe = $("gabe"), elGabeText = $("gabeText"),
+      btnZiehen = $("btnZiehen"), btnPassen = $("btnPassen");
+const melde = (text) => { elHinweis.textContent = text || ""; };
+const notiz = (text) => { elNotiz.textContent = text || ""; };
+
+const gleich = (a, b) => (a[0] === b[0] && a[1] === b[1]) || (a[0] === b[1] && a[1] === b[0]);
+const augenSumme = (hand) => hand.reduce((s, k) => s + k[0] + k[1], 0);
+const sortiert = (hand) => hand.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+function satz() {
+  const alle = [];
+  for (let a = 0; a <= AUGEN; a++) for (let b = a; b <= AUGEN; b++) alle.push([a, b]);
+  return alle;
+}
+function mischen(liste) {
+  const a = liste.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* --------------------------- gemeinsame Regeln -------------------------- */
+function neuerStand(spielerZahl) {
+  const st = mischen(satz());
+  const sp = {
+    kette: [], enden: [-1, -1], vorrat: st.slice(spielerZahl * HAND), haende: [],
+    zug: 0, punkte: new Array(spielerZahl).fill(0), runden: new Array(spielerZahl).fill(0),
+    status: "spiel", gewinner: -1, note: ""
+  };
+  for (let i = 0; i < spielerZahl; i++) sp.haende.push(sortiert(st.slice(i * HAND, (i + 1) * HAND)));
+  return sp;
+}
+
+function passtAn(sp, stein) {
+  if (!sp.kette.length) return true;
+  return sp.enden.some((e) => stein[0] === e || stein[1] === e);
+}
+function kannLegen(sp, sitz) {
+  return sp.haende[sitz].some((k) => passtAn(sp, k));
+}
+function seiten(sp, stein) {
+  if (!sp.kette.length) return ["rechts"];
+  const aus = [];
+  if (stein[0] === sp.enden[0] || stein[1] === sp.enden[0]) aus.push("links");
+  if (stein[0] === sp.enden[1] || stein[1] === sp.enden[1]) aus.push("rechts");
+  return aus;
+}
+function naechster(sp) {
+  sp.zug = (sp.zug + 1) % sp.haende.length;
+}
+function beenden(sp, gewinner, text) {
+  sp.status = "ende";
+  if (gewinner < 0) {
+    let best = -1, bestAugen = 0, gleichstand = false;
+    sp.haende.forEach((hand, i) => {
+      const a = augenSumme(hand);
+      if (best < 0 || a < bestAugen) { best = i; bestAugen = a; gleichstand = false; }
+      else if (a === bestAugen) gleichstand = true;
+    });
+    if (gleichstand) { sp.gewinner = -1; sp.note = text + " Es bleibt unentschieden."; return; }
+    gewinner = best;
+  }
+  const punkte = sp.haende.reduce((s, hand, i) => (i === gewinner ? s : s + augenSumme(hand)), 0);
+  sp.punkte[gewinner] += punkte;
+  sp.runden[gewinner] += 1;
+  sp.gewinner = gewinner;
+  sp.note = text + " " + punkte + " Punkte.";
+}
+
+// Stein anlegen; liefert einen Fehlertext oder "".
+function legenRegel(sp, sitz, stein, seite) {
+  if (sp.status !== "spiel") return "Gerade läuft keine Runde.";
+  if (sitz !== sp.zug) return "Du bist nicht an der Reihe.";
+  const i = sp.haende[sitz].findIndex((k) => gleich(k, stein));
+  if (i < 0) return "Dieser Stein ist nicht auf deiner Hand.";
+  const moeglich = seiten(sp, stein);
+  if (!moeglich.length) return "Dieser Stein passt an keine Seite.";
+  if (seite && !moeglich.includes(seite)) return "Diese Seite passt nicht.";
+  if (!seite) seite = moeglich.includes("rechts") ? "rechts" : "links";
+  const hand = sp.haende[sitz];
+  hand.splice(i, 1);
+  if (!sp.kette.length) {
+    sp.kette.push([stein[0], stein[1]]);
+    sp.enden = [stein[0], stein[1]];
+  } else if (seite === "links") {
+    const neu = stein[1] === sp.enden[0] ? [stein[0], stein[1]] : [stein[1], stein[0]];
+    sp.kette.unshift(neu);
+    sp.enden[0] = neu[0];
+  } else {
+    const neu = stein[0] === sp.enden[1] ? [stein[0], stein[1]] : [stein[1], stein[0]];
+    sp.kette.push(neu);
+    sp.enden[1] = neu[1];
+  }
+  if (!hand.length) { beenden(sp, sitz, "Alle Steine weg –"); return ""; }
+  naechster(sp);
+  return "";
+}
+
+function ziehenRegel(sp, sitz) {
+  if (sp.status !== "spiel") return "Gerade läuft keine Runde.";
+  if (sitz !== sp.zug) return "Du bist nicht an der Reihe.";
+  if (kannLegen(sp, sitz)) return "Du kannst noch legen.";
+  if (!sp.vorrat.length) return "Der Vorrat ist leer – bitte passen.";
+  const stein = sp.vorrat.shift();
+  sp.haende[sitz] = sortiert(sp.haende[sitz].concat([stein]));
+  if (!passtAn(sp, stein)) { sp.note = "Der Stein passt nicht – der Zug geht weiter."; naechster(sp); }
+  else sp.note = "Der Stein passt.";
+  return "";
+}
+
+function passenRegel(sp, sitz) {
+  if (sp.status !== "spiel") return "Gerade läuft keine Runde.";
+  if (sitz !== sp.zug) return "Du bist nicht an der Reihe.";
+  if (kannLegen(sp, sitz)) return "Du kannst noch legen.";
+  if (sp.vorrat.length) return "Du musst erst ziehen.";
+  sp.note = "Gepasst.";
+  naechster(sp);
+  if (!sp.haende.some((_, i) => kannLegen(sp, i))) beenden(sp, -1, "Niemand kann mehr legen.");
+  return "";
+}
+
+/* -------------------------------- lokal -------------------------------- */
+let lokal = null;   // { sp, modus, handOffen, runde }
+let wahl = null;    // gewählter Stein, wenn beide Seiten passen
+
+const lokalNamen = () => lokal.modus === "computer" ? ["Du", "Computer"] : ["Spieler 1", "Spieler 2"];
+
+function lokalStarten(modus) {
+  // Punkte und Rundensiege bleiben beim Weiterspielen im selben Modus stehen.
+  const alt = lokal && lokal.modus === modus ? lokal : null;
+  const runde = alt ? alt.runde + 1 : 1;
+  const sp = neuerStand(2);
+  if (alt) { sp.punkte = alt.sp.punkte.slice(); sp.runden = alt.sp.runden.slice(); }
+  lokal = { sp, modus, handOffen: true, runde };
+  wahl = null;
+  melde("");
+  lokal.sp.note = modus === "computer" ? "Du fängst an." : "Spieler 1 fängt an.";
+  zeichne();
+  if (modus === "computer") computerZug();
+}
+
+function endePruefen() {
+  const sp = lokal && lokal.sp;
+  if (!sp || sp.status !== "ende") return;
+  const wer = lokalNamen();
+  if (sp.gewinner >= 0) sp.note = wer[sp.gewinner] + " gewinnt die Runde mit " + sp.punkte[sp.gewinner] + " Punkten.";
+  else sp.note = "Runde ohne Sieger.";
+}
+
+function lokalSpielen(stein, seite) {
+  const sp = lokal.sp;
+  const fehler = legenRegel(sp, sp.zug, stein, seite);
+  if (fehler) { melde(fehler); return; }
+  wahl = null;
+  melde("");
+  endePruefen();
+  if (lokal.modus === "zweit" && sp.status === "spiel") lokal.handOffen = false;
+  zeichne();
+  if (lokal.modus === "computer") computerZug();
+}
+
+function lokalZiehen() {
+  const fehler = ziehenRegel(lokal.sp, lokal.sp.zug);
+  if (fehler) { melde(fehler); return; }
+  melde("");
+  endePruefen();
+  zeichne();
+  if (lokal.modus === "computer") computerZug();
+}
+
+function lokalPassen() {
+  const fehler = passenRegel(lokal.sp, lokal.sp.zug);
+  if (fehler) { melde(fehler); return; }
+  melde("");
+  endePruefen();
+  zeichne();
+  if (lokal.modus === "computer" && lokal.sp.status === "spiel") computerZug();
+}
+
+// Der Computer legt den stärksten passenden Stein, sonst zieht oder passt er.
+function computerZug() {
+  if (!lokal || lokal.modus !== "computer") return;
+  const sp = lokal.sp;
+  if (sp.status !== "spiel" || sp.zug !== 1) return;
+  const moeglich = sp.haende[1].filter((k) => passtAn(sp, k));
+  if (moeglich.length) {
+    setTimeout(() => {
+      if (!lokal || lokal.sp !== sp || sp.status !== "spiel" || sp.zug !== 1) return;
+      const stein = moeglich.sort((a, b) => (b[0] + b[1]) - (a[0] + a[1]))[0];
+      const da = seiten(sp, stein);
+      lokalSpielen(stein, da.length === 1 ? da[0] : "");
+    }, 520);
+    return;
+  }
+  if (sp.vorrat.length) {
+    setTimeout(() => {
+      if (!lokal || lokal.sp !== sp || sp.status !== "spiel" || sp.zug !== 1) return;
+      const fehler = ziehenRegel(sp, 1);
+      if (fehler) { melde(fehler); return; }
+      endePruefen();
+      zeichne();
+      computerZug();
+    }, 480);
+    return;
+  }
+  setTimeout(() => {
+    if (!lokal || lokal.sp !== sp || sp.status !== "spiel" || sp.zug !== 1) return;
+    const fehler = passenRegel(sp, 1);
+    if (fehler) { melde(fehler); return; }
+    endePruefen();
+    zeichne();
+  }, 480);
+}
+
+/* -------------------------------- online ------------------------------- */
+let onlineGame = null, onlineBusy = false;
+
+async function api(aktion, koerper) {
+  const url = "/api/domino?room=" + encodeURIComponent(ROOM) +
+    (aktion ? "&action=" + encodeURIComponent(aktion) : "&id=" + encodeURIComponent(MYID));
+  const r = await fetch(url, aktion ? {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ id: MYID }, koerper || {}))
+  } : { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.text()).trim() || "Aktion fehlgeschlagen.");
+  return r.json();
+}
+
+async function hole() {
+  if (!ONLINE || onlineBusy) return;
+  onlineBusy = true;
+  try {
+    onlineGame = (await api(null)).game || null;
+    zeichne();
+  } catch (e) {
+    elLage.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+async function schicke(aktion, koerper) {
+  // Läuft gerade eine Abfrage, wird der Klick nicht verworfen, sondern
+  // nachgeholt, sobald der Platz frei ist.
+  for (let i = 0; i < 60 && onlineBusy; i++) await new Promise((r) => setTimeout(r, 50));
+  if (onlineBusy) { melde("Der Server antwortet nicht – bitte noch einmal tippen."); return false; }
+  onlineBusy = true;
+  try {
+    onlineGame = (await api(aktion, koerper)).game || null;
+    wahl = null;
+    melde("");
+    zeichne();
+    return true;
+  } catch (e) {
+    melde(e.message);
+    return false;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+/* ------------------------------ Zeichnen ------------------------------- */
+function halbHTML(n) {
+  let s = "<span class=\"haelfte\">";
+  for (let i = 0; i < 9; i++) s += "<i class=\"punkt" + (PUNKTE[n].includes(i) ? " an" : "") + "\"></i>";
+  return s + "</span>";
+}
+function steinEl(stein, klasse) {
+  const d = document.createElement("span");
+  d.className = "stein" + (klasse ? " " + klasse : "");
+  d.innerHTML = halbHTML(stein[0]) + halbHTML(stein[1]);
+  d.dataset.stein = stein[0] + "-" + stein[1];
+  return d;
+}
+
+function zeichneKette(kette) {
+  elKette.innerHTML = "";
+  if (!kette || !kette.length) {
+    elKette.innerHTML = "<span class=\"leer\">Noch kein Stein auf dem Tisch.</span>";
+    return;
+  }
+  for (const stein of kette) elKette.appendChild(steinEl(stein));
+}
+
+// Knöpfe für die Seitenwahl, wenn ein Stein an beide Enden passt.
+function zeichneEnden(moeglich) {
+  elEnden.innerHTML = "";
+  if (!wahl || !moeglich || moeglich.length < 2) return;
+  for (const seite of moeglich) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ende-knopf";
+    b.dataset.seite = seite;
+    b.textContent = seite === "links" ? "◀ links anlegen" : "rechts anlegen ▶";
+    elEnden.appendChild(b);
+  }
+}
+
+function zeichneHand(hand, darf, passt, text) {
+  elHand.innerHTML = "";
+  if (!hand || !hand.length) {
+    const hinweis = document.createElement("span");
+    hinweis.className = "leer";
+    hinweis.textContent = text || "Keine Steine auf der Hand.";
+    elHand.appendChild(hinweis);
+    return;
+  }
+  for (const stein of hand) {
+    const klasse = !darf ? "gesperrt" : (wahl && gleich(wahl, stein) ? "wahl" : (passt(stein) ? "passt" : ""));
+    elHand.appendChild(steinEl(stein, klasse));
+  }
+}
+
+function spielerZeile(name, punkte, steine, dran, ich) {
+  const p = document.createElement("p");
+  p.className = "sp" + (dran ? " dran" : "");
+  const n = document.createElement("span");
+  n.textContent = name + (ich ? " (du)" : "");
+  const b = document.createElement("b");
+  b.textContent = punkte + " Punkte · " + steine + (steine === 1 ? " Stein" : " Steine");
+  p.append(n, b);
+  return p;
+}
+
+function zeichneLokal() {
+  const sp = lokal.sp, wer = lokalNamen();
+  const sichtbar = lokal.modus === "computer" || lokal.handOffen;
+  const sitz = lokal.modus === "computer" ? 0 : sp.zug;
+  const darf = sp.status === "spiel" && sichtbar && sp.zug === sitz;
+  elRunde.textContent = "Runde " + lokal.runde;
+  elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
+  elZug.textContent = sp.status === "spiel"
+    ? (lokal.modus === "computer" && sp.zug === 0 ? "· du bist dran" : "· " + wer[sp.zug] + " ist dran")
+    : "";
+  zeichneKette(sp.kette);
+  zeichneEnden(wahl ? seiten(sp, wahl) : null);
+  elSpieler.innerHTML = "";
+  wer.forEach((name, i) => {
+    elSpieler.appendChild(spielerZeile(name, sp.punkte[i], sp.haende[i].length,
+      sp.status === "spiel" && sp.zug === i, false));
+  });
+  notiz(sp.note);
+  elTalon.textContent = "Vorrat: " + sp.vorrat.length;
+  elHandTitel.textContent = lokal.modus === "computer"
+    ? "Deine Steine" + (sp.zug === 1 && sp.status === "spiel" ? " – der Computer ist dran" : "")
+    : "Steine von " + wer[sp.zug];
+  zeichneHand(sichtbar ? sp.haende[sp.zug] : [], darf, (k) => passtAn(sp, k),
+    "Hand verdeckt – Gerät weitergeben.");
+  const keinStein = darf && !kannLegen(sp, sitz);
+  btnZiehen.disabled = !(keinStein && sp.vorrat.length > 0);
+  btnPassen.disabled = !(keinStein && sp.vorrat.length === 0);
+  btnZiehen.textContent = "Ziehen (" + sp.vorrat.length + ")";
+  elEnde.classList.toggle("versteckt", sp.status !== "ende");
+  if (lokal.modus === "zweit" && sp.status === "spiel" && !lokal.handOffen) {
+    elGabeText.textContent = wer[sp.zug] + " ist dran";
+    elGabe.classList.remove("versteckt");
+  } else {
+    elGabe.classList.add("versteckt");
+  }
+}
+
+// Darf ich online gerade legen?
+function onlinePasst(stein) {
+  const g = onlineGame;
+  if (!g || !g.kette.length) return true;
+  return g.enden.some((e) => stein[0] === e || stein[1] === e);
+}
+function onlineSeiten(stein) {
+  const g = onlineGame;
+  if (!g) return [];
+  if (!g.kette.length) return ["rechts"];
+  const aus = [];
+  if (stein[0] === g.enden[0] || stein[1] === g.enden[0]) aus.push("links");
+  if (stein[0] === g.enden[1] || stein[1] === g.enden[1]) aus.push("rechts");
+  return aus;
+}
+
+function zeichneOnline() {
+  const g = onlineGame;
+  $("startLeiste").classList.add("versteckt");
+  $("onlineLeiste").classList.remove("versteckt");
+  if (!g) {
+    elLage.textContent = "Keine Runde";
+    elRunde.textContent = "—";
+    zeichneKette([]);
+    elHand.innerHTML = "";
+    elSpieler.innerHTML = "";
+    notiz("Eröffne eine Runde – Mitspieler treten im Raum bei.");
+    elEnde.classList.add("versteckt");
+    elEnden.innerHTML = "";
+    elTalon.textContent = "";
+    btnZiehen.disabled = true;
+    btnPassen.disabled = true;
+    $("btnErstellen").classList.remove("versteckt");
+    $("btnBereit").classList.add("versteckt");
+    $("btnLos").classList.add("versteckt");
+    return;
+  }
+  const ich = (g.spieler || []).find((s) => s.id === MYID) || null;
+  const dran = g.status === "spiel" ? g.spieler[g.zug] : null;
+  const meinZug = !!(dran && dran.id === MYID && g.status === "spiel");
+  const hand = (ich && ich.hand) || [];
+  elRunde.textContent = "Runde " + g.runde;
+  elLage.textContent = g.status === "invited" ? "Warte auf Mitspieler"
+    : g.status === "spiel" ? "Läuft" : "Runde vorbei";
+  elZug.textContent = dran ? "· " + (dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
+  zeichneKette(g.kette);
+  zeichneEnden(wahl ? onlineSeiten(wahl) : null);
+  elSpieler.innerHTML = "";
+  for (const s of g.spieler || []) {
+    elSpieler.appendChild(spielerZeile(s.name, s.punkte, s.anzahl, !!(dran && dran.id === s.id), s.id === MYID));
+  }
+  notiz(g.note);
+  elTalon.textContent = "Vorrat: " + g.talon;
+  elHandTitel.textContent = "Deine Steine";
+  zeichneHand(hand, meinZug, onlinePasst,
+    g.status === "invited" ? "Die Steine kommen, sobald es losgeht." : "Keine Steine auf der Hand.");
+  const keinStein = meinZug && !hand.some(onlinePasst);
+  btnZiehen.disabled = !(keinStein && g.talon > 0);
+  btnPassen.disabled = !(keinStein && g.talon === 0);
+  btnZiehen.textContent = "Ziehen (" + g.talon + ")";
+  elEnde.classList.toggle("versteckt", g.status !== "ende");
+  $("btnErstellen").classList.toggle("versteckt", true);
+  $("btnBereit").classList.toggle("versteckt", g.status !== "invited");
+  $("btnLos").classList.toggle("versteckt", g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+function zeichne() {
+  if (ONLINE) zeichneOnline();
+  else if (lokal) zeichneLokal();
+  else {
+    zeichneKette([]);
+    elHand.innerHTML = "";
+  }
+}
+
+/* ------------------------------ Bedienung ------------------------------ */
+function spielen(stein, seite) {
+  if (ONLINE) {
+    wahl = null;
+    schicke("legen", { stein, seite: seite || "" });
+    return;
+  }
+  lokalSpielen(stein, seite);
+}
+
+elHand.addEventListener("click", (e) => {
+  const d = e.target.closest(".stein");
+  if (!d || d.classList.contains("gesperrt")) return;
+  const [a, b] = d.dataset.stein.split("-").map(Number);
+  const stein = [a, b];
+  const moeglich = ONLINE ? onlineSeiten(stein) : seiten(lokal.sp, stein);
+  if (!moeglich.length) { melde("Dieser Stein passt an keine Seite."); return; }
+  if (moeglich.length > 1) {
+    wahl = stein;
+    melde("Beide Seiten passen – links oder rechts?");
+    zeichne();
+    return;
+  }
+  spielen(stein, moeglich[0]);
+});
+
+elEnden.addEventListener("click", (e) => {
+  const b = e.target.closest(".ende-knopf");
+  if (!b || !wahl) return;
+  const stein = wahl;
+  spielen(stein, b.dataset.seite);
+});
+
+btnZiehen.addEventListener("click", () => {
+  if (ONLINE) schicke("ziehen"); else lokalZiehen();
+});
+btnPassen.addEventListener("click", () => {
+  if (ONLINE) schicke("passen"); else lokalPassen();
+});
+$("btnComputer").addEventListener("click", () => lokalStarten("computer"));
+$("btnZweit").addEventListener("click", () => lokalStarten("zweit"));
+$("btnNochmal").addEventListener("click", () => {
+  if (ONLINE) schicke("naechste");
+  else if (lokal) lokalStarten(lokal.modus);
+});
+$("btnGabe").addEventListener("click", () => {
+  if (!lokal) return;
+  lokal.handOffen = true;
+  elGabe.classList.add("versteckt");
+  zeichne();
+});
+$("btnErstellen").addEventListener("click", () => schicke("create"));
+$("btnBereit").addEventListener("click", () => schicke("ready"));
+$("btnLos").addEventListener("click", () => schicke("start"));
+
+if (ONLINE) {
+  hole();
+  setInterval(hole, 1200);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
+} else {
+  zeichne();
+  notiz("Wähle oben: gegen den Computer oder zu zweit an diesem Gerät.");
+}
+})();
+</script>
+</body>
+</html>

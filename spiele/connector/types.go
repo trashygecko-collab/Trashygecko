@@ -205,6 +205,10 @@ type Room struct {
 	Galgen          *GalgenGame            // Galgenmännchen
 	Bingo           *BingoGame             // Bingo
 	Wortsuche       *WortsucheGame         // Wortsuche
+	Domino          *DominoGame            // Domino
+	Schlangen       *SchlangenGame         // Schlangen und Leitern
+	Pig             *PigGame               // Pig
+	Gaense          *GaenseGame            // Gänsespiel
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
 	Mutes           map[string]time.Time   // playerID -> unmute time
 	MsgTimes        map[string][]time.Time // for spam protection

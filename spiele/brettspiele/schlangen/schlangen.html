@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Schlangen und Leitern</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<link rel="stylesheet" href="/spiele/brettspiele/wuerfel.css">
+<style>
+.brett{position:relative;width:min(100%,calc(100dvh - 250px));max-width:100%;margin:0 auto;aspect-ratio:1;
+  overflow:visible}
+@media(max-height:520px){.brett{width:min(100%,calc(100dvh - 96px))}}
+.raster{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);
+  grid-template-rows:repeat(10,1fr);gap:2px}
+.feld{position:relative;border-radius:5px;background:#14382d;border:1px solid #1b4133;
+  display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px;
+  font-size:clamp(7px,1.5vh,12px);color:#7f9c8c}
+.feld.dunkel{background:#103026}
+.feld.ziel{background:#3b3221;border-color:#e8cd8e;color:#e8cd8e}
+.wege{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.startzone{position:absolute;left:0;right:0;bottom:-34px;height:30px;border:1px dashed #1d4a3a;
+  border-radius:8px;display:flex;align-items:center;justify-content:center;color:#a9c3b6;font-size:11px}
+.figuren{position:absolute;inset:0;pointer-events:none}
+.figuren .figur{position:absolute;width:clamp(12px,2.4vh,20px);height:clamp(12px,2.4vh,20px);
+  transform:translate(-50%,-50%);transition:left .11s linear,top .11s linear;z-index:3;
+  box-shadow:0 0 0 2px #0a211b,0 1px 3px rgba(0,0,0,.6)}
+.figuren .figur.weich{transition:left .42s ease-in-out,top .42s ease-in-out}
+</style>
+</head>
+<body>
+<main class="wg-app">
+  <header class="wg-kopf">
+    <div class="wg-titel">SCHLANGEN UND LEITERN</div>
+    <small id="lage">Bereit</small>
+    <div class="wg-leiste" id="startLeiste">
+      <select class="wg-btn" id="anzahl" aria-label="Spielerzahl">
+        <option value="2">2 Spieler</option>
+        <option value="3">3 Spieler</option>
+        <option value="4">4 Spieler</option>
+      </select>
+      <button class="wg-btn haupt" id="btnLokal">Lokal starten</button>
+    </div>
+    <div class="wg-leiste wg-versteckt" id="onlineLeiste">
+      <button class="wg-btn haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="wg-btn" id="btnBereit">Bereit</button>
+      <button class="wg-btn" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="wg-mitte">
+    <div class="wg-flaeche">
+      <div class="brett" id="brett">
+        <div class="raster" id="raster"></div>
+        <svg class="wege" id="wege" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="figuren" id="figuren"></div>
+        <div class="startzone">Start</div>
+      </div>
+    </div>
+
+    <aside class="wg-karte">
+      <div class="wg-leiste"><b id="rundenTitel">Runde 1</b><span class="wg-notiz" id="zugText"></span></div>
+      <div class="wg-spieler" id="spieler"></div>
+      <div class="wg-leiste">
+        <span id="wuerfelHalte"></span>
+        <button class="wg-btn haupt gross" id="btnWuerfeln" disabled>Würfeln</button>
+      </div>
+      <div class="wg-fehler" id="fehler"></div>
+      <div class="wg-notiz" id="notiz"></div>
+      <div class="wg-log" id="log"></div>
+      <div class="wg-leiste wg-versteckt" id="ende">
+        <button class="wg-btn haupt" id="btnNochmal">Nächste Runde</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
+<script>
+(() => {
+"use strict";
+/* Schlangen und Leitern: 100 Felder, ein Würfel. Wer 100 genau erreicht,
+   gewinnt; Leitern tragen hinauf, Schlangen ziehen hinunter. Lokal an einem
+   Gerät oder über den Connector mit bis zu vier Spielern. */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const FELDER = 100, LEITERN = 6, SCHLANGEN = 6;
+const $ = (id) => document.getElementById(id);
+const elRaster = $("raster"), elWege = $("wege"), elFiguren = $("figuren"),
+      elSpieler = $("spieler"), elNotiz = $("notiz"), elLog = $("log"),
+      elLage = $("lage"), elZug = $("zugText"), elRunde = $("rundenTitel"),
+      elEnde = $("ende"), elFehler = $("fehler"), btnWuerfeln = $("btnWuerfeln");
+
+const dice = WG.wuerfelEl(0);
+$("wuerfelHalte").appendChild(dice);
+
+let lokal = null;        // { sp, anzahl }
+let onlineGame = null;
+let anzeige = [0, 0, 0, 0];
+let sperre = false;
+let brettStand = "";
+
+const warte = WG.warte;
+const fehler = (text) => { elFehler.textContent = text || ""; };
+const notiz = (text) => { elNotiz.textContent = text || ""; };
+
+/* ------------------------------- Regeln -------------------------------- */
+function mischen(liste) {
+  const a = liste.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Leitern und Schlangen wie auf dem Server: sechs Paare, eindeutige Felder,
+// nicht auf 1 oder 100.
+function brettMachen() {
+  const belegt = new Set([1, 100]);
+  const leitern = [], schlangen = [];
+  for (let versuch = 0; versuch < 400 && leitern.length < LEITERN; versuch++) {
+    const start = 2 + Math.floor(Math.random() * 88);
+    const ziel = start + 11 + Math.floor(Math.random() * 18);
+    if (ziel > 99 || belegt.has(start) || belegt.has(ziel)) continue;
+    belegt.add(start); belegt.add(ziel);
+    leitern.push([start, ziel]);
+  }
+  for (let versuch = 0; versuch < 400 && schlangen.length < SCHLANGEN; versuch++) {
+    const start = 12 + Math.floor(Math.random() * 86);
+    const ziel = start - (11 + Math.floor(Math.random() * 18));
+    if (ziel < 2 || belegt.has(start) || belegt.has(ziel)) continue;
+    belegt.add(start); belegt.add(ziel);
+    schlangen.push([start, ziel]);
+  }
+  return { leitern, schlangen };
+}
+
+function neuerStand(anzahl) {
+  const { leitern, schlangen } = brettMachen();
+  return {
+    runde: 1, zug: 0, wurf: 0, status: "spiel", sieger: "",
+    leitern: leitern.map((p) => p.slice()),
+    schlangen: schlangen.map((p) => p.slice()),
+    spieler: Array.from({ length: anzahl }, (_, i) => ({
+      id: "s" + i, name: "Spieler " + (i + 1), farbe: i, pos: 0, zuege: 0
+    })),
+    verlauf: [],
+    note: "Wer Feld 100 genau erreicht, gewinnt. Leitern hoch, Schlangen hinunter."
+  };
+}
+
+function zielFuer(sp, feld, liste) {
+  const treffer = liste.find((p) => p[0] === feld);
+  return treffer ? treffer[1] : null;
+}
+
+function zugMachen(sp, sitz, wurf) {
+  const sp1 = sp.spieler[sitz];
+  sp1.zuege++;
+  sp.wurf = wurf;
+  const ziel = sp1.pos + wurf;
+  if (ziel > FELDER) {
+    sp.verlauf.push(sp1.name + " würfelt " + wurf + " – das ist zu weit, die Figur bleibt auf " + sp1.pos + ".");
+    sp.zug = (sp.zug + 1) % sp.spieler.length;
+    return "";
+  }
+  sp1.pos = ziel;
+  let text = sp1.name + " würfelt " + wurf + " und zieht auf Feld " + ziel + ".";
+  const leiter = zielFuer(sp, ziel, sp.leitern);
+  const schlange = zielFuer(sp, ziel, sp.schlangen);
+  if (leiter !== null) { sp1.pos = leiter; text += " Die Leiter führt hinauf auf " + leiter + "."; }
+  else if (schlange !== null) { sp1.pos = schlange; text += " Die Schlange zieht hinunter auf " + schlange + "."; }
+  sp.verlauf.push(text);
+  sp.verlauf = sp.verlauf.slice(-8);
+  if (sp1.pos >= FELDER) {
+    sp.status = "ende";
+    sp.sieger = sp1.id;
+    sp.note = sp1.name + " erreicht Feld 100 und gewinnt.";
+    return "";
+  }
+  sp.zug = (sp.zug + 1) % sp.spieler.length;
+  return "";
+}
+
+/* ------------------------------- Anzeige ------------------------------- */
+// Feld → Mittelpunkt in Prozent (Reihe 1 unten links, dann im Zickzack).
+function feldPos(nr) {
+  const zeile = Math.floor((nr - 1) / 10);
+  const spalte = (nr - 1) % 10;
+  const c = zeile % 2 === 0 ? spalte : 9 - spalte;
+  return { x: (c + 0.5) * 10, y: (9 - zeile + 0.5) * 10 };
+}
+
+function rasterBauen() {
+  elRaster.innerHTML = "";
+  for (let zeile = 9; zeile >= 0; zeile--) {
+    const von = zeile * 10 + 1, bis = zeile * 10 + 10;
+    const reihe = [];
+    for (let nr = von; nr <= bis; nr++) reihe.push(nr);
+    if (zeile % 2 === 1) reihe.reverse();
+    for (const nr of reihe) {
+      const d = document.createElement("div");
+      d.className = "feld" + ((zeile + nr) % 2 === 0 ? " dunkel" : "") + (nr === 100 ? " ziel" : "");
+      d.dataset.feld = nr;
+      d.textContent = nr;
+      elRaster.appendChild(d);
+    }
+  }
+}
+
+function wegeZeichnen(sp) {
+  const teile = [];
+  const pfeil = (a, b) => {
+    const p = feldPos(a), q = feldPos(b);
+    const dx = q.x - p.x, dy = q.y - p.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * 7, ny = (dx / len) * 7;
+    const mx = (p.x + q.x) / 2 + nx, my = (p.y + q.y) / 2 + ny;
+    return `<path d="M${p.x} ${p.y} Q${mx} ${my} ${q.x} ${q.y}" fill="none"
+      stroke="#7fb98a" stroke-width="1.5" stroke-linecap="round" opacity=".85"/>
+      <circle cx="${q.x}" cy="${q.y}" r="1.4" fill="#7fb98a" opacity=".9"/>`;
+  };
+  for (const [start, ziel] of sp.leitern) {
+    const a = feldPos(start), b = feldPos(ziel);
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * 1.5, ny = (dx / len) * 1.5;
+    teile.push(`<path d="M${a.x + nx} ${a.y + ny} L${b.x + nx} ${b.y + ny}" stroke="#c9a86a" stroke-width=".8"/>`);
+    teile.push(`<path d="M${a.x - nx} ${a.y - ny} L${b.x - nx} ${b.y - ny}" stroke="#c9a86a" stroke-width=".8"/>`);
+    for (let k = 1; k < 7; k++) {
+      const t = k / 7;
+      const x = a.x + dx * t, y = a.y + dy * t;
+      teile.push(`<path d="M${x + nx} ${y + ny} L${x - nx} ${y - ny}" stroke="#c9a86a" stroke-width=".7"/>`);
+    }
+  }
+  for (const [start, ziel] of sp.schlangen) {
+    const a = feldPos(start), b = feldPos(ziel);
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * 6, ny = (dx / len) * 6;
+    const mx = (a.x + b.x) / 2 + nx, my = (a.y + b.y) / 2 + ny;
+    teile.push(`<path d="M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}" fill="none" stroke="#d98878"
+      stroke-width="2.2" stroke-linecap="round" opacity=".9"/>`);
+    teile.push(`<circle cx="${a.x}" cy="${a.y}" r="1.8" fill="#d98878"/>`);
+  }
+  elWege.innerHTML = teile.join("");
+}
+
+function figurenSichern(anzahl) {
+  elFiguren.innerHTML = "";
+  for (let i = 0; i < anzahl; i++) {
+    const f = WG.figur(i, "Spieler " + (i + 1));
+    f.dataset.sitz = i;
+    elFiguren.appendChild(f);
+  }
+}
+
+function figurSetzen(sitz, pos, weich) {
+  const f = elFiguren.querySelector('.figur[data-sitz="' + sitz + '"]');
+  if (!f) return;
+  f.classList.toggle("weich", !!weich);
+  if (!pos) {
+    f.style.left = (10 + sitz * 12) + "%";
+    f.style.top = "calc(100% + 16px)";
+  } else {
+    const p = feldPos(pos);
+    f.style.left = p.x + "%";
+    f.style.top = p.y + "%";
+  }
+}
+
+function spielerZeichnen(sp) {
+  elSpieler.innerHTML = "";
+  sp.spieler.forEach((s, i) => {
+    const p = document.createElement("p");
+    p.className = "wg-sp" + (sp.status === "spiel" && sp.zug === i ? " dran" : "");
+    const f = WG.figur(s.farbe, s.name);
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = s.name;
+    const b = document.createElement("b");
+    b.textContent = s.pos ? "Feld " + s.pos : "Start";
+    p.append(f, n, b);
+    elSpieler.appendChild(p);
+  });
+}
+
+function kopfZeichnen(sp) {
+  elRunde.textContent = "Runde " + sp.runde;
+  elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
+  const dran = sp.status === "spiel" ? sp.spieler[sp.zug] : null;
+  elZug.textContent = dran ? "· " + (ONLINE && dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
+  notiz(sp.note);
+  elLog.innerHTML = "";
+  for (const z of (sp.verlauf || []).slice(-4)) {
+    const d = document.createElement("div");
+    d.textContent = z;
+    elLog.appendChild(d);
+  }
+  elEnde.classList.toggle("wg-versteckt", sp.status !== "ende");
+  const meinZug = ONLINE
+    ? !!(sp.status === "spiel" && sp.spieler[sp.zug] && sp.spieler[sp.zug].id === MYID)
+    : sp.status === "spiel";
+  btnWuerfeln.disabled = sperre || !meinZug;
+}
+
+async function bewegen(sp, sitz, ziel, wurf) {
+  const von = anzeige[sitz];
+  if (ziel === von) { figurSetzen(sitz, ziel); return; }
+  if (wurf && ziel >= von && von + wurf <= FELDER) {
+    for (let f = von + 1; f <= von + wurf; f++) {
+      figurSetzen(sitz, f);
+      await warte(105);
+    }
+  } else if (ziel > von && ziel - von <= 6) {
+    for (let f = von + 1; f <= ziel; f++) { figurSetzen(sitz, f); await warte(105); }
+  }
+  if (ziel !== Math.min(FELDER, von + (wurf || 0))) {
+    await warte(70);
+    figurSetzen(sitz, ziel, true);
+    await warte(430);
+  }
+  anzeige[sitz] = ziel;
+}
+
+async function standZeigen(sp, wuerfeln) {
+  sperre = true;
+  const marke = JSON.stringify([sp.leitern, sp.schlangen]);
+  if (marke !== brettStand) {
+    brettStand = marke;
+    rasterBauen();
+    wegeZeichnen(sp);
+  }
+  if (wuerfeln && sp.wurf) {
+    await WG.wuerfeln(dice, sp.wurf, 560);
+  } else {
+    WG.setzeWuerfel(dice, sp.wurf || 0);
+  }
+  spielerZeichnen(sp);
+  kopfZeichnen(sp);
+  for (let i = 0; i < sp.spieler.length; i++) {
+    if (anzeige[i] !== sp.spieler[i].pos) await bewegen(sp, i, sp.spieler[i].pos, sp.wurf);
+  }
+  sperre = false;
+  kopfZeichnen(sp);
+}
+
+/* -------------------------------- lokal -------------------------------- */
+async function lokalWuerfeln() {
+  if (sperre || !lokal || lokal.sp.status !== "spiel") return;
+  const sp = lokal.sp;
+  const sitz = sp.zug;
+  const wurf = 1 + Math.floor(Math.random() * 6);
+  await WG.wuerfeln(dice, wurf, 560);
+  fehler(zugMachen(sp, sitz, wurf));
+  await standZeigen(sp, false);
+}
+
+function lokalStarten(weiter) {
+  const anzahl = Number($("anzahl").value) || 2;
+  const vorher = weiter && lokal ? lokal.sp.runde : 0;
+  lokal = { sp: neuerStand(anzahl) };
+  if (vorher) lokal.sp.runde = vorher + 1;
+  anzeige = [0, 0, 0, 0];
+  brettStand = "";
+  fehler("");
+  figurenSichern(anzahl);
+  WG.setzeWuerfel(dice, 0);
+  standZeigen(lokal.sp, false);
+}
+
+/* -------------------------------- online ------------------------------- */
+const netz = WG.netz({
+  pfad: "/api/schlangen", room: ROOM, id: MYID,
+  melde: (t) => fehler(t)
+});
+
+async function uebernehmen(g) {
+  const alt = onlineGame;
+  onlineGame = g;
+  if (!g) { fehler(""); spielerZeichnen({ spieler: [], status: "", zug: -1 }); $("startLeiste").classList.add("wg-versteckt"); return; }
+  if (!alt || alt.runde !== g.runde) {
+    // Neue Runde: Brett neu aufbauen und alle Figuren an den Start.
+    brettStand = "";
+    anzeige = [0, 0, 0, 0];
+    figurenSichern(g.spieler.length);
+    for (let i = 0; i < g.spieler.length; i++) figurSetzen(i, 0);
+  }
+  while (elFiguren.children.length < g.spieler.length) {
+    const f = WG.figur(elFiguren.children.length, "");
+    f.dataset.sitz = elFiguren.children.length;
+    elFiguren.appendChild(f);
+  }
+  const neuerWurf = !alt || alt.wurf !== g.wurf || alt.zug !== g.zug || alt.runde !== g.runde;
+  await standZeigen(g, neuerWurf);
+  leisteOnline(g);
+}
+
+function leisteOnline(g) {
+  $("startLeiste").classList.add("wg-versteckt");
+  $("onlineLeiste").classList.remove("wg-versteckt");
+  const ich = g.spieler.find((s) => s.id === MYID);
+  $("btnErstellen").classList.toggle("wg-versteckt", !!g);
+  $("btnBereit").classList.toggle("wg-versteckt", g.status !== "invited");
+  $("btnLos").classList.toggle("wg-versteckt", g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+/* ------------------------------ Bedienung ------------------------------ */
+btnWuerfeln.addEventListener("click", () => {
+  if (ONLINE) onlineWuerfeln();
+  else lokalWuerfeln();
+});
+
+async function onlineWuerfeln() {
+  if (sperre) return;
+  const r = await netz.schicke("wuerfeln");
+  if (r.ok && r.game) await uebernehmen(r.game);
+}
+
+$("btnLokal").addEventListener("click", lokalStarten);
+$("btnNochmal").addEventListener("click", async () => {
+  if (!ONLINE) { lokalStarten(true); return; }
+  const r = await netz.schicke("naechste");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnErstellen").addEventListener("click", async () => {
+  const r = await netz.schicke("create");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnBereit").addEventListener("click", async () => {
+  const r = await netz.schicke("ready");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnLos").addEventListener("click", async () => {
+  const r = await netz.schicke("start");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+
+rasterBauen();
+
+if (ONLINE) {
+  $("startLeiste").classList.add("wg-versteckt");
+  const hohle = async () => {
+    const r = await netz.hole();
+    if (r.ok) await uebernehmen(r.game);
+  };
+  hohle();
+  setInterval(hohle, 1200);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hohle(); });
+} else {
+  notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");
+  spielerZeichnen({ spieler: [], status: "", zug: -1 });
+  elZug.textContent = "";
+}
+})();
+</script>
+</body>
+</html>

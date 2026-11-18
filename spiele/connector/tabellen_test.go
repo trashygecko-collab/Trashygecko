@@ -48,6 +48,10 @@ var spielFeld = map[string]string{
 	"galgen":           "Galgen",
 	"bingo":            "Bingo",
 	"wortsuche":        "Wortsuche",
+	"domino":           "Domino",
+	"schlangen":        "Schlangen",
+	"pig":              "Pig",
+	"gaensespiel":      "Gaense",
 	"malen":            "Mal",
 }
 

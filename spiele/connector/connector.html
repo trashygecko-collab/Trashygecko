@@ -1060,6 +1060,10 @@ let currentSechsundsechzigGame=null;
 let currentGalgenGame=null;
 let currentBingoGame=null;
 let currentWortsucheGame=null;
+let currentDominoGame=null;
+let currentSchlangenGame=null;
+let currentPigGame=null;
+let currentGaenseGame=null;
 
 const SUPPORTED_GAMES = [
  { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/brettspiele/tictac/tictactoe.html", api: "/api/tictactoe" },
@@ -1094,6 +1098,10 @@ const SUPPORTED_GAMES = [
  { id: "galgen", name: "Galgenmännchen", path: "/spiele/brettspiele/galgen/galgen.html", api: "/api/galgen" },
  { id: "bingo", name: "Bingo", path: "/spiele/brettspiele/bingo/bingo.html", api: "/api/bingo" },
  { id: "wortsuche", name: "Wortsuche", path: "/spiele/brettspiele/wortsuche/wortsuche.html", api: "/api/wortsuche" },
+ { id: "domino", name: "Domino", path: "/spiele/brettspiele/domino/domino.html", api: "/api/domino" },
+ { id: "schlangen", name: "Schlangen und Leitern", path: "/spiele/brettspiele/schlangen/schlangen.html", api: "/api/schlangen" },
+ { id: "pig", name: "Pig", path: "/spiele/brettspiele/pig/pig.html", api: "/api/pig" },
+ { id: "gaensespiel", name: "Gänsespiel", path: "/spiele/brettspiele/gaensespiel/gaensespiel.html", api: "/api/gaensespiel" },
  // Malen braucht keine Einladung: alle im Raum landen auf derselben Fläche.
  { id: "malen", name: "Malen", path: "/spiele/malen/malen.html", api: "" }
 ];
@@ -1283,6 +1291,10 @@ async function refreshGames(players, vorrang){
  await refreshGalgen(players);
  await refreshBingo(players);
  await refreshWortsuche(players);
+ await refreshDomino(players);
+ await refreshSchlangen(players);
+ await refreshPig(players);
+ await refreshGaense(players);
  }finally{
   // Ab hier darf wieder sofort gezeichnet werden (z. B. aus einem Knopf).
   statusZyklus=false;
@@ -1333,6 +1345,10 @@ function gameStateFor(gameId){
  if(gameId==="galgen")return currentGalgenGame;
  if(gameId==="bingo")return currentBingoGame;
  if(gameId==="wortsuche")return currentWortsucheGame;
+ if(gameId==="domino")return currentDominoGame;
+ if(gameId==="schlangen")return currentSchlangenGame;
+ if(gameId==="pig")return currentPigGame;
+ if(gameId==="gaensespiel")return currentGaenseGame;
  return currentTTTGame;
 }
 
@@ -2434,6 +2450,130 @@ async function refreshWortsuche(players){
   addStatusButton("Bereit",async()=>{ if(await gameApiAction("wortsuche","ready"))await refreshPlayers(); });
  }else{
   addStatusButton("Los",async()=>{ if(await gameApiAction("wortsuche","start"))openGame(gamePath("wortsuche")); });
+ }
+}
+
+// Domino: zwei Spieler, je sieben Steine – wer zuerst alle los ist, gewinnt.
+async function refreshDomino(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/domino?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentDominoGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  const amZug=game.spieler[game.zug];
+  tttStatus(game.status==="spiel"
+   ? "Domino läuft – "+game.spieler.map(s=>s.name+": "+s.anzahl+" Steine").join(", ")+". Am Zug: "+(amZug?amZug.name:"—")+"."
+   : "Domino beendet. "+(game.note||""),"domino");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("domino")));
+  return;
+ }
+ tttStatus("Domino: "+game.spieler.length+" am Tisch – warte auf Bereitschaft.","domino");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("domino","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("domino","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("domino","start"))openGame(gamePath("domino")); });
+ }
+}
+
+// Schlangen und Leitern: ein Würfel, 100 Felder, Leitern hoch, Schlangen hinunter.
+async function refreshSchlangen(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/schlangen?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSchlangenGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  const dran=game.spieler[game.zug];
+  tttStatus(game.status==="spiel"
+   ? "Schlangen und Leitern läuft – "+game.spieler.map(s=>s.name+": Feld "+(s.pos||"Start")).join(", ")+". Am Zug: "+(dran?dran.name:"—")+"."
+   : (game.note||"Runde beendet."),"schlangen");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("schlangen")));
+  return;
+ }
+ tttStatus("Schlangen und Leitern: "+game.spieler.length+" am Tisch – warte auf Bereitschaft.","schlangen");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("schlangen","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("schlangen","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("schlangen","start"))openGame(gamePath("schlangen")); });
+ }
+}
+
+// Pig: würfeln oder sichern, eine 1 nimmt die Punkte des Zuges.
+async function refreshPig(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/pig?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentPigGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  const dran=game.spieler[game.zug];
+  tttStatus(game.status==="spiel"
+   ? "Pig läuft – "+game.spieler.map(s=>s.name+": "+s.punkte).join(", ")+". Am Zug: "+(dran?dran.name:"—")+(dran&&dran.runde?" ("+dran.runde+" im Zug)":"")+"."
+   : (game.note||"Runde beendet."),"pig");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("pig")));
+  return;
+ }
+ tttStatus("Pig: "+game.spieler.length+" am Tisch – warte auf Bereitschaft.","pig");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("pig","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("pig","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("pig","start"))openGame(gamePath("pig")); });
+ }
+}
+
+// Gänsespiel: zwei Würfel, 63 Felder, Sonderfelder wie Brücke und Brunnen.
+async function refreshGaense(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/gaensespiel?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentGaenseGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  const dran=game.spieler[game.zug];
+  tttStatus(game.status==="spiel"
+   ? "Gänsespiel läuft – "+game.spieler.map(s=>s.name+": Feld "+s.pos).join(", ")+". Am Zug: "+(dran?dran.name:"—")+"."
+   : (game.note||"Runde beendet."),"gaensespiel");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("gaensespiel")));
+  return;
+ }
+ tttStatus("Gänsespiel: "+game.spieler.length+" am Tisch – warte auf Bereitschaft.","gaensespiel");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("gaensespiel","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("gaensespiel","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("gaensespiel","start"))openGame(gamePath("gaensespiel")); });
  }
 }
 

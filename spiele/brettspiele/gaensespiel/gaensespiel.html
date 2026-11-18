@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Gänsespiel</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<link rel="stylesheet" href="/spiele/brettspiele/wuerfel.css">
+<style>
+.brett{position:relative;width:min(100%,calc(100dvh - 262px));max-width:100%;margin:0 auto;aspect-ratio:1;
+  flex:1 1 auto;min-height:0}
+@media(max-height:520px){.brett{width:min(100%,calc(100dvh - 112px))}}
+.wege{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.feld{position:absolute;border-radius:50%;transform:translate(-50%,-50%);display:flex;align-items:center;
+  justify-content:center;background:#14382d;border:1px solid #24504044;color:#9fbdb0;
+  font-size:clamp(6px,1.15vh,11px);line-height:1;z-index:1}
+.feld svg{position:absolute;inset:12%;width:76%;height:76%;opacity:.9}
+.feld .nr{position:relative;z-index:2;opacity:.75}
+.feld.sonder .nr{position:absolute;right:6%;bottom:4%;font-size:.78em;opacity:.85}
+.feld.ziel{background:#3b3221;border-color:#e8cd8e;color:#f6edda;box-shadow:0 0 8px #e8cd8e55}
+.feld.gans{border-color:#7fb98a}
+.feld.wir{box-shadow:0 0 0 2px #e8cd8e,0 0 10px #e8cd8e66}
+.figuren{position:absolute;inset:0;pointer-events:none}
+.figuren .figur{position:absolute;width:clamp(10px,1.8vh,16px);height:clamp(10px,1.8vh,16px);
+  transform:translate(-50%,-50%);transition:left .12s linear,top .12s linear;z-index:3;
+  box-shadow:0 0 0 2px #0a211b}
+.legende{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;font-size:10px;color:var(--wg-muted)}
+.legende span{display:flex;align-items:center;gap:3px}
+.legende svg{width:12px;height:12px}
+@media(max-height:520px){.legende{display:none}}
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-gans" viewBox="0 0 24 24"><path d="M7 20c4 0 5-3 5-6V9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M12 9a3 3 0 1 1 5 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="17.5" cy="10.5" r="1.4" fill="currentColor"/><path d="M19 11l3 1-3 1.4z" fill="currentColor"/><ellipse cx="7" cy="20" rx="6" ry="2.6" fill="currentColor" opacity=".5"/></symbol>
+  <symbol id="i-bruecke" viewBox="0 0 24 24"><path d="M3 20v-6a9 9 0 0 1 18 0v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3 15h18" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-gasthaus" viewBox="0 0 24 24"><path d="M4 20V11l8-7 8 7v9z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-brunnen" viewBox="0 0 24 24"><path d="M4 12h16v8H4z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 16c1.6-1.4 3-1.4 4.6 0M13.4 16c1.6-1.4 3-1.4 4.6 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9l8-5 8 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-labyrinth" viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 1 8-8 6 6 0 0 1-6 6 4 4 0 0 1-4-4 2 2 0 0 1 2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-gefaengnis" viewBox="0 0 24 24"><path d="M6 4v16M11 4v16M16 4v16M21 4v16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M3 4h18M3 20h18" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-tod" viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 1 7 7c0 2.4-1.2 4-2.6 5v3.4H7.6V15C6.2 14 5 12.4 5 10a7 7 0 0 1 7-7z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9.4" cy="10.4" r="1.5" fill="currentColor"/><circle cx="14.6" cy="10.4" r="1.5" fill="currentColor"/><path d="M10.4 21v-2.6M13.6 21v-2.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+</svg>
+
+<main class="wg-app">
+  <header class="wg-kopf">
+    <div class="wg-titel">GÄNSESPIEL</div>
+    <small id="lage">Bereit</small>
+    <div class="wg-leiste" id="startLeiste">
+      <select class="wg-btn" id="anzahl" aria-label="Spielerzahl">
+        <option value="2">2 Spieler</option>
+        <option value="3">3 Spieler</option>
+        <option value="4">4 Spieler</option>
+      </select>
+      <button class="wg-btn haupt" id="btnLokal">Lokal starten</button>
+    </div>
+    <div class="wg-leiste wg-versteckt" id="onlineLeiste">
+      <button class="wg-btn haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="wg-btn" id="btnBereit">Bereit</button>
+      <button class="wg-btn" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="wg-mitte">
+    <div class="wg-flaeche">
+      <div class="brett" id="brett">
+        <svg class="wege" id="wege" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div class="figuren" id="figuren"></div>
+      </div>
+      <div class="legende">
+        <span style="color:#7fb98a"><svg><use href="#i-gans"/></svg>Gans: noch einmal</span>
+        <span style="color:#c9a86a"><svg><use href="#i-bruecke"/></svg>Brücke 6 → 12</span>
+        <span style="color:#8aa9d6"><svg><use href="#i-gasthaus"/></svg>Gasthaus 19</span>
+        <span style="color:#6fb3c9"><svg><use href="#i-brunnen"/></svg>Brunnen 31</span>
+        <span style="color:#b48ad6"><svg><use href="#i-labyrinth"/></svg>Labyrinth 42</span>
+        <span style="color:#d98878"><svg><use href="#i-gefaengnis"/></svg>Gefängnis 52</span>
+        <span style="color:#b0645c"><svg><use href="#i-tod"/></svg>Tod 58</span>
+      </div>
+    </div>
+
+    <aside class="wg-karte">
+      <div class="wg-leiste"><b id="rundenTitel">Runde 1</b><span class="wg-notiz" id="zugText"></span></div>
+      <div class="wg-spieler" id="spieler"></div>
+      <div class="wg-leiste">
+        <span id="wurfHalte"></span>
+        <button class="wg-btn haupt gross" id="btnWuerfeln" disabled>Würfeln</button>
+      </div>
+      <div class="wg-fehler" id="fehler"></div>
+      <div class="wg-notiz" id="notiz"></div>
+      <div class="wg-log" id="log"></div>
+      <div class="wg-leiste wg-versteckt" id="ende">
+        <button class="wg-btn haupt" id="btnNochmal">Nächste Runde</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
+<script>
+(() => {
+"use strict";
+/* Gänsespiel: 63 Felder, zwei Würfel. Über das Ziel hinaus geht es rückwärts,
+   Gänsefelder ziehen noch einmal, Sonderfelder schicken zurück oder lassen
+   aussetzen. Wer Feld 63 erreicht, gewinnt. */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+
+const FELDER = 63;
+const BRUECKE = [6, 12], GASTHAUS = 19, BRUNNEN = 31, LABYRINTH = [42, 30],
+      GEFAENGNIS = 52, GEFAENGNIS_RUNDEN = 3, TOD = [58, 1];
+const $ = (id) => document.getElementById(id);
+const elSpieler = $("spieler"), elNotiz = $("notiz"), elLog = $("log"),
+      elLage = $("lage"), elZug = $("zugText"), elRunde = $("rundenTitel"),
+      elEnde = $("ende"), elFehler = $("fehler"), elBrett = $("brett"),
+      elWege = $("wege"), elFiguren = $("figuren"), btnWuerfeln = $("btnWuerfeln");
+
+const w1 = WG.wuerfelEl(0), w2 = WG.wuerfelEl(0);
+$("wurfHalte").append(w1, w2);
+
+let lokal = null;
+let onlineGame = null;
+let anzeige = [0, 0, 0, 0];
+let sperre = false;
+
+const warte = WG.warte;
+const fehler = (text) => { elFehler.textContent = text || ""; };
+const notiz = (text) => { elNotiz.textContent = text || ""; };
+const istGans = (feld) => feld > 0 && feld % 9 === 0 && feld <= 54;
+
+/* ------------------------------- Regeln -------------------------------- */
+function neuerStand(anzahl) {
+  return {
+    runde: 1, zug: 0, wuerfel: [0, 0], status: "spiel", sieger: "", verlauf: [],
+    spieler: Array.from({ length: anzahl }, (_, i) => ({
+      id: "s" + i, name: "Spieler " + (i + 1), farbe: i, pos: 0, aussetzen: 0, imBrunnen: false
+    })),
+    note: "Zwei Würfel. Wer Feld 63 erreicht, gewinnt."
+  };
+}
+
+function ziehen(pos, schritte) {
+  const ziel = pos + schritte;
+  if (ziel <= FELDER) return { pos: ziel, text: "" };
+  const zurueck = ziel - FELDER;
+  return { pos: FELDER - zurueck, text: " Über das Ziel hinaus – " + zurueck + " Felder zurück." };
+}
+
+function naechster(sp) {
+  for (let i = 0; i < sp.spieler.length * 8; i++) {
+    sp.zug = (sp.zug + 1) % sp.spieler.length;
+    const s = sp.spieler[sp.zug];
+    if (s.imBrunnen) {
+      sp.verlauf.push(s.name + " sitzt im Brunnen und setzt aus.");
+      continue;
+    }
+    if (s.aussetzen > 0) {
+      s.aussetzen--;
+      sp.verlauf.push(s.name + (s.aussetzen > 0
+        ? " setzt aus – noch " + s.aussetzen + " Runden."
+        : " setzt diese Runde aus."));
+      continue;
+    }
+    return;
+  }
+}
+
+function zugMachen(sp, sitz, a, b) {
+  const summe = a + b;
+  sp.wuerfel = [a, b];
+  const s = sp.spieler[sitz];
+  const teile = [s.name + " würfelt " + a + " + " + b + " = " + summe + "."];
+  const erste = ziehen(s.pos, summe);
+  teile.push("Von Feld " + s.pos + " auf " + erste.pos + "." + erste.text);
+  s.pos = erste.pos;
+  for (let schritt = 0; schritt < 8; schritt++) {
+    const feld = s.pos;
+    if (feld === BRUECKE[0]) {
+      s.pos = BRUECKE[1];
+      teile.push("Die Brücke trägt " + s.name + " auf Feld " + BRUECKE[1] + ".");
+    } else if (istGans(feld)) {
+      const neu = ziehen(feld, summe);
+      s.pos = neu.pos;
+      teile.push("Gänsefeld " + feld + " – " + s.name + " zieht noch einmal " + summe +
+        " Felder auf " + neu.pos + "." + neu.text);
+    } else if (feld === GASTHAUS) {
+      s.aussetzen = 1;
+      teile.push("Im Gasthaus muss " + s.name + " eine Runde aussetzen.");
+      break;
+    } else if (feld === BRUNNEN) {
+      sp.spieler.forEach((o, i) => {
+        if (i !== sitz && o.imBrunnen) {
+          o.imBrunnen = false;
+          teile.push(o.name + " ist aus dem Brunnen frei.");
+        }
+      });
+      s.imBrunnen = true;
+      teile.push(s.name + " fällt in den Brunnen und wartet, bis jemand auf Feld 31 landet.");
+      break;
+    } else if (feld === LABYRINTH[0]) {
+      s.pos = LABYRINTH[1];
+      teile.push("Das Labyrinth schickt " + s.name + " zurück auf Feld " + LABYRINTH[1] + ".");
+    } else if (feld === GEFAENGNIS) {
+      s.aussetzen = GEFAENGNIS_RUNDEN;
+      teile.push("Im Gefängnis setzt " + s.name + " " + GEFAENGNIS_RUNDEN + " Runden aus.");
+      break;
+    } else if (feld === TOD[0]) {
+      s.pos = TOD[1];
+      teile.push("Der Tod schickt " + s.name + " zurück zum Anfang.");
+    } else {
+      break;
+    }
+  }
+  sp.verlauf.push(teile.join(" "));
+  sp.verlauf = sp.verlauf.slice(-8);
+  if (s.pos >= FELDER) {
+    sp.status = "ende";
+    sp.sieger = s.id;
+    sp.note = s.name + " erreicht Feld 63 und gewinnt.";
+    return;
+  }
+  naechster(sp);
+}
+
+/* ------------------------------- Spielfeld ------------------------------ */
+// Drei Ringe: 1–26 außen, 27–48 in der Mitte, 49–63 innen. So bleibt jedes Feld
+// groß genug zum Lesen, und der Weg nach innen ist deutlich.
+const RINGE = [
+  { von: 1, bis: 26, r: 44.5, start: -90 },
+  { von: 27, bis: 48, r: 31, start: -81 },
+  { von: 49, bis: 63, r: 17.5, start: -73 }
+];
+const POS = {};
+
+function posRechnen() {
+  for (const ring of RINGE) {
+    const anzahl = ring.bis - ring.von + 1;
+    const schritt = 360 / anzahl;
+    for (let k = 0; k < anzahl; k++) {
+      const nr = ring.von + k;
+      const w = (ring.start + k * schritt) * Math.PI / 180;
+      POS[nr] = { x: 50 + ring.r * Math.cos(w), y: 50 + ring.r * Math.sin(w) };
+    }
+  }
+}
+
+function feldGroesse(nr) {
+  if (nr <= 26) return 8.6;
+  if (nr <= 48) return 7.6;
+  return 6.6;
+}
+
+function feldKlasse(nr) {
+  if (nr >= FELDER) return " ziel";
+  if (nr === BRUECKE[0]) return " sonder";
+  if (istGans(nr)) return " gans sonder";
+  if ([GASTHAUS, BRUNNEN, LABYRINTH[0], GEFAENGNIS, TOD[0]].includes(nr)) return " sonder";
+  return "";
+}
+
+function symbolFuer(nr) {
+  if (nr === BRUECKE[0]) return "i-bruecke";
+  if (istGans(nr)) return "i-gans";
+  if (nr === GASTHAUS) return "i-gasthaus";
+  if (nr === BRUNNEN) return "i-brunnen";
+  if (nr === LABYRINTH[0]) return "i-labyrinth";
+  if (nr === GEFAENGNIS) return "i-gefaengnis";
+  if (nr === TOD[0]) return "i-tod";
+  return "";
+}
+
+let felderGebaut = "";
+
+function brettBauen() {
+  if (felderGebaut === "ja") return;
+  felderGebaut = "ja";
+  posRechnen();
+  for (let nr = 1; nr <= FELDER; nr++) {
+    const p = POS[nr], groesse = feldGroesse(nr);
+    const d = document.createElement("div");
+    d.className = "feld" + feldKlasse(nr);
+    d.dataset.feld = nr;
+    d.style.left = p.x + "%";
+    d.style.top = p.y + "%";
+    d.style.width = groesse + "%";
+    d.style.height = groesse + "%";
+    const sym = symbolFuer(nr);
+    if (sym) d.innerHTML = '<svg viewBox="0 0 24 24"><use href="#' + sym + '"/></svg>';
+    const n = document.createElement("span");
+    n.className = "nr";
+    n.textContent = nr;
+    d.appendChild(n);
+    elBrett.appendChild(d);
+  }
+  // Verbindungslinien zeigen den Weg von Feld zu Feld.
+  const linien = [];
+  for (let nr = 1; nr < FELDER; nr++) {
+    const a = POS[nr], b = POS[nr + 1];
+    linien.push('<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y +
+      '" stroke="#1d4a3a" stroke-width=".5"/>');
+  }
+  elWege.innerHTML = linien.join("");
+}
+
+function figurenSichern(anzahl) {
+  elFiguren.innerHTML = "";
+  for (let i = 0; i < anzahl; i++) {
+    const f = WG.figur(i, "Spieler " + (i + 1));
+    f.dataset.sitz = i;
+    elFiguren.appendChild(f);
+  }
+}
+
+function figurSetzen(sitz, pos, weich) {
+  const f = elFiguren.querySelector('.figur[data-sitz="' + sitz + '"]');
+  if (!f) return;
+  f.classList.toggle("weich", !!weich);
+  if (!pos) {
+    f.style.left = (50 + (sitz - 1.5) * 4) + "%";
+    f.style.top = "94%";
+    return;
+  }
+  const p = POS[pos] || POS[1];
+  const versatz = (sitz % 2 ? 1.7 : -1.7);
+  f.style.left = (p.x + versatz) + "%";
+  f.style.top = (p.y + (sitz > 1 ? 1.7 : -1.7)) + "%";
+}
+
+function markiere(sp) {
+  const dran = sp.status === "spiel" ? sp.spieler[sp.zug] : null;
+  elBrett.querySelectorAll(".feld.wir").forEach((d) => d.classList.remove("wir"));
+  if (!dran || !dran.pos) return;
+  const d = elBrett.querySelector('.feld[data-feld="' + dran.pos + '"]');
+  if (d) d.classList.add("wir");
+}
+
+/* ------------------------------- Anzeige ------------------------------- */
+function spielerZeichnen(sp) {
+  elSpieler.innerHTML = "";
+  sp.spieler.forEach((s, i) => {
+    const p = document.createElement("p");
+    p.className = "wg-sp" + (sp.status === "spiel" && sp.zug === i ? " dran" : "");
+    const f = WG.figur(s.farbe, s.name);
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = s.name;
+    const b = document.createElement("b");
+    let text = s.pos ? "Feld " + s.pos : "Start";
+    if (s.imBrunnen) text += " · Brunnen";
+    else if (s.aussetzen > 0) text += " · " + s.aussetzen + "× aus";
+    b.textContent = text;
+    p.append(f, n, b);
+    elSpieler.appendChild(p);
+  });
+}
+
+function kopfZeichnen(sp) {
+  elRunde.textContent = "Runde " + sp.runde;
+  elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
+  const dran = sp.status === "spiel" ? sp.spieler[sp.zug] : null;
+  elZug.textContent = dran ? "· " + (ONLINE && dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
+  notiz(sp.note);
+  elLog.innerHTML = "";
+  for (const z of (sp.verlauf || []).slice(-4)) {
+    const d = document.createElement("div");
+    d.textContent = z;
+    elLog.appendChild(d);
+  }
+  elEnde.classList.toggle("wg-versteckt", sp.status !== "ende");
+  const meinZug = ONLINE ? !!(dran && dran.id === MYID) : sp.status === "spiel";
+  btnWuerfeln.disabled = sperre || !meinZug;
+}
+
+async function bewegen(sp, sitz, ziel, summe) {
+  const von = anzeige[sitz];
+  if (ziel === von) { figurSetzen(sitz, ziel); return; }
+  const landung = ziehen(von, summe || 0).pos;
+  if (summe && von + summe >= von) {
+    // Feld für Feld bis zur Landung (bei Rücklauf über das Ziel bis 63).
+    const ende = Math.min(FELDER, von + summe);
+    for (let f = von + 1; f <= ende; f++) { figurSetzen(sitz, f); await warte(85); }
+    if (landung !== ende) {
+      for (let f = FELDER - 1; f >= landung; f--) { figurSetzen(sitz, f); await warte(85); }
+    }
+  }
+  if (ziel !== landung) {
+    await warte(80);
+    figurSetzen(sitz, ziel, true);
+    await warte(400);
+  }
+  anzeige[sitz] = ziel;
+}
+
+async function standZeigen(sp, wuerfeln) {
+  sperre = true;
+  brettBauen();
+  if (wuerfeln && sp.wuerfel && sp.wuerfel[0]) {
+    await Promise.all([WG.wuerfeln(w1, sp.wuerfel[0], 520), WG.wuerfeln(w2, sp.wuerfel[1], 640)]);
+  } else {
+    WG.setzeWuerfel(w1, (sp.wuerfel && sp.wuerfel[0]) || 0);
+    WG.setzeWuerfel(w2, (sp.wuerfel && sp.wuerfel[1]) || 0);
+  }
+  spielerZeichnen(sp);
+  kopfZeichnen(sp);
+  for (let i = 0; i < sp.spieler.length; i++) {
+    if (anzeige[i] !== sp.spieler[i].pos) {
+      const summe = (sp.wuerfel && sp.wuerfel[0]) ? sp.wuerfel[0] + sp.wuerfel[1] : 0;
+      await bewegen(sp, i, sp.spieler[i].pos, summe);
+    }
+  }
+  markiere(sp);
+  sperre = false;
+  kopfZeichnen(sp);
+}
+
+/* -------------------------------- lokal -------------------------------- */
+async function lokalWuerfeln() {
+  if (sperre || !lokal || lokal.sp.status !== "spiel") return;
+  const sp = lokal.sp;
+  const sitz = sp.zug;
+  const a = 1 + Math.floor(Math.random() * 6), b = 1 + Math.floor(Math.random() * 6);
+  sperre = true;
+  kopfZeichnen(sp);
+  await Promise.all([WG.wuerfeln(w1, a, 520), WG.wuerfeln(w2, b, 640)]);
+  zugMachen(sp, sitz, a, b);
+  sperre = false;
+  await standZeigen(sp, false);
+}
+
+function lokalStarten(weiter) {
+  const anzahl = Number($("anzahl").value) || 2;
+  const vorher = weiter && lokal ? lokal.sp.runde : 0;
+  lokal = { sp: neuerStand(anzahl) };
+  if (vorher) lokal.sp.runde = vorher + 1;
+  anzeige = [0, 0, 0, 0];
+  fehler("");
+  figurenSichern(anzahl);
+  WG.setzeWuerfel(w1, 0); WG.setzeWuerfel(w2, 0);
+  standZeigen(lokal.sp, false);
+}
+
+/* -------------------------------- online ------------------------------- */
+const netz = WG.netz({ pfad: "/api/gaensespiel", room: ROOM, id: MYID, melde: (t) => fehler(t) });
+
+async function uebernehmen(g) {
+  const alt = onlineGame;
+  onlineGame = g;
+  if (!g) {
+    elSpieler.innerHTML = "";
+    notiz("Eröffne eine Runde – Mitspieler treten im Raum bei.");
+    return;
+  }
+  if (!alt || alt.runde !== g.runde) {
+    anzeige = [0, 0, 0, 0];
+    figurenSichern(g.spieler.length);
+    for (let i = 0; i < g.spieler.length; i++) figurSetzen(i, 0);
+  }
+  while (elFiguren.children.length < g.spieler.length) {
+    const f = WG.figur(elFiguren.children.length, "");
+    f.dataset.sitz = elFiguren.children.length;
+    elFiguren.appendChild(f);
+  }
+  const neuerWurf = !alt || alt.zug !== g.zug || alt.runde !== g.runde ||
+    !alt.wuerfel || alt.wuerfel[0] !== g.wuerfel[0] || alt.wuerfel[1] !== g.wuerfel[1];
+  await standZeigen(g, neuerWurf);
+  leisteOnline(g);
+}
+
+function leisteOnline(g) {
+  $("startLeiste").classList.add("wg-versteckt");
+  $("onlineLeiste").classList.remove("wg-versteckt");
+  const ich = g.spieler.find((s) => s.id === MYID);
+  $("btnErstellen").classList.toggle("wg-versteckt", !!g);
+  $("btnBereit").classList.toggle("wg-versteckt", g.status !== "invited");
+  $("btnLos").classList.toggle("wg-versteckt", g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+/* ------------------------------ Bedienung ------------------------------ */
+btnWuerfeln.addEventListener("click", async () => {
+  if (!ONLINE) { lokalWuerfeln(); return; }
+  const r = await netz.schicke("wuerfeln");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnLokal").addEventListener("click", lokalStarten);
+$("btnNochmal").addEventListener("click", async () => {
+  if (!ONLINE) { lokalStarten(true); return; }
+  const r = await netz.schicke("naechste");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnErstellen").addEventListener("click", async () => {
+  const r = await netz.schicke("create");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnBereit").addEventListener("click", async () => {
+  const r = await netz.schicke("ready");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnLos").addEventListener("click", async () => {
+  const r = await netz.schicke("start");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+
+brettBauen();
+
+if (ONLINE) {
+  $("startLeiste").classList.add("wg-versteckt");
+  const hohle = async () => {
+    const r = await netz.hole();
+    if (r.ok) await uebernehmen(r.game);
+  };
+  hohle();
+  setInterval(hohle, 1200);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hohle(); });
+} else {
+  notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");
+  elZug.textContent = "";
+}
+})();
+</script>
+</body>
+</html>

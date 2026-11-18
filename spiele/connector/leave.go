@@ -292,6 +292,38 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Wortsuche = nil }),
+		sitz("Domino",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Domino; g != nil {
+					return dominoRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Domino = nil }),
+		sitz("Schlangen und Leitern",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Schlangen; g != nil {
+					return schlangenRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Schlangen = nil }),
+		sitz("Pig",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Pig; g != nil {
+					return pigRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Pig = nil }),
+		sitz("Gänsespiel",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Gaense; g != nil {
+					return gaenseRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Gaense = nil }),
 		sitz("Mensch ärgere dich nicht",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Menschaerger; g != nil {
@@ -683,6 +715,26 @@ func (r *Room) aktivesSpiel(id string) string {
 			return s
 		}
 	}
+	if g := r.Domino; g != nil {
+		if s := fuerSitz("domino", g.Status, dominoIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Schlangen; g != nil {
+		if s := fuerSitz("schlangen", g.Status, schlangenIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Pig; g != nil {
+		if s := fuerSitz("pig", g.Status, pigIDs(g)); s != "" {
+			return s
+		}
+	}
+	if g := r.Gaense; g != nil {
+		if s := fuerSitz("gaensespiel", g.Status, gaenseIDs(g)); s != "" {
+			return s
+		}
+	}
 	if g := r.Rechen; g != nil && g.Status == "active" {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -846,6 +898,34 @@ func (r *Room) playerInGame(id string) bool {
 		}
 	}
 	if g := r.Wortsuche; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Domino; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Schlangen; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Pig; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Gaense; g != nil {
 		for _, p := range g.Spieler {
 			if p.ID == id {
 				return true

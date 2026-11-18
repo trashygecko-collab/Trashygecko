@@ -285,7 +285,10 @@ async function hole() {
 }
 
 async function schicke(aktion, koerper) {
-  if (onlineBusy) return false;
+  // Läuft gerade eine Abfrage, wird der Klick nicht verworfen, sondern
+  // nachgeholt, sobald der Platz frei ist.
+  for (let i = 0; i < 60 && onlineBusy; i++) await new Promise((r) => setTimeout(r, 50));
+  if (onlineBusy) { melde("Der Server antwortet nicht – bitte noch einmal tippen."); return false; }
   onlineBusy = true;
   try {
     const d = await api(aktion, koerper);
