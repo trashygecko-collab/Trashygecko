@@ -4,15 +4,15 @@
 #   bash bauen.sh
 #
 # Beim ersten Mal lädt das Skript ein portables JDK 17 und die Android-Werkzeuge
-# (zusammen etwa 350 MB) in den Ordner .werkzeuge und lässt sie dort liegen.
-# Danach dauert ein Bau nur noch Sekunden.
+# (zusammen etwa 350 MB) nach ../../../arbeit/werkzeuge/t-spiele und lässt sie
+# dort liegen – also ausserhalb der Homepage. Danach dauert ein Bau Sekunden.
 #
 # Eigenen Werkzeugordner benutzen:  TSPIELE_WERKZEUGE=/pfad bash bauen.sh
 
 set -e
 
 HIER="$(cd "$(dirname "$0")" && pwd)"
-WERK="${TSPIELE_WERKZEUGE:-$HIER/.werkzeuge}"
+WERK="${TSPIELE_WERKZEUGE:-$HIER/../../../arbeit/werkzeuge/t-spiele}"
 mkdir -p "$WERK"
 cd "$HIER"
 
@@ -63,7 +63,7 @@ echo "== Ressourcen"
   --java "$BAU/gen" \
   --min-sdk-version "$MINDESTENS" \
   --target-sdk-version "$ZIEL" \
-  --version-code 4 --version-name 1.3 \
+  --version-code 5 --version-name 1.4 \
   "$BAU/res.zip"
 
 echo "== Java"

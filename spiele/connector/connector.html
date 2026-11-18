@@ -593,6 +593,15 @@ try {
  sessionID=String(Date.now())+Math.random();
 }
 
+// Neue Spielerkennung: Wenn der Server den Platz an ein anderes Gerät bindet
+// (Token verloren – Speicher geleert, anderer Browser, privater Modus), kommt
+// man mit einer frischen Kennung sofort wieder hinein. Der alte Platz
+// verschwindet von selbst, sobald er nicht mehr anwesend ist.
+function neuerSpieler(){
+ sessionID=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random());
+ try{ sessionStorage.setItem("tg-player-id",sessionID); }catch(e){}
+}
+
 const nameField=document.getElementById("player");
 try{
  const savedName=sessionStorage.getItem("tg-player-name");
@@ -765,15 +774,34 @@ async function nameUebernehmen(mitFokus){
 
 // Ohne Namen ist das kein Hindernis: der Server vergibt "Boss" (am Rechner,
 // auf dem der Connector läuft) bzw. "Spieler1", "Spieler2" …
+// Kaltstart (etwa ein Render-Server, der gerade aufwacht): die erste Anfrage
+// läuft oft in 502/503 oder ins Leere. Drei Versuche mit kurzer Pause sparen
+// das mehrfache Neuladen von Hand. Fehler unter 500 (etwa 403 oder 404) gehen
+// sofort zurück - die haben eine Ursache, die Warten nicht behebt.
+async function mitWiederholung(anfrage,versuche=3){
+ let letzterFehler=null;
+ for(let i=0;i<versuche;i++){
+  try{
+   const antwort=await anfrage();
+   if(antwort.status<500)return antwort;
+   letzterFehler=Error("Der Connector antwortet gerade nicht ("+antwort.status+").");
+  }catch(e){
+   letzterFehler=e;
+  }
+  if(i<versuche-1)await new Promise(fertig=>setTimeout(fertig,1200*(i+1)));
+ }
+ throw letzterFehler||Error("Der Connector ist nicht erreichbar.");
+}
+
 async function joinSingleRoom(){
  const input=document.getElementById("player");
  const name=input.value.trim();
  try{
-  const r=await fetch("/api/rooms",{
+  const r=await mitWiederholung(()=>fetch("/api/rooms",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({id:sessionID,name})
-  });
+  }));
   if(!r.ok)throw Error("Connector nicht erreichbar.");
   const room=await r.json();
   document.getElementById("room").value=room.code;
@@ -795,11 +823,25 @@ async function join(roomDisplayName){
  const code=document.getElementById("room").value.trim().toUpperCase();
  if(!code)return;
  try{
-  const p=await fetch("/api/presence",{
+  let p=await mitWiederholung(()=>fetch("/api/presence",{
    method:"POST",headers:{"Content-Type":"application/json"},
    body:JSON.stringify({room:code,id:sessionID,name:playerName()})
-  });
-  if(!p.ok)throw Error(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen.");
+  }));
+  // 403: Dieser Platz hängt an einem anderen Gerät – dem Browser fehlt sein
+  // Token (Speicher geleert, anderer Browser, privater Modus) oder die Kennung
+  // stammt aus einer Kopie. Mit frischer Kennung klappt der Beitritt, statt
+  // dauerhaft draußen zu bleiben.
+  if(p.status===403){
+   neuerSpieler();
+   p=await mitWiederholung(()=>fetch("/api/presence",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({room:code,id:sessionID,name:playerName()})
+   }));
+  }
+  if(!p.ok){
+   const text=(await p.text()).trim();
+   throw Error(text||(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen."));
+  }
   // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
   // "Spieler1" …). Den zeigen wir an und behalten ihn.
   const vergeben=await p.json().catch(()=>({}));
@@ -872,6 +914,7 @@ let verbindungStand="";
 let verbindungLaeuft=false;
 let verbindungNeuBis=0;   // "Wiederverbindung läuft" soll kurz sichtbar bleiben
 let verbindungFehlschlaege=0;  // Aussetzer hintereinander
+let verbindungHinweis=false;   // Absagegrund schon gezeigt
 
 function verbindungZeigen(zustand){
  if(!VERBINDUNG_TEXT[zustand]||zustand===verbindungStand)return;
@@ -897,6 +940,13 @@ async function heartbeat(){
    body:JSON.stringify({room:activeRoom,id:sessionID,name:playerName(),active})
   });
   ok=r.ok;
+  // Absage mit Begründung (etwa "Platz gehört zu einem anderen Gerät") einmal
+  // in der Hinweiszeile zeigen - sonst bleibt nur ein stummes "unterbrochen".
+  if(!ok&&r.status===403&&!verbindungHinweis){
+   verbindungHinweis=true;
+   const text=(await r.text().catch(()=>"")).trim();
+   setRoomStatus(text||"Dieser Platz gehört zu einem anderen Gerät – Seite neu laden.");
+  }
   if(ok){
    // Der Admin darf mitten in der Partie umbenennen: Der Name vom Server
    // gilt, auch wenn hier noch der alte steht.

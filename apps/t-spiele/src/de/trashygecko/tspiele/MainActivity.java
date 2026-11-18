@@ -15,6 +15,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,7 +49,20 @@ public class MainActivity extends Activity {
     /** Goldener Schnitt – so teilen sich die Abstände. */
     private static final float PHI = 1.618f;
 
+    /** Ein normales Handy ist rund 360 dp breit – das ist der Maßstab 1. */
+    private static final float HANDY_BREITE_DP = 360f;
+
+    /** Deckel für den Maßstab: darüber wird es unhandlich. */
+    private static final float SKALA_MAX = 1.9f;
+
     private float dichte;
+
+    /**
+     * Maßstab für Schrift und Abstände. Auf dem Handy 1, auf einem 7-Zoll-Tablet
+     * rund 1,7, auf grossen Tablets 1,9 – sonst bleibt auf dem grossen Schirm
+     * alles klein in der Mitte stehen.
+     */
+    private float skala = 1f;
 
     /** Zeile in der Mitte, die Datum und Uhrzeit im Spruch mitführt. */
     private TextView uhr;
@@ -68,6 +82,16 @@ public class MainActivity extends Activity {
         super.onCreate(zustand);
         dichte = getResources().getDisplayMetrics().density;
 
+        // Die kuerzere Bildschirmseite in dp bestimmt den Maßstab (kleinste
+        // Breite, also auch im Querformat dieselbe Groesse).
+        int breiteDp = getResources().getConfiguration().smallestScreenWidthDp;
+
+        if (breiteDp <= 0) {
+            breiteDp = Math.round(getResources().getDisplayMetrics().widthPixels / dichte);
+        }
+
+        skala = Math.min(SKALA_MAX, Math.max(1f, breiteDp / HANDY_BREITE_DP));
+
         // Morgen-Lob: Kanal anlegen, Erlaubnis erfragen, Wecker stellen.
         LobWecker.kanalAnlegen(this);
         erlaubnisFuerHinweise();
@@ -81,7 +105,6 @@ public class MainActivity extends Activity {
         LinearLayout seite = new LinearLayout(this);
         seite.setOrientation(LinearLayout.VERTICAL);
         seite.setGravity(Gravity.CENTER_HORIZONTAL);
-        seite.setBackgroundDrawable(hintergrund());
         seite.setPadding(px(32), px(62), px(32), px(44));
 
         // --- Kopf: Schmuckzeile, Titel, Untertitel, feine Goldlinie
@@ -128,7 +151,19 @@ public class MainActivity extends Activity {
         seite.addView(new View(this), new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f / PHI));
 
-        setContentView(seite);
+        // Auf flachen Schirmen (Tablet im Querformat) kann der Inhalt hoeher
+        // sein als das Fenster - dann laesst er sich rollen, statt unten
+        // abgeschnitten zu sein. Der Verlauf liegt auf der Rolle, damit er
+        // beim Scrollen das ganze Fenster fuellt.
+        ScrollView rolle = new ScrollView(this);
+
+        rolle.setFillViewport(true);
+        rolle.setBackgroundDrawable(hintergrund());
+        rolle.addView(seite, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.MATCH_PARENT));
+
+        setContentView(rolle);
     }
 
     /** Zeilenumbruch im Spruch – als Escape, damit die Datei lesbar bleibt. */
@@ -216,7 +251,7 @@ public class MainActivity extends Activity {
         TextView feld = new TextView(this);
         feld.setText(text);
         feld.setTextColor(farbe);
-        feld.setTextSize(TypedValue.COMPLEX_UNIT_SP, groesse);
+        feld.setTextSize(TypedValue.COMPLEX_UNIT_SP, groesse * skala);
         feld.setTypeface(Typeface.create(Typeface.SERIF, schnitt));
         feld.setGravity(Gravity.CENTER);
         if (Build.VERSION.SDK_INT >= 21) {
@@ -250,6 +285,6 @@ public class MainActivity extends Activity {
     }
 
     private int px(int dp) {
-        return Math.round(dp * dichte);
+        return Math.round(dp * dichte * skala);
     }
 }

@@ -20,6 +20,14 @@ Dazu kommt **jeden Morgen um 7:30 ein Lob als Benachrichtigung** – ohne Server
 der Wecker steckt im Gerät (auch nach einem Neustart wird er neu gestellt).
 Abschalten geht in den Android-Einstellungen unter Benachrichtigungen.
 
+**Tablets:** Alle Maße – Schrift und Abstände – wachsen mit der kürzeren
+Bildschirmseite. Maßstab 1 ist ein 360 dp breites Handy; ein 7-Zoll-Tablet
+(rund 600 dp) bekommt Faktor 1,67 (Titel 38 → 63 sp, Knöpfe 19 → 32 sp),
+ein 10-Zoll-Tablet den Deckel 1,9 (Titel 72 sp, Knöpfe 36 sp). Im Querformat
+gilt derselbe Faktor, weil die *kleinste* Breite zählt. Wird der Inhalt dabei
+höher als das Fenster, laesst sich der Startbildschirm rollen statt unten
+abgeschnitten zu sein.
+
 Kein eigener Browser. Berechtigungen: Internet, Benachrichtigungen (ab Android 13
 zu bestätigen) und „Neustart erkennen“ für den Wecker. Die App bleibt im
 Hintergrund stehen, der Zurück-Knopf führt wieder auf den Startbildschirm.
@@ -64,7 +72,8 @@ Die Formen stehen oben im Skript (Körper, Augen, Wangen, Mund).
     bash bauen.sh
 
 Beim ersten Mal lädt das Skript ein portables JDK 17 und die Android-Werkzeuge
-nach `.werkzeuge` (etwa 350 MB) und lässt sie dort liegen; danach dauert ein
+nach `../../../arbeit/werkzeuge/t-spiele` (etwa 350 MB) und lässt sie dort
+liegen – also ausserhalb der Homepage; danach dauert ein
 Bau wenige Sekunden. Android Studio oder Gradle werden nicht gebraucht.
 
 Der Schlüssel `schluessel.jks` (Passwort `tspiele123`) bleibt im Ordner: Nur

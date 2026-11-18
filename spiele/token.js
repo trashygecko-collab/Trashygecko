@@ -16,25 +16,39 @@
     return "tg-token:" + raum + ":" + id;
   }
 
+  // Rueckfall im Speicher: im privaten Modus oder bei gesperrtem Speicher
+  // liefert localStorage nichts. Ohne diesen Merker erzeugte jeder Ruf ein
+  // neues Token - der Server sah dann bei jedem Lebenszeichen ein "anderes
+  // Geraet" und antwortete mit 403.
+  var merker = {};
+
   function tokenFuer(raum, id) {
     if (!raum || !id) {
       return "";
     }
+    var schluesselWert = schluessel(raum, id);
     try {
-      return localStorage.getItem(schluessel(raum, id)) || "";
+      var gespeichert = localStorage.getItem(schluesselWert);
+      if (gespeichert) {
+        merker[schluesselWert] = gespeichert;
+        return gespeichert;
+      }
     } catch (e) {
-      return "";
+      /* kein Speicher - dann gilt der Merker */
     }
+    return merker[schluesselWert] || "";
   }
 
   function merkeToken(raum, id, token) {
     if (!raum || !id || !token) {
       return;
     }
+    var schluesselWert = schluessel(raum, id);
+    merker[schluesselWert] = token;
     try {
-      localStorage.setItem(schluessel(raum, id), token);
+      localStorage.setItem(schluesselWert, token);
     } catch (e) {
-      /* privater Modus: dann eben ohne Token – der Platz bleibt gesperrt */
+      /* privater Modus: der Merker haelt das Token fuer diese Sitzung */
     }
   }
 
