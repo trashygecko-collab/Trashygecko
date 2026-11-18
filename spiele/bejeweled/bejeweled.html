@@ -359,6 +359,19 @@ function zelleMitte(r,c){
  return {x:RAND+ZELLE*c+ZELLE/2, y:RAND+ZELLE*r+ZELLE/2};
 }
 
+// Abgerundetes Rechteck als eigener Pfad: ctx.roundRect fehlt in aelteren
+// Browsern (Android-WebView, Safari vor 16.4).  Dort brach zeichne() ab und das
+// Feld blieb leer - Starten und Tippen wirkten wie tot.
+function rundesRechteck(x,y,w,h,r){
+ const b=Math.min(r,w/2,h/2);
+ ctx.moveTo(x+b,y);
+ ctx.arcTo(x+w,y,x+w,y+h,b);
+ ctx.arcTo(x+w,y+h,x,y+h,b);
+ ctx.arcTo(x,y+h,x,y,b);
+ ctx.arcTo(x,y,x+w,y,b);
+ ctx.closePath();
+}
+
 function form(art,x,y,r){
  ctx.beginPath();
  if(art===0){
@@ -374,7 +387,7 @@ function form(art,x,y,r){
   ctx.closePath();
  }else if(art===3){
   const s=r*0.82;
-  ctx.roundRect(x-s,y-s,s*2,s*2,7);
+  rundesRechteck(x-s,y-s,s*2,s*2,7);
  }else if(art===4){
   ctx.moveTo(x,y-r*1.05);
   ctx.lineTo(x+r*1.05,y+r*0.85);
@@ -445,7 +458,7 @@ function zeichne(){
   ctx.strokeStyle="#f1dca8";
   ctx.lineWidth=3;
   ctx.beginPath();
-  ctx.roundRect(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,8);
+  rundesRechteck(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,8);
   ctx.stroke();
  }
 

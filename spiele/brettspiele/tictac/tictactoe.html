@@ -331,6 +331,8 @@ small,.muted,.hint{color:#a9c3b6}
 
 </main>
 
+<script src="../../lob.js"></script>
+<script src="../mahjong/js/pech.js"></script>
 <script src="/spiele/netz.js"></script>
 <script>
 (() => {
@@ -351,6 +353,22 @@ const wins = [
   [0,4,8],
   [2,4,6]
 ];
+
+// Lob-, Pech- und Gleichstandstext: die gemeinsamen Listen aus lob.js und
+// pech.js, mit einem festen Satz als Ersatz, falls eine Datei fehlt.
+function lobText() {
+  return typeof lobSpruch === 'function'
+    ? lobSpruch()
+    : 'Super gemacht! Du bist ein echter Profi!';
+}
+
+function pechText() {
+  return typeof pechSpruch === 'function'
+    ? pechSpruch()
+    : 'Schade, das war knapp – die nächste Runde gehört dir!';
+}
+
+const GLEICHSTAND = 'Gleichstand! Ihr seid beide gleich gut!';
 
 let board = Array(9).fill('');
 let current = 'X';
@@ -516,7 +534,7 @@ function play(index) {
       `<span>${winner} hat gewonnen!</span>`;
 
     message.textContent =
-      `🎉 ${winner} gewinnt die Runde! 🎉`;
+      `🎉 ${lobText()} 🎉`;
 
     cells.forEach(c => c.disabled = true);
 
@@ -531,10 +549,9 @@ function play(index) {
     finished = true;
 
     status.className = 'status neutral';
-    status.textContent = 'Unentschieden!';
+    status.textContent = 'Gleichstand!';
 
-    message.textContent =
-      'Keiner hat gewonnen – noch eine Runde?';
+    message.textContent = GLEICHSTAND;
 
     reset.textContent = '↻ NOCHMAL SPIELEN';
 
@@ -640,14 +657,16 @@ function renderMultiplayer(game){
     if(game.winner==='draw'){
       line.classList.remove('show');
       status.className='status neutral';
-      status.textContent='Unentschieden!';
-      message.textContent='Keiner hat gewonnen – noch eine Runde?';
+      status.textContent='Gleichstand!';
+      message.textContent=GLEICHSTAND;
     }else{
       const wonByX=game.winner==='X';
       const winnerName=wonByX?game.xName:game.oName;
       status.className=`status ${wonByX?'pink':'blue'}`;
       status.innerHTML=`<span>${winnerName} hat gewonnen!</span>`;
-      message.textContent=game.winner===onlineMark?'🎉 Du hast gewonnen! 🎉':`🎉 ${winnerName} gewinnt die Runde! 🎉`;
+      message.textContent=game.winner===onlineMark
+        ? `🎉 ${lobText()} 🎉`
+        : `😅 ${pechText()}`;
       if(winningCombo) drawWinLine(winningCombo);
     }
     reset.disabled=false;
