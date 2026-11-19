@@ -27,13 +27,9 @@ COPY . .
 # (der Server liest ihn relativ zur Webseite, SITE_DIR).  Der Ordner
 # spiele/connector selbst bleibt draussen - nur die Grafiken kommen mit.
 RUN if [ -d spiele/connector/smilies ]; then cp -a spiele/connector/smilies /tmp/smilies; fi
-RUN mkdir -p /tmp/downloads && cp spiele/connector/connector.zip /tmp/downloads/connector.zip && cp spiele/connector-online/connector.zip /tmp/downloads/connector-online.zip
 RUN rm -rf .git spiele/connector spiele/connector-online
 RUN if [ -d /tmp/smilies ]; then mkdir -p spiele/connector && mv /tmp/smilies spiele/connector/smilies; fi
-# Die beiden Quellpakete sollen herunterladbar sein, obwohl die
-# Programmordner selbst draussen bleiben; sie werden wie die Smileys
-# vor dem Loeschen nach /tmp gerettet.
-RUN mkdir -p spiele/downloads && cp /tmp/downloads/*.zip spiele/downloads/
+# spiele/downloads liegt unter der Webseite und bleibt im Abbild.
 
 # 3) Laufzeit
 FROM alpine:3.20
