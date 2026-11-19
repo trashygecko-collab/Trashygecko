@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
@@ -11,11 +12,61 @@
 :root{
   --bg:#0a211b; --panel:#0f2b23; --line:#1d4a3a; --gold:#e8cd8e; --ink:#f6edda;
   --muted:#a9c3b6; --rot:#e04b3f; --gruen:#4fbf72;
+  --glanz:radial-gradient(ellipse at 20% 0%,#12332a 0%,transparent 45%);
+  --karte:linear-gradient(160deg,#0f2b23,#0a211b);
+  --buehne:#081914; --taste:#14382d; --taste-hover:#1b4a3a;
+  --treffer:#1f5d43; --daneben:#3a1a17; --daneben-rand:#7a2c25;
+  --leer:#2f5a49; --sp:#0b241d; --schein:#e8cd8e44; --herz:#e8cd8e;
+  --holz-hell:#a2855a; --holz:#7a6242; --holz-dunkel:#55432c;
+  --holz-maser:#3f301c; --holz-knoten:#3a2b1a; --nagel:#cbb487;
+  --seil:#c0a877; --figur:#e8cd8e;
+  --boden-hell:#1d4a31; --boden:#0f2b1d; --gras:#3f8f5a;
 }
+
+/* Ansicht Mädchen: helles Holz, Rosa */
+body[data-stil="maedchen"]{
+  --bg:#fff3f8; --panel:#fffafd; --line:#ffc3da; --gold:#d84a86; --ink:#5f3a4c;
+  --muted:#a9547a; --rot:#d63b4a; --gruen:#2fa77a;
+  --glanz:radial-gradient(ellipse at 20% 0%,#ffe0ee 0%,transparent 50%);
+  --karte:linear-gradient(160deg,#fffafd,#ffeef5);
+  --buehne:#fff7fb; --taste:#ffe9f2; --taste-hover:#ffdae8;
+  --treffer:#d9f6e9; --daneben:#ffe1e3; --daneben-rand:#f0a4a4;
+  --leer:#e3b7cb; --sp:#fff5f9; --schein:#d84a8633; --herz:#e0568a;
+  --holz-hell:#e0b183; --holz:#c48a57; --holz-dunkel:#99613a;
+  --holz-maser:#8a5630; --holz-knoten:#7d4c2a; --nagel:#f4e6c8;
+  --seil:#e5799f; --figur:#c2386c;
+  --boden-hell:#dff0d8; --boden:#bfdcc0; --gras:#5faa6b;
+  color-scheme:light;
+}
+
+/* Ansicht Buben: dunkles Holz, Acid */
+body[data-stil="buben"]{
+  --bg:#070d12; --panel:#0b1419; --line:#24333d; --gold:#c8ff3d; --ink:#dbe7ee;
+  --muted:#7f8f9b; --rot:#ff5f5f; --gruen:#39ff88;
+  --glanz:radial-gradient(ellipse at 20% 0%,#12212b 0%,transparent 50%);
+  --karte:linear-gradient(160deg,#0d1820,#060b0f);
+  --buehne:#050a0e; --taste:#0e1a21; --taste-hover:#16262f;
+  --treffer:#12301f; --daneben:#2a1113; --daneben-rand:#5a1d22;
+  --leer:#33454f; --sp:#0a1218; --schein:#c8ff3d33; --herz:#c8ff3d;
+  --holz-hell:#7d5c3e; --holz:#5c4128; --holz-dunkel:#3c2a1a;
+  --holz-maser:#2b1d11; --holz-knoten:#241708; --nagel:#cbd5dd;
+  --seil:#22d3ee; --figur:#c8ff3d;
+  --boden-hell:#12222b; --boden:#070d12; --gras:#1f6b4a;
+  color-scheme:dark;
+}
+
+.stilwahl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.stilwahl button{font-family:inherit;font-size:13px;padding:5px 11px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:var(--taste);color:var(--ink)}
+.stilwahl button.aktiv{border-color:var(--gold);color:var(--gold);font-weight:bold}
+body[data-stil="klassisch"] .stilwahl button.aktiv{background:var(--gold);color:#0a211b}
+body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
+  border-color:#e2537f;box-shadow:0 2px 8px #ff77ad55}
+body[data-stil="buben"] .stilwahl button.aktiv{background:var(--gold);color:#08130a;box-shadow:0 0 10px #c8ff3d55}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;padding:10px;background:radial-gradient(ellipse at 20% 0%,#12332a 0%,transparent 45%),var(--bg);
+  margin:0;padding:10px;background:var(--glanz),var(--bg);
   color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
 }
 .app{width:min(1120px,100%);display:flex;flex-direction:column;gap:10px;height:100%;min-height:0}
@@ -40,35 +91,35 @@ body{
 @media(max-height:420px) and (orientation:landscape){
   .zeichnung{display:none}
 }
-.karte{background:linear-gradient(160deg,#0f2b23,#0a211b);border:1px solid var(--line);border-radius:14px;padding:10px}
+.karte{background:var(--karte);border:1px solid var(--line);border-radius:14px;padding:10px}
 .buehne{display:flex;flex-direction:column;gap:8px;min-height:0}
-.zeichnung{position:relative;flex:1 1 auto;min-height:120px;border-radius:12px;background:#081914;overflow:hidden}
+.zeichnung{position:relative;flex:1 1 auto;min-height:190px;border-radius:12px;background:var(--buehne);overflow:hidden}
 .zeichnung svg{width:100%;height:100%;display:block}
 .wort{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .buch{width:clamp(24px,4.2vw,38px);height:clamp(32px,5.2vw,46px);display:flex;align-items:center;justify-content:center;
   font-size:clamp(16px,3vw,24px);font-weight:bold;border-bottom:3px solid var(--line);color:var(--ink);transition:color .2s,border-color .2s}
 .buch.offen{color:var(--gold);border-color:var(--gold)}
-.buch.leer{color:#2f5a49}
+.buch.leer{color:var(--leer)}
 .tastatur{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
 @media(max-width:520px){.tastatur{grid-template-columns:repeat(7,minmax(0,1fr))}}
-.taste{padding:9px 0;font-size:clamp(13px,2vw,17px);font-weight:bold;background:#14382d;color:var(--ink);
+.taste{padding:9px 0;font-size:clamp(13px,2vw,17px);font-weight:bold;background:var(--taste);color:var(--ink);
   border:1px solid var(--line);border-radius:8px;cursor:pointer;font-family:inherit;transition:transform .08s,background .15s}
-.taste:hover:not(:disabled){background:#1b4a3a}
+.taste:hover:not(:disabled){background:var(--taste-hover)}
 .taste:active:not(:disabled){transform:scale(.95)}
-.taste.treffer{background:#1f5d43;color:var(--gruen);border-color:var(--gruen)}
-.taste.daneben{background:#3a1a17;color:var(--rot);border-color:#7a2c25;text-decoration:line-through}
+.taste.treffer{background:var(--treffer);color:var(--gruen);border-color:var(--gruen)}
+.taste.daneben{background:var(--daneben);color:var(--rot);border-color:var(--daneben-rand);text-decoration:line-through}
 .taste:disabled{opacity:.55;cursor:default}
 .seite{display:flex;flex-direction:column;gap:8px;min-height:0}
 .leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .leiste label{color:var(--muted);font-size:13px}
-select,button.aktion{font-family:inherit;background:#14382d;color:var(--ink);border:1px solid var(--line);
+select,button.aktion{font-family:inherit;background:var(--taste);color:var(--ink);border:1px solid var(--line);
   border-radius:8px;padding:8px 10px;cursor:pointer}
 button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;font-weight:bold}
-.herzen{display:flex;gap:4px;font-size:20px;letter-spacing:2px}
+.herzen{display:flex;gap:4px;font-size:20px;letter-spacing:2px;color:var(--herz)}
 .spieler{display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0}
 .sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;
-  border:1px solid var(--line);border-radius:9px;background:#0b241d;font-size:14px}
-.sp.dran{border-color:var(--gold);box-shadow:0 0 12px #e8cd8e44}
+  border:1px solid var(--line);border-radius:9px;background:var(--sp);font-size:14px}
+.sp.dran{border-color:var(--gold);box-shadow:0 0 12px var(--schein)}
 .sp b{color:var(--gold)}
 .notiz{color:var(--muted);font-size:13px;min-height:18px}
 .log{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:96px;overflow:auto}
@@ -78,7 +129,7 @@ button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;fo
 .versteckt{display:none!important}
 </style>
 </head>
-<body>
+<body data-stil="klassisch">
 <main class="app">
   <header class="kopf">
     <div class="titel">GALGENMÄNNCHEN</div>
@@ -100,17 +151,72 @@ button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;fo
     </div>
   </header>
 
+  <div class="leiste stilwahl" id="stilwahl">
+    <span>Ansicht</span>
+    <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
+    <button type="button" data-stil="maedchen">Mädchen</button>
+    <button type="button" data-stil="buben">Buben</button>
+  </div>
+
   <section class="mitte">
     <div class="karte buehne">
       <div class="zeichnung">
         <svg viewBox="0 0 220 200" aria-label="Galgen" role="img">
-          <g stroke="#7a6242" stroke-width="6" stroke-linecap="round" fill="none">
-            <line x1="20" y1="188" x2="120" y2="188"/>
-            <line x1="60" y1="188" x2="60" y2="20"/>
-            <line x1="60" y1="20" x2="150" y2="20"/>
-            <line x1="150" y1="20" x2="150" y2="42"/>
+          <defs>
+            <linearGradient id="holzWaag" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="var(--holz-hell)"/>
+              <stop offset=".45" stop-color="var(--holz)"/>
+              <stop offset="1" stop-color="var(--holz-dunkel)"/>
+            </linearGradient>
+            <linearGradient id="holzSenk" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="var(--holz-hell)"/>
+              <stop offset=".45" stop-color="var(--holz)"/>
+              <stop offset="1" stop-color="var(--holz-dunkel)"/>
+            </linearGradient>
+            <linearGradient id="bodenGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="var(--boden-hell)"/>
+              <stop offset="1" stop-color="var(--boden)"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Wiese -->
+          <rect x="0" y="182" width="220" height="18" fill="url(#bodenGrad)"/>
+          <ellipse cx="72" cy="190" rx="62" ry="6" fill="#000000" opacity=".22"/>
+          <g stroke="var(--gras)" stroke-width="1.7" stroke-linecap="round" opacity=".8">
+            <path d="M16 190 l-3 -7"/><path d="M26 191 l3 -8"/><path d="M100 189 l-2 -7"/>
+            <path d="M132 191 l3 -7"/><path d="M182 190 l2 -8"/><path d="M198 191 l-2 -7"/>
           </g>
-          <g id="figur" stroke="#e8cd8e" stroke-width="5" fill="none" stroke-linecap="round">
+
+          <!-- Holzbalken -->
+          <rect x="8" y="172" width="124" height="16" rx="5" fill="url(#holzWaag)"/>
+          <rect x="50" y="12" width="17" height="176" rx="5" fill="url(#holzSenk)"/>
+          <rect x="52" y="10" width="112" height="17" rx="5" fill="url(#holzWaag)"/>
+          <line x1="68" y1="100" x2="122" y2="24" stroke="url(#holzSenk)" stroke-width="9" stroke-linecap="round"/>
+
+          <!-- Maserung -->
+          <g stroke="var(--holz-maser)" stroke-width="1" fill="none" opacity=".5" stroke-linecap="round">
+            <path d="M57 30 q3 40 -1 74 q-3 34 1 66"/>
+            <path d="M63 34 q-2 36 1 70"/>
+            <path d="M62 16 q32 2 62 0"/>
+            <path d="M64 22 q30 -2 58 0"/>
+            <path d="M20 177 q34 2 66 0"/>
+            <path d="M24 183 q28 -1 56 0"/>
+          </g>
+
+          <!-- Astloch und Nägel -->
+          <ellipse cx="58" cy="118" rx="2.6" ry="3.4" fill="var(--holz-knoten)" opacity=".8"/>
+          <ellipse cx="58" cy="118" rx="4.4" ry="5.4" fill="none" stroke="var(--holz-knoten)" stroke-width="1" opacity=".45"/>
+          <ellipse cx="108" cy="18" rx="2.2" ry="2.6" fill="var(--holz-knoten)" opacity=".7"/>
+          <circle cx="58.5" cy="19" r="2.2" fill="var(--nagel)"/>
+          <circle cx="58.5" cy="178" r="2.4" fill="var(--nagel)"/>
+          <circle cx="146" cy="19" r="2.2" fill="var(--nagel)"/>
+          <circle cx="58.5" cy="18.4" r=".8" fill="#ffffff" opacity=".5"/>
+
+          <!-- Strick -->
+          <line x1="150" y1="26" x2="150" y2="41" stroke="var(--seil)" stroke-width="3.2" stroke-linecap="round"/>
+          <circle cx="150" cy="43" r="3.6" fill="none" stroke="var(--seil)" stroke-width="2.2"/>
+
+          <g id="figur" stroke="var(--figur)" stroke-width="5" fill="none" stroke-linecap="round">
             <circle id="tKopf" cx="150" cy="56" r="14" style="opacity:0"/>
             <line id="tKoerper" x1="150" y1="70" x2="150" y2="118" style="opacity:0"/>
             <line id="tArmL" x1="150" y1="84" x2="128" y2="104" style="opacity:0"/>
@@ -450,8 +556,30 @@ function zeichne() {
   }
 }
 
+/* ---------------------------- Ansicht ----------------------------- */
+const STIL_KEY = "galgen-stil";
+function stilSetzen(name, merken) {
+  if (!["klassisch", "maedchen", "buben"].includes(name)) name = "klassisch";
+  document.body.dataset.stil = name;
+  if (merken !== false) {
+    try { localStorage.setItem(STIL_KEY, name); } catch (e) {}
+  }
+  document.querySelectorAll("#stilwahl button").forEach((b) => {
+    b.classList.toggle("aktiv", b.dataset.stil === name);
+  });
+}
+let startStil = "klassisch";
+try { startStil = localStorage.getItem(STIL_KEY) || "klassisch"; } catch (e) {}
+stilSetzen(startStil, false);
+document.querySelectorAll("#stilwahl button").forEach((b) => {
+  b.addEventListener("click", () => stilSetzen(b.dataset.stil));
+});
+
 if (ONLINE) {
-  hole();
+  // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+  // Hintergrund und meldet sich nur als "nicht aktiv".
+  WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
   setInterval(hole, 1500);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
 } else {

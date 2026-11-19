@@ -51,6 +51,8 @@ canvas{display:block;width:100%;height:auto;border-radius:10px;
 .fluegel button{flex:1;font-family:inherit;font-size:15px;padding:14px 8px;border-radius:8px;
  border:1px solid #d9bc7c66;background:#123a2e;color:#e8cd8e;cursor:pointer;touch-action:none}
 .fluegel button:active,.fluegel button.drueckt{background:#e8cd8e;color:#0b241d}
+.fluegel button.stift{flex:0 0 118px;font-size:13px;background:#0f2b23;white-space:nowrap}
+.fluegel button.stift.drueckt{background:#e8cd8e;color:#0b241d}
 
 .fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:26px}
 #regeln{margin-top:12px;padding:0 10px 10px}
@@ -76,6 +78,7 @@ a{color:#e8cd8e}
  <div class="statuszeile">
   <span id="automatName">–</span>
   <span>Punkte <b id="punkte">0</b></span>
+  <span>×<b id="multi">1</b></span>
   <span>Kugeln <b id="kugeln">3</b></span>
   <span>Rekord <b id="rekord">–</b></span>
  </div>
@@ -96,20 +99,23 @@ a{color:#e8cd8e}
  <div class="fluegel">
   <button id="links">◀ linker Flipper</button>
   <button id="rechts">rechter Flipper ▶</button>
+  <button id="stift" class="stift">Stift ziehen</button>
  </div>
 
  <div class="fuss">
-  <span id="hinweis">Leertaste oder „Los geht's" wirft die Kugel ein.</span>
+  <span id="hinweis">Stift rechts unten im Kanal nach unten ziehen und loslassen – die Kugel schießt nach oben.</span>
  </div>
 
  <details id="regeln">
   <summary>Regeln</summary>
   <ol>
    <li><b>Ziel:</b> Mit den beiden Flippern die Kugel im Spiel halten und möglichst viele Punkte sammeln.</li>
+   <li><b>Stift:</b> Rechts liegt die Kugel im Kanal auf dem Stift. Stift nach unten ziehen (im Feld, mit dem Knopf <b>Stift ziehen</b> oder <b>Leertaste</b> halten) und loslassen – je weiter gezogen, desto kräftiger der Schuss. Der Stift schießt die Kugel oben durch den Bogen ins Feld.</li>
    <li><b>Flipper:</b> Linke Bildhälfte antippen oder <b>A</b> / <b>←</b> für den linken, rechte Hälfte oder <b>L</b> / <b>→</b> für den rechten Flipper.</li>
-   <li><b>Einwerfen:</b> Leertaste, der Knopf in der Meldung oder ein Tipp auf die Kugel oben.</li>
-   <li><b>Punkte:</b> Bumper geben bei jedem Treffer Punkte, Schleudern über den Flippern etwas weniger, Zielscheiben viel. Ist eine ganze Reihe Ziele abgeräumt, gibt es einen Bonus und die Reihe steht wieder.</li>
-   <li><b>Kugeln:</b> Drei Kugeln pro Partie – fällt die Kugel unten durch, kommt die nächste.</li>
+   <li><b>Schleudern:</b> Die beiden Dreiecke über den Flippern stoßen die Kugel zurück ins Feld (60 Punkte je Stoß).</li>
+   <li><b>Lichter oben:</b> Drei Lichter <b>A</b>, <b>B</b>, <b>C</b> – rollt die Kugel durch eines, leuchtet es. Sind alle drei an, gibt es einen Bonus und der Punkte-Multiplikator steigt um eins (bis ×5).</li>
+   <li><b>Punkte:</b> Bumper geben bei jedem Treffer Punkte, Schleudern etwas weniger, Zielscheiben viel. Ist eine ganze Reihe Ziele abgeräumt, gibt es einen Bonus und die Reihe steht wieder.</li>
+   <li><b>Kugeln:</b> Drei Kugeln pro Partie – fällt die Kugel unten durch, kommt die nächste auf den Stift.</li>
    <li><b>Rekord:</b> Der höchste Punktestand wird für jeden Automaten getrennt gemerkt.</li>
   </ol>
   <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
@@ -127,18 +133,39 @@ const MAXSPEED=1750;
 
 // ------------------------------------------------------------------ Rahmen
 // Gemeinsames Gehäuse: Außenwände, obere Rundung, Trichter zum Auslass.
+// Rechts läuft ein schmaler Kugelkanal bis ganz nach unten – dort liegt die
+// Kugel auf dem Stift und wird nach oben ins Feld geschossen.
+const KANAL={x:336,mitte:356,boden:652,ruh:644};
 const RAHMEN=[
  [24,132,24,468],
  [24,468,92,614],
  [92,614,142,664],
- [376,132,376,468],
- [376,468,308,614],
+ [376,132,376,700],
+ [KANAL.x,190,KANAL.x,700],
+ [336,468,308,614],
  [308,614,258,664],
  [24,132,58,64],
  [58,64,116,34],
  [116,34,284,34],
  [284,34,342,64],
  [342,64,376,132]
+];
+
+// Schleudern über den Flippern: Stoßfläche und die Richtung, in die sie stößt.
+const SCHLEUDERN=[
+ {x1:62,y1:494,x2:126,y2:558,nx:0.7071,ny:-0.7071,punkte:60,kick:330},
+ {x1:298,y1:494,x2:234,y2:558,nx:-0.7071,ny:-0.7071,punkte:60,kick:330}
+];
+
+// Rücklaufsperre am Ende des Kanals: hoch fliegt die Kugel durch, zurück
+// wird sie nach links ins Feld abgelenkt.
+const RUECKLAUF={x1:336,y1:186,x2:376,y2:152};
+
+// Drei Lichter oben: durchrollen schaltet sie an, alle drei geben Bonus.
+const ROLLOVER=[
+ {x:146,y:128,w:26,h:44,an:false,blitz:0},
+ {x:187,y:128,w:26,h:44,an:false,blitz:0},
+ {x:228,y:128,w:26,h:44,an:false,blitz:0}
 ];
 
 // ------------------------------------------------------------------ Automaten
@@ -202,39 +229,45 @@ const AUTOMATEN=[
 
 // ------------------------------------------------------------------ Zustand
 let automat=AUTOMATEN[0];
-let wand=[], bumper=[], ziele=[], baenke=[], flipper=[];
-let kugel={x:200,y:110,vx:0,vy:0};
+let wand=[], bumper=[], ziele=[], baenke=[], flipper=[], schleudern=[];
+let rollover=ROLLOVER.map(r=>({...r}));
+let kugel={x:KANAL.mitte,y:KANAL.ruh,vx:0,vy:0};
 let spur=[];
-let punkte=0, restKugeln=3, zustand="bereit", vorbei=false;
+let punkte=0, restKugeln=3, zustand="bereit", vorbei=false, multi=1;
 let zielTreffer=new Set();
 let popups=[];
 let letzteZeit=0, sammler=0;
 let ruhigSeit=0;
+let zug=0, stiftAn=false, stiftWieder=0, ziehStart=null;
 
 function baueAutomat(a){
  automat=a;
- wand=RAHMEN.concat(a.wand).map(s=>({x1:s[0],y1:s[1],x2:s[2],y2:s[3]}));
+ wand=RAHMEN.concat([[KANAL.x,KANAL.boden,376,KANAL.boden]],a.wand)
+  .map(s=>({x1:s[0],y1:s[1],x2:s[2],y2:s[3]}));
  bumper=a.bumper.map(b=>({...b,blitz:0,cooldown:0}));
  ziele=a.ziele.map(z=>({...z,runter:false,blitz:0}));
+ schleudern=SCHLEUDERN.map(s=>({...s,cooldown:0,blitz:0}));
  baenke=a.baenke;
  baueFlipper();
  $("automatName").textContent=a.name;
- $("hinweis").textContent=a.tipp+" Leertaste wirft ein.";
+ $("hinweis").textContent=a.tipp+" Stift rechts ziehen und loslassen.";
  zeigeRekord();
 }
 
 function baueFlipper(){
  flipper=[
-  {x:128,y:606,len:74,ruhe:0.52,aktiv:-0.56,winkel:0.52,alt:0.52,an:false,schub:17,links:true},
-  {x:272,y:606,len:74,ruhe:Math.PI-0.52,aktiv:Math.PI+0.56,winkel:Math.PI-0.52,alt:Math.PI-0.52,an:false,schub:17,links:false}
+  {x:124,y:606,len:74,ruhe:0.52,aktiv:-0.56,winkel:0.52,alt:0.52,an:false,schub:17,links:true},
+  {x:276,y:606,len:74,ruhe:Math.PI-0.52,aktiv:Math.PI+0.56,winkel:Math.PI-0.52,alt:Math.PI-0.52,an:false,schub:17,links:false}
  ];
 }
 
 function neuesSpiel(a){
  if(a)baueAutomat(a);
  punkte=0; restKugeln=automat.kugeln; vorbei=false;
+ multi=1;
  zielTreffer=new Set();
  ziele.forEach(z=>z.runter=false);
+ rollover.forEach(r=>{ r.an=false; r.blitz=0; });
  popups=[];
  meldungZu();
  neueKugel();
@@ -242,18 +275,35 @@ function neuesSpiel(a){
 }
 
 function neueKugel(){
- kugel={x:200,y:112,vx:0,vy:0};
+ kugel={x:KANAL.mitte,y:KANAL.ruh,vx:0,vy:0};
  spur=[];
  zustand="bereit";
+ zug=0; stiftAn=false; stiftWieder=0; ziehStart=null;
+ $("stift").classList.remove("drueckt");
  ruhigSeit=0;
- $("hinweis").textContent="Bereit – Leertaste, Knopf oder Tipp auf die Kugel wirft sie ein.";
+ $("hinweis").textContent="Stift rechts nach unten ziehen und loslassen – je weiter gezogen, desto stärker der Schuss.";
 }
 
-function einwerfen(){
- if(zustand!=="bereit"||vorbei)return;
+// ------------------------------------------------------------------ Stift
+// Solange der Stift gezogen wird, lädt die Feder; beim Loslassen fliegt die
+// Kugel den Kanal hinauf und durch den Bogen ins Feld.
+function stiftZiehen(){
+ if(vorbei||zustand!=="bereit")return;
+ stiftAn=true;
+ $("stift").classList.add("drueckt");
+}
+
+function stiftLos(){
+ if(!stiftAn)return;
+ stiftAn=false;
+ $("stift").classList.remove("drueckt");
+ if(vorbei||zustand!=="bereit"){ zug=0; return; }
+ const kraft=Math.max(0.18,zug);
+ zug=0;
+ stiftWieder=1;
  zustand="spiel";
- kugel.vy=170;
- kugel.vx=(Math.random()-0.5)*70;
+ kugel.vy=-(820+480*kraft);
+ kugel.vx=(Math.random()-0.5)*26;
  $("hinweis").textContent="Viel Glück!";
 }
 
@@ -298,6 +348,10 @@ function kugelInRechteck(z){
 }
 
 function physik(dt){
+ // Stift laden
+ if(zustand==="bereit"&&stiftAn)zug=Math.min(1,zug+dt*1.35);
+ if(stiftWieder>0)stiftWieder=Math.max(0,stiftWieder-dt*5);
+
  // Flipper drehen
  for(const f of flipper){
   const ziel=f.an?f.aktiv:f.ruhe;
@@ -318,6 +372,53 @@ function physik(dt){
 
  // Wände
  for(const w of wand)wandTreffer(w.x1,w.y1,w.x2,w.y2,0.55);
+
+ // Rücklaufsperre (nur wenn die Kugel fällt)
+ if(kugel.vy>0)wandTreffer(RUECKLAUF.x1,RUECKLAUF.y1,RUECKLAUF.x2,RUECKLAUF.y2,0.5);
+
+ // Schleudern über den Flippern
+ for(const s of schleudern){
+  if(s.cooldown>0)s.cooldown-=dt;
+  if(s.blitz>0)s.blitz-=dt*3;
+  const c=naechsterPunkt(kugel.x,kugel.y,s.x1,s.y1,s.x2,s.y2);
+  const sdx=kugel.x-c.x, sdy=kugel.y-c.y;
+  const sd=Math.hypot(sdx,sdy);
+  if(sd>=RK+4)continue;
+  const nx=sd>0.001?sdx/sd:s.nx, ny=sd>0.001?sdy/sd:s.ny;
+  kugel.x=c.x+nx*(RK+4.4);
+  kugel.y=c.y+ny*(RK+4.4);
+  const svn=kugel.vx*nx+kugel.vy*ny;
+  if(svn<0){
+   kugel.vx-=(1+0.5)*svn*nx;
+   kugel.vy-=(1+0.5)*svn*ny;
+  }
+  if(s.cooldown<=0){
+   s.cooldown=0.14;
+   s.blitz=1;
+   // Stoß mit etwas Streuung, damit die Kugel nicht im selben Bogen hängen bleibt
+   kugel.vx+=(s.nx+(Math.random()-0.5)*0.22)*s.kick;
+   kugel.vy+=(s.ny-Math.random()*0.14)*s.kick;
+   addiere(s.punkte,c.x,c.y-6);
+  }
+ }
+
+ // Lichter oben: durchrollen schaltet sie an
+ rollover.forEach(r=>{
+  if(r.blitz>0)r.blitz-=dt*3;
+  if(r.an)return;
+  if(kugel.x>r.x&&kugel.x<r.x+r.w&&kugel.y>r.y&&kugel.y<r.y+r.h){
+   r.an=true;
+   r.blitz=1;
+   addiere(150,r.x+r.w/2,r.y-6);
+   if(rollover.every(x=>x.an)){
+    multi=Math.min(5,multi+1);
+    zeigeZahlen();
+    addiere(1200,200,r.y+r.h+18);
+    rollover.forEach(x=>{ x.an=false; });
+    $("hinweis").textContent="Alle Lichter an – Multiplikator ×"+multi+"!";
+   }
+  }
+ });
 
  // Bumper
  for(const b of bumper){
@@ -407,6 +508,18 @@ function physik(dt){
   return;
  }
 
+ // Kugel ist in den Kanal zurückgefallen: liegt wieder am Stift
+ if(kugel.x>KANAL.x+4&&kugel.y>KANAL.boden-44&&v<160){
+  kugel.x=KANAL.mitte;
+  kugel.y=KANAL.ruh;
+  kugel.vx=0;
+  kugel.vy=0;
+  zustand="bereit";
+  zug=0;
+  $("hinweis").textContent="Kugel liegt wieder am Stift – noch einmal ziehen.";
+  return;
+ }
+
  // steckengebliebene Kugel anstupsen
  if(v<26){
   ruhigSeit+=dt;
@@ -449,14 +562,16 @@ function pruefeBaenke(){
 }
 
 function addiere(wert,x,y){
- punkte+=wert;
+ const echt=Math.round(wert*multi);
+ punkte+=echt;
  zeigeZahlen();
- popups.push({x,y,text:"+"+wert,leben:1});
+ popups.push({x,y,text:"+"+echt,leben:1});
  if(popups.length>14)popups.shift();
 }
 
 function zeigeZahlen(){
  $("punkte").textContent=punkte.toLocaleString("de-DE");
+ $("multi").textContent=multi;
  $("kugeln").textContent=Math.max(0,restKugeln);
 }
 function zeigeRekord(){
@@ -503,6 +618,11 @@ function zeichne(){
   ctx.lineWidth=4;
   ctx.beginPath(); ctx.moveTo(w[0],w[1]); ctx.lineTo(w[2],w[3]); ctx.stroke();
  }
+
+ // Kugelkanal mit Stift, Schleudern und Lichter
+ zeichneStift();
+ for(const s of schleudern)zeichneSchleuder(s);
+ zeichneLichter();
 
  // Ziele
  ziele.forEach(z=>{
@@ -601,6 +721,111 @@ function zeichne(){
  }
 }
 
+// Stift mit Feder, Knopf und Ladeanzeige im Kanal rechts
+function zeichneStift(){
+ const f=automat.farbe, x=KANAL.mitte;
+ ctx.fillStyle="#00000033";
+ ctx.fillRect(KANAL.x+2,192,376-KANAL.x-4,KANAL.boden-194);
+
+ const kopf=KANAL.boden+zug*20;
+ ctx.fillStyle=f.licht;
+ rundeFlaeche(x-5,kopf-8,10,22,4);
+ ctx.fill();
+ ctx.strokeStyle="#00000066";
+ ctx.lineWidth=1;
+ ctx.stroke();
+
+ // Feder
+ const von=kopf+14, bis=H-14;
+ ctx.strokeStyle="#9fb3ab";
+ ctx.lineWidth=2;
+ ctx.beginPath();
+ for(let i=0;i<=6;i++){
+  const yy=von+(bis-von)*i/6;
+  const xx=x+(i===0?0:(i%2?7:-7));
+  if(i===0)ctx.moveTo(x,yy); else ctx.lineTo(xx,yy);
+ }
+ ctx.stroke();
+
+ ctx.fillStyle=f.wand;
+ rundeFlaeche(x-14,bis-1,28,10,4);
+ ctx.fill();
+
+ // Rücklaufsperre
+ ctx.strokeStyle=f.wand+"cc";
+ ctx.lineWidth=3;
+ ctx.beginPath();
+ ctx.moveTo(RUECKLAUF.x1,RUECKLAUF.y1);
+ ctx.lineTo(RUECKLAUF.x2,RUECKLAUF.y2);
+ ctx.stroke();
+
+ // Ladeanzeige (links neben der Kugel)
+ const gx=KANAL.x+2, gy=586, gh=58;
+ ctx.fillStyle="#00000055";
+ rundeFlaeche(gx,gy,6,gh,3);
+ ctx.fill();
+ const hh=Math.round(gh*zug);
+ if(hh>1){
+  const gl=ctx.createLinearGradient(0,gy+gh-hh,0,gy+gh);
+  gl.addColorStop(0,"#ff6b5f");
+  gl.addColorStop(1,f.licht);
+  ctx.fillStyle=gl;
+  rundeFlaeche(gx,gy+gh-hh,6,hh,3);
+  ctx.fill();
+ }
+ ctx.strokeStyle=f.licht+"66";
+ ctx.lineWidth=1;
+ rundeFlaeche(gx,gy,6,gh,3);
+ ctx.stroke();
+}
+
+// Dreieck-Schleuder mit leuchtender Stoßfläche
+function zeichneSchleuder(s){
+ const f=automat.farbe;
+ ctx.beginPath();
+ ctx.moveTo(s.x1,s.y1);
+ ctx.lineTo(s.x2,s.y2);
+ ctx.lineTo(s.x1,s.y2);
+ ctx.closePath();
+ ctx.fillStyle="#00000044";
+ ctx.fill();
+ ctx.strokeStyle=f.wand+"66";
+ ctx.lineWidth=2;
+ ctx.stroke();
+
+ const an=s.blitz>0;
+ if(an){
+  ctx.strokeStyle="rgba(255,255,255,"+(s.blitz*0.4).toFixed(2)+")";
+  ctx.lineWidth=11;
+  ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+ }
+ ctx.strokeStyle=an?"#ffffff":f.licht;
+ ctx.lineWidth=an?6:4;
+ ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+}
+
+// Drei Lichter oben (A/B/C)
+function zeichneLichter(){
+ const f=automat.farbe;
+ const namen=["A","B","C"];
+ ctx.save();
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
+ ctx.font="bold 13px Georgia, serif";
+ rollover.forEach((r,i)=>{
+  ctx.beginPath();
+  rundeFlaeche(r.x,r.y,r.w,r.h,7);
+  ctx.fillStyle=r.an?f.licht:"#00000044";
+  ctx.fill();
+  ctx.strokeStyle=r.blitz>0?"#ffffff":f.licht+"aa";
+  ctx.lineWidth=1.6;
+  ctx.stroke();
+  ctx.fillStyle=r.an?"#0b241d":f.licht;
+  ctx.fillText(namen[i],r.x+r.w/2,r.y+r.h/2+1);
+ });
+ ctx.restore();
+}
+
 function rundeFlaeche(x,y,w,h,r){
  ctx.beginPath();
  ctx.moveTo(x+r,y);
@@ -638,12 +863,32 @@ leinwand.addEventListener("pointerdown",e=>{
  const r=leinwand.getBoundingClientRect();
  const x=(e.clientX-r.left)/r.width*W;
  const y=(e.clientY-r.top)/r.height*H;
- if(zustand==="bereit"&&Math.hypot(x-kugel.x,y-kugel.y)<40){ einwerfen(); return; }
+ // Kanal oder Kugel: Stift fassen und ziehen
+ if(zustand==="bereit"&&(x>KANAL.x-6||Math.hypot(x-kugel.x,y-kugel.y)<44)){
+  ziehStart=y;
+  zug=0;
+  stiftZiehen();
+  if(leinwand.setPointerCapture){leinwand.setPointerCapture(e.pointerId);}
+  e.preventDefault();
+  return;
+ }
  fluegel(x<W/2,true);
  if(leinwand.setPointerCapture){leinwand.setPointerCapture(e.pointerId);}
 });
-leinwand.addEventListener("pointerup",()=>{ fluegel(true,false); fluegel(false,false); });
-leinwand.addEventListener("pointercancel",()=>{ fluegel(true,false); fluegel(false,false); });
+leinwand.addEventListener("pointermove",e=>{
+ if(ziehStart==null)return;
+ const r=leinwand.getBoundingClientRect();
+ const y=(e.clientY-r.top)/r.height*H;
+ zug=Math.max(0,Math.min(1,(y-ziehStart)/70));
+});
+leinwand.addEventListener("pointerup",()=>{
+ if(ziehStart!=null){ ziehStart=null; stiftLos(); }
+ fluegel(true,false); fluegel(false,false);
+});
+leinwand.addEventListener("pointercancel",()=>{
+ if(ziehStart!=null){ ziehStart=null; stiftLos(); }
+ fluegel(true,false); fluegel(false,false);
+});
 
 ["links","rechts"].forEach(id=>{
  const el=$(id);
@@ -659,13 +904,20 @@ window.addEventListener("keydown",e=>{
  if(e.key==="ArrowRight"||e.key==="l"||e.key==="L"){ fluegel(false,true); e.preventDefault(); }
  if(e.key===" "){
   if(!$("meldung").hidden)$("meldungKnopf").click();
-  else einwerfen();
+  else stiftZiehen();
   e.preventDefault();
  }
 });
 window.addEventListener("keyup",e=>{
  if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A")fluegel(true,false);
  if(e.key==="ArrowRight"||e.key==="l"||e.key==="L")fluegel(false,false);
+ if(e.key===" ")stiftLos();
+});
+
+// Knopf „Stift ziehen“ unter dem Tisch
+$("stift").addEventListener("pointerdown",e=>{ e.preventDefault(); stiftZiehen(); });
+["pointerup","pointerleave","pointercancel"].forEach(typ=>{
+ $("stift").addEventListener(typ,()=>stiftLos());
 });
 
 // Meldung
@@ -678,7 +930,6 @@ function meldung(titel,text,knopf){
 function meldungZu(){ $("meldung").hidden=true; }
 $("meldungKnopf").onclick=()=>{
  neuesSpiel();
- if(zustand==="bereit")einwerfen();
 };
 
 // Automatenwahl
@@ -701,6 +952,7 @@ AUTOMATEN.forEach((a,i)=>{
 baueAutomat(AUTOMATEN[0]);
 neuesSpiel();
 meldung("FLIPPER",automat.tipp+" Drei Kugeln, zwei Flipper – viel Glück.","Los geht's");
+zeichne();
 requestAnimationFrame(zeit=>{ letzteZeit=zeit; runde(zeit); });
 })();
 </script>

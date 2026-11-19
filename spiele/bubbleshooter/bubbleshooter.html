@@ -8,36 +8,93 @@
 <style>
 *{box-sizing:border-box}
 [hidden]{display:none !important}
+
+/* Drei Ansichten, ein Spiel: Schlicht (Grün und Gold), Süß (Zuckerbäckerei in
+   Creme und Rosa) und Hart (Neon-Kanone, dunkles Metall). Die Ansicht färbt
+   die ganze Seite und das Spielfeld; umschaltbar in der Leiste darunter, die
+   Wahl bleibt gespeichert. */
+body[data-stil="schlicht"]{
+ --bg1:#1d4b3e;--bg2:#123329;--bg3:#0a211b;
+ --rahmen:#d9bc7c66;--rahmen-hell:#d9bc7c;--akzent:#e8cd8e;--akzent-text:#0b241d;
+ --feld:#0f2b23;--feld-dunkel:#08120f;--leiste:#0b241d;
+ --text:#efe6d2;--text-leise:#a9c3b6;--titel:#f4e6c2;
+ --akzent-2:#4fb3a0;
+ --radius:8px;--radius-klein:6px;--titel-weite:.06em;
+ --buehne-schatten:#00000088;--schleier:#04100ccc;--kasten-titel:#f1dca8;
+}
+body[data-stil="suess"]{
+ --bg1:#fff7fb;--bg2:#ffe4f0;--bg3:#fbd6e6;
+ --rahmen:#f3a8c6;--rahmen-hell:#ff8fbd;--akzent:#ff7fb2;--akzent-text:#43182c;
+ --feld:#fff8fb;--feld-dunkel:#ffeef6;--leiste:#fff3f8;
+ --text:#5a3244;--text-leise:#a5748c;--titel:#e2537f;
+ --akzent-2:#9d6bff;
+ --radius:18px;--radius-klein:14px;--titel-weite:.12em;
+ --buehne-schatten:#f3a8c633;--schleier:#fff4f9ee;--kasten-titel:#e2537f;
+}
+body[data-stil="hart"]{
+ --bg1:#1c222a;--bg2:#0d1115;--bg3:#040608;
+ --rahmen:#3a4650;--rahmen-hell:#c8ff3d;--akzent:#c8ff3d;--akzent-text:#101403;
+ --feld:#0d1116;--feld-dunkel:#05080b;--leiste:#0a0e12;
+ --text:#dfe7ee;--text-leise:#93a1ad;--titel:#c8ff3d;
+ --akzent-2:#22d3ee;
+ --radius:2px;--radius-klein:2px;--titel-weite:.16em;
+ --buehne-schatten:#000000aa;--schleier:#04070ae6;--kasten-titel:#c8ff3d;
+}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+.fenster{border:1px solid var(--rahmen);border-radius:var(--radius);overflow:hidden;background:var(--feld);
  box-shadow:0 6px 18px #00000055}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--bg1),var(--bg2));border-bottom:1px solid var(--rahmen)}
+.titelleiste .titel{color:var(--titel);font-size:14px;letter-spacing:var(--titel-weite);text-transform:uppercase}
+.titelleiste .kreuz{color:var(--akzent);border:1px solid var(--rahmen);border-radius:var(--radius-klein);
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
-.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
-.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rahmen)}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:var(--radius-klein);
+ border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
+.menueleiste button:hover{filter:brightness(1.15);border-color:var(--rahmen-hell)}
+.menueleiste button.aktiv{background:var(--akzent);color:var(--akzent-text);border-color:var(--akzent);font-weight:bold}
+
+/* Ansichts-Wahl: der gewählte Knopf zeigt schon seine eigene Farbe. */
+.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;
+ background:var(--leiste);border-bottom:1px solid var(--rahmen)}
+.stilwahl .stil-titel{font-size:12px;color:var(--text-leise);letter-spacing:.08em;
+ text-transform:uppercase;margin-right:2px}
+.stilwahl button{font-family:inherit;font-size:13px;padding:6px 11px;border-radius:var(--radius-klein);
+ border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
+.stilwahl button:hover{filter:brightness(1.12);border-color:var(--rahmen-hell)}
+.stilwahl button[data-stil="schlicht"].aktiv{background:var(--akzent);color:var(--akzent-text);
+ border-color:var(--akzent);font-weight:bold}
+.stilwahl button[data-stil="suess"].aktiv{background:linear-gradient(#ffd0e4,#ff9ec4);color:#43182c;
+ border-color:#ff9ec4;font-weight:bold}
+.stilwahl button[data-stil="hart"].aktiv{background:#c8ff3d;color:#101403;border-color:#c8ff3d;font-weight:bold}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--text-leise);background:var(--leiste);border-bottom:1px solid var(--rahmen)}
+.statuszeile b{color:var(--akzent);font-weight:normal}
 
 .buehne{position:relative;padding:8px;display:flex;justify-content:center;align-items:flex-start;
- gap:6px;background:#08120f}
+ gap:6px;background:var(--feld-dunkel)}
+/* Im Duell liegen zwei Felder nebeneinander: mehr Luft dazwischen, ein eigener
+   Rahmen je Feld und eine Bühne, die die beiden Felder umschließt statt über
+   die ganze Fensterbreite zu laufen. */
+.buehne.duell{gap:14px;background:var(--feld)}
+/* Am Handy zählt jeder Pixel Feldbreite: schmale Ränder, kleinerer Abstand –
+   die Ringe um die Felder halten sie trotzdem auseinander. */
+@media (max-width:480px){
+ body{padding:4px 4px 14px}
+ .buehne.duell{padding:3px;gap:8px}
+}
 .buehne canvas{display:block;width:100%;height:auto;
- border-radius:8px;touch-action:none;box-shadow:inset 0 0 40px #00000088}
-.buehne.duell canvas{max-width:196px;border-radius:6px}
+ border-radius:var(--radius);touch-action:none;box-shadow:inset 0 0 40px var(--buehne-schatten)}
+.buehne.duell canvas{max-width:196px;border-radius:var(--radius-klein);
+ box-shadow:0 0 0 1px var(--rahmen), inset 0 0 40px var(--buehne-schatten)}
 /* Feld samt Schussknopf soll ohne Scrollen ins Bild passen. Die Breite folgt
    der Fensterhöhe, damit das Seitenverhältnis der Kugeln erhalten bleibt
    (Feld 400×600, im Duell 196×560). */
@@ -47,40 +104,45 @@ main{max-width:760px;margin:auto}
 
 /* Schussknopf: Geschossen wird nur hier, nicht beim Tippen ins Feld. */
 .schuss{display:block;width:100%;margin-top:6px;padding:13px 8px;
- border:1px solid #e8cd8e;border-radius:9px;background:#e8cd8e;color:#0b241d;
+ border:1px solid var(--rahmen-hell);border-radius:calc(var(--radius) + 1px);background:var(--akzent);color:var(--akzent-text);
  font-family:inherit;font-size:15px;font-weight:bold;letter-spacing:.12em;
  cursor:pointer;touch-action:manipulation}
-.schuss:hover{background:#f1dca8}
+.schuss:hover{filter:brightness(1.08)}
 .schuss:active{transform:scale(.98)}
 .buehne.duell .schuss{font-size:13px;letter-spacing:.06em;padding:15px 4px}
-.brettkopf{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:#a9c3b6;padding:0 2px}
-.brettkopf b{color:#e8cd8e;font-weight:normal}
+.brettkopf{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--text-leise);padding:0 2px 3px}
+.brettkopf b{color:var(--akzent);font-weight:normal}
+/* Jedes Feld trägt seine Spielerfarbe als Unterstrich – links Akzent, rechts die
+   zweite Farbe der Ansicht, damit man die Felder nicht verwechselt. */
+.buehne.duell #kopf1{border-bottom:2px solid var(--akzent)}
+.buehne.duell #kopf2{border-bottom:2px solid var(--akzent-2)}
+.buehne.duell #kopf2 b{color:var(--akzent-2)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ background:var(--schleier);border-radius:var(--radius);padding:14px;text-align:center}
+.meldung .kasten{background:var(--feld);border:1px solid var(--rahmen-hell);border-radius:calc(var(--radius) + 2px);padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--kasten-titel);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--text);font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:var(--radius-klein);cursor:pointer;
+ border:1px solid var(--rahmen-hell);background:var(--akzent);color:var(--akzent-text);font-weight:bold}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--text-leise);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--akzent);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--text)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--kasten-titel);font-weight:normal}
+.klein{color:var(--text-leise);font-size:13px}
+a{color:var(--akzent)}
 .meldung-knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
-.meldung-knoepfe button.still{background:#0f2b23;color:#f1dca8;border-color:#d9bc7c66}
+.meldung-knoepfe button.still{background:var(--feld);color:var(--kasten-titel);border-color:var(--rahmen)}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <script src="/spiele/token.js"></script>
 </head>
-<body>
+<body data-stil="schlicht">
 <main class="fenster">
  <div class="titelleiste">
   <span class="titel">Bubble Shooter</span>
@@ -91,6 +153,13 @@ a{color:#e8cd8e}
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnSolo" class="aktiv">1 Spieler</button>
   <button id="btnDuell">2 Spieler</button>
+ </div>
+
+ <div class="stilwahl" id="stilwahl">
+  <span class="stil-titel">Ansicht</span>
+  <button type="button" data-stil="schlicht" class="aktiv">Schlicht</button>
+  <button type="button" data-stil="suess">Süß</button>
+  <button type="button" data-stil="hart">Hart</button>
  </div>
 
  <div class="statuszeile">
@@ -120,7 +189,7 @@ a{color:#e8cd8e}
  </div>
 
  <div class="fuss">
-  <span id="hinweis">Finger ins Feld setzen oder ziehen: Richtung wählen. Geschossen wird mit SCHIESSEN darunter.</span>
+  <span id="hinweis">Ins Feld tippen oder ziehen: Richtung einstellen – sie bleibt, bis du neu ziehst. Geschossen wird mit SCHIESSEN darunter.</span>
  </div>
 
  <details id="regeln">
@@ -132,6 +201,7 @@ a{color:#e8cd8e}
    <li><b>Absturz:</b> Kugeln, die nach dem Platzen keinen Halt mehr an der Decke haben, fallen herunter und bringen Extrapunkte.</li>
    <li><b>Nachschub:</b> Nach je acht Schüssen schiebt sich oben eine neue Reihe nach. Berührt eine Kugel die goldene Linie, ist das Spiel vorbei.</li>
    <li><b>Tasten:</b> Pfeiltasten links/rechts zielen, Leertaste oder Pfeil nach oben schießt.</li>
+   <li><b>Ansicht:</b> Schlicht (Grün und Gold), Süß (Zuckerbäckerei mit Glitzer) oder Hart (Neon-Kanone mit Warnstreifen). Die Ansicht ist reine Anzeige – gespielt wird überall dasselbe, die Wahl bleibt gespeichert.</li>
    <li><b>Zwei Spieler:</b> Jeder hat sein eigenes Feld. Wer zuerst die goldene Linie überschreitet, verliert – der andere gewinnt.</li>
   </ol>
   <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
@@ -142,7 +212,457 @@ a{color:#e8cd8e}
 (() => {
 const $=id=>document.getElementById(id);
 
-const FARBEN=["#4fb3a0","#e8cd8e","#6f9fd8","#d98b8b","#a58bd8"];
+/* ---------------------------------------------------------------- Ansichten */
+
+/* Drei Ansichten, ein Spiel. „Schlicht“ bleibt die ruhige grün-goldene Fassung.
+   „Süß“ ist eine Zuckerbäckerei: helle Creme, glänzende Fruchtbonbons mit
+   weißem Zuckerrrand, aufsteigende Glitzerpunkte, eine Zuckerguss-Linie als
+   Warnlinie. „Hart“ ist eine Neon-Kanone: dunkles Metall, grelle Leuchtfarben,
+   Laser-Ziellinie und rote Warnstreifen. Gezeichnet wird in allen drei mit
+   denselben Maßen – nur Farbe und Schmuck ändern sich, die Regeln nicht. */
+const STILE={
+ schlicht:{
+  name:"Schlicht",
+  farbe:"#0b241d",
+  farben:["#4fb3a0","#e8cd8e","#6f9fd8","#d98b8b","#a58bd8"],
+  text:"#a9c3b6",
+  schrift:"Georgia,serif",
+  rahmen:"#d9bc7c44",
+  hintergrund(g,W,H){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#123f31");
+   v.addColorStop(.6,"#0c2c23");
+   v.addColorStop(1,"#071912");
+   g.fillStyle=v;
+   g.fillRect(0,0,W,H);
+   g.fillStyle="#ffffff0d";
+   for(let i=0;i<26;i++)g.fillRect((i*79)%W,(i*137)%(H-120),2,2);
+  },
+  ziel(g,punkte){
+   g.save();
+   g.setLineDash([5,7]);
+   g.strokeStyle="#e8cd8ecc";
+   g.lineWidth=2;
+   g.beginPath();
+   for(let i=0;i<punkte.length;i+=2){
+    const [x,y]=punkte[i];
+    if(i===0)g.moveTo(x,y); else g.lineTo(x,y);
+   }
+   g.stroke();
+   g.restore();
+   if(punkte.length){
+    const [ex,ey]=punkte[punkte.length-1];
+    g.fillStyle="#e8cd8e55";
+    g.beginPath();
+    g.arc(ex,ey,6,0,Math.PI*2);
+    g.fill();
+   }
+  },
+  tod(g,W,TOD){
+   g.save();
+   g.setLineDash([8,6]);
+   g.strokeStyle="#d9bc7c";
+   g.globalAlpha=.55;
+   g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(0,TOD);
+   g.lineTo(W,TOD);
+   g.stroke();
+   g.restore();
+  },
+  kanone(g,cx,cy,R,winkel){
+   g.save();
+   g.translate(cx,cy);
+   g.rotate(winkel);
+   g.fillStyle="#123a2d";
+   g.strokeStyle="#d9bc7c88";
+   g.lineWidth=2;
+   g.beginPath();
+   g.roundRect(-7,-R*2.1,14,R*2.1,5);
+   g.fill();
+   g.stroke();
+   g.restore();
+   g.save();
+   g.setLineDash([4,7]);
+   g.strokeStyle="#d9bc7c99";
+   g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(cx+Math.sin(winkel)*(R*1.9+10),cy-Math.cos(winkel)*(R*1.9+10));
+   g.lineTo(cx+Math.sin(winkel)*(R*1.9+96),cy-Math.cos(winkel)*(R*1.9+96));
+   g.stroke();
+   g.restore();
+   g.fillStyle="#1a4a3a";
+   g.strokeStyle="#d9bc7c99";
+   g.lineWidth=2;
+   g.beginPath();
+   g.arc(cx,cy,R*0.95,0,Math.PI*2);
+   g.fill();
+   g.stroke();
+  },
+  kugel(g,x,y,r,farbe){
+   const v=g.createRadialGradient(x-r*0.35,y-r*0.4,r*0.12,x,y,r*1.05);
+   v.addColorStop(0,hell(farbe,0.55));
+   v.addColorStop(.58,farbe);
+   v.addColorStop(1,dunkel(farbe,0.5));
+   g.fillStyle=v;
+   g.beginPath();
+   g.arc(x,y,r,0,Math.PI*2);
+   g.fill();
+   g.strokeStyle="#06141088";
+   g.lineWidth=1.4;
+   g.stroke();
+   g.fillStyle="#ffffff55";
+   g.beginPath();
+   g.arc(x-r*0.32,y-r*0.38,r*0.22,0,Math.PI*2);
+   g.fill();
+  }
+ },
+
+ suess:{
+  name:"Süß",
+  farbe:"#fff3f8",
+  farben:["#ff5f9e","#ffc02e","#2fd0b0","#9d6bff","#ff8a45"],
+  text:"#8a5068",
+  schrift:"Georgia,serif",
+  rahmen:"#f3a8c6",
+  hintergrund(g,W,H,t){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#fffafd");
+   v.addColorStop(.5,"#ffeaf4");
+   v.addColorStop(1,"#fbd7e8");
+   g.fillStyle=v;
+   g.fillRect(0,0,W,H);
+   // Zartes Konfetti statt großer Wolken: kleine Punkte, die nicht wie
+   // Flecken wirken, sondern wie Zuckerstreusel im Hintergrund.
+   for(let i=0;i<16;i++){
+    const cx2=(i*53+17)%W;
+    const cy2=(i*79+31)%H;
+    g.fillStyle=(i%3===0?"#ffc2dc66":i%3===1?"#cfe9ff66":"#ffe6a866");
+    g.beginPath();
+    g.arc(cx2,cy2,2.6,0,Math.PI*2);
+    g.fill();
+   }
+   // Aufsteigendes Glitzer – das Feld lebt ein wenig
+   for(let i=0;i<8;i++){
+    const sx=(i*61+Math.sin(t*.7+i)*8)%W;
+    const sy=H-((i*97+t*22)%(H+40));
+    const r2=1.5+(i%3)*0.6;
+    g.fillStyle=(i%2?"#ff9ec4":"#9ad7ff")+"33";
+    g.beginPath();
+    g.arc(sx,sy,r2*2.6,0,Math.PI*2);
+    g.fill();
+    g.fillStyle="#ffffffe0";
+    g.beginPath();
+    g.arc(sx,sy,r2,0,Math.PI*2);
+    g.fill();
+   }
+  },
+  ziel(g,punkte){
+   g.save();
+   g.lineCap="round";
+   g.setLineDash([3,9]);
+   g.beginPath();
+   for(let i=0;i<punkte.length;i+=2){
+    const [x,y]=punkte[i];
+    if(i===0)g.moveTo(x,y); else g.lineTo(x,y);
+   }
+   g.strokeStyle="#ffffffcc";
+   g.lineWidth=5;
+   g.stroke();
+   g.strokeStyle="#f2568f";
+   g.lineWidth=2.4;
+   g.stroke();
+   g.restore();
+   if(punkte.length){
+    const [ex,ey]=punkte[punkte.length-1];
+    g.fillStyle="#ffffffee";
+    g.beginPath();
+    g.arc(ex,ey,7,0,Math.PI*2);
+    g.fill();
+    g.fillStyle="#ff77ad";
+    g.beginPath();
+    g.arc(ex,ey,4,0,Math.PI*2);
+    g.fill();
+   }
+  },
+  tod(g,W,TOD){
+   // Zuckerguss: kräftige rosa Linie mit weißen Zacken, damit sie als
+   // Warnlinie sofort ins Auge fällt
+   g.save();
+   g.lineCap="round";
+   g.strokeStyle="#f2568f";
+   g.lineWidth=4;
+   g.beginPath();
+   g.moveTo(0,TOD);
+   g.lineTo(W,TOD);
+   g.stroke();
+   g.setLineDash([10,9]);
+   g.strokeStyle="#ffffffee";
+   g.lineWidth=2.2;
+   g.stroke();
+   g.restore();
+  },
+  kanone(g,cx,cy,R,winkel){
+   g.save();
+   g.translate(cx,cy);
+   g.rotate(winkel);
+   const v=g.createLinearGradient(0,-R*2.1,0,0);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(1,"#ffd0e4");
+   g.fillStyle=v;
+   g.strokeStyle="#ff8fbd";
+   g.lineWidth=2.4;
+   g.beginPath();
+   g.roundRect(-8,-R*2.15,16,R*2.15,7);
+   g.fill();
+   g.stroke();
+   // Zuckerguss am Rohr
+   g.strokeStyle="#ff9ec4cc";
+   g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(-5,-R*1.6);
+   g.lineTo(5,-R*1.5);
+   g.moveTo(-5,-R*1.0);
+   g.lineTo(5,-R*0.9);
+   g.stroke();
+   g.restore();
+   // weiche Ziellinie
+   g.save();
+   g.lineCap="round";
+   g.setLineDash([1,9]);
+   g.strokeStyle="#ff8fbdcc";
+   g.lineWidth=4;
+   g.beginPath();
+   g.moveTo(cx+Math.sin(winkel)*(R*1.9+10),cy-Math.cos(winkel)*(R*1.9+10));
+   g.lineTo(cx+Math.sin(winkel)*(R*1.9+96),cy-Math.cos(winkel)*(R*1.9+96));
+   g.stroke();
+   g.restore();
+   // Sockel wie ein Cupcake
+   const s=g.createRadialGradient(cx-R*.3,cy-R*.4,2,cx,cy,R*1.1);
+   s.addColorStop(0,"#ffffff");
+   s.addColorStop(1,"#ffb8d5");
+   g.fillStyle=s;
+   g.strokeStyle="#ff8fbd";
+   g.lineWidth=2.4;
+   g.beginPath();
+   g.arc(cx,cy,R*0.95,0,Math.PI*2);
+   g.fill();
+   g.stroke();
+   // Streusel
+   const streusel=[[-0.35,0.2,"#ff77ad"],[0.3,0.35,"#63dcc0"],[0.05,-0.35,"#ffcf4d"],[-0.15,0.5,"#b48cff"]];
+   for(const [dx,dy,ton] of streusel){
+    g.fillStyle=ton;
+    g.beginPath();
+    g.arc(cx+dx*R,cy+dy*R,1.8,0,Math.PI*2);
+    g.fill();
+   }
+  },
+  kugel(g,x,y,r,farbe){
+   // Zuckerglanz um die Kugel
+   g.fillStyle=farbe+"33";
+   g.beginPath();
+   g.arc(x,y,r*1.28,0,Math.PI*2);
+   g.fill();
+   // Bonbonkörper: nur ein kleiner weißer Glanz, damit die Farbe trägt
+   const v=g.createRadialGradient(x-r*0.4,y-r*0.44,r*0.06,x,y,r*1.02);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.2,hell(farbe,0.26));
+   v.addColorStop(.62,farbe);
+   v.addColorStop(1,dunkel(farbe,0.22));
+   g.fillStyle=v;
+   g.beginPath();
+   g.arc(x,y,r,0,Math.PI*2);
+   g.fill();
+   g.strokeStyle="#ffffffe6";
+   g.lineWidth=2.2;
+   g.stroke();
+   g.fillStyle="#ffffffe0";
+   g.beginPath();
+   g.arc(x-r*0.34,y-r*0.38,r*0.2,0,Math.PI*2);
+   g.fill();
+   g.fillStyle="#ffffff88";
+   g.beginPath();
+   g.arc(x+r*0.34,y+r*0.22,r*0.12,0,Math.PI*2);
+   g.fill();
+  }
+ },
+
+ hart:{
+  name:"Hart",
+  farbe:"#070a0d",
+  farben:["#39ff88","#22d3ee","#ff2d95","#ffb020","#a855f7"],
+  text:"#b8c6d2",
+  schrift:"Arial Narrow,Arial,Helvetica,sans-serif",
+  rahmen:"#3a4650aa",
+  hintergrund(g,W,H,R,t){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#0b1014");
+   v.addColorStop(.55,"#060a0d");
+   v.addColorStop(1,"#030507");
+   g.fillStyle=v;
+   g.fillRect(0,0,W,H);
+   // feines Raster wie auf einem Messgerät
+   g.strokeStyle="#1b323a44";
+   g.lineWidth=1;
+   g.beginPath();
+   for(let x=0;x<W;x+=28){ g.moveTo(x+.5,0); g.lineTo(x+.5,H); }
+   for(let y=0;y<H;y+=28){ g.moveTo(0,y+.5); g.lineTo(W,y+.5); }
+   g.stroke();
+   // Spannung am unteren Rand
+   const p=.55+.2*Math.sin(t*1.6);
+   const s=g.createRadialGradient(W/2,H+R*2,10,W/2,H+R*2,R*11);
+   s.addColorStop(0,"#22d3ee"+Math.round(p*46).toString(16).padStart(2,"0"));
+   s.addColorStop(1,"#22d3ee00");
+   g.fillStyle=s;
+   g.fillRect(0,H-R*9,W,R*9);
+  },
+  ziel(g,punkte){
+   g.save();
+   g.lineCap="round";
+   g.beginPath();
+   for(let i=0;i<punkte.length;i+=2){
+    const [x,y]=punkte[i];
+    if(i===0)g.moveTo(x,y); else g.lineTo(x,y);
+   }
+   g.strokeStyle="#9dff5e22";
+   g.lineWidth=4.5;
+   g.stroke();
+   g.setLineDash([5,10]);
+   g.strokeStyle="#c8ff3daa";
+   g.lineWidth=1.2;
+   g.stroke();
+   g.restore();
+   if(punkte.length){
+    const [ex,ey]=punkte[punkte.length-1];
+    g.save();
+    g.translate(ex,ey);
+    g.rotate(Math.PI/4);
+    g.fillStyle="#c8ff3d";
+    g.fillRect(-4,-4,8,8);
+    g.strokeStyle="#06110a";
+    g.lineWidth=1.4;
+    g.strokeRect(-4,-4,8,8);
+    g.restore();
+   }
+  },
+  tod(g,W,TOD,t){
+   const puls=.7+.3*Math.sin(t*2.2);
+   g.save();
+   g.strokeStyle="#ff3b30";
+   g.globalAlpha=.16*puls;
+   g.lineWidth=9;
+   g.beginPath();
+   g.moveTo(0,TOD);
+   g.lineTo(W,TOD);
+   g.stroke();
+   g.globalAlpha=.95;
+   g.setLineDash([16,10]);
+   g.lineWidth=3;
+   g.stroke();
+   g.restore();
+  },
+  kanone(g,cx,cy,R,winkel){
+   g.save();
+   g.translate(cx,cy);
+   g.rotate(winkel);
+   const v=g.createLinearGradient(-8,0,8,0);
+   v.addColorStop(0,"#0c1116");
+   v.addColorStop(.45,"#3a4650");
+   v.addColorStop(1,"#0c1116");
+   g.fillStyle=v;
+   g.strokeStyle="#7f8c99";
+   g.lineWidth=2;
+   g.beginPath();
+   g.roundRect(-8,-R*2.2,16,R*2.2,2);
+   g.fill();
+   g.stroke();
+   g.strokeStyle="#c8ff3d";
+   g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(-5,-R*2.05);
+   g.lineTo(5,-R*2.05);
+   g.stroke();
+   g.restore();
+   // Laser-Ziellinie
+   g.save();
+   g.strokeStyle="#c8ff3dcc";
+   g.lineWidth=2;
+   g.beginPath();
+   g.moveTo(cx+Math.sin(winkel)*(R*1.9+10),cy-Math.cos(winkel)*(R*1.9+10));
+   g.lineTo(cx+Math.sin(winkel)*(R*1.9+96),cy-Math.cos(winkel)*(R*1.9+96));
+   g.stroke();
+   g.restore();
+   // Metall-Sockel
+   const s=g.createLinearGradient(cx,cy-R,cx,cy+R);
+   s.addColorStop(0,"#39434e");
+   s.addColorStop(1,"#080c10");
+   g.fillStyle=s;
+   g.strokeStyle="#7f8c99";
+   g.lineWidth=2;
+   g.beginPath();
+   g.arc(cx,cy,R*0.95,0,Math.PI*2);
+   g.fill();
+   g.stroke();
+   g.strokeStyle="#c8ff3d66";
+   g.lineWidth=1.6;
+   g.beginPath();
+   g.arc(cx,cy,R*0.66,0,Math.PI*2);
+   g.stroke();
+   for(let i=0;i<3;i++){
+    const a=-Math.PI/2+i*Math.PI*2/3;
+    g.fillStyle="#c8ff3d99";
+    g.beginPath();
+    g.arc(cx+Math.cos(a)*R*0.8,cy+Math.sin(a)*R*0.8,1.7,0,Math.PI*2);
+    g.fill();
+   }
+  },
+  kugel(g,x,y,r,farbe){
+   // Leuchthof
+   g.fillStyle=farbe+"1f";
+   g.beginPath();
+   g.arc(x,y,r*1.24,0,Math.PI*2);
+   g.fill();
+   const v=g.createRadialGradient(x-r*0.4,y-r*0.45,r*0.08,x,y,r*1.02);
+   v.addColorStop(0,hell(farbe,0.85));
+   v.addColorStop(.5,farbe);
+   v.addColorStop(1,dunkel(farbe,0.72));
+   g.fillStyle=v;
+   g.beginPath();
+   g.arc(x,y,r,0,Math.PI*2);
+   g.fill();
+   g.strokeStyle="#000000cc";
+   g.lineWidth=1.6;
+   g.stroke();
+   // harter Lichtreflex
+   g.strokeStyle="#ffffffaa";
+   g.lineWidth=1.4;
+   g.beginPath();
+   g.arc(x,y,r*0.66,Math.PI*1.05,Math.PI*1.55);
+   g.stroke();
+   g.fillStyle="#ffffffee";
+   g.beginPath();
+   g.arc(x-r*0.28,y-r*0.32,r*0.24,0,Math.PI*2);
+   g.fill();
+  }
+ }
+};
+
+let stilWahl="schlicht";
+try{ const gespeichert=localStorage.getItem("bubble-stil"); if(STILE[gespeichert])stilWahl=gespeichert; }catch(e){}
+const STIL=()=>STILE[stilWahl]||STILE.schlicht;
+
+function stilSetzen(neu){
+ if(!STILE[neu])return;
+ stilWahl=neu;
+ document.body.dataset.stil=neu;
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta)meta.content=STILE[neu].farbe;
+ document.querySelectorAll("#stilwahl button").forEach(b=>{
+  b.classList.toggle("aktiv",b.dataset.stil===neu);
+ });
+ try{ localStorage.setItem("bubble-stil",neu); }catch(e){}
+ bretter.forEach(({brett})=>brett.zeichne());
+}
 const TEMPO=8.5;          // Kugelgeschwindigkeit pro Frame
 const WINKEL_MAX=1.32;    // maximale Neigung in Radiant
 
@@ -456,118 +976,53 @@ function Brett(canvas,opt){
  }
 
  function kugel(x,y,rr,farbe){
-  const g=ctx.createRadialGradient(x-rr*0.35,y-rr*0.4,rr*0.12,x,y,rr*1.05);
-  g.addColorStop(0,hell(farbe,0.55));
-  g.addColorStop(.58,farbe);
-  g.addColorStop(1,dunkel(farbe,0.5));
-  ctx.fillStyle=g;
-  ctx.beginPath();
-  ctx.arc(x,y,rr,0,Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle="#06141088";
-  ctx.lineWidth=1.4;
-  ctx.stroke();
-  ctx.fillStyle="#ffffff55";
-  ctx.beginPath();
-  ctx.arc(x-rr*0.32,y-rr*0.38,rr*0.22,0,Math.PI*2);
-  ctx.fill();
+  STIL().kugel(ctx,x,y,rr,farbe);
  }
 
  function zeichne(){
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"#123f31");
-  g.addColorStop(.6,"#0c2c23");
-  g.addColorStop(1,"#071912");
-  ctx.fillStyle=g;
-  ctx.fillRect(0,0,W,H);
+  const st=STIL();
+  const farben=st.farben;
+  const t=performance.now()/1000;
 
-  // Sterne
-  ctx.fillStyle="#ffffff0d";
-  for(let i=0;i<26;i++)ctx.fillRect((i*79)%W,(i*137)%(H-120),2,2);
+  st.hintergrund(ctx,W,H,R,t);
 
-  // Ziellinie
-  if(zustand==="laeuft"){
-   const linie=zielLinie();
-   ctx.save();
-   ctx.setLineDash([5,7]);
-   ctx.strokeStyle="#e8cd8ecc";
-   ctx.lineWidth=2;
-   ctx.beginPath();
-   for(let i=0;i<linie.length;i+=2){
-    const [x,y]=linie[i];
-    if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
-   }
-   ctx.stroke();
-   ctx.restore();
-   if(linie.length){
-    const [ex,ey]=linie[linie.length-1];
-    ctx.fillStyle="#e8cd8e55";
-    ctx.beginPath();
-    ctx.arc(ex,ey,6,0,Math.PI*2);
-    ctx.fill();
-   }
-  }
+  // Ziellinie (simulierte Flugbahn samt Abpraller)
+  if(zustand==="laeuft") st.ziel(ctx,zielLinie());
 
   // Kugeln
   for(let r=0;r<feld.length;r++){
    for(let c=0;c<SP;c++){
     const f=feld[r].z[c];
     if(f==null)continue;
-    kugel(zelleX(r,c),zelleY(r),R-1,FARBEN[f]);
+    kugel(zelleX(r,c),zelleY(r),R-1,farben[f]);
    }
   }
 
-  // goldene Linie
-  ctx.save();
-  ctx.setLineDash([8,6]);
-  ctx.strokeStyle="#d9bc7c";
-  ctx.globalAlpha=.55;
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(0,TOD);
-  ctx.lineTo(W,TOD);
-  ctx.stroke();
-  ctx.restore();
+  // Verlustlinie (goldene Linie) – je Ansicht anders betont
+  st.tod(ctx,W,TOD,t);
 
-  // Kanone
+  // Kanone samt Ziellinie und Sockel – Form und Farbe je Ansicht
   const cx=W/2, cy=SCHUSS_Y;
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate(winkel);
-  ctx.fillStyle="#123a2d";
-  ctx.strokeStyle="#d9bc7c88";
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.roundRect(-7,-R*2.1,14,R*2.1,5);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-  ctx.fillStyle="#1a4a3a";
-  ctx.strokeStyle="#d9bc7c99";
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.arc(cx,cy,R*0.95,0,Math.PI*2);
-  ctx.fill();
-  ctx.stroke();
+  st.kanone(ctx,cx,cy,R,winkel);
 
   // aktuelle Kugel im Rohr
   if(zustand!=="ende"){
-   kugel(cx+Math.sin(winkel)*R*1.9,cy-Math.cos(winkel)*R*1.9,R*0.82,FARBEN[aktuell]);
+   kugel(cx+Math.sin(winkel)*R*1.9,cy-Math.cos(winkel)*R*1.9,R*0.82,farben[aktuell]);
   }
 
   // nächste Kugel an der Seite
   if(W>260){
-   ctx.fillStyle="#a9c3b6";
-   ctx.font="11px Georgia,serif";
+   ctx.fillStyle=st.text;
+   ctx.font="11px "+st.schrift;
    ctx.textAlign="center";
    ctx.fillText("Nächste",W-32,cy-24);
-   kugel(W-32,cy-2,R*0.68,FARBEN[naechste]);
+   kugel(W-32,cy-2,R*0.68,farben[naechste]);
   }
 
   // fliegende Kugel
-  if(schuss)kugel(schuss.x,schuss.y,R*0.86,FARBEN[schuss.farbe]);
+  if(schuss)kugel(schuss.x,schuss.y,R*0.86,farben[schuss.farbe]);
 
-  ctx.strokeStyle="#d9bc7c44";
+  ctx.strokeStyle=st.rahmen;
   ctx.lineWidth=3;
   ctx.strokeRect(1.5,1.5,W-3,H-3);
  }
@@ -663,7 +1118,7 @@ function spielAufbauen(){
   $("meldungTitel").textContent="BUBBLE SHOOTER";
   $("meldungText").textContent="Ziele mit dem Finger im Feld und schieße mit dem Knopf darunter. Drei gleiche Farben platzen.";
   $("meldungKnopf").textContent="Starten";
-  $("hinweis").textContent="Finger ins Feld setzen oder ziehen: Richtung wählen. Geschossen wird mit SCHIESSEN darunter.";
+  $("hinweis").textContent="Ins Feld tippen oder ziehen: Richtung einstellen – sie bleibt, bis du neu ziehst. Geschossen wird mit SCHIESSEN darunter.";
  }else{
   $("buehne").classList.add("duell");
   $("wrap1").hidden=false;
@@ -704,16 +1159,29 @@ function verbinden(){
     y:(e.clientY-r.top)/r.height*brett.H
    };
   };
-  // Im Feld wird nur gezielt: Antippen setzt die Richtung, Ziehen korrigiert sie.
+  // Im Feld wird nur gezielt: Antippen oder Ziehen setzt die Richtung, danach
+  // bleibt sie stehen – auch wenn der Zeiger zum Schussknopf weiterwandert.
   // Geschossen wird ausschließlich mit dem Knopf unter dem eigenen Feld.
+  let zieht=false;
   canvas.onpointerdown=e=>{
-   brett.zielen(zeigerPos(e).x,zeigerPos(e).y);
+   zieht=true;
+   try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+   const p=zeigerPos(e);
+   brett.zielen(p.x,p.y);
    e.preventDefault();
   };
   canvas.onpointermove=e=>{
+   if(!zieht)return;               // ohne Druck zielt der Zeiger nicht mit
    const p=zeigerPos(e);
    brett.zielen(p.x,p.y);
   };
+  const ziehenEnde=e=>{
+   zieht=false;
+   try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+  };
+  canvas.onpointerup=ziehenEnde;
+  canvas.onpointercancel=ziehenEnde;
+  canvas.onpointerleave=e=>{ if(!zieht)return; };
   const knopf=$("schuss"+(i+1));
   if(knopf)knopf.onpointerdown=e=>{
    e.preventDefault();
@@ -1001,6 +1469,11 @@ $("btnDuell").onclick=()=>{
  $("btnSolo").classList.remove("aktiv");
  spielAufbauen();
 };
+
+stilSetzen(stilWahl);
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.onclick=()=>stilSetzen(b.dataset.stil);
+});
 
 rekord=rekordLaden();
 spielAufbauen();

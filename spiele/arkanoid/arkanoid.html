@@ -8,60 +8,103 @@
 <style>
 *{box-sizing:border-box}
 [hidden]{display:none !important}
+
+/* Drei Ansichten, ein Spiel: Klassisch (Grün und Gold), Mädchen (Rosen und
+   Creme mit Herzen) und Jungs (Neon und Stahl). Die Ansicht färbt die ganze
+   Seite und das Spielfeld; umschaltbar in der Leiste darunter, die Wahl
+   bleibt gespeichert. */
+body[data-stil="klassisch"]{
+ --bg1:#1d4b3e;--bg2:#123329;--bg3:#0a211b;
+ --rahmen:#d9bc7c66;--rahmen-hell:#d9bc7c;--akzent:#e8cd8e;--akzent-text:#0b241d;
+ --feld:#0f2b23;--feld-dunkel:#08120f;--leiste:#0b241d;
+ --text:#efe6d2;--text-leise:#a9c3b6;--titel:#f4e6c2;
+ --radius:8px;--radius-klein:6px;--titel-weite:.06em;
+ --buehne-schatten:#00000088;--schleier:#04100ccc;--kasten-titel:#f1dca8;--gut:#e8cd8e;
+}
+body[data-stil="maedchen"]{
+ --bg1:#fff7fb;--bg2:#ffe4f0;--bg3:#fbd6e6;
+ --rahmen:#f3a8c6;--rahmen-hell:#ff8fbd;--akzent:#ff7fb2;--akzent-text:#43182c;
+ --feld:#fff8fb;--feld-dunkel:#ffeef6;--leiste:#fff3f8;
+ --text:#5a3244;--text-leise:#a5748c;--titel:#e2537f;
+ --radius:18px;--radius-klein:14px;--titel-weite:.12em;
+ --buehne-schatten:#f3a8c633;--schleier:#fff4f9ee;--kasten-titel:#e2537f;--gut:#c2456f;
+}
+body[data-stil="jungs"]{
+ --bg1:#1c222a;--bg2:#0d1115;--bg3:#040608;
+ --rahmen:#3a4650;--rahmen-hell:#c8ff3d;--akzent:#c8ff3d;--akzent-text:#101403;
+ --feld:#0d1116;--feld-dunkel:#05080b;--leiste:#0a0e12;
+ --text:#dfe7ee;--text-leise:#93a1ad;--titel:#c8ff3d;
+ --radius:2px;--radius-klein:2px;--titel-weite:.16em;
+ --buehne-schatten:#000000aa;--schleier:#04070ae6;--kasten-titel:#c8ff3d;--gut:#b8c6d2;
+}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+.fenster{border:1px solid var(--rahmen);border-radius:var(--radius);overflow:hidden;background:var(--feld);
  box-shadow:0 6px 18px #00000055}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--bg1),var(--bg2));border-bottom:1px solid var(--rahmen)}
+.titelleiste .titel{color:var(--titel);font-size:14px;letter-spacing:var(--titel-weite);text-transform:uppercase}
+.titelleiste .kreuz{color:var(--akzent);border:1px solid var(--rahmen);border-radius:var(--radius-klein);
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
-.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rahmen)}
+.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:var(--radius-klein);
+ border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
+.menueleiste button:hover{filter:brightness(1.15);border-color:var(--rahmen-hell)}
 .menueleiste .rechts{margin-left:auto;display:flex;gap:4px}
 
-.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+/* Ansichts-Wahl: der gewählte Knopf zeigt schon seine eigene Farbe. */
+.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;
+ background:var(--leiste);border-bottom:1px solid var(--rahmen)}
+.stilwahl .stil-titel{font-size:12px;color:var(--text-leise);letter-spacing:.08em;
+ text-transform:uppercase;margin-right:2px}
+.stilwahl button{font-family:inherit;font-size:13px;padding:6px 11px;border-radius:var(--radius-klein);
+ border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
+.stilwahl button:hover{filter:brightness(1.12);border-color:var(--rahmen-hell)}
+.stilwahl button[data-stil="klassisch"].aktiv{background:var(--akzent);color:var(--akzent-text);
+ border-color:var(--akzent);font-weight:bold}
+.stilwahl button[data-stil="maedchen"].aktiv{background:linear-gradient(#ffd0e4,#ff9ec4);color:#43182c;
+ border-color:#ff9ec4;font-weight:bold}
+.stilwahl button[data-stil="jungs"].aktiv{background:#c8ff3d;color:#101403;border-color:#c8ff3d;font-weight:bold}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
-canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px #00000088}
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:var(--text-leise);background:var(--leiste);border-bottom:1px solid var(--rahmen)}
+.statuszeile b{color:var(--akzent);font-weight:normal}
+
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--feld-dunkel)}
+canvas{display:block;width:100%;height:auto;border-radius:var(--radius);touch-action:none;
+ box-shadow:inset 0 0 40px var(--buehne-schatten)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ background:var(--schleier);border-radius:var(--radius);padding:14px;text-align:center}
+.meldung .kasten{background:var(--feld);border:1px solid var(--rahmen-hell);border-radius:calc(var(--radius) + 2px);padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--kasten-titel);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--text);font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:var(--radius-klein);cursor:pointer;
+ border:1px solid var(--rahmen-hell);background:var(--akzent);color:var(--akzent-text);font-weight:bold}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
-.fuss .gut{color:#e8cd8e}
+.fuss{padding:6px 10px;font-size:13px;color:var(--text-leise);min-height:28px}
+.fuss .gut{color:var(--gut)}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--akzent);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--text)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--kasten-titel);font-weight:normal}
+.klein{color:var(--text-leise);font-size:13px}
+a{color:var(--akzent)}
 .mitte{text-align:center}
 
 @media(max-width:430px){ .menueleiste button{font-size:12px;padding:6px 8px} }
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
-<body>
+<body data-stil="klassisch">
 <main class="fenster">
  <div class="titelleiste">
   <span class="titel">Arkanoid</span>
@@ -74,6 +117,13 @@ a{color:#e8cd8e}
   <span class="rechts">
    <button id="btnLaser" hidden>◉ Feuer</button>
   </span>
+ </div>
+
+ <div class="stilwahl" id="stilwahl">
+  <span class="stil-titel">Ansicht</span>
+  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
+  <button type="button" data-stil="maedchen">Mädchen</button>
+  <button type="button" data-stil="jungs">Jungs</button>
  </div>
 
  <div class="statuszeile">
@@ -108,6 +158,7 @@ a{color:#e8cd8e}
    <li><b>Power-ups</b> fallen aus zerschlagenen Steinen und werden mit dem Schläger aufgefangen: <b>E</b> breiter Schläger, <b>C</b> Ball klebt, <b>L</b> Laser, <b>D</b> drei Bälle, <b>S</b> langsamer, <b>P</b> ein Leben extra.</li>
    <li><b>Steine:</b> Je höher die Reihe sitzt, desto mehr Punkte gibt sie. Alle Steine weg heißt: nächstes Level, der Ball wird dabei etwas schneller.</li>
    <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+   <li><b>Ansicht:</b> Klassisch (Grün und Gold), Mädchen (Rosen, Creme und Herzen) oder Jungs (Neon und Stahl). Die Ansicht ist reine Anzeige – Steine, Punkte und Tempo sind überall gleich, die Wahl bleibt gespeichert.</li>
   </ol>
   <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
  </details>
@@ -135,6 +186,426 @@ const POWER={
  S:{farbe:"#9fb98f",text:"S"},
  P:{farbe:"#e8a7c0",text:"P"}
 };
+
+/* ---------------------------------------------------------------- Ansichten */
+
+/* Drei Ansichten, ein Spiel. „Klassisch“ bleibt die grün-goldene Fassung.
+   „Mädchen“ ist ein Rosenbogen: Creme und Rosa, runde Bonbon-Steine mit
+   Herzen, ein Schläger wie ein Lippenstift, aufsteigendes Glitzer.
+   „Jungs“ ist Neon-Stahl: fast schwarzes Feld mit Messraster, kantige Steine
+   mit Leuchtrand, Laser und pulsierender Lichtsaum unten.
+   Maße, Punkte und Tempo sind in allen drei gleich. */
+function hell(hex,t){
+ const n=parseInt(hex.slice(1),16), r=n>>16, gg=(n>>8)&255, b=n&255;
+ return "rgb("+Math.round(r+(255-r)*t)+","+Math.round(gg+(255-gg)*t)+","+Math.round(b+(255-b)*t)+")";
+}
+function dunkel(hex,t){
+ const n=parseInt(hex.slice(1),16), r=n>>16, gg=(n>>8)&255, b=n&255;
+ return "rgb("+Math.round(r*(1-t))+","+Math.round(gg*(1-t))+","+Math.round(b*(1-t))+")";
+}
+function herz(g,x,y,s){
+ g.beginPath();
+ g.moveTo(x,y+s*0.6);
+ g.bezierCurveTo(x-s*1.3,y-s*0.5,x-s*0.35,y-s*1.15,x,y-s*0.35);
+ g.bezierCurveTo(x+s*0.35,y-s*1.15,x+s*1.3,y-s*0.5,x,y+s*0.6);
+ g.closePath();
+ g.fill();
+}
+
+const STILE={
+ klassisch:{
+  name:"Klassisch",
+  farbe:"#0b241d",
+  reihen:["#e8cd8e","#d9bc7c","#b9d8c4","#a9c3b6","#c2765c","#9fb3ab","#7f9c8f"],
+  powerFarben:{E:"#4fb3a0",C:"#d9bc7c",L:"#c2603f",D:"#8fb3e8",S:"#9fb98f",P:"#e8a7c0"},
+  hintergrund(g,W,H){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#0d3a2c");
+   v.addColorStop(.6,"#0a2a21");
+   v.addColorStop(1,"#061a14");
+   g.fillStyle=v;
+   g.fillRect(0,0,W,H);
+   g.fillStyle="#ffffff0d";
+   for(let x=18;x<W;x+=32)for(let y=18;y<H;y+=32)g.fillRect(x,y,1.5,1.5);
+  },
+  stein(g,st){
+   const farbe=this.reihen[Math.min(this.reihen.length-1,st.reihe)];
+   const v=g.createLinearGradient(st.x,st.y,st.x,st.y+st.h);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.12,farbe);
+   v.addColorStop(1,farbe);
+   g.fillStyle=v;
+   g.globalAlpha=st.treffer>1?1:0.92;
+   g.fillRect(st.x,st.y,st.w,st.h);
+   g.globalAlpha=1;
+   g.strokeStyle="#0a2a2188";
+   g.lineWidth=1;
+   g.strokeRect(st.x+.5,st.y+.5,st.w-1,st.h-1);
+   g.fillStyle="#ffffff55";
+   g.fillRect(st.x+2,st.y+2,st.w-4,2);
+   g.fillStyle="#0a2a2144";
+   g.fillRect(st.x+2,st.y+st.h-4,st.w-4,2);
+   if(st.treffer>1){
+    g.fillStyle="#0a2a2177";
+    g.fillRect(st.x+st.w/2-6,st.y+st.h/2-1.5,12,3);
+   }
+  },
+  power(g,p){
+   const farbe=this.powerFarben[p.art];
+   g.fillStyle=farbe;
+   g.beginPath();
+   g.roundRect(p.x-9,p.y-11,18,22,5);
+   g.fill();
+   g.strokeStyle="#0a2a21";
+   g.lineWidth=2;
+   g.stroke();
+   g.fillStyle="#0b241d";
+   g.font="bold 13px Georgia,serif";
+   g.textAlign="center";
+   g.textBaseline="middle";
+   g.fillText(POWER[p.art].text,p.x,p.y+1);
+  },
+  laser(g,schuesse){
+   g.fillStyle="#ffd9a0";
+   schuesse.forEach(s=>g.fillRect(s.x-1.5,s.y-12,3,12));
+  },
+  schlaeger(g,x,w){
+   const sx=x-w/2;
+   const v=g.createLinearGradient(0,H-34,0,H-34+SCHLAEGER_H);
+   v.addColorStop(0,"#ffe9b0");
+   v.addColorStop(.5,"#e8cd8e");
+   v.addColorStop(1,"#a9873f");
+   g.fillStyle=v;
+   g.beginPath();
+   g.roundRect(sx,H-34,w,SCHLAEGER_H,5);
+   g.fill();
+   g.strokeStyle="#5c4715";
+   g.lineWidth=1.5;
+   g.stroke();
+   g.fillStyle="#d9bc7c";
+   g.fillRect(sx-3,H-32,4,8);
+   g.fillRect(sx+w-1,H-32,4,8);
+  },
+  ball(g,b){
+   const v=g.createRadialGradient(b.x-2,b.y-2,1,b.x,b.y,b.r+2);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.6,"#f1e6c8");
+   v.addColorStop(1,"#c9b98f");
+   g.beginPath();
+   g.arc(b.x,b.y,b.r,0,Math.PI*2);
+   g.fillStyle=v;
+   g.fill();
+  },
+  rahmen(g,W,H){
+   g.strokeStyle="#d9bc7c33";
+   g.lineWidth=2;
+   g.strokeRect(1,1,W-2,H-2);
+   g.strokeStyle="#ffffff14";
+   g.beginPath();
+   g.moveTo(0,H-34);
+   g.lineTo(W,H-34);
+   g.stroke();
+  }
+ },
+
+ maedchen:{
+  name:"Mädchen",
+  farbe:"#fff3f8",
+  reihen:["#ff9ec4","#ffc2dc","#c9a8ff","#9ad7ff","#7fe3c4","#ffd08a","#ffb0a8"],
+  powerFarben:{E:"#7fe3c4",C:"#ffd08a",L:"#ff9ec4",D:"#9ad7ff",S:"#c9a8ff",P:"#ff8fbd"},
+  hintergrund(g,W,H,t){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#fffafd");
+   v.addColorStop(.5,"#ffe9f3");
+   v.addColorStop(1,"#fbd7e8");
+   g.fillStyle=v;
+   g.fillRect(0,0,W,H);
+   // weiche Kreise wie Seifenblasen
+   const blasen=[[W*0.24,H*0.2,54,"#ffc2dc"],[W*0.78,H*0.34,40,"#cfe9ff"],[W*0.22,H*0.72,60,"#ffe6a8"]];
+   for(const [bx,by,br,ton] of blasen){
+    const b=g.createRadialGradient(bx-br*.3,by-br*.3,2,bx,by,br);
+    b.addColorStop(0,ton+"aa");
+    b.addColorStop(1,ton+"00");
+    g.fillStyle=b;
+    g.beginPath();
+    g.arc(bx,by,br,0,Math.PI*2);
+    g.fill();
+   }
+   // aufsteigendes Glitzer
+   for(let i=0;i<9;i++){
+    const sx2=(i*67+Math.sin(t*.8+i)*7)%W;
+    const sy2=H-((i*89+t*20)%(H+40));
+    const r2=1.4+(i%3)*0.6;
+    g.fillStyle=(i%2?"#ff9ec4":"#9ad7ff")+"33";
+    g.beginPath();
+    g.arc(sx2,sy2,r2*2.6,0,Math.PI*2);
+    g.fill();
+    g.fillStyle="#ffffffdd";
+    g.beginPath();
+    g.arc(sx2,sy2,r2,0,Math.PI*2);
+    g.fill();
+   }
+  },
+  stein(g,st){
+   const farbe=this.reihen[Math.min(this.reihen.length-1,st.reihe)];
+   const v=g.createLinearGradient(st.x,st.y,st.x,st.y+st.h);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.3,hell(farbe,.5));
+   v.addColorStop(.78,farbe);
+   v.addColorStop(1,dunkel(farbe,.18));
+   g.fillStyle=v;
+   g.beginPath();
+   g.roundRect(st.x,st.y,st.w,st.h,7);
+   g.fill();
+   g.strokeStyle="#ffffffdd";
+   g.lineWidth=2;
+   g.stroke();
+   g.fillStyle="#ffffff80";
+   g.beginPath();
+   g.roundRect(st.x+4,st.y+3,st.w-8,3,1.5);
+   g.fill();
+   if(st.treffer>1){
+    g.fillStyle="#ffffffdd";
+    herz(g,st.x+st.w/2,st.y+st.h/2,4.2);
+   }
+  },
+  power(g,p){
+   const farbe=this.powerFarben[p.art];
+   g.fillStyle="#ffffff";
+   g.beginPath();
+   g.roundRect(p.x-9,p.y-11,18,22,7);
+   g.fill();
+   g.fillStyle=farbe;
+   g.beginPath();
+   g.roundRect(p.x-9,p.y-11,18,22,7);
+   g.fill();
+   g.strokeStyle="#ff6fa5";
+   g.lineWidth=1.6;
+   g.stroke();
+   g.fillStyle="#ffffffcc";
+   g.beginPath();
+   g.arc(p.x-4,p.y-5,2,0,Math.PI*2);
+   g.fill();
+   g.fillStyle="#4a2033";
+   g.font="bold 12px Georgia,serif";
+   g.textAlign="center";
+   g.textBaseline="middle";
+   g.fillText(POWER[p.art].text,p.x,p.y+2);
+  },
+  laser(g,schuesse){
+   schuesse.forEach(s=>{
+    g.fillStyle="#ff9ec4";
+    g.fillRect(s.x-2,s.y-12,4,12);
+    g.fillStyle="#ffffffee";
+    g.fillRect(s.x-0.7,s.y-12,1.4,12);
+   });
+  },
+  schlaeger(g,x,w){
+   const sx=x-w/2;
+   const v=g.createLinearGradient(0,H-34,0,H-34+SCHLAEGER_H);
+   v.addColorStop(0,"#ffb3d1");
+   v.addColorStop(.5,"#ff8fbd");
+   v.addColorStop(1,"#d63b74");
+   g.fillStyle=v;
+   g.beginPath();
+   g.roundRect(sx,H-34,w,SCHLAEGER_H,SCHLAEGER_H/2);
+   g.fill();
+   g.strokeStyle="#b32a5f";
+   g.lineWidth=2;
+   g.stroke();
+   g.fillStyle="#ffffffdd";
+   g.beginPath();
+   g.roundRect(sx+7,H-31,w-14,3,1.5);
+   g.fill();
+   // kleiner Schleifen-Knoten in der Mitte
+   g.fillStyle="#ff6fa5";
+   herz(g,sx+w/2,H-27,3.2);
+  },
+  ball(g,b,t){
+   g.fillStyle="#ff9ec433";
+   g.beginPath();
+   g.arc(b.x,b.y,b.r*1.7,0,Math.PI*2);
+   g.fill();
+   const v=g.createRadialGradient(b.x-2.5,b.y-2.5,1,b.x,b.y,b.r+1);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.22,"#ffd3e6");
+   v.addColorStop(.65,"#ff77ad");
+   v.addColorStop(1,"#c22f66");
+   g.beginPath();
+   g.arc(b.x,b.y,b.r,0,Math.PI*2);
+   g.fillStyle=v;
+   g.fill();
+   g.strokeStyle="#a32458";
+   g.lineWidth=1.4;
+   g.stroke();
+   g.fillStyle="#ffffffcc";
+   g.beginPath();
+   g.arc(b.x-b.r*0.32,b.y-b.r*0.34,b.r*0.24,0,Math.PI*2);
+   g.fill();
+  },
+  rahmen(g,W,H){
+   g.save();
+   g.setLineDash([6,6]);
+   g.strokeStyle="#f3a8c6";
+   g.lineWidth=2;
+   g.strokeRect(2,2,W-4,H-4);
+   g.restore();
+   g.strokeStyle="#ff9ec433";
+   g.beginPath();
+   g.moveTo(0,H-34);
+   g.lineTo(W,H-34);
+   g.stroke();
+  }
+ },
+
+ jungs:{
+  name:"Jungs",
+  farbe:"#070a0d",
+  reihen:["#c8ff3d","#22d3ee","#ff2d95","#ffb020","#a855f7","#39ff88","#f43f5e"],
+  powerFarben:{E:"#39ff88",C:"#ffb020",L:"#ff2d95",D:"#22d3ee",S:"#a855f7",P:"#c8ff3d"},
+  hintergrund(g,W,H,t){
+   const v=g.createLinearGradient(0,0,0,H);
+   v.addColorStop(0,"#0b1014");
+   v.addColorStop(.55,"#060a0d");
+   v.addColorStop(1,"#030507");
+   g.fillStyle=v;
+   g.fillRect(0,0,W,H);
+   g.strokeStyle="#1b323a44";
+   g.lineWidth=1;
+   g.beginPath();
+   for(let x=0;x<W;x+=28){ g.moveTo(x+.5,0); g.lineTo(x+.5,H); }
+   for(let y=0;y<H;y+=28){ g.moveTo(0,y+.5); g.lineTo(W,y+.5); }
+   g.stroke();
+   const puls=.6+.4*Math.sin(t*2);
+   // Lichtsaum von unten – linear, damit keine harte Kante im Feld steht
+   const s=g.createLinearGradient(0,H-140,0,H);
+   s.addColorStop(0,"rgba(34,211,238,0)");
+   s.addColorStop(1,"rgba(34,211,238,"+(0.18*puls).toFixed(3)+")");
+   g.fillStyle=s;
+   g.fillRect(0,H-140,W,140);
+  },
+  stein(g,st){
+   const farbe=this.reihen[Math.min(this.reihen.length-1,st.reihe)];
+   const c=4;
+   g.beginPath();
+   g.moveTo(st.x+c,st.y);
+   g.lineTo(st.x+st.w-c,st.y);
+   g.lineTo(st.x+st.w,st.y+c);
+   g.lineTo(st.x+st.w,st.y+st.h-c);
+   g.lineTo(st.x+st.w-c,st.y+st.h);
+   g.lineTo(st.x+c,st.y+st.h);
+   g.lineTo(st.x,st.y+st.h-c);
+   g.lineTo(st.x,st.y+c);
+   g.closePath();
+   const bv=g.createLinearGradient(st.x,st.y,st.x,st.y+st.h);
+   bv.addColorStop(0,"#1a232b");
+   bv.addColorStop(.42,farbe+"55");
+   bv.addColorStop(1,"#070c10");
+   g.fillStyle=bv;
+   g.fill();
+   g.strokeStyle=farbe;
+   g.lineWidth=st.treffer>1?2.6:2;
+   g.stroke();
+   g.strokeStyle=farbe+"88";
+   g.lineWidth=1.2;
+   g.beginPath();
+   g.moveTo(st.x+c+2,st.y+2.5);
+   g.lineTo(st.x+st.w-c-2,st.y+2.5);
+   g.stroke();
+   if(st.treffer>1){
+    g.fillStyle=farbe;
+    g.fillRect(st.x+st.w/2-8,st.y+st.h/2-1,16,2);
+    g.fillRect(st.x+st.w/2-8,st.y+st.h/2+2,16,2);
+   }
+  },
+  power(g,p){
+   const farbe=this.powerFarben[p.art];
+   g.fillStyle="#0b1116";
+   g.beginPath();
+   g.roundRect(p.x-9,p.y-11,18,22,2);
+   g.fill();
+   g.strokeStyle=farbe;
+   g.lineWidth=2;
+   g.stroke();
+   g.fillStyle=farbe;
+   g.font="bold 13px Arial Narrow,Arial,sans-serif";
+   g.textAlign="center";
+   g.textBaseline="middle";
+   g.fillText(POWER[p.art].text,p.x,p.y+1);
+  },
+  laser(g,schuesse){
+   schuesse.forEach(s=>{
+    g.fillStyle="#c8ff3d33";
+    g.fillRect(s.x-3,s.y-13,6,13);
+    g.fillStyle="#d9ff7a";
+    g.fillRect(s.x-1,s.y-13,2,13);
+   });
+  },
+  schlaeger(g,x,w){
+   const sx=x-w/2;
+   const v=g.createLinearGradient(0,H-34,0,H-34+SCHLAEGER_H);
+   v.addColorStop(0,"#4d5966");
+   v.addColorStop(1,"#151c23");
+   g.fillStyle=v;
+   g.beginPath();
+   g.roundRect(sx,H-34,w,SCHLAEGER_H,2);
+   g.fill();
+   g.strokeStyle="#8f9ca8";
+   g.lineWidth=1.8;
+   g.stroke();
+   g.fillStyle="#c8ff3d";
+   g.fillRect(sx+2,H-33.5,w-4,2);
+   g.fillStyle="#22d3ee55";
+   g.fillRect(sx+2,H-26,w-4,1.5);
+   g.fillStyle="#c8ff3d99";
+   for(let i=0;i<3;i++)g.fillRect(sx+w/2-10+i*10,H-22,4,1.5);
+  },
+  ball(g,b){
+   g.fillStyle="#22d3ee3a";
+   g.beginPath();
+   g.arc(b.x,b.y,b.r*1.8,0,Math.PI*2);
+   g.fill();
+   const v=g.createRadialGradient(b.x-2,b.y-2,1,b.x,b.y,b.r+1);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.45,"#a9f6ff");
+   v.addColorStop(1,"#22d3ee");
+   g.beginPath();
+   g.arc(b.x,b.y,b.r,0,Math.PI*2);
+   g.fillStyle=v;
+   g.fill();
+   g.strokeStyle="#04141a";
+   g.lineWidth=1.4;
+   g.stroke();
+  },
+  rahmen(g,W,H){
+   g.strokeStyle="#3a465088";
+   g.lineWidth=2;
+   g.strokeRect(1,1,W-2,H-2);
+   g.strokeStyle="#22d3ee33";
+   g.beginPath();
+   g.moveTo(0,H-34);
+   g.lineTo(W,H-34);
+   g.stroke();
+  }
+ }
+};
+
+let stilWahl="klassisch";
+try{ const gespeichert=localStorage.getItem("arkanoid-stil"); if(STILE[gespeichert])stilWahl=gespeichert; }catch(e){}
+const STIL=()=>STILE[stilWahl]||STILE.klassisch;
+const powerFarbe=art=>STIL().powerFarben[art]||POWER[art].farbe;
+
+function stilSetzen(neu){
+ if(!STILE[neu])return;
+ stilWahl=neu;
+ document.body.dataset.stil=neu;
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta)meta.content=STILE[neu].farbe;
+ document.querySelectorAll("#stilwahl button").forEach(b=>b.classList.toggle("aktiv",b.dataset.stil===neu));
+ try{ localStorage.setItem("arkanoid-stil",neu); }catch(e){}
+ powerZeigen();
+ zeichne();
+}
 
 let zustand="start";       // start, laeuft, pause, level, ende
 let punkte=0, leben=3, level=1;
@@ -238,7 +709,7 @@ function powerZeigen(){
  const teile=aktivePower.map(p=>{
   const def=POWER[p.art];
   const rest=Math.ceil(p.rest);
-  return '<span style="color:'+def.farbe+'">'+def.text+'</span> '+rest+"s";
+  return '<span style="color:'+powerFarbe(p.art)+'">'+def.text+'</span> '+rest+"s";
  });
  const text=teile.join(" · ");
  if(text!==letztePowerAnzeige){
@@ -457,107 +928,28 @@ function levelGeschafft(){
 // ---------------------------------------------------------------- Zeichnen
 
 function zeichne(){
- // Hintergrund
- const g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,"#0d3a2c");
- g.addColorStop(.6,"#0a2a21");
- g.addColorStop(1,"#061a14");
- ctx.fillStyle=g;
- ctx.fillRect(0,0,W,H);
-
- // feine Punkte als Raster
- ctx.fillStyle="#ffffff0d";
- for(let x=18;x<W;x+=32)for(let y=18;y<H;y+=32){
-  ctx.fillRect(x,y,1.5,1.5);
- }
-
- // Rand
- ctx.strokeStyle="#d9bc7c33";
- ctx.lineWidth=2;
- ctx.strokeRect(1,1,W-2,H-2);
+ // Alles, was sich je Ansicht ändert, zeichnen die Stil-Funktionen.
+ const st=STIL();
+ const t=performance.now()/1000;
+ st.hintergrund(ctx,W,H,t);
 
  // Steine
- steine.forEach(st=>{
-  const farben=["#e8cd8e","#d9bc7c","#b9d8c4","#a9c3b6","#c2765c","#9fb3ab","#7f9c8f"];
-  const farbe=farben[Math.min(farben.length-1,st.reihe)];
-  const grad=ctx.createLinearGradient(st.x,st.y,st.x,st.y+st.h);
-  grad.addColorStop(0,"#ffffff");
-  grad.addColorStop(.12,farbe);
-  grad.addColorStop(1,farbe);
-  ctx.fillStyle=grad;
-  ctx.globalAlpha=st.treffer>1?1:0.92;
-  ctx.fillRect(st.x,st.y,st.w,st.h);
-  ctx.globalAlpha=1;
-  ctx.strokeStyle="#0a2a2188";
-  ctx.lineWidth=1;
-  ctx.strokeRect(st.x+.5,st.y+.5,st.w-1,st.h-1);
-  ctx.fillStyle="#ffffff55";
-  ctx.fillRect(st.x+2,st.y+2,st.w-4,2);
-  ctx.fillStyle="#0a2a2144";
-  ctx.fillRect(st.x+2,st.y+st.h-4,st.w-4,2);
-  if(st.treffer>1){
-   ctx.fillStyle="#0a2a2177";
-   ctx.fillRect(st.x+st.w/2-6,st.y+st.h/2-1.5,12,3);
-  }
- });
+ steine.forEach(s=>st.stein(ctx,s,t));
 
  // Power-Ups
- powerUps.forEach(p=>{
-  const def=POWER[p.art];
-  ctx.fillStyle=def.farbe;
-  ctx.beginPath();
-  ctx.roundRect(p.x-9,p.y-11,18,22,5);
-  ctx.fill();
-  ctx.strokeStyle="#0a2a21";
-  ctx.lineWidth=2;
-  ctx.stroke();
-  ctx.fillStyle="#0b241d";
-  ctx.font="bold 13px Georgia,serif";
-  ctx.textAlign="center";
-  ctx.textBaseline="middle";
-  ctx.fillText(def.text,p.x,p.y+1);
- });
+ powerUps.forEach(p=>st.power(ctx,p,t));
 
  // Laser
- ctx.fillStyle="#ffd9a0";
- schuesse.forEach(s=>ctx.fillRect(s.x-1.5,s.y-12,3,12));
+ st.laser(ctx,schuesse);
 
  // Schläger
- const sx=schlaeger.x-schlaeger.w/2;
- const sg=ctx.createLinearGradient(0,H-34,0,H-34+SCHLAEGER_H);
- sg.addColorStop(0,"#ffe9b0");
- sg.addColorStop(.5,"#e8cd8e");
- sg.addColorStop(1,"#a9873f");
- ctx.fillStyle=sg;
- ctx.beginPath();
- ctx.roundRect(sx,H-34,schlaeger.w,SCHLAEGER_H,5);
- ctx.fill();
- ctx.strokeStyle="#5c4715";
- ctx.lineWidth=1.5;
- ctx.stroke();
- // seitliche Metallspitzen
- ctx.fillStyle="#d9bc7c";
- ctx.fillRect(sx-3,H-32,4,8);
- ctx.fillRect(sx+schlaeger.w-1,H-32,4,8);
+ st.schlaeger(ctx,schlaeger.x,schlaeger.w,t);
 
  // Bälle
- bälle.forEach(b=>{
-  const bg=ctx.createRadialGradient(b.x-2,b.y-2,1,b.x,b.y,b.r+2);
-  bg.addColorStop(0,"#ffffff");
-  bg.addColorStop(.6,"#f1e6c8");
-  bg.addColorStop(1,"#c9b98f");
-  ctx.beginPath();
-  ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
-  ctx.fillStyle=bg;
-  ctx.fill();
- });
+ bälle.forEach(b=>st.ball(ctx,b,t));
 
- // Trennlinie unten
- ctx.strokeStyle="#ffffff14";
- ctx.beginPath();
- ctx.moveTo(0,H-34);
- ctx.lineTo(W,H-34);
- ctx.stroke();
+ // Rahmen und Trennlinie unten
+ st.rahmen(ctx,W,H);
 }
 
 // ---------------------------------------------------------------- Meldung
@@ -670,6 +1062,11 @@ function neuesSpiel(){
  $("btnPause").textContent="Pause";
  zeichne();
 }
+
+stilSetzen(stilWahl);
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.onclick=()=>stilSetzen(b.dataset.stil);
+});
 
 neuesSpiel();
 requestAnimationFrame(schleife);

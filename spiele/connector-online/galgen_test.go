@@ -84,6 +84,7 @@ func TestGalgenRegeln(t *testing.T) {
 	}
 	// Richtige Buchstaben raten, bis das Wort steht – Punkte müssen stimmen.
 	gesamt := 0
+	letzter := ""
 	for runde := 0; runde < 200; runde++ {
 		g = spiel()
 		if g.Status != "spiel" {
@@ -109,6 +110,11 @@ func TestGalgenRegeln(t *testing.T) {
 			t.Fatalf("raten %s: %d %s", buchstabe, rec.Code, rec.Body.String())
 		}
 		nach := spiel()
+		// Streng abwechselnd: nach jedem Buchstaben ist der Nächste dran.
+		if nach.Status == "spiel" && nach.Spieler[nach.Zug].ID == sitz.ID {
+			t.Fatalf("nach „%s“ ist derselbe Spieler wieder dran", buchstabe)
+		}
+		letzter = sitz.ID
 		neu := 0
 		for _, s := range nach.Spieler {
 			if s.ID == sitz.ID {
@@ -129,8 +135,10 @@ func TestGalgenRegeln(t *testing.T) {
 	if gesamt != wortlaenge {
 		t.Fatalf("Punkte %d != Buchstaben %d", gesamt, wortlaenge)
 	}
-	if g.Sieger == "" {
-		t.Fatal("kein Sieger")
+	// Sieger ist, wer das letzte Feld gefüllt hat – nicht, wer die meisten
+	// Punkte hat.
+	if g.Sieger == "" || g.Sieger != letzter {
+		t.Fatalf("Sieger %q ist nicht der letzte Rater %q", g.Sieger, letzter)
 	}
 	// Nächste Runde startet mit neuem Wort.
 	if r := ruf("b", "naechste", nil); r.Code != http.StatusOK {
@@ -158,8 +166,8 @@ func TestGalgenRegeln(t *testing.T) {
 		ruf(sitz.ID, "raten", map[string]any{"buchstabe": b})
 	}
 	g = spiel()
-	if g.Status != "ende" || g.Geloest {
-		t.Fatalf("Niederlage nicht erkannt: status=%s geloest=%v fehler=%d", g.Status, g.Geloest, g.Fehler)
+	if g.Status != "ende" || g.Geloest || g.Sieger != "" {
+		t.Fatalf("Niederlage nicht erkannt: status=%s geloest=%v fehler=%d sieger=%q", g.Status, g.Geloest, g.Fehler, g.Sieger)
 	}
 	// Verlassen entfernt den Platz.
 	ruf("a", "reset", nil)

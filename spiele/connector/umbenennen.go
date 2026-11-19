@@ -21,6 +21,11 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 		ID       string `json:"id"`
 		TargetID string `json:"targetId"`
 		Name     string `json:"name"`
+		// Vorher ist der Name, den der Admin im Dialog gesehen hat. Weicht er
+		// inzwischen ab, hat jemand anders denselben Spieler schon umbenannt –
+		// dann bleibt die spätere Anfrage ohne Wirkung, statt die Änderung zu
+		// überschreiben. Leer heißt: keine Prüfung (alte Aufrufer).
+		Vorher string `json:"vorher"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -30,6 +35,7 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 	input.ID = strings.TrimSpace(input.ID)
 	input.TargetID = strings.TrimSpace(input.TargetID)
 	input.Name = limitName(strings.TrimSpace(input.Name))
+	input.Vorher = strings.TrimSpace(input.Vorher)
 	if input.Room == "" || input.ID == "" || input.TargetID == "" {
 		http.Error(w, "Parameter fehlen", http.StatusBadRequest)
 		return
@@ -59,6 +65,11 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	alt := target.Name
+	if input.Vorher != "" && input.Vorher != alt {
+		mu.Unlock()
+		http.Error(w, "Der Name wurde inzwischen geändert – bitte neu öffnen.", http.StatusConflict)
+		return
+	}
 	// Doppelte Namen bekommen eine Nummer – sonst könnte sich der Admin als
 	// Mitspieler ausgeben.
 	neu := room.uniqueName(input.Name, input.TargetID)
@@ -72,6 +83,9 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 		// Partien tragen den Namen mit: Die Spielseiten fragen im Sekundentakt
 		// und zeigen ihn damit sofort, ohne dass die Partie neu beginnt.
 		room.spielerUmbenennen(input.TargetID, neu)
+		// Der Chatverlauf bleibt derselbe – nur der Name an den alten Zeilen
+		// wird nachgezogen, damit nicht zwei Namen für einen Spieler stehen.
+		room.messagesUmbenennen(input.TargetID, alt, neu)
 		room.addMessage(Message{
 			Name:     alt,
 			Text:     "heißt jetzt " + neu + ".",
@@ -82,6 +96,29 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mu.Unlock()
 	jsonResponse(w, map[string]string{"name": neu, "vorher": alt})
+}
+
+// messagesUmbenennen zieht den neuen Namen durch den vorhandenen Chatverlauf:
+// Absenderzeilen (auch „verlässt den Raum“) tragen die Spielerkennung, ebenso
+// Flüsterzeilen als Empfänger. Systemzeilen ohne Kennung, die mit dem alten
+// Namen beginnen (etwa „X ist wohl eingeschlafen“), werden am Wortanfang
+// ersetzt. Die Nachricht selbst und ihr Zeitpunkt bleiben unverändert.
+func (r *Room) messagesUmbenennen(id, alt, neu string) {
+	if id == "" || neu == "" || alt == "" || alt == neu {
+		return
+	}
+	for i := range r.Messages {
+		m := &r.Messages[i]
+		if m.SenderID == id {
+			m.Name = neu
+		}
+		if m.ToID == id {
+			m.ToName = neu
+		}
+		if m.SenderID == "" && m.Name == "" && strings.HasPrefix(m.Text, alt+" ") {
+			m.Text = neu + strings.TrimPrefix(m.Text, alt)
+		}
+	}
 }
 
 // spielerUmbenennen schreibt einen neuen Namen in alle Partien des Raums. Es

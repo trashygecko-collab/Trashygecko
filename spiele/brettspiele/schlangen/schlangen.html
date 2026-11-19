@@ -452,35 +452,13 @@ if (ONLINE) {
     const r = await netz.hole();
     if (r.ok) { fehler(""); await uebernehmen(r.game); }
   };
-  // Lebenszeichen: hält den Platz im Raum und die Partie am Leben. Ohne das
-  // beendet der Raum eine Runde nach 90 s Stille („Verbindung weg“), auch wenn
-  // beide nur kurz warten. Im Hintergrund meldet sich die Seite als versteckt,
-  // damit ein eingefrorener Tab die Partie nicht verliert.
-  const leben = async () => {
-    try {
-      await fetch("/api/presence", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room: ROOM, id: MYID, name: MYNAME, active: true })
-      });
-    } catch (e) { /* schwaches WLAN: der nächste Takt versucht es neu */ }
-  };
-  const seiteMelden = async () => {
-    try {
-      await fetch("/api/imspiel?room=" + encodeURIComponent(ROOM) +
-        "&id=" + encodeURIComponent(MYID) +
-        (document.visibilityState === "hidden" ? "&seite=versteckt" : ""), { cache: "no-store" });
-    } catch (e) { /* schwaches WLAN: der nächste Takt versucht es neu */ }
-  };
-  // Erst den Platz sichern, dann fragen: sonst antwortet der erste Abruf mit
-  // „Bitte zuerst dem Spielraum beitreten“ und die Seite startet mit Fehler.
-  (async () => { await leben(); await seiteMelden(); hohle(); })();
-  setInterval(leben, 30000);
-  setInterval(seiteMelden, 2500);
+  // Gemeinsames Lebenszeichen (wuerfel-common.js): erst den Platz sichern,
+  // dann fragen – sonst antwortet der erste Abruf mit „Bitte zuerst dem
+  // Spielraum beitreten“ und die Seite startet mit Fehler.
+  const bereit = WG.leben({ room: ROOM, id: MYID, name: MYNAME });
+  (async () => { await bereit; hohle(); })();
   setInterval(hohle, 1200);
-  document.addEventListener("visibilitychange", () => {
-    seiteMelden();
-    if (!document.hidden) hohle();
-  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hohle(); });
   window.addEventListener("focus", hohle);
 } else {
   notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");

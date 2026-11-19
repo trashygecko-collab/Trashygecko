@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
@@ -562,7 +563,10 @@ $("btnBereit").addEventListener("click", () => schicke("ready"));
 $("btnLos").addEventListener("click", () => schicke("start"));
 
 if (ONLINE) {
-  hole();
+  // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+  // Hintergrund und meldet sich nur als "nicht aktiv".
+  WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
   setInterval(hole, 1500);
   // Die Uhr läuft auch ohne Antwort des Servers weiter.
   setInterval(() => { if (onlineGame && onlineGame.status === "spiel" && onlineGame.rest > 0) { onlineGame.rest--; elZeit.textContent = "· " + onlineGame.rest + " s"; } }, 1000);

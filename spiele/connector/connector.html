@@ -233,6 +233,21 @@ html:fullscreen body{padding:18px 1px}
  font-family:var(--tg-schrift);font-size:16px;font-weight:normal;
  letter-spacing:.05em;color:#f1dca8}
 .chat-name-btn:hover{text-decoration:underline;color:#fff3d4}
+/* Admin sieht beim Überfahren einen dezenten Stift als Hinweis. */
+.chat-name-btn.admin::after{content:"\270e";margin-left:4px;font-size:12px;opacity:0;
+ transition:opacity .15s;color:#e8cd8e}
+.chat-name-btn.admin:hover::after,.chat-name-btn.admin:focus-visible::after{opacity:.7}
+/* Namen ändern im Namensfenster (nur für den Admin sichtbar). */
+.tone-rename{padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid #2f5a4b}
+.tone-rename label{display:block;margin-bottom:6px;font-size:15px;color:#f4efe2}
+.tone-rename label strong{color:#e8cd8e}
+.tone-rename input{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;
+ border:1px solid #3f7360;background:#0b241d;color:#f4efe2;font-family:var(--tg-schrift);
+ font-size:16px;min-height:44px}
+.tone-rename input:focus{outline:none;border-color:#e8cd8e;box-shadow:0 0 0 2px #e8cd8e33}
+.tone-rename-aktionen{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.tone-rename-aktionen button{min-height:44px}
+.tone-fehler{margin:6px 0 0;font-size:13px;color:#ff9c9c}
 /* Begrüßung für Neue: eigener kleiner Kasten mit genau einem Knopf. */
 #chat .willkommen{border:1px solid #d9bc7c66;border-radius:9px;padding:10px 12px;margin:8px 0;background:#14392f}
 #chat .willkommen b{color:#e8cd8e}
@@ -550,6 +565,15 @@ html:fullscreen body{padding:18px 1px}
 <button type="button" class="tone-btn evil" data-tone="evil">Ganz böse</button>
 <button type="button" id="toneWhisper" class="tone-btn whisper">Nur an diese Person schreiben</button>
 <button type="button" id="toneGame" class="tone-btn game">Runde anbieten</button>
+</div>
+<div id="toneRename" class="tone-rename" hidden>
+<label for="toneRenameFeld">Neuer Name für <strong id="toneRenameAlt">…</strong></label>
+<input id="toneRenameFeld" type="text" maxlength="24" autocomplete="off" enterkeyhint="done" spellcheck="false">
+<p id="toneRenameFehler" class="tone-fehler" hidden></p>
+<div class="tone-rename-aktionen">
+<button type="button" id="toneRenameSave" class="tone-btn">Speichern</button>
+<button type="button" id="toneRenameAbbrechen" class="tone-btn">Abbrechen</button>
+</div>
 </div>
 <div id="toneMute" class="tone-mute" hidden>
 <span>Stummschalten:</span>
@@ -1131,28 +1155,52 @@ async function mutePlayer(targetId, minutes){
  }
 }
 
+// Admin-Knopf in der Spielerliste: dasselbe Fenster wie ein Klick auf den
+// Namen im Chat, nur gleich mit dem Feld im Blick.
+function spielerUmbenennen(zielID, alt){
+ if(!activeRoom||!isRoomOwner||!zielID)return;
+ openTonePicker(zielID, alt);
+ if(!document.getElementById("toneRename").hidden){
+  const feld=document.getElementById("toneRenameFeld");
+  feld.focus(); feld.select();
+ }
+}
+
 // Der Admin ändert den Namen eines Spielers – auch mitten in einer laufenden
-// Partie. Der Server schreibt ihn sofort in den Raum und in alle Partien,
-// die Spielseiten zeigen ihn beim nächsten Abruf.
-async function spielerUmbenennen(zielID, alt){
- if(!activeRoom||!isRoomOwner)return;
- const neu=prompt("Neuer Name für "+alt+":",alt);
- if(neu===null)return;
- const name=neu.trim();
- if(!name||name===alt)return;
+// Partie. Die Berechtigung prüft der Server; hier wird nur der Dialog bedient.
+// Der neue Name gilt im Raum, im Chatverlauf und in allen Partien, die
+// Spielstände selbst bleiben unberührt.
+async function umbenennenSpeichern(){
+ if(!activeRoom||!isRoomOwner||!toneTargetId)return;
+ const feld=document.getElementById("toneRenameFeld");
+ const fehler=document.getElementById("toneRenameFehler");
+ const alt=toneTargetName;
+ const neu=feld.value.trim();
+ fehler.hidden=true;
+ if(!neu){
+  fehler.textContent="Der Name darf nicht leer sein.";
+  fehler.hidden=false;
+  feld.focus();
+  return;
+ }
+ if(neu===alt){ closeTonePicker(); return; }
  try{
   const r=await fetch("/api/umbenennen",{
    method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:activeRoom,id:sessionID,targetId:zielID,name})
+   body:JSON.stringify({room:activeRoom,id:sessionID,targetId:toneTargetId,name:neu,vorher:alt})
   });
   if(!r.ok){
-   alert((await r.text())||"Umbenennen fehlgeschlagen.");
+   fehler.textContent=(await r.text()).trim()||"Umbenennen fehlgeschlagen.";
+   fehler.hidden=false;
    return;
   }
+  closeTonePicker();
+  lastChatSignature="";
   await refresh();
   await refreshPlayers();
  }catch(e){
-  alert("Umbenennen fehlgeschlagen.");
+  fehler.textContent="Umbenennen fehlgeschlagen.";
+  fehler.hidden=false;
  }
 }
 
@@ -3814,9 +3862,11 @@ async function refresh(){
     }else if(m.senderId && m.senderId!==sessionID && !m.whisper && !m.gone){
      const nameBtn=document.createElement("button");
      nameBtn.type="button";
-     nameBtn.className="chat-name-btn";
+     nameBtn.className="chat-name-btn"+(isRoomOwner?" admin":"");
      nameBtn.textContent=m.name;
-     nameBtn.title="Klicken: lieb, witzig, böse oder flüstern";
+     nameBtn.title=isRoomOwner
+      ? "Klicken: Sprüche, flüstern, einladen oder Namen ändern"
+      : "Klicken: lieb, witzig, böse oder flüstern";
      nameBtn.onclick=(e)=>{
       e.stopPropagation();
       openTonePicker(m.senderId, m.name);
@@ -3977,6 +4027,13 @@ function openTonePicker(id,name){
  document.getElementById("toneTarget").textContent=name;
  document.getElementById("toneWhisper").textContent="Flüstern: nur "+name+" liest mit";
  document.getElementById("toneMute").hidden=!isRoomOwner;
+ const renameBox=document.getElementById("toneRename");
+ renameBox.hidden=!isRoomOwner;
+ if(isRoomOwner){
+  document.getElementById("toneRenameAlt").textContent=name;
+  document.getElementById("toneRenameFeld").value=name;
+  document.getElementById("toneRenameFehler").hidden=true;
+ }
  const picker=document.getElementById("tonePicker");
  picker.hidden=false;
  picker.scrollIntoView({behavior:"smooth",block:"nearest"});
@@ -3986,6 +4043,17 @@ function closeTonePicker(){
  toneTargetId=null;
 }
 document.getElementById("toneClose").onclick=closeTonePicker;
+document.getElementById("toneRenameSave").onclick=umbenennenSpeichern;
+document.getElementById("toneRenameAbbrechen").onclick=closeTonePicker;
+// Enter übernimmt, Escape bricht ab – wie im übrigen Chat.
+document.getElementById("toneRenameFeld").addEventListener("keydown",e=>{
+ if(e.key==="Enter"){ e.preventDefault(); umbenennenSpeichern(); }
+ else if(e.key==="Escape"){ e.preventDefault(); closeTonePicker(); }
+});
+document.addEventListener("keydown",e=>{
+ const picker=document.getElementById("tonePicker");
+ if(e.key==="Escape"&&picker&&!picker.hidden)closeTonePicker();
+});
 // Flüstern: schreibt "/f Name: " ins Nachrichtenfeld und setzt den Cursor dahinter.
 document.getElementById("toneWhisper").onclick=()=>{
  if(!toneTargetName)return;
@@ -4012,7 +4080,7 @@ document.getElementById("toneGame").onclick=()=>{
   closeTonePicker();
  };
 });
-document.querySelectorAll("#tonePicker .tone-btn:not(.whisper):not(.game)").forEach(btn=>{
+document.querySelectorAll("#tonePicker .tone-buttons .tone-btn").forEach(btn=>{
  btn.onclick=async()=>{
   if(!toneTargetId)return;
   const response=await fetch("/api/tone?room="+encodeURIComponent(activeRoom),{

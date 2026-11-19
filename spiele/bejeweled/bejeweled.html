@@ -9,59 +9,127 @@
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:var(--seite) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
+ --seite:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%);
+ --text:#efe6d2;
+ --fenster-bg:#0f2b23;--fenster-rand:#d9bc7c66;--schatten:0 6px 18px #00000055;--radius:8px;
+ --titel-leiste:linear-gradient(#1e5645,#144238);--titel-rand:#d9bc7c44;--titel-text:#f4e6c2;
+ --kreuz-text:#e8cd8e;--kreuz-rand:#d9bc7c66;--kreuz-bg:#0b241d;
+ --leiste-bg:#0b241d;--leiste-rand:#d9bc7c33;
+ --knopf-bg:#0f2b23;--knopf-rand:#d9bc7c66;--knopf-text:#e8cd8e;--knopf-hover:#184536;
+ --status-bg:#0b241d;--status-rand:#d9bc7c22;--status-text:#a9c3b6;--status-b:#e8cd8e;
+ --zeit-bg:#0b241d;--balken:linear-gradient(90deg,#4fb3a0,#e8cd8e);
+ --buehne-bg:#08120f;--canvas-schatten:inset 0 0 40px #00000088;--canvas-rand:#0000;
+ --meldung-bg:#04100ccc;--kasten-bg:#0f2b23;--kasten-rand:#d9bc7c;
+ --meldung-titel:#f1dca8;--meldung-text:#d8edd8;
+ --meldung-knopf-bg:#e8cd8e;--meldung-knopf-text:#0b241d;--meldung-knopf-rand:#d9bc7c;
+ --fuss-text:#a9c3b6;--regeln-titel:#e8cd8e;--regeln-text:#d8d2bf;--regeln-b:#f1dca8;--link:#e8cd8e;
+ --theme:#0b241d;
+}
+
+/* ---------------------------------------------------------------- Ansichten */
+
+body[data-stil="maedchen"]{
+ --seite:radial-gradient(circle 900px at 50% -6%,#fff6fa 0%,#ffe6f0 46%,#ffd6e5 100%);
+ --text:#5f3a4c;
+ --fenster-bg:#fffafd;--fenster-rand:#ffc3da;--schatten:0 10px 26px #d63b7426;--radius:14px;
+ --titel-leiste:linear-gradient(#ffe9f3,#ffd5e4);--titel-rand:#ffb3cf;--titel-text:#b32a5f;
+ --kreuz-text:#c2386c;--kreuz-rand:#ffb3cf;--kreuz-bg:#ffffff;
+ --leiste-bg:#fff6fa;--leiste-rand:#ffd0e2;
+ --knopf-bg:#ffffff;--knopf-rand:#ffb3cf;--knopf-text:#c2386c;--knopf-hover:#ffe9f2;
+ --status-bg:#fff6fa;--status-rand:#ffd0e2;--status-text:#a9547a;--status-b:#c2386c;
+ --zeit-bg:#ffe9f2;--balken:linear-gradient(90deg,#ff9ec4,#ffcf6e);
+ --buehne-bg:#fff7fb;--canvas-schatten:inset 0 0 26px #ffb3cf4d;--canvas-rand:#ffd0e2;
+ --meldung-bg:#fff4facc;--kasten-bg:#ffffff;--kasten-rand:#ffb3cf;
+ --meldung-titel:#c2386c;--meldung-text:#8a4a66;
+ --meldung-knopf-bg:#ff7fb2;--meldung-knopf-text:#ffffff;--meldung-knopf-rand:#e2537f;
+ --fuss-text:#a9547a;--regeln-titel:#c2386c;--regeln-text:#7d4a60;--regeln-b:#b32a5f;--link:#c2386c;
+ --theme:#ffe6f0;
+}
+
+body[data-stil="buben"]{
+ --seite:radial-gradient(circle 900px at 50% -6%,#111d26 0%,#080e13 46%,#03070a 100%);
+ --text:#d6e2ea;
+ --fenster-bg:#080f14;--fenster-rand:#2b3a45;--schatten:0 10px 28px #00000080,0 0 0 1px #c8ff3d14;--radius:10px;
+ --titel-leiste:linear-gradient(#131f28,#0a1218);--titel-rand:#2b3a45;--titel-text:#c8ff3d;
+ --kreuz-text:#c8ff3d;--kreuz-rand:#2b3a45;--kreuz-bg:#0a1218;
+ --leiste-bg:#05090c;--leiste-rand:#1d2a33;
+ --knopf-bg:#0c1419;--knopf-rand:#2b3a45;--knopf-text:#c8ff3d;--knopf-hover:#16232c;
+ --status-bg:#05090c;--status-rand:#1d2a33;--status-text:#7f8f9b;--status-b:#c8ff3d;
+ --zeit-bg:#0a1218;--balken:linear-gradient(90deg,#c8ff3d,#22d3ee);
+ --buehne-bg:#03060a;--canvas-schatten:inset 0 0 34px #000000cc;--canvas-rand:#1d2a33;
+ --meldung-bg:#03070add;--kasten-bg:#0a1218;--kasten-rand:#c8ff3d;
+ --meldung-titel:#c8ff3d;--meldung-text:#c9d6df;
+ --meldung-knopf-bg:#c8ff3d;--meldung-knopf-text:#08130a;--meldung-knopf-rand:#c8ff3d;
+ --fuss-text:#7f8f9b;--regeln-titel:#c8ff3d;--regeln-text:#b9c6d0;--regeln-b:#e6ff9a;--link:#c8ff3d;
+ --theme:#080e13;
+}
+
+.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 8px;
+ background:var(--leiste-bg);border-bottom:1px solid var(--leiste-rand);font-size:12px;
+ color:var(--status-text);letter-spacing:.04em}
+.stilwahl button{font-family:inherit;font-size:13px;padding:5px 10px;border-radius:999px;cursor:pointer;
+ border:1px solid var(--knopf-rand);background:var(--knopf-bg);color:var(--knopf-text)}
+.stilwahl button:hover{background:var(--knopf-hover)}
+.stilwahl button.aktiv{border-color:var(--knopf-text);font-weight:bold}
+body[data-stil="klassisch"] .stilwahl button.aktiv{background:#e8cd8e;color:#0b241d}
+body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
+ box-shadow:0 2px 8px #ff77ad66}
+body[data-stil="buben"] .stilwahl button.aktiv{background:#c8ff3d;color:#08130a;box-shadow:0 0 12px #c8ff3d66}
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:1px solid var(--fenster-rand);border-radius:var(--radius);overflow:hidden;
+ background:var(--fenster-bg);box-shadow:var(--schatten)}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:var(--titel-leiste);border-bottom:1px solid var(--titel-rand)}
+.titelleiste .titel{color:var(--titel-text);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--kreuz-text);border:1px solid var(--kreuz-rand);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--kreuz-bg)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste-bg);
+ border-bottom:1px solid var(--leiste-rand)}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+ border:1px solid var(--knopf-rand);background:var(--knopf-bg);color:var(--knopf-text);cursor:pointer}
+.menueleiste button:hover{background:var(--knopf-hover)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--status-text);background:var(--status-bg);border-bottom:1px solid var(--status-rand)}
+.statuszeile b{color:var(--status-b);font-weight:normal}
 
-.zeit{height:6px;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.zeit > i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#4fb3a0,#e8cd8e);
+.zeit{height:6px;background:var(--zeit-bg);border-bottom:1px solid var(--status-rand)}
+.zeit > i{display:block;height:100%;width:100%;background:var(--balken);
  border-radius:0 3px 3px 0;transition:width .12s linear}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
-canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px #00000088}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne-bg)}
+canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:var(--radius);touch-action:none;
+ border:1px solid var(--canvas-rand);box-shadow:var(--canvas-schatten)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ background:var(--meldung-bg);border-radius:var(--radius);padding:14px;text-align:center}
+.meldung .kasten{background:var(--kasten-bg);border:1px solid var(--kasten-rand);border-radius:12px;
+ padding:16px 18px;max-width:320px;box-shadow:0 8px 22px #00000022}
+.meldung h2{margin:0 0 6px;color:var(--meldung-titel);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:999px;cursor:pointer;
+ border:1px solid var(--meldung-knopf-rand);background:var(--meldung-knopf-bg);color:var(--meldung-knopf-text);
+ font-weight:bold}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--fuss-text);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--regeln-titel);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln-text)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--regeln-b);font-weight:normal}
+.klein{color:var(--fuss-text);font-size:13px}
+a{color:var(--link)}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
-<body>
+<body data-stil="klassisch">
 <main class="fenster">
  <div class="titelleiste">
   <span class="titel">Bejeweled</span>
@@ -71,6 +139,13 @@ a{color:#e8cd8e}
  <div class="menueleiste">
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnMischen">Neu mischen</button>
+ </div>
+
+ <div class="stilwahl" id="stilwahl">
+  <span>Ansicht</span>
+  <button data-stil="klassisch" class="aktiv">Klassisch</button>
+  <button data-stil="maedchen">Mädchen</button>
+  <button data-stil="buben">Buben</button>
  </div>
 
  <div class="statuszeile">
@@ -104,6 +179,7 @@ a{color:#e8cd8e}
    <li><b>Ketten:</b> Fallen danach neue Steine nach und bilden wieder Reihen, zählt jede Kaskade doppelt so viel wie die vorige.</li>
    <li><b>Kein Zug mehr:</b> Geht nichts mehr, mischt sich das Feld von selbst neu.</li>
    <li><b>Ende:</b> Läuft die Zeit ab, ist die Runde vorbei. Die Bestmarke merkt sich der Browser.</li>
+   <li><b>Ansicht:</b> Über <b>Klassisch</b>, <b>Mädchen</b> oder <b>Buben</b> wechselt die Optik. Die Steine, Punkte und die Zeit bleiben gleich, nur Farben und Formen ändern sich.</li>
   </ol>
   <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
  </details>
@@ -404,42 +480,295 @@ function form(art,x,y,r){
  }
 }
 
-function stein(art,x,y,r,alpha){
- const farbe=FARBEN[art];
- ctx.globalAlpha=alpha==null?1:alpha;
- const g=ctx.createRadialGradient(x-r*0.35,y-r*0.4,r*0.15,x,y,r*1.15);
- g.addColorStop(0,"#ffffffbb");
- g.addColorStop(.35,farbe);
- g.addColorStop(1,"#0b241dcc");
- form(art,x,y,r);
- ctx.fillStyle=g;
- ctx.fill();
- ctx.strokeStyle="#06141099";
- ctx.lineWidth=1.6;
- ctx.stroke();
- ctx.globalAlpha=1;
+// ---------------------------------------------------------------- Ansichten
+
+// Farben mischen: n=0 Ausgangsfarbe, n=1 Ziel (255 weiß bzw. 0 schwarz).
+function mische(hex,ziel,n){
+ const a=parseInt(hex.slice(1,3),16), b=parseInt(hex.slice(3,5),16), c=parseInt(hex.slice(5,7),16);
+ const r=Math.round(a+(ziel-a)*n), g=Math.round(b+(ziel-b)*n), bl=Math.round(c+(ziel-c)*n);
+ const h=v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,"0");
+ return "#"+h(r)+h(g)+h(bl);
+}
+const hell=(hex,n)=>mische(hex,255,n);
+const dunkel=(hex,n)=>mische(hex,0,n);
+
+// Jede Ansicht bringt ihre eigenen Farben und ihr eigenes Zeichnen mit:
+// Brett, Stein, Auswahlrahmen und Feldrand. Regeln und Punkte sind gleich.
+const STILE={
+ klassisch:{
+  farben:FARBEN,
+  hintergrund(){
+   const g=ctx.createLinearGradient(0,0,0,H);
+   g.addColorStop(0,"#123f31");
+   g.addColorStop(.6,"#0c2c23");
+   g.addColorStop(1,"#071912");
+   ctx.fillStyle=g;
+   ctx.fillRect(0,0,W,H);
+   ctx.strokeStyle="#ffffff0a";
+   ctx.lineWidth=1;
+   for(let i=0;i<=N;i++){
+    const p=RAND+i*ZELLE;
+    ctx.beginPath();
+    ctx.moveTo(p,RAND);
+    ctx.lineTo(p,H-RAND);
+    ctx.moveTo(RAND,p);
+    ctx.lineTo(W-RAND,p);
+    ctx.stroke();
+   }
+  },
+  stein(art,x,y,r,alpha){
+   const farbe=this.farben[art];
+   ctx.globalAlpha=alpha==null?1:alpha;
+   const g=ctx.createRadialGradient(x-r*0.35,y-r*0.4,r*0.15,x,y,r*1.15);
+   g.addColorStop(0,"#ffffffbb");
+   g.addColorStop(.35,farbe);
+   g.addColorStop(1,"#0b241dcc");
+   form(art,x,y,r);
+   ctx.fillStyle=g;
+   ctx.fill();
+   ctx.strokeStyle="#06141099";
+   ctx.lineWidth=1.6;
+   ctx.stroke();
+   ctx.globalAlpha=1;
+  },
+  auswahl(r,c){
+   const {x,y}=zelleMitte(r,c);
+   ctx.strokeStyle="#f1dca8";
+   ctx.lineWidth=3;
+   ctx.beginPath();
+   rundesRechteck(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,8);
+   ctx.stroke();
+  },
+  rahmen(){
+   ctx.strokeStyle="#d9bc7c44";
+   ctx.lineWidth=3;
+   ctx.strokeRect(1.5,1.5,W-3,H-3);
+  }
+ },
+
+ maedchen:{
+  farben:["#ff77ad","#ffc94d","#5fdcc0","#b48cff","#ff9a5c","#7fc8ff"],
+  hintergrund(t){
+   const g=ctx.createLinearGradient(0,0,0,H);
+   g.addColorStop(0,"#fffafd");
+   g.addColorStop(.55,"#fff0f6");
+   g.addColorStop(1,"#ffe2ee");
+   ctx.fillStyle=g;
+   ctx.fillRect(0,0,W,H);
+   // weiche Lichtflecken
+   const b1=ctx.createRadialGradient(60,50,8,60,50,150);
+   b1.addColorStop(0,"rgba(255,196,224,.55)");
+   b1.addColorStop(1,"rgba(255,196,224,0)");
+   ctx.fillStyle=b1;
+   ctx.fillRect(0,0,W,H);
+   const b2=ctx.createRadialGradient(340,350,8,340,350,170);
+   b2.addColorStop(0,"rgba(255,228,170,.5)");
+   b2.addColorStop(1,"rgba(255,228,170,0)");
+   ctx.fillStyle=b2;
+   ctx.fillRect(0,0,W,H);
+   // Zellen als Zuckerplättchen
+   for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+     if((r+c)%2)continue;
+     ctx.fillStyle="#ffffff99";
+     ctx.beginPath();
+     rundesRechteck(RAND+c*ZELLE+2,RAND+r*ZELLE+2,ZELLE-4,ZELLE-4,11);
+     ctx.fill();
+     ctx.strokeStyle="#ffd7e6";
+     ctx.lineWidth=1;
+     ctx.stroke();
+    }
+   }
+   // Glitzer
+   const gl=.55+.45*Math.sin(t*1.8);
+   ctx.strokeStyle="rgba(255,255,255,"+(0.55+0.35*gl).toFixed(2)+")";
+   ctx.lineWidth=1.4;
+   [[34,120],[356,84],[300,330],[70,300]].forEach(([sx,sy])=>{
+    ctx.beginPath();
+    ctx.moveTo(sx-4,sy);
+    ctx.lineTo(sx+4,sy);
+    ctx.moveTo(sx,sy-4);
+    ctx.lineTo(sx,sy+4);
+    ctx.stroke();
+   });
+  },
+  stein(art,x,y,r,alpha){
+   const farbe=this.farben[art];
+   ctx.globalAlpha=alpha==null?1:alpha;
+   const v=ctx.createRadialGradient(x-r*0.3,y-r*0.36,r*0.1,x,y,r*1.2);
+   v.addColorStop(0,"#ffffff");
+   v.addColorStop(.28,hell(farbe,.6));
+   v.addColorStop(.72,farbe);
+   v.addColorStop(1,dunkel(farbe,.22));
+   form(art,x,y,r);
+   ctx.fillStyle=v;
+   ctx.fill();
+   ctx.strokeStyle="#ffffffdd";
+   ctx.lineWidth=2;
+   ctx.stroke();
+   ctx.fillStyle="#ffffffee";
+   ctx.beginPath();
+   ctx.arc(x-r*0.34,y-r*0.4,Math.max(1.5,r*0.16),0,Math.PI*2);
+   ctx.fill();
+   ctx.globalAlpha=1;
+  },
+  auswahl(r,c){
+   const {x,y}=zelleMitte(r,c);
+   ctx.save();
+   ctx.shadowColor="rgba(255,119,173,.75)";
+   ctx.shadowBlur=12;
+   ctx.strokeStyle="#ff5c9c";
+   ctx.lineWidth=3;
+   ctx.beginPath();
+   rundesRechteck(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,13);
+   ctx.stroke();
+   ctx.restore();
+  },
+  rahmen(){
+   ctx.strokeStyle="#ffffffcc";
+   ctx.lineWidth=7;
+   ctx.beginPath();
+   rundesRechteck(3.5,3.5,W-7,H-7,15);
+   ctx.stroke();
+   ctx.strokeStyle="#ffb3cf";
+   ctx.lineWidth=2;
+   ctx.beginPath();
+   rundesRechteck(3.5,3.5,W-7,H-7,15);
+   ctx.stroke();
+  }
+ },
+
+ buben:{
+  farben:["#39ff88","#22d3ee","#ff2d95","#ffb020","#a855f7","#c8ff3d"],
+  hintergrund(t){
+   const g=ctx.createLinearGradient(0,0,0,H);
+   g.addColorStop(0,"#0d161d");
+   g.addColorStop(.65,"#070d12");
+   g.addColorStop(1,"#03070a");
+   ctx.fillStyle=g;
+   ctx.fillRect(0,0,W,H);
+   // dunkle Kacheln
+   for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+     ctx.fillStyle=(r+c)%2?"#0a131a":"#0d1a22";
+     ctx.beginPath();
+     rundesRechteck(RAND+c*ZELLE+1.5,RAND+r*ZELLE+1.5,ZELLE-3,ZELLE-3,5);
+     ctx.fill();
+    }
+   }
+   // Raster
+   ctx.strokeStyle="#1b2a34";
+   ctx.lineWidth=1;
+   for(let i=0;i<=N;i++){
+    const p=RAND+i*ZELLE;
+    ctx.beginPath();
+    ctx.moveTo(p,RAND);
+    ctx.lineTo(p,H-RAND);
+    ctx.moveTo(RAND,p);
+    ctx.lineTo(W-RAND,p);
+    ctx.stroke();
+   }
+   // Lichtsaum von unten, linear – sonst steht eine harte Kante im Feld
+   const puls=.6+.4*Math.sin(t*2);
+   const s=ctx.createLinearGradient(0,H-150,0,H);
+   s.addColorStop(0,"rgba(34,211,238,0)");
+   s.addColorStop(1,"rgba(34,211,238,"+(0.16*puls).toFixed(3)+")");
+   ctx.fillStyle=s;
+   ctx.fillRect(0,H-150,W,150);
+  },
+  stein(art,x,y,r,alpha){
+   const farbe=this.farben[art];
+   ctx.globalAlpha=alpha==null?1:alpha;
+   const v=ctx.createRadialGradient(x-r*0.3,y-r*0.36,r*0.1,x,y,r*1.25);
+   v.addColorStop(0,hell(farbe,.92));
+   v.addColorStop(.42,farbe);
+   v.addColorStop(1,dunkel(farbe,.4));
+   ctx.save();
+   ctx.shadowColor=farbe;
+   ctx.shadowBlur=9;
+   form(art,x,y,r);
+   ctx.fillStyle=v;
+   ctx.fill();
+   ctx.restore();
+   form(art,x,y,r);
+   ctx.strokeStyle=hell(farbe,.35);
+   ctx.lineWidth=2;
+   ctx.stroke();
+   // Facette innen
+   form(art,x,y,r*0.55);
+   ctx.strokeStyle="rgba(255,255,255,.4)";
+   ctx.lineWidth=1;
+   ctx.stroke();
+   // Glanzpunkt
+   ctx.fillStyle="#ffffffee";
+   ctx.beginPath();
+   ctx.arc(x-r*0.32,y-r*0.36,Math.max(1.4,r*0.15),0,Math.PI*2);
+   ctx.fill();
+   ctx.globalAlpha=1;
+  },
+  auswahl(r,c){
+   const {x,y}=zelleMitte(r,c);
+   ctx.save();
+   ctx.shadowColor="rgba(200,255,61,.8)";
+   ctx.shadowBlur=12;
+   ctx.strokeStyle="#c8ff3d";
+   ctx.lineWidth=2.4;
+   ctx.beginPath();
+   rundesRechteck(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,5);
+   ctx.stroke();
+   ctx.restore();
+  },
+  rahmen(){
+   ctx.strokeStyle="#2b3a45";
+   ctx.lineWidth=3;
+   ctx.strokeRect(1.5,1.5,W-3,H-3);
+   // Ecken in Acid
+   ctx.strokeStyle="#c8ff3d";
+   ctx.lineWidth=2.5;
+   const e=14;
+   [[RAND-4,RAND-4,1,1],[W-RAND+4,RAND-4,-1,1],[RAND-4,H-RAND+4,1,-1],[W-RAND+4,H-RAND+4,-1,-1]]
+    .forEach(([px,py,sx,sy])=>{
+     ctx.beginPath();
+     ctx.moveTo(px+sx*e,py);
+     ctx.lineTo(px,py);
+     ctx.lineTo(px,py+sy*e);
+     ctx.stroke();
+    });
+  }
+ }
+};
+
+let stilWahl="klassisch";
+try{
+ const gemerkt=localStorage.getItem("bejeweled-stil");
+ if(gemerkt&&STILE[gemerkt])stilWahl=gemerkt;
+}catch(e){}
+
+function STIL(){ return STILE[stilWahl]||STILE.klassisch; }
+
+function stilSetzen(name,merken){
+ if(!STILE[name])name="klassisch";
+ stilWahl=name;
+ document.body.dataset.stil=name;
+ if(merken!==false){
+  try{ localStorage.setItem("bejeweled-stil",name); }catch(e){}
+ }
+ document.querySelectorAll("#stilwahl button").forEach(b=>{
+  b.classList.toggle("aktiv",b.dataset.stil===name);
+ });
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta){
+  const wert=getComputedStyle(document.body).getPropertyValue("--theme").trim();
+  if(wert)meta.setAttribute("content",wert);
+ }
+ zeichne();
 }
 
 function zeichne(){
- const g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,"#123f31");
- g.addColorStop(.6,"#0c2c23");
- g.addColorStop(1,"#071912");
- ctx.fillStyle=g;
- ctx.fillRect(0,0,W,H);
+ const st=STIL();
+ const t=performance.now()/1000;
 
- // Rasterlinien
- ctx.strokeStyle="#ffffff0a";
- ctx.lineWidth=1;
- for(let i=0;i<=N;i++){
-  const p=RAND+i*ZELLE;
-  ctx.beginPath();
-  ctx.moveTo(p,RAND);
-  ctx.lineTo(p,H-RAND);
-  ctx.moveTo(RAND,p);
-  ctx.lineTo(W-RAND,p);
-  ctx.stroke();
- }
+ st.hintergrund(t);
 
  // Steine
  for(let r=0;r<N;r++){
@@ -448,23 +777,14 @@ function zeichne(){
    if(art==null)continue;
    const {x,y}=zelleMitte(r,c);
    const weg=blinken.some(([br,bc])=>br===r&&bc===c);
-   stein(art,x,y,ZELLE*0.38,weg?0.45:1);
+   st.stein(art,x,y,ZELLE*0.38,weg?0.45:1);
   }
  }
 
  // Auswahl
- if(auswahl){
-  const {x,y}=zelleMitte(auswahl[0],auswahl[1]);
-  ctx.strokeStyle="#f1dca8";
-  ctx.lineWidth=3;
-  ctx.beginPath();
-  rundesRechteck(x-ZELLE/2+3,y-ZELLE/2+3,ZELLE-6,ZELLE-6,8);
-  ctx.stroke();
- }
+ if(auswahl) st.auswahl(auswahl[0],auswahl[1],t);
 
- ctx.strokeStyle="#d9bc7c44";
- ctx.lineWidth=3;
- ctx.strokeRect(1.5,1.5,W-3,H-3);
+ st.rahmen();
 }
 
 // ---------------------------------------------------------------- Schleife
@@ -546,6 +866,13 @@ $("btnMischen").onclick=()=>{
 
 rekord=rekordLaden();
 neuesSpiel();
+stilSetzen(stilWahl,false);
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.onclick=()=>{
+  stilSetzen(b.dataset.stil);
+  $("hinweis").textContent="Ansicht: "+b.textContent.trim()+".";
+ };
+});
 requestAnimationFrame(schleife);
 
 

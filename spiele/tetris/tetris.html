@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TrashyGecko – Tetris</title>
@@ -871,7 +872,11 @@ zeichne();
 requestAnimationFrame(schleife);
 
 if (online){
-  holeStand();
+  // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+  // Hintergrund und meldet sich nur als "nicht aktiv".
+  WG.leben({ room: onlineRoom, id: onlineID, name: (params.get("name") || "").trim() })
+    .then(holeStand);
 } else {
   starteSpiel();
 }

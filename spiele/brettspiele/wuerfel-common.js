@@ -93,6 +93,35 @@ window.WG = (() => {
     return { hole, schicke };
   }
 
+  // Lebenszeichen für eine Online-Partie: hält den Platz im Raum und die
+  // Partie am Leben. Ohne das beendet der Raum eine Runde nach 90 s Stille
+  // („Verbindung weg") und wirft den Platz nach 150 s ganz weg. Ein Tab im
+  // Hintergrund meldet sich als versteckt, damit ein eingefrorener Tab die
+  // Partie nicht verliert. Gibt ein Versprechen zurück, das nach dem ersten
+  // Lebenszeichen erfüllt ist – die Spielseite darf erst danach fragen.
+  function leben({ room, id, name, takt = 2500, presenceTakt = 30000 }) {
+    const da = async () => {
+      try {
+        await fetch("/api/presence", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ room, id, name: name || "", active: true })
+        });
+      } catch (e) { /* schwaches WLAN: der nächste Takt versucht es neu */ }
+    };
+    const seite = async () => {
+      try {
+        await fetch("/api/imspiel?room=" + encodeURIComponent(room) +
+          "&id=" + encodeURIComponent(id) +
+          (document.visibilityState === "hidden" ? "&seite=versteckt" : ""), { cache: "no-store" });
+      } catch (e) { /* schwaches WLAN: der nächste Takt versucht es neu */ }
+    };
+    const bereit = (async () => { await da(); await seite(); })();
+    setInterval(da, presenceTakt);
+    setInterval(seite, takt);
+    document.addEventListener("visibilitychange", seite);
+    return bereit;
+  }
+
   // Ein kleines Feld mit Figur in Spielerfarbe.
   function figur(farbe, name) {
     const f = document.createElement("span");
@@ -102,5 +131,5 @@ window.WG = (() => {
     return f;
   }
 
-  return { wuerfelEl, setzeWuerfel, wuerfeln, warte, netz, figur, FARBEN, FARBNAMEN };
+  return { wuerfelEl, setzeWuerfel, wuerfeln, warte, netz, leben, figur, FARBEN, FARBNAMEN };
 })();

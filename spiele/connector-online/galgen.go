@@ -9,9 +9,11 @@ import (
 	"time"
 )
 
-// Galgenmännchen: Ein gemeinsames Wort, reihum raten die Spieler Buchstaben.
-// Ein Treffer bringt Punkte und der Spieler bleibt dran, ein Fehlgriff kostet
-// ein Leben. Ist das Wort gelöst, gewinnt, wer die meisten Buchstaben fand.
+// Galgenmännchen: Ein gemeinsames Wort, die Spieler raten streng abwechselnd
+// je einen Buchstaben. Ein Treffer bringt Punkte, ein Fehlgriff kostet ein
+// Leben (für alle). Wer mit seinem Buchstaben das letzte offene Feld füllt,
+// hat das Wort erraten und gewinnt; sind vorher die Leben weg, haben alle
+// verloren (kein Sieger).
 const galgenMaxSpieler = 6
 
 // galgenWorte: Wort, Kategorie und Stufe (1 leicht, 2 mittel, 3 schwer).
@@ -185,9 +187,10 @@ func (g *GalgenGame) galgenWeiter() {
 	g.Zug = (g.Zug + 1) % len(g.Spieler)
 }
 
-// galgenBeenden schließt die Runde und sagt, wer vorn liegt. Eine verlorene
-// Runde hat keinen Sieger.
-func (g *GalgenGame) galgenBeenden(geloest bool) int {
+// galgenBeenden schließt die Runde. Sieger ist, wer das Wort erraten hat;
+// eine verlorene Runde hat keinen Sieger. Zurück kommt der Sitz mit den
+// meisten Punkten (nur für den Text).
+func (g *GalgenGame) galgenBeenden(geloest bool, siegerID string) int {
 	g.Status = "ende"
 	best := 0
 	for i := range g.Spieler {
@@ -196,7 +199,7 @@ func (g *GalgenGame) galgenBeenden(geloest bool) int {
 		}
 	}
 	if geloest {
-		g.Sieger = g.Spieler[best].ID
+		g.Sieger = siegerID
 	} else {
 		g.Sieger = ""
 	}
@@ -358,17 +361,19 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 			g.Letzte = append(g.Letzte, "✔ "+g.Spieler[sitz].Name+": "+strings.ToUpper(b))
 			if g.galgenFertig() {
 				g.Geloest = true
-				best := g.galgenBeenden(true)
+				g.galgenBeenden(true, g.Spieler[sitz].ID)
 				g.Note = "Wort gelöst: " + strings.ToUpper(g.Wort) + ". " +
-					g.Spieler[best].Name + " gewinnt mit " + strconv.Itoa(g.Spieler[best].Punkte) + " Punkten."
+					g.Spieler[sitz].Name + " hat das letzte Feld gefüllt und gewinnt."
+			} else {
+				g.galgenWeiter()
 			}
 		} else {
 			g.Fehler++
 			g.Note = g.Spieler[sitz].Name + " rät „" + strings.ToUpper(b) + "“ – daneben (" + strconv.Itoa(g.Fehler) + "/" + strconv.Itoa(g.MaxFehler) + ")."
 			g.Letzte = append(g.Letzte, "✖ "+g.Spieler[sitz].Name+": "+strings.ToUpper(b))
 			if g.Fehler >= g.MaxFehler {
-				g.galgenBeenden(false)
-				g.Note = "Verloren! Das Wort war „" + strings.ToUpper(g.Wort) + "“."
+				g.galgenBeenden(false, "")
+				g.Note = "Verloren! Das Wort war „" + strings.ToUpper(g.Wort) + "“ – diesmal hat es keiner erraten."
 			} else {
 				g.galgenWeiter()
 			}
