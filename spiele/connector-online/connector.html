@@ -806,8 +806,8 @@ function setRoomStatus(text){
  el.hidden=!text;
 }
 
-// Ohne eigenen Namen entscheidet der Server: "Boss" am Server-PC, sonst
-// "Spieler1", "Spieler2", …
+// Ohne eigenen Namen vergibt der Server "Namenloser"; weitere Namenlose
+// bekommen eine Nummer.
 function playerName(){
  return document.getElementById("player").value.trim();
 }
@@ -852,7 +852,7 @@ async function copyAddress(){
 /* Es gibt genau einen Raum: einmal betreten, drin bleiben. */
 // Namen übernehmen: der Server trägt ihn sofort ein und schreibt die
 // Chatzeile "alter Name: heißt jetzt neuer Name." Ist das Feld leer,
-// vergibt er wieder "Boss" bzw. "Spieler1", "Spieler2" …
+// vergibt er wieder "Namenloser".
 async function nameUebernehmen(mitFokus){
  if(!activeRoom||!sessionID)return;
  try{
@@ -879,8 +879,7 @@ async function nameUebernehmen(mitFokus){
  }
 }
 
-// Ohne Namen ist das kein Hindernis: der Server vergibt "Boss" (am Rechner,
-// auf dem der Connector läuft) bzw. "Spieler1", "Spieler2" …
+// Ohne Namen ist das kein Hindernis: der Server vergibt "Namenloser".
 // Kaltstart (etwa ein Render-Server, der gerade aufwacht): die erste Anfrage
 // läuft oft in 502/503 oder ins Leere. Drei Versuche mit kurzer Pause sparen
 // das mehrfache Neuladen von Hand. Fehler unter 500 (etwa 403 oder 404) gehen
@@ -983,8 +982,8 @@ async function join(roomDisplayName, wieder){
    }
    throw Error(text||(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen."));
   }
-  // Der Server vergibt einen Namen, wenn keiner eingetragen ist ("Boss",
-  // "Spieler1" …). Den zeigen wir an und behalten ihn.
+  // Der Server vergibt einen Namen, wenn keiner eingetragen ist
+  // ("Namenloser"). Den zeigen wir an und behalten ihn.
   const vergeben=await p.json().catch(()=>({}));
   if(vergeben&&vergeben.name&&vergeben.name!==nameField.value.trim()){
    nameField.value=vergeben.name;

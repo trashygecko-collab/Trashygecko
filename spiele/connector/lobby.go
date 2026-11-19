@@ -50,6 +50,26 @@ func roomTitle(name string) string {
 	return name + "s Abenteuerland"
 }
 
+// istStandardname erkennt die Namen, die der Server früher selbst vergeben
+// hat: "Boss" am Server-PC und "Spieler1", "Spieler2", … für alle anderen.
+// Wer so heißt, hat sich keinen Namen ausgedacht und gilt als namenlos.
+func istStandardname(name string) bool {
+	name = strings.TrimSpace(name)
+	if strings.EqualFold(name, "Boss") {
+		return true
+	}
+	const basis = "Spieler"
+	if len(name) <= len(basis) || !strings.EqualFold(name[:len(basis)], basis) {
+		return false
+	}
+	for _, z := range name[len(basis):] {
+		if z < '0' || z > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // bossErkennen bestimmt, wer als Boss (Admin) gilt. Lokal ist das der PC, auf
 // dem der Connector läuft; die Online-Fassung setzt das beim Start um.
 var bossErkennen = func(r *http.Request, room *Room) bool {
@@ -144,7 +164,7 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 		input.ID = strings.TrimSpace(input.ID)
 		pName := strings.TrimSpace(input.Name)
 		if pName == "" {
-			pName = "Spieler"
+			pName = "Namenloser"
 		}
 		pName = limitName(pName)
 
@@ -219,6 +239,13 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.Name = limitName(input.Name)
+	// Alte Automatiknamen ("Boss", "Spieler1", "Spieler2" …) zählen wie ein
+	// leerer Name: damit hat sich niemand vorgestellt. Solche Plätze heißen
+	// jetzt "Namenloser" – auch wenn der Name schon gespeichert ist.
+	if istStandardname(input.Name) {
+		input.Name = ""
+		input.Umbenennen = true
+	}
 
 	mu.Lock()
 	room := rooms[input.Room]
@@ -276,19 +303,17 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Diese Spielerkennung ist hier nicht bekannt – bitte neu beitreten.", http.StatusConflict)
 		return
 	}
-	// Wer ohne eigenen Namen hereinkommt, bekommt einen: der Boss "Boss",
-	// alle anderen "Spieler1", "Spieler2", … – umbenennen geht jederzeit.
+	// Wer ohne eigenen Namen hereinkommt, heißt "Namenloser"; weitere
+	// Namenlose bekommen eine Nummer. Umbenennen geht jederzeit.
 	// Ein bekannter Spieler behält seinen Namen; geändert wird er nur, wenn
 	// er es selbst verlangt (umbenennen) oder der Admin ihn umbenannt hat.
 	name := player.Name
 	if !known || input.Umbenennen {
 		wunsch := input.Name
 		if wunsch == "" {
-			if amServer {
-				wunsch = "Boss"
-			} else {
-				wunsch = room.freierName("Spieler")
-			}
+			// Kein Name angegeben: nicht mehr "Boss" bzw. "Spieler1", sondern
+			// einheitlich "Namenloser".
+			wunsch = "Namenloser"
 		}
 		// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder als
 		// der Admin ausgeben.
