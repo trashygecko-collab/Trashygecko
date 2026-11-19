@@ -70,16 +70,21 @@
 
   function aktualisiere() {
     if (!knopf) return;
-    var offen = !!spiel && !document.fullscreenElement && !document.webkitFullscreenElement &&
-      !(breit && breit.matches);
+    var voll = document.fullscreenElement || document.webkitFullscreenElement;
+    // Nur das Vollbild des Spielfelds nimmt die ganze Seite ein; im Vollbild
+    // der Seite (html) sind Chat und Spiel weiter zu sehen – dort gehört der
+    // Knopf hin.
+    var offen = !!spiel && !(breit && breit.matches) &&
+      !(voll && voll !== document.documentElement);
     knopf.style.display = offen ? "flex" : "none";
     if (!offen) return;
     var imChat = chatSichtbar();
+    if (imChat) ungelesen = 0;   // was im Bild steht, ist gelesen
     var text = imChat ? "Zurück zum Spiel" : "Zum Chat springen";
     zeichen.textContent = imChat ? "▾" : "💬";
     knopf.title = text;
     knopf.setAttribute("aria-label", text);
-    zaehler.style.display = ungelesen > 0 && !imChat ? "block" : "none";
+    zaehler.style.display = ungelesen > 0 ? "block" : "none";
     zaehler.textContent = ungelesen > 99 ? "99+" : String(ungelesen);
   }
 
@@ -90,10 +95,8 @@
   }
 
   function umschalten() {
-    var imChat = chatSichtbar();
-    springe(imChat ? holeSpiel && holeSpiel() : holeChat && holeChat());
-    if (!imChat) setzeUngelesen(0);
-    aktualisiere();
+    springe(chatSichtbar() ? holeSpiel && holeSpiel() : holeChat && holeChat());
+    aktualisiere();   // räumt beim Chat den Zähler ab
   }
 
   function baue() {
