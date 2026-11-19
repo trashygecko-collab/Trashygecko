@@ -335,6 +335,12 @@ html:fullscreen body{padding:18px 1px}
 .solo-hinweis a{display:block;padding:9px 12px;text-align:center;text-decoration:none;
  border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;color:#f1dca8}
 .solo-hinweis a:hover{border-color:#d9bc7c8c;background:#17423a;color:#fff3d4}
+/* Handy: solange eine Partie offen ist, liegt die lange Spieleliste zu und
+   dieser Knopf holt sie zurück (eingeblendet nur im Handy-Block weiter unten). */
+.solo-schalter{display:none;width:100%;margin:10px 0 0;padding:9px 12px;
+ font:inherit;font-size:13px;color:#f1dca8;background:#0b241d;text-align:left;
+ border:1px solid #d9bc7c33;border-radius:6px;cursor:pointer}
+.solo-schalter:hover{border-color:#d9bc7c8c;background:#17423a;color:#fff3d4}
 /* „Weitere Spielmöglichkeiten": steht als zweiter Knopf neben dem QR-Code und
    klappt genauso auf und zu. Zugeklappt ist nur der Knopf zu sehen. */
 #addressbox{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
@@ -464,6 +470,27 @@ html:fullscreen body{padding:18px 1px}
   border-left:1px solid #d9bc7c55;background:#08120f}
  .solo-pch{display:block;margin:10px 0 0;font-size:13px;color:#a9bfb2}
 }
+
+/* --- Handy und Tablet: Spiel unter dem Chat, über die volle Breite --------
+   Bis 1023 px steht der Chat oben, das Spielfenster darunter in voller
+   Breite; der PC behält Chat links und Spiel rechts (@media 1024px oben).
+   Die Seite scrollt weiter, das Spielfeld behält seine eigene Bedienung.
+   Der schwebende Chat-Knopf kommt aus /spiele/mobil.js. */
+@media (max-width:1023px){
+ body.spiel-offen #spielFenster{display:flex;flex-direction:column;
+  border-top:1px solid #d9bc7c55}
+ /* Das Feld nimmt die Höhe unter dem Kopf des Spielfensters (44 px) ein. */
+ body.spiel-offen #spielRahmen{flex:0 0 auto;
+  height:calc(100vh - 44px);height:calc(100dvh - 44px)}
+ body.spiel-offen #fullscreenBtn{display:none}
+ /* Beim Spielen bleibt der Chat kompakt, damit das Feld groß wird. */
+ body.spiel-offen #chatbox{display:flex;flex-direction:column;height:30vh;height:30dvh}
+ body.spiel-offen #chat{flex:1 1 auto;height:auto;min-height:0}
+ /* 36 Kacheln sind über 1000 px lang – beim Spielen steht hier nur der Chat. */
+ body.spiel-offen #soloListe{display:none}
+ body.spiel-offen #soloListe.offen{display:block}
+ body.spiel-offen #soloSchalter{display:block}
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
@@ -509,6 +536,7 @@ html:fullscreen body{padding:18px 1px}
 </div>
 
 <div id="soloPanel" class="modus-panel" hidden>
+<button type="button" id="soloSchalter" class="solo-schalter" aria-expanded="false">Spiele-Auswahl anzeigen</button>
 <div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
 <p class="solo-pch">Am PC öffnen sich die Spiele rechts neben dem Chat – mitspielen und weiterreden.</p>
 <p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
@@ -606,6 +634,7 @@ html:fullscreen body{padding:18px 1px}
      aria-label="Breite von Chat und Spiel ziehen" title="Breite ziehen"></div>
 
 <script src="/spiele/netz.js"></script>
+<script src="/spiele/mobil.js"></script>
 <script>
 // Harte Obergrenze für jeden API-Ruf. Ohne sie kann ein einziger hängender
 // Request die Seite dauerhaft blockieren: refresh() setzt chatBusy und würde
@@ -1412,24 +1441,16 @@ function spielDef(path){
 // Am PC läuft die Partie rechts neben dem Chat; Handy und Tablet bekommen
 // einen eigenen Tab, damit der Connector dort stehen bleibt. Blockiert der
 // Browser den Tab, geht es wie bisher im selben Tab weiter.
+// PC: rechts neben dem Chat. Handy: unter dem Chat, in derselben Seite.
 function openGame(path){
- const url=spielAdresse(path);
- if(istPc()){
-  const def=spielDef(path);
-  spielOeffnen(spielAnzeigename(path),url,{mehrspieler:true,gameId:def?def.id:""});
-  return;
- }
- const tab=window.open(url,"_blank");
- if(!tab)location.href=url;
+ const def=spielDef(path);
+ spielOeffnen(spielAnzeigename(path),spielAdresse(path),{mehrspieler:true,gameId:def?def.id:""});
 }
 
 // Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
 function openMalen(){
  if(!activeRoom||!sessionID)return;
- const url=spielAdresse("/spiele/malen/malen.html");
- if(istPc()){ spielOeffnen("Malen",url,{mehrspieler:true,gameId:"malen"}); return; }
- const tab=window.open(url,"_blank");
- if(!tab)location.href=url;
+ spielOeffnen("Malen",spielAdresse("/spiele/malen/malen.html"),{mehrspieler:true,gameId:"malen"});
 }
 
 async function gameApiAction(gameId, action, data={}){
@@ -3479,14 +3500,9 @@ function rundeInhalt(box,players){
  los.textContent="Runde anbieten";
  los.onclick=async()=>{
   const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
-  // Am Handy lässt der Browser einen neuen Tab nur im Klick selbst zu.
-  const tab=(!istPc()&&def)?window.open("","_blank"):null;
   const ok=await angebotAktion("bieten",selectedGame);
-  if(ok&&def){
-   // Wer die Runde anbietet, sitzt schon am Tisch und bekommt das Feld gleich.
-   if(tab){ try{ tab.location.href=spielAdresse(def.path); }catch(e){} tab.focus&&tab.focus(); }
-   else openGame(def.path);
-  }else if(tab){ try{ tab.close(); }catch(e){} }
+  // Wer die Runde anbietet, sitzt schon am Tisch und bekommt das Feld gleich.
+  if(ok&&def)openGame(def.path);
  };
  box.appendChild(los);
 
@@ -4004,7 +4020,12 @@ async function refresh(){
    if(chatbox&&!chatbox.hidden){
     const rect=chatbox.getBoundingClientRect();
     const imBild=rect.top>=-8&&rect.bottom<=window.innerHeight+8;
-    if(!imBild)chatbox.scrollIntoView({behavior:"smooth",block:"start"});
+    if(!imBild){
+     // Läuft am Handy eine Partie, reißt die Seite nicht mehr zum Chat:
+     // die zentrale Bedienung zählt mit, der Knopf führt hin.
+     if(window.TGMobil&&TGMobil.spielOffen())TGMobil.ungesehen();
+     else chatbox.scrollIntoView({behavior:"smooth",block:"start"});
+    }
    }
   }
   letzteChatZeile=zeile;
@@ -4404,12 +4425,17 @@ function spielOeffnen(name,url,info){
  framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||""}:null;
  if(rahmen.getAttribute("src")!==url)rahmen.src=url;
  document.body.classList.add("spiel-offen");
+ soloAuswahl(false);   // Handy: Liste zuklappen, auch beim Wechsel des Spiels
+ // Am Handy meldet sich die zentrale Bedienung an: Knopf, Zähler und
+ // der Sprung zum Spielfenster stecken in /spiele/mobil.js.
+ if(!istPc()&&window.TGMobil)TGMobil.spielGeoeffnet(url);
 }
 
 // Rahmen leeren, ohne den Server zu fragen – die Partie ist schon vorbei oder
 // der Spieler hat sie selbst verlassen.
 function rahmenLeeren(){
  document.body.classList.remove("spiel-offen");
+ if(window.TGMobil)TGMobil.spielZu();
  const rahmen=document.getElementById("spielRahmen");
  if(rahmen.getAttribute("src")!=="about:blank")rahmen.src="about:blank";
  framePartie=null;
@@ -4484,6 +4510,12 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
 });
 
 // Vollbild gehört nur zur Ansicht: Esc verlässt das Vollbild, nicht die Partie.
+// Die Seitenposition kommt beim Verlassen zurück, die Partie läuft weiter.
+let vollbildPosition=0;
+document.addEventListener("fullscreenchange",()=>{
+ if(document.fullscreenElement)vollbildPosition=window.scrollY;
+ else if(vollbildPosition){window.scrollTo(0,vollbildPosition);vollbildPosition=0;}
+});
 document.getElementById("spielVoll").addEventListener("click",()=>{
  const rahmen=document.getElementById("spielRahmen");
  try{
@@ -4552,13 +4584,9 @@ document.getElementById("spielZu").addEventListener("click",()=>{
  if(framePartie&&!window.confirm("Möchtest du die Partie wirklich verlassen?"))return;
  spielSchliessen();
 });
-// Fenster schmal machen: das Spiel würde sonst unsichtbar weiterlaufen.
-const pcBreit=window.matchMedia("(min-width: 1024px)");
-pcBreit.addEventListener("change",e=>{
- if(!e.matches&&document.body.classList.contains("spiel-offen"))spielSchliessen();
-});
 window.addEventListener("resize",()=>{
- if(document.body.classList.contains("spiel-offen")&&!istPc())spielSchliessen();
+ // Am Handy steht das Spiel unter dem Chat: ein Größenwechsel (etwa die
+ // eingeblendete Adressleiste) darf die Partie nicht schließen.
  if(linksBreite)breiteSetzen(linksBreite,false);
 });
 breiteLaden();
@@ -4615,7 +4643,6 @@ function spielRaster(gruppe,nurSpiele){
    // Spiele am PC rechts neben dem Chat öffnen, auf dem Handy im neuen Tab.
    if(/\.html($|\?)/i.test(eintrag.ziel)){
     link.addEventListener("click",ev=>{
-     if(!istPc())return;
      if(ev.ctrlKey||ev.metaKey||ev.shiftKey||ev.altKey)return;
      ev.preventDefault();
      spielOeffnen(name,link.href);
@@ -4744,6 +4771,22 @@ setInterval(()=>{
   heartbeat();
  }
 },5000);
+// Zentrale mobile Bedienung: schwebender Chat-Knopf über dem Spielfenster.
+// Sie gehört zur Oberfläche, nicht zu den Spielen.
+if(window.TGMobil)TGMobil.einrichten({
+ chat:()=>document.getElementById("chatbox"),
+ spiel:()=>document.getElementById("spielFenster")
+});
+// Handy: beim Spielen ist die lange Spieleliste zugeklappt (siehe CSS);
+// dieser Knopf holt sie zurück, damit man ohne Umweg ein anderes Spiel wählt.
+const soloSchalter=document.getElementById("soloSchalter");
+const soloListe=document.getElementById("soloListe");
+function soloAuswahl(offen){
+ soloListe.classList.toggle("offen",offen);
+ soloSchalter.setAttribute("aria-expanded",String(offen));
+ soloSchalter.textContent=offen?"Spiele-Auswahl ausblenden":"Spiele-Auswahl anzeigen";
+}
+soloSchalter.addEventListener("click",()=>soloAuswahl(!soloListe.classList.contains("offen")));
 setInterval(()=>{ if(imVordergrund()) refresh(); },1000);
 setInterval(()=>{ if(imVordergrund()) refreshPlayers(); },3000);
 setInterval(()=>{ if(imVordergrund()) loadMutes(); },3000);
