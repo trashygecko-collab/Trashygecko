@@ -3,210 +3,308 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b241d">
+<meta name="theme-color" content="#0058e6">
 <title>Spider Solitär</title>
 <style>
+/* Windows-XP-Version: Luna-Fenster (Titelleiste, Menü, Statusleiste),
+   grüner Filz, Vorratsstapel unten rechts, fertige Folgen unten links. */
 *{box-sizing:border-box}
 [hidden]{display:none !important}
-body{margin:0;padding:6px 6px 22px;color:#efe6d2;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- font:15px var(--tg-schrift);-webkit-tap-highlight-color:transparent}
-main{max-width:900px;margin:auto;min-height:calc(100vh - 28px);display:flex;flex-direction:column}
+:root{
+ --streifen:26px;
+ --xp-knopf:#ece9d8; --xp-rand:#aca899; --xp-blau:#316ac5;
+ --filz:#008000;
+}
+html,body{height:100%}
+body{margin:0;background:#3a6ea5;color:#000;
+ font:12px Tahoma,"Segoe UI",Verdana,Arial,sans-serif;-webkit-tap-highlight-color:transparent;
+ display:flex;align-items:stretch;justify-content:center}
 
-/* Fensterrahmen im XP-Look, in Grün und Gold */
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055;display:flex;flex-direction:column;min-height:calc(100vh - 28px)}
-.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+/* ---------------------------------------------------------------- Fenster */
+.xp{display:flex;flex-direction:column;width:100%;max-width:1040px;height:100dvh;
+ background:var(--xp-knopf);border:1px solid #0831d9;border-radius:8px 8px 0 0;
+ box-shadow:0 10px 30px #00000066;overflow:hidden}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
-.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover:not(:disabled){background:#184536}
-.menueleiste button:disabled{opacity:.4;cursor:default}
-.menueleiste .farben{display:flex;gap:4px;margin-left:auto}
-.menueleiste .farben button.aktiv{border-color:#e8cd8e;color:#0b241d;background:#e8cd8e;font-weight:bold}
+.titelleiste{display:flex;align-items:center;gap:6px;height:28px;flex:0 0 auto;
+ padding:0 3px 0 6px;color:#fff;font-weight:bold;font-size:12px;
+ background:linear-gradient(to bottom,#0997ff 0%,#0053ee 8%,#0050ee 40%,#0066ff 88%,#0058e6 93%,#3b8cff 95%,#6ba5ff 100%);
+ border-radius:7px 7px 0 0;text-shadow:1px 1px 1px #0a246a;user-select:none}
+.titelleiste .titel{flex:1 1 auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+ display:flex;align-items:center;gap:5px}
+.titelleiste .titel i{font-style:normal;font-size:13px;opacity:.95}
+.fensterknoepfe{display:flex;align-items:center;gap:2px}
+.fensterknoepfe span,.fensterknoepfe a{display:flex;align-items:center;justify-content:center;
+ width:21px;height:20px;border-radius:3px;font-size:11px;font-weight:bold;color:#fff;
+ border:1px solid #ffffff55;background:linear-gradient(#4a9bff,#0b5cd5 60%,#0847a8);
+ text-decoration:none;cursor:pointer}
+.fensterknoepfe .kreuz{background:linear-gradient(#f88,#d63a12 55%,#b32b08)}
+.fensterknoepfe a.tg-zurueck{width:auto;padding:0 7px;font-weight:normal;font-size:11px;
+ background:linear-gradient(#7ab2ff,#2b6ed0 60%,#1d4f9c)}
 
-.statuszeile{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+.menueleiste{display:flex;align-items:center;gap:1px;flex:0 0 auto;padding:1px 4px;
+ background:var(--xp-knopf);border-bottom:1px solid var(--xp-rand);position:relative;z-index:30}
+.menueleiste>button{font:inherit;border:1px solid transparent;background:none;padding:3px 9px;cursor:pointer}
+.menueleiste>button:hover{border-color:#fff #aca899 #aca899 #fff}
+.menueleiste>button.offen{background:var(--xp-blau);color:#fff;border-color:#0a246a}
+.menueleiste .rechts{margin-left:auto;color:#555;font-size:11px;padding-right:4px}
 
-.filz{padding:8px;flex:1;background:radial-gradient(circle at 50% 0%,#12603f 0%,#0d4a31 42%,#093725 100%)}
+.dropdown{position:absolute;top:100%;min-width:210px;background:#f6f5ee;
+ border:1px solid var(--xp-rand);box-shadow:2px 2px 3px #00000033;padding:2px}
+.dropdown button{display:flex;align-items:center;justify-content:space-between;gap:18px;
+ width:100%;border:0;background:none;font:inherit;padding:4px 10px;text-align:left;cursor:pointer}
+.dropdown button:hover:not(:disabled){background:var(--xp-blau);color:#fff}
+.dropdown button:disabled{color:#999;cursor:default}
+.dropdown button.gewaehlt::before{content:"•";margin-right:-8px;width:8px;display:inline-block}
+.dropdown .trenner{height:1px;margin:3px 4px;background:#d5d2c5}
+.dropdown .kbd{color:#666;font-size:11px}
+.dropdown button:hover:not(:disabled) .kbd{color:#dbe6ff}
+.dropdown .kopf{padding:3px 10px 2px;color:#666;font-size:11px}
 
-.oben{display:flex;align-items:stretch;justify-content:space-between;gap:10px;margin-bottom:10px}
-/* Die acht Ablageplätze sind so groß wie eine Karte (5:7) – beim Schrumpfen
-   teilen sie sich die Zeile, statt herauszuragen. */
-.ablagestapel{display:flex;gap:6px;flex:1;min-width:0;align-items:stretch}
-.ablagestapel .platz{flex:1 1 0;min-width:0;max-width:86px;aspect-ratio:5/7;padding:0;margin:0;
- border-radius:5%;cursor:pointer;font-family:inherit;container-type:inline-size;
- position:relative;display:block;overflow:hidden}
-.ablagestapel .platz:not(.voll){border:1px dashed #ffffff38;background:#00000026;color:#ffffff5c;
- display:flex;align-items:center;justify-content:center}
-.ablagestapel .platz.voll{border-color:#d9bc7c;
- box-shadow:0 2px 8px -2px #000000aa,0 0 0 1px #d9bc7c55}
-.ablagestapel .platz:hover:not(.voll){border-color:#ffffff66;background:#00000033}
-.leer-zeichen{font-family:Georgia,"Times New Roman",serif;font-size:clamp(9px,34cqw,22px);opacity:.45}
-.nachzieh{width:auto;min-width:70px;height:auto;padding:6px 10px;border-radius:6px;border:1px solid #d9bc7c88;
- cursor:pointer;color:#f4e6c2;font-family:inherit;font-size:13px;line-height:1.25;
- background:linear-gradient(150deg,#255d94,#17426d 58%,#103255);
- box-shadow:0 2px 8px -3px #00000099,inset 0 0 0 3px #ffffff12}
-.nachzieh:hover:not(.leer){filter:brightness(1.08)}
-.nachzieh.leer{opacity:.4;cursor:default;background:#0b241d;box-shadow:none}
+/* ------------------------------------------------------------------ Filz */
+.filz{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+ padding:6px 8px 4px;border-left:1px solid #004d00;border-right:1px solid #004d00;
+ background:radial-gradient(circle at 50% -10%,#009a00 0%,#008000 52%,#006400 100%)}
+.bahn{flex:1 1 auto;min-height:0;overflow:hidden}
+.brett{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;align-items:start;
+ max-width:900px;margin:0 auto}
+.spalte{position:relative;min-height:40px;border-radius:3px}
+/* Freie Spalte: wie in XP ein hell umrandetes Feld */
+.spalte.leer{border:1px solid #ffffff66;background:#0000001f;box-shadow:inset 0 0 0 1px #00000033}
+.spalte.ziel{background:#ffff0033;box-shadow:inset 0 0 0 2px #ffe14d}
 
-/* Spielfeld: zehn Spalten, Karten überlappen über negative Ränder */
-.brett{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;align-items:start}
-.spalte{position:relative;min-height:56px;border-radius:6px}
-.spalte.leer{border:1px dashed #ffffff2e}
-.spalte.ziel{background:#e8cd8e18;box-shadow:inset 0 0 0 1px #e8cd8e55}
-
-/* Echte Karte: Eckenindex oben links (Rang über Farbe), gespiegelt unten
-   rechts, dazwischen die Augen bzw. das Bild. Der Eckenindex ist so
-   bemessen, dass er in dem schmalen Streifen Platz hat, der bei den
-   überlappten Karten sichtbar bleibt. */
-.karte{position:relative;width:100%;aspect-ratio:5/7;border-radius:5%;
- background:linear-gradient(158deg,#fffefb 0%,#fcf7ec 46%,#f4ecdb 100%);
- border:1px solid #cbbfa2;
- box-shadow:0 1px 2px #0000003d,0 3px 7px -3px #00000059;
+/* ---------------------------------------------------------------- Karten */
+.karte{position:relative;width:100%;aspect-ratio:5/7;border-radius:4px;
+ background:#ffffff;border:1px solid #8f8f8f;
+ box-shadow:1px 1px 2px #00000055;
  overflow:hidden;cursor:pointer;user-select:none;container-type:inline-size;
- font-family:Georgia,"Times New Roman",serif}
-.karte::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
- background:linear-gradient(142deg,#ffffff7a 0%,#ffffff00 46%)}
-.karte.rot{color:#b3231f}
-.karte.schwarz{color:#1a1f1c}
+ font-family:"Times New Roman",Georgia,serif}
+.karte.rot{color:#c00000}
+.karte.schwarz{color:#000000}
 .karte .ecke{position:absolute;display:flex;flex-direction:column;align-items:center;
- line-height:.84;font-weight:700;z-index:2}
+ line-height:.82;font-weight:700;z-index:2}
 .karte .ecke b{font-size:clamp(10px,30cqw,26px);letter-spacing:-.03em}
-.karte .ecke i{font-size:clamp(8px,26cqw,22px);font-style:normal;margin-top:.04em}
-.karte .ecke.oben{left:5%;top:3.5%}
-.karte .ecke.unten{right:5%;bottom:3.5%;transform:rotate(180deg)}
+.karte .ecke i{font-size:clamp(8px,26cqw,22px);font-style:normal;margin-top:.06em}
+.karte .ecke.oben{left:5%;top:3%}
+.karte .ecke.unten{right:5%;bottom:3%;transform:rotate(180deg)}
 .karte .pips{position:absolute;inset:16% 13%}
 .karte .pip{position:absolute;transform:translate(-50%,-50%);font-style:normal;line-height:1;
  font-size:clamp(7px,17cqw,16px)}
 .karte .pip.unten{transform:translate(-50%,-50%) rotate(180deg)}
 .karte .bild{position:absolute;inset:26% 23%;display:flex;flex-direction:column;
- align-items:center;justify-content:center;border:1px solid currentColor;border-radius:8%;
- box-shadow:inset 0 0 0 2px #ffffffcc;
- background:repeating-linear-gradient(45deg,#0000000c 0 3px,#00000000 3px 6px)}
+ align-items:center;justify-content:center;border:1px solid currentColor;border-radius:3px;
+ box-shadow:inset 0 0 0 2px #ffffff;
+ background:repeating-linear-gradient(45deg,#00000012 0 2px,#00000000 2px 4px)}
 .karte .bild b{font-size:clamp(12px,34cqw,30px);line-height:1}
 .karte .bild i{font-size:clamp(8px,21cqw,18px);font-style:normal;margin-top:.06em}
-.karte.hinten{background:linear-gradient(150deg,#2a639c,#17426d 55%,#0f3055);border-color:#0b2947}
-.karte.hinten::before{inset:6%;border-radius:3px;border:1px solid #ffffff42;
+
+/* Kartenrücken im XP-Muster: blaues Rautengitter mit weißem Innenrahmen */
+.ruecken,.karte.hinten{
  background:
-  repeating-linear-gradient(45deg,#ffffff17 0 2px,#00000000 2px 5px),
-  repeating-linear-gradient(-45deg,#ffffff17 0 2px,#00000000 2px 5px)}
-.karte.gewaehlt{outline:2px solid #e8cd8e;outline-offset:-2px;
- box-shadow:0 0 10px #e8cd8e66,0 4px 10px -4px #000000aa}
-.karte.tipp{outline:2px solid #c2765c;outline-offset:-2px}
-/* Auf dem Handy sind die Spalten nur ~32 px breit: dort liegen Rang und Farbe
-   nebeneinander (wie in kompakten Kartenspielen), die Augen entfallen. */
+  repeating-linear-gradient(45deg,#ffffff26 0 2px,#00000000 2px 7px),
+  repeating-linear-gradient(-45deg,#ffffff26 0 2px,#00000000 2px 7px),
+  linear-gradient(160deg,#5a8fcc 0%,#2f6099 45%,#1e4677 100%);
+ border-color:#12325c}
+.karte.hinten::before{content:"";position:absolute;inset:7%;border:1px solid #ffffff88;border-radius:2px}
+.karte.gewaehlt{outline:2px solid #ffe14d;outline-offset:-2px;box-shadow:0 0 8px #ffe14d99}
+.karte.tipp{outline:2px solid #ff8a3d;outline-offset:-2px}
+
+/* Am Handy sind die Spalten schmal: Rang und Farbe nebeneinander, keine Augen */
 @container (max-width:56px){
  .karte .pips{display:none}
  .karte .ecke{flex-direction:row;align-items:baseline;gap:.06em;line-height:1}
- .karte .ecke.oben{top:3%}
- .karte .ecke.unten{bottom:3%}
+ .karte .ecke.oben{top:2%}
+ /* Auf schmalen Karten steht der Rang nur oben links – der gespiegelte
+    Index läge sonst direkt darunter und macht den Stapel unleserlich. */
+ .karte .ecke.unten{display:none}
  .karte .ecke b{font-size:11.5px}
  .karte .ecke i{font-size:9.5px;margin-top:0}
- /* Bildkarten ohne Rahmen, sonst stößt er an den unteren Eckindex */
- .karte .bild{inset:23% 19%;border:none;box-shadow:none;background:none}
+ .karte .bild{inset:23% 17%;border:none;box-shadow:none;background:none}
  .karte .bild b{font-size:14px}
  .karte .bild i{font-size:10px}
 }
 
-.hinweis{margin-top:8px;font-size:13px;color:#d8edd8;font-style:italic;min-height:18px}
-.hinweis.warnung{color:#f0c0a8}
+/* --------------------------------------------------- Ablage und Vorrat */
+.fuss{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+ flex:0 0 auto;padding-top:6px}
+.ablagestapel{display:flex;gap:5px;min-width:0;align-items:flex-end}
+.ablagestapel .platz{flex:0 0 auto;width:clamp(24px,8vw,64px);aspect-ratio:5/7;
+ padding:0;margin:0;border-radius:4px;cursor:pointer;font-family:inherit;
+ container-type:inline-size;position:relative;display:block;overflow:hidden;
+ border:1px dashed #ffffff4d;background:#0000001f}
+.ablagestapel .platz.voll{border:1px solid #8f8f8f;box-shadow:0 1px 3px #00000066}
+.ablagestapel .platz:hover:not(.voll){border-color:#ffffff99}
+.leer-zeichen{font-family:"Times New Roman",serif;font-size:clamp(8px,30cqw,16px);
+ opacity:.4;color:#fff;display:flex;align-items:center;justify-content:center;height:100%}
 
-.sieg{position:fixed;inset:0;background:#000000aa;display:flex;align-items:center;justify-content:center;
- padding:18px;z-index:9}
-.sieg .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:18px;
- max-width:340px;text-align:center}
-.sieg h2{margin:0 0 8px;color:#f1dca8;font-weight:normal;letter-spacing:.1em}
-.sieg p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.sieg button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+.stapel{position:relative;flex:0 0 auto;width:clamp(34px,10.5vw,52px);aspect-ratio:5/7;
+ cursor:pointer;border-radius:4px;border:0;padding:0;background:none}
+.stapel .rueck{position:absolute;inset:0;border-radius:4px;border:1px solid #12325c;
+ background:
+  repeating-linear-gradient(45deg,#ffffff26 0 2px,#00000000 2px 7px),
+  repeating-linear-gradient(-45deg,#ffffff26 0 2px,#00000000 2px 7px),
+  linear-gradient(160deg,#5a8fcc 0%,#2f6099 45%,#1e4677 100%);
+ box-shadow:1px 1px 2px #00000055}
+.stapel .rueck::before{content:"";position:absolute;inset:8%;border:1px solid #ffffff88;border-radius:2px}
+.stapel.leer{cursor:default;border:1px dashed #ffffff55;background:#0000001f}
+.stapel.leer .rueck{display:none}
+.stapel .zahl{position:absolute;right:-4px;bottom:-4px;min-width:15px;height:15px;border-radius:8px;
+ background:#ece9d8;color:#000;border:1px solid #00000055;font-size:10px;font-weight:bold;
+ display:flex;align-items:center;justify-content:center;padding:0 3px}
 
-#regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
-#regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
-.mitte{text-align:center}
+.hinweis{flex:0 0 auto;min-height:16px;padding:2px 2px 0;font-size:11px;color:#eaffea;
+ text-shadow:1px 1px 1px #004400;font-style:italic;overflow:hidden;white-space:nowrap;
+ text-overflow:ellipsis}
+.hinweis.warnung{color:#ffe4c4}
 
+/* --------------------------------------------------------- Statusleiste */
+.statusleiste{display:flex;flex:0 0 auto;gap:2px;padding:2px;background:var(--xp-knopf);
+ border-top:1px solid #aca899;font-size:11px}
+.statusleiste span{flex:1 1 0;min-width:0;padding:2px 6px;border:1px solid;
+ border-color:#aca899 #fff #fff #aca899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.statusleiste b{font-weight:normal}
+
+/* ------------------------------------------------------------ Dialoge */
+.dialog{position:fixed;inset:0;background:#00000055;display:flex;align-items:center;
+ justify-content:center;padding:14px;z-index:60}
+.dialog .kasten{width:min(360px,100%);background:var(--xp-knopf);border:1px solid #0831d9;
+ border-radius:7px 7px 0 0;box-shadow:0 12px 30px #00000066;overflow:hidden;
+ display:flex;flex-direction:column}
+.dialog .kopf{display:flex;align-items:center;height:26px;padding:0 4px 0 7px;color:#fff;
+ font-weight:bold;background:linear-gradient(to bottom,#0997ff,#0053ee 12%,#0046d5 88%,#3b8cff);
+ text-shadow:1px 1px 1px #0a246a}
+.dialog .kopf span{flex:1 1 auto}
+.dialog .kopf i{font-style:normal;cursor:pointer;width:19px;height:18px;border-radius:3px;
+ display:flex;align-items:center;justify-content:center;font-weight:bold;
+ background:linear-gradient(#f88,#d63a12 55%,#b32b08);border:1px solid #ffffff55}
+.dialog .inhalt{padding:12px 14px;font-size:12px;line-height:1.55}
+.dialog .inhalt p{margin:0 0 8px}
+.dialog .zeile{display:flex;align-items:center;gap:7px;padding:3px 0;cursor:pointer}
+.dialog .zeile input{accent-color:#316ac5;margin:0}
+.dialog .knoepfe{display:flex;justify-content:flex-end;gap:6px;padding:8px 12px 11px}
+.dialog .knoepfe button{font:inherit;min-width:74px;padding:4px 10px;cursor:pointer;
+ background:linear-gradient(#fdfdfd,#ece9d8 55%,#dcd8c8);border:1px solid #7f7f7f;border-radius:3px}
+.dialog .knoepfe button:hover{background:linear-gradient(#fff,#f4f1e5 55%,#e6e1d2)}
+.dialog .knoepfe button.haupt{border-color:#2a5aa8;box-shadow:inset 0 0 0 1px #ffffff99}
+.dialog ol{margin:6px 0 0;padding-left:18px}
+.dialog li{margin-bottom:5px}
+.dialog b{font-weight:bold}
+.dialog .klein{color:#555;font-size:11px}
 @media(max-width:420px){
- .spalte{min-height:48px}
- .menueleiste button{font-size:12px;padding:6px 8px}
+ .statusleiste{font-size:10px}
+ .statusleiste .lang{display:none}
+ .ablagestapel{gap:3px}
 }
 </style>
-<link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
-<main class="fenster">
+<main class="xp">
  <div class="titelleiste">
-  <span class="titel">Spider Solitär</span>
-  <span class="kreuz">×</span>
+  <span class="titel"><i>♠</i>Spider Solitär</span>
+  <div class="fensterknoepfe">
+   <span title="Minimieren">_</span>
+   <span title="Maximieren">▢</span>
+   <span class="kreuz" title="Schließen">✕</span>
+  </div>
  </div>
 
  <div class="menueleiste">
-  <button id="btnNeu">Neues Spiel</button>
-  <button id="btnUndo">Rückgängig</button>
-  <button id="btnTipp">Tipp</button>
-  <span class="farben" id="farben">
-   <button data-farben="1" class="aktiv">1 Farbe</button>
-   <button data-farben="2">2 Farben</button>
-   <button data-farben="4">4 Farben</button>
-  </span>
- </div>
+  <button id="mSpiel" aria-haspopup="true" aria-expanded="false">Spiel</button>
+  <button id="mHilfe" aria-haspopup="true" aria-expanded="false">Hilfe</button>
+  <span class="rechts"><span id="kopfSchwierigkeit">Leicht · eine Farbe</span></span>
 
- <div class="statuszeile">
-  <span>Punkte <b id="punkte">500</b></span>
-  <span>Züge <b id="zuege">0</b></span>
-  <span>Zeit <b id="zeit">00:00</b></span>
-  <span>Gewonnen <b id="quote">–</b></span>
+  <div class="dropdown" id="menueSpiel" hidden>
+   <button data-aktion="neu">Neues Spiel…<span class="kbd">F2</span></button>
+   <div class="trenner"></div>
+   <button data-aktion="undo" id="miUndo">Rückgängig<span class="kbd">Strg+Z</span></button>
+   <button data-aktion="tipp">Tipp<span class="kbd">H</span></button>
+   <div class="trenner"></div>
+   <div class="kopf">Schwierigkeit</div>
+   <button data-aktion="1" data-schwer="1">Leicht – eine Farbe</button>
+   <button data-aktion="2" data-schwer="2">Mittel – zwei Farben</button>
+   <button data-aktion="4" data-schwer="4">Schwer – vier Farben</button>
+  </div>
+
+  <div class="dropdown" id="menueHilfe" hidden>
+   <button data-aktion="regeln">Regeln<span class="kbd">F1</span></button>
+   <div class="trenner"></div>
+   <button data-aktion="zurueck">Zurück zum Connector</button>
+  </div>
  </div>
 
  <div class="filz">
-  <div class="oben">
+  <div class="bahn" id="bahn"><div class="brett" id="brett"></div></div>
+  <div class="fuss">
    <div class="ablagestapel" id="ablage" aria-label="Fertige Folgen"></div>
-   <button class="nachzieh" id="nachzieh" title="Zehn Karten nachlegen">Nachlegen</button>
+   <button class="stapel" id="nachzieh" aria-label="Zehn Karten nachlegen"></button>
   </div>
-  <div class="brett" id="brett"></div>
   <div class="hinweis" id="hinweis"></div>
  </div>
 
- <details id="regeln">
-  <summary>Regeln</summary>
-  <ol>
-   <li><b>Ziel:</b> Alle Karten in acht vollständigen Folgen König bis Ass in einer Farbe aufbauen. Fertige Folgen wandern automatisch nach oben rechts.</li>
-   <li><b>Blatt:</b> 104 Karten in zehn Spalten – die ersten vier Spalten mit sechs, die übrigen sechs mit fünf Karten. Nur die oberste Karte liegt offen.</li>
-   <li><b>Bewegen:</b> Eine Karte oder eine absteigende Folge gleicher Farbe wandert auf eine Karte, die einen Rang höher liegt – die Farbe ist dabei egal. Auf eine leere Spalte darf alles.</li>
-   <li><b>Nachlegen:</b> Rechts oben warten fünf Stapel zu je zehn Karten. Nachlegen geht nur, wenn keine Spalte leer ist.</li>
-   <li><b>Punkte:</b> Start mit 500, jeder Zug kostet einen Punkt, jede fertige Folge bringt 100.</li>
-   <li><b>Schwierigkeit:</b> Eine Farbe ist die leichte Variante, zwei Farben die mittlere, vier Farben das echte Spider.</li>
-   <li><b>Bedienung:</b> Karte antippen, dann die Zielspalte antippen. Nochmal dieselbe Spalte tippt die Auswahl wieder ab.</li>
-  </ol>
-  <p class="klein mitte"><a href="/spiele/spiele.html">Zurück zur Spieleübersicht</a></p>
- </details>
+ <div class="statusleiste">
+  <span>Punkte <b id="punkte">500</b></span>
+  <span>Züge <b id="zuege">0</b></span>
+  <span>Zeit <b id="zeit">0:00</b></span>
+  <span>Folgen <b id="folgen">0/8</b></span>
+  <span class="lang">Gewonnen <b id="quote">–</b></span>
+ </div>
 </main>
 
-<div class="sieg" id="sieg" hidden>
+<!-- Neues Spiel: XP fragt den Schwierigkeitsgrad ab -->
+<div class="dialog" id="dialogNeu" hidden>
  <div class="kasten">
-  <h2>GEWONNEN</h2>
-  <p id="siegText"></p>
-  <button id="btnNochmal">Noch eine Runde</button>
+  <div class="kopf"><span>Neues Spiel</span><i data-zu="dialogNeu">✕</i></div>
+  <div class="inhalt">
+   <p>Wählen Sie den Schwierigkeitsgrad:</p>
+   <label class="zeile"><input type="radio" name="schwer" value="1"> Leicht – eine Farbe</label>
+   <label class="zeile"><input type="radio" name="schwer" value="2"> Mittel – zwei Farben</label>
+   <label class="zeile"><input type="radio" name="schwer" value="4"> Schwer – vier Farben</label>
+  </div>
+  <div class="knoepfe">
+   <button class="haupt" id="btnNeuOk">OK</button>
+   <button id="btnNeuAb">Abbrechen</button>
+  </div>
+ </div>
+</div>
+
+<div class="dialog" id="dialogRegeln" hidden>
+ <div class="kasten" style="width:min(420px,100%)">
+  <div class="kopf"><span>Regeln</span><i data-zu="dialogRegeln">✕</i></div>
+  <div class="inhalt">
+   <ol>
+    <li><b>Ziel:</b> alle Karten in acht Folgen König bis Ass in einer Farbe aufbauen. Fertige Folgen wandern automatisch nach unten links.</li>
+    <li><b>Blatt:</b> 104 Karten in zehn Spalten – die ersten vier mit sechs, die übrigen sechs mit fünf Karten. Nur die unterste Karte liegt offen.</li>
+    <li><b>Bewegen:</b> eine Karte oder eine absteigende Reihe gleicher Farbe auf eine Karte legen, die einen Rang höher liegt – die Farbe ist dabei egal. Auf eine leere Spalte darf alles.</li>
+    <li><b>Nachlegen:</b> unten rechts warten fünf Stapel zu je zehn Karten. Nachlegen geht nur, wenn keine Spalte leer ist.</li>
+    <li><b>Punkte:</b> Start mit 500, jeder Zug kostet einen Punkt, jede fertige Folge bringt 100.</li>
+    <li><b>Bedienung:</b> Karte antippen, dann die Zielspalte antippen. Dieselbe Spalte noch einmal tippt die Auswahl ab.</li>
+   </ol>
+   <p class="klein" style="margin-top:8px">Tastatur: F2 neues Spiel, Strg+Z rückgängig, H Tipp, F1 Regeln.</p>
+  </div>
+  <div class="knoepfe"><button class="haupt" id="btnRegelnOk">OK</button></div>
+ </div>
+</div>
+
+<div class="dialog" id="sieg" hidden>
+ <div class="kasten">
+  <div class="kopf"><span>Spider Solitär</span><i data-zu="sieg">✕</i></div>
+  <div class="inhalt">
+   <p><b>Gratulation, Sie haben gewonnen!</b></p>
+   <p id="siegText"></p>
+  </div>
+  <div class="knoepfe"><button class="haupt" id="btnNochmal">Neues Spiel</button></div>
  </div>
 </div>
 
 <script>
 (() => {
+"use strict";
+/* Spider Solitär: 104 Karten in zehn Spalten, König bis Ass in einer Farbe,
+   fünf Nachlegen, acht Folgen – Optik nach der Windows-XP-Fassung. */
 const RANG={1:"A",2:"2",3:"3",4:"4",5:"5",6:"6",7:"7",8:"8",9:"9",10:"10",11:"B",12:"D",13:"K"};
 const FARBEN=["♠","♥","♦","♣"];
 const ROT=new Set([1,2]);
 const STAT_KEY="spider-statistik";
+const SCHWIERIG=[1,2,4];
 
 // Augenbilder der Zahlenkarten (x/y in Prozent der Kartenfläche).
 const PIPS={
@@ -248,12 +346,12 @@ let timer=null;
 let auswahl=null;
 let verlauf=[];
 let tippMarkierung=null;
-let kartenNr=0;             // fortlaufende Nummer je Karte (fuer die Animation)
+let kartenNr=0;
 
 const $=id=>document.getElementById(id);
 
 function escapeHtml(t){
- return String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+ return String(t).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 }
 function statistikLaden(){
  try{ return JSON.parse(localStorage.getItem(STAT_KEY)||"{}"); }catch(e){ return {}; }
@@ -310,6 +408,7 @@ function neuesSpiel(anzahl){
  zeichne();
  zeigeQuote();
  hinweis("");
+ schwierigkeitZeigen();
 }
 
 function mischen(a){
@@ -409,7 +508,7 @@ function pruefeSieg(){
  gewonnen();
 }
 
-// ---------------------------------------------------------------- Rückgängig
+// ---------------------------------------------------------- Rückgängig
 
 function verlaufMerken(){
  verlauf.push(JSON.stringify({
@@ -462,14 +561,11 @@ function tipp(){
  }
  tippMarkierung={von:bester.von,index:bester.index,nach:bester.nach};
  zeichne();
- hinweis("Vorschlag: die markierte Karte in die goldene Spalte legen.");
+ hinweis("Vorschlag: die markierte Karte in die gelbe Spalte legen.");
 }
 
-// ---------------------------------------------------------------- Zeichnen
+// -------------------------------------------------------------- Zeichnen
 
-// Karten gleiten wie echte Karten von ihrem alten Platz zum neuen: vor dem
-// Neuzeichnen die Positionen merken, danach die Differenz als Animation
-// abspielen (FLIP).
 function zeichneMitAnimation(){
  const ruhig=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
  const vorher=new Map();
@@ -490,7 +586,7 @@ function zeichneMitAnimation(){
   el.style.zIndex="5";
   const lauf=el.animate(
    [{transform:"translate("+dx+"px,"+dy+"px)"},{transform:"none"}],
-   {duration:230,easing:"cubic-bezier(.2,.85,.3,1)"});
+   {duration:200,easing:"cubic-bezier(.2,.85,.3,1)"});
   lauf.onfinish=()=>{ el.style.zIndex=""; };
  });
 }
@@ -498,17 +594,25 @@ function zeichneMitAnimation(){
 function zeichne(){
  zeichneAblage();
  zeichneBrett();
+ zeichneStapel();
  $("punkte").textContent=punkte;
  $("zuege").textContent=zuege;
- const rest=nachziehStapel.length;
- $("nachzieh").textContent=rest?("Nachlegen "+rest):"leer";
- $("nachzieh").classList.toggle("leer",!rest);
- $("btnUndo").disabled=!verlauf.length;
+ $("folgen").textContent=ablage.length+"/8";
+ const undo=$("miUndo");
+ if(undo)undo.disabled=!verlauf.length;
+ passeStreifen();
 }
 
 function zeigeQuote(){
  const stats=statistikLaden();
  $("quote").textContent=(stats.gewonnen||0)+"/"+(stats.gespielt||0);
+}
+
+function schwierigkeitZeigen(){
+ const namen={1:"Leicht · eine Farbe",2:"Mittel · zwei Farben",4:"Schwer · vier Farben"};
+ $("kopfSchwierigkeit").textContent=namen[farbAnzahl]||"";
+ document.querySelectorAll("#menueSpiel [data-schwer]").forEach(b=>
+  b.classList.toggle("gewaehlt",Number(b.dataset.schwer)===farbAnzahl));
 }
 
 function zeichneAblage(){
@@ -527,7 +631,7 @@ function zeichneAblage(){
    platz.className="platz voll karte "+(ROT.has(farbe)?"rot":"schwarz");
    platz.innerHTML=kartenInnen({rang:13,farbe:farbe});
    platz.setAttribute("aria-label","Fertige Folge "+FARBEN[farbe]+" König bis Ass");
-   platz.title="Folge "+FARBEN[farbe]+" König bis Ass – 13 Karten";
+   platz.title="Folge "+FARBEN[farbe]+" von König bis Ass";
   }
   platz.addEventListener("click",()=>ablageKlick(i));
   box.appendChild(platz);
@@ -542,6 +646,32 @@ function ablageKlick(i){
  }
  hinweis("Ablage "+(i+1)+": "+FARBEN[farbe]+" von König bis Ass komplett – "+
   ablage.length+" von 8 Folgen.");
+}
+
+function zeichneStapel(){
+ const box=$("nachzieh");
+ const liegen=Math.ceil(nachziehStapel.length/10);
+ box.innerHTML="";
+ box.classList.toggle("leer",!liegen);
+ box.title=liegen?("Zehn Karten nachlegen – noch "+liegen+" Spiele"):"Der Vorrat ist leer";
+ for(let i=0;i<liegen;i++){
+  const b=document.createElement("span");
+  b.className="rueck";
+  // Fünf Spiele liegen als Treppe übereinander wie in XP
+  b.style.left=(-i*5)+"px";
+  b.style.top=(-i*2)+"px";
+  box.appendChild(b);
+ }
+ if(liegen){
+  const n=document.createElement("b");
+  n.className="zahl";
+  n.textContent=String(liegen);
+  box.appendChild(n);
+ }
+ if(box.dataset.bereit!=="ja"){
+  box.dataset.bereit="ja";
+  box.addEventListener("click",nachziehen);
+ }
 }
 
 function zeichneBrett(){
@@ -559,9 +689,9 @@ function zeichneBrett(){
    const el=document.createElement("div");
    const rot=ROT.has(karte.farbe);
    el.className="karte"+(karte.offen?(rot?" rot":" schwarz"):" hinten");
-   // Die Karte ist 1,4-mal so hoch wie breit: ein negativer Rand in Prozent
-   // der Spaltenbreite lässt oben genau so viel sichtbar, wie hineinpasst.
-   if(index>0)el.style.marginTop=karte.offen?"-86%":"-100%";
+   // Der sichtbare Streifen steckt in --streifen (in passeStreifen gesetzt).
+   if(index>0)el.style.marginTop=karte.offen
+    ?"calc(var(--streifen) - 140%)":"calc(var(--streifen) * .78 - 140%)";
    el.dataset.spalte=String(s);
    el.dataset.index=String(index);
    el.dataset.id=String(karte.id);
@@ -578,16 +708,33 @@ function zeichneBrett(){
  });
 }
 
+/* Wie im Original: wird eine Spalte lang, rücken die Karten zusammen, damit
+   alles auf den Filz passt. --streifen ist der sichtbare Streifen je Karte. */
+function passeStreifen(){
+ const karten=document.querySelectorAll("#brett .karte");
+ if(!karten.length)return;
+ const hoehe=karten[0].getBoundingClientRect().height;
+ if(!hoehe)return;
+ const maxKarten=Math.max(1,...spalten.map(s=>s.length));
+ const platz=$("bahn").clientHeight-6;
+ if(platz<60)return;
+ const obergrenze=Math.max(26,hoehe*.28);
+ const streifen=Math.max(9,Math.min(obergrenze,(platz-hoehe)/Math.max(1,maxKarten-1)));
+ document.documentElement.style.setProperty("--streifen",Math.round(streifen)+"px");
+}
+
 // ---------------------------------------------------------------- Klicks
 
 function spalteKlick(s,ereignis){
  const karten=spalten[s];
+ let warnung="";
 
  if(auswahl){
   if(auswahl.spalte===s){
    auswahl=null;
    tippMarkierung=null;
    zeichne();
+   hinweis("");
    return;
   }
   if(zugMachen(auswahl.spalte,auswahl.index,s)){
@@ -595,28 +742,35 @@ function spalteKlick(s,ereignis){
    return;
   }
   auswahl=null;
-  hinweis("Dorthin passt die Karte nicht.",true);
+  warnung="Dorthin passt die Karte nicht.";
  }
 
- if(!karten.length)return;
-
- const ziel=ereignis&&ereignis.target;
- let geklickt=null;
- if(ziel&&ziel.dataset&&ziel.dataset.index!==undefined)geklickt=Number(ziel.dataset.index);
- if(geklickt===null)geklickt=karten.length-1;
-
- if(!karten[geklickt]||!karten[geklickt].offen){
-  hinweis("Diese Karte liegt verdeckt.",true);
+ if(!karten.length){
+  if(warnung)hinweis(warnung,true);
   return;
  }
+
+ // Die angetippte Karte am ganzen Kartenknoten festmachen: Rang und Farbe
+ // liegen als eigene Elemente darin, ein Tipp darauf landete bisher bei der
+ // untersten Karte des Stapels statt bei der gemeinten.
+ const ziel=ereignis&&ereignis.target;
+ const knoten=ziel&&ziel.closest?ziel.closest(".karte"):null;
+ let geklickt=knoten&&knoten.dataset.index!==undefined?Number(knoten.dataset.index):karten.length-1;
+ if(!Number.isInteger(geklickt))geklickt=karten.length-1;
+
+ // Verdeckt angetippt heißt: dieser Stapel ist gemeint, also die unterste,
+ // offene Karte.
+ if(!karten[geklickt]||!karten[geklickt].offen)geklickt=karten.length-1;
+
  if(!bewegbareFolge(s,geklickt)){
-  hinweis("Diese Folge lässt sich nicht als Ganzes bewegen.",true);
+  hinweis("Nur eine absteigende Reihe gleicher Farbe (etwa 9-8-7) lässt sich gemeinsam bewegen.",true);
   return;
  }
  auswahl={spalte:s,index:geklickt};
  tippMarkierung=null;
  zeichne();
- hinweis("");
+ // Die Warnung vom gescheiterten Zug bleibt stehen, sonst wirkt er verschluckt.
+ hinweis(warnung,!!warnung);
 }
 
 function hinweis(text,warnung){
@@ -634,7 +788,7 @@ function gewonnen(){
  stats.besteSerie=Math.max(stats.besteSerie||0,stats.serie);
  statistikSpeichern(stats);
  if(timer)clearInterval(timer);
- $("siegText").innerHTML=escapeHtml("Punkte "+punkte+" · Züge "+zuege+" · Zeit "+zeitText())+
+ $("siegText").innerHTML="Punkte "+punkte+" · Züge "+zuege+" · Zeit "+zeitText()+
   "<br>Gewonnen: "+stats.gewonnen+" von "+stats.gespielt+
   "<br>Serie: "+stats.serie+" (best: "+stats.besteSerie+")";
  $("sieg").hidden=false;
@@ -645,7 +799,7 @@ function gewonnen(){
 
 function zeitText(){
  const m=Math.floor(laufendeZeit/60), s=laufendeZeit%60;
- return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+ return m+":"+String(s).padStart(2,"0");
 }
 function startTimer(){
  if(timer)clearInterval(timer);
@@ -656,24 +810,95 @@ function startTimer(){
  },1000);
 }
 
-// ---------------------------------------------------------------- Start
+// ---------------------------------------------------------------- Menüs
 
-$("btnNeu").onclick=()=>neuesSpiel(farbAnzahl);
-$("btnUndo").onclick=zurueck;
-$("btnTipp").onclick=tipp;
-$("nachzieh").onclick=nachziehen;
-$("btnNochmal").onclick=()=>{ $("sieg").hidden=true; neuesSpiel(farbAnzahl); };
-document.querySelectorAll("#farben button").forEach(b=>{
- b.onclick=()=>{
-  farbAnzahl=Number(b.dataset.farben);
-  document.querySelectorAll("#farben button").forEach(x=>x.classList.toggle("aktiv",x===b));
-  neuesSpiel(farbAnzahl);
- };
+const menues={"mSpiel":"menueSpiel","mHilfe":"menueHilfe"};
+
+function menueZu(){
+ Object.values(menues).forEach(id=>{ $(id).hidden=true; });
+ for(const knopf of Object.keys(menues)){
+  $(knopf).classList.remove("offen");
+  $(knopf).setAttribute("aria-expanded","false");
+ }
+}
+function menueUmschalten(knopf){
+ const id=menues[knopf], warOffen=!$(id).hidden;
+ menueZu();
+ if(warOffen)return;
+ $(id).hidden=false;
+ $(knopf).classList.add("offen");
+ $(knopf).setAttribute("aria-expanded","true");
+ // Rechts ausrichten, wenn der Knopf sonst über den Rand liefe
+ const r=$(knopf).getBoundingClientRect();
+ const breite=$(id).getBoundingClientRect().width||210;
+ $(id).style.left=Math.max(2,Math.min(r.left,innerWidth-breite-6))+"px";
+}
+Object.keys(menues).forEach(knopf=>{
+ $(knopf).addEventListener("click",e=>{ e.stopPropagation(); menueUmschalten(knopf); });
+});
+document.addEventListener("click",e=>{
+ if(!e.target.closest(".menueleiste"))menueZu();
+});
+
+function dialogAuf(id){
+ menueZu();
+ $(id).hidden=false;
+}
+function dialogZu(id){ $(id).hidden=true; }
+
+document.querySelectorAll("[data-zu]").forEach(k=>k.addEventListener("click",()=>dialogZu(k.dataset.zu)));
+[$("dialogNeu"),$("dialogRegeln"),$("sieg")].forEach(d=>d.addEventListener("click",e=>{
+ if(e.target===d)dialogZu(d.id);
+}));
+
+function neuesSpielDialog(){
+ document.querySelectorAll('#dialogNeu input[name="schwer"]').forEach(r=>{
+  r.checked=Number(r.value)===farbAnzahl;
+ });
+ dialogAuf("dialogNeu");
+}
+$("btnNeuOk").addEventListener("click",()=>{
+ const gewaehlt=document.querySelector('#dialogNeu input[name="schwer"]:checked');
+ const anzahl=gewaehlt?Number(gewaehlt.value):farbAnzahl;
+ dialogZu("dialogNeu");
+ neuesSpiel(anzahl);
+ menueZu();
+});
+$("btnNeuAb").addEventListener("click",()=>dialogZu("dialogNeu"));
+$("btnRegelnOk").addEventListener("click",()=>dialogZu("dialogRegeln"));
+$("btnNochmal").addEventListener("click",()=>{ $("sieg").hidden=true; neuesSpielDialog(); });
+
+document.querySelectorAll("[data-aktion]").forEach(b=>{
+ b.addEventListener("click",()=>{
+  const was=b.dataset.aktion;
+  menueZu();
+  if(was==="neu")neuesSpielDialog();
+  else if(was==="undo")zurueck();
+  else if(was==="tipp")tipp();
+  else if(was==="regeln")dialogAuf("dialogRegeln");
+  else if(was==="zurueck"){ if(window.tgZurueck)window.tgZurueck(); }
+  else if(SCHWIERIG.includes(Number(was))){ neuesSpiel(Number(was)); }
+ });
+});
+
+document.addEventListener("keydown",e=>{
+ if(e.key==="Escape"){ menueZu(); dialogZu("dialogNeu"); dialogZu("dialogRegeln"); return; }
+ if(e.key==="F2"){ e.preventDefault(); neuesSpielDialog(); return; }
+ if(e.key==="F1"){ e.preventDefault(); dialogAuf("dialogRegeln"); return; }
+ if((e.ctrlKey||e.metaKey)&&(e.key==="z"||e.key==="Z")){ e.preventDefault(); zurueck(); return; }
+ if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&(e.key==="h"||e.key==="H")){ tipp(); }
+});
+
+// Ansicht nach Größenänderung neu rechnen (Streifen, Menüposition)
+let groesseTimer=null;
+window.addEventListener("resize",()=>{
+ clearTimeout(groesseTimer);
+ groesseTimer=setTimeout(passeStreifen,120);
 });
 
 neuesSpiel(1);
 })();
 </script>
-<script src="../../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script src="../../zurueck.js" data-ziel=".fensterknoepfe" data-vor=".kreuz"></script>
 </body>
 </html>
