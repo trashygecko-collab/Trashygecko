@@ -95,7 +95,7 @@ button.aktion:active{transform:scale(.97)}
   <header class="kopf">
     <div class="titel">GOLD MINER</div>
     <div class="werte">
-      <span>Level <b id="level">1</b>/5</span>
+      <span>Level <b id="level">1</b>/<b id="levelGesamt">50</b></span>
       <span>Geld <b id="geld">0</b> / Ziel <b id="ziel">—</b></span>
       <span>Zeit <b id="zeit">120</b> s</span>
     </div>
@@ -146,20 +146,68 @@ const AUSFAHREN = 900;                // px je Sekunde
 const LEER_ZURUECK = 1100;            // Rückweg ohne Fund
 const ZEIT_JE_LEVEL = 120;
 
-// Level: Mischung in der Mine und wie viele Stücke höchstens liegen bleiben
-// dürfen. Das Ziel ist der Wert der ganzen Mine abzüglich der billigsten
-// Stücke – nur wer fast alles hebt, kommt durch. Weil es aus dem tatsächlichen
-// Inhalt berechnet wird, ist es auch bei mageren Säcken erreichbar.
+// 50 Level: gleichmäßig von leicht nach schwer. Mit jeder Stufe wandert
+// das Gold in kleinere Stücke (goldXS = Flitter, 25 Geld), große Brocken
+// werden seltener und Steine immer mehr – die liegen im Weg und ziehen
+// langsam. „reste“ sind die billigsten Stücke, die liegen bleiben dürfen;
+// weniger heißt strenger, weil das Ziel dann fast den ganzen Minenwert
+// verlangt. Das Ziel selbst rechnet neuesLevel() aus dem Inhalt aus.
 const LEVEL = [
-  { reste: 1, goldS: 6, goldM: 3, goldG: 1, steinS: 2, steinG: 1, diamant: 1, sack: 1 },
-  { reste: 1, goldS: 5, goldM: 4, goldG: 1, steinS: 3, steinG: 2, diamant: 1, sack: 1 },
-  { reste: 2, goldS: 4, goldM: 4, goldG: 2, steinS: 4, steinG: 2, diamant: 1, sack: 2 },
-  { reste: 2, goldS: 4, goldM: 4, goldG: 2, steinS: 5, steinG: 3, diamant: 2, sack: 2 },
-  { reste: 2, goldS: 3, goldM: 5, goldG: 3, steinS: 5, steinG: 4, diamant: 2, sack: 2 }
+  { reste: 2, goldXS:  0, goldS:  7, goldM: 3, goldG: 2, steinS:  2, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  0, goldS:  7, goldM: 3, goldG: 2, steinS:  2, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  0, goldS:  7, goldM: 3, goldG: 2, steinS:  2, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  0, goldS:  7, goldM: 3, goldG: 2, steinS:  2, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  0, goldS:  7, goldM: 3, goldG: 2, steinS:  2, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  1, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  1, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 1, diamant: 1, sack: 1 },
+  { reste: 2, goldXS:  1, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 2, diamant: 1, sack: 1 },
+  { reste: 1, goldXS:  2, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 2, diamant: 1, sack: 1 },
+  { reste: 1, goldXS:  2, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 2, diamant: 1, sack: 1 },
+  { reste: 1, goldXS:  2, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 2, diamant: 1, sack: 1 },
+  { reste: 1, goldXS:  2, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 2, diamant: 1, sack: 1 },
+  { reste: 1, goldXS:  2, goldS:  6, goldM: 3, goldG: 2, steinS:  3, steinG: 2, diamant: 1, sack: 1 },
+  { reste: 1, goldXS:  2, goldS:  6, goldM: 2, goldG: 2, steinS:  4, steinG: 2, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  6, goldM: 2, goldG: 2, steinS:  4, steinG: 2, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  5, goldM: 2, goldG: 2, steinS:  4, steinG: 2, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  5, goldM: 2, goldG: 2, steinS:  4, steinG: 2, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  5, goldM: 2, goldG: 2, steinS:  4, steinG: 2, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  5, goldM: 2, goldG: 2, steinS:  4, steinG: 2, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  5, goldM: 2, goldG: 2, steinS:  4, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  3, goldS:  5, goldM: 2, goldG: 2, steinS:  4, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  4, goldS:  5, goldM: 2, goldG: 2, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  4, goldS:  5, goldM: 2, goldG: 2, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  4, goldS:  5, goldM: 2, goldG: 2, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  4, goldS:  5, goldM: 2, goldG: 2, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  4, goldS:  4, goldM: 2, goldG: 1, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  4, goldS:  4, goldM: 2, goldG: 1, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  5, goldS:  4, goldM: 2, goldG: 1, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  5, goldS:  4, goldM: 2, goldG: 1, steinS:  5, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  5, goldS:  4, goldM: 2, goldG: 1, steinS:  6, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  5, goldS:  4, goldM: 2, goldG: 1, steinS:  6, steinG: 3, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  5, goldS:  4, goldM: 2, goldG: 1, steinS:  6, steinG: 4, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  5, goldS:  4, goldM: 2, goldG: 1, steinS:  6, steinG: 4, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  6, goldS:  4, goldM: 2, goldG: 1, steinS:  6, steinG: 4, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  6, goldS:  4, goldM: 2, goldG: 1, steinS:  6, steinG: 4, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  6, goldS:  3, goldM: 2, goldG: 1, steinS:  6, steinG: 4, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  6, goldS:  3, goldM: 2, goldG: 1, steinS:  6, steinG: 4, diamant: 2, sack: 2 },
+  { reste: 1, goldXS:  6, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 4, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  6, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 4, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  6, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 4, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  7, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 4, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  7, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 4, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  7, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 4, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  7, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 5, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  7, goldS:  3, goldM: 1, goldG: 1, steinS:  7, steinG: 5, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  7, goldS:  2, goldM: 1, goldG: 1, steinS:  8, steinG: 5, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  8, goldS:  2, goldM: 1, goldG: 1, steinS:  8, steinG: 5, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  8, goldS:  2, goldM: 1, goldG: 1, steinS:  8, steinG: 5, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  8, goldS:  2, goldM: 1, goldG: 1, steinS:  8, steinG: 5, diamant: 3, sack: 3 },
+  { reste: 1, goldXS:  8, goldS:  2, goldM: 1, goldG: 1, steinS:  8, steinG: 5, diamant: 3, sack: 3 },
 ];
 
 // Art: Radius, Wert, Farbe und Ziehgeschwindigkeit (schwer = langsam).
 const ARTEN = {
+  goldXS:  { r: 11, wert: 25,  tempo: 620, farbe: "#dfc07a", rand: "#9a7f3c" },
   goldS:   { r: 17, wert: 50,  tempo: 520, farbe: "#e8cd8e", rand: "#a98c48" },
   goldM:   { r: 25, wert: 120, tempo: 400, farbe: "#f0d89a", rand: "#b99a5c" },
   goldG:   { r: 35, wert: 260, tempo: 280, farbe: "#f7e4b4", rand: "#c9a862" },
@@ -224,7 +272,7 @@ function neuesLevel(nummer, geld) {
   const plan = LEVEL[nummer - 1];
   const objekte = [];
   const liste = [];
-  for (const art of ["goldS", "goldM", "goldG", "steinS", "steinG", "diamant", "sack"]) {
+  for (const art of ["goldXS", "goldS", "goldM", "goldG", "steinS", "steinG", "diamant", "sack"]) {
     for (let i = 0; i < (plan[art] || 0); i++) liste.push(art);
   }
   const oben = obenMine();
@@ -247,12 +295,17 @@ function neuesLevel(nummer, geld) {
       stelle = { x, y };
     }
     if (!stelle) {
-      // Notfall: notfalls dichter, aber weiter im erreichbaren Bereich.
-      const winkel = zufall(-WINKEL_MAX + 0.1, WINKEL_MAX - 0.1);
-      const tiefe = zufall(unten - 20, unten);
-      stelle = { x: DREH.x + Math.sin(winkel) * (tiefe - DREH.y), y: tiefe };
-      stelle.x = Math.min(Math.max(stelle.x, a.r + 6), W - a.r - 6);
-      stelle.y = Math.min(Math.max(stelle.y, oben + a.r + 6), unten - a.r);
+      // Notfall: dicht an dicht, aber auf einem gültigen Strahl nach unten.
+      // Ein festes Klemmen von x/y würde den Winkel verschieben – das Stück
+      // läge dann außerhalb des Schwenkbereichs und der Haken käme nie hin.
+      const winkel = zufall(-WINKEL_MAX + 0.12, WINKEL_MAX - 0.12);
+      const sin = Math.sin(winkel), cos = Math.cos(winkel);
+      let tief = Math.max(40, oben + a.r + 8 - DREH.y);
+      let weit = Math.min(unten - a.r - DREH.y, (H - a.r - 8 - DREH.y) / cos);
+      if (sin > 0.001) weit = Math.min(weit, (W - a.r - 6 - DREH.x) / sin);
+      if (sin < -0.001) weit = Math.min(weit, (a.r + 6 - DREH.x) / sin);
+      const laenge = zufall(Math.min(tief, weit), Math.max(tief, weit));
+      stelle = { x: DREH.x + sin * laenge, y: DREH.y + cos * laenge };
     }
     objekte.push({
       id: ++id, art, x: stelle.x, y: stelle.y, r: a.r, tempo: a.tempo, farbe: a.farbe, rand: a.rand,
@@ -324,7 +377,7 @@ function sammle(obj) {
     spiel.zustand = "levelEnde";
     spiel.rest = 1.4;
     if (spiel.level >= LEVEL.length) {
-      zeigeEnde("Spiel gewonnen", "Alle fünf Level geschafft – " + spiel.geld + " Geld aus der Mine geholt.", false);
+      zeigeEnde("Spiel gewonnen", "Alle " + LEVEL.length + " Level geschafft – " + spiel.geld + " Geld aus der Mine geholt.", false);
     } else {
       zeigeInfo("Level " + spiel.level + " geschafft", "Weiter mit Level " + (spiel.level + 1) + " – neue Mine, neues Ziel.");
     }
@@ -1020,6 +1073,8 @@ function starteSpiel() {
   aktualisiereKopf();
 }
 
+// Die Kopfzeile zeigt „Level 1/50“ – die Zahl kommt aus der Tabelle.
+$("levelGesamt").textContent = LEVEL.length;
 $("btnStart").addEventListener("click", starteSpiel);
 $("btnNochmal").addEventListener("click", starteSpiel);
 $("btnGraben").addEventListener("click", () => auswerfen());

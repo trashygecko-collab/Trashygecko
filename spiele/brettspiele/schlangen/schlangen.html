@@ -131,6 +131,15 @@ function brettMachen() {
     belegt.add(start); belegt.add(ziel);
     leitern.push([start, ziel]);
   }
+  // Zwei Schlangen beginnen in den letzten zwei Reihen (81..97): auch dort ist
+  // man noch nicht sicher vor dem Rutschen, wie auf einem echten Brett.
+  for (let versuch = 0; versuch < 400 && schlangen.length < 2; versuch++) {
+    const start = 81 + Math.floor(Math.random() * 17);
+    const ziel = start - (11 + Math.floor(Math.random() * 18));
+    if (ziel < 2 || belegt.has(start) || belegt.has(ziel)) continue;
+    belegt.add(start); belegt.add(ziel);
+    schlangen.push([start, ziel]);
+  }
   for (let versuch = 0; versuch < 400 && schlangen.length < SCHLANGEN; versuch++) {
     const start = 12 + Math.floor(Math.random() * 86);
     const ziel = start - (11 + Math.floor(Math.random() * 18));
@@ -214,39 +223,90 @@ function rasterBauen() {
   }
 }
 
+/* Wege zeichnen: echte Holzleitern und Schlangen mit Kopf, Augen und Ringen.
+   Alles in Feld-Einheiten (0…100, ein Feld = 10). Leitern laufen von der Mitte
+   des Startfelds zur Mitte des Zielfelds, Schlangen vom Kopf am hohen Feld zum
+   Schwanz am tiefen. Der Kopf mit Augen und Zunge zeigt nach oben – so sieht
+   man auf einen Blick, wo es hinuntergeht und wo hinauf. */
 function wegeZeichnen(sp) {
   const teile = [];
-  const pfeil = (a, b) => {
-    const p = feldPos(a), q = feldPos(b);
-    const dx = q.x - p.x, dy = q.y - p.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = (-dy / len) * 7, ny = (dx / len) * 7;
-    const mx = (p.x + q.x) / 2 + nx, my = (p.y + q.y) / 2 + ny;
-    return `<path d="M${p.x} ${p.y} Q${mx} ${my} ${q.x} ${q.y}" fill="none"
-      stroke="#7fb98a" stroke-width="1.5" stroke-linecap="round" opacity=".85"/>
-      <circle cx="${q.x}" cy="${q.y}" r="1.4" fill="#7fb98a" opacity=".9"/>`;
-  };
+
+  /* ---- Leitern: zwei Holme, Sprossen, Schatten, Messingknäufe ---- */
   for (const [start, ziel] of sp.leitern) {
     const a = feldPos(start), b = feldPos(ziel);
     const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
-    const nx = (-dy / len) * 1.5, ny = (dx / len) * 1.5;
-    teile.push(`<path d="M${a.x + nx} ${a.y + ny} L${b.x + nx} ${b.y + ny}" stroke="#c9a86a" stroke-width=".8"/>`);
-    teile.push(`<path d="M${a.x - nx} ${a.y - ny} L${b.x - nx} ${b.y - ny}" stroke="#c9a86a" stroke-width=".8"/>`);
-    for (let k = 1; k < 7; k++) {
-      const t = k / 7;
+    const nx = -dy / len, ny = dx / len;            // Einheitsnormale
+    const halb = 1.9;                                // halber Holmabstand
+    const stufen = Math.max(4, Math.round(len / 6.5));
+    const holm = (seite) => `<line x1="${(a.x + nx * halb * seite).toFixed(2)}" y1="${(a.y + ny * halb * seite).toFixed(2)}"
+      x2="${(b.x + nx * halb * seite).toFixed(2)}" y2="${(b.y + ny * halb * seite).toFixed(2)}"/>`;
+    const sprosse = (t) => {
       const x = a.x + dx * t, y = a.y + dy * t;
-      teile.push(`<path d="M${x + nx} ${y + ny} L${x - nx} ${y - ny}" stroke="#c9a86a" stroke-width=".7"/>`);
-    }
+      return `<line x1="${(x + nx * halb).toFixed(2)}" y1="${(y + ny * halb).toFixed(2)}"
+        x2="${(x - nx * halb).toFixed(2)}" y2="${(y - ny * halb).toFixed(2)}"/>`;
+    };
+    let streben = holm(1) + holm(-1);
+    for (let k = 1; k <= stufen; k++) streben += sprosse(k / (stufen + 1));
+    // Schatten leicht versetzt, dann dunkle Kontur, dann helleres Holz darauf
+    teile.push(`<g transform="translate(.8 1)" opacity=".26" stroke="#000" fill="none"
+      stroke-width="2.8" stroke-linecap="round">${streben}</g>`);
+    teile.push(`<g fill="none" stroke-linecap="round">
+      <g stroke="#7c5c2e" stroke-width="2">${streben}</g>
+      <g stroke="#d9b978" stroke-width="1.05">${streben}</g></g>`);
+    const knauf = (p) => `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r=".8"
+      fill="#f0dca8" stroke="#7c5c2e" stroke-width=".3"/>`;
+    teile.push(knauf(a) + knauf(b));
   }
+
+  /* ---- Schlangen: schlanker Körper, Ringe, Kopf mit Augen und Zunge ---- */
   for (const [start, ziel] of sp.schlangen) {
-    const a = feldPos(start), b = feldPos(ziel);
+    const a = feldPos(start), b = feldPos(ziel);      // a = Kopf (hohes Feld)
     const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
-    const nx = (-dy / len) * 6, ny = (dx / len) * 6;
-    const mx = (a.x + b.x) / 2 + nx, my = (a.y + b.y) / 2 + ny;
-    teile.push(`<path d="M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}" fill="none" stroke="#d98878"
-      stroke-width="2.2" stroke-linecap="round" opacity=".9"/>`);
-    teile.push(`<circle cx="${a.x}" cy="${a.y}" r="1.8" fill="#d98878"/>`);
+    const nx = -dy / len, ny = dx / len;
+    const bogen = Math.min(7, len * 0.13);
+    const schritte = 46;
+    const punkte = [];
+    for (let i = 0; i <= schritte; i++) {
+      const t = i / schritte;
+      const quer = Math.sin(t * Math.PI) * bogen + Math.sin(t * Math.PI * 3.2) * 1.7;
+      punkte.push({ x: a.x + dx * t + nx * quer, y: a.y + dy * t + ny * quer, t });
+    }
+    const halbBreite = (t) => 1.85 - 1.35 * t;         // Kopf dick, Schwanz dünn
+    const links = [], rechts = [];
+    for (let i = 0; i < punkte.length; i++) {
+      const p = punkte[i];
+      const q = punkte[Math.min(punkte.length - 1, i + 1)];
+      const r = punkte[Math.max(0, i - 1)];
+      let tx = q.x - r.x, ty = q.y - r.y;
+      const tl = Math.hypot(tx, ty) || 1;
+      const px = -ty / tl, py = tx / tl;
+      const w = halbBreite(p.t);
+      links.push((p.x + px * w).toFixed(2) + " " + (p.y + py * w).toFixed(2));
+      rechts.push((p.x - px * w).toFixed(2) + " " + (p.y - py * w).toFixed(2));
+    }
+    const koerper = "M" + links.join(" L") + " L" + rechts.reverse().join(" L") + " Z";
+    const mitte = "M" + punkte.map((p) => p.x.toFixed(2) + " " + p.y.toFixed(2)).join(" L");
+    teile.push(`<path d="${koerper}" transform="translate(.7 1)" fill="#04140f" opacity=".35" stroke="none"/>`);
+    teile.push(`<path d="${koerper}" fill="#c85a45" stroke="#6f2b1f" stroke-width=".45" stroke-linejoin="round"/>`);
+    teile.push(`<path d="${mitte}" fill="none" stroke="#f2cfa6" stroke-width="1.05"
+      stroke-dasharray="1.5 2.6" stroke-linecap="round" opacity=".8"/>`);
+    // Kopf am hohen Feld, Blick aus dem Körper heraus
+    const k = punkte[0], n1 = punkte[2] || punkte[1];
+    let hx = k.x - n1.x, hy = k.y - n1.y;
+    const hl = Math.hypot(hx, hy) || 1;
+    const winkel = (Math.atan2(hy / hl, hx / hl) * 180) / Math.PI;
+    teile.push(`<g transform="translate(${k.x.toFixed(2)} ${k.y.toFixed(2)}) rotate(${winkel.toFixed(1)})">
+      <ellipse cx="1.15" cy="0" rx="2.45" ry="1.95" fill="#c85a45" stroke="#6f2b1f" stroke-width=".4"/>
+      <ellipse cx="1.55" cy="0" rx="1.45" ry="1.2" fill="#e07b5e" opacity=".5"/>
+      <circle cx="2.05" cy="-.85" r=".52" fill="#fff8ee"/><circle cx="2.2" cy="-.85" r=".26" fill="#241713"/>
+      <circle cx="2.05" cy=".85" r=".52" fill="#fff8ee"/><circle cx="2.2" cy=".85" r=".26" fill="#241713"/>
+      <path d="M3.45 0 l1.35 -.75 M3.45 0 l1.35 .75" stroke="#e0503f" stroke-width=".32"
+        fill="none" stroke-linecap="round"/>
+    </g>`);
+    const s = punkte[punkte.length - 1];
+    teile.push(`<circle cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r=".5" fill="#6f2b1f"/>`);
   }
+
   elWege.innerHTML = teile.join("");
 }
 
@@ -369,6 +429,9 @@ function lokalStarten(weiter) {
   brettStand = "";
   fehler("");
   figurenSichern(anzahl);
+  // Ohne Position sitzen die Figuren in der linken oberen Ecke – beim
+  // Start gehören sie in die Startzone unter dem Brett.
+  for (let i = 0; i < anzahl; i++) figurSetzen(i, 0);
   WG.setzeWuerfel(dice, 0);
   standZeigen(lokal.sp, false);
 }

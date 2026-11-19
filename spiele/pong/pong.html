@@ -56,6 +56,8 @@ body[data-stil="maenner"]{
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:var(--radius-klein);
  border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
 .menueleiste button:hover{filter:brightness(1.15);border-color:var(--rahmen-hell)}
+.menueleiste button.start{background:var(--akzent);border-color:var(--akzent);
+ color:var(--akzent-text);font-weight:bold}
 .menueleiste button.aktiv{background:var(--akzent);color:var(--akzent-text);
  border-color:var(--akzent);font-weight:bold}
 
@@ -121,6 +123,7 @@ a{color:var(--akzent)}
  </div>
 
  <div class="menueleiste" id="menueleiste">
+  <button id="btnStart" class="start">Start</button>
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnSolo" class="aktiv">1 Spieler</button>
   <button id="btnDuell">2 Spieler</button>
@@ -589,6 +592,7 @@ function zeichne(){
 /* ---------------------------------------------------------------- Lokal */
 
 function neuesSpiel(){
+ $("btnStart").hidden=false;
  if(ONLINE){ tu("reset"); return; }
  zustand="start";
  punkte1=0; punkte2=0; rallye=0;
@@ -611,6 +615,7 @@ function neuesSpiel(){
 
 function starten(){
  zustand="laeuft";
+ $("btnStart").hidden=true;
  meldungZu();
  aufschlag(-1);
  letzteZeit=performance.now();
@@ -689,6 +694,7 @@ function punkt(wer){
 
 function ende(){
  zustand="ende";
+ $("btnStart").hidden=false;
  const sieger=punkte1>punkte2?1:2;
  const titel=modus==="solo"?(sieger===1?"Gewonnen":"Verloren"):"Spieler "+sieger+" gewinnt";
  zeigeMeldung({
@@ -962,7 +968,6 @@ function ziehen(clientX,clientY){
 
 canvas.addEventListener("pointerdown",e=>{
  letzterZeigerTyp=e.pointerType||"mouse";
- if(!ONLINE&&zustand==="start"){ starten(); return; }
  ziehen(e.clientX,e.clientY);
  e.preventDefault();
 });
@@ -1018,6 +1023,11 @@ function modusSetzen(neu){
  neuesSpiel();
 }
 
+$("btnStart").onclick=()=>{
+ if(zustand==="laeuft")return;
+ if(zustand==="ende")neuesSpiel();
+ starten();
+};
 $("btnNeu").onclick=()=>neuesSpiel();
 $("btnSolo").onclick=()=>modusSetzen("solo");
 $("btnDuell").onclick=()=>modusSetzen("duell");

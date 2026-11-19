@@ -78,6 +78,17 @@ func schlangenBrett() ([][2]int, [][2]int) {
 		leitern = append(leitern, [2]int{start, ende})
 	}
 	schlangen := [][2]int{}
+	// Zwei Schlangen beginnen in den letzten zwei Reihen (81..97): auch dort ist
+	// man noch nicht sicher vor dem Rutschen, wie auf einem echten Brett.
+	for versuch := 0; versuch < 400 && len(schlangen) < 2; versuch++ {
+		start := 81 + rand.Intn(17) // 81..97
+		ende := start - (11 + rand.Intn(18))
+		if ende < 2 || belegt[start] || belegt[ende] {
+			continue
+		}
+		belegt[start], belegt[ende] = true, true
+		schlangen = append(schlangen, [2]int{start, ende})
+	}
 	for versuch := 0; versuch < 400 && len(schlangen) < schlangenSchlangen; versuch++ {
 		start := 12 + rand.Intn(86) // 12..97
 		ende := start - (11 + rand.Intn(18))
