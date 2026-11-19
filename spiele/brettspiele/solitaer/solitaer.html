@@ -3,85 +3,133 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#0b241d">
+<meta name="theme-color" content="#0b131b">
 <title>Solitär (Brettspiel)</title>
 <style>
 *{box-sizing:border-box}
 [hidden]{display:none !important}
-body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+:root{
+ --bg1:#13222e; --bg2:#0b1420; --bg3:#060a0f;
+ --panel:#111b25; --panel-2:#0b131b;
+ --text:#e9eef4; --muted:#93a3b3;
+ --warm:#f3c489; --warm-2:#c87a3e;
+ --akzent:#5fdcef;
+ --linie:rgba(255,255,255,.08); --linie-2:rgba(255,255,255,.15);
+}
+body{margin:0;padding:10px 8px 20px;
+ background:
+  radial-gradient(900px 520px at 18% -10%,#1d516766 0%,#00000000 70%),
+  radial-gradient(720px 420px at 92% 4%,#8a5a2e3d 0%,#00000000 72%),
+  linear-gradient(180deg,var(--bg1),var(--bg2) 55%,var(--bg3)) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:1px solid var(--linie);border-radius:18px;overflow:hidden;
+ background:linear-gradient(180deg,var(--panel),var(--panel-2));
+ box-shadow:inset 0 1px 0 #ffffff14,0 28px 60px -26px #000000,0 2px 10px #00000055}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:13px 14px 12px;border-bottom:1px solid var(--linie)}
+.titelleiste .titel{color:#d3e2ee;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+.titelleiste .kreuz{color:var(--muted);border:1px solid var(--linie);border-radius:50%;
+ width:26px;height:26px;line-height:24px;text-align:center;font-size:13px;
+ background:rgba(255,255,255,.04);transition:background .15s,color .15s}
+.titelleiste .kreuz:hover{background:rgba(255,255,255,.1);color:#fff}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
-.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
-.menueleiste button:disabled{opacity:.45;cursor:default}
+.menueleiste{display:flex;gap:8px;flex-wrap:wrap;padding:11px 12px;
+ border-bottom:1px solid var(--linie)}
+.menueleiste button{font-family:inherit;font-size:13px;padding:9px 15px;border-radius:10px;
+ border:1px solid var(--linie-2);background:rgba(255,255,255,.05);color:#e6eef5;cursor:pointer;
+ transition:background .15s,border-color .15s,transform .06s,box-shadow .15s}
+.menueleiste button:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.26)}
+.menueleiste button:active{transform:translateY(1px)}
+.menueleiste button:disabled{opacity:.38;cursor:default}
+.menueleiste #btnNeu{background:linear-gradient(180deg,#f9d6a6,#e3a565);color:#2b1a0c;
+ border-color:#f9dcb0;font-weight:600;box-shadow:0 6px 16px -8px #f0b978cc}
+.menueleiste #btnNeu:hover{background:linear-gradient(180deg,#ffe1b8,#eab072)}
 
-.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+.statuszeile{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;
+ padding:10px 12px;border-bottom:1px solid var(--linie)}
+.statuszeile span{display:inline-flex;align-items:baseline;gap:7px;font-size:12px;color:var(--muted);
+ padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid var(--linie)}
+.statuszeile b{color:#fff;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
 
-.buehne{position:relative;padding:8px;background:linear-gradient(180deg,#0a1f2b,#08161f)}
-/* Neue Farbwelt: Schieferblau als Brett, Kupfer für die Steine, Türkis für
-   die erreichbaren Löcher – warmes Spiel auf kühlem Grund. */
-.brett{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
- max-width:420px;margin:auto;padding:12px;border-radius:14px;
+.buehne{position:relative;padding:16px 12px 18px;
+ background:radial-gradient(120% 90% at 50% 0%,#14232f 0%,#0a1117 68%,#080d12 100%)}
+/* Dunkles Schieferbrett, eingelassene Löcher, polierte Kupfersteine,
+   türkise Ziellöcher – warmes Spiel auf kühlem Grund. */
+.brett{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(4px,1.5vw,7px);
+ width:min(92vw,430px);max-width:430px;aspect-ratio:1;margin:auto;
+ padding:clamp(10px,3vw,16px);border-radius:26px;
  background:
-  radial-gradient(circle at 50% 0%,#1b425666 0%,#00000000 62%),
-  linear-gradient(160deg,#12303f,#0d232e 58%,#0a1b24);
- border:1px solid #6fb7c755;
- box-shadow:inset 0 1px 0 #ffffff1a,0 10px 26px #00000066}
+  radial-gradient(65% 55% at 28% 0%,#2d4759a6 0%,#00000000 72%),
+  linear-gradient(165deg,#1b2c39,#12202a 55%,#0c161e);
+ border:1px solid #ffffff16;
+ box-shadow:inset 0 1px 0 #ffffff1f,inset 0 -22px 34px -20px #000000,
+  0 22px 44px -20px #000000cc}
 
 .zelle{position:relative;aspect-ratio:1;padding:0;margin:0;border:none;background:none;cursor:default}
 .zelle.aus{visibility:hidden}
 .zelle::before{content:"";position:absolute;inset:0;border-radius:50%;
- background:radial-gradient(circle at 50% 38%,#0a1a23,#050d12);
- border:1px solid #6fb7c733;
- box-shadow:inset 0 3px 6px #000000cc,inset 0 -1px 0 #ffffff12}
+ background:radial-gradient(circle at 50% 34%,#0b161f 0%,#04080c 76%);
+ border:1px solid #ffffff0f;
+ box-shadow:inset 0 4px 9px #000000d9,inset 0 -1px 0 #ffffff0f,0 1px 0 #ffffff0a}
 .zelle.voll{cursor:pointer}
-.zelle.voll::after{content:"";position:absolute;inset:11%;border-radius:50%;
- background:radial-gradient(circle at 33% 26%,#fff2dc 0%,#eab27a 30%,#c4743f 64%,#6d3520 100%);
- box-shadow:0 3px 6px #00000099,inset 0 -3px 6px #5a2a15,inset 0 2px 3px #ffffff66;
- transition:transform .12s ease,filter .12s ease}
-.zelle.voll:hover::after{filter:brightness(1.12);transform:translateY(-1px)}
-.zelle.gewaehlt::after{background:radial-gradient(circle at 33% 26%,#ffffff 0%,#f7dfa4 34%,#d8a94e 68%,#8a5f18 100%);
- box-shadow:0 0 0 2px #fff6dd,0 0 16px #f0c979bb,inset 0 -3px 6px #7a5410}
+.zelle.voll::after{content:"";position:absolute;inset:9%;border-radius:50%;
+ background:radial-gradient(circle at 32% 24%,#fff8ec 0%,#f8cf95 17%,#dd9a58 41%,#ac6229 68%,#5c2e13 100%);
+ box-shadow:0 7px 12px -5px #000000b3,inset 0 -4px 8px #4a2410,inset 0 2px 2px #ffffff7a;
+ transition:transform .15s ease,filter .15s ease,box-shadow .15s ease;
+ animation:steinAuf .18s ease-out}
+.zelle.voll:hover::after{filter:brightness(1.1);transform:translateY(-2px)}
+.zelle.gewaehlt::after{background:radial-gradient(circle at 32% 24%,#ffffff 0%,#ffe8be 20%,#ffcb7f 48%,#e08e34 76%,#8a4a14 100%);
+ box-shadow:0 0 0 2px #ffe6b4,0 0 24px #ffbe6aaa,0 10px 18px -8px #000000;
+ transform:translateY(-3px) scale(1.03)}
 .zelle.ziel{cursor:pointer}
-.zelle.ziel::after{content:"";position:absolute;inset:31%;border-radius:50%;
- background:radial-gradient(circle,#bff3ff,#4fd0e6 70%);opacity:.8;
- box-shadow:0 0 12px #55d6ecaa}
-.zelle.ziel:hover::after{opacity:1;box-shadow:0 0 18px #7ee7f7}
+.zelle.ziel::after{content:"";position:absolute;inset:27%;border-radius:50%;
+ background:radial-gradient(circle at 50% 38%,#effdff 0%,var(--akzent) 55%,#1d8fa8 100%);
+ box-shadow:0 0 0 1px #8ff1ff88,0 0 18px #5fdcef88;
+ animation:zielPuls 1.7s ease-in-out infinite}
+.zelle.ziel:hover::after{animation-play-state:paused;box-shadow:0 0 0 2px #bdf6ff,0 0 24px #7ee7f7}
+@keyframes steinAuf{from{transform:scale(.62);opacity:0}}
+@keyframes zielPuls{0%,100%{opacity:.62;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
 
-.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+.meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:rgba(5,9,13,.62);backdrop-filter:blur(5px);padding:14px;text-align:center}
+.meldung .kasten{background:linear-gradient(180deg,#172531,#0d151d);border:1px solid #ffffff1c;
+ border-radius:18px;padding:22px 22px 20px;max-width:330px;
+ box-shadow:inset 0 1px 0 #ffffff16,0 28px 54px -20px #000000}
+.meldung h2{margin:0 0 10px;color:var(--warm);font-weight:600;letter-spacing:.2em;
+ text-transform:uppercase;font-size:13px}
+.meldung p{margin:0 0 16px;color:#b7c6d3;font-size:13.5px;line-height:1.6}
+.meldung button{font-family:inherit;font-size:14px;padding:11px 20px;border-radius:10px;cursor:pointer;
+ border:1px solid #f9dcb0;background:linear-gradient(180deg,#f9d6a6,#e3a565);color:#2b1a0c;
+ font-weight:600;box-shadow:0 8px 20px -10px #f0b978}
+.meldung button:hover{background:linear-gradient(180deg,#ffe1b8,#eab072)}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:9px 14px;font-size:12.5px;color:var(--muted);min-height:34px;
+ border-top:1px solid var(--linie);line-height:1.5}
 
-#regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
-#regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln{margin-top:12px;padding:0 14px 14px}
+#regeln summary{cursor:pointer;color:var(--akzent);font-size:13px;letter-spacing:.04em;padding:8px 0}
+#regeln summary::marker{color:var(--akzent)}
+#regeln ol{margin:0;padding-left:20px;line-height:1.6;font-size:13px;color:#b7c6d3}
+#regeln li{margin-bottom:6px}
+#regeln b{color:#e6eef5;font-weight:600}
+.klein{color:var(--muted);font-size:12.5px}
+a{color:var(--akzent)}
 .mitte{text-align:center}
+
+@media (prefers-reduced-motion:reduce){
+ *{animation:none !important;transition:none !important}
+}
+@media (max-width:480px){
+ body{padding:6px 5px 16px}
+ .buehne{padding:12px 8px 14px}
+ .menueleiste{padding:9px 10px}
+ .menueleiste button{padding:10px 16px;font-size:13.5px}
+ .statuszeile{gap:6px}
+ .statuszeile span{padding:4px 10px;font-size:11.5px}
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>

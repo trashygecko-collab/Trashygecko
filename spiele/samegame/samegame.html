@@ -8,66 +8,135 @@
 <style>
 *{box-sizing:border-box}
 [hidden]{display:none !important}
+
+/* Farben der Seite je Ansicht; die Steine holen ihre zwei Töne aus --k1/--k2 */
+:root{
+ --bg1:#1d4b3e; --bg2:#123329; --bg3:#0a211b;
+ --panel:#0f2b23; --gold:#e8cd8e; --ink:#efe6d2; --muted:#a9c3b6; --titel:#f4e6c2;
+ --taste:#0f2b23; --taste-hover:#184536; --titel-bg:linear-gradient(#1e5645,#144238);
+ --buehne:#08120f; --muster:radial-gradient(transparent 0,transparent 0); --muster-groesse:12px;
+ --fenster-rand:#d9bc7c66; --titel-rand:#d9bc7c44; --leisten-rand:#d9bc7c33;
+ --trenner:#d9bc7c22; --knopf-rand:#d9bc7c66; --meldung-rand:#d9bc7c;
+ --schleier:#04100ccc; --knopf-text:#0b241d; --flug:#f7e4b4;
+ --stein-rand:#00000044; --stein-radius:5px;
+ --stein-schatten:inset 0 1px 0 #ffffff22; --stein-glanz:none; --ring:#f4e6c2;
+}
+body[data-stil="maedchen"]{
+ --bg1:#f7a6d4; --bg2:#eb7bc0; --bg3:#c94f92;
+ --panel:#fffafd; --gold:#6b0d3b; --ink:#3a0f24; --muted:#5b2340; --titel:#5c0f38;
+ --taste:#fff6fb; --taste-hover:#ffe2ee; --titel-bg:linear-gradient(#ffe1ef,#ffd0e5);
+ --buehne:linear-gradient(#fff9fc,#ffeef6);
+ --muster:radial-gradient(#ffd7e7 1.2px,transparent 1.2px); --muster-groesse:13px;
+ --fenster-rand:#f0bfd3; --titel-rand:#f3c3d6; --leisten-rand:#f7d6e3;
+ --trenner:#f9dbe6; --knopf-rand:#f0bfd3; --meldung-rand:#e88ab2;
+ --schleier:#fff6fae0; --knopf-text:#ffffff; --flug:#d84a86;
+ --stein-rand:#ffffff; --stein-radius:26%;
+ --stein-schatten:0 2px 6px #e07aa055,inset 0 -3px 0 #ffffff70;
+ --stein-glanz:radial-gradient(circle at 32% 22%,#ffffffd0 0%,#ffffff00 48%);
+ --ring:#ffffff;
+ color-scheme:light;
+}
+body[data-stil="buben"]{
+ --bg1:#0e1722; --bg2:#070c12; --bg3:#04070a;
+ --panel:#0a1119; --gold:#c8ff3d; --ink:#dbe7ee; --muted:#7f8f9b; --titel:#c8ff3d;
+ --taste:#0d1620; --taste-hover:#16232f; --titel-bg:linear-gradient(#101b25,#0a121a);
+ --buehne:#05080c;
+ --muster:linear-gradient(#ffffff08 1px,transparent 1px); --muster-groesse:18px;
+ --fenster-rand:#22303c; --titel-rand:#24313d; --leisten-rand:#1b2630;
+ --trenner:#141d25; --knopf-rand:#2a3a47; --meldung-rand:#3c514f;
+ --schleier:#04070add; --knopf-text:#08130a; --flug:#c8ff3d;
+ --stein-rand:#ffffff2b; --stein-radius:22%;
+ --stein-schatten:inset 0 0 8px #0000008c;
+ --stein-glanz:radial-gradient(circle at 34% 24%,#ffffff8c 0%,#ffffff00 44%);
+ --ring:#ffffff;
+}
+
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
+ color:var(--ink);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+.fenster{border:1px solid var(--fenster-rand);border-radius:8px;overflow:hidden;background:var(--panel);
  box-shadow:0 6px 18px #00000055}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:var(--titel-bg);border-bottom:1px solid var(--titel-rand)}
+.titelleiste .titel{color:var(--titel);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--knopf-rand);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--taste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--taste);
+ border-bottom:1px solid var(--leisten-rand)}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
-.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+ border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--taste-hover)}
+.menueleiste button.aktiv{background:var(--gold);color:var(--knopf-text);border-color:var(--gold);font-weight:bold}
 .menueleiste button:disabled{opacity:.45;cursor:default}
 
-.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+.stilwahl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;
+ background:var(--taste);border-bottom:1px solid var(--trenner);font-size:12px;color:var(--muted)}
+.stilwahl button{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
+ border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold)}
+.stilwahl button.aktiv{background:var(--gold);color:var(--knopf-text);border-color:var(--gold);font-weight:bold}
+body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
+ border-color:#e2537f;box-shadow:0 2px 8px #ff77ad55}
+body[data-stil="buben"] .stilwahl button.aktiv{background:var(--gold);color:#08130a;box-shadow:0 0 10px #c8ff3d55}
 
-.buehne{position:relative;padding:8px;background:#08120f}
+.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--taste);border-bottom:1px solid var(--trenner)}
+.statuszeile b{color:var(--gold);font-weight:normal}
+
+.buehne{position:relative;padding:8px;background:var(--buehne);
+ background-image:var(--muster);background-size:var(--muster-groesse) var(--muster-groesse)}
 .brett{display:grid;grid-template-columns:repeat(var(--sp,12),1fr);gap:3px;
  max-width:460px;margin:auto}
-.stein{padding:0;margin:0;border:1px solid #00000044;border-radius:5px;aspect-ratio:1;
- cursor:pointer;box-shadow:inset 0 1px 0 #ffffff22;
- transition:transform .16s ease,opacity .16s ease}
-.stein:hover{filter:brightness(1.18)}
-.stein.gruppe{filter:brightness(1.35);box-shadow:inset 0 0 0 2px #f4e6c2,inset 0 0 10px #00000055}
-.stein.weg{transform:scale(.25);opacity:0}
+.stein{--k1:#888;--k2:#555;
+ padding:0;margin:0;border:1px solid var(--stein-rand);border-radius:var(--stein-radius);
+ aspect-ratio:1;cursor:pointer;
+ background-color:var(--k1);
+ background-image:var(--stein-glanz),linear-gradient(160deg,var(--k1),var(--k2));
+ box-shadow:var(--stein-schatten);
+ transition:transform .16s ease,opacity .16s ease,filter .12s ease}
+body[data-stil="buben"] .stein{box-shadow:0 0 9px -1px var(--k1),inset 0 0 8px #0000008c}
+.stein:hover{filter:brightness(1.14)}
+.stein.vorschau{filter:brightness(1.2) saturate(1.1);
+ box-shadow:inset 0 0 0 2px var(--ring),var(--stein-schatten)}
+.stein.gruppe{filter:brightness(1.32);
+ box-shadow:inset 0 0 0 2px var(--ring),inset 0 0 12px #00000055}
+.stein.weg{transform:scale(.2);opacity:0}
 .stein.wackeln{animation:wackeln .3s}
 @keyframes wackeln{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 
-.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+.punkteflug{position:absolute;pointer-events:none;font-weight:bold;font-size:clamp(15px,3.4vw,20px);
+ color:var(--flug);text-shadow:0 2px 8px #00000099;transform:translate(-50%,-50%);
+ animation:flug .95s ease-out forwards}
+@keyframes flug{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+ 18%{opacity:1}
+ 100%{opacity:0;transform:translate(-50%,-170%) scale(1.15)}}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--meldung-rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--ink);font-size:14px;line-height:1.5}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid var(--meldung-rand);background:var(--gold);color:var(--knopf-text);font-weight:bold}
+body[data-stil="maedchen"] .meldung button{border-color:#c2477f}
+
+.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--ink)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
-<body>
+<body data-stil="klassisch">
 <main class="fenster">
  <div class="titelleiste">
   <span class="titel">SameGame</span>
@@ -87,6 +156,13 @@ a{color:#e8cd8e}
   <span>Züge <b id="zuege">0</b></span>
   <span>Blöcke <b id="rest">0</b></span>
   <span>Rekord <b id="rekord">–</b></span>
+ </div>
+
+ <div class="stilwahl" id="stilwahl">
+  <span>Ansicht</span>
+  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
+  <button type="button" data-stil="maedchen">Mädchen</button>
+  <button type="button" data-stil="buben">Buben</button>
  </div>
 
  <div class="buehne">
@@ -123,7 +199,18 @@ a{color:#e8cd8e}
 (() => {
 const $=id=>document.getElementById(id);
 
-const FARBEN=["#e8cd8e","#4fb3a0","#6f9fd8","#d98b8b","#a58bd8"];
+// Zwei Töne je Steinfarbe (hell → dunkel) – je Ansicht ein eigener Satz
+const PALETTEN={
+ klassisch:[["#e8cd8e","#e8cd8eaa"],["#4fb3a0","#4fb3a0aa"],["#6f9fd8","#6f9fd8aa"],
+            ["#d98b8b","#d98b8baa"],["#a58bd8","#a58bd8aa"]],
+ maedchen: [["#ffb3d4","#ff78ad"],["#9defd7","#35c997"],["#cabaff","#8a63ff"],
+            ["#ffd39b","#ff9330"],["#a6ddff","#3faee8"]],
+ buben:    [["#e6ff86","#a4e000"],["#8df4ff","#00b6d4"],["#ff9acb","#ff1f74"],
+            ["#ffcb96","#ff7a00"],["#cdb6ff","#7a3cff"]]
+};
+const FARBZAHL=5;
+let stil="klassisch";
+function palette(){ return PALETTEN[stil]||PALETTEN.klassisch; }
 
 const STUFEN={
  klein:{sp:10,ze:12,key:"samegame-best-10x12"},
@@ -147,7 +234,7 @@ function neuesSpiel(){
  spalten=s.sp; zeilen=s.ze;
  brett.style.setProperty("--sp",spalten);
  feld=Array.from({length:zeilen},()=>
-  Array.from({length:spalten},()=>Math.floor(Math.random()*FARBEN.length)));
+  Array.from({length:spalten},()=>Math.floor(Math.random()*FARBZAHL)));
  punkte=0; zuege=0; verlauf=[]; vorbei=false; sperre=false;
  meldungZu();
  zeichne();
@@ -167,7 +254,9 @@ function zeichne(){
     stein.style.visibility="hidden";
     stein.tabIndex=-1;
    }else{
-    stein.style.background="linear-gradient(160deg,"+FARBEN[farbe]+","+FARBEN[farbe]+"aa)";
+    const ton=palette()[farbe];
+    stein.style.setProperty("--k1",ton[0]);
+    stein.style.setProperty("--k2",ton[1]);
    }
    stick.appendChild(stein);
   }
@@ -277,6 +366,8 @@ function tippen(z,s){
   if(el){ el.classList.add("gruppe"); setTimeout(()=>el.classList.add("weg"),30); }
  });
 
+  if(gewinn>0)zeigePunkte("+"+gewinn,gruppe);
+
  setTimeout(()=>{
   gruppe.forEach(([gz,gs])=>{ feld[gz][gs]=null; });
   nachrutschen();
@@ -333,6 +424,53 @@ brett.addEventListener("click",e=>{
  tippen(Number(stein.dataset.z),Number(stein.dataset.s));
 });
 
+// Vorschau: beim Überfahren leuchten alle Steine der Gruppe, die ein Klick
+// wegräumen würde (am Handy gibt es kein Überfahren – dort zeigt der Klick es).
+function loescheVorschau(){
+ brett.querySelectorAll(".stein.vorschau").forEach(el=>el.classList.remove("vorschau"));
+}
+function zeigeVorschau(z,s){
+ loescheVorschau();
+ if(sperre||vorbei)return;
+ const gruppe=gruppeBei(z,s);
+ if(gruppe.length<2)return;
+ const steine=brett.children;
+ for(const [gz,gs] of gruppe){
+  const el=steine[gz*spalten+gs];
+  if(el)el.classList.add("vorschau");
+ }
+}
+brett.addEventListener("pointerover",e=>{
+ if(e.pointerType==="touch")return;
+ const stein=e.target.closest(".stein");
+ if(!stein)return;
+ zeigeVorschau(Number(stein.dataset.z),Number(stein.dataset.s));
+});
+brett.addEventListener("pointerleave",loescheVorschau);
+
+// Punkte steigen dort auf, wo die Gruppe verschwindet
+function zeigePunkte(text,gruppe){
+ const buehne=document.querySelector(".buehne");
+ if(!buehne)return;
+ const rb=buehne.getBoundingClientRect();
+ const steine=brett.children;
+ let x=0,y=0,n=0;
+ for(const [gz,gs] of gruppe){
+  const el=steine[gz*spalten+gs];
+  if(!el)continue;
+  const r=el.getBoundingClientRect();
+  x+=r.left+r.width/2; y+=r.top+r.height/2; n++;
+ }
+ if(!n)return;
+ const d=document.createElement("div");
+ d.className="punkteflug";
+ d.textContent=text;
+ d.style.left=(x/n-rb.left)+"px";
+ d.style.top=(y/n-rb.top)+"px";
+ buehne.appendChild(d);
+ setTimeout(()=>d.remove(),1000);
+}
+
 $("btnNeu").onclick=()=>neuesSpiel();
 
 function stufeWaehlen(name,id){
@@ -361,6 +499,27 @@ window.addEventListener("keydown",e=>{
  if(e.key===" "&&!$("meldung").hidden){ $("meldungKnopf").click(); e.preventDefault(); }
  if((e.key==="z"||e.key==="Z")&&!$("btnZurueck").disabled)  { $("btnZurueck").click(); }
 });
+
+// ------------------------------------------------------------------ Ansicht
+const STIL_KEY="samegame-stil";
+function stilSetzen(name,merken){
+ if(!PALETTEN[name])name="klassisch";
+ stil=name;
+ document.body.dataset.stil=name;
+ if(merken!==false){ try{ localStorage.setItem(STIL_KEY,name); }catch(e){} }
+ document.querySelectorAll("#stilwahl button").forEach(b=>{
+  b.classList.toggle("aktiv",b.dataset.stil===name);
+ });
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta)meta.content=name==="maedchen"?"#ffe8f2":name==="buben"?"#070c12":"#0b241d";
+ if(feld.length)zeichne();
+}
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.addEventListener("click",()=>stilSetzen(b.dataset.stil));
+});
+let startStil="klassisch";
+try{ startStil=localStorage.getItem(STIL_KEY)||"klassisch"; }catch(e){}
+stilSetzen(startStil,false);
 
 neuesSpiel();
 })();

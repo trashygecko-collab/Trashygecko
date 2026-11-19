@@ -1,0 +1,85 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "de.trashygecko.tmahjong"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "de.trashygecko.tmahjong"
+        minSdk 24
+        targetSdk 34
+        versionCode 7
+        versionName "1.6"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // Kein Qualitaetsverlust bei Schrift und Bildern im WebView.
+    buildFeatures {
+        buildConfig false
+    }
+}
+
+dependencies {
+    // WebViewAssetLoader: liefert die Spieldateien unter einer echten https-Herkunft
+    // aus, damit localStorage und die Sicherheitsregeln des Spiels greifen.
+    implementation "androidx.webkit:webkit:1.11.0"
+    implementation "androidx.core:core:1.13.1"
+}
+
+// Die Spieldateien liegen nur an einer Stelle (spiele/brettspiele/mahjong) und
+// werden beim Bauen in die Assets kopiert - so kann die App nicht von der
+// Webfassung abweichen.  file() zaehlt vom App-Modul (spiele/android/app) aus:
+// ../../ ist spiele/.
+def spielQuelle = file("../../brettspiele/mahjong")
+def wwwZiel = file("src/main/assets/www")
+
+tasks.register("spielKopieren", Copy) {
+    from(spielQuelle) {
+        exclude "README.md"
+    }
+    // Der Ordnerbaum der Homepage wird nachgebaut: mahjong.html laedt die
+    // Spruchliste als ../../lob.js, also liegt www/lob.js zwei Ebenen darueber.
+    into(file("${wwwZiel}/brettspiele/mahjong"))
+}
+
+// lob.js liegt in der Homepage neben spiele/ - hier also direkt unter www/.
+tasks.register("lobKopieren", Copy) {
+    from(file("../../lob.js"))
+    into(wwwZiel)
+}
+
+// zurueck.js ebenfalls: das Spiel laedt es mit ../../zurueck.js, also unter
+// www/.  In der App tut es nichts (siehe Kommentar in der Datei selbst).
+tasks.register("zurueckKopieren", Copy) {
+    from(file("../../zurueck.js"))
+    into(wwwZiel)
+}
+
+// Gemeinsame Schrift der Homepage: die Spielseiten laden sie absolut als
+// /spiele/schrift.css und /spiele/schrift/*.woff2.  Deshalb liegen die Dateien
+// unter assets/spiele/ - MainActivity liefert sie unter /spiele/ aus.
+tasks.register("schriftKopieren", Copy) {
+    from(file("../../schrift.css"))
+    from(file("../../schrift")) {
+        include "*.woff2"
+        include "OFL.txt"
+        into "schrift"
+    }
+    into(file("src/main/assets/spiele"))
+}
+
+tasks.named("preBuild") {
+    dependsOn "spielKopieren", "lobKopieren", "zurueckKopieren", "schriftKopieren"
+}

@@ -7,12 +7,14 @@
 <title>Flipper</title>
 <style>
 *{box-sizing:border-box}
+html,body{height:100%}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 14px;
  background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
  color:#efe6d2;font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
-main{max-width:820px;margin:auto}
+main{max-width:820px;width:100%;margin:auto;display:flex;flex-direction:column;min-height:0;height:100%}
+.titelleiste,.menueleiste,.statuszeile,.fluegel,.fuss,#regeln{flex:0 0 auto}
 
 .fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
  box-shadow:0 6px 18px #00000055}
@@ -34,9 +36,12 @@ main{max-width:820px;margin:auto}
 .statuszeile b{color:#e8cd8e;font-weight:normal}
 #punkte{font-size:16px;color:#fff3d2}
 
-.tisch{display:flex;gap:10px;padding:8px;background:#08120f;align-items:flex-start;justify-content:center}
-.leinwand{position:relative;flex:1 1 auto;max-width:430px}
-canvas{display:block;width:100%;height:auto;border-radius:10px;
+/* Der Tisch nimmt genau den Platz, der zwischen Kopf, Knöpfen und Fuß übrig
+   ist – passeTisch() setzt die Maße der Leinwand danach (Höhe und Breite). */
+.tisch{display:flex;gap:10px;padding:8px;background:#08120f;align-items:center;justify-content:center;
+ flex:1 1 auto;min-height:0;overflow:hidden}
+.leinwand{position:relative;flex:0 0 auto;width:300px;height:420px;max-width:100%}
+canvas{display:block;width:100%;height:100%;border-radius:10px;
  border:1px solid #d9bc7c33;background:#04100c;touch-action:none}
 
 .meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -112,6 +117,7 @@ a{color:#e8cd8e}
    <li><b>Ziel:</b> Mit den beiden Flippern die Kugel im Spiel halten und möglichst viele Punkte sammeln.</li>
    <li><b>Stift:</b> Rechts liegt die Kugel im Kanal auf dem Stift. Stift nach unten ziehen (im Feld, mit dem Knopf <b>Stift ziehen</b> oder <b>Leertaste</b> halten) und loslassen – je weiter gezogen, desto kräftiger der Schuss. Der Stift schießt die Kugel oben durch den Bogen ins Feld.</li>
    <li><b>Flipper:</b> Linke Bildhälfte antippen oder <b>A</b> / <b>←</b> für den linken, rechte Hälfte oder <b>L</b> / <b>→</b> für den rechten Flipper.</li>
+   <li><b>Mittelstift:</b> Zwischen den beiden Flippern fährt ein Stift auf und ab. Ist er oben, prallt die Kugel an ihm ab und bleibt im Spiel; ist er unten, rutscht sie durch den Auslass.</li>
    <li><b>Schleudern:</b> Die beiden Dreiecke über den Flippern stoßen die Kugel zurück ins Feld (60 Punkte je Stoß).</li>
    <li><b>Lichter oben:</b> Drei Lichter <b>A</b>, <b>B</b>, <b>C</b> – rollt die Kugel durch eines, leuchtet es. Sind alle drei an, gibt es einen Bonus und der Punkte-Multiplikator steigt um eins (bis ×5).</li>
    <li><b>Punkte:</b> Bumper geben bei jedem Treffer Punkte, Schleudern etwas weniger, Zielscheiben viel. Ist eine ganze Reihe Ziele abgeräumt, gibt es einen Bonus und die Reihe steht wieder.</li>
@@ -160,6 +166,11 @@ const SCHLEUDERN=[
 // Rücklaufsperre am Ende des Kanals: hoch fliegt die Kugel durch, zurück
 // wird sie nach links ins Feld abgelenkt.
 const RUECKLAUF={x1:336,y1:186,x2:376,y2:152};
+
+// Mittelstift zwischen den beiden Flippern: er fährt auf und ab. Oben hält er
+// die Kugel im Spiel, unten ist der Auslass frei.
+const MSTIFT={x:200,r:7,oben:606,unten:712,zyklus:5.2,fahr:0.6};
+let mstiftT=0;
 
 // Drei Lichter oben: durchrollen schaltet sie an, alle drei geben Bonus.
 const ROLLOVER=[
@@ -256,9 +267,71 @@ function baueAutomat(a){
 
 function baueFlipper(){
  flipper=[
-  {x:124,y:606,len:74,ruhe:0.52,aktiv:-0.56,winkel:0.52,alt:0.52,an:false,schub:17,links:true},
-  {x:276,y:606,len:74,ruhe:Math.PI-0.52,aktiv:Math.PI+0.56,winkel:Math.PI-0.52,alt:Math.PI-0.52,an:false,schub:17,links:false}
+  {x:120,y:606,len:74,ruhe:0.52,aktiv:-0.56,winkel:0.52,alt:0.52,an:false,schub:17,links:true},
+  {x:280,y:606,len:74,ruhe:Math.PI-0.52,aktiv:Math.PI+0.56,winkel:Math.PI-0.52,alt:Math.PI-0.52,an:false,schub:17,links:false}
  ];
+}
+
+// 0 = ganz unten, 1 = ganz oben; weich anfahren und anhalten
+function mstiftStelle(){
+ const t=mstiftT%MSTIFT.zyklus;
+ let p;
+ if(t<MSTIFT.fahr)p=t/MSTIFT.fahr;
+ else if(t<MSTIFT.zyklus/2)p=1;
+ else if(t<MSTIFT.zyklus/2+MSTIFT.fahr)p=1-(t-MSTIFT.zyklus/2)/MSTIFT.fahr;
+ else p=0;
+ p=Math.max(0,Math.min(1,p));
+ p=p*p*(3-2*p);
+ return {p,y:MSTIFT.unten+(MSTIFT.oben-MSTIFT.unten)*p};
+}
+
+// Der Stift ist eine senkrechte Stange mit runder Kappe: Abstand zur Strecke.
+function mstiftStoss(){
+ const st=mstiftStelle();
+ const cy=Math.min(Math.max(kugel.y,st.y),H+40);
+ const dx=kugel.x-MSTIFT.x, dy=kugel.y-cy;
+ let d=Math.hypot(dx,dy);
+ const dick=RK+MSTIFT.r;
+ if(d>=dick)return;
+ let nx,ny;
+ if(d<0.0001){
+  nx=kugel.x<MSTIFT.x?-1:1; ny=0; d=1;
+ }else{
+  nx=dx/d; ny=dy/d;
+ }
+ kugel.x=MSTIFT.x+nx*(dick+0.4);
+ kugel.y=cy+ny*(dick+0.4);
+ const vn=kugel.vx*nx+kugel.vy*ny;
+ if(vn<0){
+  kugel.vx-=1.5*vn*nx;
+  kugel.vy-=1.5*vn*ny;
+ }
+}
+
+function zeichneMittelstift(){
+ const f=automat.farbe, st=mstiftStelle(), y=st.y;
+ // Loch im Tisch, aus dem der Stift fährt
+ ctx.fillStyle="#00000066";
+ ctx.beginPath();
+ ctx.ellipse(MSTIFT.x,H-4,13,7,0,0,Math.PI*2);
+ ctx.fill();
+ if(y>=H-1)return;   // ganz eingefahren: nur das Loch
+ // Stange
+ const gl=ctx.createLinearGradient(MSTIFT.x-MSTIFT.r,0,MSTIFT.x+MSTIFT.r,0);
+ gl.addColorStop(0,"#6f7a76");
+ gl.addColorStop(0.4,"#d5ded8");
+ gl.addColorStop(1,"#59625f");
+ ctx.fillStyle=gl;
+ rundeFlaeche(MSTIFT.x-MSTIFT.r,y,MSTIFT.r*2,Math.max(0,H-y),MSTIFT.r);
+ ctx.fill();
+ // Gummikappe oben
+ ctx.beginPath();
+ ctx.arc(MSTIFT.x,y+MSTIFT.r,MSTIFT.r+1,0,Math.PI*2);
+ ctx.fillStyle=f.licht;
+ ctx.fill();
+ ctx.strokeStyle="#00000066";
+ ctx.lineWidth=1;
+ ctx.stroke();
 }
 
 function neuesSpiel(a){
@@ -348,6 +421,7 @@ function kugelInRechteck(z){
 }
 
 function physik(dt){
+ mstiftT+=dt;
  // Stift laden
  if(zustand==="bereit"&&stiftAn)zug=Math.min(1,zug+dt*1.35);
  if(stiftWieder>0)stiftWieder=Math.max(0,stiftWieder-dt*5);
@@ -493,6 +567,9 @@ function physik(dt){
    kugel.vy+=ny*230;
   }
  }
+
+ // Mittelstift zwischen den Flippern
+ mstiftStoss();
 
  // Geschwindigkeit deckeln
  const v=Math.hypot(kugel.vx,kugel.vy);
@@ -681,6 +758,9 @@ function zeichne(){
   ctx.fillStyle="#0a1f19"; ctx.fill();
   ctx.strokeStyle=f.licht; ctx.lineWidth=1.5; ctx.stroke();
  }
+
+ // Mittelstift zwischen den Flippern
+ zeichneMittelstift();
 
  // Spur
  spur.forEach((p,i)=>{
@@ -948,7 +1028,27 @@ AUTOMATEN.forEach((a,i)=>{
  $("automatLeiste").appendChild(b);
 });
 
+// Tischgröße: so viel Platz, wie im Fenster übrig bleibt (kein Scrollen)
+function passeTisch(){
+ const box=document.querySelector(".tisch");
+ const lw=document.querySelector(".leinwand");
+ if(!box||!lw)return;
+ const r=box.getBoundingClientRect();
+ const cs=getComputedStyle(box);
+ const freiW=Math.max(80,r.width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight));
+ const freiH=Math.max(80,r.height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom));
+ const h=Math.max(220,Math.min(freiH,freiW*1.75));
+ const w=h*4/7;
+ lw.style.width=Math.round(w)+"px";
+ lw.style.height=Math.round(h)+"px";
+}
+window.addEventListener("resize",passeTisch);
+window.addEventListener("orientationchange",passeTisch);
+if(window.ResizeObserver)new ResizeObserver(()=>passeTisch()).observe(document.querySelector(".tisch"));
+document.getElementById("regeln").addEventListener("toggle",passeTisch);
+
 // Start
+passeTisch();
 baueAutomat(AUTOMATEN[0]);
 neuesSpiel();
 meldung("FLIPPER",automat.tipp+" Drei Kugeln, zwei Flipper – viel Glück.","Los geht's");

@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0b241d">
@@ -674,11 +675,10 @@ if(ONLINE){
  const tasten=document.querySelector(".tasten");
  if(tasten)tasten.hidden=true;
  $("hinweis").textContent="Spielstand wird geladen …";
- holen();
- setInterval(()=>{
-  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
- },30000);
+ // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+ // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+ // Hintergrund und meldet sich nur als „nicht aktiv“.
+ WG.leben({room:ROOM,id:ID,name:NAME}).then(holen);
 }else{
  neuePartie();
  meldung("TRON","Zwei Lichtrenner, zwei Spuren – wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.","Starten");

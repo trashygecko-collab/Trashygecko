@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b241d">
@@ -507,12 +508,11 @@ if(!ONLINE){
  $("startText").textContent="Cabo läuft über den Connector: Raum öffnen, „Cabo“ anbieten, Karte im Chat antippen – dann sitzt du am Tisch.";
  zeige("start",true);
 }else{
- holen();
+ // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+ // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+ // Hintergrund und meldet sich nur als „nicht aktiv“.
+ WG.leben({room:ROOM,id:ID,name:(ich()&&ich().name)||NAME}).then(holen);
  setInterval(holen,1300);
- setInterval(()=>{
-  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:ROOM,id:ID,name:(ich()&&ich().name)||NAME,active:true})}).catch(()=>{});
- },30000);
 }
 </script>
 <script src="/spiele/verlassen.js"></script>

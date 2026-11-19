@@ -141,6 +141,7 @@ a{color:var(--akzent)}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 </head>
 <body data-stil="schlicht">
 <main class="fenster">
@@ -1480,11 +1481,10 @@ spielAufbauen();
 if(ONLINE){
  $("menueleiste").hidden=true;
  $("hinweis").textContent="Spielstand wird geladen …";
- holen();
- setInterval(()=>{
-  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
- },30000);
+ // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+ // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+ // Hintergrund und meldet sich nur als „nicht aktiv“.
+ WG.leben({room:ROOM,id:ID,name:NAME}).then(holen);
 }
 requestAnimationFrame(schleife);
 

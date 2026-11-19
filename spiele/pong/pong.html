@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0b241d">
@@ -26,10 +27,10 @@ body[data-stil="klassisch"]{
  --radius:8px;--radius-klein:6px;--schrift-titel:1px;
 }
 body[data-stil="maedchen"]{
- --bg1:#ffeaf2;--bg2:#ffe0ec;--bg3:#f7d8e8;
+ --bg1:#f7a6d4;--bg2:#eb7bc0;--bg3:#c94f92;
  --rahmen:#f3a8c6;--rahmen-hell:#ff9ec4;--akzent:#ff8fbd;--akzent-text:#4a2233;
  --feld:#fff6fa;--feld-dunkel:#ffeef5;--leiste:#fff6fa;
- --text:#5c3a4c;--text-leise:#a1748c;
+ --text:#3a0f24;--text-leise:#5b2340;
  --radius:18px;--radius-klein:14px;--schrift-titel:2px;
 }
 body[data-stil="maenner"]{
@@ -1028,11 +1029,10 @@ if(ONLINE){
  $("statusBest").hidden=true;
  $("statusPunkte").firstChild.nodeValue="Punkte ";
  meineX=W/2;
- holen();
- setInterval(()=>{
-  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
- },30000);
+ // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+ // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+ // Hintergrund und meldet sich nur als „nicht aktiv“.
+ WG.leben({room:ROOM,id:ID,name:NAME}).then(holen);
 }else{
  beste=rekordLaden();
  neuesSpiel();

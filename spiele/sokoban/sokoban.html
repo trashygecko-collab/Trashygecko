@@ -8,66 +8,109 @@
 <style>
 *{box-sizing:border-box}
 [hidden]{display:none !important}
+/* Farben der Seite je Ansicht; das Feld malt STILE[stil] */
+:root{
+ --bg1:#1d4b3e; --bg2:#123329; --bg3:#0a211b;
+ --panel:#0f2b23; --ink:#efe6d2; --muted:#a9c3b6; --gold:#e8cd8e; --titel:#f4e6c2;
+ --taste:#0b241d; --taste-hover:#184536; --titel-bg:linear-gradient(#1e5645,#144238);
+ --buehne:#08120f; --pad:#12312a; --pad-aktiv:#1e5645; --regel:#d8d2bf;
+ --fenster-rand:#d9bc7c66; --titel-rand:#d9bc7c44; --leisten-rand:#d9bc7c33;
+ --trenner:#d9bc7c22; --knopf-rand:#d9bc7c66; --meldung-rand:#d9bc7c;
+ --schleier:#04100ccc; --knopf-text:#0b241d; --kasten-text:#d8edd8;
+ --leinwand:inset 0 0 40px #00000088;
+}
+body[data-stil="maedchen"]{
+ --bg1:#f7a6d4; --bg2:#eb7bc0; --bg3:#c94f92;
+ --panel:#fffafd; --ink:#3a0f24; --muted:#5b2340; --gold:#6b0d3b; --titel:#5c0f38;
+ --taste:#fff6fb; --taste-hover:#ffe2ee; --titel-bg:linear-gradient(#ffe1ef,#ffd0e5);
+ --buehne:#fff2f8; --pad:#fff6fb; --pad-aktiv:#ffd9e8; --regel:#6b4356;
+ --fenster-rand:#f0bfd3; --titel-rand:#f3c3d6; --leisten-rand:#f7d6e3;
+ --trenner:#f9dbe6; --knopf-rand:#f0bfd3; --meldung-rand:#e88ab2;
+ --schleier:#fff6fae0; --knopf-text:#ffffff; --kasten-text:#6b4356;
+ --leinwand:inset 0 0 0 1px #f3c3d6;
+ color-scheme:light;
+}
+body[data-stil="buben"]{
+ --bg1:#0e1722; --bg2:#070c12; --bg3:#04070a;
+ --panel:#0a1119; --ink:#dbe7ee; --muted:#7f8f9b; --gold:#c8ff3d; --titel:#c8ff3d;
+ --taste:#0d1620; --taste-hover:#16232f; --titel-bg:linear-gradient(#101b25,#0a121a);
+ --buehne:#05080c; --pad:#0d1620; --pad-aktiv:#1b2a33; --regel:#b6c4cf;
+ --fenster-rand:#22303c; --titel-rand:#24313d; --leisten-rand:#1b2630;
+ --trenner:#141d25; --knopf-rand:#2a3a47; --meldung-rand:#3c514f;
+ --schleier:#04070add; --knopf-text:#08130a; --kasten-text:#b6c4cf;
+ --leinwand:inset 0 0 40px #000000aa;
+}
+
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
+ color:var(--ink);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+.fenster{border:1px solid var(--fenster-rand);border-radius:8px;overflow:hidden;background:var(--panel);
  box-shadow:0 6px 18px #00000055}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:var(--titel-bg);border-bottom:1px solid var(--titel-rand)}
+.titelleiste .titel{color:var(--titel);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--knopf-rand);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--taste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:var(--taste);
+ border-bottom:1px solid var(--leisten-rand)}
 .menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+ border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--taste-hover)}
+
+.stilwahl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;
+ background:var(--taste);border-bottom:1px solid var(--trenner);font-size:12px;color:var(--muted)}
+.stilwahl button{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
+ border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold)}
+.stilwahl button.aktiv{background:var(--gold);color:var(--knopf-text);border-color:var(--gold);font-weight:bold}
+body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
+ border-color:#e2537f;box-shadow:0 2px 8px #ff77ad55}
+body[data-stil="buben"] .stilwahl button.aktiv{background:var(--gold);color:#08130a;box-shadow:0 0 10px #c8ff3d55}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--taste);border-bottom:1px solid var(--trenner)}
+.statuszeile b{color:var(--gold);font-weight:normal}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
 canvas{display:block;width:100%;max-width:480px;height:auto;border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px #00000088}
+ box-shadow:var(--leinwand)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--meldung-rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--kasten-text);font-size:14px;line-height:1.5}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--meldung-rand);background:var(--gold);color:var(--knopf-text);font-weight:bold}
+body[data-stil="maedchen"] .meldung button{border-color:#c2477f}
 
 .pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
- gap:6px;justify-content:center;padding:8px 8px 4px;background:#08120f}
+ gap:6px;justify-content:center;padding:8px 8px 4px;background:var(--buehne)}
 .pad button{font-family:inherit;font-size:20px;border-radius:8px;cursor:pointer;
- border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
-.pad button:active{background:#1e5645}
+ border:1px solid var(--knopf-rand);background:var(--pad);color:var(--gold)}
+.pad button:active{background:var(--pad-aktiv)}
 .pad .oben{grid-column:2;grid-row:1}
 .pad .links{grid-column:1;grid-row:2}
 .pad .runter{grid-column:2;grid-row:2}
 .pad .rechts{grid-column:3;grid-row:2}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regel)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
-<body>
+<body data-stil="klassisch">
 <main class="fenster">
  <div class="titelleiste">
   <span class="titel">Sokoban</span>
@@ -86,6 +129,13 @@ a{color:#e8cd8e}
   <span>Schieben <b id="schieben">0</b></span>
   <span>Kisten <b id="kisten">0/0</b></span>
   <span>Bestwert <b id="bestwert">–</b></span>
+ </div>
+
+ <div class="stilwahl" id="stilwahl">
+  <span>Ansicht</span>
+  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
+  <button type="button" data-stil="maedchen">Mädchen</button>
+  <button type="button" data-stil="buben">Buben</button>
  </div>
 
  <div class="buehne">
@@ -153,6 +203,412 @@ let verlauf=[];
 let geloest=false;
 
 const Z=40;
+
+/* ---------------------------------------------------------------- Ansichten */
+/* Jede Ansicht malt Boden, Wand, Ziel, Kiste und Figur selbst. Maße, Level und
+   Regeln bleiben gleich – nur die Bilder sind andere. */
+const STILE={
+ klassisch:{
+  hintergrund(){
+   ctx.fillStyle="#0c2a21";
+   ctx.fillRect(0,0,canvas.width,canvas.height);
+  },
+  boden(px,py,x,y){
+   ctx.fillStyle=(x+y)%2===0?"#123329":"#102e25";
+   ctx.fillRect(px,py,Z,Z);
+   ctx.strokeStyle="#ffffff08";
+   ctx.lineWidth=1;
+   ctx.strokeRect(px+.5,py+.5,Z-1,Z-1);
+  },
+  wand(px,py){
+   const g=ctx.createLinearGradient(px,py,px,py+Z);
+   g.addColorStop(0,"#2a6a54");
+   g.addColorStop(1,"#17453a");
+   ctx.fillStyle=g;
+   ctx.fillRect(px,py,Z,Z);
+   ctx.strokeStyle="#0b241d";
+   ctx.lineWidth=2;
+   ctx.strokeRect(px+1,py+1,Z-2,Z-2);
+   ctx.fillStyle="#ffffff14";
+   ctx.fillRect(px+3,py+3,Z-6,3);
+  },
+  ziel(cx,cy){
+   ctx.strokeStyle="#e8cd8e88";
+   ctx.lineWidth=2;
+   ctx.beginPath();
+   ctx.arc(cx,cy,Z*0.26,0,Math.PI*2);
+   ctx.stroke();
+   ctx.fillStyle="#e8cd8e33";
+   ctx.beginPath();
+   ctx.arc(cx,cy,Z*0.16,0,Math.PI*2);
+   ctx.fill();
+  },
+  kiste(px,py,w,aufZiel){
+   const g=ctx.createLinearGradient(px,py,px,py+w);
+   if(aufZiel){
+    g.addColorStop(0,"#cfe6b0");
+    g.addColorStop(1,"#7fa864");
+   }else{
+    g.addColorStop(0,"#b98f5c");
+    g.addColorStop(1,"#7a5730");
+   }
+   ctx.fillStyle=g;
+   ctx.beginPath();
+   ctx.roundRect(px,py,w,w,5);
+   ctx.fill();
+   ctx.strokeStyle=aufZiel?"#4c6a3a":"#3d2a14";
+   ctx.lineWidth=2;
+   ctx.stroke();
+   ctx.strokeStyle=aufZiel?"#4c6a3a99":"#3d2a1499";
+   ctx.lineWidth=2.5;
+   ctx.beginPath();
+   ctx.moveTo(px+5,py+5); ctx.lineTo(px+w-5,py+w-5);
+   ctx.moveTo(px+w-5,py+5); ctx.lineTo(px+5,py+w-5);
+   ctx.stroke();
+  },
+  figur(cx,cy){
+   ctx.fillStyle="#00000044";
+   ctx.beginPath();
+   ctx.ellipse(cx,cy+Z*0.3,Z*0.26,Z*0.1,0,0,Math.PI*2);
+   ctx.fill();
+   const pg=ctx.createRadialGradient(cx-4,cy-6,2,cx,cy,Z*0.32);
+   pg.addColorStop(0,"#ffe9b0");
+   pg.addColorStop(1,"#c99a3f");
+   ctx.fillStyle=pg;
+   ctx.beginPath();
+   ctx.arc(cx,cy,Z*0.28,0,Math.PI*2);
+   ctx.fill();
+   ctx.strokeStyle="#6b4a12";
+   ctx.lineWidth=1.5;
+   ctx.stroke();
+   [-4,4].forEach(dx=>{
+    ctx.fillStyle="#0b241d";
+    ctx.beginPath();
+    ctx.arc(cx+dx,cy-2,1.8,0,Math.PI*2);
+    ctx.fill();
+   });
+   ctx.strokeStyle="#0b241d";
+   ctx.lineWidth=1.6;
+   ctx.beginPath();
+   ctx.arc(cx,cy+3,4,0.25*Math.PI,0.75*Math.PI);
+   ctx.stroke();
+  },
+  rahmen(){
+   ctx.strokeStyle="#d9bc7c44";
+   ctx.lineWidth=3;
+   ctx.strokeRect(1.5,1.5,canvas.width-3,canvas.height-3);
+  }
+ },
+
+ /* Süß: Blumenmädchen im Rosengarten. Auf dem Beet steht ein Topf mit Knospe,
+    auf dem Ziel blüht sie auf. */
+ maedchen:{
+  hintergrund(){
+   const g=ctx.createLinearGradient(0,0,0,canvas.height);
+   g.addColorStop(0,"#fff6fb"); g.addColorStop(.7,"#ffeaf3"); g.addColorStop(1,"#ffdcec");
+   ctx.fillStyle=g;
+   ctx.fillRect(0,0,canvas.width,canvas.height);
+  },
+  boden(px,py,x,y){
+   ctx.fillStyle=(x+y)%2===0?"#fffafd":"#fde8f1";
+   ctx.fillRect(px,py,Z,Z);
+   ctx.strokeStyle="#f6d9e5";
+   ctx.lineWidth=1;
+   ctx.strokeRect(px+.5,py+.5,Z-1,Z-1);
+   if((x+y)%2===0){
+    ctx.fillStyle="#ffffffcc";
+    ctx.beginPath(); ctx.arc(px+Z/2,py+Z/2,1.4,0,Math.PI*2); ctx.fill();
+   }
+  },
+  wand(px,py){
+   const g=ctx.createLinearGradient(px,py,px,py+Z);
+   g.addColorStop(0,"#ffb4d2"); g.addColorStop(1,"#ec7ba4");
+   ctx.fillStyle=g;
+   ctx.beginPath(); ctx.roundRect(px+1,py+1,Z-2,Z-2,4); ctx.fill();
+   ctx.strokeStyle="#fff0f7";
+   ctx.lineWidth=1.4;
+   ctx.stroke();
+   ctx.fillStyle="#ffffff66";
+   ctx.beginPath(); ctx.roundRect(px+3,py+3,Z-6,2.6,1.3); ctx.fill();
+   // kleine Rose in der Wand
+   const bx=px+Z*0.5, by=py+Z*0.62;
+   ctx.fillStyle="#fff3f8";
+   for(let i=0;i<5;i++){
+    const a=i/5*Math.PI*2-Math.PI/2;
+    ctx.beginPath(); ctx.arc(bx+Math.cos(a)*3.1,by+Math.sin(a)*3.1,2.1,0,Math.PI*2); ctx.fill();
+   }
+   ctx.fillStyle="#ffd23f";
+   ctx.beginPath(); ctx.arc(bx,by,1.8,0,Math.PI*2); ctx.fill();
+  },
+  ziel(cx,cy){
+   ctx.save();
+   ctx.setLineDash([4,3]);
+   ctx.strokeStyle="#e0759f";
+   ctx.lineWidth=1.8;
+   ctx.beginPath(); ctx.arc(cx,cy,Z*0.27,0,Math.PI*2); ctx.stroke();
+   ctx.restore();
+   ctx.fillStyle="#ffb3cf55";
+   ctx.beginPath(); ctx.arc(cx,cy,Z*0.18,0,Math.PI*2); ctx.fill();
+   // kleiner Trieb: „hier wächst etwas“
+   ctx.strokeStyle="#4aa576"; ctx.lineWidth=1.6;
+   ctx.beginPath(); ctx.moveTo(cx,cy+5); ctx.lineTo(cx,cy-2); ctx.stroke();
+   ctx.fillStyle="#7ed6a5";
+   ctx.beginPath(); ctx.ellipse(cx-3,cy-1,3,1.7,0.5,0,Math.PI*2); ctx.fill();
+   ctx.beginPath(); ctx.ellipse(cx+3,cy-3.5,3,1.7,-0.5,0,Math.PI*2); ctx.fill();
+  },
+  kiste(px,py,w,aufZiel){
+   const cx=px+w/2;
+   const topY=py+w*0.56, botY=py+w-2;
+   // Topf
+   const pg=ctx.createLinearGradient(px,topY,px,botY);
+   pg.addColorStop(0,"#f6976c"); pg.addColorStop(1,"#c4562f");
+   ctx.fillStyle=pg;
+   ctx.beginPath();
+   ctx.moveTo(px+5,topY); ctx.lineTo(px+w-5,topY);
+   ctx.lineTo(px+w-9,botY); ctx.lineTo(px+9,botY);
+   ctx.closePath(); ctx.fill();
+   ctx.strokeStyle="#a03f22"; ctx.lineWidth=1.5; ctx.stroke();
+   ctx.fillStyle="#ffb08d";
+   ctx.beginPath(); ctx.roundRect(px+3.5,topY-4.5,w-7,4.5,2); ctx.fill();
+   ctx.strokeStyle="#a03f22"; ctx.stroke();
+   // Stängel und Blätter
+   ctx.strokeStyle="#3f9e6a"; ctx.lineWidth=2.4;
+   ctx.beginPath(); ctx.moveTo(cx,topY-4); ctx.lineTo(cx,py+9); ctx.stroke();
+   ctx.fillStyle="#5cc487";
+   ctx.beginPath(); ctx.ellipse(cx-4.5,topY-11,4,2.2,0.55,0,Math.PI*2); ctx.fill();
+   ctx.beginPath(); ctx.ellipse(cx+4.5,topY-15,4,2.2,-0.55,0,Math.PI*2); ctx.fill();
+   if(aufZiel){
+    // aufgeblüht
+    ctx.fillStyle="#ff9ec4";
+    for(let i=0;i<5;i++){
+     const a=i/5*Math.PI*2-Math.PI/2;
+     ctx.beginPath(); ctx.arc(cx+Math.cos(a)*4.4,py+8+Math.sin(a)*4.4,3.9,0,Math.PI*2); ctx.fill();
+    }
+    ctx.strokeStyle="#ffffffcc"; ctx.lineWidth=1;
+    for(let i=0;i<5;i++){
+     const a=i/5*Math.PI*2-Math.PI/2;
+     ctx.beginPath(); ctx.arc(cx+Math.cos(a)*4.4,py+8+Math.sin(a)*4.4,3.9,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.fillStyle="#ffd23f";
+    ctx.beginPath(); ctx.arc(cx,py+8,3.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#ffffff";
+    ctx.beginPath(); ctx.arc(px+w-5,py+5,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+6,py+7,1.1,0,Math.PI*2); ctx.fill();
+   }else{
+    // geschlossene Knospe
+    const bg=ctx.createLinearGradient(cx,py+3,cx,py+13);
+    bg.addColorStop(0,"#ffb3cf"); bg.addColorStop(1,"#ef6f9e");
+    ctx.fillStyle=bg;
+    ctx.beginPath(); ctx.ellipse(cx,py+8,4.4,5.4,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#c9436f"; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.fillStyle="#4aa576";
+    ctx.beginPath(); ctx.ellipse(cx-3,py+12,2.4,1.4,0.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+3,py+12,2.4,1.4,-0.5,0,Math.PI*2); ctx.fill();
+   }
+  },
+  figur(cx,cy){
+   const R=Z*0.3;
+   ctx.fillStyle="#d98aac33";
+   ctx.beginPath();
+   ctx.ellipse(cx,cy+Z*0.3,Z*0.24,Z*0.09,0,0,Math.PI*2); ctx.fill();
+   // Kopf
+   const fg=ctx.createRadialGradient(cx-3,cy-4,1,cx,cy,R*1.1);
+   fg.addColorStop(0,"#fff2f8"); fg.addColorStop(1,"#ffc2da");
+   ctx.fillStyle=fg;
+   ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+   ctx.strokeStyle="#d9568a"; ctx.lineWidth=1.6; ctx.stroke();
+   // Haare als Kappe
+   ctx.fillStyle="#8a5a3c";
+   ctx.beginPath();
+   ctx.arc(cx,cy,R,Math.PI*1.02,Math.PI*1.98);
+   ctx.closePath(); ctx.fill();
+   // Pferdeschwanz
+   ctx.beginPath(); ctx.arc(cx+R*0.96,cy-R*0.1,R*0.42,0,Math.PI*2); ctx.fill();
+   // Schleife
+   const bx=cx+R*0.62, by=cy-R*0.82;
+   ctx.fillStyle="#ff6fa5";
+   ctx.beginPath();
+   ctx.moveTo(bx,by); ctx.lineTo(bx-4.2,by-3); ctx.lineTo(bx-4.2,by+3); ctx.closePath(); ctx.fill();
+   ctx.beginPath();
+   ctx.moveTo(bx,by); ctx.lineTo(bx+4.2,by-3); ctx.lineTo(bx+4.2,by+3); ctx.closePath(); ctx.fill();
+   ctx.beginPath(); ctx.arc(bx,by,1.6,0,Math.PI*2); ctx.fill();
+   // Augen mit Wimpern
+   [-4,4].forEach(dx=>{
+    ctx.fillStyle="#3a1f2b";
+    ctx.beginPath(); ctx.arc(cx+dx,cy+0.5,2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#ffffff";
+    ctx.beginPath(); ctx.arc(cx+dx-0.7,cy-0.3,0.7,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#3a1f2b"; ctx.lineWidth=1.1;
+    ctx.beginPath();
+    ctx.moveTo(cx+dx-2,cy-1.4); ctx.lineTo(cx+dx-3.6,cy-3.2);
+    ctx.moveTo(cx+dx+2,cy-1.4); ctx.lineTo(cx+dx+3.6,cy-3.2);
+    ctx.stroke();
+   });
+   // Wangen
+   ctx.fillStyle="#ff8fb499";
+   ctx.beginPath(); ctx.arc(cx-7,cy+4.4,2.5,0,Math.PI*2); ctx.fill();
+   ctx.beginPath(); ctx.arc(cx+7,cy+4.4,2.5,0,Math.PI*2); ctx.fill();
+   // Mund
+   ctx.strokeStyle="#b03f66"; ctx.lineWidth=1.7;
+   ctx.beginPath(); ctx.arc(cx,cy+3.4,4.2,0.18*Math.PI,0.82*Math.PI); ctx.stroke();
+  },
+  rahmen(){
+   ctx.strokeStyle="#f08cb6";
+   ctx.lineWidth=4;
+   ctx.strokeRect(2,2,canvas.width-4,canvas.height-4);
+  }
+ },
+
+ /* Krass: Giftlager. Das Fass mit radioaktivem Schleim muss auf das
+    Abflussgitter; der Arbeiter trägt Schutzanzug und Visier. */
+ buben:{
+  hintergrund(){
+   ctx.fillStyle="#0a0e12";
+   ctx.fillRect(0,0,canvas.width,canvas.height);
+  },
+  boden(px,py,x,y){
+   ctx.fillStyle=(x+y)%2===0?"#151d22":"#111820";
+   ctx.fillRect(px,py,Z,Z);
+   ctx.strokeStyle="#ffffff08";
+   ctx.lineWidth=1;
+   ctx.strokeRect(px+.5,py+.5,Z-1,Z-1);
+   ctx.fillStyle="#ffffff10";
+   ctx.beginPath(); ctx.arc(px+5,py+5,1.2,0,Math.PI*2); ctx.fill();
+   ctx.beginPath(); ctx.arc(px+Z-5,py+Z-5,1.2,0,Math.PI*2); ctx.fill();
+  },
+  wand(px,py){
+   const g=ctx.createLinearGradient(px,py,px,py+Z);
+   g.addColorStop(0,"#39464f"); g.addColorStop(1,"#1b242b");
+   ctx.fillStyle=g;
+   ctx.fillRect(px,py,Z,Z);
+   // Gefahrenstreifen
+   ctx.save();
+   ctx.beginPath(); ctx.rect(px+1,py+1,Z-2,Z-2); ctx.clip();
+   ctx.strokeStyle="#c8ff3d22";
+   ctx.lineWidth=6;
+   for(let i=-1;i<4;i++){
+    ctx.beginPath();
+    ctx.moveTo(px+i*Z*0.4-6,py+Z+4); ctx.lineTo(px+i*Z*0.4+Z*0.5,py-4); ctx.stroke();
+   }
+   ctx.restore();
+   ctx.strokeStyle="#0a0e12";
+   ctx.lineWidth=2;
+   ctx.strokeRect(px+1,py+1,Z-2,Z-2);
+   ctx.fillStyle="#ffffff1a";
+   ctx.fillRect(px+3,py+3,Z-6,2);
+   // Nieten
+   ctx.fillStyle="#0a0e12";
+   [[px+6,py+Z-6],[px+Z-6,py+Z-6]].forEach(p=>{
+    ctx.beginPath(); ctx.arc(p[0],p[1],1.9,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#5d6d78";
+    ctx.beginPath(); ctx.arc(p[0]-0.5,p[1]-0.5,0.8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#0a0e12";
+   });
+  },
+  ziel(cx,cy){
+   const gl=ctx.createRadialGradient(cx,cy,1,cx,cy,Z*0.42);
+   gl.addColorStop(0,"#6dff4a55"); gl.addColorStop(1,"#6dff4a00");
+   ctx.fillStyle=gl;
+   ctx.beginPath(); ctx.arc(cx,cy,Z*0.42,0,Math.PI*2); ctx.fill();
+   ctx.fillStyle="#060a0c";
+   ctx.beginPath(); ctx.arc(cx,cy,Z*0.27,0,Math.PI*2); ctx.fill();
+   ctx.strokeStyle="#6dff4a"; ctx.lineWidth=1.8;
+   ctx.beginPath(); ctx.arc(cx,cy,Z*0.27,0,Math.PI*2); ctx.stroke();
+   ctx.strokeStyle="#6dff4a66"; ctx.lineWidth=1.6;
+   for(let i=-1;i<=1;i++){
+    const y=cy+i*Z*0.13;
+    ctx.beginPath();
+    ctx.moveTo(cx-Z*0.21,y); ctx.lineTo(cx+Z*0.21,y); ctx.stroke();
+   }
+  },
+  kiste(px,py,w,aufZiel){
+   const cx=px+w/2, cy=py+w/2, R=w/2;
+   if(aufZiel){
+    const gl=ctx.createRadialGradient(cx,cy,2,cx,cy,R*1.5);
+    gl.addColorStop(0,"#6dff4a55"); gl.addColorStop(1,"#6dff4a00");
+    ctx.fillStyle=gl;
+    ctx.beginPath(); ctx.arc(cx,cy,R*1.5,0,Math.PI*2); ctx.fill();
+   }
+   // Fass
+   const bg=ctx.createLinearGradient(px,py,px+w,py);
+   bg.addColorStop(0,"#1a4a16");
+   bg.addColorStop(.3,aufZiel?"#a8ff70":"#74f245");
+   bg.addColorStop(.66,aufZiel?"#68d43e":"#3fae28");
+   bg.addColorStop(1,"#173f15");
+   ctx.fillStyle=bg;
+   ctx.beginPath(); ctx.roundRect(px+3,py+2.5,w-6,w-7,7); ctx.fill();
+   ctx.strokeStyle="#08130a"; ctx.lineWidth=1.6; ctx.stroke();
+   // Deckelrand und Glanzkante
+   ctx.fillStyle="#0c1a0c";
+   ctx.beginPath(); ctx.roundRect(px+5,py+3.6,w-10,2.4,1.2); ctx.fill();
+   ctx.fillStyle="#ffffff2e";
+   ctx.beginPath(); ctx.roundRect(px+5.6,py+8,2.1,w-20,1.05); ctx.fill();
+   // Radioaktiv-Zeichen
+   const cyS=cy-2.5, tw=R*0.62;
+   ctx.fillStyle="#08130a";
+   ctx.beginPath();
+   ctx.moveTo(cx,cyS-tw);
+   ctx.lineTo(cx+tw,cyS+tw*0.78);
+   ctx.lineTo(cx-tw,cyS+tw*0.78);
+   ctx.closePath();
+   ctx.fill();
+   ctx.fillStyle=aufZiel?"#d4ff9e":"#8dff5c";
+   ctx.fillRect(cx-tw*0.13,cyS-tw*0.32,tw*0.26,tw*0.62);
+   ctx.beginPath(); ctx.arc(cx,cyS+tw*0.48,tw*0.15,0,Math.PI*2); ctx.fill();
+   // Schleim quillt unten heraus
+   ctx.fillStyle=aufZiel?"#d4ff9e":"#a8ff6a";
+   ctx.beginPath(); ctx.ellipse(cx,py+w-8.5,w*0.4,4.4,0,0,Math.PI*2); ctx.fill();
+   ctx.strokeStyle=aufZiel?"#8fe05a":"#6fd33a"; ctx.lineWidth=1;
+   ctx.stroke();
+   ctx.beginPath(); ctx.ellipse(px+w*0.3,py+w-3,2.2,3.4,0,0,Math.PI*2); ctx.fill();
+   ctx.beginPath(); ctx.ellipse(px+w*0.56,py+w-2,1.8,3,0,0,Math.PI*2); ctx.fill();
+   ctx.beginPath(); ctx.ellipse(px+w*0.79,py+w-3.6,2.5,2.4,0,0,Math.PI*2); ctx.fill();
+   if(aufZiel){
+    ctx.fillStyle="#e8ffd0";
+    ctx.beginPath(); ctx.arc(px+w-6.5,py+6.5,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+7.5,py+13,1.1,0,Math.PI*2); ctx.fill();
+   }
+  },
+  figur(cx,cy){
+   const R=Z*0.31;
+   ctx.fillStyle="#00000055";
+   ctx.beginPath();
+   ctx.ellipse(cx,cy+Z*0.3,Z*0.24,Z*0.09,0,0,Math.PI*2); ctx.fill();
+   // Anzug
+   const g=ctx.createRadialGradient(cx-3,cy-4,1,cx,cy,R*1.1);
+   g.addColorStop(0,"#4a5a67"); g.addColorStop(1,"#1b242c");
+   ctx.fillStyle=g;
+   ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+   ctx.strokeStyle="#0b1014"; ctx.lineWidth=2; ctx.stroke();
+   ctx.strokeStyle="#c8ff3d44"; ctx.lineWidth=1.2;
+   ctx.beginPath(); ctx.arc(cx,cy,R*0.86,0,Math.PI*2); ctx.stroke();
+   // Visier
+   const vg=ctx.createLinearGradient(cx,cy-R*0.5,cx,cy+R*0.2);
+   vg.addColorStop(0,"#eaffb0"); vg.addColorStop(1,"#8fd400");
+   ctx.fillStyle=vg;
+   ctx.beginPath(); ctx.roundRect(cx-R*0.74,cy-R*0.46,R*1.48,R*0.56,3); ctx.fill();
+   ctx.strokeStyle="#0b1014"; ctx.lineWidth=1.3; ctx.stroke();
+   ctx.fillStyle="#ffffff99";
+   ctx.beginPath(); ctx.roundRect(cx-R*0.6,cy-R*0.38,R*0.5,R*0.14,2); ctx.fill();
+   // Filter
+   ctx.fillStyle="#2a353d";
+   ctx.beginPath(); ctx.arc(cx,cy+R*0.6,R*0.32,0,Math.PI*2); ctx.fill();
+   ctx.strokeStyle="#0b1014"; ctx.lineWidth=1.2; ctx.stroke();
+   ctx.fillStyle="#4a5a66";
+   ctx.beginPath(); ctx.arc(cx,cy+R*0.6,R*0.17,0,Math.PI*2); ctx.fill();
+  },
+  rahmen(){
+   ctx.strokeStyle="#38e1ff";
+   ctx.lineWidth=3;
+   ctx.strokeRect(2,2,canvas.width-4,canvas.height-4);
+   ctx.strokeStyle="#c8ff3d66";
+   ctx.lineWidth=1;
+   ctx.strokeRect(6.5,6.5,canvas.width-13,canvas.height-13);
+  }
+ }
+};
+let stil="klassisch";
+function stilJetzt(){ return STILE[stil]||STILE.klassisch; }
 
 function istWand(x,y){ return waende.includes(x+","+y); }
 function kisteBei(x,y){ return kisten.findIndex(k=>k.x===x&&k.y===y); }
@@ -254,108 +710,30 @@ function pruefen(){
 // ---------------------------------------------------------------- Zeichnen
 
 function zeichne(){
- // Boden
- ctx.fillStyle="#0c2a21";
- ctx.fillRect(0,0,canvas.width,canvas.height);
+ const S=stilJetzt();
+ S.hintergrund();
 
  for(let y=0;y<zeilen;y++){
   for(let x=0;x<spalten;x++){
    const px=x*Z, py=y*Z;
-   if(istWand(x,y)){
-    const g=ctx.createLinearGradient(px,py,px,py+Z);
-    g.addColorStop(0,"#2a6a54");
-    g.addColorStop(1,"#17453a");
-    ctx.fillStyle=g;
-    ctx.fillRect(px,py,Z,Z);
-    ctx.strokeStyle="#0b241d";
-    ctx.lineWidth=2;
-    ctx.strokeRect(px+1,py+1,Z-2,Z-2);
-    ctx.fillStyle="#ffffff14";
-    ctx.fillRect(px+3,py+3,Z-6,3);
-   }else{
-    ctx.fillStyle=(x+y)%2===0?"#123329":"#102e25";
-    ctx.fillRect(px,py,Z,Z);
-    ctx.strokeStyle="#ffffff08";
-    ctx.lineWidth=1;
-    ctx.strokeRect(px+.5,py+.5,Z-1,Z-1);
-   }
+   if(istWand(x,y))S.wand(px,py);
+   else S.boden(px,py,x,y);
   }
  }
 
  // Ziele
- ziele.forEach(z=>{
-  const cx=z.x*Z+Z/2, cy=z.y*Z+Z/2;
-  ctx.strokeStyle="#e8cd8e88";
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.arc(cx,cy,Z*0.26,0,Math.PI*2);
-  ctx.stroke();
-  ctx.fillStyle="#e8cd8e33";
-  ctx.beginPath();
-  ctx.arc(cx,cy,Z*0.16,0,Math.PI*2);
-  ctx.fill();
- });
+ ziele.forEach(z=>S.ziel(z.x*Z+Z/2, z.y*Z+Z/2));
 
  // Kisten
  kisten.forEach(k=>{
   const aufZiel=ziele.some(z=>z.x===k.x&&z.y===k.y);
-  const px=k.x*Z+3, py=k.y*Z+3, w=Z-6;
-  const g=ctx.createLinearGradient(px,py,px,py+w);
-  if(aufZiel){
-   g.addColorStop(0,"#cfe6b0");
-   g.addColorStop(1,"#7fa864");
-  }else{
-   g.addColorStop(0,"#b98f5c");
-   g.addColorStop(1,"#7a5730");
-  }
-  ctx.fillStyle=g;
-  ctx.beginPath();
-  ctx.roundRect(px,py,w,w,5);
-  ctx.fill();
-  ctx.strokeStyle=aufZiel?"#4c6a3a":"#3d2a14";
-  ctx.lineWidth=2;
-  ctx.stroke();
-  // Streben
-  ctx.strokeStyle=aufZiel?"#4c6a3a99":"#3d2a1499";
-  ctx.lineWidth=2.5;
-  ctx.beginPath();
-  ctx.moveTo(px+5,py+5); ctx.lineTo(px+w-5,py+w-5);
-  ctx.moveTo(px+w-5,py+5); ctx.lineTo(px+5,py+w-5);
-  ctx.stroke();
+  S.kiste(k.x*Z+3, k.y*Z+3, Z-6, aufZiel);
  });
 
  // Spielfigur
- const cx=spieler.x*Z+Z/2, cy=spieler.y*Z+Z/2;
- ctx.fillStyle="#00000044";
- ctx.beginPath();
- ctx.ellipse(cx,cy+Z*0.3,Z*0.26,Z*0.1,0,0,Math.PI*2);
- ctx.fill();
- const pg=ctx.createRadialGradient(cx-4,cy-6,2,cx,cy,Z*0.32);
- pg.addColorStop(0,"#ffe9b0");
- pg.addColorStop(1,"#c99a3f");
- ctx.fillStyle=pg;
- ctx.beginPath();
- ctx.arc(cx,cy,Z*0.28,0,Math.PI*2);
- ctx.fill();
- ctx.strokeStyle="#6b4a12";
- ctx.lineWidth=1.5;
- ctx.stroke();
- // Augen
- [-4,4].forEach(dx=>{
-  ctx.fillStyle="#0b241d";
-  ctx.beginPath();
-  ctx.arc(cx+dx,cy-2,1.8,0,Math.PI*2);
-  ctx.fill();
- });
- ctx.strokeStyle="#0b241d";
- ctx.lineWidth=1.6;
- ctx.beginPath();
- ctx.arc(cx,cy+3,4,0.25*Math.PI,0.75*Math.PI);
- ctx.stroke();
+ S.figur(spieler.x*Z+Z/2, spieler.y*Z+Z/2);
 
- ctx.strokeStyle="#d9bc7c44";
- ctx.lineWidth=3;
- ctx.strokeRect(1.5,1.5,canvas.width-3,canvas.height-3);
+ S.rahmen();
 }
 
 // ---------------------------------------------------------------- Eingabe
@@ -404,6 +782,32 @@ LEVEL.forEach((_,i)=>{
  o.value=String(i);
  o.textContent="Level "+(i+1);
  $("levelWahl").appendChild(o);
+});
+
+// ------------------------------------------------------------------ Ansicht
+const STIL_KEY="sokoban-stil";
+function stilSetzen(name,merken){
+ if(!STILE[name])name="klassisch";
+ stil=name;
+ document.body.dataset.stil=name;
+ if(merken!==false){ try{ localStorage.setItem(STIL_KEY,name); }catch(e){} }
+ document.querySelectorAll("#stilwahl button").forEach(b=>{
+  b.classList.toggle("aktiv",b.dataset.stil===name);
+ });
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta)meta.content=name==="maedchen"?"#ffe8f2":name==="buben"?"#070c12":"#0b241d";
+ zeichne();
+}
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.addEventListener("click",()=>stilSetzen(b.dataset.stil));
+});
+let startStil="klassisch";
+try{ startStil=localStorage.getItem(STIL_KEY)||"klassisch"; }catch(e){}
+if(!STILE[startStil])startStil="klassisch";
+stil=startStil;
+document.body.dataset.stil=stil;
+document.querySelectorAll("#stilwahl button").forEach(b=>{
+ b.classList.toggle("aktiv",b.dataset.stil===stil);
 });
 
 levelLaden(0);
