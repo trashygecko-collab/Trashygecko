@@ -164,6 +164,7 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/tron", tronHandler)
 	mux.HandleFunc("/api/bomberman", bomberHandler)
 	mux.HandleFunc("/api/bubble", bubbleHandler)
+	mux.HandleFunc("/api/snake", snakeHandler)
 	mux.HandleFunc("/api/schwimmen", schwimmenHandler)
 	mux.HandleFunc("/api/arschloch", arschlochHandler)
 	mux.HandleFunc("/api/sechsundsechzig", sechsundsechzigHandler)

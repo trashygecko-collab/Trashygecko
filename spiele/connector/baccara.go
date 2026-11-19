@@ -154,15 +154,33 @@ func baccaraSitz(g *BaccaraGame, id string) int {
 	return -1
 }
 
+// baccaraNach liefert den nächsten Spieler, der die Bank legen kann. Wer nicht
+// einmal die kleinste Bank in der Kasse hat, kommt nicht in Frage – sonst bleibt
+// der Tisch stehen, weil „Bank legen“ dauerhaft abgelehnt wird und niemand mehr
+// einen Knopf hat, der weiterhilft.
 func baccaraNach(g *BaccaraGame, von int) int {
 	n := len(g.Spieler)
 	for i := 1; i <= n; i++ {
 		k := (von + i) % n
-		if g.Spieler[k].Status != "pleite" {
+		if g.Spieler[k].Status != "pleite" && g.Spieler[k].Kasse >= baccaraBankMin {
 			return k
 		}
 	}
 	return -1
+}
+
+// baccaraKannSetzen meldet, ob mindestens ein Pointeur noch Geld für den
+// kleinsten Einsatz hat.
+func baccaraKannSetzen(g *BaccaraGame) bool {
+	for i := range g.Spieler {
+		if i == g.BankSitz || g.Spieler[i].Status == "pleite" {
+			continue
+		}
+		if g.Spieler[i].Kasse >= baccaraSchritt {
+			return true
+		}
+	}
+	return false
 }
 
 func baccaraBelegt(g *BaccaraGame) int {
@@ -209,6 +227,17 @@ func baccaraNeueRunde(g *BaccaraGame) {
 		baccaraBankWeiter(g)
 		return
 	}
+	// Kann keiner der Pointeure mehr setzen, wäre die Runde nicht mehr
+	// weiterzuspielen: der Bankhalter könnte keine Karten geben und niemand
+	// hätte einen Knopf. Dann ist die Partie vorbei.
+	if !baccaraKannSetzen(g) {
+		g.Status = "ende"
+		if g.BankSitz >= 0 && g.BankSitz < len(g.Spieler) {
+			g.Sieger = g.Spieler[g.BankSitz].Name
+			g.Note = "Niemand kann mehr setzen – " + g.Sieger + " hat die Partie gewonnen."
+		}
+		return
+	}
 	g.Status = "setzen"
 	g.Note = "Runde " + strconv.Itoa(g.Runde) + ": Setzt gegen die Bank (" + baccaraEuro(g.Bank) + ")."
 }
@@ -223,6 +252,7 @@ func baccaraBankWeiter(g *BaccaraGame) {
 	naechster := baccaraNach(g, g.BankSitz)
 	if naechster < 0 {
 		g.Status = "ende"
+		g.Note = "Niemand kann die Bank legen – die Partie ist vorbei."
 		return
 	}
 	g.BankSitz = naechster

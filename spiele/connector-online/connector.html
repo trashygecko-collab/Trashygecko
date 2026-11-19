@@ -1199,6 +1199,7 @@ let currentPongGame=null;
 let currentTronGame=null;
 let currentBombermanGame=null;
 let currentBubbleGame=null;
+let currentSnakeGame=null;
 let currentSchachGame=null;
 let currentGoGame=null;
 let currentBackgammonGame=null;
@@ -1243,6 +1244,7 @@ const SUPPORTED_GAMES = [
  { id: "tron", name: "Tron", path: "/spiele/tron/tron.html", api: "/api/tron" },
  { id: "bomberman", name: "Bomberman", path: "/spiele/bomberman/bomberman.html", api: "/api/bomberman" },
  { id: "bubble", name: "Bubble Shooter", path: "/spiele/bubbleshooter/bubbleshooter.html", api: "/api/bubble" },
+ { id: "snake", name: "Snake", path: "/spiele/snake/snake.html", api: "/api/snake" },
  { id: "cabo", name: "Cabo", path: "/spiele/kartenspiele/cabo/cabo.html", api: "/api/cabo" },
  { id: "poker", name: "Poker", path: "/spiele/kartenspiele/poker/poker.html", api: "/api/poker" },
  { id: "uno", name: "UNO", path: "/spiele/kartenspiele/uno/uno.html", api: "/api/uno" },
@@ -1420,7 +1422,7 @@ const SPIEL_ABFRAGEN={
  hold:refreshHold, skyjo:refreshSkyjo, kniffel:refreshKniffel,
  schach:refreshSchach, go:refreshGo, backgammon:refreshBackgammon,
  maumau:refreshMauMau, siebzehn:refreshSiebzehn, baccara:refreshBaccara,
- schiffe:refreshSchiffe, pong:refreshPong, tron:refreshTron, bomberman:refreshBomberman, bubble:refreshBubble,
+ schiffe:refreshSchiffe, pong:refreshPong, tron:refreshTron, bomberman:refreshBomberman, bubble:refreshBubble, snake:refreshSnake,
  cabo:refreshCabo, poker:refreshPoker,
  uno:refreshUno, schwimmen:refreshSchwimmen, arschloch:refreshArschloch,
  einsxeins:refreshEinsxeins, sechsundsechzig:refreshSechsundsechzig, galgen:refreshGalgen,
@@ -1515,6 +1517,7 @@ function gameStateFor(gameId){
  if(gameId==="tron")return currentTronGame;
  if(gameId==="bomberman")return currentBombermanGame;
  if(gameId==="bubble")return currentBubbleGame;
+ if(gameId==="snake")return currentSnakeGame;
  if(gameId==="schach")return currentSchachGame;
  if(gameId==="go")return currentGoGame;
  if(gameId==="backgammon")return currentBackgammonGame;
@@ -2171,6 +2174,63 @@ async function refreshBubble(players){
   addStatusButton("Neues Duell", async()=>{
    if(await gameApiAction("bubble","reset")){
     openGame(gamePath("bubble"));
+   }
+  });
+ }
+}
+
+// Snake: beide Schlangen und die Äpfel führt der Server.
+async function refreshSnake(players){
+ let game=null;
+ try{
+  const response=await fetch("/api/snake?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
+  if(!response.ok)throw Error();
+  game=(await response.json()).game;
+ }catch(e){
+  return;
+ }
+ currentSnakeGame=game;
+ if(!game)return;
+
+ const namen=game.spieler.map(p=>p.name).join(" gegen ");
+ const meiner=game.du>=0;
+ const stand=game.spieler.map(p=>p.name+" "+p.sieg).join(" : ");
+ const laengen=game.spieler.map(p=>p.name+" "+p.laenge).join(", ");
+
+ if(game.status==="invited"){
+  tttStatus("Snake: "+namen+" – "+game.spieler.length+" von 2 Plätzen belegt.");
+  if(meiner){
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("snake")));
+  }else{
+   addStatusButton("Mitspielen", async()=>{
+    if(await gameApiAction("snake","join")){
+     openGame(gamePath("snake"));
+    }
+   });
+  }
+  return;
+ }
+
+ if(game.status==="spiel"){
+  tttStatus("Snake läuft – Runde "+game.runde+", "+stand+" ("+laengen+").", "snake");
+  return;
+ }
+
+ if(game.status==="runde"){
+  tttStatus("Snake – Runde "+game.runde+" vorbei: "+(game.meldung||"")+" Stand "+stand+".", "snake");
+  addStatusButton("Nächste Runde", async()=>{
+   if(await gameApiAction("snake","weiter")){
+    openGame(gamePath("snake"));
+   }
+  });
+  return;
+ }
+
+ if(game.status==="ende"){
+  tttStatus("Snake beendet – "+(game.sieger||"niemand")+" gewinnt "+stand+".", "snake");
+  addStatusButton("Neue Partie", async()=>{
+   if(await gameApiAction("snake","reset")){
+    openGame(gamePath("snake"));
    }
   });
  }

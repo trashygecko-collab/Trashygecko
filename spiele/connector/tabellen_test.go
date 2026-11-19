@@ -42,6 +42,7 @@ var spielFeld = map[string]string{
 	"tron":             "Tron",
 	"bomberman":        "Bomberman",
 	"bubble":           "Bubble",
+	"snake":            "Snake",
 	"cabo":             "Cabo",
 	"poker":            "Poker",
 	"uno":              "Uno",

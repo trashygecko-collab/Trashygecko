@@ -167,11 +167,15 @@ func siebzehnSitz(g *SiebzehnGame, id string) int {
 	return -1
 }
 
+// siebzehnNach liefert den nächsten Spieler, der die Bank legen kann. Wer
+// nicht einmal die kleinste Bank in der Kasse hat, kommt nicht in Frage – sonst
+// bleibt der Tisch stehen, weil „Bank legen" dauerhaft abgelehnt wird und
+// niemand mehr einen Knopf hat, der weiterhilft.
 func siebzehnNach(g *SiebzehnGame, von int) int {
 	n := len(g.Spieler)
 	for i := 1; i <= n; i++ {
 		k := (von + i) % n
-		if g.Spieler[k].Status != "pleite" {
+		if g.Spieler[k].Status != "pleite" && g.Spieler[k].Kasse >= siebzehnBankMin {
 			return k
 		}
 	}
@@ -207,7 +211,32 @@ func siebzehnNeueRunde(g *SiebzehnGame) {
 	if g.Bank <= 0 {
 		g.Status = "bank"
 		g.Note = "Die Bank ist leer – der Nächste legt eine neue Bank."
+		return
 	}
+	// Kann keiner der Pointeure mehr setzen, wäre die Runde nicht mehr
+	// weiterzuspielen: der Bankhalter könnte keine Karten geben und niemand
+	// hätte einen Knopf. Dann ist die Partie vorbei.
+	if !siebzehnKannSetzen(g) {
+		g.Status = "ende"
+		if g.BankSitz >= 0 && g.BankSitz < len(g.Spieler) {
+			g.Sieger = g.Spieler[g.BankSitz].Name
+			g.Note = "Niemand kann mehr setzen – " + g.Sieger + " hat die Partie gewonnen."
+		}
+	}
+}
+
+// siebzehnKannSetzen meldet, ob mindestens ein Pointeur noch Geld für den
+// kleinsten Einsatz hat.
+func siebzehnKannSetzen(g *SiebzehnGame) bool {
+	for i := range g.Spieler {
+		if i == g.BankSitz || g.Spieler[i].Status == "pleite" {
+			continue
+		}
+		if g.Spieler[i].Kasse >= siebzehnSchritt {
+			return true
+		}
+	}
+	return false
 }
 
 func siebzehnBankWeiter(g *SiebzehnGame) {
@@ -221,6 +250,7 @@ func siebzehnBankWeiter(g *SiebzehnGame) {
 	naechster := siebzehnNach(g, g.BankSitz)
 	if naechster < 0 {
 		g.Status = "ende"
+		g.Note = "Niemand kann die Bank legen – die Partie ist vorbei."
 		return
 	}
 	g.BankSitz = naechster
@@ -764,14 +794,26 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if game.FeuerSitz >= 0 {
 			// Feuer: dieser Spieler übernimmt die Bank, der Rest wird
-			// ausgezahlt.
+			// ausgezahlt. Hat er nicht einmal die kleinste Bank, geht sie an
+			// den Nächsten, der sie legen kann – sonst käme der Tisch nicht
+			// mehr weiter.
 			alterHalter := game.BankSitz
+			ziel := game.FeuerSitz
+			feuerName := game.Spieler[ziel].Name
+			game.FeuerSitz = -1
+			if game.Spieler[ziel].Status == "pleite" || game.Spieler[ziel].Kasse < siebzehnBankMin {
+				ziel = siebzehnNach(game, alterHalter)
+			}
+			if ziel < 0 {
+				game.Status = "ende"
+				game.Note = feuerName + " hatte Feuer, kann die Bank aber nicht legen – die Partie ist vorbei."
+				break
+			}
 			if game.Bank > 0 {
 				game.Spieler[alterHalter].Kasse += game.Bank
 			}
 			game.Bank = 0
-			game.BankSitz = game.FeuerSitz
-			game.FeuerSitz = -1
+			game.BankSitz = ziel
 			game.Status = "bank"
 			game.Ergebnisse = nil
 			for i := range game.Spieler {
@@ -779,7 +821,12 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 				game.Spieler[i].Karten = []int{}
 				game.Spieler[i].Feuer = false
 			}
-			game.Note = game.Spieler[game.BankSitz].Name + " hatte Feuer und übernimmt die Bank."
+			if game.Spieler[game.BankSitz].Name == feuerName {
+				game.Note = feuerName + " hatte Feuer und übernimmt die Bank."
+			} else {
+				game.Note = feuerName + " hatte Feuer, kann die Bank aber nicht legen – " +
+					game.Spieler[game.BankSitz].Name + " übernimmt."
+			}
 			break
 		}
 		siebzehnNeueRunde(game)

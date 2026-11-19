@@ -56,9 +56,12 @@ canvas{display:block;margin:0 auto;height:auto;aspect-ratio:21/23;
 #regeln b{color:#f1dca8;font-weight:normal}
 .klein{color:#a9c3b6;font-size:13px}
 a{color:#e8cd8e}
+.meldung-knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
+.meldung-knoepfe button.still{background:#0f2b23;color:#f1dca8;border-color:#d9bc7c66}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<script src="/spiele/token.js"></script>
 </head>
 <body>
 <main class="fenster">
@@ -67,7 +70,7 @@ a{color:#e8cd8e}
   <span class="kreuz">×</span>
  </div>
 
- <div class="menueleiste">
+ <div class="menueleiste" id="menueleiste">
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnPause">Pause</button>
  </div>
@@ -86,6 +89,7 @@ a{color:#e8cd8e}
     <h2 id="meldungTitel">SNAKE</h2>
     <p id="meldungText">Wische über das Feld, um die Richtung zu bestimmen – oder nimm die Pfeiltasten.</p>
     <button id="meldungKnopf">Starten</button>
+    <div class="meldung-knoepfe" id="meldungKnoepfe" hidden></div>
    </div>
   </div>
  </div>
@@ -112,6 +116,15 @@ a{color:#e8cd8e}
 const canvas=document.getElementById("feld");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
+
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
+   führt der Server beide Schlangen, den Apfel und die Runden – hier wird
+   nur gelenkt und gezeichnet. Ohne diese Angaben läuft alles lokal. */
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get("room")||"").toUpperCase();
+const ID=params.get("id")||"";
+const NAME=params.get("name")||"Spieler";
+const ONLINE=!!(ROOM&&ID);
 
 const SPALTEN=21, ZEILEN=23;
 const ZELLE=20;
@@ -324,7 +337,260 @@ function zeigeMeldung(titel,text,knopf){
  $("meldungTitel").textContent=titel;
  $("meldungText").textContent=text;
  $("meldungKnopf").textContent=knopf;
+ $("meldungKnopf").hidden=false;
+ $("meldungKnoepfe").hidden=true;
+ $("meldungKnoepfe").innerHTML="";
  $("meldung").hidden=false;
+}
+
+/* ---------------------------------------------------------------- Online */
+
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
+   führt der Server beide Schlangen, den Apfel und die Runden – hier wird nur
+   gelenkt und gezeichnet. Ohne diese Angaben läuft alles wie bisher lokal. */
+let fern=null, holeLaeuft=false, holeTimer=0, letzterEndstand="";
+let fernRaster=new Uint8Array(SPALTEN*ZEILEN), fernApfel=null, fernSpieler=[];
+let letzteLenkung=0, letzteRichtung="";
+
+/* Der Server schickt das Feld als Lauflängen ("0x120,1x4,3x9"). */
+function rasterAusLauflaengen(text){
+ const r=new Uint8Array(SPALTEN*ZEILEN);
+ let i=0;
+ for(const teil of String(text||"").split(",")){
+  if(!teil)continue;
+  const stueck=teil.split("x");
+  const wert=Number(stueck[0])||0, anzahl=Number(stueck[1])||0;
+  for(let k=0;k<anzahl&&i<r.length;k++)r[i++]=wert;
+ }
+ return r;
+}
+
+async function holen(){
+ if(!ONLINE||holeLaeuft)return;
+ holeLaeuft=true;
+ try{
+  const r=await fetch("/api/snake?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
+  if(r.status===403){
+   $("hinweis").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen.";
+   return;
+  }
+  if(!r.ok)throw Error();
+  const d=await r.json();
+  uebernehmen(d.game||null);
+ }catch(e){
+  $("hinweis").textContent="Verbindung sucht …";
+ }finally{
+  holeLaeuft=false;
+  clearTimeout(holeTimer);
+  holeTimer=setTimeout(holen,fern&&fern.status==="spiel"?120:700);
+ }
+}
+
+async function tu(aktion,felder){
+ if(!ONLINE)return null;
+ try{
+  const r=await fetch("/api/snake?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:ID},felder||{}))
+  });
+  const text=await r.text();
+  if(!r.ok){
+   $("hinweis").textContent=text.trim()||("Fehler "+r.status);
+   return null;
+  }
+  const d=JSON.parse(text);
+  if(d.game)uebernehmen(d.game);
+  return d.game||null;
+ }catch(e){
+  $("hinweis").textContent="Verbindung fehlgeschlagen.";
+  return null;
+ }
+}
+
+function uebernehmen(g){
+ fern=g;
+ if(!g){
+  fernRaster=new Uint8Array(SPALTEN*ZEILEN);
+  fernApfel=null;
+  onlineMeldung("SNAKE","Noch kein Tisch in diesem Raum.",[
+   {label:"Tisch eröffnen",haupt:true,aktion:()=>tu("create")}
+  ]);
+  zeichneOnline();
+  return;
+ }
+
+ fernRaster=rasterAusLauflaengen(g.raster);
+ fernApfel=g.apfel||null;
+ fernSpieler=g.spieler||[];
+
+ const meiner=g.du>=0?g.spieler[g.du]:null;
+ if(meiner){
+  $("punkte").textContent=meiner.punkte;
+  $("laenge").textContent=meiner.laenge;
+  $("tempo").textContent=g.runde;
+  $("rekord").textContent=meiner.sieg;
+ }
+
+ const stand=g.spieler.map(p=>p.name+" "+p.sieg).join(" : ");
+ if(g.status==="spiel"){
+  $("meldung").hidden=true;
+  zustand="laeuft";
+  $("hinweis").textContent=g.note||"Wischen lenkt die eigene Schlange.";
+ }else if(g.status==="runde"){
+  zustand="runde";
+  onlineMeldung("RUNDE "+g.runde,(g.meldung||"")+" Stand "+stand+".",[
+   {label:"Nächste Runde",haupt:true,aktion:()=>tu("weiter")}
+  ]);
+  $("hinweis").textContent=g.note||"";
+ }else if(g.status==="ende"){
+  zustand="ende";
+  const kennung=g.id+"|"+g.runde+"|"+g.sieger;
+  if(kennung!==letzterEndstand){
+   letzterEndstand=kennung;
+   onlineMeldung("MATCH VORBEI",(g.meldung||"")+" Endstand "+stand+".",[
+    {label:"Neue Partie",haupt:true,aktion:()=>tu("reset")}
+   ]);
+  }
+  $("hinweis").textContent=g.note||"";
+ }else{
+  zustand="start";
+  zeigeLobby(g);
+ }
+ zeichneOnline();
+}
+
+function zeigeLobby(g){
+ const meiner=g.du>=0?g.spieler[g.du]:null;
+ const knoepfe=[];
+ if(!meiner){
+  knoepfe.push({label:"Mitspielen",haupt:true,aktion:()=>tu("join")});
+ }else{
+  knoepfe.push({label:meiner.ready?"Doch nicht bereit":"Bereit",haupt:!meiner.ready,aktion:()=>tu("ready")});
+  if(g.hostId===ID){
+   knoepfe.push({label:"Partie starten",
+    aus:g.spieler.length<2||!g.spieler.every(p=>p.ready),
+    aktion:()=>tu("start")});
+  }
+ }
+ const namen=g.spieler.map(p=>p.name+(p.id===g.hostId?" · Gastgeber":"")+(p.ready?" · bereit":"")).join("  ·  ");
+ const text=(g.spieler.length<2
+  ?"Ein Platz ist noch frei – wer mitspielen will, drückt MITSPIELEN. "
+  :(g.spieler.every(p=>p.ready)?"Beide sind bereit – der Gastgeber startet. ":"Beide drücken BEREIT, dann startet der Gastgeber. "))+namen;
+ onlineMeldung("SNAKE",text,knoepfe);
+ $("hinweis").textContent=g.note||"";
+}
+
+// Lenken über den Server: gleiche Richtung kurz hintereinander nicht spammen.
+function lenkenOnline(richtung){
+ if(!fern||fern.status!=="spiel")return;
+ const jetzt=performance.now();
+ if(richtung===letzteRichtung&&jetzt-letzteLenkung<140)return;
+ letzteLenkung=jetzt;
+ letzteRichtung=richtung;
+ tu("richtung",{dir:richtung});
+}
+
+function hauptKnopf(){
+ const box=$("meldungKnoepfe");
+ if(box&&!box.hidden){
+  const b=[...box.querySelectorAll("button")].find(k=>!k.disabled);
+  if(b){ b.click(); return; }
+ }
+ if(!$("meldung").hidden&&!$("meldungKnopf").hidden)$("meldungKnopf").click();
+}
+
+function onlineMeldung(titel,text,knoepfe){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").hidden=true;
+ const box=$("meldungKnoepfe");
+ box.innerHTML="";
+ box.hidden=false;
+ (knoepfe||[]).forEach(k=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=k.label;
+  if(!k.haupt)b.className="still";
+  b.disabled=!!k.aus;
+  b.onclick=()=>{ if(k.aktion)k.aktion(); };
+  box.appendChild(b);
+ });
+ $("meldung").hidden=false;
+}
+
+/* Beide Schlangen aus dem Serverstand zeichnen – gleicher Stil wie lokal,
+   nur mit zwei Farben. */
+function zeichneOnline(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#0d3a2c");
+ g.addColorStop(.6,"#0a2a21");
+ g.addColorStop(1,"#061a14");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+
+ ctx.fillStyle="#ffffff08";
+ for(let y=0;y<ZEILEN;y++)for(let x=0;x<SPALTEN;x++){
+  if((x+y)%2===0)ctx.fillRect(x*ZELLE,y*ZELLE,ZELLE,ZELLE);
+ }
+ ctx.strokeStyle="#ffffff0a";
+ ctx.lineWidth=1;
+ for(let x=0;x<=SPALTEN;x++){ ctx.beginPath();ctx.moveTo(x*ZELLE+.5,0);ctx.lineTo(x*ZELLE+.5,H);ctx.stroke(); }
+ for(let y=0;y<=ZEILEN;y++){ ctx.beginPath();ctx.moveTo(0,y*ZELLE+.5);ctx.lineTo(W,y*ZELLE+.5);ctx.stroke(); }
+ ctx.strokeStyle="#d9bc7c44";
+ ctx.lineWidth=3;
+ ctx.strokeRect(1.5,1.5,W-3,H-3);
+
+ if(fernApfel){
+  const ax=fernApfel.x*ZELLE+ZELLE/2, ay=fernApfel.y*ZELLE+ZELLE/2;
+  const ag=ctx.createRadialGradient(ax-3,ay-4,2,ax,ay,ZELLE*0.55);
+  ag.addColorStop(0,"#f2a08a"); ag.addColorStop(.5,"#c2603f"); ag.addColorStop(1,"#8d3a22");
+  ctx.fillStyle=ag;
+  ctx.beginPath(); ctx.arc(ax,ay,ZELLE*0.38,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#4fb3a0";
+  ctx.beginPath(); ctx.ellipse(ax+3,ay-ZELLE*0.36,3.6,2.2,-0.5,0,Math.PI*2); ctx.fill();
+ }
+
+ // Kopfdaten je Spieler aus der Ansicht
+ const farben={
+  1:{kopf:["#ffe9b0","#d9bc7c"], koerper:["#7fc0a6","#3f7d67"]},
+  2:{kopf:["#cfe9ff","#7fb0d9"], koerper:["#8fb6e0","#476c96"]}
+ };
+ const blick={hoch:[0,-1],runter:[0,1],links:[-1,0],rechts:[1,0]};
+
+ for(let nr=1;nr<=2;nr++){
+  const f=farben[nr];
+  const sicht=fernSpieler.find(p=>p.nr===nr);
+  const kopf=sicht&&sicht.kopf?sicht.kopf:null;
+  for(let y=0;y<ZEILEN;y++)for(let x=0;x<SPALTEN;x++){
+   if(fernRaster[y*SPALTEN+x]!==nr)continue;
+   const px=x*ZELLE, py=y*ZELLE;
+   const istKopf=!!(kopf&&kopf.x===x&&kopf.y===y);
+   const innen=istKopf?1.4:1.9;
+   const gr=ctx.createLinearGradient(px,py,px,py+ZELLE);
+   if(istKopf){ gr.addColorStop(0,f.kopf[0]); gr.addColorStop(1,f.kopf[1]); }
+   else{ gr.addColorStop(0,f.koerper[0]); gr.addColorStop(1,f.koerper[1]); }
+   ctx.fillStyle=gr;
+   ctx.beginPath();
+   ctx.roundRect(px+innen,py+innen,ZELLE-innen*2,ZELLE-innen*2,istKopf?6:5);
+   ctx.fill();
+   ctx.strokeStyle="#0a2a2188";
+   ctx.lineWidth=1;
+   ctx.stroke();
+   if(istKopf){
+    const d=blick[(sicht&&sicht.richtung)||"rechts"]||[1,0];
+    const augen=[];
+    if(d[0]!==0){
+     augen.push({x:px+ZELLE/2+d[0]*4,y:py+ZELLE/2-4});
+     augen.push({x:px+ZELLE/2+d[0]*4,y:py+ZELLE/2+4});
+    }else{
+     augen.push({x:px+ZELLE/2-4,y:py+ZELLE/2+d[1]*4});
+     augen.push({x:px+ZELLE/2+4,y:py+ZELLE/2+d[1]*4});
+    }
+    ctx.fillStyle="#0b241d";
+    augen.forEach(a=>{ ctx.beginPath(); ctx.arc(a.x,a.y,2.1,0,Math.PI*2); ctx.fill(); });
+   }
+  }
+ }
 }
 
 // ---------------------------------------------------------------- Schleife
@@ -332,7 +598,7 @@ function zeigeMeldung(titel,text,knopf){
 function schleife(zeit){
  const dt=Math.min(80,zeit-letzteZeit||16);
  letzteZeit=zeit;
- if(zustand==="laeuft"){
+ if(!ONLINE&&zustand==="laeuft"){
   schrittRest+=dt;
   const taktLaenge=tempoJetzt();
   while(schrittRest>=taktLaenge){
@@ -341,7 +607,7 @@ function schleife(zeit){
    if(zustand!=="laeuft")break;
   }
  }
- zeichne();
+ if(ONLINE)zeichneOnline(); else zeichne();
  requestAnimationFrame(schleife);
 }
 
@@ -357,6 +623,12 @@ canvas.addEventListener("pointerup",e=>{
  if(!wischStart)return;
  const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
  wischStart=null;
+ if(ONLINE){
+  if(Math.hypot(dx,dy)<16){ hauptKnopf(); return; }
+  lenkenOnline(Math.abs(dx)>Math.abs(dy)?(dx>0?"rechts":"links"):(dy>0?"runter":"hoch"));
+  e.preventDefault();
+  return;
+ }
  if(Math.hypot(dx,dy)<16){
   if(zustand==="start")starten();
   return;
@@ -370,6 +642,15 @@ canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
 
 window.addEventListener("keydown",e=>{
  const k=e.key;
+ if(ONLINE){
+  const richtung={
+   ArrowUp:"hoch",ArrowDown:"runter",ArrowLeft:"links",ArrowRight:"rechts",
+   w:"hoch",s:"runter",a:"links",d:"rechts",W:"hoch",S:"runter",A:"links",D:"rechts"
+  }[k];
+  if(richtung){ e.preventDefault(); lenkenOnline(richtung); return; }
+  if(k===" "){ e.preventDefault(); hauptKnopf(); }
+  return;
+ }
  const map={
   ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
   w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]
@@ -399,11 +680,26 @@ $("btnPause").onclick=()=>{
  }
 };
 
-neuesSpiel();
+if(ONLINE){
+ // Menü weg, Stand vom Server.
+ $("menueleiste").hidden=true;
+ fernRaster=new Uint8Array(SPALTEN*ZEILEN);
+ fernApfel=null;
+ $("hinweis").textContent="Spielstand wird geladen …";
+ zeichneOnline();
+ holen();
+ setInterval(()=>{
+  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
+ },30000);
+}else{
+ neuesSpiel();
+}
 requestAnimationFrame(schleife);
 
 })();
 </script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script src="/spiele/verlassen.js"></script>
 </body>
 </html>

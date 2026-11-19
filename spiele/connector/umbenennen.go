@@ -191,6 +191,9 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.Bubble; g != nil {
 		benenne(g.Spieler, id, neu, func(p *BubbleSpieler) string { return p.ID }, func(p *BubbleSpieler) *string { return &p.Name })
 	}
+	if g := r.Snake; g != nil {
+		benenne(g.Spieler, id, neu, func(p *SnakeSpieler) string { return p.ID }, func(p *SnakeSpieler) *string { return &p.Name })
+	}
 	if g := r.Pong; g != nil {
 		benenne(g.Spieler, id, neu, func(p *PongSpieler) string { return p.ID }, func(p *PongSpieler) *string { return &p.Name })
 	}

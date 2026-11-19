@@ -213,6 +213,7 @@ type Room struct {
 	Tron            *TronGame              // Tron (Lichtrennen online)
 	Bomberman       *BomberGame            // Bomberman (Bomben-Duell online)
 	Bubble          *BubbleGame            // Bubble Shooter (Duell online)
+	Snake           *SnakeGame             // Snake (Duell online)
 	Schwimmen       *SchwimmenGame
 	Arschloch       *ArschlochGame
 	Sechsundsechzig *SechsundsechzigGame

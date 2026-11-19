@@ -467,6 +467,12 @@ if(!ONLINE){
   fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
    body:JSON.stringify({room:ROOM,id:ID,name:(meinSitz()>=0?game.spieler[meinSitz()].name:NAME),active:true})}).catch(()=>{});
  },30000);
+ // Zurück auf der Seite – Tab geholt, Handy aufgeweckt, App wieder offen:
+ // sofort den Stand holen. Sonst steht die Anzeige noch auf dem alten Zug
+ // (im Hintergrund drosselt der Browser die Taktgeber) und es lässt sich
+ // nichts drücken, bis der nächste Takt durchkommt.
+ document.addEventListener("visibilitychange",()=>{ if(!document.hidden)holen(); });
+ window.addEventListener("focus",()=>holen());
 }
 </script>
 </body>
