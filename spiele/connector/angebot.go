@@ -40,6 +40,7 @@ var spielApi = map[string]string{
 	"hold":             "hold",
 	"skyjo":            "skyjo",
 	"kniffel":          "kniffel",
+	"zehntausend":      "zehntausend",
 	"schach":           "schach",
 	"go":               "go",
 	"backgammon":       "backgammon",
@@ -86,6 +87,7 @@ var spielAnzeige = map[string]string{
 	"hold":             "Hold the Line",
 	"skyjo":            "Skyjo",
 	"kniffel":          "Kniffel",
+	"zehntausend":      "10.000",
 	"schach":           "Schach",
 	"go":               "Go",
 	"backgammon":       "Backgammon",
@@ -142,6 +144,7 @@ var tischspiel = map[string]bool{
 	"schlangen":       true,
 	"pig":             true,
 	"gaensespiel":     true,
+	"zehntausend":     true,
 }
 
 // Gemeinsame Fläche: Malen hat kein Gegenüber und keinen Spielstand, der

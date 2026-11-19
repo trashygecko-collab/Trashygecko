@@ -199,6 +199,7 @@ type Room struct {
 	Hold            *HoldGame
 	Skyjo           *SkyjoGame
 	Kniffel         *KniffelGame
+	ZehnTausend     *ZehnTausendGame   // 10.000 (Würfelspiel online)
 	Schach          *ChessGame
 	Go              *GoGame
 	Backgammon      *BackgammonGame

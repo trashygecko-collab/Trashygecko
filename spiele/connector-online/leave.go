@@ -260,6 +260,14 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Kniffel = nil }),
+		sitz("10.000",
+			func(id, n string) (bool, bool, int) {
+				if g := r.ZehnTausend; g != nil {
+					return zehnTausendRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.ZehnTausend = nil }),
 		sitz("Arschloch",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Arschloch; g != nil {
@@ -680,6 +688,13 @@ func (r *Room) aktivesSpiel(id string) string {
 			}
 		}
 	}
+	if g := r.ZehnTausend; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "zehntausend"
+			}
+		}
+	}
 	if g := r.Arschloch; g != nil && g.Status == "active" {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -958,6 +973,13 @@ func (r *Room) playerInGame(id string) bool {
 		}
 	}
 	if g := r.Kniffel; g != nil {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.ZehnTausend; g != nil {
 		for _, p := range g.Players {
 			if p.ID == id {
 				return true

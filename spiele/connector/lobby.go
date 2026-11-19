@@ -136,6 +136,8 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 				game = "Skyjo"
 			} else if room.Kniffel != nil && (room.Kniffel.Status == "active" || room.Kniffel.Status == "invited") {
 				game = "Kniffel"
+			} else if room.ZehnTausend != nil && (room.ZehnTausend.Status == "active" || room.ZehnTausend.Status == "invited") {
+				game = "10.000"
 			} else if room.Schach != nil && (room.Schach.Status == "active" || room.Schach.Status == "invited") {
 				game = "Schach"
 			} else if room.Go != nil && (room.Go.Status == "active" || room.Go.Status == "invited") {

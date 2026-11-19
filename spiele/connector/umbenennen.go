@@ -201,6 +201,9 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.Kniffel; g != nil {
 		benenne(g.Players, id, neu, func(p *KniffelPlayer) string { return p.ID }, func(p *KniffelPlayer) *string { return &p.Name })
 	}
+	if g := r.ZehnTausend; g != nil {
+		benenne(g.Players, id, neu, func(p *ZTPlayer) string { return p.ID }, func(p *ZTPlayer) *string { return &p.Name })
+	}
 	if g := r.Menschaerger; g != nil {
 		benenne(g.Players, id, neu, func(p *MaenPlayer) string { return p.ID }, func(p *MaenPlayer) *string { return &p.Name })
 	}
