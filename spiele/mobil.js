@@ -190,6 +190,9 @@
     spielZu: function () {
       spiel = "";
       setzeUngelesen(0);
+      // Am Handy steht die Seite beim Spiel weit unten – nach dem Schließen
+      // wieder zum Chat. Der gemerkte Platz des Spiels bleibt unberührt.
+      if (!(breit && breit.matches)) springe(holeChat && holeChat());
     },
     spielOffen: function () { return !!spiel; },
     // Eine neue Nachricht kam an, während der Chat nicht zu sehen war.
