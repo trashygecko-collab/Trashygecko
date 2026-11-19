@@ -29,6 +29,9 @@ COPY . .
 RUN if [ -d spiele/connector/smilies ]; then cp -a spiele/connector/smilies /tmp/smilies; fi
 RUN rm -rf .git spiele/connector spiele/connector-online
 RUN if [ -d /tmp/smilies ]; then mkdir -p spiele/connector && mv /tmp/smilies spiele/connector/smilies; fi
+# Die beiden Quellpakete sollen herunterladbar sein, obwohl die
+# Programmordner selbst draussen bleiben.
+RUN mkdir -p spiele/downloads && cp spiele/connector/connector.zip spiele/downloads/connector.zip && cp spiele/connector-online/connector.zip spiele/downloads/connector-online.zip
 
 # 3) Laufzeit
 FROM alpine:3.20
