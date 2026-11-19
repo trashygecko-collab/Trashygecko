@@ -210,6 +210,9 @@ type Room struct {
 	Baccara         *BaccaraGame
 	Schiffe         *SchiffeGame
 	Pong            *PongGame              // Pong (Online-Duell)
+	Tron            *TronGame              // Tron (Lichtrennen online)
+	Bomberman       *BomberGame            // Bomberman (Bomben-Duell online)
+	Bubble          *BubbleGame            // Bubble Shooter (Duell online)
 	Schwimmen       *SchwimmenGame
 	Arschloch       *ArschlochGame
 	Sechsundsechzig *SechsundsechzigGame

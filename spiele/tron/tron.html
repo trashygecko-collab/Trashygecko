@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="de">
 <head>
+<script src="/spiele/token.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0b241d">
@@ -47,6 +48,8 @@ canvas{display:block;border-radius:8px;border:1px solid #d9bc7c33;
 .meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
 .meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.12em;font-size:18px}
 .meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+.meldung .knoepfe{display:flex;flex-direction:column;gap:7px}
+.meldung button.still{background:#0f2b23;color:#e8cd8e}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
  border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
 
@@ -86,14 +89,14 @@ a{color:#e8cd8e}
   <span class="kreuz">×</span>
  </div>
 
- <div class="menueleiste">
+ <div class="menueleiste" id="menueleiste">
   <button id="btnNeu">Neue Partie</button>
  </div>
 
  <div class="statuszeile">
-  <span>Spieler 1 <b id="p1Stand">0</b></span>
+  <span id="zeile1">Spieler 1 <b id="p1Stand">0</b></span>
   <span class="runde">Runde <b id="rundeNr">1</b> · Ziel <b id="ziel">3</b></span>
-  <span>Spieler 2 <b id="p2Stand">0</b></span>
+  <span id="zeile2">Spieler 2 <b id="p2Stand">0</b></span>
  </div>
 
  <div class="tisch">
@@ -103,6 +106,7 @@ a{color:#e8cd8e}
     <div class="kasten">
      <h2 id="meldungTitel">TRON</h2>
      <p id="meldungText">Zwei Lichtrenner, zwei Spuren. Wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.</p>
+     <div class="knoepfe" id="meldungKnoepfe" hidden></div>
      <button id="meldungKnopf">Starten</button>
     </div>
    </div>
@@ -137,6 +141,15 @@ a{color:#e8cd8e}
 const $=id=>document.getElementById(id);
 const leinwand=$("leinwand");
 const ctx=leinwand.getContext("2d");
+
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
+   führt der Server Raster, Spuren und Runden – hier wird nur gelenkt und
+   gezeichnet. Ohne diese Angaben läuft alles wie bisher lokal am Gerät. */
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get("room")||"").toUpperCase();
+const ID=params.get("id")||"";
+const NAME=params.get("name")||"Spieler";
+const ONLINE=!!(ROOM&&ID);
 
 /* Hochkant-Handy: hohes Feld (32 × 44), sonst das breite (44 × 32). Startplätze
    und Zeichnen rechnen überall mit SPALTEN/ZEILEN, darum reicht das Umschalten. */
@@ -370,11 +383,167 @@ function zeichne(){
  }
 }
 
+/* ---------------------------------------------------------------- Online */
+
+let fern=null, holeLaeuft=false, holeTimer=0, letzterEndstand="";
+let letzteLenkung=0, letzteRichtung="";
+
+/* Der Server schickt das Raster als Lauflängen ("0x120,1x4,2x9"). */
+function rasterAusLauflaengen(text){
+ const r=new Uint8Array(SPALTEN*ZEILEN);
+ let i=0;
+ for(const teil of String(text||"").split(",")){
+  if(!teil)continue;
+  const stueck=teil.split("x");
+  const wert=Number(stueck[0])||0, anzahl=Number(stueck[1])||0;
+  for(let k=0;k<anzahl&&i<r.length;k++)r[i++]=wert;
+ }
+ return r;
+}
+
+async function holen(){
+ if(!ONLINE||holeLaeuft)return;
+ holeLaeuft=true;
+ try{
+  const r=await fetch("/api/tron?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
+  if(r.status===403){
+   $("hinweis").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen.";
+   return;
+  }
+  if(!r.ok)throw Error();
+  const d=await r.json();
+  uebernehmen(d.game||null);
+ }catch(e){
+  $("hinweis").textContent="Verbindung sucht …";
+ }finally{
+  holeLaeuft=false;
+  clearTimeout(holeTimer);
+  holeTimer=setTimeout(holen,fern&&fern.status==="spiel"?110:700);
+ }
+}
+
+async function tu(aktion,felder){
+ if(!ONLINE)return null;
+ try{
+  const r=await fetch("/api/tron?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:ID},felder||{}))
+  });
+  const text=await r.text();
+  if(!r.ok){
+   $("hinweis").textContent=text.trim()||("Fehler "+r.status);
+   return null;
+  }
+  const d=JSON.parse(text);
+  if(d.game)uebernehmen(d.game);
+  return d.game||null;
+ }catch(e){
+  $("hinweis").textContent="Verbindung fehlgeschlagen.";
+  return null;
+ }
+}
+
+/* Serverstand in die Anzeige übernehmen: dasselbe Raster, dieselben Renner –
+   gezeichnet wird mit derselben Funktion wie lokal. */
+function uebernehmen(g){
+ fern=g;
+ if(!g){
+  zustand="bereit";
+  onlineMeldung("TRON","Noch kein Tisch in diesem Raum.",[
+   {label:"Tisch eröffnen",haupt:true,aktion:()=>tu("create")}
+  ]);
+  zeichne();
+  return;
+ }
+ if(hochkant!==true)setzeFeld(true);
+
+ raster=rasterAusLauflaengen(g.raster);
+ spieler=g.spieler.map((p,i)=>({
+  nr:i+1,x:p.x,y:p.y,dx:p.dx,dy:p.dy,naechste:null,tot:p.tot,sieg:p.sieg,
+  farbe:i===0?"#ff8a5c":"#5ce0ff", farbe2:i===0?"#ffb08a":"#a8ecff", spur:i+1
+ }));
+ staub=[];
+ runde=g.runde;
+ sieg1=g.spieler[0]?g.spieler[0].sieg:0;
+ sieg2=g.spieler[1]?g.spieler[1].sieg:0;
+ zeigeStand();
+
+ $("zeile1").firstChild.nodeValue=(g.spieler[0]?g.spieler[0].name:"Spieler 1")+" ";
+ $("zeile2").firstChild.nodeValue=(g.spieler[1]?g.spieler[1].name:"Spieler 2")+" ";
+
+ if(g.status==="spiel"){
+  zustand="laeuft";
+  meldungZu();
+  $("hinweis").textContent=g.note||"Los! Nur rechtswinklige Kurven.";
+ }else if(g.status==="runde"){
+  zustand="runde";
+  onlineMeldung("RUNDE "+g.runde,(g.meldung||"")+" Stand "+sieg1+" : "+sieg2+".",[
+   {label:"Nächste Runde",haupt:true,aktion:()=>tu("weiter")}
+  ]);
+  $("hinweis").textContent=g.note||"";
+ }else if(g.status==="ende"){
+  zustand="match";
+  const kennung=g.id+"|"+g.runde+"|"+g.sieger;
+  if(kennung!==letzterEndstand){
+   letzterEndstand=kennung;
+   onlineMeldung("PARTIE VORBEI",(g.meldung||"")+" Endstand "+sieg1+" : "+sieg2+".",[
+    {label:"Neue Partie",haupt:true,aktion:()=>tu("reset")}
+   ]);
+  }
+  $("hinweis").textContent=g.note||"";
+ }else{
+  zustand="bereit";
+  zeigeLobby(g);
+ }
+ zeichne();
+}
+
+function zeigeLobby(g){
+ const meiner=g.du>=0?g.spieler[g.du]:null;
+ const knoepfe=[];
+ if(!meiner){
+  knoepfe.push({label:"Mitspielen",haupt:true,aktion:()=>tu("join")});
+ }else{
+  knoepfe.push({label:meiner.ready?"Doch nicht bereit":"Bereit",haupt:!meiner.ready,aktion:()=>tu("ready")});
+  if(g.hostId===ID){
+   knoepfe.push({label:"Partie starten",
+    aus:g.spieler.length<2||!g.spieler.every(p=>p.ready),
+    aktion:()=>tu("start")});
+  }
+ }
+ const namen=g.spieler.map(p=>p.name+(p.id===g.hostId?" · Gastgeber":"")+(p.ready?" · bereit":"")).join("  ·  ");
+ const text=(g.spieler.length<2
+  ?"Ein Platz ist noch frei – wer mitspielen will, drückt MITSPIELEN. "
+  :(g.spieler.every(p=>p.ready)?"Beide sind bereit – der Gastgeber startet. ":"Beide drücken BEREIT, dann startet der Gastgeber. "))+namen;
+ onlineMeldung("TRON",text,knoepfe);
+ $("hinweis").textContent=g.note||"";
+}
+
+// Lenken über den Server: gleiche Richtung kurz hintereinander nicht spammen.
+function lenkenOnline(richtung){
+ if(!fern||fern.status!=="spiel")return;
+ const jetzt=performance.now();
+ if(richtung===letzteRichtung&&jetzt-letzteLenkung<150)return;
+ letzteLenkung=jetzt;
+ letzteRichtung=richtung;
+ tu("richtung",{dir:richtung});
+}
+
+// Hauptknopf im Meldungsfenster (für Tippen und Leertaste).
+function hauptKnopf(){
+ const box=$("meldungKnoepfe");
+ if(box&&!box.hidden){
+  const b=[...box.querySelectorAll("button")].find(k=>!k.disabled);
+  if(b){ b.click(); return; }
+ }
+ if(!$("meldung").hidden&&!$("meldungKnopf").hidden)$("meldungKnopf").click();
+}
+
 // ------------------------------------------------------------------ Schleife
 function schleife(zeit){
  const dt=Math.min(0.1,(zeit-letzte)/1000||0);
  letzte=zeit;
- if(zustand==="laeuft"){
+ if(!ONLINE&&zustand==="laeuft"){
   sammler+=dt;
   let schutz=0;
   while(sammler>=TAKT&&schutz<4){ takt(); sammler-=TAKT; schutz++; }
@@ -391,11 +560,16 @@ const TASTEN={
 
 window.addEventListener("keydown",e=>{
  const t=TASTEN[e.code];
+ if(ONLINE){
+  // WASD wie Pfeiltasten lenken den eigenen Renner.
+  if(t){ e.preventDefault(); lenkenOnline(t[1]); return; }
+  if(e.code==="Space"||e.code==="Enter"){ e.preventDefault(); hauptKnopf(); }
+  return;
+ }
  if(t){ e.preventDefault(); lenke(t[0],t[1]); return; }
  if(e.code==="Space"||e.code==="Enter"){
   e.preventDefault();
-  if(!$("meldung").hidden)$("meldungKnopf").click();
-  else weiter();
+  hauptKnopf();
  }
 });
 
@@ -404,7 +578,7 @@ const wisch=new Map();
 leinwand.addEventListener("pointerdown",e=>{
  const r=leinwand.getBoundingClientRect();
  const x=(e.clientX-r.left)/r.width;
- if(zustand==="bereit"&&$("meldung").hidden){ starteRunde(); }
+ if(!ONLINE&&zustand==="bereit"&&$("meldung").hidden){ starteRunde(); }
  wisch.set(e.pointerId,{x:e.clientX,y:e.clientY,nr:x<0.5?1:2});
  try{ if(leinwand.setPointerCapture){leinwand.setPointerCapture(e.pointerId);} }catch(fehler){}
 });
@@ -414,12 +588,14 @@ leinwand.addEventListener("pointerup",e=>{
  if(!w)return;
  const dx=e.clientX-w.x, dy=e.clientY-w.y;
  if(Math.abs(dx)<14&&Math.abs(dy)<14){
-  if(!$("meldung").hidden)$("meldungKnopf").click();
+  if(ONLINE)hauptKnopf();
+  else if(!$("meldung").hidden)$("meldungKnopf").click();
   else weiter();
   return;
  }
- if(Math.abs(dx)>Math.abs(dy))lenke(w.nr,dx>0?"rechts":"links");
- else lenke(w.nr,dy>0?"runter":"hoch");
+ const richtung=Math.abs(dx)>Math.abs(dy)?(dx>0?"rechts":"links"):(dy>0?"runter":"hoch");
+ if(ONLINE)lenkenOnline(richtung);
+ else lenke(w.nr,richtung);
 });
 leinwand.addEventListener("pointercancel",e=>wisch.delete(e.pointerId));
 
@@ -427,12 +603,16 @@ leinwand.addEventListener("pointercancel",e=>wisch.delete(e.pointerId));
 /* Das Feld füllt den Platz, den der Bildschirm hergibt – Seitenverhältnis
    bleibt, damit Kreise rund sind. */
 function passeAn(){
- const jetztHoch=window.innerHeight>window.innerWidth;
+ // Online ist das Feld fest 32 × 44 – beide Geräte spielen dieselbe Karte,
+// ein Drehen darf sie nicht austauschen.
+ const jetztHoch=ONLINE?true:(window.innerHeight>window.innerWidth);
  if(hochkant===null){ setzeFeld(jetztHoch); }
  else if(jetztHoch!==hochkant){
   setzeFeld(jetztHoch);
-  neueRunde();
-  $("hinweis").textContent="Gedreht – die Runde startet neu.";
+  if(!ONLINE){
+   neueRunde();
+   $("hinweis").textContent="Gedreht – die Runde startet neu.";
+  }
  }
  const tisch=leinwand.closest(".tisch");
  const rand=8;
@@ -454,9 +634,32 @@ function meldung(titel,text,knopf){
  $("meldungTitel").textContent=titel;
  $("meldungText").textContent=text;
  $("meldungKnopf").textContent=knopf;
+ $("meldungKnopf").hidden=false;
+ $("meldungKnoepfe").hidden=true;
+ $("meldungKnoepfe").innerHTML="";
  $("meldung").hidden=false;
 }
 function meldungZu(){ $("meldung").hidden=true; }
+
+/* Online braucht mehr als einen Knopf (Bereit, Start, nächste Runde). */
+function onlineMeldung(titel,text,knoepfe){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").hidden=true;
+ const box=$("meldungKnoepfe");
+ box.innerHTML="";
+ box.hidden=false;
+ (knoepfe||[]).forEach(k=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=k.label;
+  if(!k.haupt)b.className="still";
+  b.disabled=!!k.aus;
+  b.onclick=()=>{ if(k.aktion)k.aktion(); };
+  box.appendChild(b);
+ });
+ $("meldung").hidden=false;
+}
 $("meldungKnopf").onclick=()=>{
  if(zustand==="bereit")starteRunde();
  else weiter();
@@ -464,10 +667,25 @@ $("meldungKnopf").onclick=()=>{
 $("btnNeu").onclick=()=>{ neuePartie(); meldung("TRON","Neue Partie – drei Runden gewinnen das Match.","Starten"); };
 
 passeAn();
-neuePartie();
-meldung("TRON","Zwei Lichtrenner, zwei Spuren – wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.","Starten");
+if(ONLINE){
+ // Über den Connector: Menü und Tastenlegende der lokalen Fassung weg,
+ // dafür der Stand vom Server.
+ $("menueleiste").hidden=true;
+ const tasten=document.querySelector(".tasten");
+ if(tasten)tasten.hidden=true;
+ $("hinweis").textContent="Spielstand wird geladen …";
+ holen();
+ setInterval(()=>{
+  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
+ },30000);
+}else{
+ neuePartie();
+ meldung("TRON","Zwei Lichtrenner, zwei Spuren – wer an eine Wand oder in eine Spur fährt, verliert die Runde. Drei Runden gewinnen die Partie.","Starten");
+}
 requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });
 })();
 </script>
+<script src="/spiele/verlassen.js"></script>
 </body>
 </html>

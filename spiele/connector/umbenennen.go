@@ -182,6 +182,15 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.Baccara; g != nil {
 		benenne(g.Spieler, id, neu, func(p *BaccaraSpieler) string { return p.ID }, func(p *BaccaraSpieler) *string { return &p.Name })
 	}
+	if g := r.Tron; g != nil {
+		benenne(g.Spieler, id, neu, func(p *TronSpieler) string { return p.ID }, func(p *TronSpieler) *string { return &p.Name })
+	}
+	if g := r.Bomberman; g != nil {
+		benenne(g.Spieler, id, neu, func(p *BomberSpieler) string { return p.ID }, func(p *BomberSpieler) *string { return &p.Name })
+	}
+	if g := r.Bubble; g != nil {
+		benenne(g.Spieler, id, neu, func(p *BubbleSpieler) string { return p.ID }, func(p *BubbleSpieler) *string { return &p.Name })
+	}
 	if g := r.Pong; g != nil {
 		benenne(g.Spieler, id, neu, func(p *PongSpieler) string { return p.ID }, func(p *PongSpieler) *string { return &p.Name })
 	}

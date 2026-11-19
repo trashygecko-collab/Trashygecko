@@ -73,9 +73,12 @@ main{max-width:760px;margin:auto}
 #regeln b{color:#f1dca8;font-weight:normal}
 .klein{color:#a9c3b6;font-size:13px}
 a{color:#e8cd8e}
+.meldung-knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
+.meldung-knoepfe button.still{background:#0f2b23;color:#f1dca8;border-color:#d9bc7c66}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<script src="/spiele/token.js"></script>
 </head>
 <body>
 <main class="fenster">
@@ -84,7 +87,7 @@ a{color:#e8cd8e}
   <span class="kreuz">×</span>
  </div>
 
- <div class="menueleiste">
+ <div class="menueleiste" id="menueleiste">
   <button id="btnNeu">Neues Spiel</button>
   <button id="btnSolo" class="aktiv">1 Spieler</button>
   <button id="btnDuell">2 Spieler</button>
@@ -111,6 +114,7 @@ a{color:#e8cd8e}
     <h2 id="meldungTitel">BUBBLE SHOOTER</h2>
     <p id="meldungText">Ziele mit dem Finger und schieße Kugeln in die Reihen. Drei gleiche Farben platzen.</p>
     <button id="meldungKnopf">Starten</button>
+    <div class="meldung-knoepfe" id="meldungKnoepfe" hidden></div>
    </div>
   </div>
  </div>
@@ -142,6 +146,15 @@ const FARBEN=["#4fb3a0","#e8cd8e","#6f9fd8","#d98b8b","#a58bd8"];
 const TEMPO=8.5;          // Kugelgeschwindigkeit pro Frame
 const WINKEL_MAX=1.32;    // maximale Neigung in Radiant
 
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
+   rechnet der Server beide Felder – hier wird gezielt, geschossen und
+   gezeichnet. Ohne diese Angaben läuft alles wie bisher lokal am Gerät. */
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get("room")||"").toUpperCase();
+const ID=params.get("id")||"";
+const NAME=params.get("name")||"Spieler";
+const ONLINE=!!(ROOM&&ID);
+
 // ---------------------------------------------------------------- Hilfen
 
 const rnd=(a,b)=>a+Math.random()*(b-a);
@@ -169,6 +182,8 @@ function dunkel(hex,t){
 function Brett(canvas,opt){
  const ctx=canvas.getContext("2d");
  const W=opt.W, H=opt.H, R=opt.R;
+ const online=!!opt.online;
+ const aufSchuss=opt.onSchuss||null;
  canvas.width=W;
  canvas.height=H;
 
@@ -250,6 +265,8 @@ function Brett(canvas,opt){
 
  function schiessen(){
   if(zustand!=="laeuft"||schuss)return;
+  // Online fliegt die Kugel auf dem Server: hier geht nur der Winkel hinaus.
+  if(online){ if(aufSchuss)aufSchuss(winkel); return; }
   schuss={
    x:W/2, y:SCHUSS_Y-R,
    vx:Math.sin(winkel)*TEMPO,
@@ -400,6 +417,7 @@ function Brett(canvas,opt){
  }
 
  function schritt(){
+  if(online)return;                      // gerechnet wird auf dem Server
   if(zustand!=="laeuft")return;
   if(schuss)bewegen();
   else if(schuesse>=reihenBisNeu){ schuesse=0; neueReihe(); }
@@ -562,6 +580,18 @@ function Brett(canvas,opt){
    reihen:feld.length,schuesseBisReihe:reihenBisNeu-schuesse,
    kugeln:feld.reduce((s,re)=>s+re.z.filter(v=>v!=null).length,0)}),
   feld:()=>feld.map(re=>({v:re.v,z:re.z.slice()})),
+  /* Stand vom Server ins eigene Feld übernehmen (null = noch kein Duell). */
+  setzeFern:(d)=>{
+   if(!d){ feld=[]; schuss=null; zustand="start"; zeichne(); return; }
+   feld=(d.reihen||[]).map(re=>({v:re.v,z:re.z.map(v=>v===0?null:v-1)}));
+   punkte=d.punkte||0;
+   aktuell=d.aktuell||0;
+   naechste=d.naechste||0;
+   schuesse=reihenBisNeu-(d.schuesseBisReihe||0);
+   schuss=d.kugel?{x:d.kugel.x,y:d.kugel.y,farbe:d.kugel.farbe}:null;
+   zustand=d.zustand||"start";
+   zeichne();
+  },
   setzeFeld:(f)=>{ feld=f; },
   setzeZustand:(z)=>{ zustand=z; },
   setzeKugel:(r,c,farbe)=>{ feld[r].z[c]=farbe; },
@@ -590,6 +620,29 @@ function spielAufbauen(){
  // aufräumen
  bretter=[];
  $("meldung").hidden=false;
+
+ if(ONLINE){
+  // Ein Feld in den Maßen des Servers (196 × 560, Kugelradius 13).
+  $("buehne").classList.remove("duell");
+  $("wrap1").hidden=false;
+  $("wrap2").hidden=true;
+  $("kopf1").hidden=false;
+  const brett=Brett($("feld1"),{
+   W:196,H:560,R:13,reihen:6,tod:66,reihenBisNeu:6,farben:4,seed:7,
+   online:true,
+   onSchuss:(w)=>schussOnline(w)
+  });
+  bretter.push({brett,canvas:$("feld1"),name:"Spieler 1"});
+  brett.neu();
+  $("statusLinks").innerHTML='Punkte <b id="punkte">0</b>';
+  $("statusRechts").textContent="Wer zuerst die goldene Linie überschreitet, verliert.";
+  $("meldungTitel").textContent="BUBBLE SHOOTER";
+  $("meldungText").textContent="Spielstand wird geladen …";
+  $("meldungKnopf").textContent="Starten";
+  verbinden();
+  $("meldungKnopf").onclick=()=>{};
+  return;
+ }
 
  if(modus==="solo"){
   $("buehne").classList.remove("duell");
@@ -725,6 +778,17 @@ function endeDuell(verlierer,punkte){
 
 window.addEventListener("keydown",e=>{
  const k=e.key;
+ if(ONLINE){
+  if(!bretter.length)return;
+  if(k==="ArrowLeft"||k==="a"||k==="A"){ bretter[0].brett.winkelAendern(-0.06); e.preventDefault(); }
+  if(k==="ArrowRight"||k==="d"||k==="D"){ bretter[0].brett.winkelAendern(0.06); e.preventDefault(); }
+  if(k===" "||k==="ArrowUp"||k==="w"||k==="W"){
+   if(!$("meldung").hidden)hauptKnopf();
+   else bretter[0].brett.schiessen();
+   e.preventDefault();
+  }
+  return;
+ }
  if(modus==="solo"){
   if(k==="ArrowLeft"){ bretter[0]&&bretter[0].brett.winkelAendern(-0.06); e.preventDefault(); }
   if(k==="ArrowRight"){ bretter[0]&&bretter[0].brett.winkelAendern(0.06); e.preventDefault(); }
@@ -753,6 +817,155 @@ window.addEventListener("keydown",e=>{
  }
 });
 
+/* ---------------------------------------------------------------- Online */
+
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
+   rechnet der Server beide Felder (Flug, Anhängen, Dreier, Absturz, Nachschub
+   und die goldene Linie) – hier wird nur gezielt, geschossen und gezeichnet. */
+let fern=null, holeLaeuft=false, holeTimer=0, letzterEndstand="";
+
+async function holen(){
+ if(!ONLINE||holeLaeuft)return;
+ holeLaeuft=true;
+ try{
+  const r=await fetch("/api/bubble?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
+  if(r.status===403){
+   $("hinweis").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen.";
+   return;
+  }
+  if(!r.ok)throw Error();
+  const d=await r.json();
+  uebernehmen(d.game||null);
+ }catch(e){
+  $("hinweis").textContent="Verbindung sucht …";
+ }finally{
+  holeLaeuft=false;
+  clearTimeout(holeTimer);
+  holeTimer=setTimeout(holen,fern&&fern.status==="spiel"?110:700);
+ }
+}
+
+async function tu(aktion,felder){
+ if(!ONLINE)return null;
+ try{
+  const r=await fetch("/api/bubble?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:ID},felder||{}))
+  });
+  const text=await r.text();
+  if(!r.ok){
+   $("hinweis").textContent=text.trim()||("Fehler "+r.status);
+   return null;
+  }
+  const d=JSON.parse(text);
+  if(d.game)uebernehmen(d.game);
+  return d.game||null;
+ }catch(e){
+  $("hinweis").textContent="Verbindung fehlgeschlagen.";
+  return null;
+ }
+}
+
+/* Serverstand ins eigene Brett übernehmen – gezeichnet wird mit derselben
+   Funktion wie lokal. */
+function uebernehmen(g){
+ fern=g;
+ if(!g){
+  onlineMeldung("BUBBLE SHOOTER","Noch kein Tisch in diesem Raum.",[
+   {label:"Tisch eröffnen",haupt:true,aktion:()=>tu("create")}
+  ]);
+  if(bretter.length)bretter[0].brett.setzeFern(null);
+  return;
+ }
+
+ const meiner=g.du>=0?g.spieler[g.du]:null;
+ const gegner=g.du>=0?g.spieler[1-g.du]:null;
+ if(meiner)$("kopf1").firstChild.textContent=meiner.name;
+ $("statusLinks").innerHTML='Punkte <b id="punkte">'+(meiner?meiner.punkte:0)+"</b>";
+ $("statusRechts").innerHTML=gegner
+  ?gegner.name+' <b>'+gegner.punkte+'</b> Punkte · '+gegner.reihen+' Reihen'
+  :"Wer zuerst die goldene Linie überschreitet, verliert.";
+
+ if(g.brett){
+  bretter[0].brett.setzeFern(g.brett);
+ }else{
+  bretter[0].brett.setzeFern(null);
+ }
+
+ if(g.status==="spiel"){
+  $("meldung").hidden=true;
+  $("hinweis").textContent=meiner&&meiner.verloren?"Deine Kugeln haben die goldene Linie erreicht.":(g.note||"Zielen und schießen – wer zuerst die goldene Linie überschreitet, verliert.");
+ }else if(g.status==="ende"){
+  const kennung=g.id+"|"+g.gewinner+"|"+(g.meldung||"");
+  if(kennung!==letzterEndstand){
+   letzterEndstand=kennung;
+   onlineMeldung("DUELL VORBEI",(g.meldung||""),[
+    {label:"Neues Duell",haupt:true,aktion:()=>tu("reset")}
+   ]);
+  }
+  $("hinweis").textContent=g.note||"";
+ }else{
+  zeigeLobby(g);
+ }
+}
+
+function zeigeLobby(g){
+ const meiner=g.du>=0?g.spieler[g.du]:null;
+ const knoepfe=[];
+ if(!meiner){
+  knoepfe.push({label:"Mitspielen",haupt:true,aktion:()=>tu("join")});
+ }else{
+  knoepfe.push({label:meiner.ready?"Doch nicht bereit":"Bereit",haupt:!meiner.ready,aktion:()=>tu("ready")});
+  if(g.hostId===ID){
+   knoepfe.push({label:"Duell starten",
+    aus:g.spieler.length<2||!g.spieler.every(p=>p.ready),
+    aktion:()=>tu("start")});
+  }
+ }
+ const namen=g.spieler.map(p=>p.name+(p.id===g.hostId?" · Gastgeber":"")+(p.ready?" · bereit":"")).join("  ·  ");
+ const text=(g.spieler.length<2
+  ?"Ein Platz ist noch frei – wer mitspielen will, drückt MITSPIELEN. "
+  :(g.spieler.every(p=>p.ready)?"Beide sind bereit – der Gastgeber startet. ":"Beide drücken BEREIT, dann startet der Gastgeber. "))+namen;
+ onlineMeldung("BUBBLE SHOOTER",text+" "+(g.note||""),knoepfe);
+ $("hinweis").textContent=g.note||"";
+}
+
+// Schuss über den Server: nur der Winkel geht hinaus, geflogen wird dort.
+function schussOnline(winkel){
+ if(!fern||fern.status!=="spiel")return;
+ tu("schiessen",{winkel:Math.round(winkel*1000)/1000});
+}
+
+// Hauptknopf im Meldungsfenster (für Tippen und Leertaste).
+function hauptKnopf(){
+ const box=$("meldungKnoepfe");
+ if(box&&!box.hidden){
+  const b=[...box.querySelectorAll("button")].find(k=>!k.disabled);
+  if(b){ b.click(); return; }
+ }
+ if(!$("meldung").hidden&&!$("meldungKnopf").hidden)$("meldungKnopf").click();
+}
+
+/* Online braucht mehr als einen Knopf (Bereit, Start, neues Duell). */
+function onlineMeldung(titel,text,knoepfe){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").hidden=true;
+ const box=$("meldungKnoepfe");
+ box.innerHTML="";
+ box.hidden=false;
+ (knoepfe||[]).forEach(k=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=k.label;
+  if(!k.haupt)b.className="still";
+  b.disabled=!!k.aus;
+  b.onclick=()=>{ if(k.aktion)k.aktion(); };
+  box.appendChild(b);
+ });
+ $("meldung").hidden=false;
+}
+
 // ---------------------------------------------------------------- Schleife
 
 let letzteZeit=0, akku=0;
@@ -764,7 +977,7 @@ function schleife(zeit){
  let schutz=0;
  while(akku>=1/60&&schutz<5){
   akku-=1/60;
-  bretter.forEach(({brett})=>brett.schritt());
+  if(!ONLINE)bretter.forEach(({brett})=>brett.schritt());
   schutz++;
  }
  bretter.forEach(({brett})=>brett.zeichne());
@@ -791,11 +1004,21 @@ $("btnDuell").onclick=()=>{
 
 rekord=rekordLaden();
 spielAufbauen();
+if(ONLINE){
+ $("menueleiste").hidden=true;
+ $("hinweis").textContent="Spielstand wird geladen …";
+ holen();
+ setInterval(()=>{
+  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
+ },30000);
+}
 requestAnimationFrame(schleife);
 
 
 })();
 </script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script src="/spiele/verlassen.js"></script>
 </body>
 </html>

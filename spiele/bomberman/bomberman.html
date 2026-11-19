@@ -81,9 +81,12 @@ canvas{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #
 #regeln b{color:#f1dca8;font-weight:normal}
 .klein{color:#a9c3b6;font-size:13px}
 a{color:#e8cd8e}
+.meldung-knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
+.meldung-knoepfe button.still{background:#0b241d;color:#f1dca8;border-color:#d9bc7c66}
 .mitte{text-align:center}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<script src="/spiele/token.js"></script>
 </head>
 <body>
 <main class="fenster">
@@ -92,7 +95,7 @@ a{color:#e8cd8e}
   <span class="kreuz">×</span>
  </div>
 
- <div class="menueleiste">
+ <div class="menueleiste" id="menueleiste">
   <button id="btnNeu">Neue Partie</button>
   <span style="width:10px"></span>
   <button data-spieler="2" class="aktiv">2 Spieler</button>
@@ -111,6 +114,7 @@ a{color:#e8cd8e}
      <h2 id="meldungTitel">BOMBERMAN</h2>
      <p id="meldungText"></p>
      <button id="meldungKnopf">Los geht's</button>
+     <div class="meldung-knoepfe" id="meldungKnoepfe" hidden></div>
     </div>
    </div>
   </div>
@@ -147,6 +151,19 @@ a{color:#e8cd8e}
 const $=id=>document.getElementById(id);
 const leinwand=$("leinwand");
 const ctx=leinwand.getContext("2d");
+
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
+   führt der Server Karte, Bomben, Flammen und Runden – hier wird nur gelenkt
+   und gezeichnet. Ohne diese Angaben läuft alles wie bisher lokal am Gerät. */
+const params=new URLSearchParams(location.search);
+const ROOM=(params.get("room")||"").toUpperCase();
+const ID=params.get("id")||"";
+const NAME=params.get("name")||"Spieler";
+const ONLINE=!!(ROOM&&ID);
+const ONLINE_TASTEN={
+ KeyW:[0,-1],KeyA:[-1,0],KeyS:[0,1],KeyD:[1,0],
+ ArrowUp:[0,-1],ArrowLeft:[-1,0],ArrowDown:[0,1],ArrowRight:[1,0]
+};
 
 const SPALTEN=15, ZEILEN=13, K=40;
 const W=SPALTEN*K, H=ZEILEN*K;          // 600 × 520
@@ -646,12 +663,228 @@ function zeichne(){
  ctx.strokeRect(1,1,W-2,H-2);
 }
 
+/* ---------------------------------------------------------------- Online */
+
+/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann führt
+   der Server Karte, Bomben, Flammen und Runden – hier wird nur gelenkt,
+   „Bombe“ gedrückt und gezeichnet. Ohne diese Angaben läuft alles lokal. */
+let fern=null, holeLaeuft=false, holeTimer=0, letzterEndstand="";
+let letzteLenkung=0, letzteRichtung="";
+let meinNr=1, padNr=0;
+
+/* Der Server schickt das Raster als Lauflängen ("0x120,1x4,2x9"). */
+function rasterAusLauflaengen(text){
+ const r=new Uint8Array(SPALTEN*ZEILEN);
+ let i=0;
+ for(const teil of String(text||"").split(",")){
+  if(!teil)continue;
+  const stueck=teil.split("x");
+  const wert=Number(stueck[0])||0, anzahl=Number(stueck[1])||0;
+  for(let k=0;k<anzahl&&i<r.length;k++)r[i++]=wert;
+ }
+ return r;
+}
+
+async function holen(){
+ if(!ONLINE||holeLaeuft)return;
+ holeLaeuft=true;
+ try{
+  const r=await fetch("/api/bomberman?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(ID),{cache:"no-store"});
+  if(r.status===403){
+   $("hinweis").textContent="Du bist nicht mehr im Raum – bitte über den Connector neu einsteigen.";
+   return;
+  }
+  if(!r.ok)throw Error();
+  const d=await r.json();
+  uebernehmen(d.game||null);
+ }catch(e){
+  $("hinweis").textContent="Verbindung sucht …";
+ }finally{
+  holeLaeuft=false;
+  clearTimeout(holeTimer);
+  holeTimer=setTimeout(holen,fern&&fern.status==="spiel"?110:700);
+ }
+}
+
+async function tu(aktion,felder){
+ if(!ONLINE)return null;
+ try{
+  const r=await fetch("/api/bomberman?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:ID},felder||{}))
+  });
+  const text=await r.text();
+  if(!r.ok){
+   $("hinweis").textContent=text.trim()||("Fehler "+r.status);
+   return null;
+  }
+  const d=JSON.parse(text);
+  if(d.game)uebernehmen(d.game);
+  return d.game||null;
+ }catch(e){
+  $("hinweis").textContent="Verbindung fehlgeschlagen.";
+  return null;
+ }
+}
+
+/* Serverstand in die Anzeige übernehmen: dieselbe Karte, dieselben Bomben und
+   Flammen – gezeichnet wird mit denselben Funktionen wie lokal. */
+function uebernehmen(g){
+ fern=g;
+ if(!g){
+  zustand="start";
+  onlineMeldung("BOMBERMAN","Noch kein Tisch in diesem Raum.",[
+   {label:"Tisch eröffnen",haupt:true,aktion:()=>tu("create")}
+  ]);
+  zeichne();
+  return;
+ }
+
+ zustand=g.status==="spiel"?"laeuft":g.status==="runde"?"runde":g.status==="ende"?"match":"start";
+ raster=rasterAusLauflaengen(g.raster);
+ spieler=(g.spieler||[]).map(p=>({
+  nr:p.nr, x:p.x, y:p.y, dx:p.dx, dy:p.dy,
+  bombenMax:p.bombenMax, feuer:p.feuer, tempo:p.tempo,
+  leben:p.leben, sieg:p.sieg, aufBombe:0, laufT:p.laufT, totSeit:p.totSeit,
+  letzteRichtung:[p.blickX,p.blickY],
+  farbe:FARBEN[p.nr]||FARBEN[1]
+ }));
+ (g.spieler||[]).forEach(p=>{ NAMEN[p.nr]=p.name; });
+ bomben=(g.bomben||[]).map(b=>({x:b.x,y:b.y,nr:b.nr,zeit:b.rest,radius:b.radius,phase:b.phase}));
+ flammen=(g.flammen||[]).map(f=>({x:f.x,y:f.y,leben:f.rest,phase:f.phase}));
+ powerups=(g.powerups||[]).map(p=>({x:p.x,y:p.y,art:p.art,phase:p.phase}));
+ trümmer=[];
+ runde=g.runde;
+ vorlauf=g.vorlauf||0;
+ meinNr=g.du>=0?g.spieler[g.du].nr:1;
+ if(meinNr!==padNr)bauePads();
+ zeigeStand();
+
+ const stand=(g.spieler||[]).map(p=>p.name+" "+p.sieg).join(" : ");
+ if(g.status==="spiel"){
+  meldungZu();
+  $("hinweis").textContent=g.note||"Wer zuletzt übrig bleibt, gewinnt die Runde.";
+ }else if(g.status==="runde"){
+  onlineMeldung("RUNDE "+g.runde,(g.meldung||"")+" Stand "+stand+".",[
+   {label:"Nächste Runde",haupt:true,aktion:()=>tu("weiter")}
+  ]);
+  $("hinweis").textContent=g.note||"";
+ }else if(g.status==="ende"){
+  const kennung=g.id+"|"+g.runde+"|"+g.sieger;
+  if(kennung!==letzterEndstand){
+   letzterEndstand=kennung;
+   onlineMeldung("MATCH VORBEI",(g.meldung||"")+" Endstand "+stand+".",[
+    {label:"Neue Partie",haupt:true,aktion:()=>tu("reset")}
+   ]);
+  }
+  $("hinweis").textContent=g.note||"";
+ }else{
+  zeigeLobby(g);
+ }
+ zeichne();
+}
+
+function zeigeLobby(g){
+ const meiner=g.du>=0?g.spieler[g.du]:null;
+ const knoepfe=[];
+ if(!meiner){
+  knoepfe.push({label:"Mitspielen",haupt:true,aktion:()=>tu("join")});
+ }else{
+  knoepfe.push({label:meiner.ready?"Doch nicht bereit":"Bereit",haupt:!meiner.ready,aktion:()=>tu("ready")});
+  if(g.hostId===ID){
+   knoepfe.push({label:"Partie starten",
+    aus:g.spieler.length<2||!g.spieler.every(p=>p.ready),
+    aktion:()=>tu("start")});
+  }
+ }
+ const namen=g.spieler.map(p=>p.name+(p.id===g.hostId?" · Gastgeber":"")+(p.ready?" · bereit":"")).join("  ·  ");
+ const text=(g.spieler.length<2
+  ?"Ein Platz ist noch frei – wer mitspielen will, drückt MITSPIELEN. "
+  :(g.spieler.every(p=>p.ready)?"Beide sind bereit – der Gastgeber startet. ":"Beide drücken BEREIT, dann startet der Gastgeber. "))+namen;
+ onlineMeldung("BOMBERMAN",text+" "+g.note,knoepfe);
+ $("hinweis").textContent=g.note||"";
+}
+
+// Lenken und Bombe über den Server: gleiche Richtung kurz hintereinander nicht spammen.
+function lenkenOnline(dx,dy){
+ if(!fern||fern.status!=="spiel")return;
+ const kennung=dx+","+dy, jetzt=performance.now();
+ if(kennung===letzteRichtung&&jetzt-letzteLenkung<120)return;
+ letzteLenkung=jetzt;
+ letzteRichtung=kennung;
+ tu("richtung",{dx:dx,dy:dy});
+}
+
+function bombeOnline(){
+ if(!fern||fern.status!=="spiel")return;
+ tu("bombe");
+}
+
+// Steuerkreuz für den eigenen Bomber (Handy).
+function bauePadOnline(){
+ const oben=$("padsOben"), unten=$("padsUnten");
+ while(oben.firstChild)oben.removeChild(oben.firstChild);
+ while(unten.firstChild)unten.removeChild(unten.firstChild);
+ const pad=document.createElement("div");
+ pad.className="pad pad"+meinNr;
+ [["hoch","▲"],["links","◀"],["bombe","✸"],["rechts","▶"],["runter","▼"]].forEach(([dir,text])=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=text;
+  const richtung={hoch:[0,-1],runter:[0,1],links:[-1,0],rechts:[1,0]}[dir];
+  b.addEventListener("pointerdown",e=>{
+   e.preventDefault();
+   if(dir==="bombe")bombeOnline();
+   else lenkenOnline(richtung[0],richtung[1]);
+  });
+  const los=()=>{ if(dir!=="bombe")lenkenOnline(0,0); };
+  b.addEventListener("pointerup",los);
+  b.addEventListener("pointerleave",los);
+  b.addEventListener("pointercancel",los);
+  pad.appendChild(b);
+ });
+ unten.appendChild(pad);
+ padNr=meinNr;
+}
+
+// Hauptknopf im Meldungsfenster (für Tippen und Leertaste).
+function hauptKnopf(){
+ const box=$("meldungKnoepfe");
+ if(box&&!box.hidden){
+  const b=[...box.querySelectorAll("button")].find(k=>!k.disabled);
+  if(b){ b.click(); return; }
+ }
+ if(!$("meldung").hidden&&!$("meldungKnopf").hidden)$("meldungKnopf").click();
+}
+
+/* Online braucht mehr als einen Knopf (Bereit, Start, nächste Runde). */
+function onlineMeldung(titel,text,knoepfe){
+ $("meldungTitel").textContent=titel;
+ $("meldungText").textContent=text;
+ $("meldungKnopf").hidden=true;
+ const box=$("meldungKnoepfe");
+ box.innerHTML="";
+ box.hidden=false;
+ (knoepfe||[]).forEach(k=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=k.label;
+  if(!k.haupt)b.className="still";
+  b.disabled=!!k.aus;
+  b.onclick=()=>{ if(k.aktion)k.aktion(); };
+  box.appendChild(b);
+ });
+ $("meldung").hidden=false;
+}
+
 // ------------------------------------------------------------------ Schleife
 function schleife(zeit){
  const dt=Math.min(0.05,(zeit-letzte)/1000||0);
  letzte=zeit;
- update(dt);
- spieler.forEach(s=>{ if(!s.leben)s.totSeit+=dt; });
+ if(!ONLINE){
+  update(dt);
+  spieler.forEach(s=>{ if(!s.leben)s.totSeit+=dt; });
+ }
  zeichne();
  requestAnimationFrame(schleife);
 }
@@ -672,6 +905,17 @@ const TASTEN={
 const gedrueckt=new Map();
 
 window.addEventListener("keydown",e=>{
+ if(ONLINE){
+  if(e.code==="Space"||e.code==="Enter"){
+   e.preventDefault();
+   if(!$("meldung").hidden)hauptKnopf();
+   else bombeOnline();
+   return;
+  }
+  const r=ONLINE_TASTEN[e.code];
+  if(r){ e.preventDefault(); lenkenOnline(r[0],r[1]); }
+  return;
+ }
  if(e.code==="Space"){
   e.preventDefault();
   if(!$("meldung").hidden)$("meldungKnopf").click();
@@ -686,6 +930,10 @@ window.addEventListener("keydown",e=>{
  setzeRichtung(t[0],t[1],t[2]);
 });
 window.addEventListener("keyup",e=>{
+ if(ONLINE){
+  if(ONLINE_TASTEN[e.code])lenkenOnline(0,0);
+  return;
+ }
  const t=TASTEN[e.code];
  if(!t||t[1]==="bombe")return;
  gedrueckt.delete(e.code);
@@ -696,6 +944,7 @@ window.addEventListener("keyup",e=>{
 
 // Touch-Steuerkreuze
 function bauePads(){
+ if(ONLINE){ bauePadOnline(); return; }
  const oben=$("padsOben"), unten=$("padsUnten");
  while (oben.firstChild) oben.removeChild(oben.firstChild); while (unten.firstChild) unten.removeChild(unten.firstChild);
  const knopf=(nr,dir,text)=>"";
@@ -744,6 +993,9 @@ function meldung(titel,text,knopf){
  $("meldungTitel").textContent=titel;
  $("meldungText").textContent=text;
  $("meldungKnopf").textContent=knopf;
+ $("meldungKnopf").hidden=false;
+ $("meldungKnoepfe").hidden=true;
+ $("meldungKnoepfe").innerHTML="";
  $("meldung").hidden=false;
 }
 function meldungZu(){ $("meldung").hidden=true; }
@@ -768,15 +1020,33 @@ document.querySelectorAll("[data-spieler]").forEach(b=>{
 });
 
 // Start
-bauePads();
-spieler=[neuerSpieler(1),neuerSpieler(2)];
-neueKarten();
-zeigeStand();
-meldung("BOMBERMAN",
- zustand==="start"?"Zwei bis vier Bomber, ein Tisch voller Kisten. Wer zuerst drei Runden gewinnt, gewinnt das Match.":"",
- "Los geht's");
+if(ONLINE){
+ // Menü und Tastenlegende der lokalen Fassung weg, dafür der Stand vom Server.
+ $("menueleiste").hidden=true;
+ const tasten=document.querySelector(".tasten");
+ if(tasten)tasten.hidden=true;
+ raster=new Uint8Array(SPALTEN*ZEILEN);
+ spieler=[neuerSpieler(1),neuerSpieler(2)];
+ zeigeStand();
+ bauePads();
+ $("hinweis").textContent="Spielstand wird geladen …";
+ holen();
+ setInterval(()=>{
+  fetch("/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({room:ROOM,id:ID,name:NAME,active:true})}).catch(()=>{});
+ },30000);
+}else{
+ bauePads();
+ spieler=[neuerSpieler(1),neuerSpieler(2)];
+ neueKarten();
+ zeigeStand();
+ meldung("BOMBERMAN",
+  "Zwei bis vier Bomber, ein Tisch voller Kisten. Wer zuerst drei Runden gewinnt, gewinnt das Match.",
+  "Los geht's");
+}
 requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });
 })();
 </script>
+<script src="/spiele/verlassen.js"></script>
 </body>
 </html>

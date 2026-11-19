@@ -373,6 +373,30 @@ func (r *Room) partien() []partie {
 				return nil
 			},
 			func() { r.Baccara = nil }),
+		ohneSitz("Tron",
+			func() []string {
+				if g := r.Tron; g != nil {
+					return idsVon(g.Spieler, func(p TronSpieler) string { return p.ID })
+				}
+				return nil
+			},
+			func() { r.Tron = nil }),
+		ohneSitz("Bomberman",
+			func() []string {
+				if g := r.Bomberman; g != nil {
+					return idsVon(g.Spieler, func(p BomberSpieler) string { return p.ID })
+				}
+				return nil
+			},
+			func() { r.Bomberman = nil }),
+		ohneSitz("Bubble Shooter",
+			func() []string {
+				if g := r.Bubble; g != nil {
+					return idsVon(g.Spieler, func(p BubbleSpieler) string { return p.ID })
+				}
+				return nil
+			},
+			func() { r.Bubble = nil }),
 		ohneSitz("Pong",
 			func() []string {
 				if g := r.Pong; g != nil {
@@ -693,6 +717,21 @@ func (r *Room) aktivesSpiel(id string) string {
 			return s
 		}
 	}
+	if g := r.Tron; g != nil {
+		if s := fuerSitz("tron", g.Status, idsVon(g.Spieler, func(p TronSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Bomberman; g != nil {
+		if s := fuerSitz("bomberman", g.Status, idsVon(g.Spieler, func(p BomberSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
+	if g := r.Bubble; g != nil {
+		if s := fuerSitz("bubble", g.Status, idsVon(g.Spieler, func(p BubbleSpieler) string { return p.ID })); s != "" {
+			return s
+		}
+	}
 	if g := r.Pong; g != nil {
 		if s := fuerSitz("pong", g.Status, idsVon(g.Spieler, func(p PongSpieler) string { return p.ID })); s != "" {
 			return s
@@ -827,6 +866,24 @@ func (r *Room) playerInGame(id string) bool {
 		func() []string {
 			if g := r.Poker; g != nil {
 				return idsVon(g.Spieler, func(p PokerSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Tron; g != nil {
+				return idsVon(g.Spieler, func(p TronSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Bomberman; g != nil {
+				return idsVon(g.Spieler, func(p BomberSpieler) string { return p.ID })
+			}
+			return nil
+		},
+		func() []string {
+			if g := r.Bubble; g != nil {
+				return idsVon(g.Spieler, func(p BubbleSpieler) string { return p.ID })
 			}
 			return nil
 		},
