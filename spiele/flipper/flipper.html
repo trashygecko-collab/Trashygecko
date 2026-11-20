@@ -4,77 +4,186 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0b241d">
-<title>Flipper</title>
+<title>TrashyGecko – Arcade Flipper</title>
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--leiste:#0b241d;
+--panel:#0f2b23;--kopf:#1e5645;--kopf-2:#144238;--hover:#184536;
+--schleier:#04100ccc;--tief:#08120f;--grund:#04100c;--fluegel:#123a2e;
+--fenster-rand:#9b8150;--kante:#ffffff0b;--punkte:#fff3d2;
+--hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;
+--rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
+--schatten:#00000077;--schatten-tief:#00000077;
+/* Feld: der Zeichencode liest genau diese. */
+--fl-glanz:#ffffff;--fl-schatten-1:#00000033;--fl-schatten-2:#00000044;
+--fl-schatten-3:#00000055;--fl-schatten-4:#00000066;--fl-stange-1:#6f7a76;
+--fl-stange-2:#d5ded8;--fl-stange-3:#59625f;--fl-fahne-1:#f9ffff;
+--fl-fahne-2:#82928d;--fl-fahne-3:#303b3b;--fl-fahne-rand:#e9f0e8;
+--fl-spinner:#252f30;--fl-spinner-rand:#dbe5dd;--fl-scoop-aussen:#101719;
+--fl-scoop-innen:#020706;--fl-rampe:#aab8b5;--fl-rampe-rand:#090e12;
+--fl-zinne:#f2e5c4;--fl-leitblech:#ffffffaa;--fl-bumper-ring:#303b3a;
+--fl-bumper-kante:#d8d8c8;--fl-bumper-kappe:#f8f0d6;--fl-arm-1:#fffdf0;
+--fl-arm-2:#a77b38;--fl-arm-3:#423321;--fl-arm-rand:#f8e8b7;
+--fl-arm-linie:#ffffff99;--fl-lager:#4a514d;--fl-lager-rand:#d7d5c7;
+--fl-lager-schlitz:#39413d;--fl-schraube:#aeb8ae;--fl-schraub-schlitz:#39443e;
+--fl-zierrand:#ffffff18;--fl-lampe-aus:#29342e;--fl-spur:#fff0c8;
+--fl-kugel-rand:#00000055;--fl-kugel-ende:#8d8b80;--fl-ring:#e8cd8e;
+--fl-feder:#9fb3ab;--fl-lade-warn:#ff6b5f;--fl-licht-text:#0b241d;
+--fl-t1-grund-1:#123a2c;--fl-t1-grund-2:#06150f;--fl-t1-wand:#d9bc7c;
+--fl-t1-licht:#e8cd8e;--fl-t1-bumper-1:#2f8a66;--fl-t1-bumper-2:#123a2c;
+--fl-t1-ziel:#c8a96a;--fl-t1-kugel:#fff4d6;--fl-t2-grund-1:#241a3d;
+--fl-t2-grund-2:#0a0614;--fl-t2-wand:#6ee7ff;--fl-t2-licht:#ff5fd2;
+--fl-t2-bumper-1:#ff5fd2;--fl-t2-bumper-2:#2a0f38;--fl-t2-ziel:#6ee7ff;
+--fl-t2-kugel:#f2faff;--fl-t3-grund-1:#0e3340;--fl-t3-grund-2:#041014;
+--fl-t3-wand:#d9a05a;--fl-t3-licht:#f0c98a;--fl-t3-bumper-1:#2b8a92;
+--fl-t3-bumper-2:#08262c;--fl-t3-ziel:#d9a05a;--fl-t3-kugel:#fff1d8;
+--fl-t4-grund-1:#2a1a45;--fl-t4-grund-2:#08040f;--fl-t4-wand:#cfc0ff;
+--fl-t4-licht:#ffffff;--fl-t4-bumper-1:#8f6bff;--fl-t4-bumper-2:#1b1030;
+--fl-t4-ziel:#cfc0ff;--fl-t4-kugel:#ffffff;
+}
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#85204a;--leiste:#ffeaf3;
+--panel:#ffe3ef;--kopf:#ffd0e4;--kopf-2:#ffb8d4;--hover:#ffd0e4;
+--schleier:#fff6fae0;--tief:#ffd8e7;--grund:#fff6fa;--fluegel:#ffeaf3;
+--fenster-rand:#c9588f;--kante:#ffffffcc;--punkte:#5b2340;
+--hell:#8f2450;--muted:#7a2b52;--regeln:#5b2340;--meldung-text:#5b2340;
+--rand:#ef7aa8;--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
+--schatten:#8f245033;--schatten-tief:#8f245055;
+--fl-glanz:#ffffff;--fl-schatten-1:#8f245033;--fl-schatten-2:#8f245044;
+--fl-schatten-3:#8f245055;--fl-schatten-4:#8f245066;--fl-stange-1:#f3c6d8;
+--fl-stange-2:#fff2f7;--fl-stange-3:#c99ab1;--fl-fahne-1:#fff6fa;
+--fl-fahne-2:#e9b6cc;--fl-fahne-3:#b57e97;--fl-fahne-rand:#ffe3ef;
+--fl-spinner:#7a2b52;--fl-spinner-rand:#ffe3ef;--fl-scoop-aussen:#7a2b52;
+--fl-scoop-innen:#2a0a1b;--fl-rampe:#e9b6cc;--fl-rampe-rand:#8f2450;
+--fl-zinne:#ffe3ef;--fl-leitblech:#8f2450aa;--fl-bumper-ring:#b57e97;
+--fl-bumper-kante:#fff2f7;--fl-bumper-kappe:#fff6fa;--fl-arm-1:#fff2f7;
+--fl-arm-2:#c9588f;--fl-arm-3:#8f2450;--fl-arm-rand:#ffe3ef;
+--fl-arm-linie:#ffffffcc;--fl-lager:#b57e97;--fl-lager-rand:#ffe3ef;
+--fl-lager-schlitz:#5b2340;--fl-schraube:#ffd0e4;--fl-schraub-schlitz:#8f2450;
+--fl-zierrand:#8f24501a;--fl-lampe-aus:#b57e97;--fl-spur:#ffd0e4;
+--fl-kugel-rand:#8f245055;--fl-kugel-ende:#a06a7d;--fl-ring:#8f2450;
+--fl-feder:#d8a8bd;--fl-lade-warn:#e0245e;--fl-licht-text:#ffeaf3;
+--fl-t1-grund-1:#fff0f7;--fl-t1-grund-2:#ffd8e7;--fl-t1-wand:#c9588f;
+--fl-t1-licht:#8f2450;--fl-t1-bumper-1:#e0245e;--fl-t1-bumper-2:#8f2450;
+--fl-t1-ziel:#e0559a;--fl-t1-kugel:#e0245e;--fl-t2-grund-1:#ffe6f2;
+--fl-t2-grund-2:#ffc9e0;--fl-t2-wand:#b06bff;--fl-t2-licht:#8f2450;
+--fl-t2-bumper-1:#b06bff;--fl-t2-bumper-2:#5b2340;--fl-t2-ziel:#b06bff;
+--fl-t2-kugel:#b06bff;--fl-t3-grund-1:#e8f7ff;--fl-t3-grund-2:#cfe9f7;
+--fl-t3-wand:#b06b00;--fl-t3-licht:#5b2340;--fl-t3-bumper-1:#1f7f9e;
+--fl-t3-bumper-2:#12495e;--fl-t3-ziel:#b06b00;--fl-t3-kugel:#1f7f9e;
+--fl-t4-grund-1:#f3e8ff;--fl-t4-grund-2:#ded0f5;--fl-t4-wand:#7b3fe4;
+--fl-t4-licht:#5b2340;--fl-t4-bumper-1:#7b3fe4;--fl-t4-bumper-2:#3a0f24;
+--fl-t4-ziel:#7b3fe4;--fl-t4-kugel:#7b3fe4;
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:#e6e9ec;--gold:#c8ff3d;--leiste:#0a0d10;
+--panel:#111316;--kopf:#1c2530;--kopf-2:#111820;--hover:#20262e;
+--schleier:#04070bcc;--tief:#080b0e;--grund:#04070b;--fluegel:#151b22;
+--fenster-rand:#2a4050;--kante:#c8ff3d1a;--punkte:#c8ff3d;
+--hell:#c8ff3d;--muted:#adb4bc;--regeln:#c2c8cf;--meldung-text:#c9d4dc;
+--rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
+--schatten:#00000088;--schatten-tief:#000000cc;
+--fl-glanz:#f2fbff;--fl-schatten-1:#00000066;--fl-schatten-2:#00000077;
+--fl-schatten-3:#00000099;--fl-schatten-4:#000000aa;--fl-stange-1:#2a3a46;
+--fl-stange-2:#9fb3bd;--fl-stange-3:#16202a;--fl-fahne-1:#d7e6ee;
+--fl-fahne-2:#6b7f8a;--fl-fahne-3:#3a4a55;--fl-fahne-rand:#4de0ff;
+--fl-spinner:#12202b;--fl-spinner-rand:#aab4bc;--fl-scoop-aussen:#0a1219;
+--fl-scoop-innen:#04070b;--fl-rampe:#4de0ff;--fl-rampe-rand:#04070b;
+--fl-zinne:#c8ff3d55;--fl-leitblech:#4de0ff88;--fl-bumper-ring:#2a3a46;
+--fl-bumper-kante:#9fb3bd;--fl-bumper-kappe:#e6f7ff;--fl-arm-1:#f2ffd0;
+--fl-arm-2:#6b8f00;--fl-arm-3:#2b3a00;--fl-arm-rand:#c8ff3d;
+--fl-arm-linie:#c8ff3daa;--fl-lager:#2a3a44;--fl-lager-rand:#c8ff3d;
+--fl-lager-schlitz:#04070b;--fl-schraube:#7e8892;--fl-schraub-schlitz:#04070b;
+--fl-zierrand:#c8ff3d1a;--fl-lampe-aus:#1b2b36;--fl-spur:#4de0ff;
+--fl-kugel-rand:#00000099;--fl-kugel-ende:#7e8892;--fl-ring:#c8ff3d;
+--fl-feder:#5c7d8f;--fl-lade-warn:#ff5a6a;--fl-licht-text:#04070b;
+--fl-t1-grund-1:#0c1a22;--fl-t1-grund-2:#04070b;--fl-t1-wand:#4de0ff;
+--fl-t1-licht:#c8ff3d;--fl-t1-bumper-1:#1b8fa0;--fl-t1-bumper-2:#0a141c;
+--fl-t1-ziel:#4de0ff;--fl-t1-kugel:#e6f7ff;--fl-t2-grund-1:#1a0f2a;
+--fl-t2-grund-2:#05030b;--fl-t2-wand:#ff5a6a;--fl-t2-licht:#c8ff3d;
+--fl-t2-bumper-1:#ff5a6a;--fl-t2-bumper-2:#1b1030;--fl-t2-ziel:#ff5a6a;
+--fl-t2-kugel:#f2fbff;--fl-t3-grund-1:#08222a;--fl-t3-grund-2:#03090d;
+--fl-t3-wand:#ffd24d;--fl-t3-licht:#c8ff3d;--fl-t3-bumper-1:#2fd07a;
+--fl-t3-bumper-2:#0a1f26;--fl-t3-ziel:#ffd24d;--fl-t3-kugel:#eafaff;
+--fl-t4-grund-1:#101a2b;--fl-t4-grund-2:#04070b;--fl-t4-wand:#b070ff;
+--fl-t4-licht:#c8ff3d;--fl-t4-bumper-1:#4de0ff;--fl-t4-bumper-2:#12182a;
+--fl-t4-ziel:#b070ff;--fl-t4-kugel:#ffffff;
+}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 14px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:820px;width:100%;margin:auto;display:flex;flex-direction:column;min-height:0;height:100%}
 .titelleiste,.menueleiste,.statuszeile,.fluegel,.fuss,#regeln{flex:0 0 auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:2px solid var(--fenster-rand);border-radius:10px;overflow:hidden;background:var(--panel);
+ box-shadow:0 8px 24px var(--schatten),inset 0 0 0 2px var(--kante)}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
+.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-3)}
 .menueleiste button{font-family:inherit;font-size:12.5px;padding:7px 9px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
-.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--hover)}
+.menueleiste button.aktiv{background:var(--gold);color:var(--leiste);border-color:var(--gold);font-weight:bold}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
-#punkte{font-size:16px;color:#fff3d2}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
+.statuszeile b{color:var(--gold);font-weight:normal}
+#punkte{font-size:16px;color:var(--punkte)}
 
 /* Der Tisch nimmt genau den Platz, der zwischen Kopf, Knöpfen und Fuß übrig
    ist – passeTisch() setzt die Maße der Leinwand danach (Höhe und Breite). */
-.tisch{display:flex;gap:10px;padding:8px;background:#08120f;align-items:center;justify-content:center;
+.tisch{display:flex;gap:10px;padding:8px;background:var(--tief);align-items:center;justify-content:center;
  flex:1 1 auto;min-height:0;overflow:hidden}
 .leinwand{position:relative;flex:0 0 auto;width:300px;height:420px;max-width:100%}
 canvas{display:block;width:100%;height:100%;border-radius:10px;
- border:1px solid #d9bc7c33;background:#04100c;touch-action:none}
+ border:1px solid var(--rand-3);background:var(--grund);touch-action:none}
 
 .meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:10px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:290px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:18px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:10px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:16px 18px;max-width:290px}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:18px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
-.fluegel{display:flex;gap:8px;padding:0 8px 8px;background:#08120f}
+.fluegel{display:flex;gap:8px;padding:0 8px 8px;background:var(--tief)}
 .fluegel button{flex:1;font-family:inherit;font-size:15px;padding:14px 8px;border-radius:8px;
- border:1px solid #d9bc7c66;background:#123a2e;color:#e8cd8e;cursor:pointer;touch-action:none}
-.fluegel button:active,.fluegel button.drueckt{background:#e8cd8e;color:#0b241d}
-.fluegel button.stift{flex:0 0 118px;font-size:13px;background:#0f2b23;white-space:nowrap}
-.fluegel button.stift.drueckt{background:#e8cd8e;color:#0b241d}
+ border:1px solid var(--rand-1);background:var(--fluegel);color:var(--gold);cursor:pointer;touch-action:none}
+.fluegel button:active,.fluegel button.drueckt{background:var(--gold);color:var(--leiste)}
+.fluegel button.stift{flex:0 0 118px;font-size:13px;background:var(--panel);white-space:nowrap}
+.fluegel button.stift.drueckt{background:var(--gold);color:var(--leiste)}
 
-.fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:26px}
+.fuss{padding:6px 10px 10px;font-size:13px;color:var(--muted);min-height:26px}
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
 </style>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
 <main class="fenster">
  <div class="titelleiste">
-  <span class="titel">Flipper</span>
+  <span class="titel">TRASHYGECKO · ARCADE PINBALL</span>
   <span class="kreuz">×</span>
  </div>
 
@@ -118,7 +227,10 @@ a{color:#e8cd8e}
    <li><b>Stift:</b> Rechts liegt die Kugel im Kanal auf dem Stift. Stift nach unten ziehen (im Feld, mit dem Knopf <b>Stift ziehen</b> oder <b>Leertaste</b> halten) und loslassen – je weiter gezogen, desto kräftiger der Schuss. Der Stift schießt die Kugel oben durch den Bogen ins Feld.</li>
    <li><b>Flipper:</b> Linke Bildhälfte antippen oder <b>A</b> / <b>←</b> für den linken, rechte Hälfte oder <b>L</b> / <b>→</b> für den rechten Flipper.</li>
    <li><b>Mittelstift:</b> Zwischen den beiden Flippern fährt ein Stift auf und ab. Ist er oben, prallt die Kugel an ihm ab und bleibt im Spiel; ist er unten, rutscht sie durch den Auslass.</li>
-   <li><b>Schleudern:</b> Die beiden Dreiecke über den Flippern stoßen die Kugel zurück ins Feld (60 Punkte je Stoß).</li>
+   <li><b>Schleudern:</b> Die beiden Dreiecke über den Flippern stoßen die Kugel zurück ins Feld.</li>
+   <li><b>Spinner:</b> Die drehende Metallfahne in der Tischmitte bringt Zusatzpunkte und verändert den Kugelweg.</li>
+   <li><b>Rampe:</b> Die seitliche Stahlrampe hat einen eigenen Rampeneinlauf mit kräftigem Rückschuss.</li>
+   <li><b>KICK-Scoop:</b> Der runde Kugelfang schleudert die Kugel mit einem starken Auswurf zurück ins Spielfeld.</li>
    <li><b>Lichter oben:</b> Drei Lichter <b>A</b>, <b>B</b>, <b>C</b> – rollt die Kugel durch eines, leuchtet es. Sind alle drei an, gibt es einen Bonus und der Punkte-Multiplikator steigt um eins (bis ×5).</li>
    <li><b>Punkte:</b> Bumper geben bei jedem Treffer Punkte, Schleudern etwas weniger, Zielscheiben viel. Ist eine ganze Reihe Ziele abgeräumt, gibt es einen Bonus und die Reihe steht wieder.</li>
    <li><b>Kugeln:</b> Drei Kugeln pro Partie – fällt die Kugel unten durch, kommt die nächste auf den Stift.</li>
@@ -183,60 +295,65 @@ const ROLLOVER=[
 const AUTOMATEN=[
 {
  id:"zwerg", name:"Zwergenwerk", kugeln:3, grav:1180,
- farbe:{grund1:"#123a2c",grund2:"#06150f",wand:"#d9bc7c",licht:"#e8cd8e",
-        bumper1:"#2f8a66",bumper2:"#123a2c",ziel:"#c8a96a",kugel:"#fff4d6"},
+ satz:1, farbe:{},
  tipp:"Der Klassiker im Stollen: drei Bumper, ruhiger Tisch.",
  wand:[],
  bumper:[{x:200,y:196,r:19,punkte:100,kick:430},
          {x:146,y:268,r:16,punkte:150,kick:400},
-         {x:254,y:268,r:16,punkte:150,kick:400}],
- ziele:[{x:118,y:392,w:44,h:14},{x:172,y:392,w:44,h:14},{x:226,y:392,w:44,h:14}],
+         {x:254,y:268,r:16,punkte:150,kick:400},{x:104,y:350,r:14,punkte:180,kick:420},{x:296,y:350,r:14,punkte:180,kick:420}],
+ ziele:[{x:92,y:392,w:34,h:14},{x:136,y:392,w:34,h:14},{x:180,y:392,w:34,h:14},{x:224,y:392,w:34,h:14},{x:268,y:392,w:34,h:14}],
  baenke:[[0,1,2]],
  bonus:2500
 },
 {
  id:"neon", name:"Neon-Stadt", kugeln:3, grav:1240,
- farbe:{grund1:"#241a3d",grund2:"#0a0614",wand:"#6ee7ff",licht:"#ff5fd2",
-        bumper1:"#ff5fd2",bumper2:"#2a0f38",ziel:"#6ee7ff",kugel:"#f2faff"},
+ satz:2, farbe:{},
  tipp:"Vier Bumper im Rautenmuster und ein Zielbänkchen oben rechts.",
  wand:[[300,236,330,300],[330,300,300,364]],
  bumper:[{x:200,y:176,r:18,punkte:120,kick:470},
          {x:150,y:232,r:15,punkte:100,kick:450},
          {x:250,y:232,r:15,punkte:100,kick:450},
-         {x:200,y:288,r:18,punkte:120,kick:470}],
- ziele:[{x:96,y:300,w:16,h:56},{x:120,y:300,w:16,h:56},{x:144,y:300,w:16,h:56}],
+         {x:200,y:288,r:18,punkte:120,kick:470},{x:104,y:365,r:14,punkte:160,kick:440},{x:296,y:365,r:14,punkte:160,kick:440}],
+ ziele:[{x:88,y:300,w:16,h:56},{x:112,y:300,w:16,h:56},{x:136,y:300,w:16,h:56},{x:248,y:300,w:16,h:56},{x:272,y:300,w:16,h:56},{x:296,y:300,w:16,h:56}],
  baenke:[[0,1,2]],
  bonus:3000
 },
 {
  id:"pirat", name:"Piratenbucht", kugeln:3, grav:1120,
- farbe:{grund1:"#0e3340",grund2:"#041014",wand:"#d9a05a",licht:"#f0c98a",
-        bumper1:"#2b8a92",bumper2:"#08262c",ziel:"#d9a05a",kugel:"#fff1d8"},
+ satz:3, farbe:{},
  tipp:"Fünf Bumper und zwei Zielgruppen – viel Betrieb an Deck.",
  wand:[[64,300,96,360],[96,360,64,420]],
  bumper:[{x:200,y:166,r:16,punkte:120,kick:420},
          {x:146,y:220,r:14,punkte:100,kick:400},
          {x:254,y:220,r:14,punkte:100,kick:400},
          {x:176,y:296,r:14,punkte:150,kick:430},
-         {x:236,y:296,r:14,punkte:150,kick:430}],
- ziele:[{x:236,y:368,w:16,h:52},{x:260,y:368,w:16,h:52},{x:284,y:368,w:16,h:52}],
+         {x:236,y:296,r:14,punkte:150,kick:430},{x:100,y:390,r:15,punkte:170,kick:450},{x:300,y:390,r:15,punkte:170,kick:450}],
+ ziele:[{x:236,y:368,w:16,h:52},{x:260,y:368,w:16,h:52},{x:284,y:368,w:16,h:52},{x:92,y:326,w:16,h:48},{x:116,y:326,w:16,h:48}],
  baenke:[[0,1,2]],
  bonus:3200
 },
 {
  id:"stern", name:"Sternenstaub", kugeln:3, grav:1080,
- farbe:{grund1:"#2a1a45",grund2:"#08040f",wand:"#cfc0ff",licht:"#ffffff",
-        bumper1:"#8f6bff",bumper2:"#1b1030",ziel:"#cfc0ff",kugel:"#ffffff"},
+ satz:4, farbe:{},
  tipp:"Meisterklasse: große Bumper, vier Ziele, hohe Punkte.",
  wand:[[118,430,150,486],[150,486,118,540],[282,430,250,486],[250,486,282,540]],
  bumper:[{x:200,y:180,r:26,punkte:200,kick:520},
          {x:140,y:272,r:22,punkte:150,kick:480},
-         {x:260,y:272,r:22,punkte:150,kick:480}],
- ziele:[{x:104,y:352,w:14,h:50},{x:126,y:352,w:14,h:50},{x:148,y:352,w:14,h:50},{x:170,y:352,w:14,h:50}],
+         {x:260,y:272,r:22,punkte:150,kick:480},{x:104,y:386,r:16,punkte:180,kick:470},{x:296,y:386,r:16,punkte:180,kick:470},{x:200,y:410,r:15,punkte:250,kick:500}],
+ ziele:[{x:92,y:352,w:14,h:50},{x:114,y:352,w:14,h:50},{x:136,y:352,w:14,h:50},{x:158,y:352,w:14,h:50},{x:242,y:352,w:14,h:50},{x:264,y:352,w:14,h:50},{x:286,y:352,w:14,h:50}],
  baenke:[[0,1,2,3]],
  bonus:4000
 }
 ];
+
+// ------------------------------------------------------------------ Zusatzmechanik: individuelle Bahnen, Rampe, Spinner und Kugelfang.
+const TISCH_MECHANIK={
+ zwerg:{rails:[[78,174,78,286],[78,286,94,316],[94,316,122,330],[122,330,140,316],[140,316,140,286],[260,316,278,330],[278,330,306,316],[306,316,322,286],[322,286,322,174]],ramp:[[278,430],[304,404],[310,350],[292,316],[270,302]],spinner:{x:200,y:344,len:30},scoop:{x:200,y:454,r:14},rampZone:{x:270,y:300,w:40,h:28}},
+ neon:{rails:[[76,170,76,292],[76,292,94,316],[94,316,122,316],[122,316,138,292],[324,170,324,292],[324,292,306,316],[306,316,278,316],[278,316,262,292]],ramp:[[100,440],[82,414],[82,362],[100,338],[124,328]],spinner:{x:200,y:350,len:34},scoop:{x:200,y:458,r:14},rampZone:{x:82,y:330,w:44,h:28}},
+ pirat:{rails:[[76,172,76,282],[76,282,94,308],[94,308,122,324],[122,324,140,308],[324,172,324,282],[324,282,306,308],[306,308,278,324],[278,324,260,308]],ramp:[[280,438],[310,410],[314,360],[294,332],[270,320]],spinner:{x:200,y:344,len:31},scoop:{x:200,y:458,r:15},rampZone:{x:270,y:316,w:46,h:30}},
+ stern:{rails:[[74,170,74,288],[74,288,92,314],[92,314,122,330],[122,330,142,310],[326,170,326,288],[326,288,308,314],[308,314,278,330],[278,330,258,310]],ramp:[[104,444],[78,414],[78,360],[100,332],[128,316]],spinner:{x:200,y:338,len:36},scoop:{x:200,y:458,r:16},rampZone:{x:78,y:314,w:52,h:32}}
+};
+let mechanik=null, spinnerWinkel=0, scoopSperre=0, rampBlitz=0, rampTreffer=0;
 
 // ------------------------------------------------------------------ Zustand
 let automat=AUTOMATEN[0];
@@ -250,11 +367,115 @@ let popups=[];
 let letzteZeit=0, sammler=0;
 let ruhigSeit=0;
 let zug=0, stiftAn=false, stiftWieder=0, ziehStart=null;
+/* Die Farben stehen als Tokens im Stylesheet. Einmal lesen, bei Stilwechsel
+   neu lesen - Tisch, Figuren und Beleuchtung faerben mit. */
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let F={};
+function mitAlpha(hex,a){const n=parseInt(hex.slice(1),16);
+ return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")";}
+function paletteLaden(){
+ F={
+  glanz:tok("--fl-glanz"),
+  schatten_1:tok("--fl-schatten-1"),
+  schatten_2:tok("--fl-schatten-2"),
+  schatten_3:tok("--fl-schatten-3"),
+  schatten_4:tok("--fl-schatten-4"),
+  stange_1:tok("--fl-stange-1"),
+  stange_2:tok("--fl-stange-2"),
+  stange_3:tok("--fl-stange-3"),
+  fahne_1:tok("--fl-fahne-1"),
+  fahne_2:tok("--fl-fahne-2"),
+  fahne_3:tok("--fl-fahne-3"),
+  fahne_rand:tok("--fl-fahne-rand"),
+  spinner:tok("--fl-spinner"),
+  spinner_rand:tok("--fl-spinner-rand"),
+  scoop_aussen:tok("--fl-scoop-aussen"),
+  scoop_innen:tok("--fl-scoop-innen"),
+  rampe:tok("--fl-rampe"),
+  rampe_rand:tok("--fl-rampe-rand"),
+  zinne:tok("--fl-zinne"),
+  leitblech:tok("--fl-leitblech"),
+  bumper_ring:tok("--fl-bumper-ring"),
+  bumper_kante:tok("--fl-bumper-kante"),
+  bumper_kappe:tok("--fl-bumper-kappe"),
+  arm_1:tok("--fl-arm-1"),
+  arm_2:tok("--fl-arm-2"),
+  arm_3:tok("--fl-arm-3"),
+  arm_rand:tok("--fl-arm-rand"),
+  arm_linie:tok("--fl-arm-linie"),
+  lager:tok("--fl-lager"),
+  lager_rand:tok("--fl-lager-rand"),
+  lager_schlitz:tok("--fl-lager-schlitz"),
+  schraube:tok("--fl-schraube"),
+  schraub_schlitz:tok("--fl-schraub-schlitz"),
+  zierrand:tok("--fl-zierrand"),
+  lampe_aus:tok("--fl-lampe-aus"),
+  spur:tok("--fl-spur"),
+  kugel_rand:tok("--fl-kugel-rand"),
+  kugel_ende:tok("--fl-kugel-ende"),
+  ring:tok("--fl-ring"),
+  feder:tok("--fl-feder"),
+  lade_warn:tok("--fl-lade-warn"),
+  licht_text:tok("--fl-licht-text"),
+  t1_grund_1:tok("--fl-t1-grund-1"),
+  t1_grund_2:tok("--fl-t1-grund-2"),
+  t1_wand:tok("--fl-t1-wand"),
+  t1_licht:tok("--fl-t1-licht"),
+  t1_bumper_1:tok("--fl-t1-bumper-1"),
+  t1_bumper_2:tok("--fl-t1-bumper-2"),
+  t1_ziel:tok("--fl-t1-ziel"),
+  t1_kugel:tok("--fl-t1-kugel"),
+  t2_grund_1:tok("--fl-t2-grund-1"),
+  t2_grund_2:tok("--fl-t2-grund-2"),
+  t2_wand:tok("--fl-t2-wand"),
+  t2_licht:tok("--fl-t2-licht"),
+  t2_bumper_1:tok("--fl-t2-bumper-1"),
+  t2_bumper_2:tok("--fl-t2-bumper-2"),
+  t2_ziel:tok("--fl-t2-ziel"),
+  t2_kugel:tok("--fl-t2-kugel"),
+  t3_grund_1:tok("--fl-t3-grund-1"),
+  t3_grund_2:tok("--fl-t3-grund-2"),
+  t3_wand:tok("--fl-t3-wand"),
+  t3_licht:tok("--fl-t3-licht"),
+  t3_bumper_1:tok("--fl-t3-bumper-1"),
+  t3_bumper_2:tok("--fl-t3-bumper-2"),
+  t3_ziel:tok("--fl-t3-ziel"),
+  t3_kugel:tok("--fl-t3-kugel"),
+  t4_grund_1:tok("--fl-t4-grund-1"),
+  t4_grund_2:tok("--fl-t4-grund-2"),
+  t4_wand:tok("--fl-t4-wand"),
+  t4_licht:tok("--fl-t4-licht"),
+  t4_bumper_1:tok("--fl-t4-bumper-1"),
+  t4_bumper_2:tok("--fl-t4-bumper-2"),
+  t4_ziel:tok("--fl-t4-ziel"),
+  t4_kugel:tok("--fl-t4-kugel")
+ };
+ const rollen=["grund1","grund2","wand","licht","bumper1","bumper2","ziel","kugel"];
+ const namen=["grund-1","grund-2","wand","licht","bumper-1","bumper-2","ziel","kugel"];
+ AUTOMATEN.forEach(a=>{
+  const o={};
+  rollen.forEach((r,k)=>{o[r]=tok("--fl-t"+a.satz+"-"+namen[k]);});
+  a.farbe=o;
+ });
+}
+function neuZeichnen(){
+ paletteLaden();
+ const c=document.querySelector("canvas");
+ if(c){const x=c.getContext("2d");if(x)x.clearRect(0,0,c.width,c.height);}
+ zeichne();
+}
+paletteLaden();
+if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(neuZeichnen);
+/* stil.js setzt den Stil erst nach dem Parsen - danach einmal frisch zeichnen. */
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",neuZeichnen);
+
 
 function baueAutomat(a){
  automat=a;
- wand=RAHMEN.concat([[KANAL.x,KANAL.boden,376,KANAL.boden]],a.wand)
+ mechanik=TISCH_MECHANIK[a.id];
+ wand=RAHMEN.concat([[KANAL.x,KANAL.boden,376,KANAL.boden]],a.wand,mechanik.rails)
   .map(s=>({x1:s[0],y1:s[1],x2:s[2],y2:s[3]}));
+ spinnerWinkel=0; scoopSperre=0; rampBlitz=0; rampTreffer=0;
  bumper=a.bumper.map(b=>({...b,blitz:0,cooldown:0}));
  ziele=a.ziele.map(z=>({...z,runter:false,blitz:0}));
  schleudern=SCHLEUDERN.map(s=>({...s,cooldown:0,blitz:0}));
@@ -311,16 +532,16 @@ function mstiftStoss(){
 function zeichneMittelstift(){
  const f=automat.farbe, st=mstiftStelle(), y=st.y;
  // Loch im Tisch, aus dem der Stift fährt
- ctx.fillStyle="#00000066";
+ ctx.fillStyle=F.schatten_4;
  ctx.beginPath();
  ctx.ellipse(MSTIFT.x,H-4,13,7,0,0,Math.PI*2);
  ctx.fill();
  if(y>=H-1)return;   // ganz eingefahren: nur das Loch
  // Stange
  const gl=ctx.createLinearGradient(MSTIFT.x-MSTIFT.r,0,MSTIFT.x+MSTIFT.r,0);
- gl.addColorStop(0,"#6f7a76");
- gl.addColorStop(0.4,"#d5ded8");
- gl.addColorStop(1,"#59625f");
+ gl.addColorStop(0,F.stange_1);
+ gl.addColorStop(0.4,F.stange_2);
+ gl.addColorStop(1,F.stange_3);
  ctx.fillStyle=gl;
  rundeFlaeche(MSTIFT.x-MSTIFT.r,y,MSTIFT.r*2,Math.max(0,H-y),MSTIFT.r);
  ctx.fill();
@@ -329,7 +550,7 @@ function zeichneMittelstift(){
  ctx.arc(MSTIFT.x,y+MSTIFT.r,MSTIFT.r+1,0,Math.PI*2);
  ctx.fillStyle=f.licht;
  ctx.fill();
- ctx.strokeStyle="#00000066";
+ ctx.strokeStyle=F.schatten_4;
  ctx.lineWidth=1;
  ctx.stroke();
 }
@@ -539,6 +760,39 @@ function physik(dt){
   pruefeBaenke();
  });
 
+ // Rotierender Spinner: die Fahne wird von der Kugel angeschlagen.
+ spinnerWinkel+=dt*(2.2+Math.min(9,Math.hypot(kugel.vx,kugel.vy)*0.004));
+ if(scoopSperre>0)scoopSperre-=dt;
+ if(rampBlitz>0)rampBlitz-=dt*2.5;
+ const sp=mechanik.spinner;
+ const sx1=sp.x-Math.cos(spinnerWinkel)*sp.len, sy1=sp.y-Math.sin(spinnerWinkel)*sp.len;
+ const sx2=sp.x+Math.cos(spinnerWinkel)*sp.len, sy2=sp.y+Math.sin(spinnerWinkel)*sp.len;
+ const sc=naechsterPunkt(kugel.x,kugel.y,sx1,sy1,sx2,sy2);
+ const sdx=kugel.x-sc.x, sdy=kugel.y-sc.y, sd=Math.hypot(sdx,sdy);
+ if(sd<RK+4){
+  const nx=sd>0.001?sdx/sd:0, ny=sd>0.001?sdy/sd:-1;
+  kugel.x=sc.x+nx*(RK+4.5); kugel.y=sc.y+ny*(RK+4.5);
+  const vn=kugel.vx*nx+kugel.vy*ny;
+  if(vn<0){kugel.vx-=1.75*vn*nx;kugel.vy-=1.75*vn*ny;}
+  kugel.vx-=Math.sin(spinnerWinkel)*115; kugel.vy+=Math.cos(spinnerWinkel)*115;
+  if(Math.random()<0.16)addiere(75,sp.x,sp.y-20);
+ }
+ // Scoop-Kugelfang mit kräftigem Auswurf zurück ins obere Spielfeld.
+ const so=mechanik.scoop, sdist=Math.hypot(kugel.x-so.x,kugel.y-so.y);
+ if(scoopSperre<=0&&sdist<so.r+RK-2&&kugel.vy>35){
+  scoopSperre=1.05; kugel.x=so.x; kugel.y=so.y-4;
+  kugel.vx=(Math.random()-0.5)*210; kugel.vy=-790;
+  addiere(1500,so.x,so.y-18); rampBlitz=1;
+ }
+ // Rampeneinlauf: ein sauberer Treffer löst den Rampenschuss aus.
+ const rz=mechanik.rampZone;
+ if(kugel.x>rz.x&&kugel.x<rz.x+rz.w&&kugel.y>rz.y&&kugel.y<rz.y+rz.h&&kugel.vy>80&&rampBlitz<=0){
+  rampBlitz=1; rampTreffer++;
+  kugel.vy=-Math.max(520,Math.abs(kugel.vy)*0.92);
+  kugel.vx+=(automat.id==='neon'?230:-210);
+  addiere(900+rampTreffer*100,rz.x+rz.w/2,rz.y-10);
+ }
+
  // Flipper
  for(const f of flipper){
   const ex=f.x+Math.cos(f.winkel)*f.len, ey=f.y+Math.sin(f.winkel)*f.len;
@@ -679,6 +933,27 @@ function zeichne(){
  }
  ctx.restore();
 
+ // Eigenständige Spielfeldgrafik – je Automat mit eigener Atmosphäre.
+ zeichneTischArtwork();
+
+ // Aufwendig gezeichnete Stahlrampe mit eigener Lichtkante.
+ ctx.save();
+ const rp=mechanik.ramp; ctx.lineCap="round"; ctx.lineJoin="round";
+ const rampPfad=(versatz)=>{ctx.beginPath();rp.forEach((p,i)=>{const prev=rp[Math.max(0,i-1)],next=rp[Math.min(rp.length-1,i+1)];const dx=next[0]-prev[0],dy=next[1]-prev[1],l=Math.hypot(dx,dy)||1;const x=p[0]-dy/l*versatz,y=p[1]+dx/l*versatz;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});};
+ for(const off of [-8,8]){rampPfad(off);ctx.strokeStyle=F.rampe_rand;ctx.lineWidth=10;ctx.stroke();ctx.strokeStyle=F.rampe;ctx.lineWidth=5;ctx.stroke();}
+ rampPfad(0);ctx.strokeStyle=automat.farbe.licht;ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.stroke();ctx.restore();
+ // Mechanischer Spinner mit rotierender Metallfahne.
+ const spd=mechanik.spinner;
+ ctx.save();ctx.translate(spd.x,spd.y);ctx.rotate(spinnerWinkel);ctx.shadowColor=automat.farbe.licht;ctx.shadowBlur=8;
+ const sg=ctx.createLinearGradient(0,-5,0,5);sg.addColorStop(0,F.fahne_1);sg.addColorStop(.5,F.fahne_2);sg.addColorStop(1,F.fahne_3);
+ ctx.fillStyle=sg;rundeFlaeche(-spd.len,-5,spd.len*2,10,4);ctx.fill();ctx.strokeStyle=F.fahne_rand;ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+ ctx.beginPath();ctx.arc(spd.x,spd.y,7,0,Math.PI*2);ctx.fillStyle=F.spinner;ctx.fill();ctx.strokeStyle=F.spinner_rand;ctx.lineWidth=2;ctx.stroke();
+ // Scoop-Mulde, die die Kugel einfängt und wieder auswirft.
+ const so=mechanik.scoop;ctx.save();ctx.shadowColor=automat.farbe.licht;ctx.shadowBlur=rampBlitz>0?18:5;
+ ctx.beginPath();ctx.arc(so.x,so.y,so.r+5,0,Math.PI*2);ctx.fillStyle=F.scoop_aussen;ctx.fill();
+ ctx.beginPath();ctx.arc(so.x,so.y,so.r,0,Math.PI*2);ctx.fillStyle=F.scoop_innen;ctx.fill();ctx.strokeStyle=automat.farbe.licht;ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle=automat.farbe.licht;ctx.font="bold 8px Arial";ctx.textAlign="center";ctx.fillText("KICK",so.x,so.y+3);ctx.restore();
+
  // Wände
  ctx.lineCap="round";
  for(const w of wand){
@@ -689,9 +964,13 @@ function zeichne(){
   ctx.lineWidth=4;
   ctx.beginPath(); ctx.moveTo(w.x1,w.y1); ctx.lineTo(w.x2,w.y2); ctx.stroke();
  }
+ // Metallische Innenkante der Außenbanden
+ ctx.save(); ctx.lineCap="round"; ctx.strokeStyle=F.zinne; ctx.globalAlpha=.42; ctx.lineWidth=1.5;
+ for(const w of wand){ctx.beginPath();ctx.moveTo(w.x1-2,w.y1);ctx.lineTo(w.x2-2,w.y2);ctx.stroke();}
+ ctx.restore();
  // Maschinen-eigene Leitbleche etwas dünner
  for(const w of automat.wand){
-  ctx.strokeStyle="#ffffffaa";
+  ctx.strokeStyle=F.leitblech;
   ctx.lineWidth=4;
   ctx.beginPath(); ctx.moveTo(w[0],w[1]); ctx.lineTo(w[2],w[3]); ctx.stroke();
  }
@@ -713,50 +992,69 @@ function zeichne(){
   ctx.fill(); ctx.stroke();
   if(z.blitz>0){
    ctx.globalAlpha=z.blitz*0.8;
-   ctx.fillStyle="#ffffff";
+   ctx.fillStyle=F.glanz;
    rundeFlaeche(z.x,z.y,z.w,z.h,5);
    ctx.fill();
   }
   ctx.restore();
  });
 
- // Bumper
+ // Mechanische Pop-Bumper mit Metallring, Gummikante und leuchtender Kappe
  bumper.forEach(b=>{
-  const gl=ctx.createRadialGradient(b.x-b.r*0.35,b.y-b.r*0.4,b.r*0.2,b.x,b.y,b.r);
-  gl.addColorStop(0,"#ffffff");
-  gl.addColorStop(0.35,f.bumper1);
+  const puls=0.5+0.5*Math.sin(performance.now()/145+b.x);
+  const gl=ctx.createRadialGradient(b.x-b.r*.34,b.y-b.r*.42,1,b.x,b.y,b.r+5);
+  gl.addColorStop(0,F.glanz);
+  gl.addColorStop(.22,f.licht);
+  gl.addColorStop(.48,f.bumper1);
   gl.addColorStop(1,f.bumper2);
-  ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+  ctx.save();
+  ctx.shadowColor=b.blitz>0?F.glanz:f.licht;
+  ctx.shadowBlur=b.blitz>0?22:5+puls*3;
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r+5,0,Math.PI*2);
+  ctx.fillStyle=F.bumper_ring; ctx.fill();
+  ctx.lineWidth=3; ctx.strokeStyle=F.bumper_kante; ctx.stroke();
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r+1,0,Math.PI*2);
   ctx.fillStyle=gl; ctx.fill();
-  ctx.lineWidth=2;
-  ctx.strokeStyle=b.blitz>0?"#ffffff":f.licht;
-  ctx.stroke();
+  ctx.lineWidth=2; ctx.strokeStyle=b.blitz>0?F.glanz:f.licht; ctx.stroke();
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r*.48,0,Math.PI*2);
+  ctx.fillStyle=F.bumper_kappe; ctx.fill();
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r*.27,0,Math.PI*2);
+  ctx.fillStyle=f.bumper2; ctx.fill();
+  ctx.restore();
   if(b.blitz>0){
-   ctx.beginPath(); ctx.arc(b.x,b.y,b.r+6*b.blitz,0,Math.PI*2);
-   ctx.strokeStyle="rgba(255,255,255,"+(b.blitz*0.5)+")";
-   ctx.lineWidth=2; ctx.stroke();
+   ctx.beginPath(); ctx.arc(b.x,b.y,b.r+10*b.blitz,0,Math.PI*2);
+   ctx.strokeStyle=mitAlpha(F.glanz,b.blitz*.55);
+   ctx.lineWidth=3; ctx.stroke();
   }
  });
 
- // Flipper
+ // Flipperarme: breite Gummikörper mit Stahlkern und massiven Drehgelenken
  for(const fl of flipper){
   ctx.save();
   ctx.translate(fl.x,fl.y);
   ctx.rotate(fl.winkel);
-  const gl=ctx.createLinearGradient(0,-6,0,6);
-  gl.addColorStop(0,"#fff6dc");
-  gl.addColorStop(0.45,f.licht);
-  gl.addColorStop(1,"#8a6a33");
-  ctx.fillStyle=gl;
-  rundeFlaeche(0,-5,fl.len,10,5);
-  ctx.fill();
-  ctx.strokeStyle="#00000066";
-  ctx.lineWidth=1;
-  ctx.stroke();
+  const L=fl.len;
+  ctx.shadowColor=f.licht; ctx.shadowBlur=fl.an?12:3;
+  ctx.beginPath();
+  ctx.moveTo(3,-8); ctx.lineTo(L-9,-5.5); ctx.quadraticCurveTo(L+2,0,L-9,5.5);
+  ctx.lineTo(3,8); ctx.quadraticCurveTo(-3,0,3,-8); ctx.closePath();
+  const gl=ctx.createLinearGradient(0,-8,0,8);
+  gl.addColorStop(0,F.arm_1); gl.addColorStop(.25,f.licht);
+  gl.addColorStop(.62,F.arm_2); gl.addColorStop(1,F.arm_3);
+  ctx.fillStyle=gl; ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.lineWidth=1.5; ctx.strokeStyle=F.arm_rand; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(L-11,0);
+  ctx.strokeStyle=F.arm_linie; ctx.lineWidth=1.4; ctx.stroke();
   ctx.restore();
+  // Lagerplatte und Schraubenkopf
+  ctx.beginPath(); ctx.arc(fl.x,fl.y,10,0,Math.PI*2);
+  ctx.fillStyle=F.lager; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle=F.lager_rand; ctx.stroke();
   ctx.beginPath(); ctx.arc(fl.x,fl.y,4,0,Math.PI*2);
-  ctx.fillStyle="#0a1f19"; ctx.fill();
-  ctx.strokeStyle=f.licht; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle=f.licht; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(fl.x-2,fl.y); ctx.lineTo(fl.x+2,fl.y);
+  ctx.strokeStyle=F.lager_schlitz; ctx.lineWidth=1.3; ctx.stroke();
  }
 
  // Mittelstift zwischen den Flippern
@@ -766,23 +1064,23 @@ function zeichne(){
  spur.forEach((p,i)=>{
   ctx.beginPath();
   ctx.arc(p.x,p.y,RK*(0.35+i*0.06),0,Math.PI*2);
-  ctx.fillStyle="rgba(255,240,200,"+(i/spur.length*0.22)+")";
+  ctx.fillStyle=mitAlpha(F.spur,i/spur.length*0.22);
   ctx.fill();
  });
 
  // Kugel
  if(zustand!=="vorbei"){
   const gl=ctx.createRadialGradient(kugel.x-3,kugel.y-4,1,kugel.x,kugel.y,RK);
-  gl.addColorStop(0,"#ffffff");
+  gl.addColorStop(0,F.glanz);
   gl.addColorStop(0.55,f.kugel);
-  gl.addColorStop(1,"#8d8b80");
+  gl.addColorStop(1,F.kugel_ende);
   ctx.beginPath(); ctx.arc(kugel.x,kugel.y,RK,0,Math.PI*2);
   ctx.fillStyle=gl; ctx.fill();
-  ctx.strokeStyle="#00000055"; ctx.lineWidth=1; ctx.stroke();
+  ctx.strokeStyle=F.schatten_3; ctx.lineWidth=1; ctx.stroke();
   if(zustand==="bereit"){
    ctx.beginPath();
    ctx.arc(kugel.x,kugel.y,RK+7,0,Math.PI*2);
-   ctx.strokeStyle="rgba(232,205,142,"+(0.35+0.3*Math.sin(performance.now()/300))+")";
+   ctx.strokeStyle=mitAlpha(F.ring,0.35+0.3*Math.sin(performance.now()/300));
    ctx.lineWidth=2; ctx.stroke();
   }
  }
@@ -793,7 +1091,7 @@ function zeichne(){
  for(let i=popups.length-1;i>=0;i--){
   const p=popups[i];
   ctx.globalAlpha=Math.max(0,p.leben);
-  ctx.fillStyle="#fff3d2";
+  ctx.fillStyle=F.punkte;
   ctx.fillText(p.text,p.x,p.y);
   ctx.globalAlpha=1;
   p.leben-=0.016;
@@ -801,23 +1099,83 @@ function zeichne(){
  }
 }
 
+// Gezeichnete Einbauten und Beschriftungen verleihen jedem Tisch ein eigenes Thema.
+function zeichneTischArtwork(){
+ const f=automat.farbe;
+ ctx.save();
+ // Dunkles Spielfeld mit feiner Maserung und umlaufendem Zierrand
+ ctx.strokeStyle=f.wand+"55"; ctx.lineWidth=2;
+ rundeFlaeche(34,145,292,510,22); ctx.stroke();
+ ctx.strokeStyle=F.zierrand; ctx.lineWidth=1;
+ rundeFlaeche(40,151,280,498,18); ctx.stroke();
+ // Kleine eingelassene Schrauben entlang der Seiten
+ for(const [x,y] of [[43,166],[317,166],[43,330],[317,330],[43,500],[317,500],[58,632],[302,632]]){
+  ctx.beginPath(); ctx.arc(x,y,3.2,0,Math.PI*2); ctx.fillStyle=F.schraube; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x-1.5,y); ctx.lineTo(x+1.5,y); ctx.strokeStyle=F.schraub_schlitz; ctx.lineWidth=1; ctx.stroke();
+ }
+ // Thematische Embleme oben und in der Spielfeldmitte
+ ctx.textAlign="center"; ctx.textBaseline="middle";
+ ctx.fillStyle=f.licht; ctx.globalAlpha=.9;
+ ctx.font="bold 13px Georgia,serif";
+ const titel={zwerg:"DWARF MINE",neon:"NEON CITY",pirat:"PIRATE BAY",stern:"STAR QUEST"}[automat.id]||"PINBALL";
+ ctx.fillText(titel,185,91);
+ ctx.globalAlpha=.42; ctx.font="bold 30px Georgia,serif";
+ const symbol={zwerg:"⚒",neon:"★",pirat:"☠",stern:"✦"}[automat.id]||"★";
+ ctx.fillText(symbol,200,365);
+ ctx.globalAlpha=1;
+ // Leuchtende Spielfeld-Einsätze als kleine runde Lampen
+ const lampen=[[72,178],[108,178],[292,178],[328,178],[72,350],[328,350],[76,455],[324,455],[154,570],[246,570]];
+ lampen.forEach(([x,y],i)=>{
+  const on=Math.sin(performance.now()/260+i*1.7)>-.35;
+  ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
+  ctx.fillStyle=on?f.licht:F.lampe_aus; ctx.fill();
+  if(on){ctx.shadowColor=f.licht;ctx.shadowBlur=8;ctx.strokeStyle=f.licht;ctx.lineWidth=1;ctx.stroke();ctx.shadowBlur=0;}
+ });
+ // Beschriftete Spielfeld-Zonen
+ ctx.font="bold 9px Arial,sans-serif"; ctx.fillStyle=f.licht+"bb";
+ ctx.fillText("BONUS",200,151);
+ ctx.fillText("SPECIAL",200,450);
+ // Kleine seitliche Zierlinien erinnern an bedruckte Holz-/Kunststofftafeln
+ ctx.strokeStyle=f.wand+"77"; ctx.lineWidth=2;
+ for(const y of [205,218,395,408,535,548]){
+  ctx.beginPath(); ctx.moveTo(48,y); ctx.lineTo(64,y-5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(336,y-5); ctx.lineTo(352,y); ctx.stroke();
+ }
+ // Je nach Automat eigene dekorative Laufbahnmarkierungen
+ ctx.globalAlpha=.55; ctx.lineWidth=2; ctx.strokeStyle=f.licht;
+ if(automat.id==="zwerg"){
+  ctx.beginPath();ctx.arc(200,250,54,Math.PI*1.12,Math.PI*1.88);ctx.stroke();
+  ctx.fillText("MINE RUN",200,322);
+ }else if(automat.id==="neon"){
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(82+i*12,245);ctx.lineTo(112+i*12,275);ctx.stroke();}
+  ctx.fillText("HIGH VOLTAGE",200,325);
+ }else if(automat.id==="pirat"){
+  ctx.beginPath();ctx.arc(200,255,48,0,Math.PI*2);ctx.stroke();
+  ctx.fillText("TREASURE ZONE",200,335);
+ }else{
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(200+Math.cos(a)*35,260+Math.sin(a)*35);ctx.lineTo(200+Math.cos(a)*58,260+Math.sin(a)*58);ctx.stroke();}
+  ctx.fillText("GALAXY BONUS",200,335);
+ }
+ ctx.restore();
+}
+
 // Stift mit Feder, Knopf und Ladeanzeige im Kanal rechts
 function zeichneStift(){
  const f=automat.farbe, x=KANAL.mitte;
- ctx.fillStyle="#00000033";
+ ctx.fillStyle=F.schatten_1;
  ctx.fillRect(KANAL.x+2,192,376-KANAL.x-4,KANAL.boden-194);
 
  const kopf=KANAL.boden+zug*20;
  ctx.fillStyle=f.licht;
  rundeFlaeche(x-5,kopf-8,10,22,4);
  ctx.fill();
- ctx.strokeStyle="#00000066";
+ ctx.strokeStyle=F.schatten_4;
  ctx.lineWidth=1;
  ctx.stroke();
 
  // Feder
  const von=kopf+14, bis=H-14;
- ctx.strokeStyle="#9fb3ab";
+ ctx.strokeStyle=F.feder;
  ctx.lineWidth=2;
  ctx.beginPath();
  for(let i=0;i<=6;i++){
@@ -841,13 +1199,13 @@ function zeichneStift(){
 
  // Ladeanzeige (links neben der Kugel)
  const gx=KANAL.x+2, gy=586, gh=58;
- ctx.fillStyle="#00000055";
+ ctx.fillStyle=F.schatten_3;
  rundeFlaeche(gx,gy,6,gh,3);
  ctx.fill();
  const hh=Math.round(gh*zug);
  if(hh>1){
   const gl=ctx.createLinearGradient(0,gy+gh-hh,0,gy+gh);
-  gl.addColorStop(0,"#ff6b5f");
+  gl.addColorStop(0,F.lade_warn);
   gl.addColorStop(1,f.licht);
   ctx.fillStyle=gl;
   rundeFlaeche(gx,gy+gh-hh,6,hh,3);
@@ -867,7 +1225,7 @@ function zeichneSchleuder(s){
  ctx.lineTo(s.x2,s.y2);
  ctx.lineTo(s.x1,s.y2);
  ctx.closePath();
- ctx.fillStyle="#00000044";
+ ctx.fillStyle=F.schatten_2;
  ctx.fill();
  ctx.strokeStyle=f.wand+"66";
  ctx.lineWidth=2;
@@ -875,11 +1233,11 @@ function zeichneSchleuder(s){
 
  const an=s.blitz>0;
  if(an){
-  ctx.strokeStyle="rgba(255,255,255,"+(s.blitz*0.4).toFixed(2)+")";
+  ctx.strokeStyle=mitAlpha(F.glanz,(s.blitz*0.4).toFixed(2));
   ctx.lineWidth=11;
   ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
  }
- ctx.strokeStyle=an?"#ffffff":f.licht;
+ ctx.strokeStyle=an?F.glanz:f.licht;
  ctx.lineWidth=an?6:4;
  ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
 }
@@ -895,12 +1253,12 @@ function zeichneLichter(){
  rollover.forEach((r,i)=>{
   ctx.beginPath();
   rundeFlaeche(r.x,r.y,r.w,r.h,7);
-  ctx.fillStyle=r.an?f.licht:"#00000044";
+  ctx.fillStyle=r.an?f.licht:F.schatten_2;
   ctx.fill();
-  ctx.strokeStyle=r.blitz>0?"#ffffff":f.licht+"aa";
+  ctx.strokeStyle=r.blitz>0?F.glanz:f.licht+"aa";
   ctx.lineWidth=1.6;
   ctx.stroke();
-  ctx.fillStyle=r.an?"#0b241d":f.licht;
+  ctx.fillStyle=r.an?F.licht_text:f.licht;
   ctx.fillText(namen[i],r.x+r.w/2,r.y+r.h/2+1);
  });
  ctx.restore();
@@ -1057,5 +1415,18 @@ requestAnimationFrame(zeit=>{ letzteZeit=zeit; runde(zeit); });
 })();
 </script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
 </body>
 </html>
