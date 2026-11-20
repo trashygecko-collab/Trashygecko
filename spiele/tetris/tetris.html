@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="de">
 <head>
+<script src="/spiele/stil.js"></script>
 <script src="/spiele/token.js"></script>
 <script src="/spiele/brettspiele/wuerfel-common.js"></script>
 <meta charset="utf-8">
@@ -197,6 +198,71 @@ button:hover:not(:disabled){background:#184536}
 button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
 h1,h2,h3{color:#f1dca8;font-weight:normal}
 small,.muted,.hint{color:#a9c3b6}
+
+/* ================= ZENTRALER GRAFIKSTIL: Mädchen (Candy Pop) ================= */
+html[data-stil="maedchen"] body{
+  background:radial-gradient(ellipse at top,#f7a6d4 0%,#eb7bc0 68%);
+  color:#3a0f24;
+}
+html[data-stil="maedchen"] .feld canvas{
+  background:#fff6fa;border-color:#ef7aa8;box-shadow:0 0 18px #ff9ec440;
+}
+html[data-stil="maedchen"] .vorschau{
+  background:rgba(255,246,250,.9);border-color:#ef7aa8;box-shadow:0 2px 8px #c2386c33;
+}
+html[data-stil="maedchen"] .vorschau b{color:#8a5470}
+html[data-stil="maedchen"] .kopf{color:#8a5470}
+html[data-stil="maedchen"] .kopf .gegner{color:#3a0f24}
+html[data-stil="maedchen"] .kopf .punkte{color:#8f2450}
+html[data-stil="maedchen"] .kopf .stufe{color:#a8486b}
+html[data-stil="maedchen"] .kopf .linien{color:#6f2c4b}
+html[data-stil="maedchen"] .lob{
+  border-color:#ef7aa8;background:rgba(255,246,250,.94);color:#8f2450;box-shadow:0 0 18px #ff9ec466;
+}
+html[data-stil="maedchen"] .knoepfe button{
+  color:#c2386c;background:#fff6fa;border-color:#ef7aa8;
+}
+html[data-stil="maedchen"] .knoepfe button:hover{background:#ffe1ee}
+html[data-stil="maedchen"] .verlassen{color:#8a5470}
+
+/* ================= ZENTRALER GRAFIKSTIL: Buben (Red Reactor) ================ */
+html[data-stil="buben"] body{
+  background:radial-gradient(ellipse at top,#1e2126 0%,#08090b 68%);
+  color:#e6e9ec;
+}
+html[data-stil="buben"] .feld canvas{
+  background:#0c0e11;border-color:#e0242f;box-shadow:0 0 18px #e0242f33;
+}
+html[data-stil="buben"] .vorschau{
+  background:rgba(17,19,22,.92);border-color:#3a4148;box-shadow:0 2px 8px #000000aa;
+}
+html[data-stil="buben"] .vorschau b{color:#868d96}
+html[data-stil="buben"] .kopf{color:#868d96}
+html[data-stil="buben"] .kopf .gegner{color:#e6e9ec}
+html[data-stil="buben"] .kopf .punkte{color:#ffffff}
+html[data-stil="buben"] .kopf .stufe{color:#c9d1d9}
+html[data-stil="buben"] .kopf .linien{color:#ff5560}
+html[data-stil="buben"] .lob{
+  border-color:#e0242f;background:rgba(17,19,22,.94);color:#e6e9ec;
+  box-shadow:0 0 18px #e0242f4d;
+}
+html[data-stil="buben"] .knoepfe button{
+  color:#e6e9ec;background:linear-gradient(#22262c,#171a1f);border-color:#3a4148;
+}
+html[data-stil="buben"] .knoepfe button:hover{background:#2a2f36;border-color:#e0242f}
+html[data-stil="buben"] .verlassen{color:#adb4bc}
+
+/* Stil-Token: überschreiben die Variablen des Spiels zentral. */
+html[data-stil="maedchen"]{
+  --bg:#eb7bc0;--panel:#fff6fa;--text:#3a0f24;--muted:#8a5470;
+  --red:#c2386c;--blue:#7b3fa8;--gold:#b06bff;--cyan:#b06bff;--purple:#ef7aa8;
+  --line:#f3a8c6;
+}
+html[data-stil="buben"]{
+  --bg:#050607;--panel:#14171b;--text:#e6e9ec;--muted:#adb4bc;
+  --red:#ff5560;--blue:#c9d1d9;--gold:#e6e9ec;--cyan:#ff5560;--purple:#e0242f;
+  --line:#3a4148;
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
@@ -255,16 +321,14 @@ const FORMEN = {
 };
 const FARBE = { I: 1, O: 2, T: 3, S: 4, Z: 5, J: 6, L: 7 };
 // Jeder Stein hat seine eigene Farbe – das Feld ist damit auf einen Blick lesbar.
-const FARBEN = {
-  1: "#3fd6e6",   // I  türkis
-  2: "#f2c53d",   // O  gelb
-  3: "#a973e0",   // T  violett
-  4: "#4ecb71",   // S  grün
-  5: "#e25743",   // Z  rot
-  6: "#4b83e0",   // J  blau
-  7: "#f0932f",   // L  orange
-  8: "#6d7f76"    // Müll
+const FARBEN_SAETZE = {
+  klassisch: { 1:"#3fd6e6", 2:"#f2c53d", 3:"#a973e0", 4:"#4ecb71", 5:"#e25743", 6:"#4b83e0", 7:"#f0932f", 8:"#6d7f76" },
+  /* Candy Pop: sieben gut trennbare Bonbon-Töne */
+  maedchen:  { 1:"#ff8fbd", 2:"#ffd23f", 3:"#b06bff", 4:"#7be0b0", 5:"#ff5f6d", 6:"#7ea6ff", 7:"#ffa06b", 8:"#d9b6c6" },
+  /* Red Reactor: LED-Rot, Silber, Stahl, Kupfer, Tiefrot, Weiß – alle sieben verschieden */
+  buben:     { 1:"#ff5560", 2:"#c9d1d9", 3:"#e0242f", 4:"#d9713c", 5:"#8f1019", 6:"#7e8892", 7:"#eef1f3", 8:"#3a2f33" }
 };
+const FARBEN = Object.assign({}, FARBEN_SAETZE.klassisch);
 // Geräumte Reihen -> Punkte (mal Level).
 const PUNKTE_FUER_REIHEN = [0, 100, 300, 500, 800];
 // Geräumte Reihen -> Müll-Reihen beim Gegner.
@@ -880,8 +944,20 @@ if (online){
 } else {
   starteSpiel();
 }
+/* Zentraler Grafikstil: Steine und Feld folgen der persönlichen Wahl. */
+(function () {
+  function paletteSetzen() {
+    var stil = window.TGStil ? TGStil.hole() : "klassisch";
+    var satz = FARBEN_SAETZE[stil] || FARBEN_SAETZE.klassisch;
+    Object.assign(FARBEN, satz);
+    try { zeichne(); zeichneVorschau(); } catch (e) { /* vor dem ersten Bild */ }
+  }
+  paletteSetzen();
+  if (window.TGStil) TGStil.beiWechsel(paletteSetzen);
+})();
 </script>
 
-<script src="../zurueck.js" data-kein-knopf="1"></script>
+<script src="../zurueck.js" data-kein-knopf="1">
+</script>
 </body>
 </html>

@@ -31,13 +31,13 @@ body[data-stil="maedchen"]{
  color-scheme:light;
 }
 body[data-stil="buben"]{
- --bg1:#0e1722; --bg2:#070c12; --bg3:#04070a;
- --panel:#0a1119; --ink:#dbe7ee; --muted:#7f8f9b; --gold:#c8ff3d; --titel:#c8ff3d;
- --taste:#0d1620; --taste-hover:#16232f; --titel-bg:linear-gradient(#101b25,#0a121a);
- --buehne:#05080c; --pad:#0d1620; --pad-aktiv:#1b2a33; --regel:#b6c4cf;
- --fenster-rand:#22303c; --titel-rand:#24313d; --leisten-rand:#1b2630;
- --trenner:#141d25; --knopf-rand:#2a3a47; --meldung-rand:#3c514f;
- --schleier:#04070add; --knopf-text:#08130a; --kasten-text:#b6c4cf;
+ --bg1:#16181c; --bg2:#100f0f; --bg3:#060708;
+ --panel:#14161a; --ink:#e4e7ea; --muted:#7f868f; --gold:#e0242f; --titel:#e0242f;
+ --taste:#181b1f; --taste-hover:#1a1c20; --titel-bg:linear-gradient(#1b1e23,#14161a);
+ --buehne:#090808; --pad:#181b1f; --pad-aktiv:#22252b; --regel:#b8c0c8;
+ --fenster-rand:#2b3038; --titel-rand:#2c3138; --leisten-rand:#272524;
+ --trenner:#1e1c1b; --knopf-rand:#33383f; --meldung-rand:#3c514f;
+ --schleier:#060708dd; --knopf-text:#150a0c; --kasten-text:#b8c0c8;
  --leinwand:inset 0 0 40px #000000aa;
 }
 
@@ -60,15 +60,6 @@ main{max-width:760px;margin:auto}
 .menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
  border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold);cursor:pointer}
 .menueleiste button:hover{background:var(--taste-hover)}
-
-.stilwahl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;
- background:var(--taste);border-bottom:1px solid var(--trenner);font-size:12px;color:var(--muted)}
-.stilwahl button{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
- border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold)}
-.stilwahl button.aktiv{background:var(--gold);color:var(--knopf-text);border-color:var(--gold);font-weight:bold}
-body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
- border-color:#e2537f;box-shadow:0 2px 8px #ff77ad55}
-body[data-stil="buben"] .stilwahl button.aktiv{background:var(--gold);color:#08130a;box-shadow:0 0 10px #c8ff3d55}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
  padding:6px 10px;font-size:13px;color:var(--muted);background:var(--taste);border-bottom:1px solid var(--trenner)}
@@ -107,8 +98,45 @@ body[data-stil="maedchen"] .meldung button{border-color:#c2477f}
 .klein{color:var(--muted);font-size:13px}
 a{color:var(--gold)}
 .mitte{text-align:center}
+
+/* ---- Red Reactor: Titel in Silber, Rot bleibt der LED-Akzent ------------- */
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel,
+body[data-stil="buben"] .fenster .titel,
+body[data-stil="buben"] h2,
+body[data-stil="buben"] .meldung h2,
+body[data-stil="buben"] #regeln summary {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel {
+  text-shadow: none;
+}
+
+/* Red Reactor: Knopfaufschrift in Silber, Rot nur an Kante und Aktiv-Zustand */
+body[data-stil="buben"] button,
+body[data-stil="buben"] .menueleiste button,
+body[data-stil="buben"] .knopf,
+body[data-stil="buben"] select {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] button:hover:not(:disabled),
+body[data-stil="buben"] .menueleiste button:hover,
+body[data-stil="buben"] .knopf:hover:not(:disabled) {
+  color: #ffffff;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="buben"] .menueleiste button.aktiv,
+body[data-stil="buben"] .knopf.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="buben"] .aktion.haupt,
+body[data-stil="buben"] .meldung button {
+  color: #ffffff;
+  text-shadow: none;
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="klassisch">
 <main class="fenster">
@@ -131,12 +159,6 @@ a{color:var(--gold)}
   <span>Bestwert <b id="bestwert">–</b></span>
  </div>
 
- <div class="stilwahl" id="stilwahl">
-  <span>Ansicht</span>
-  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
-  <button type="button" data-stil="maedchen">Mädchen</button>
-  <button type="button" data-stil="buben">Buben</button>
- </div>
 
  <div class="buehne">
   <canvas id="feld" width="400" height="280"></canvas>
@@ -463,11 +485,11 @@ const STILE={
     Abflussgitter; der Arbeiter trägt Schutzanzug und Visier. */
  buben:{
   hintergrund(){
-   ctx.fillStyle="#0a0e12";
+   ctx.fillStyle="#0a0909";
    ctx.fillRect(0,0,canvas.width,canvas.height);
   },
   boden(px,py,x,y){
-   ctx.fillStyle=(x+y)%2===0?"#151d22":"#111820";
+   ctx.fillStyle=(x+y)%2===0?"#16181c":"#14161a";
    ctx.fillRect(px,py,Z,Z);
    ctx.strokeStyle="#ffffff08";
    ctx.lineWidth=1;
@@ -478,43 +500,43 @@ const STILE={
   },
   wand(px,py){
    const g=ctx.createLinearGradient(px,py,px,py+Z);
-   g.addColorStop(0,"#39464f"); g.addColorStop(1,"#1b242b");
+   g.addColorStop(0,"#3a4048"); g.addColorStop(1,"#22252b");
    ctx.fillStyle=g;
    ctx.fillRect(px,py,Z,Z);
    // Gefahrenstreifen
    ctx.save();
    ctx.beginPath(); ctx.rect(px+1,py+1,Z-2,Z-2); ctx.clip();
-   ctx.strokeStyle="#c8ff3d22";
+   ctx.strokeStyle="#e0242f22";
    ctx.lineWidth=6;
    for(let i=-1;i<4;i++){
     ctx.beginPath();
     ctx.moveTo(px+i*Z*0.4-6,py+Z+4); ctx.lineTo(px+i*Z*0.4+Z*0.5,py-4); ctx.stroke();
    }
    ctx.restore();
-   ctx.strokeStyle="#0a0e12";
+   ctx.strokeStyle="#0a0909";
    ctx.lineWidth=2;
    ctx.strokeRect(px+1,py+1,Z-2,Z-2);
    ctx.fillStyle="#ffffff1a";
    ctx.fillRect(px+3,py+3,Z-6,2);
    // Nieten
-   ctx.fillStyle="#0a0e12";
+   ctx.fillStyle="#0a0909";
    [[px+6,py+Z-6],[px+Z-6,py+Z-6]].forEach(p=>{
     ctx.beginPath(); ctx.arc(p[0],p[1],1.9,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#5d6d78";
     ctx.beginPath(); ctx.arc(p[0]-0.5,p[1]-0.5,0.8,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#0a0e12";
+    ctx.fillStyle="#0a0909";
    });
   },
   ziel(cx,cy){
    const gl=ctx.createRadialGradient(cx,cy,1,cx,cy,Z*0.42);
-   gl.addColorStop(0,"#6dff4a55"); gl.addColorStop(1,"#6dff4a00");
+   gl.addColorStop(0,"#ff4a5555"); gl.addColorStop(1,"#ff4a5500");
    ctx.fillStyle=gl;
    ctx.beginPath(); ctx.arc(cx,cy,Z*0.42,0,Math.PI*2); ctx.fill();
-   ctx.fillStyle="#060a0c";
+   ctx.fillStyle="#090909";
    ctx.beginPath(); ctx.arc(cx,cy,Z*0.27,0,Math.PI*2); ctx.fill();
-   ctx.strokeStyle="#6dff4a"; ctx.lineWidth=1.8;
+   ctx.strokeStyle="#ff4a55"; ctx.lineWidth=1.8;
    ctx.beginPath(); ctx.arc(cx,cy,Z*0.27,0,Math.PI*2); ctx.stroke();
-   ctx.strokeStyle="#6dff4a66"; ctx.lineWidth=1.6;
+   ctx.strokeStyle="#ff4a5566"; ctx.lineWidth=1.6;
    for(let i=-1;i<=1;i++){
     const y=cy+i*Z*0.13;
     ctx.beginPath();
@@ -525,46 +547,46 @@ const STILE={
    const cx=px+w/2, cy=py+w/2, R=w/2;
    if(aufZiel){
     const gl=ctx.createRadialGradient(cx,cy,2,cx,cy,R*1.5);
-    gl.addColorStop(0,"#6dff4a55"); gl.addColorStop(1,"#6dff4a00");
+    gl.addColorStop(0,"#ff4a5555"); gl.addColorStop(1,"#ff4a5500");
     ctx.fillStyle=gl;
     ctx.beginPath(); ctx.arc(cx,cy,R*1.5,0,Math.PI*2); ctx.fill();
    }
    // Fass
    const bg=ctx.createLinearGradient(px,py,px+w,py);
-   bg.addColorStop(0,"#1a4a16");
-   bg.addColorStop(.3,aufZiel?"#a8ff70":"#74f245");
-   bg.addColorStop(.66,aufZiel?"#68d43e":"#3fae28");
-   bg.addColorStop(1,"#173f15");
+   bg.addColorStop(0,"#240a0d");
+   bg.addColorStop(.3,aufZiel?"#ff8a90":"#e0242f");
+   bg.addColorStop(.66,aufZiel?"#b31722":"#8f1019");
+   bg.addColorStop(1,"#1a0608");
    ctx.fillStyle=bg;
    ctx.beginPath(); ctx.roundRect(px+3,py+2.5,w-6,w-7,7); ctx.fill();
-   ctx.strokeStyle="#08130a"; ctx.lineWidth=1.6; ctx.stroke();
+   ctx.strokeStyle="#150a0c"; ctx.lineWidth=1.6; ctx.stroke();
    // Deckelrand und Glanzkante
-   ctx.fillStyle="#0c1a0c";
+   ctx.fillStyle="#0c0b0c";
    ctx.beginPath(); ctx.roundRect(px+5,py+3.6,w-10,2.4,1.2); ctx.fill();
    ctx.fillStyle="#ffffff2e";
    ctx.beginPath(); ctx.roundRect(px+5.6,py+8,2.1,w-20,1.05); ctx.fill();
    // Radioaktiv-Zeichen
    const cyS=cy-2.5, tw=R*0.62;
-   ctx.fillStyle="#08130a";
+   ctx.fillStyle="#150a0c";
    ctx.beginPath();
    ctx.moveTo(cx,cyS-tw);
    ctx.lineTo(cx+tw,cyS+tw*0.78);
    ctx.lineTo(cx-tw,cyS+tw*0.78);
    ctx.closePath();
    ctx.fill();
-   ctx.fillStyle=aufZiel?"#d4ff9e":"#8dff5c";
+   ctx.fillStyle=aufZiel?"#ffd9db":"#ff5a63";
    ctx.fillRect(cx-tw*0.13,cyS-tw*0.32,tw*0.26,tw*0.62);
    ctx.beginPath(); ctx.arc(cx,cyS+tw*0.48,tw*0.15,0,Math.PI*2); ctx.fill();
    // Schleim quillt unten heraus
-   ctx.fillStyle=aufZiel?"#d4ff9e":"#a8ff6a";
+   ctx.fillStyle=aufZiel?"#ffd9db":"#ff8f96";
    ctx.beginPath(); ctx.ellipse(cx,py+w-8.5,w*0.4,4.4,0,0,Math.PI*2); ctx.fill();
-   ctx.strokeStyle=aufZiel?"#8fe05a":"#6fd33a"; ctx.lineWidth=1;
+   ctx.strokeStyle=aufZiel?"#f04451":"#c41724"; ctx.lineWidth=1;
    ctx.stroke();
    ctx.beginPath(); ctx.ellipse(px+w*0.3,py+w-3,2.2,3.4,0,0,Math.PI*2); ctx.fill();
    ctx.beginPath(); ctx.ellipse(px+w*0.56,py+w-2,1.8,3,0,0,Math.PI*2); ctx.fill();
    ctx.beginPath(); ctx.ellipse(px+w*0.79,py+w-3.6,2.5,2.4,0,0,Math.PI*2); ctx.fill();
    if(aufZiel){
-    ctx.fillStyle="#e8ffd0";
+    ctx.fillStyle="#f47b89";
     ctx.beginPath(); ctx.arc(px+w-6.5,py+6.5,1.5,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(px+7.5,py+13,1.1,0,Math.PI*2); ctx.fill();
    }
@@ -576,32 +598,32 @@ const STILE={
    ctx.ellipse(cx,cy+Z*0.3,Z*0.24,Z*0.09,0,0,Math.PI*2); ctx.fill();
    // Anzug
    const g=ctx.createRadialGradient(cx-3,cy-4,1,cx,cy,R*1.1);
-   g.addColorStop(0,"#4a5a67"); g.addColorStop(1,"#1b242c");
+   g.addColorStop(0,"#5d5754"); g.addColorStop(1,"#252322");
    ctx.fillStyle=g;
    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-   ctx.strokeStyle="#0b1014"; ctx.lineWidth=2; ctx.stroke();
-   ctx.strokeStyle="#c8ff3d44"; ctx.lineWidth=1.2;
+   ctx.strokeStyle="#100f0f"; ctx.lineWidth=2; ctx.stroke();
+   ctx.strokeStyle="#e0242f44"; ctx.lineWidth=1.2;
    ctx.beginPath(); ctx.arc(cx,cy,R*0.86,0,Math.PI*2); ctx.stroke();
    // Visier
    const vg=ctx.createLinearGradient(cx,cy-R*0.5,cx,cy+R*0.2);
-   vg.addColorStop(0,"#eaffb0"); vg.addColorStop(1,"#8fd400");
+   vg.addColorStop(0,"#ff6a73"); vg.addColorStop(1,"#e0242f");
    ctx.fillStyle=vg;
    ctx.beginPath(); ctx.roundRect(cx-R*0.74,cy-R*0.46,R*1.48,R*0.56,3); ctx.fill();
-   ctx.strokeStyle="#0b1014"; ctx.lineWidth=1.3; ctx.stroke();
+   ctx.strokeStyle="#100f0f"; ctx.lineWidth=1.3; ctx.stroke();
    ctx.fillStyle="#ffffff99";
    ctx.beginPath(); ctx.roundRect(cx-R*0.6,cy-R*0.38,R*0.5,R*0.14,2); ctx.fill();
    // Filter
-   ctx.fillStyle="#2a353d";
+   ctx.fillStyle="#363331";
    ctx.beginPath(); ctx.arc(cx,cy+R*0.6,R*0.32,0,Math.PI*2); ctx.fill();
-   ctx.strokeStyle="#0b1014"; ctx.lineWidth=1.2; ctx.stroke();
-   ctx.fillStyle="#4a5a66";
+   ctx.strokeStyle="#100f0f"; ctx.lineWidth=1.2; ctx.stroke();
+   ctx.fillStyle="#5c5754";
    ctx.beginPath(); ctx.arc(cx,cy+R*0.6,R*0.17,0,Math.PI*2); ctx.fill();
   },
   rahmen(){
-   ctx.strokeStyle="#38e1ff";
+   ctx.strokeStyle="#d3d0cf";
    ctx.lineWidth=3;
    ctx.strokeRect(2,2,canvas.width-4,canvas.height-4);
-   ctx.strokeStyle="#c8ff3d66";
+   ctx.strokeStyle="#e0242f66";
    ctx.lineWidth=1;
    ctx.strokeRect(6.5,6.5,canvas.width-13,canvas.height-13);
   }
@@ -785,30 +807,19 @@ LEVEL.forEach((_,i)=>{
 });
 
 // ------------------------------------------------------------------ Ansicht
-const STIL_KEY="sokoban-stil";
 function stilSetzen(name,merken){
  if(!STILE[name])name="klassisch";
  stil=name;
  document.body.dataset.stil=name;
- if(merken!==false){ try{ localStorage.setItem(STIL_KEY,name); }catch(e){} }
- document.querySelectorAll("#stilwahl button").forEach(b=>{
-  b.classList.toggle("aktiv",b.dataset.stil===name);
- });
  const meta=document.querySelector('meta[name="theme-color"]');
  if(meta)meta.content=name==="maedchen"?"#ffe8f2":name==="buben"?"#070c12":"#0b241d";
  zeichne();
 }
-document.querySelectorAll("#stilwahl button").forEach(b=>{
- b.addEventListener("click",()=>stilSetzen(b.dataset.stil));
-});
-let startStil="klassisch";
-try{ startStil=localStorage.getItem(STIL_KEY)||"klassisch"; }catch(e){}
+let startStil=TGStil.lokal();
 if(!STILE[startStil])startStil="klassisch";
 stil=startStil;
 document.body.dataset.stil=stil;
-document.querySelectorAll("#stilwahl button").forEach(b=>{
- b.classList.toggle("aktiv",b.dataset.stil===stil);
-});
+TGStil.beiWechsel(()=>stilSetzen(TGStil.lokal()));
 
 levelLaden(0);
 })();

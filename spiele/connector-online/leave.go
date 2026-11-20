@@ -268,6 +268,46 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.ZehnTausend = nil }),
+		sitz("Lügen Mäxchen",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Maexchen; g != nil {
+					return mxRaus(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Maexchen = nil }),
+		sitz("Auf nach Boston",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Boston; g != nil {
+					return bostonRaus(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Boston = nil }),
+		sitz("Chicago",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Chicago; g != nil {
+					return chRaus(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Chicago = nil }),
+		sitz("Schiffe versenken · Ship Captain Crew",
+			func(id, n string) (bool, bool, int) {
+				if g := r.ShipCrew; g != nil {
+					return scRaus(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.ShipCrew = nil }),
+		sitz("Halma",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Halma; g != nil {
+					return halmaRaus(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Halma = nil }),
 		sitz("Arschloch",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Arschloch; g != nil {
@@ -695,6 +735,41 @@ func (r *Room) aktivesSpiel(id string) string {
 			}
 		}
 	}
+	if g := r.Maexchen; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "maexchen"
+			}
+		}
+	}
+	if g := r.Boston; g != nil && (g.Status == "active" || g.Status == "runde") {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "boston"
+			}
+		}
+	}
+	if g := r.Chicago; g != nil && (g.Status == "active" || g.Status == "runde") {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "chicago"
+			}
+		}
+	}
+	if g := r.ShipCrew; g != nil && (g.Status == "active" || g.Status == "runde") {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "shipcrew"
+			}
+		}
+	}
+	if g := r.Halma; g != nil && g.Status == "active" {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return "halma"
+			}
+		}
+	}
 	if g := r.Arschloch; g != nil && g.Status == "active" {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -981,6 +1056,41 @@ func (r *Room) playerInGame(id string) bool {
 	}
 	if g := r.ZehnTausend; g != nil {
 		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Maexchen; g != nil {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Boston; g != nil {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Chicago; g != nil {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.ShipCrew; g != nil {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Halma; g != nil {
+		for _, p := range g.Spieler {
 			if p.ID == id {
 				return true
 			}

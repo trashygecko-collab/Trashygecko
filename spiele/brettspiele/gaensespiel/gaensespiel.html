@@ -4,11 +4,32 @@
 <script src="/spiele/token.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a211b">
 <meta name="color-scheme" content="dark">
 <title>Gänsespiel</title>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <link rel="stylesheet" href="/spiele/brettspiele/wuerfel.css">
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben; Flaechen, Leisten und
+   Knoepfe kommen aus wuerfel.css (--wg-...), die Stilbloecke dort gelten auch hier. */
+--filz-1:#1a4a3a;--filz-2:#123427;--tief:#0a211b;--filz-4:#06170f;--vignette:#0000007a;
+--feld-text:#a9c6b8;--feld-rand:#2a6047;--feld-1:#1b4a38;--feld-2:#14382d;--feld-3:#0e2b22;
+--misch:#0f2c22;--ton-basis:#7fb98a;
+--ziel-1:#5b4a24;--ziel-2:#3b3221;--gold:#e8cd8e;--ziel-text:#f6edda;
+--ziel-schein:#e8cd8e77;--ziel-schein-2:#e8cd8e33;--mitte-1:#2f7a5c;--mitte-2:#0b2a20;
+--wir-schein:#e8cd8e88;--wir-schein-2:#e8cd8e22;
+/* Farbton je Feldart (Rand, Symbol, Schein) */
+--ton-gans:#8fd6a0;--ton-bruecke:#dcbc7c;--ton-gasthaus:#9ab6e2;--ton-brunnen:#7fc6da;
+--ton-labyrinth:#c4a0e2;--ton-gefaengnis:#e2907c;--ton-tod:#cc7a70;--ton-ziel:#f0dca8;
+/* Symbole im Feld (SVG-Attribute, per CSS ueberschrieben) */
+--ik-holz:#c9a86a;--ik-1:#1d5c45;--ik-2:#2c7357;--ik-3:#63b58d;
+/* Legendenpunkt je Feldart (Farbe steht als Inline-Stil im Text) */
+--lg-gans:#7fb98a;--lg-bruecke:#c9a86a;--lg-gasthaus:#8aa9d6;--lg-brunnen:#6fb3c9;
+--lg-labyrinth:#b48ad6;--lg-gefaengnis:#d98878;--lg-tod:#b0645c;
+}
+
 .brett{position:relative;width:min(100%,calc(100dvh - 262px));max-width:100%;margin:0 auto;aspect-ratio:1;
   flex:0 0 auto;align-self:center;min-height:0;border-radius:50%;
   box-shadow:0 12px 30px #00000055}
@@ -16,41 +37,86 @@
    Felder ohne Untergrund im Nichts, und weil das Brett in der Spalte mitwuchs,
    wurden aus den Kreisen Ellipsen (gemessen 51 x 71 px). */
 .brett::before{content:"";position:absolute;inset:1.5%;border-radius:50%;
-  background:radial-gradient(circle at 50% 34%,#1a4a3a 0%,#123427 45%,#0a211b 76%,#06170f 100%);
-  box-shadow:inset 0 0 0 1px #ffffff10,inset 0 0 46px #0000007a}
+  background:radial-gradient(circle at 50% 34%,var(--filz-1) 0%,var(--filz-2) 45%,var(--tief) 76%,var(--filz-4) 100%);
+  box-shadow:inset 0 0 0 1px #ffffff10,inset 0 0 46px var(--vignette)}
 @media(max-height:520px){.brett{width:min(100%,calc(100dvh - 112px))}}
 .wg-flaeche{justify-content:center}
 .wege{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .feld{position:absolute;border-radius:50%;transform:translate(-50%,-50%);display:flex;align-items:center;
-  justify-content:center;color:#a9c6b8;border:1px solid #2a6047;
-  background:radial-gradient(circle at 50% 28%,#1b4a38 0%,#14382d 62%,#0e2b22 100%);
+  justify-content:center;color:var(--feld-text);border:1px solid var(--feld-rand);
+  background:radial-gradient(circle at 50% 28%,var(--feld-1) 0%,var(--feld-2) 62%,var(--feld-3) 100%);
   box-shadow:inset 0 1px 0 #ffffff12,inset 0 -2px 4px #00000035,0 2px 4px #00000040;
-  font-size:clamp(6.5px,1.3vh,12px);line-height:1;z-index:1;--ton:#7fb98a}
+  font-size:clamp(6.5px,1.3vh,12px);line-height:1;z-index:1;--ton:var(--ton-basis)}
 .feld svg{position:absolute;inset:12%;width:76%;height:76%;opacity:.95}
 .feld .nr{position:relative;z-index:2;opacity:.82;font-weight:600;text-shadow:0 1px 2px #000000cc}
 .feld.sonder .nr{position:absolute;right:6%;bottom:4%;font-size:.78em;opacity:.9}
 /* Jede Sonderart hat ihren eigenen Farbton für Rand, Symbol und Schein. */
-.feld.typ-gans{--ton:#8fd6a0}
-.feld.typ-bruecke{--ton:#dcbc7c}
-.feld.typ-gasthaus{--ton:#9ab6e2}
-.feld.typ-brunnen{--ton:#7fc6da}
-.feld.typ-labyrinth{--ton:#c4a0e2}
-.feld.typ-gefaengnis{--ton:#e2907c}
-.feld.typ-tod{--ton:#cc7a70}
-.feld.typ-ziel{--ton:#f0dca8}
-.feld.sonder{color:var(--ton);border-color:color-mix(in srgb,var(--ton) 55%,#0f2c22);
+.feld.typ-gans{--ton:var(--ton-gans)}
+.feld.typ-bruecke{--ton:var(--ton-bruecke)}
+.feld.typ-gasthaus{--ton:var(--ton-gasthaus)}
+.feld.typ-brunnen{--ton:var(--ton-brunnen)}
+.feld.typ-labyrinth{--ton:var(--ton-labyrinth)}
+.feld.typ-gefaengnis{--ton:var(--ton-gefaengnis)}
+.feld.typ-tod{--ton:var(--ton-tod)}
+.feld.typ-ziel{--ton:var(--ton-ziel)}
+.feld.sonder{color:var(--ton);border-color:color-mix(in srgb,var(--ton) 55%,var(--misch));
   box-shadow:inset 0 1px 0 #ffffff18,inset 0 0 10px color-mix(in srgb,var(--ton) 22%,transparent),0 2px 6px #00000055}
-.feld.ziel{background:radial-gradient(circle at 50% 28%,#5b4a24,#3b3221 70%);border-color:#e8cd8e;
-  color:#f6edda;box-shadow:0 0 12px #e8cd8e77,inset 0 0 10px #e8cd8e33}
-.feld.wir{box-shadow:0 0 0 2px #e8cd8e,0 0 14px #e8cd8e88,inset 0 0 10px #e8cd8e22}
+.feld.ziel{background:radial-gradient(circle at 50% 28%,var(--ziel-1),var(--ziel-2) 70%);border-color:var(--gold);
+  color:var(--ziel-text);box-shadow:0 0 12px var(--ziel-schein),inset 0 0 10px var(--ziel-schein-2)}
+.feld.wir{box-shadow:0 0 0 2px var(--gold),0 0 14px var(--wir-schein),inset 0 0 10px var(--wir-schein-2)}
 .figuren{position:absolute;inset:0;pointer-events:none}
 .figuren .figur{position:absolute;width:clamp(10px,1.8vh,16px);height:clamp(10px,1.8vh,16px);
   transform:translate(-50%,-50%);transition:left .12s linear,top .12s linear;z-index:3;
-  box-shadow:0 0 0 2px #0a211b}
+  box-shadow:0 0 0 2px var(--tief)}
 .legende{display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;font-size:10px;color:var(--wg-muted)}
 .legende span{display:flex;align-items:center;gap:3px}
 .legende svg{width:12px;height:12px}
 @media(max-height:520px){.legende{display:none}}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--filz-1:#ffd9ec;--filz-2:#ffc2da;--tief:#8f2450;--filz-4:#f7a6d4;--vignette:#8f245033;
+--feld-text:#5b2340;--feld-rand:#f0a8c8;--feld-1:#ffffff;--feld-2:#fff6fa;--feld-3:#ffe3ef;
+--misch:#ef7aa8;--ton-basis:#a2557a;
+--ziel-1:#ffe3ef;--ziel-2:#ffd0e4;--gold:#8f2450;--ziel-text:#5b2340;
+--ziel-schein:#8f245077;--ziel-schein-2:#8f245033;--mitte-1:#ffe3ef;--mitte-2:#ffc2da;
+--wir-schein:#8f245088;--wir-schein-2:#8f245022;
+--ton-gans:#c93f86;--ton-bruecke:#a8701f;--ton-gasthaus:#5a5cd6;--ton-brunnen:#1f7f8f;
+--ton-labyrinth:#7a3fd0;--ton-gefaengnis:#c2405a;--ton-tod:#8f2450;--ton-ziel:#7a3f6b;
+--ik-holz:#c0854e;--ik-1:#c2405a;--ik-2:#e0559a;--ik-3:#ff9ec4;
+--fig-0:#8f2450;--fig-1:#2a8f6a;--fig-2:#ff8fb0;--fig-3:#7a5cff;
+}
+html[data-stil="buben"]{
+--filz-1:#1b2a38;--filz-2:#0e1620;--tief:#000000;--filz-4:#070b0f;--vignette:#000000a0;
+--feld-text:#7e8892;--feld-rand:#2b3540;--feld-1:#151a20;--feld-2:#101419;--feld-3:#0b0e12;
+--misch:#000000;--ton-basis:#7e8892;
+--ziel-1:#1b222b;--ziel-2:#0d1013;--gold:#c8ff3d;--ziel-text:#e6e9ec;
+--ziel-schein:#c8ff3d77;--ziel-schein-2:#c8ff3d33;--mitte-1:#1b222b;--mitte-2:#0a0d10;
+--wir-schein:#c8ff3d88;--wir-schein-2:#c8ff3d22;
+--ton-gans:#6dff4a;--ton-bruecke:#ffb13d;--ton-gasthaus:#5aa8ff;--ton-brunnen:#38d7ff;
+--ton-labyrinth:#b06bff;--ton-gefaengnis:#ff5560;--ton-tod:#e0242f;--ton-ziel:#c8ff3d;
+--ik-holz:#8f6b3a;--ik-1:#5c7d15;--ik-2:#9ecb2a;--ik-3:#c8ff3d;
+--fig-0:#c8ff3d;--fig-1:#6dff4a;--fig-2:#ff5560;--fig-3:#7fb0ff;
+}
+/* Legendenpunkte zeigen in den neuen Stilen auf die Feldtoene;
+   Klassisch behaelt eigene Werte, weil sie dort abweichen. */
+html[data-stil="maedchen"],html[data-stil="buben"]{
+--lg-gans:var(--ton-gans);--lg-bruecke:var(--ton-bruecke);--lg-gasthaus:var(--ton-gasthaus);--lg-brunnen:var(--ton-brunnen);
+--lg-labyrinth:var(--ton-labyrinth);--lg-gefaengnis:var(--ton-gefaengnis);--lg-tod:var(--ton-tod);
+}
+html[data-stil="maedchen"] svg [fill="#0a211b"],html[data-stil="buben"] svg [fill="#0a211b"]{fill:var(--tief)}
+html[data-stil="maedchen"] svg [fill="#c9a86a"],html[data-stil="buben"] svg [fill="#c9a86a"]{fill:var(--ik-holz)}
+html[data-stil="maedchen"] svg [fill="#f0dca8"],html[data-stil="buben"] svg [fill="#f0dca8"]{fill:var(--ton-ziel)}
+html[data-stil="maedchen"] stop[stop-color="#2f7a5c"],html[data-stil="buben"] stop[stop-color="#2f7a5c"]{stop-color:var(--mitte-1)}
+html[data-stil="maedchen"] stop[stop-color="#0b2a20"],html[data-stil="buben"] stop[stop-color="#0b2a20"]{stop-color:var(--mitte-2)}
+html[data-stil="maedchen"] svg [stroke="#0a211b"],html[data-stil="buben"] svg [stroke="#0a211b"]{stroke:var(--tief)}
+html[data-stil="maedchen"] svg [stroke="#1d5c45"],html[data-stil="buben"] svg [stroke="#1d5c45"]{stroke:var(--ik-1)}
+html[data-stil="maedchen"] svg [stroke="#2c7357"],html[data-stil="buben"] svg [stroke="#2c7357"]{stroke:var(--ik-2)}
+html[data-stil="maedchen"] svg [stroke="#63b58d"],html[data-stil="buben"] svg [stroke="#63b58d"]{stroke:var(--ik-3)}
+html[data-stil="maedchen"] svg [stroke="#e8cd8e"],html[data-stil="buben"] svg [stroke="#e8cd8e"]{stroke:var(--gold)}
+html[data-stil="maedchen"] .figur[data-sitz="0"],html[data-stil="buben"] .figur[data-sitz="0"]{--farbe:var(--fig-0) !important}
+html[data-stil="maedchen"] .figur[data-sitz="1"],html[data-stil="buben"] .figur[data-sitz="1"]{--farbe:var(--fig-1) !important}
+html[data-stil="maedchen"] .figur[data-sitz="2"],html[data-stil="buben"] .figur[data-sitz="2"]{--farbe:var(--fig-2) !important}
+html[data-stil="maedchen"] .figur[data-sitz="3"],html[data-stil="buben"] .figur[data-sitz="3"]{--farbe:var(--fig-3) !important}
 </style>
 </head>
 <body>
@@ -91,13 +157,13 @@
         <div class="figuren" id="figuren"></div>
       </div>
       <div class="legende">
-        <span style="color:#7fb98a"><svg><use href="#i-gans"/></svg>Gans: noch einmal</span>
-        <span style="color:#c9a86a"><svg><use href="#i-bruecke"/></svg>Brücke 6 → 12</span>
-        <span style="color:#8aa9d6"><svg><use href="#i-gasthaus"/></svg>Gasthaus 19</span>
-        <span style="color:#6fb3c9"><svg><use href="#i-brunnen"/></svg>Brunnen 31</span>
-        <span style="color:#b48ad6"><svg><use href="#i-labyrinth"/></svg>Labyrinth 42</span>
-        <span style="color:#d98878"><svg><use href="#i-gefaengnis"/></svg>Gefängnis 52</span>
-        <span style="color:#b0645c"><svg><use href="#i-tod"/></svg>Tod 58</span>
+        <span style="color:var(--lg-gans)"><svg><use href="#i-gans"/></svg>Gans: noch einmal</span>
+        <span style="color:var(--lg-bruecke)"><svg><use href="#i-bruecke"/></svg>Brücke 6 → 12</span>
+        <span style="color:var(--lg-gasthaus)"><svg><use href="#i-gasthaus"/></svg>Gasthaus 19</span>
+        <span style="color:var(--lg-brunnen)"><svg><use href="#i-brunnen"/></svg>Brunnen 31</span>
+        <span style="color:var(--lg-labyrinth)"><svg><use href="#i-labyrinth"/></svg>Labyrinth 42</span>
+        <span style="color:var(--lg-gefaengnis)"><svg><use href="#i-gefaengnis"/></svg>Gefängnis 52</span>
+        <span style="color:var(--lg-tod)"><svg><use href="#i-tod"/></svg>Tod 58</span>
       </div>
     </div>
 
@@ -576,6 +642,18 @@ if (ONLINE) {
   notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");
   elZug.textContent = "";
 }
+})();
+</script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0a211b",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0a211b";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
 </body>

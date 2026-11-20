@@ -34,10 +34,10 @@ body[data-stil="maedchen"]{
  --radius:18px;--radius-klein:14px;--schrift-titel:2px;
 }
 body[data-stil="maenner"]{
- --bg1:#272d34;--bg2:#151a1f;--bg3:#080a0c;
- --rahmen:#7d8892;--rahmen-hell:#c8d2da;--akzent:#d7e0e8;--akzent-text:#12171c;
- --feld:#12161a;--feld-dunkel:#080a0c;--leiste:#0f1316;
- --text:#e4ebf0;--text-leise:#8f9ba5;
+ --bg1:#2f3135;--bg2:#141517;--bg3:#0a0a0b;
+ --rahmen:#82868d;--rahmen-hell:#cfd0d3;--akzent:#e0242f;--akzent-text:#ffffff;
+ --feld:#141517;--feld-dunkel:#0a0a0b;--leiste:#141517;
+ --text:#e9eaeb;--text-leise:#95989f;
  --radius:0px;--radius-klein:0px;--schrift-titel:4px;
 }
 
@@ -60,18 +60,6 @@ body[data-stil="maenner"]{
  color:var(--akzent-text);font-weight:bold}
 .menueleiste button.aktiv{background:var(--akzent);color:var(--akzent-text);
  border-color:var(--akzent);font-weight:bold}
-
-.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;
- background:var(--leiste);border-bottom:1px solid var(--rahmen)}
-.stilwahl .stil-titel{font-size:12px;color:var(--text-leise);letter-spacing:.08em;
- text-transform:uppercase;margin-right:2px}
-.stilwahl button{font-family:inherit;font-size:13px;padding:6px 11px;border-radius:var(--radius-klein);
- border:1px solid var(--rahmen);background:var(--feld);color:var(--text);cursor:pointer}
-.stilwahl button:hover{border-color:var(--rahmen-hell)}
-/* Der gewählte Stil zeigt schon seine eigene Farbe – man sieht, was man bekommt. */
-.stilwahl button[data-stil="maedchen"].aktiv{background:#ff9ec4;border-color:#ff9ec4;color:#4a2233;font-weight:bold}
-.stilwahl button[data-stil="maenner"].aktiv{background:linear-gradient(#e8eef3,#9aa5af);border-color:#e8eef3;color:#12171c;font-weight:bold}
-.stilwahl button[data-stil="klassisch"].aktiv{background:var(--akzent);border-color:var(--akzent);color:var(--akzent-text);font-weight:bold}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
  padding:6px 10px;font-size:13px;color:var(--text-leise);background:var(--leiste);
@@ -112,8 +100,56 @@ canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:var(--
 .klein{color:var(--text-leise);font-size:13px}
 a{color:var(--akzent)}
 .mitte{text-align:center}
+
+/* ---- Red Reactor: Titel und Knopfaufschrift in Silber, Rot nur als LED-Akzent ---- */
+body[data-stil="buben"] .titel,
+body[data-stil="jungs"] .titel,
+body[data-stil="maenner"] .titel,
+body[data-stil="buben"] .kopf h1,
+body[data-stil="jungs"] .kopf h1,
+body[data-stil="maenner"] .kopf h1,
+body[data-stil="buben"] h2,
+body[data-stil="jungs"] h2,
+body[data-stil="maenner"] h2 {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button,
+body[data-stil="jungs"] button,
+body[data-stil="maenner"] button,
+body[data-stil="buben"] .knopf,
+body[data-stil="jungs"] .knopf,
+body[data-stil="maenner"] .knopf {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="jungs"] button.aktiv,
+body[data-stil="maenner"] button.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="jungs"] button.haupt,
+body[data-stil="maenner"] button.haupt {
+  color: #ffffff;
+}
+/* Red Reactor: Menüknöpfe Metall, nur der Dialog trägt die rote Fläche */
+body[data-stil="maenner"] .menueleiste button.start,
+body[data-stil="maenner"] .menueleiste button.aktiv{
+  background:linear-gradient(#22262c,#171a1f);
+  color:#ffffff;border-color:#e0242f;
+  box-shadow:inset 2px 0 0 #e0242f;
+}
+body[data-stil="maenner"] .menueleiste button.start:hover,
+body[data-stil="maenner"] .menueleiste button.aktiv:hover{
+  background:linear-gradient(#2a2f36,#1d2127);border-color:#ff5560;
+}
+
+/* Red Reactor: Dialog-Hauptknopf trägt weiße Schrift */
+body[data-stil="buben"] .meldung button,
+body[data-stil="jungs"] .meldung button,
+body[data-stil="maenner"] .meldung button {
+  color: #ffffff;
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="klassisch">
 <main class="fenster">
@@ -129,12 +165,6 @@ a{color:var(--akzent)}
   <button id="btnDuell">2 Spieler</button>
  </div>
 
- <div class="stilwahl" id="stilwahl">
-  <span class="stil-titel">Stil</span>
-  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
-  <button type="button" data-stil="maedchen">Mädchen-Pong</button>
-  <button type="button" data-stil="maenner">Männer-Pong</button>
- </div>
 
  <div class="statuszeile">
   <span id="statusPunkte">Punkte <b id="punkte">0 : 0</b></span>
@@ -338,9 +368,9 @@ const STILE={
   name:"Männer-Pong",
   hintergrund(g){
    const v=g.createLinearGradient(0,0,W,H);
-   v.addColorStop(0,"#1b2026");
-   v.addColorStop(.5,"#10151a");
-   v.addColorStop(1,"#080b0e");
+   v.addColorStop(0,"#1c1d1f");
+   v.addColorStop(.5,"#141517");
+   v.addColorStop(1,"#0a0a0b");
    g.fillStyle=v; g.fillRect(0,0,W,H);
    /* Gebürstetes Metall: feine Schrägstriche */
    g.save();
@@ -355,13 +385,13 @@ const STILE={
   },
   mittellinie(g){
    g.save();
-   g.strokeStyle="rgba(200,214,224,.22)";
+   g.strokeStyle="rgb(231, 232, 233,.22)";
    g.lineWidth=1;
    g.beginPath(); g.moveTo(0,H/2-4); g.lineTo(W,H/2-4); g.stroke();
-   g.strokeStyle="rgba(200,214,224,.10)";
+   g.strokeStyle="rgb(231, 232, 233,.10)";
    g.beginPath(); g.moveTo(0,H/2+4); g.lineTo(W,H/2+4); g.stroke();
    /* Mittelmarke: harte Kerben */
-   g.strokeStyle="rgba(215,224,232,.55)"; g.lineWidth=3;
+   g.strokeStyle="rgb(222, 223, 225,.55)"; g.lineWidth=3;
    for(let x=0;x<W;x+=22){
     g.beginPath(); g.moveTo(x,H/2-9); g.lineTo(x+8,H/2-9); g.stroke();
     g.beginPath(); g.moveTo(x,H/2+9); g.lineTo(x+8,H/2+9); g.stroke();
@@ -369,48 +399,48 @@ const STILE={
    g.restore();
   },
   rahmen(g){
-   g.strokeStyle="rgba(200,214,224,.28)"; g.lineWidth=2;
+   g.strokeStyle="rgb(231, 232, 233,.28)"; g.lineWidth=2;
    g.beginPath();
    g.moveTo(0,SPIELFELD_OBEN-6); g.lineTo(W,SPIELFELD_OBEN-6);
    g.moveTo(0,SPIELFELD_UNTEN+6); g.lineTo(W,SPIELFELD_UNTEN+6);
    g.stroke();
   },
-  zahl:"rgba(200,214,224,.10)",
+  zahl:"rgb(231, 232, 233,.10)",
   zahlGroesse:158,
-  text:"#8f9ba5",
+  text:"#95989f",
   ball(g,x,y,r){
    const v=g.createRadialGradient(x-r*.4,y-r*.45,r*.1,x,y,r*1.05);
    v.addColorStop(0,"#ffffff");
-   v.addColorStop(.35,"#e3ebf1");
-   v.addColorStop(.7,"#a9b5bf");
-   v.addColorStop(1,"#5f6a74");
+   v.addColorStop(.35,"#e9eaeb");
+   v.addColorStop(.7,"#b0b3b8");
+   v.addColorStop(1,"#64686f");
    g.fillStyle=v;
    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
-   g.strokeStyle="#20262c"; g.lineWidth=1.4; g.stroke();
+   g.strokeStyle="#242529"; g.lineWidth=1.4; g.stroke();
    g.fillStyle="rgba(255,255,255,.85)";
    g.beginPath(); g.arc(x-r*.32,y-r*.36,r*.22,0,Math.PI*2); g.fill();
   },
   schlaeger(g,x,y,farbe,eigen){
    const v=g.createLinearGradient(x,y,x,y+SCHLAEGER_H);
-   v.addColorStop(0,"#f2f6f9");
+   v.addColorStop(0,"#f6f5f5");
    v.addColorStop(.35,farbe);
-   v.addColorStop(.62,"#69737c");
-   v.addColorStop(1,"#2b3238");
+   v.addColorStop(.62,"#6d7178");
+   v.addColorStop(1,"#2f3135");
    g.fillStyle=v;
    g.fillRect(x-SCHLAEGER_W/2,y,SCHLAEGER_W,SCHLAEGER_H);
-   g.strokeStyle="#0a0d10"; g.lineWidth=1.5;
+   g.strokeStyle="#0e0f10"; g.lineWidth=1.5;
    g.strokeRect(x-SCHLAEGER_W/2+.75,y+.75,SCHLAEGER_W-1.5,SCHLAEGER_H-1.5);
    g.fillStyle="rgba(255,255,255,.65)";
    g.fillRect(x-SCHLAEGER_W/2+3,y+2,SCHLAEGER_W-6,1.5);
    /* Schraubköpfe an beiden Enden */
    for(const kx of [x-SCHLAEGER_W/2+6,x+SCHLAEGER_W/2-6]) {
-    g.fillStyle="#8d99a3";
+    g.fillStyle="#93969d";
     g.beginPath(); g.arc(kx,y+SCHLAEGER_H/2,2.2,0,Math.PI*2); g.fill();
-    g.strokeStyle="#20262c"; g.lineWidth=1; g.stroke();
+    g.strokeStyle="#242529"; g.lineWidth=1; g.stroke();
    }
   },
-  eigen:"#d7e0e8",
-  gegner:"#8f9ba5"
+  eigen:"#e0242f",
+  gegner:"#9fa2a8"
  }
 };
 
@@ -441,7 +471,7 @@ function niete(g,x,y){
 /* ---------------------------------------------------------------- Zustand */
 
 let stil="klassisch";
-try{ const gespeichert=localStorage.getItem("pong-stil"); if(STILE[gespeichert])stil=gespeichert; }catch(e){}
+stil=TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "maenner" });
 
 let modus="solo";            // solo, duell (nur ohne Connector)
 let zustand="start";         // start, laeuft, pause, ende
@@ -462,15 +492,8 @@ function stilSetzen(neu){
  if(!STILE[neu])neu="klassisch";
  stil=neu;
  document.body.dataset.stil=neu;
- document.querySelectorAll("#stilwahl button").forEach(b=>{
-  b.classList.toggle("aktiv",b.dataset.stil===neu);
- });
- try{ localStorage.setItem("pong-stil",neu); }catch(e){}
  zeichne();
 }
-document.querySelectorAll("#stilwahl button").forEach(b=>{
- b.onclick=()=>stilSetzen(b.dataset.stil);
-});
 
 // Punkte, Rallye und Rekord in der Statuszeile.
 function aktualisiere(){
@@ -531,7 +554,7 @@ function zeichneBild(stand){
   const vy=spiegel?-stand.ball.vy:stand.ball.vy;
   if(stand.ball.ruhig!==true){
    for(let i=1;i<=3;i++){
-    ctx.fillStyle=stil==="maenner"?"rgba(200,214,224,.13)":stil==="maedchen"?"rgba(255,158,196,.22)":"rgba(232,205,142,.20)";
+    ctx.fillStyle=stil==="maenner"?"rgba(226,232,238,.13)":stil==="maedchen"?"rgba(255,158,196,.22)":"rgba(232,205,142,.20)";
     ctx.beginPath();
     ctx.arc(bx-vx*i*0.012,by-vy*i*0.012,Math.max(2,stand.ball.r-i*1.8),0,Math.PI*2);
     ctx.fill();
@@ -547,7 +570,7 @@ function zeichneBild(stand){
  ctx.fillText(stand.obenName,W/2+24,SPIELFELD_OBEN-12);
  ctx.fillText(stand.untenName,W/2+24,SPIELFELD_UNTEN+22);
 
- ctx.strokeStyle=stil==="maenner"?"rgba(200,214,224,.25)":"rgba(217,188,124,.28)";
+ ctx.strokeStyle=stil==="maenner"?"rgba(226,232,238,.25)":"rgba(217,188,124,.28)";
  ctx.lineWidth=3;
  if(stil==="maenner")ctx.strokeRect(1.5,1.5,W-3,H-3);
  else{ ctx.beginPath(); ctx.roundRect(1.5,1.5,W-3,H-3,8); ctx.stroke(); }
@@ -1033,6 +1056,7 @@ $("btnSolo").onclick=()=>modusSetzen("solo");
 $("btnDuell").onclick=()=>modusSetzen("duell");
 
 stilSetzen(stil);
+TGStil.beiWechsel(()=>stilSetzen(TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "maenner" })));
 
 if(ONLINE){
  $("menueleiste").hidden=true;

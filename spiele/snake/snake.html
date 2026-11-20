@@ -29,13 +29,13 @@ body[data-stil="maedchen"]{
  color-scheme:light;
 }
 body[data-stil="buben"]{
- --bg1:#0e1722; --bg2:#070c12; --bg3:#04070a;
- --panel:#0a1119; --gold:#c8ff3d; --ink:#dbe7ee; --muted:#7f8f9b; --titel:#c8ff3d;
- --taste:#0d1620; --taste-hover:#16232f; --titel-bg:linear-gradient(#101b25,#0a121a);
- --buehne:#05080c;
- --fenster-rand:#22303c; --titel-rand:#24313d; --leisten-rand:#1b2630;
- --trenner:#141d25; --knopf-rand:#2a3a47; --meldung-rand:#3c514f;
- --schleier:#04070add; --knopf-text:#08130a; --still-rand:#2a3a47;
+ --bg1:#16181c; --bg2:#100f0f; --bg3:#060708;
+ --panel:#14161a; --gold:#e0242f; --ink:#e4e7ea; --muted:#7f868f; --titel:#e0242f;
+ --taste:#181b1f; --taste-hover:#1a1c20; --titel-bg:linear-gradient(#1b1e23,#14161a);
+ --buehne:#090808;
+ --fenster-rand:#2b3038; --titel-rand:#2c3138; --leisten-rand:#272524;
+ --trenner:#1e1c1b; --knopf-rand:#33383f; --meldung-rand:#3c514f;
+ --schleier:#060708dd; --knopf-text:#150a0c; --still-rand:#33383f;
 }
 
 body{margin:0;padding:6px 6px 18px;
@@ -57,15 +57,6 @@ main{max-width:760px;margin:auto}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
  border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold);cursor:pointer}
 .menueleiste button:hover{background:var(--taste-hover)}
-
-.stilwahl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;
- background:var(--taste);border-bottom:1px solid var(--trenner);font-size:12px;color:var(--muted)}
-.stilwahl button{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
- border:1px solid var(--knopf-rand);background:var(--panel);color:var(--gold)}
-.stilwahl button.aktiv{background:var(--gold);color:var(--knopf-text);border-color:var(--gold);font-weight:bold}
-body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
- border-color:#e2537f;box-shadow:0 2px 8px #ff77ad55}
-body[data-stil="buben"] .stilwahl button.aktiv{background:var(--gold);color:#08130a;box-shadow:0 0 10px #c8ff3d55}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
  padding:6px 10px;font-size:13px;color:var(--muted);background:var(--taste);border-bottom:1px solid var(--trenner)}
@@ -99,10 +90,47 @@ a{color:var(--gold)}
 .meldung-knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
 .meldung-knoepfe button.still{background:var(--panel);color:var(--gold);border-color:var(--still-rand)}
 .mitte{text-align:center}
+
+/* ---- Red Reactor: Titel in Silber, Rot bleibt der LED-Akzent ------------- */
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel,
+body[data-stil="buben"] .fenster .titel,
+body[data-stil="buben"] h2,
+body[data-stil="buben"] .meldung h2,
+body[data-stil="buben"] #regeln summary {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel {
+  text-shadow: none;
+}
+
+/* Red Reactor: Knopfaufschrift in Silber, Rot nur an Kante und Aktiv-Zustand */
+body[data-stil="buben"] button,
+body[data-stil="buben"] .menueleiste button,
+body[data-stil="buben"] .knopf,
+body[data-stil="buben"] select {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] button:hover:not(:disabled),
+body[data-stil="buben"] .menueleiste button:hover,
+body[data-stil="buben"] .knopf:hover:not(:disabled) {
+  color: #ffffff;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="buben"] .menueleiste button.aktiv,
+body[data-stil="buben"] .knopf.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="buben"] .aktion.haupt,
+body[data-stil="buben"] .meldung button {
+  color: #ffffff;
+  text-shadow: none;
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <script src="/spiele/token.js"></script>
 <script src="/spiele/brettspiele/wuerfel-common.js"></script>
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="klassisch">
 <main class="fenster">
@@ -123,12 +151,6 @@ a{color:var(--gold)}
   <span>Rekord <b id="rekord">0</b></span>
  </div>
 
- <div class="stilwahl" id="stilwahl">
-  <span>Ansicht</span>
-  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
-  <button type="button" data-stil="maedchen">Mädchen</button>
-  <button type="button" data-stil="buben">Buben</button>
- </div>
 
  <div class="buehne">
   <canvas id="feld" width="420" height="460"></canvas>
@@ -301,16 +323,16 @@ const STILE={
     glühender Apfel, Head mit Visier und schrägen Augen */
  buben:{
   hintergrund(){
-   ctx.fillStyle="#05080c"; ctx.fillRect(0,0,W,H);
-   ctx.strokeStyle="#27e0ff1c"; ctx.lineWidth=1;
+   ctx.fillStyle="#090808"; ctx.fillRect(0,0,W,H);
+   ctx.strokeStyle="#ef374d1c"; ctx.lineWidth=1;
    for(let x=0;x<=SPALTEN;x++){ctx.beginPath();ctx.moveTo(x*ZELLE+.5,0);ctx.lineTo(x*ZELLE+.5,H);ctx.stroke();}
    for(let y=0;y<=ZEILEN;y++){ctx.beginPath();ctx.moveTo(0,y*ZELLE+.5);ctx.lineTo(W,y*ZELLE+.5);ctx.stroke();}
-   ctx.strokeStyle="#c8ff3d0e"; ctx.lineWidth=2;
+   ctx.strokeStyle="#e0242f0e"; ctx.lineWidth=2;
    for(let i=-ZEILEN;i<SPALTEN;i+=3){
     ctx.beginPath(); ctx.moveTo(i*ZELLE,0); ctx.lineTo((i+ZEILEN)*ZELLE,H); ctx.stroke();
    }
-   ctx.strokeStyle="#38e1ff"; ctx.lineWidth=3; ctx.strokeRect(2,2,W-4,H-4);
-   ctx.strokeStyle="#c8ff3d66"; ctx.lineWidth=1; ctx.strokeRect(6.5,6.5,W-13,H-13);
+   ctx.strokeStyle="#d3d0cf"; ctx.lineWidth=3; ctx.strokeRect(2,2,W-4,H-4);
+   ctx.strokeStyle="#e0242f66"; ctx.lineWidth=1; ctx.strokeRect(6.5,6.5,W-13,H-13);
   },
   apfel(ax,ay){
    const t=performance.now()/300;
@@ -325,7 +347,7 @@ const STILE={
   },
   farbe(nr){
    return nr===2?{k:["#ffd6ff","#b02bff"],r:["#ff8ad6","#a01ec9"]}
-               :{k:["#e8ff9c","#a4e000"],r:["#7ff3ff","#00a6d6"]};
+               :{k:["#f47b89","#e0242f"],r:["#f47b89","#706966"]};
   },
   koerper(px,py,nr){
    const f=this.farbe(nr);
@@ -348,7 +370,7 @@ const STILE={
    ctx.beginPath(); ctx.roundRect(px+1.6,py+1.6,ZELLE-3.2,ZELLE-3.2,4); ctx.fill();
    ctx.strokeStyle="#ffffff88"; ctx.lineWidth=1; ctx.stroke();
    const vx=cx+mx*2.2, vy=cy+my*2.2;
-   ctx.fillStyle="#08131a";
+   ctx.fillStyle="#121110";
    ctx.beginPath(); ctx.roundRect(vx-5.4,vy-5.4,10.8,10.8,3); ctx.fill();
    const sx=mx!==0?0:1, sy=mx!==0?1:0;
    ctx.fillStyle=f.k[0];
@@ -792,25 +814,17 @@ $("btnPause").onclick=()=>{
 };
 
 // ------------------------------------------------------------------ Ansicht
-const STIL_KEY="snake-stil";
 function stilSetzen(name,merken){
  if(!STILE[name])name="klassisch";
  stil=name;
  document.body.dataset.stil=name;
- if(merken!==false){ try{ localStorage.setItem(STIL_KEY,name); }catch(e){} }
- document.querySelectorAll("#stilwahl button").forEach(b=>{
-  b.classList.toggle("aktiv",b.dataset.stil===name);
- });
  const meta=document.querySelector('meta[name="theme-color"]');
  if(meta)meta.content=name==="maedchen"?"#ffe8f2":name==="buben"?"#070c12":"#0b241d";
  if(ONLINE)zeichneOnline(); else zeichne();
 }
-document.querySelectorAll("#stilwahl button").forEach(b=>{
- b.addEventListener("click",()=>stilSetzen(b.dataset.stil));
-});
-let startStil="klassisch";
-try{ startStil=localStorage.getItem(STIL_KEY)||"klassisch"; }catch(e){}
-stilSetzen(startStil,false);
+let startStil=TGStil.lokal();
+stilSetzen(startStil);
+TGStil.beiWechsel(()=>stilSetzen(TGStil.lokal()));
 
 if(ONLINE){
  // Menü weg, Stand vom Server.

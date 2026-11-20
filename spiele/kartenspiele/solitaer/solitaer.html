@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<script src="/spiele/stil.js"></script>
+<meta name="theme-color" content="#0b131b">
+<title>Solitär – fünf Varianten</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+:root{
+  --bg1:#13222e; --bg2:#0b1420; --bg3:#060a0f;
+  --panel:#111b25; --panel-2:#0b131b;
+  --text:#e9eef4; --muted:#93a3b3;
+  --warm:#f3c489; --warm-2:#c87a3e;
+  --linie:rgba(255,255,255,.08); --linie-2:rgba(255,255,255,.16);
+  --karte-1:#313942; --karte-2:#262d34;
+  --karte-rand:#4d5964;
+  --rot:#c9705f; --schwarz:#e9e3d5;
+  --ruecken-1:#2b414f; --ruecken-2:#182832;
+  --sfw:82px;
+  --tg-schrift:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+html,body{min-height:100%}
+body{margin:0;padding:12px 10px 26px;
+  background:
+    radial-gradient(900px 520px at 18% -10%,#1d516766 0%,#00000000 70%),
+    radial-gradient(720px 420px at 92% 4%,#8a5a2e3d 0%,#00000000 72%),
+    linear-gradient(180deg,var(--bg1),var(--bg2) 55%,var(--bg3)) fixed;
+  color:var(--text);font:15px/1.5 var(--tg-schrift);
+  -webkit-tap-highlight-color:transparent;overflow-x:hidden}
+a{color:var(--warm)}
+.seite{max-width:1120px;margin:0 auto}
+
+/* ------------------------------------------------------------------ Kopf */
+.kopf{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:4px 2px 14px}
+.kopf h1{margin:0;font-size:clamp(22px,3.4vw,30px);font-weight:600;letter-spacing:.02em}
+.kopf .unter{margin:0;color:var(--muted);font-size:13px}
+.kopf .zurueck{margin-left:auto;font-size:13px;text-decoration:none;color:var(--muted);
+  border:1px solid var(--linie);border-radius:999px;padding:6px 14px;background:rgba(255,255,255,.04)}
+.kopf .zurueck:hover{color:#fff;background:rgba(255,255,255,.09)}
+
+/* ---------------------------------------------------------- Knöpfe */
+.knopf{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--linie-2);background:rgba(255,255,255,.06);color:#e9eef4;
+  transition:background .15s,border-color .15s,transform .06s}
+.knopf:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+.knopf:active{transform:translateY(1px)}
+.knopf:disabled{opacity:.36;cursor:default;transform:none}
+.knopf.zweit{background:rgba(255,255,255,.03)}
+#btnNeu{background:linear-gradient(180deg,#f6d3a3,#dfa060);color:#2b1a0c;border-color:#f9dcb0;font-weight:600}
+
+/* ------------------------------------------------------- Modusauswahl */
+.auswahl{margin-top:6px}
+.modus-liste{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.modus{position:relative;display:grid;grid-template-columns:104px 1fr;gap:14px;align-items:start;
+  padding:16px;border:1px solid var(--linie);border-radius:16px;
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  box-shadow:inset 0 1px 0 #ffffff10,0 18px 40px -28px #000}
+.modus-vorschau{grid-row:span 3;width:104px;border-radius:10px;background:#0a121a;
+  border:1px solid var(--linie);padding:6px}
+.modus-vorschau svg{display:block;width:100%;height:auto}
+.modus-text h3{margin:0 0 4px;font-size:17px;font-weight:600}
+.modus-text p{margin:0 0 8px;color:var(--muted);font-size:13px;line-height:1.45}
+.modus-option{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:0 0 6px}
+.modus-option select,.leiste-option select{font-family:inherit;font-size:12.5px;padding:4px 6px;border-radius:8px;
+  background:#0e1822;color:var(--text);border:1px solid var(--linie-2)}
+.modus .start{justify-self:start;grid-column:2}
+.modus-quote{grid-column:1/-1;color:#7d8d9c;font-size:11.5px;min-height:0}
+.modus-quote:empty{display:none}
+
+/* ------------------------------------------------------------ Spielfenster */
+.fenster{border:1px solid var(--linie);border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  box-shadow:inset 0 1px 0 #ffffff12,0 26px 60px -30px #000}
+.leiste{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--linie)}
+.leiste-optionen{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.leiste-option{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.leiste-modus{margin-left:auto;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fb2c2}
+.anzeige{display:flex;flex-wrap:wrap;gap:8px;padding:9px 12px;border-bottom:1px solid var(--linie)}
+.anzeige span{display:inline-flex;align-items:baseline;gap:6px;font-size:12px;color:var(--muted);
+  padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid var(--linie)}
+.anzeige b{color:#fff;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.bahn{padding:12px;background:radial-gradient(120% 90% at 50% 0%,#16252f 0%,#0a1117 70%,#080d12 100%);
+  overflow-x:hidden;overflow-y:auto;max-height:calc(100dvh - 190px)}
+.hinweis{min-height:20px;margin:0;padding:8px 14px 12px;font-size:12.5px;color:#a9c3b6}
+.hinweis.warnung{color:#e8b9a4}
+
+/* ---------------------------------------------------------------- Karten */
+.karte{position:relative;aspect-ratio:5/7;border-radius:5px;overflow:hidden;
+  background:linear-gradient(165deg,var(--karte-1),var(--karte-2));
+  border:1px solid var(--karte-rand);
+  box-shadow:0 2px 5px #00000066,inset 0 1px 0 #ffffff0f;
+  user-select:none;touch-action:manipulation;cursor:grab;
+  font-family:Georgia,"Times New Roman",serif;container-type:inline-size}
+.karte.rot{color:var(--rot)}
+.karte.schwarz{color:var(--schwarz)}
+.karte .ecke{position:absolute;display:flex;flex-direction:column;align-items:center;
+  line-height:.86;font-weight:700;z-index:2}
+.karte .ecke b{font-size:clamp(11px,31cqw,30px);letter-spacing:-.03em}
+.karte .ecke i{font-size:clamp(9px,26cqw,24px);font-style:normal;margin-top:.08em;opacity:.9}
+.karte .ecke.oben{left:6%;top:4%}
+.karte .ecke.unten{right:6%;bottom:4%;transform:rotate(180deg)}
+.karte .pips{position:absolute;inset:17% 14%}
+.karte .pip{position:absolute;transform:translate(-50%,-50%);font-style:normal;line-height:1;
+  font-size:clamp(8px,18cqw,18px);opacity:.88}
+.karte .pip.unten{transform:translate(-50%,-50%) rotate(180deg)}
+.karte .bild{position:absolute;inset:26% 22%;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;border:1px solid currentColor;border-radius:3px;opacity:.9;
+  background:repeating-linear-gradient(45deg,#ffffff0d 0 2px,#00000000 2px 5px)}
+.karte .bild b{font-size:clamp(13px,35cqw,32px);line-height:1}
+.karte .bild i{font-size:clamp(9px,22cqw,20px);font-style:normal;margin-top:.08em}
+.karte.hinten{background:
+    repeating-linear-gradient(45deg,#ffffff14 0 2px,#00000000 2px 8px),
+    linear-gradient(160deg,var(--ruecken-1),var(--ruecken-2));
+  border-color:#3f5a6b;cursor:default}
+.karte.hinten::before{content:"";position:absolute;inset:8%;border:1px solid #ffffff2b;border-radius:3px}
+.karte.gewaehlt{outline:2px solid var(--warm);outline-offset:-2px;box-shadow:0 0 0 1px #000,0 6px 16px -6px #000}
+.karte.tipp{outline:2px solid #9fd3c6;outline-offset:-2px}
+.karte.verdeckt{opacity:.52;cursor:default}
+.karte.bedeckt{opacity:.8;cursor:default}
+.karte.spielbar{box-shadow:0 0 0 1px #ffffff1f,0 2px 6px #0006}
+.karte.ohne-klick{cursor:default;pointer-events:none}
+.geist{position:fixed;z-index:90;pointer-events:none;opacity:.9;transform:rotate(-2deg);
+  box-shadow:0 14px 28px #000a}
+
+/* Schmale Karten (Handy, Spider mit zehn Spalten): Rang und Farbe nebeneinander,
+   keine Augen – sonst überdecken sich die Zeichen. */
+@container (max-width:64px){
+  .karte .pips{display:none}
+  .karte .ecke{flex-direction:row;align-items:baseline;gap:.06em;line-height:1}
+  .karte .ecke.oben{left:7%;top:4%}
+  .karte .ecke.unten{display:none}
+  .karte .ecke b{font-size:12.5px}
+  .karte .ecke i{font-size:10.5px;margin-top:0}
+  .karte .bild{inset:22% 14%;border:none;box-shadow:none;background:none}
+  .karte .bild b{font-size:15px}
+  .karte .bild i{font-size:11px}
+}
+body.zieht{cursor:grabbing}
+
+/* -------------------------------------------------------- Stapel & Felder */
+.stapelfeld{position:relative;width:var(--sfw);flex:0 0 auto;aspect-ratio:5/7;border-radius:5px;
+  display:flex;align-items:center;justify-content:center}
+.stapelfeld.leer{border:1px dashed #ffffff33;background:rgba(255,255,255,.03);cursor:pointer}
+.stapelfeld.leer:hover{border-color:#ffffff66}
+.stapelfeld.ziel{border:1px dashed #ffffff26;background:rgba(255,255,255,.02)}
+.stapelfeld.moeglich{border-color:var(--warm);box-shadow:inset 0 0 0 1px #f3c48955,0 0 0 3px #f3c4891f;
+  background:rgba(243,196,137,.08)}
+.stapelfeld.ueber{border-color:#9fd3c6;box-shadow:inset 0 0 0 2px #9fd3c655}
+.stapelfeld .karte{position:absolute;inset:0;width:100%;height:100%}
+.stapelfeld .karte.hinten{cursor:pointer}
+.stapelfeld.voll{cursor:pointer}
+.leerzeichen{font-size:11px;color:#7f8f9d;letter-spacing:.04em;text-align:center;padding:0 4px}
+.leerzeichen.farbe{font-size:clamp(16px,2.4vw,24px);opacity:.55}
+.leerzeichen.farbe.rot{color:var(--rot)}
+.stapelzahl{position:absolute;right:-5px;bottom:-5px;min-width:18px;height:18px;border-radius:9px;
+  background:#1c2a34;border:1px solid #4b6474;color:#d7e3ec;font-size:10.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:var(--tg-schrift)}
+.waste-rest{position:absolute;left:-6px;top:-4px;width:70%;opacity:.55;pointer-events:none}
+
+/* ------------------------------------------------------------ Klondike */
+.kopfreihe{display:flex;align-items:flex-start;gap:8px;row-gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.kopfreihe .luft{flex:1 1 auto}
+.ablagen{display:flex;gap:8px;flex:0 1 auto;min-width:0;flex-wrap:wrap}
+.tableau{display:grid;gap:6px;align-items:start}
+.tableau.zehn{grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}
+.tableau.acht{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.klondike .tableau{grid-template-columns:repeat(7,minmax(0,1fr))}
+.spalte{position:relative;min-height:40px;border-radius:5px}
+.spalte.leer{border:1px dashed #ffffff26;background:rgba(255,255,255,.02)}
+.spalte.leer .leerfeld{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#6e7f8d;font-family:Georgia,serif;font-size:clamp(12px,3vw,18px)}
+.spalte.moeglich{border-color:var(--warm);background:rgba(243,196,137,.07);box-shadow:inset 0 0 0 1px #f3c48955}
+.spalte.ueber{box-shadow:inset 0 0 0 2px #9fd3c655}
+.spalte .karte{width:100%}
+
+/* --------------------------------------------------------------- Spider */
+.spider .tableau{margin-bottom:14px}
+.spider-fuss{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.fertige{display:flex;gap:5px;flex-wrap:wrap;min-width:0}
+.fertigplatz{position:relative;width:calc(var(--sfw) * .82);aspect-ratio:5/7;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;border:1px dashed #ffffff26;background:rgba(255,255,255,.02)}
+.fertigplatz.voll{border-style:solid;border-color:var(--karte-rand)}
+.fertigplatz .karte{position:absolute;inset:0;width:100%;height:100%}
+.vorrat{position:relative;width:var(--sfw);aspect-ratio:5/7;border-radius:5px;display:flex;
+  align-items:center;justify-content:center;border:1px dashed #ffffff33;background:rgba(255,255,255,.03);cursor:pointer}
+.vorrat .karte{position:absolute;inset:0;width:100%;height:100%}
+.vorrat.leer{cursor:default;opacity:.6}
+
+/* ------------------------------------------------------------- FreeCell */
+.zellen{display:flex;gap:8px;flex:0 1 auto;min-width:0;flex-wrap:wrap}
+.stapelfeld.zelle{width:calc(var(--sfw) * .84)}
+
+/* -------------------------------------------------------------- Pyramid */
+.pyramid{display:flex;flex-direction:column;align-items:center;gap:14px}
+.pyramide{position:relative}
+.pyramide .karte{position:absolute}
+.pyr-platz,.berg-platz{position:absolute;border-radius:5px;border:1px dashed #ffffff14}
+.pyramid-fuss,.tripeaks-fuss{display:flex;gap:16px;justify-content:center;position:relative;z-index:2}
+
+/* ------------------------------------------------------------- TriPeaks */
+.tripeaks{display:flex;flex-direction:column;align-items:center;gap:14px}
+.berge{position:relative}
+.berge .karte{position:absolute}
+.stapelfeld.waste .waste-zahl{position:absolute;right:-6px;top:-6px;min-width:18px;height:18px;border-radius:9px;
+  background:#1c2a34;border:1px solid #4b6474;color:#d7e3ec;font-size:10.5px;
+  display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* -------------------------------------------------------------- Dialoge */
+.schleier{position:fixed;inset:0;background:#04080bcc;display:flex;align-items:center;justify-content:center;
+  padding:16px;z-index:80;backdrop-filter:blur(2px)}
+.dialog{width:min(460px,100%);border-radius:14px;overflow:hidden;border:1px solid var(--linie-2);
+  background:linear-gradient(180deg,#16232e,#0c141c);box-shadow:0 30px 70px -20px #000}
+.dialog-kopf{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--linie);
+  font-weight:600;font-size:14px}
+.dialog-kopf span{flex:1 1 auto}
+.dialog-zu{width:28px;height:28px;border-radius:50%;border:1px solid var(--linie);background:rgba(255,255,255,.05);
+  color:#c9d6e0;font-size:15px;line-height:1;cursor:pointer}
+.dialog-inhalt{padding:14px 16px;font-size:13.5px;line-height:1.6;max-height:60dvh;overflow:auto}
+.dialog-inhalt p{margin:0 0 8px}
+.dialog-inhalt ol{margin:0;padding-left:20px}
+.dialog-inhalt li{margin-bottom:7px}
+.dialog-inhalt .klein{color:var(--muted);font-size:12px}
+.dialog-knoepfe{display:flex;justify-content:flex-end;gap:8px;padding:0 16px 16px}
+
+/* ------------------------------------------------------------- Anpassung */
+@media(max-width:900px){:root{--sfw:70px}}
+@media(max-width:640px){
+  :root{--sfw:54px}
+  .kopfreihe .luft{display:none}
+  .ablagen{margin-left:auto}
+  body{padding:8px 6px 18px}
+  .modus{grid-template-columns:78px 1fr;padding:13px;gap:11px}
+  .modus-vorschau{width:78px}
+  .bahn{padding:8px;max-height:none}
+  .kopfreihe{gap:5px}
+  .ablagen{gap:5px}
+  .leiste{gap:6px;padding:8px}
+  .knopf{padding:7px 11px;font-size:12.5px}
+  .anzeige{padding:7px 8px;gap:5px}
+  .anzeige span{padding:3px 8px;font-size:11px}
+  .spider-fuss{gap:8px}
+  .fertige{gap:3px}
+  .leiste-modus{margin-left:0;width:100%}
+}
+@media(max-width:420px){
+  :root{--sfw:46px}
+  .modus-liste{grid-template-columns:1fr}
+  .fertigplatz{width:calc(var(--sfw) * .8)}
+}
+
+/* ---- Grafikstil (zentral): Klassisch bleibt unverändert ---- */
+html[data-stil="maedchen"]{--bg1:#ffe0ef;--bg2:#f7a6d4;--bg3:#eb7bc0;--panel:#fff6fa;--panel-2:#ffeaf3;--text:#3a0f24;--muted:#8f2450;--warm:#b06bff;--warm-2:#7a2fbf;--linie:rgba(181,42,99,.12);--linie-2:rgba(181,42,99,.22);--karte-1:#ffffff;--karte-2:#ffeaf3;--karte-rand:#ef7aa8;--rot:#b0286a;--schwarz:#3a0f24}
+html[data-stil="maedchen"] body{background:radial-gradient(120% 90% at 50% 0%,#ffe0ef 0%,#f7a6d4 60%,#eb7bc0 100%);color:#3a0f24}
+html[data-stil="maedchen"] .fenster{background:#fff6fa;border-color:#ef7aa8;box-shadow:0 18px 40px #b52a6340}
+html[data-stil="maedchen"] .bahn{background:radial-gradient(120% 90% at 50% 0%,#fff6fa 0%,#ffeaf3 70%,#ffd0e4 100%)}
+html[data-stil="maedchen"] .karte{box-shadow:0 2px 5px #b52a6333}
+html[data-stil="maedchen"] .karte.hinten{background:repeating-linear-gradient(45deg,#ffffff40 0 2px,#00000000 2px 7px),repeating-linear-gradient(-45deg,#ffffff40 0 2px,#00000000 2px 7px),linear-gradient(160deg,#ffd0e4 0%,#ff9ec4 45%,#b06bff 100%);border-color:#8f2450}
+html[data-stil="maedchen"] .knopf{background:#fff6fa;border-color:#ef7aa8;color:#8f2450}
+html[data-stil="maedchen"] .knopf:hover{background:#ffeaf3;border-color:#b06bff}
+html[data-stil="maedchen"] .hinweis{color:#8f2450}
+html[data-stil="maedchen"] .hinweis.warnung{color:#b0286a}
+html[data-stil="maedchen"] .dialog{background:linear-gradient(180deg,#fff6fa,#ffeaf3);border-color:#ef7aa8;box-shadow:0 30px 70px -20px #b52a6355}
+html[data-stil="maedchen"] .dialog-zu{background:#ffe3ef;border-color:#ef7aa8;color:#8f2450}
+html[data-stil="maedchen"] .schleier{background:rgba(255,246,250,.82)}
+html[data-stil="maedchen"] .stapelfeld.waste .waste-zahl{background:#ffe3ef;border-color:#ef7aa8;color:#5b2340}
+html[data-stil="buben"]{--bg1:#141a21;--bg2:#0a0d10;--bg3:#04070b;--panel:#111316;--panel-2:#0b0e11;--text:#e6e9ec;--muted:#adb4bc;--warm:#c8ff3d;--warm-2:#6dff4a;--linie:rgba(255,255,255,.08);--linie-2:rgba(255,255,255,.16);--karte-1:#1e252d;--karte-2:#151a20;--karte-rand:#3a424b;--rot:#ff6b74;--schwarz:#e6e9ec}
+html[data-stil="buben"] body{background:radial-gradient(120% 90% at 50% 0%,#141a21 0%,#0a0d10 60%,#04070b 100%);color:#e6e9ec}
+html[data-stil="buben"] .fenster{background:#111316;border-color:#23262c;box-shadow:0 18px 40px #000000aa}
+html[data-stil="buben"] .bahn{background:radial-gradient(120% 90% at 50% 0%,#161d24 0%,#0a0d10 70%,#06090c 100%)}
+html[data-stil="buben"] .karte{box-shadow:0 2px 5px #000000aa}
+html[data-stil="buben"] .karte.hinten{background:repeating-linear-gradient(45deg,#ffffff14 0 2px,#00000000 2px 7px),repeating-linear-gradient(-45deg,#ffffff14 0 2px,#00000000 2px 7px),linear-gradient(160deg,#2a1418 0%,#1b0e11 45%,#0a0d10 100%);border-color:#e0242f}
+html[data-stil="buben"] .knopf{background:#1b1e23;border-color:#e0242f;color:#ff8a90}
+html[data-stil="buben"] .knopf:hover{background:#23262c;border-color:#ff5560}
+html[data-stil="buben"] .hinweis{color:#adb4bc}
+html[data-stil="buben"] .hinweis.warnung{color:#ff8a90}
+html[data-stil="buben"] .dialog{background:linear-gradient(180deg,#161d24,#0b0e11);border-color:#2b3540;box-shadow:0 30px 70px -20px #000}
+html[data-stil="buben"] .dialog-zu{background:#1b1e23;border-color:#2b3540;color:#e6e9ec}
+html[data-stil="buben"] .schleier{background:rgba(4,7,11,.86)}
+html[data-stil="buben"] .stapelfeld.waste .waste-zahl{background:#16181c;border-color:#2b3540;color:#e6e9ec}
+</style>
+</head>
+<body>
+<main class="seite">
+  <header class="kopf">
+    <h1>Solitär</h1>
+    <p class="unter">Fünf Varianten – ein Spiel</p>
+    <a class="zurueck" href="/spiele/spiele.html">← Spieleübersicht</a>
+  </header>
+
+  <section class="auswahl" id="modusAuswahl" aria-label="Spielmodus wählen">
+    <div class="modus-liste" id="modusListe"></div>
+  </section>
+
+  <section class="fenster" id="spielbereich" hidden aria-label="Spielfeld">
+    <div class="leiste">
+      <button type="button" class="knopf zweit" id="btnMenue">☰ Modi</button>
+      <button type="button" class="knopf" id="btnNeu">Neues Spiel</button>
+      <button type="button" class="knopf zweit" id="btnUndo">Rückgängig</button>
+      <button type="button" class="knopf zweit" id="btnTipp">Tipp</button>
+      <button type="button" class="knopf zweit" id="btnRegeln">Regeln</button>
+      <div class="leiste-optionen" id="optionen" hidden></div>
+      <span class="leiste-modus" id="hudModus"></span>
+    </div>
+    <div class="anzeige">
+      <span>Punkte <b id="hudPunkte">0</b></span>
+      <span>Züge <b id="hudZuege">0</b></span>
+      <span>Zeit <b id="hudZeit">0:00</b></span>
+      <span id="hudExtraBox" hidden><b id="hudExtra"></b></span>
+    </div>
+    <div class="bahn" id="bahn"><div id="brett"></div></div>
+    <p class="hinweis" id="hinweis" role="status"></p>
+  </section>
+</main>
+
+<div class="schleier" id="dialogSchleier" hidden>
+  <div class="dialog" id="dialog" role="dialog" aria-modal="true"></div>
+</div>
+
+<!-- Gemeinsames Kartenbild, Spaltenaufbau, dann die fünf Modi, zuletzt der Rahmen. -->
+<script src="js/karten.js"></script>
+<script src="js/tableau.js"></script>
+<script src="js/klondike.js"></script>
+<script src="js/spider.js"></script>
+<script src="js/freecell.js"></script>
+<script src="js/pyramid.js"></script>
+<script src="js/tripeaks.js"></script>
+<script src="js/shell.js"></script>
+</body>
+</html>

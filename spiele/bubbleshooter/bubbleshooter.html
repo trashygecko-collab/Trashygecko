@@ -33,12 +33,12 @@ body[data-stil="suess"]{
 }
 body[data-stil="hart"]{
  --bg1:#1c222a;--bg2:#0d1115;--bg3:#040608;
- --rahmen:#3a4650;--rahmen-hell:#c8ff3d;--akzent:#c8ff3d;--akzent-text:#101403;
- --feld:#0d1116;--feld-dunkel:#05080b;--leiste:#0a0e12;
- --text:#dfe7ee;--text-leise:#93a1ad;--titel:#c8ff3d;
- --akzent-2:#22d3ee;
+ --rahmen:#3a4650;--rahmen-hell:#e0242f;--akzent:#e0242f;--akzent-text:#101403;
+ --feld:#0d1116;--feld-dunkel:#05080b;--leiste:#08090b;
+ --text:#dfe7ee;--text-leise:#93a1ad;--titel:#e0242f;
+ --akzent-2:#b8c0c8;
  --radius:2px;--radius-klein:2px;--titel-weite:.16em;
- --buehne-schatten:#000000aa;--schleier:#04070ae6;--kasten-titel:#c8ff3d;
+ --buehne-schatten:#000000aa;--schleier:#060708e6;--kasten-titel:#e0242f;
 }
 body{margin:0;padding:6px 6px 18px;
  background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
@@ -60,20 +60,6 @@ main{max-width:760px;margin:auto}
  border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
 .menueleiste button:hover{filter:brightness(1.15);border-color:var(--rahmen-hell)}
 .menueleiste button.aktiv{background:var(--akzent);color:var(--akzent-text);border-color:var(--akzent);font-weight:bold}
-
-/* Ansichts-Wahl: der gewählte Knopf zeigt schon seine eigene Farbe. */
-.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;
- background:var(--leiste);border-bottom:1px solid var(--rahmen)}
-.stilwahl .stil-titel{font-size:12px;color:var(--text-leise);letter-spacing:.08em;
- text-transform:uppercase;margin-right:2px}
-.stilwahl button{font-family:inherit;font-size:13px;padding:6px 11px;border-radius:var(--radius-klein);
- border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
-.stilwahl button:hover{filter:brightness(1.12);border-color:var(--rahmen-hell)}
-.stilwahl button[data-stil="schlicht"].aktiv{background:var(--akzent);color:var(--akzent-text);
- border-color:var(--akzent);font-weight:bold}
-.stilwahl button[data-stil="suess"].aktiv{background:linear-gradient(#ffd0e4,#ff9ec4);color:#43182c;
- border-color:#ff9ec4;font-weight:bold}
-.stilwahl button[data-stil="hart"].aktiv{background:#c8ff3d;color:#101403;border-color:#c8ff3d;font-weight:bold}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
  padding:6px 10px;font-size:13px;color:var(--text-leise);background:var(--leiste);border-bottom:1px solid var(--rahmen)}
@@ -138,10 +124,47 @@ a{color:var(--akzent)}
 .meldung-knoepfe{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:2px}
 .meldung-knoepfe button.still{background:var(--feld);color:var(--kasten-titel);border-color:var(--rahmen)}
 .mitte{text-align:center}
+
+/* ---- Red Reactor: Titel in Silber, Rot bleibt der LED-Akzent ------------- */
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel,
+body[data-stil="buben"] .fenster .titel,
+body[data-stil="buben"] h2,
+body[data-stil="buben"] .meldung h2,
+body[data-stil="buben"] #regeln summary {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel {
+  text-shadow: none;
+}
+
+/* Red Reactor: Knopfaufschrift in Silber, Rot nur an Kante und Aktiv-Zustand */
+body[data-stil="buben"] button,
+body[data-stil="buben"] .menueleiste button,
+body[data-stil="buben"] .knopf,
+body[data-stil="buben"] select {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] button:hover:not(:disabled),
+body[data-stil="buben"] .menueleiste button:hover,
+body[data-stil="buben"] .knopf:hover:not(:disabled) {
+  color: #ffffff;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="buben"] .menueleiste button.aktiv,
+body[data-stil="buben"] .knopf.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="buben"] .aktion.haupt,
+body[data-stil="buben"] .meldung button {
+  color: #ffffff;
+  text-shadow: none;
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <script src="/spiele/token.js"></script>
 <script src="/spiele/brettspiele/wuerfel-common.js"></script>
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="schlicht">
 <main class="fenster">
@@ -156,12 +179,6 @@ a{color:var(--akzent)}
   <button id="btnDuell">2 Spieler</button>
  </div>
 
- <div class="stilwahl" id="stilwahl">
-  <span class="stil-titel">Ansicht</span>
-  <button type="button" data-stil="schlicht" class="aktiv">Schlicht</button>
-  <button type="button" data-stil="suess">Süß</button>
-  <button type="button" data-stil="hart">Hart</button>
- </div>
 
  <div class="statuszeile">
   <span id="statusLinks">Punkte <b id="punkte">0</b></span>
@@ -491,7 +508,7 @@ const STILE={
  hart:{
   name:"Hart",
   farbe:"#070a0d",
-  farben:["#39ff88","#22d3ee","#ff2d95","#ffb020","#a855f7"],
+  farben:["#ff5a63","#c9d1d9","#ff2d95","#ffb020","#a855f7"],
   text:"#b8c6d2",
   schrift:"Arial Narrow,Arial,Helvetica,sans-serif",
   rahmen:"#3a4650aa",
@@ -512,8 +529,8 @@ const STILE={
    // Spannung am unteren Rand
    const p=.55+.2*Math.sin(t*1.6);
    const s=g.createRadialGradient(W/2,H+R*2,10,W/2,H+R*2,R*11);
-   s.addColorStop(0,"#22d3ee"+Math.round(p*46).toString(16).padStart(2,"0"));
-   s.addColorStop(1,"#22d3ee00");
+   s.addColorStop(0,"#b8c0c8"+Math.round(p*46).toString(16).padStart(2,"0"));
+   s.addColorStop(1,"#b8c0c800");
    g.fillStyle=s;
    g.fillRect(0,H-R*9,W,R*9);
   },
@@ -529,7 +546,7 @@ const STILE={
    g.lineWidth=4.5;
    g.stroke();
    g.setLineDash([5,10]);
-   g.strokeStyle="#c8ff3daa";
+   g.strokeStyle="#e0242faa";
    g.lineWidth=1.2;
    g.stroke();
    g.restore();
@@ -538,7 +555,7 @@ const STILE={
     g.save();
     g.translate(ex,ey);
     g.rotate(Math.PI/4);
-    g.fillStyle="#c8ff3d";
+    g.fillStyle="#e0242f";
     g.fillRect(-4,-4,8,8);
     g.strokeStyle="#06110a";
     g.lineWidth=1.4;
@@ -577,7 +594,7 @@ const STILE={
    g.roundRect(-8,-R*2.2,16,R*2.2,2);
    g.fill();
    g.stroke();
-   g.strokeStyle="#c8ff3d";
+   g.strokeStyle="#e0242f";
    g.lineWidth=2;
    g.beginPath();
    g.moveTo(-5,-R*2.05);
@@ -586,7 +603,7 @@ const STILE={
    g.restore();
    // Laser-Ziellinie
    g.save();
-   g.strokeStyle="#c8ff3dcc";
+   g.strokeStyle="#e0242fcc";
    g.lineWidth=2;
    g.beginPath();
    g.moveTo(cx+Math.sin(winkel)*(R*1.9+10),cy-Math.cos(winkel)*(R*1.9+10));
@@ -604,14 +621,14 @@ const STILE={
    g.arc(cx,cy,R*0.95,0,Math.PI*2);
    g.fill();
    g.stroke();
-   g.strokeStyle="#c8ff3d66";
+   g.strokeStyle="#e0242f66";
    g.lineWidth=1.6;
    g.beginPath();
    g.arc(cx,cy,R*0.66,0,Math.PI*2);
    g.stroke();
    for(let i=0;i<3;i++){
     const a=-Math.PI/2+i*Math.PI*2/3;
-    g.fillStyle="#c8ff3d99";
+    g.fillStyle="#e0242f99";
     g.beginPath();
     g.arc(cx+Math.cos(a)*R*0.8,cy+Math.sin(a)*R*0.8,1.7,0,Math.PI*2);
     g.fill();
@@ -649,7 +666,7 @@ const STILE={
 };
 
 let stilWahl="schlicht";
-try{ const gespeichert=localStorage.getItem("bubble-stil"); if(STILE[gespeichert])stilWahl=gespeichert; }catch(e){}
+stilWahl=TGStil.lokal({ klassisch: "schlicht", maedchen: "suess", buben: "hart" });
 const STIL=()=>STILE[stilWahl]||STILE.schlicht;
 
 function stilSetzen(neu){
@@ -658,10 +675,6 @@ function stilSetzen(neu){
  document.body.dataset.stil=neu;
  const meta=document.querySelector('meta[name="theme-color"]');
  if(meta)meta.content=STILE[neu].farbe;
- document.querySelectorAll("#stilwahl button").forEach(b=>{
-  b.classList.toggle("aktiv",b.dataset.stil===neu);
- });
- try{ localStorage.setItem("bubble-stil",neu); }catch(e){}
  bretter.forEach(({brett})=>brett.zeichne());
 }
 const TEMPO=8.5;          // Kugelgeschwindigkeit pro Frame
@@ -1472,9 +1485,7 @@ $("btnDuell").onclick=()=>{
 };
 
 stilSetzen(stilWahl);
-document.querySelectorAll("#stilwahl button").forEach(b=>{
- b.onclick=()=>stilSetzen(b.dataset.stil);
-});
+TGStil.beiWechsel(()=>stilSetzen(TGStil.lokal({ klassisch: "schlicht", maedchen: "suess", buben: "hart" })));
 
 rekord=rekordLaden();
 spielAufbauen();

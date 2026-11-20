@@ -27,21 +27,12 @@ body[data-stil="maedchen"]{
 
 /* Ansicht Jungs: schwarzer Stollen */
 body[data-stil="jungs"]{
-  --bg:#08090b; --panel:#0e1116; --line:#252b34; --gold:#ff4b3f; --ink:#dde3ea;
-  --muted:#8892a0; --rot:#ff3b30; --gruen:#4fb3a0;
-  --glanz:radial-gradient(ellipse at 50% 0%,#161a20 0%,transparent 55%);
-  --buehne:#05070a; --taste:#141920; --schleier:#05070add;
-  --knopf-text:#08090b; --knopf-rand:#ff7b72;
+  --bg:#0a0a0b; --panel:#141517; --line:#2f3135; --gold:#e0242f; --ink:#e8e9ea;
+  --muted:#8d9097; --rot:#ff5560; --gruen:#cfd0d3;
+  --glanz:radial-gradient(ellipse at 50% 0%,#1c1d1f 0%,transparent 55%);
+  --buehne:#050506; --taste:#1c1d1f; --schleier:#050506dd;
+  --knopf-text:#ffffff; --knopf-rand:#ff8a90;
 }
-
-.stilwahl{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--muted)}
-.stilwahl button{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;
-  border:1px solid var(--line);background:var(--taste);color:var(--ink)}
-.stilwahl button.aktiv{border-color:var(--gold);color:var(--gold);font-weight:bold}
-body[data-stil="klassisch"] .stilwahl button.aktiv{background:var(--gold);color:var(--knopf-text)}
-body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
-  border-color:#e2537f;box-shadow:0 2px 8px #ff77ad44}
-body[data-stil="jungs"] .stilwahl button.aktiv{background:var(--gold);color:var(--knopf-text);box-shadow:0 0 10px #ff4b3f55}
 *{box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{
@@ -88,7 +79,44 @@ button.aktion:active{transform:scale(.97)}
   .app{gap:4px}
   .kopf{font-size:12px}
 }
+
+/* ---- Red Reactor: Titel und Knopfaufschrift in Silber, Rot nur als LED-Akzent ---- */
+body[data-stil="buben"] .titel,
+body[data-stil="jungs"] .titel,
+body[data-stil="maenner"] .titel,
+body[data-stil="buben"] .kopf h1,
+body[data-stil="jungs"] .kopf h1,
+body[data-stil="maenner"] .kopf h1,
+body[data-stil="buben"] h2,
+body[data-stil="jungs"] h2,
+body[data-stil="maenner"] h2 {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button,
+body[data-stil="jungs"] button,
+body[data-stil="maenner"] button,
+body[data-stil="buben"] .knopf,
+body[data-stil="jungs"] .knopf,
+body[data-stil="maenner"] .knopf {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="jungs"] button.aktiv,
+body[data-stil="maenner"] button.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="jungs"] button.haupt,
+body[data-stil="maenner"] button.haupt {
+  color: #ffffff;
+}
+
+/* Red Reactor: Dialog-Hauptknopf trägt weiße Schrift */
+body[data-stil="buben"] .meldung button,
+body[data-stil="jungs"] .meldung button,
+body[data-stil="maenner"] .meldung button {
+  color: #ffffff;
+}
 </style>
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="klassisch">
 <main class="app">
@@ -123,12 +151,6 @@ button.aktion:active{transform:scale(.97)}
   <div class="fuss">
     <button class="aktion" id="btnGraben">Haken auswerfen</button>
     <span class="hinweis">Tasten: Leertaste / Pfeil unten · am Handy: Bildschirm antippen</span>
-    <div class="stilwahl" id="stilwahl">
-      <span>Ansicht</span>
-      <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
-      <button type="button" data-stil="maedchen">Mädchen</button>
-      <button type="button" data-stil="jungs">Jungs</button>
-    </div>
   </div>
 </main>
 
@@ -720,9 +742,9 @@ function spinnwebe(x, y, r, dreh) {
 
 function himmelJungs(oben) {
   const g = ctx.createLinearGradient(0, 0, 0, oben);
-  g.addColorStop(0, "#04060a");
-  g.addColorStop(0.65, "#0a0f15");
-  g.addColorStop(1, "#131a22");
+  g.addColorStop(0, "#050506");
+  g.addColorStop(0.65, "#0e0f10");
+  g.addColorStop(1, "#1c1d1f");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, oben);
 
@@ -731,7 +753,7 @@ function himmelJungs(oben) {
     const x = ((i * 211) % (W + 100)) - 50;
     const y = 6 + ((i * 127) % Math.max(16, oben - 16));
     const r = 12 + (i % 5) * 8;
-    ctx.fillStyle = i % 2 ? "#ffffff07" : "#0000005e";
+    ctx.fillStyle = i % 2 ? "#ffffff07" : "#0505065e";
     ctx.beginPath();
     ctx.moveTo(x - r, y);
     ctx.lineTo(x - r * 0.25, y - r * 0.75);
@@ -756,7 +778,7 @@ function himmelJungs(oben) {
     ctx.fillRect(px, by + bh, ph, Math.max(4, oben - by - bh));
   }
   // Maserung
-  ctx.strokeStyle = "#00000055";
+  ctx.strokeStyle = "#05050655";
   ctx.lineWidth = 1;
   for (let i = 0; i < 4; i++) {
     const y = by + bh * (0.25 + i * 0.18);
@@ -766,7 +788,7 @@ function himmelJungs(oben) {
     ctx.stroke();
   }
   // Plankenstöße
-  ctx.strokeStyle = "#00000066";
+  ctx.strokeStyle = "#05050666";
   for (let x = 46; x < W; x += 74) {
     ctx.beginPath();
     ctx.moveTo(x, by);
@@ -786,7 +808,7 @@ function himmelJungs(oben) {
   ctx.lineTo(W * 0.965 - ph - oben * 0.28, by + bh);
   ctx.stroke();
   // Nägel
-  ctx.fillStyle = "#8d8577";
+  ctx.fillStyle = "#7c8088";
   for (const px of [W * 0.035 + ph / 2, W * 0.965 - ph / 2]) {
     for (const y of [by + bh * 0.5, oben - 3]) {
       ctx.beginPath();
@@ -814,7 +836,7 @@ function erdeJungs(oben) {
   ctx.fillStyle = g;
   ctx.fillRect(0, oben, W, H - oben);
   // Felskante
-  ctx.strokeStyle = "#3a3f47";
+  ctx.strokeStyle = "#3d4045";
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(0, oben);
@@ -828,7 +850,7 @@ function erdeJungs(oben) {
     ctx.arc(x, y, 2 + (i % 4), 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = "#5a6068";
+  ctx.fillStyle = "#5c5f66";
   for (let i = 0; i < 12; i++) {
     const x = (i * 307 + 60) % W, y = oben + 36 + ((i * 157) % geroll);
     ctx.beginPath();
@@ -898,28 +920,28 @@ function windeMaedchen(oben) {
 function windeJungs(oben) {
   const x = DREH.x, y = DREH.y;
   // Kette vom Stollenbalken herab
-  ctx.strokeStyle = "#6c737c";
+  ctx.strokeStyle = "#6e727a";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(x, oben * 0.2);
   ctx.lineTo(x, y - 15);
   ctx.stroke();
-  ctx.fillStyle = "#8d949c";
+  ctx.fillStyle = "#8f939a";
   for (let yy = oben * 0.2 + 4; yy < y - 15; yy += 7) {
     ctx.fillRect(x - 1.6, yy, 3.2, 3.2);
   }
   // Eisentrommel
-  ctx.fillStyle = "#1a2027";
+  ctx.fillStyle = "#1c1d1f";
   ctx.fillRect(x - 26, y - 17, 52, 19);
-  ctx.fillStyle = "#2b333c";
+  ctx.fillStyle = "#2f3135";
   ctx.fillRect(x - 26, y - 17, 52, 5);
-  ctx.fillStyle = "#11161b";
+  ctx.fillStyle = "#141517";
   ctx.fillRect(x - 18, y - 10, 36, 9);
-  ctx.fillStyle = "#3c454f";
+  ctx.fillStyle = "#3d4045";
   ctx.beginPath();
   ctx.arc(x, y - 5.5, 5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#9fa8b2";
+  ctx.strokeStyle = "#a4a7ad";
   ctx.lineWidth = 1.6;
   ctx.beginPath();
   ctx.arc(x, y - 5.5, 5, 0, Math.PI * 2);
@@ -944,7 +966,7 @@ const ANSICHT = {
                seil: "#fbf6ea", haken: "#2b3a46", hakenRand: "#fbf6ea", holzA: "#b8875a", holzB: "#d9a978" },
   jungs:     { himmel: himmelJungs, erde: erdeJungs, vorn: () => {},
                winde: windeJungs,
-               seil: "#9fa8b2", haken: "#cdd3d8", holzA: "#3a2a19", holzB: "#5a4128" }
+               seil: "#a4a7ad", haken: "#d0d2d5", holzA: "#3a2a19", holzB: "#5a4128" }
 };
 
 /* ---------------------------- Zeichnen ----------------------------- */
@@ -1104,25 +1126,15 @@ window.goldMinerStand = () => {
 };
 
 /* ---------------------------- Ansicht ------------------------------ */
-const STIL_KEY = "goldminer-stil";
 function stilSetzen(name, merken) {
   if (!["klassisch", "maedchen", "jungs"].includes(name)) name = "klassisch";
   stil = name;
   document.body.dataset.stil = name;
-  if (merken !== false) {
-    try { localStorage.setItem(STIL_KEY, name); } catch (e) {}
-  }
-  document.querySelectorAll("#stilwahl button").forEach((b) => {
-    b.classList.toggle("aktiv", b.dataset.stil === name);
-  });
   zeichne();
 }
-let startStil = "klassisch";
-try { startStil = localStorage.getItem(STIL_KEY) || "klassisch"; } catch (e) {}
-stilSetzen(startStil, false);
-document.querySelectorAll("#stilwahl button").forEach((b) => {
-  b.addEventListener("click", () => stilSetzen(b.dataset.stil));
-});
+let startStil = TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" });
+stilSetzen(startStil);
+TGStil.beiWechsel(() => stilSetzen(TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" })));
 
 passeAn();
 bildAus = requestAnimationFrame(bild);

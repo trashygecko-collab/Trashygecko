@@ -4,29 +4,70 @@
 <script src="/spiele/token.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a211b">
 <meta name="color-scheme" content="dark">
 <title>Schlangen und Leitern</title>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <link rel="stylesheet" href="/spiele/brettspiele/wuerfel.css">
 <style>
+
+:root{
+/* Klassisch sind genau die alten Farben. Geruest, Leisten und Knoepfe
+   kommen aus wuerfel.css (--wg-...), das auch die Stilbloecke traegt.
+   Leiter und Schlange stecken als SVG-Attribut im Zeichencode; nur die
+   Stilbloecke ueberschreiben sie (--leiter, --schlange, --fig...). */
+--feld:#14382d;--feld-rand:#1b4133;--feld-dunkel:#103026;--ziel:#3b3221;--ziel-rand:#e8cd8e;
+--start:#1d4a3a;--nummer:#7f9c8c;--start-text:#a9c3b6;--figur-schatten:#0a211b;
+/* Wege: Leiter und Schlange zeichnet der Code, er liest nur diese Tokens. */
+--leiter:#f0dca8;--leiter-dunkel:#7c5c2e;--leiter-hell:#d9b978;--leiter-schatten:#000000;
+--schlange:#c85a45;--schlange-hell:#e07b5e;--schlange-rand:#6f2b1f;
+--bauch:#f2cfa6;--zunge:#e0503f;--auge:#fff8ee;--pupille:#241713;--weg-schatten:#04140f;
+}
+
 .brett{position:relative;width:min(100%,calc(100dvh - 250px));max-width:100%;margin:0 auto;aspect-ratio:1;
   overflow:visible}
 @media(max-height:520px){.brett{width:min(100%,calc(100dvh - 96px))}}
 .raster{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);
   grid-template-rows:repeat(10,1fr);gap:2px}
-.feld{position:relative;border-radius:5px;background:#14382d;border:1px solid #1b4133;
+.feld{position:relative;border-radius:5px;background:var(--feld);border:1px solid var(--feld-rand);
   display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px;
-  font-size:clamp(7px,1.5vh,12px);color:#7f9c8c}
-.feld.dunkel{background:#103026}
-.feld.ziel{background:#3b3221;border-color:#e8cd8e;color:#e8cd8e}
+  font-size:clamp(7px,1.5vh,12px);color:var(--nummer)}
+.feld.dunkel{background:var(--feld-dunkel)}
+.feld.ziel{background:var(--ziel);border-color:var(--ziel-rand);color:var(--ziel-rand)}
 .wege{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-.startzone{position:absolute;left:0;right:0;bottom:-34px;height:30px;border:1px dashed #1d4a3a;
-  border-radius:8px;display:flex;align-items:center;justify-content:center;color:#a9c3b6;font-size:11px}
+.startzone{position:absolute;left:0;right:0;bottom:-34px;height:30px;border:1px dashed var(--start);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--start-text);font-size:11px}
 .figuren{position:absolute;inset:0;pointer-events:none}
 .figuren .figur{position:absolute;width:clamp(12px,2.4vh,20px);height:clamp(12px,2.4vh,20px);
   transform:translate(-50%,-50%);transition:left .11s linear,top .11s linear;z-index:3;
-  box-shadow:0 0 0 2px #0a211b,0 1px 3px rgba(0,0,0,.6)}
+  box-shadow:0 0 0 2px var(--figur-schatten),0 1px 3px rgba(0,0,0,.6)}
 .figuren .figur.weich{transition:left .42s ease-in-out,top .42s ease-in-out}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--feld:#fff6fa;--feld-rand:#ef7aa8;--feld-dunkel:#ffeaf3;--ziel:#ffd0e4;--ziel-rand:#8f2450;
+--start:#ff9ec4;--nummer:#a2557a;--start-text:var(--ziel-rand);--figur-schatten:var(--feld-rand);
+--fig-1:#2a8f6a;--fig-2:#ff8fb0;--fig-3:#7a5cff;
+--leiter:#ffd23f;--leiter-dunkel:#b07c00;--leiter-hell:#fff0a0;
+--schlange:var(--feld-rand);--schlange-hell:var(--ziel);--schlange-rand:#b0286a;
+--bauch:#ffffff;--zunge:#b06bff;--auge:var(--bauch);--pupille:#5b2340;--weg-schatten:var(--pupille);--leiter-schatten:var(--ziel-rand);
+}
+html[data-stil="buben"]{
+--feld:#12161a;--feld-rand:#2b3540;--feld-dunkel:#0d1013;--ziel:#1b222b;--ziel-rand:#c8ff3d;
+--start:#e0242f;--nummer:#7e8892;--start-text:#adb4bc;--figur-schatten:#000000;
+--fig-1:#6dff4a;--fig-2:#ff5560;--fig-3:#7fb0ff;
+--leiter:var(--ziel-rand);--leiter-dunkel:#5c7d15;--leiter-hell:#e8ff9e;
+--schlange:var(--start);--schlange-hell:var(--fig-2);--schlange-rand:#6d1a1f;
+--bauch:#ffb3b8;--zunge:var(--ziel-rand);--auge:#e6e9ec;--pupille:#0a0d10;--weg-schatten:var(--figur-schatten);--leiter-schatten:var(--figur-schatten);
+}
+/* Spielfiguren: --farbe setzt der Zeichencode inline, daher !important */
+html[data-stil="maedchen"] .figur[data-sitz="0"],html[data-stil="buben"] .figur[data-sitz="0"]{--farbe:var(--fig-0) !important}
+html[data-stil="maedchen"] .figur[data-sitz="1"],html[data-stil="buben"] .figur[data-sitz="1"]{--farbe:var(--fig-1) !important}
+html[data-stil="maedchen"] .figur[data-sitz="2"],html[data-stil="buben"] .figur[data-sitz="2"]{--farbe:var(--fig-2) !important}
+html[data-stil="maedchen"] .figur[data-sitz="3"],html[data-stil="buben"] .figur[data-sitz="3"]{--farbe:var(--fig-3) !important}
+/* Erste Figur: in beiden neuen Stilen die Zielfarbe */
+html[data-stil="maedchen"],html[data-stil="buben"]{--fig-0:var(--ziel-rand)}
+</style>
 </style>
 </head>
 <body>
@@ -248,13 +289,13 @@ function wegeZeichnen(sp) {
     let streben = holm(1) + holm(-1);
     for (let k = 1; k <= stufen; k++) streben += sprosse(k / (stufen + 1));
     // Schatten leicht versetzt, dann dunkle Kontur, dann helleres Holz darauf
-    teile.push(`<g transform="translate(.8 1)" opacity=".26" stroke="#000" fill="none"
+    teile.push(`<g transform="translate(.8 1)" opacity=".26" stroke="var(--leiter-schatten)" fill="none"
       stroke-width="2.8" stroke-linecap="round">${streben}</g>`);
     teile.push(`<g fill="none" stroke-linecap="round">
-      <g stroke="#7c5c2e" stroke-width="2">${streben}</g>
-      <g stroke="#d9b978" stroke-width="1.05">${streben}</g></g>`);
+      <g stroke="var(--leiter-dunkel)" stroke-width="2">${streben}</g>
+      <g stroke="var(--leiter-hell)" stroke-width="1.05">${streben}</g></g>`);
     const knauf = (p) => `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r=".8"
-      fill="#f0dca8" stroke="#7c5c2e" stroke-width=".3"/>`;
+      fill="var(--leiter)" stroke="var(--leiter-dunkel)" stroke-width=".3"/>`;
     teile.push(knauf(a) + knauf(b));
   }
 
@@ -286,9 +327,9 @@ function wegeZeichnen(sp) {
     }
     const koerper = "M" + links.join(" L") + " L" + rechts.reverse().join(" L") + " Z";
     const mitte = "M" + punkte.map((p) => p.x.toFixed(2) + " " + p.y.toFixed(2)).join(" L");
-    teile.push(`<path d="${koerper}" transform="translate(.7 1)" fill="#04140f" opacity=".35" stroke="none"/>`);
-    teile.push(`<path d="${koerper}" fill="#c85a45" stroke="#6f2b1f" stroke-width=".45" stroke-linejoin="round"/>`);
-    teile.push(`<path d="${mitte}" fill="none" stroke="#f2cfa6" stroke-width="1.05"
+    teile.push(`<path d="${koerper}" transform="translate(.7 1)" fill="var(--weg-schatten)" opacity=".35" stroke="none"/>`);
+    teile.push(`<path d="${koerper}" fill="var(--schlange)" stroke="var(--schlange-rand)" stroke-width=".45" stroke-linejoin="round"/>`);
+    teile.push(`<path d="${mitte}" fill="none" stroke="var(--bauch)" stroke-width="1.05"
       stroke-dasharray="1.5 2.6" stroke-linecap="round" opacity=".8"/>`);
     // Kopf am hohen Feld, Blick aus dem Körper heraus
     const k = punkte[0], n1 = punkte[2] || punkte[1];
@@ -296,15 +337,15 @@ function wegeZeichnen(sp) {
     const hl = Math.hypot(hx, hy) || 1;
     const winkel = (Math.atan2(hy / hl, hx / hl) * 180) / Math.PI;
     teile.push(`<g transform="translate(${k.x.toFixed(2)} ${k.y.toFixed(2)}) rotate(${winkel.toFixed(1)})">
-      <ellipse cx="1.15" cy="0" rx="2.45" ry="1.95" fill="#c85a45" stroke="#6f2b1f" stroke-width=".4"/>
-      <ellipse cx="1.55" cy="0" rx="1.45" ry="1.2" fill="#e07b5e" opacity=".5"/>
-      <circle cx="2.05" cy="-.85" r=".52" fill="#fff8ee"/><circle cx="2.2" cy="-.85" r=".26" fill="#241713"/>
-      <circle cx="2.05" cy=".85" r=".52" fill="#fff8ee"/><circle cx="2.2" cy=".85" r=".26" fill="#241713"/>
-      <path d="M3.45 0 l1.35 -.75 M3.45 0 l1.35 .75" stroke="#e0503f" stroke-width=".32"
+      <ellipse cx="1.15" cy="0" rx="2.45" ry="1.95" fill="var(--schlange)" stroke="var(--schlange-rand)" stroke-width=".4"/>
+      <ellipse cx="1.55" cy="0" rx="1.45" ry="1.2" fill="var(--schlange-hell)" opacity=".5"/>
+      <circle cx="2.05" cy="-.85" r=".52" fill="var(--auge)"/><circle cx="2.2" cy="-.85" r=".26" fill="var(--pupille)"/>
+      <circle cx="2.05" cy=".85" r=".52" fill="var(--auge)"/><circle cx="2.2" cy=".85" r=".26" fill="var(--pupille)"/>
+      <path d="M3.45 0 l1.35 -.75 M3.45 0 l1.35 .75" stroke="var(--zunge)" stroke-width=".32"
         fill="none" stroke-linecap="round"/>
     </g>`);
     const s = punkte[punkte.length - 1];
-    teile.push(`<circle cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r=".5" fill="#6f2b1f"/>`);
+    teile.push(`<circle cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r=".5" fill="var(--schlange-rand)"/>`);
   }
 
   elWege.innerHTML = teile.join("");
@@ -528,6 +569,18 @@ if (ONLINE) {
   spielerZeichnen({ spieler: [], status: "", zug: -1 });
   elZug.textContent = "";
 }
+})();
+</script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0a211b",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0a211b";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
 </body>

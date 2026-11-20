@@ -32,13 +32,13 @@ body[data-stil="maedchen"]{
 }
 /* Buben: Neon – fast schwarze Seite, dunkle Zellen, Acid-Treffer mit Leuchten. */
 body[data-stil="buben"]{
-  --bg:#05080c; --panel:#0b1219; --line:#1e2a35; --gold:#c8ff3d; --ink:#e6f0f7;
-  --muted:#7f8f9b; --gruen:#6dff4a; --rot:#ff5a3d;
-  --glanz:#0f1a24; --taste:#121a22; --chip:#0c141b;
-  --zelle-bg:#121a22; --zelle-rand:#22303c; --zelle-ink:#cfe3ef; --zelle-hover:#1a2530;
-  --wahl-bg:#1d1a08; --wahl-rand:#c8ff3d; --wahl-ink:#eaff9c;
-  --linie-bg:#14202a; --linie-rand:#38e1ff; --linie-ink:#c8f6ff;
-  --gef-bg:#0f2f1a; --gef-rand:#6dff4a; --gef-ink:#d8ffc0; --gef-glow:#6dff4a66;
+  --bg:#090808; --panel:#14161a; --line:#24272d; --gold:#e0242f; --ink:#ebeae9;
+  --muted:#7f868f; --gruen:#ff4a55; --rot:#ff5a3d;
+  --glanz:#14161a; --taste:#191c21; --chip:#181b1f;
+  --zelle-bg:#191c21; --zelle-rand:#2b3038; --zelle-ink:#dad7d6; --zelle-hover:#202329;
+  --wahl-bg:#1d1a08; --wahl-rand:#e0242f; --wahl-ink:#f47b89;
+  --linie-bg:#1b1e23; --linie-rand:#d3d0cf; --linie-ink:#e8e6e5;
+  --gef-bg:#1c0c0e; --gef-rand:#ff4a55; --gef-ink:#f47b89; --gef-glow:#ff4a5566;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -89,13 +89,6 @@ button.aktion:disabled{opacity:.45;cursor:default}
 button.aktion.haupt{background:var(--gold);color:var(--taste);border-color:var(--gold);font-weight:bold}
 body[data-stil="maedchen"] button.aktion.haupt{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
   border-color:#e2537f}
-.stilwahl{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap}
-.stilwahl button{font-family:inherit;font-size:12px;padding:6px 11px;border-radius:999px;cursor:pointer;
-  border:1px solid var(--line);background:var(--taste);color:var(--gold)}
-.stilwahl button.aktiv{background:var(--gold);color:var(--taste);border-color:var(--gold);font-weight:bold}
-body[data-stil="maedchen"] .stilwahl button.aktiv{background:linear-gradient(#ff9ec4,#ff77ad);color:#fff;
-  border-color:#e2537f}
-body[data-stil="buben"] .stilwahl button.aktiv{box-shadow:0 0 10px #c8ff3d55}
 .worte{display:flex;flex-wrap:wrap;gap:5px;overflow:auto;min-height:0;align-content:flex-start}
 .wort{border:1px solid var(--line);border-radius:7px;padding:4px 8px;font-size:clamp(11px,1.7vh,14px);
   letter-spacing:1px;background:var(--chip)}
@@ -122,18 +115,50 @@ body[data-stil="buben"] .stilwahl button.aktiv{box-shadow:0 0 10px #c8ff3d55}
   .karte.seite{overflow:visible}
   .wort{font-size:clamp(12px,1.9vh,15px);padding:6px 10px}
 }
+
+/* ---- Red Reactor: Titel in Silber, Rot bleibt der LED-Akzent ------------- */
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel,
+body[data-stil="buben"] .fenster .titel,
+body[data-stil="buben"] h2,
+body[data-stil="buben"] .meldung h2,
+body[data-stil="buben"] #regeln summary {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel {
+  text-shadow: none;
+}
+
+/* Red Reactor: Knopfaufschrift in Silber, Rot nur an Kante und Aktiv-Zustand */
+body[data-stil="buben"] button,
+body[data-stil="buben"] .menueleiste button,
+body[data-stil="buben"] .knopf,
+body[data-stil="buben"] select {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] button:hover:not(:disabled),
+body[data-stil="buben"] .menueleiste button:hover,
+body[data-stil="buben"] .knopf:hover:not(:disabled) {
+  color: #ffffff;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="buben"] .menueleiste button.aktiv,
+body[data-stil="buben"] .knopf.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="buben"] .aktion.haupt,
+body[data-stil="buben"] .meldung button {
+  color: #ffffff;
+  text-shadow: none;
+}
 </style>
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="klassisch">
 <main class="app">
   <header class="kopf">
     <div class="titel">WORTSUCHE</div>
     <small id="lage">Bereit</small>
-    <div class="stilwahl" id="stilwahl">
-      <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
-      <button type="button" data-stil="maedchen">Mädchen</button>
-      <button type="button" data-stil="buben">Buben</button>
-    </div>
     <div class="leiste" id="startLeiste">
       <button class="aktion haupt" id="btnStart">Spiel starten</button>
       <button class="aktion" id="btnNeu">Neue Runde</button>
@@ -632,24 +657,16 @@ $("btnBereit").addEventListener("click", () => schicke("ready"));
 $("btnLos").addEventListener("click", () => schicke("start"));
 
 // ------------------------------------------------------------------ Ansicht
-const STIL_KEY = "wortsuche-stil";
 function stilSetzen(name, merken) {
   const gueltig = (name === "maedchen" || name === "buben") ? name : "klassisch";
   document.body.dataset.stil = gueltig;
   document.documentElement.style.colorScheme = gueltig === "maedchen" ? "light" : "dark";
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = gueltig === "maedchen" ? "#fff2f8" : gueltig === "buben" ? "#05080c" : "#0a211b";
-  if (merken !== false) { try { localStorage.setItem(STIL_KEY, gueltig); } catch (e) {} }
-  document.querySelectorAll("#stilwahl button").forEach((b) => {
-    b.classList.toggle("aktiv", b.dataset.stil === gueltig);
-  });
 }
-document.querySelectorAll("#stilwahl button").forEach((b) => {
-  b.addEventListener("click", () => stilSetzen(b.dataset.stil));
-});
-let startStil = "klassisch";
-try { startStil = localStorage.getItem(STIL_KEY) || "klassisch"; } catch (e) {}
-stilSetzen(startStil, false);
+let startStil = TGStil.lokal();
+stilSetzen(startStil);
+TGStil.beiWechsel(() => stilSetzen(TGStil.lokal()));
 
 if (ONLINE) {
   // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die

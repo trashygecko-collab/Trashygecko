@@ -1,0 +1,406 @@
+/* ===========================================================================
+   HALMA – Darstellung (drei Designwelten)
+
+   Alle Farben hängen an CSS-Variablen; die Welt wird über body[data-stil]
+   gewählt. Die Spielfiguren bekommen ihre Farben aus js/design.js.
+   =========================================================================== */
+
+* { box-sizing: border-box; }
+
+/* hidden muss auch gegen display:flex gewinnen. */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  background-attachment: fixed;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ------------------------------------------------------------------ Gerüst */
+.seite {
+  max-width: 1240px; margin: 0 auto; height: 100dvh;
+  padding: clamp(8px, 1.2vw, 16px);
+  display: flex; flex-direction: column; gap: clamp(8px, 1vw, 12px);
+  overflow: hidden;
+}
+
+.kopf {
+  display: flex; align-items: center; gap: clamp(8px, 1.4vw, 16px); flex-wrap: wrap;
+  padding: 10px 14px 12px;
+  background: var(--kopf-bg); border: 1px solid var(--kopf-rand);
+  border-radius: 14px; box-shadow: var(--kopf-schatten);
+}
+.kopf h1 {
+  margin: 0; font-size: clamp(17px, 2.2vw, 24px); letter-spacing: .06em;
+  font-family: var(--titel-schrift); color: var(--titel); font-weight: 700;
+}
+.kopf .unter { margin: 2px 0 0; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.kopf .rechts { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.buehne {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(8px, 1vw, 12px); align-items: stretch;
+}
+.bereich {
+  min-width: 0; min-height: 0; overflow: auto;
+  padding: clamp(10px, 1.4vw, 16px);
+  background: var(--panel); border: 1px solid var(--panel-rand);
+  border-radius: 16px; box-shadow: var(--panel-schatten);
+}
+
+/* -------------------------------------------------------------------- Menü */
+.menue { display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+.menue h2 { margin: 0; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--akzent); }
+.varianten { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.variante {
+  display: flex; gap: 10px; align-items: flex-start; text-align: left;
+  padding: 10px; border-radius: 12px; cursor: pointer; font: inherit; color: var(--text);
+  background: var(--karte-bg); border: 1px solid var(--karte-rand);
+  transition: transform .12s ease, border-color .12s ease;
+}
+.variante:hover { transform: translateY(-2px); }
+.variante.aktiv { border-color: var(--akzent); box-shadow: 0 0 0 1px var(--akzent) inset; }
+.variante svg { flex: 0 0 44px; width: 44px; height: 44px; }
+.variante b { display: block; font-size: 13.5px; letter-spacing: .02em; }
+.variante span { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.variante[disabled] { opacity: .45; cursor: not-allowed; }
+
+.optionen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.feldgruppe { display: flex; flex-direction: column; gap: 4px; }
+.feldgruppe label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.feldgruppe select, .feldgruppe input[type="number"] {
+  font: inherit; font-size: 13px; padding: 7px 9px; border-radius: 9px;
+  background: var(--input-bg); color: var(--text); border: 1px solid var(--input-rand);
+}
+.schalter { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.schalter input { width: 16px; height: 16px; accent-color: var(--akzent); }
+
+.knopfreihe { display: flex; gap: 8px; flex-wrap: wrap; }
+.knopf {
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .08em;
+  padding: 10px 18px; border-radius: 10px; cursor: pointer;
+  background: var(--knopf-bg); color: var(--knopf-text); border: 1px solid var(--knopf-rand);
+  box-shadow: var(--knopf-schatten);
+}
+.knopf.zweit { background: var(--knopf2-bg); color: var(--knopf2-text); border-color: var(--knopf2-rand); box-shadow: none; }
+.knopf:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ------------------------------------------------------------------ Spiel */
+.spiel { display: flex; flex-direction: column; min-height: 0; gap: 8px; overflow: hidden; }
+.leiste {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 12.5px;
+}
+.marke {
+  padding: 4px 10px; border-radius: 999px; font-size: 11.5px; letter-spacing: .08em;
+  background: var(--marke-bg); color: var(--marke-text); border: 1px solid var(--marke-rand);
+}
+.marke.dran { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); font-weight: 700; }
+.leiste .rechts { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+.brettrahmen {
+  flex: 1 1 auto; min-height: 0; display: grid; place-items: center;
+  padding: 4px;
+}
+.brett { position: relative; border-radius: 14px; touch-action: manipulation; }
+
+.feld {
+  position: absolute; display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--feld);
+  border: 1px solid var(--feld-rand);
+  box-shadow: var(--feld-schatten);
+  transition: background .12s ease, box-shadow .12s ease;
+}
+.brett.quadrat .feld { border-radius: 22%; }
+.feld.zone { background: var(--zone-bg); border-color: var(--zone-rand); }
+.feld.start { box-shadow: inset 0 0 0 1px var(--zone-rand); }
+.feld.mark {
+  background: var(--mark-bg);
+  box-shadow: 0 0 0 2px var(--mark-ring), 0 0 10px var(--mark-schein);
+  cursor: pointer;
+}
+.feld.mark.sprung { background: var(--sprung-bg); box-shadow: 0 0 0 2px var(--sprung-ring), 0 0 10px var(--sprung-schein); }
+.feld.letzter { box-shadow: inset 0 0 0 2px var(--letzter-rand); }
+.feld.gerade { background: var(--gerade-bg); }
+
+.figur {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 34% 26%, var(--figur-hell) 0%, var(--figur) 52%, var(--figur-dunkel) 100%);
+  border: 1px solid var(--figur-rand);
+  box-shadow: inset 0 -2px 5px rgba(0, 0, 0, .35), inset 0 2px 3px rgba(255, 255, 255, .35),
+              0 3px 5px rgba(0, 0, 0, .45);
+  cursor: pointer; z-index: 3;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.figur::after {
+  content: ""; position: absolute; left: 22%; top: 14%; width: 30%; height: 24%;
+  border-radius: 50%; background: rgba(255, 255, 255, .55); filter: blur(1px);
+}
+.figur.eigene { cursor: pointer; }
+.figur.gewaehlt {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 2px var(--auswahl-ring), 0 0 12px var(--auswahl-schein),
+              inset 0 -2px 5px rgba(0, 0, 0, .35);
+  z-index: 4;
+}
+.figur.fremd { cursor: default; }
+.figur.huepft { animation: huepf .42s ease-out; }
+@keyframes huepf {
+  0% { transform: scale(1.1) translateY(0); }
+  45% { transform: scale(1.16) translateY(-28%); }
+  100% { transform: scale(1.12) translateY(0); }
+}
+
+/* -------------------------------------------------------------- Feldlupe */
+/* Auf dem Handy sind die 16×16-Felder nur gut 20 px breit. Die Lupe zeigt
+   den 5×5-Ausschnitt um das angetippte Feld mit 60 px je Feld. */
+.lupe {
+  position: fixed; z-index: 15; padding: 6px 6px 6px;
+  border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--panel-rand);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .62);
+  touch-action: manipulation;
+}
+.lupe-kopf {
+  display: flex; align-items: center; gap: 8px;
+  padding: 1px 2px 6px; font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.lupe-kopf span { flex: 1 1 auto; }
+.lupe-zu {
+  width: 26px; height: 26px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--knopf2-rand); background: var(--knopf2-bg);
+  color: var(--knopf2-text); font: inherit; font-size: 16px; line-height: 1;
+}
+.lupe-gitter { display: grid; grid-template-columns: repeat(5, 56px); grid-auto-rows: 56px; gap: 2px; }
+.lupe-zelle { position: relative; border-radius: 8px; cursor: pointer; }
+.lupe-zelle .feld {
+  position: absolute !important; left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important; aspect-ratio: auto !important;
+  border-width: 2px;
+}
+.lupe-zelle .figur { border-width: 2px; }
+.lupe-zelle.mitte .feld {
+  box-shadow: 0 0 0 3px var(--auswahl-ring), 0 0 16px var(--auswahl-schein),
+              inset 0 0 0 1px var(--zone-rand) !important;
+}
+.lupe-zelle:focus-visible { outline: 2px solid var(--akzent); outline-offset: 1px; }
+
+.fuss { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+.fuss .letzter-zug { color: var(--muted); flex: 1 1 180px; min-width: 0; }
+.fuss .knopf { padding: 8px 13px; font-size: 12px; }
+
+/* ------------------------------------------------------------- Lernkarte */
+.lernkarte {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 9px 14px; border-radius: 12px; z-index: 12;
+  background: var(--lern-bg); color: var(--lern-text); border: 1px solid var(--lern-rand);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .45);
+  font-size: 12.5px; line-height: 1.4; pointer-events: none;
+  opacity: 0; transition: opacity .18s ease;
+}
+.lernkarte.sichtbar { opacity: 1; }
+.lernkarte b { color: var(--lern-akzent); }
+
+/* -------------------------------------------------------------- Spieler */
+.spielerliste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.spielerliste li {
+  display: grid; grid-template-columns: 14px 1fr auto; gap: 3px 8px; align-items: center;
+  padding: 7px 9px; border-radius: 10px; font-size: 12.5px;
+  background: var(--zeile-bg); border: 1px solid transparent;
+}
+.spielerliste li.dran { border-color: var(--akzent); }
+.spielerliste .punkt { width: 12px; height: 12px; border-radius: 50%; grid-row: span 2; box-shadow: inset 0 -1px 2px #0007; }
+.spielerliste .name { font-weight: 600; }
+.spielerliste .stand { grid-column: 2 / 4; font-size: 11.5px; color: var(--muted); }
+.spielerliste .balken { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--balken-bg); overflow: hidden; }
+.spielerliste .balken i { display: block; height: 100%; background: var(--akzent); }
+
+.verlauf { margin: 10px 0 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--muted); max-height: 150px; overflow: auto; }
+.verlauf li { padding: 2px 0; border-bottom: 1px dotted var(--linie); }
+
+/* --------------------------------------------------------------- Dialog */
+.schleier {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px;
+  background: rgba(6, 8, 8, .62); backdrop-filter: blur(3px);
+}
+.schleier[hidden] { display: none; }
+.dialog {
+  width: min(440px, 100%); max-height: 88dvh; overflow: auto;
+  padding: 18px; border-radius: 16px;
+  background: var(--dialog-bg); border: 1px solid var(--dialog-rand);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+}
+.dialog h2 { margin: 0 0 6px; font-size: 18px; color: var(--titel); font-family: var(--titel-schrift); }
+.dialog p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--text); }
+.dialog ul { margin: 0 0 12px 18px; padding: 0; font-size: 12.5px; line-height: 1.55; }
+.dialog .knopfreihe { margin-top: 6px; }
+
+/* ------------------------------------------------------------ Aufgabenkarten */
+.aufgaben { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.aufgabe {
+  text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  padding: 9px 11px; border-radius: 11px; background: var(--karte-bg);
+  border: 1px solid var(--karte-rand);
+}
+.aufgabe.aktiv { border-color: var(--akzent); }
+.aufgabe b { display: block; font-size: 13px; }
+.aufgabe span { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.aufgabe .best { color: var(--akzent); font-size: 11px; }
+
+/* ------------------------------------------------------------- Responsive */
+@media (min-width: 900px) {
+  .buehne { grid-template-columns: minmax(0, 1fr) 250px; }
+  .spielerbereich { display: flex; flex-direction: column; gap: 8px; }
+}
+.online-leiste {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 10px; border-radius: 10px; font-size: 12.5px;
+  background: var(--flaeche); border: 1px solid var(--linie); color: var(--muted);
+}
+.online-leiste #onlineText { flex: 1 1 160px; }
+.online-leiste .knopf { padding: 5px 12px; font-size: 12.5px; }
+
+@media (max-width: 899px) {
+  .spielerbereich { order: 2; max-height: 32dvh; overflow: auto; }
+  .buehne { grid-template-columns: minmax(0, 1fr); }
+  .kopf .rechts { width: 100%; margin-left: 0; }
+  .menue .varianten { grid-template-columns: 1fr; }
+  /* Sechs Spieler sollen dem Brett nicht die Höhe wegnehmen. */
+  .spielerliste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .spielerliste li { padding: 5px 7px; font-size: 11.5px; }
+  .verlauf { max-height: 52px; }
+}
+@media (max-width: 560px) {
+  .seite { padding: 6px; gap: 6px; }
+  .kopf { padding: 8px 10px; }
+  .kopf .unter { display: none; }
+  .lernkarte { bottom: 8px; font-size: 12px; }
+  .fuss .knopf { flex: 1 1 30%; }
+}
+
+/* ============================================================== Design 1 */
+body[data-stil="normal"] {
+  --bg: radial-gradient(circle at 22% -10%, #1d4a3a 0%, #0f2a22 46%, #081712 100%) fixed;
+  --text: #e9e2cf; --muted: #a9b3a3; --titel: #f0d9a2;
+  --kopf-bg: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(0, 0, 0, .12));
+  --kopf-rand: rgba(214, 178, 96, .3); --kopf-schatten: 0 8px 24px rgba(0, 0, 0, .35);
+  --titel-schrift: Georgia, "Times New Roman", serif;
+  --panel: linear-gradient(180deg, rgba(18, 46, 37, .96), rgba(11, 32, 25, .96));
+  --panel-rand: rgba(214, 178, 96, .22); --panel-schatten: 0 14px 34px rgba(0, 0, 0, .38);
+  --akzent: #d6b260; --akzent-text: #221a08;
+  --wahl-bg: rgba(0, 0, 0, .28); --wahl-aktiv-bg: #d6b260; --wahl-aktiv-text: #221a08;
+  --wahl-aktiv-rand: #e8cd8e;
+  --karte-bg: rgba(255, 255, 255, .04); --karte-rand: rgba(214, 178, 96, .22);
+  --input-bg: rgba(0, 0, 0, .3); --input-rand: rgba(214, 178, 96, .28);
+  --knopf-bg: linear-gradient(180deg, #e8cd8e, #c9a45a); --knopf-text: #241a06;
+  --knopf-rand: #f0dcae; --knopf-schatten: 0 6px 14px rgba(0, 0, 0, .35);
+  --knopf2-bg: rgba(255, 255, 255, .06); --knopf2-text: #e9e2cf; --knopf2-rand: rgba(214, 178, 96, .3);
+  --marke-bg: rgba(0, 0, 0, .3); --marke-text: #d9d2bd; --marke-rand: rgba(214, 178, 96, .28);
+  --feld: radial-gradient(circle at 34% 28%, #2f5a49, #1b3a2e 62%, #122a21);
+  --feld-rand: rgba(214, 178, 96, .3); --feld-schatten: inset 0 1px 2px rgba(255, 255, 255, .12), 0 1px 2px rgba(0, 0, 0, .4);
+  --zone-bg: radial-gradient(circle at 34% 28%, #4a3c1f, #3a2f18 60%, #2b2312);
+  --zone-rand: rgba(214, 178, 96, .62);
+  --mark-bg: radial-gradient(circle, #ffe9b0, #d6b260);
+  --mark-ring: #ffeec2; --mark-schein: rgba(214, 178, 96, .6);
+  --sprung-bg: radial-gradient(circle, #bff0d8, #6fc9a5);
+  --sprung-ring: #e6fff2; --sprung-schein: rgba(111, 201, 165, .55);
+  --auswahl-ring: #ffe9b0; --auswahl-schein: rgba(214, 178, 96, .7);
+  --letzter-rand: rgba(255, 236, 190, .7);
+  --gerade-bg: radial-gradient(circle, rgba(214, 178, 96, .3), rgba(214, 178, 96, .12));
+  --lern-bg: rgba(10, 26, 21, .96); --lern-text: #e9e2cf; --lern-rand: rgba(214, 178, 96, .4);
+  --lern-akzent: #f0d9a2;
+  --zeile-bg: rgba(255, 255, 255, .04); --balken-bg: rgba(255, 255, 255, .12);
+  --dialog-bg: linear-gradient(180deg, #153a2d, #0d251d); --dialog-rand: rgba(214, 178, 96, .35);
+  --linie: rgba(255, 255, 255, .1);
+}
+
+/* ============================================================== Design 2 */
+body[data-stil="maedchen"] {
+  --bg: radial-gradient(circle at 18% -6%, #3c1c44 0%, rgba(60, 28, 68, 0) 48%),
+        radial-gradient(circle at 88% 2%, #2b1233 0%, rgba(43, 18, 51, 0) 44%),
+        linear-gradient(180deg, #221229 0%, #1b0f21 56%, #150b19 100%) fixed;
+  --text: #f0e2e8; --muted: #b9a0ae; --titel: #f2ccd6;
+  --kopf-bg: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(0, 0, 0, .14));
+  --kopf-rand: rgba(226, 166, 143, .28); --kopf-schatten: 0 8px 24px rgba(0, 0, 0, .38);
+  --titel-schrift: Georgia, "Times New Roman", serif;
+  --panel: linear-gradient(180deg, rgba(46, 22, 54, .96), rgba(30, 14, 36, .97));
+  --panel-rand: rgba(226, 166, 143, .22); --panel-schatten: 0 14px 34px rgba(0, 0, 0, .42);
+  --akzent: #e2a68f; --akzent-text: #2a1120;
+  --wahl-bg: rgba(0, 0, 0, .3); --wahl-aktiv-bg: #e2a68f; --wahl-aktiv-text: #2a1120;
+  --wahl-aktiv-rand: #f2ccd6;
+  --karte-bg: rgba(255, 255, 255, .045); --karte-rand: rgba(226, 166, 143, .2);
+  --input-bg: rgba(0, 0, 0, .32); --input-rand: rgba(226, 166, 143, .26);
+  --knopf-bg: linear-gradient(180deg, #f2ccd6, #d79ba6); --knopf-text: #31131f;
+  --knopf-rand: #f6dde2; --knopf-schatten: 0 6px 14px rgba(0, 0, 0, .38);
+  --knopf2-bg: rgba(255, 255, 255, .06); --knopf2-text: #f0e2e8; --knopf2-rand: rgba(226, 166, 143, .3);
+  --marke-bg: rgba(0, 0, 0, .32); --marke-text: #e3d3db; --marke-rand: rgba(226, 166, 143, .26);
+  --feld: radial-gradient(circle at 34% 28%, #4a2740, #35182c 62%, #24101f);
+  --feld-rand: rgba(226, 166, 143, .26); --feld-schatten: inset 0 1px 2px rgba(255, 255, 255, .1), 0 1px 2px rgba(0, 0, 0, .45);
+  --zone-bg: radial-gradient(circle at 34% 28%, #5d2b3f, #47202f 60%, #341622);
+  --zone-rand: rgba(226, 166, 143, .55);
+  --mark-bg: radial-gradient(circle, #f6dde2, #d79ba6);
+  --mark-ring: #f8e6ea; --mark-schein: rgba(226, 166, 143, .55);
+  --sprung-bg: radial-gradient(circle, #e6c0d8, #b47a9c);
+  --sprung-ring: #f4e0ee; --sprung-schein: rgba(180, 122, 156, .55);
+  --auswahl-ring: #f6dde2; --auswahl-schein: rgba(226, 166, 143, .68);
+  --letzter-rand: rgba(255, 226, 232, .68);
+  --gerade-bg: radial-gradient(circle, rgba(226, 166, 143, .28), rgba(226, 166, 143, .1));
+  --lern-bg: rgba(33, 15, 40, .96); --lern-text: #f0e2e8; --lern-rand: rgba(226, 166, 143, .38);
+  --lern-akzent: #f2ccd6;
+  --zeile-bg: rgba(255, 255, 255, .045); --balken-bg: rgba(255, 255, 255, .12);
+  --dialog-bg: linear-gradient(180deg, #38182f, #24101f); --dialog-rand: rgba(226, 166, 143, .32);
+  --linie: rgba(255, 255, 255, .1);
+}
+
+/* ============================================================== Design 3 */
+body[data-stil="buben"] {
+  --bg: radial-gradient(circle at 72% -12%, #1c1d1f 0%, rgb(28, 29, 31, 0) 50%),
+        radial-gradient(circle at 12% 108%, #141517 0%, rgb(20, 21, 23, 0) 46%),
+        linear-gradient(180deg, #0e0f10 0%, #0a0a0b 60%, #0a0a0b 100%) fixed;
+  --text: #e4e5e6; --muted: #9b9ea5; --titel: #e6e9ec;
+  --kopf-bg: linear-gradient(180deg, rgba(255, 255, 255, .05), rgb(5, 5, 6, .22));
+  --kopf-rand: rgb(239, 54, 76, .22); --kopf-schatten: 0 8px 24px rgb(5, 5, 6, .5);
+  --titel-schrift: "Segoe UI", system-ui, sans-serif;
+  --panel: linear-gradient(180deg, rgb(28, 29, 31, .97), rgb(14, 15, 16, .98));
+  --panel-rand: rgb(139, 143, 150, .18); --panel-schatten: 0 14px 34px rgb(5, 5, 6, .5);
+  --akzent: #e0242f; --akzent-text: #ffffff;
+  --wahl-bg: rgb(5, 5, 6, .36); --wahl-aktiv-bg: #e0242f; --wahl-aktiv-text: #ffffff;
+  --wahl-aktiv-rand: #ff8a90;
+  --karte-bg: rgba(255, 255, 255, .04); --karte-rand: rgb(139, 143, 150, .2);
+  --input-bg: rgb(5, 5, 6, .4); --input-rand: rgb(139, 143, 150, .24);
+  --knopf-bg: linear-gradient(180deg, #e0242f, #8f1019); --knopf-text: #ffffff;
+  --knopf-rand: #ff8a90; --knopf-schatten: 0 6px 16px rgb(5, 5, 6, .45);
+  --knopf2-bg: rgba(255, 255, 255, .05); --knopf2-text: #e4e5e6; --knopf2-rand: rgb(139, 143, 150, .3);
+  --marke-bg: rgb(5, 5, 6, .4); --marke-text: #c6c8cb; --marke-rand: rgb(139, 143, 150, .22);
+  --feld: radial-gradient(circle at 34% 28%, #2f3135, #242529 62%, #141517);
+  --feld-rand: rgb(160, 163, 170, .2); --feld-schatten: inset 0 1px 2px rgba(255, 255, 255, .09), 0 1px 2px rgb(5, 5, 6, .5);
+  --zone-bg: radial-gradient(circle at 34% 28%, #242529, #1c1d1f 60%, #141517);
+  --zone-rand: rgb(239, 54, 76, .45);
+  --mark-bg: radial-gradient(circle, #ff8a90, #e0242f);
+  --mark-ring: #ff8a90; --mark-schein: rgb(239, 54, 76, .55);
+  --sprung-bg: radial-gradient(circle, #ffd9db, #d9713c);
+  --sprung-ring: #ff8a90; --sprung-schein: rgb(238, 51, 72, .5);
+  --auswahl-ring: #ff8a90; --auswahl-schein: rgb(239, 54, 76, .7);
+  --letzter-rand: rgb(239, 54, 76, .55);
+  --gerade-bg: radial-gradient(circle, rgb(239, 54, 76, .26), rgb(239, 54, 76, .08));
+  --lern-bg: rgb(14, 15, 16, .97); --lern-text: #e4e5e6; --lern-rand: rgb(239, 54, 76, .32);
+  --lern-akzent: #ff8a90;
+  --zeile-bg: rgba(255, 255, 255, .04); --balken-bg: rgba(255, 255, 255, .12);
+  --dialog-bg: linear-gradient(180deg, #1c1d1f, #0e0f10); --dialog-rand: rgb(239, 54, 76, .3);
+  --linie: rgba(255, 255, 255, .09);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figur, .feld, .lernkarte, .variante { transition: none; }
+  .figur.huepft { animation: none; }
+}

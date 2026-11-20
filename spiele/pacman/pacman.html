@@ -6,68 +6,118 @@
 <meta name="theme-color" content="#0b241d">
 <title>Pac-Man</title>
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--leiste:#0b241d;
+--panel:#0f2b23;--kopf:#1e5645;--kopf-2:#144238;--hover:#184536;
+--buehne:#08120f;--schleier:#04100ccc;--pad:#12312a;
+--hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;
+--rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
+--schatten:#00000055;--schatten-tief:#00000088;
+/* Feld: der Zeichencode liest genau diese. */
+--pm-grund:#07130f;--pm-wand-1:#1d5a49;--pm-wand-2:#144336;--pm-wand-rand:#d9bc7c33;
+--pm-tor:#e8a7c0;--pm-punkt:#e8cd8e;--pm-kraft:#f4e6c2;
+--pm-geist-1:#c2603f;--pm-geist-2:#e8a7c0;--pm-geist-3:#4fb3a0;--pm-geist-4:#d9bc7c;
+--pm-geist-heim:#4a6b60;--pm-geist-blau:#4f7fd9;
+--pm-auge:#f7f3e6;--pm-pupille:#123a2a;--pm-pupille-blau:#0b241d;
+--pm-pac:#e8cd8e;--pm-pac-rand:#7a5a1c;--pm-tod:#c2603f;--pm-rahmen:#d9bc7c44;
+}
+
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:1px solid var(--rand-1);border-radius:8px;overflow:hidden;background:var(--panel);
+ box-shadow:0 6px 18px var(--schatten)}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
+.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-3)}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--hover)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
+.statuszeile b{color:var(--gold);font-weight:normal}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
 /* Spielfeld: Seitenverhaeltnis 19:21 bleibt, die Hoehe passt sich dem
    Fenster an, damit am PC nicht gescrollt werden muss. */
 canvas{display:block;margin:0 auto;height:auto;aspect-ratio:19/21;
  width:min(100%,calc((100vh - 220px) * 19 / 21));border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px #00000088}
+ box-shadow:inset 0 0 40px var(--schatten-tief)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
 .pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
- gap:6px;justify-content:center;padding:8px 8px 4px;background:#08120f}
+ gap:6px;justify-content:center;padding:8px 8px 4px;background:var(--buehne)}
 .pad button{font-family:inherit;font-size:20px;border-radius:8px;cursor:pointer;
- border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
-.pad button:active{background:#1e5645}
+ border:1px solid var(--rand-1);background:var(--pad);color:var(--gold)}
+.pad button:active{background:var(--kopf)}
 .pad .oben{grid-column:2;grid-row:1}
 .pad .links{grid-column:1;grid-row:2}
 .pad .runter{grid-column:2;grid-row:2}
 .pad .rechts{grid-column:3;grid-row:2}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#8f2450;--leiste:#ffeaf3;
+--panel:#ffe3ef;--kopf:#f7a6d4;--kopf-2:#ef7aa8;--hover:var(--leiste);
+--buehne:#fff6fa;--schleier:#fff6facc;--pad:#ffd9e9;
+--hell:var(--text);--muted:#7a2b52;--regeln:var(--text);--meldung-text:var(--text);
+--rand:#ef7aa8;--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
+--schatten:#8f245040;--schatten-tief:#8f245033;
+--pm-grund:#fff6fa;--pm-wand-1:#ffb8d4;--pm-wand-2:#ef8ab8;--pm-wand-rand:#8f245033;
+--pm-tor:#b0286a;--pm-punkt:#8f2450;--pm-kraft:#5b2340;
+--pm-geist-1:#e0245e;--pm-geist-2:#9a4fe0;--pm-geist-3:#2a8f6a;--pm-geist-4:#a85f00;
+--pm-geist-heim:#c09ad6;--pm-geist-blau:#4a34b8;
+--pm-auge:#ffffff;--pm-pupille:#5b2340;--pm-pupille-blau:#ffffff;
+--pm-pac:#d81f4f;--pm-pac-rand:#8f2450;--pm-tod:#c2185b;--pm-rahmen:#8f245055;
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:var(--text);--gold:#c8ff3d;--leiste:#0a0d10;
+--panel:#111316;--kopf:#1c2530;--kopf-2:#111820;--hover:#20262e;
+--buehne:#080b0e;--schleier:#04070bcc;--pad:#151b22;
+--hell:var(--gold);--muted:#adb4bc;--regeln:#c2c8cf;--meldung-text:#c9d4dc;
+--rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
+--schatten:#00000088;--schatten-tief:#000000cc;
+--pm-grund:#05080b;--pm-wand-1:#1d4137;--pm-wand-2:#14322c;--pm-wand-rand:#c8ff3d55;
+--pm-tor:#c8ff3d;--pm-punkt:#e6ff86;--pm-kraft:#ffffff;
+--pm-geist-1:#ff5a6a;--pm-geist-2:#4de0ff;--pm-geist-3:#b070ff;--pm-geist-4:#ffd24d;
+--pm-geist-heim:#3a4a52;--pm-geist-blau:#6b7bff;
+--pm-auge:#ffffff;--pm-pupille:#04070b;--pm-pupille-blau:#ffffff;
+--pm-pac:#c8ff3d;--pm-pac-rand:#4a6b00;--pm-tod:#e0242f;--pm-rahmen:#c8ff3d44;
+}
 </style>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
@@ -163,13 +213,31 @@ canvas.width=Math.round(W*DPR);
 canvas.height=Math.round(H*DPR);
 ctx.setTransform(DPR,0,0,DPR,0,0);
 
+/* Die Feld-Farben stehen als Tokens im Stylesheet. Einmal lesen, bei
+   Stilwechsel neu lesen – die Geister werden dabei mit umgefaerbt. */
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let F={}, GEIST_FARBEN=[];
+function paletteLaden(){
+ F={
+  grund:tok("--pm-grund"), wand1:tok("--pm-wand-1"), wand2:tok("--pm-wand-2"),
+  wandRand:tok("--pm-wand-rand"), tor:tok("--pm-tor"), punkt:tok("--pm-punkt"),
+  kraft:tok("--pm-kraft"), heim:tok("--pm-geist-heim"), blau:tok("--pm-geist-blau"),
+  auge:tok("--pm-auge"), pupille:tok("--pm-pupille"), pupilleBlau:tok("--pm-pupille-blau"),
+  pac:tok("--pm-pac"), pacRand:tok("--pm-pac-rand"), tod:tok("--pm-tod"), rahmen:tok("--pm-rahmen")
+ };
+ GEIST_FARBEN=[1,2,3,4].map(i=>tok("--pm-geist-"+i));
+}
+paletteLaden();
+if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(paletteLaden);
+
+
 const START={x:9,y:19};
 const HAUS_AUSGANG={x:9,y:8};
 const GEIST_START=[
- {x:9,y:10,name:"Blinky",farbe:"#c2603f"},
- {x:8,y:10,name:"Pinky",farbe:"#e8a7c0"},
- {x:10,y:10,name:"Inky",farbe:"#4fb3a0"},
- {x:9,y:11,name:"Clyde",farbe:"#d9bc7c"}
+ {x:9,y:10,name:"Blinky"},
+ {x:8,y:10,name:"Pinky"},
+ {x:10,y:10,name:"Inky"},
+ {x:9,y:11,name:"Clyde"}
 ];
 
 let zustand="start";       // start, laeuft, pause, tot, level, ende
@@ -238,7 +306,7 @@ function geisterNeu(){
  geister=GEIST_START.map((g,index)=>({
   ...wesenNeu(g.x,g.y,{x:0,y:-1}),
   name:g.name,
-  farbe:g.farbe,
+  nr:index,
   heim:index===0?0:1+index,     // gestaffelte Freigabe in Sekunden
   status:"haus",
   x:zentrum(g.x,g.y).x,
@@ -591,7 +659,7 @@ function update(dt){
 
 function zeichne(){
  // Hintergrund
- ctx.fillStyle="#07130f";
+ ctx.fillStyle=F.grund;
  ctx.fillRect(0,0,W,H);
 
  // Labyrinth
@@ -600,15 +668,15 @@ function zeichne(){
    const c=MAZE[y][x];
    if(c==="#"){
     const g=ctx.createLinearGradient(x*Z,y*Z,x*Z,y*Z+Z);
-    g.addColorStop(0,"#1d5a49");
-    g.addColorStop(1,"#144336");
+    g.addColorStop(0,F.wand1);
+    g.addColorStop(1,F.wand2);
     ctx.fillStyle=g;
     ctx.fillRect(x*Z+1,y*Z+1,Z-2,Z-2);
-    ctx.strokeStyle="#d9bc7c33";
+    ctx.strokeStyle=F.wandRand;
     ctx.lineWidth=1;
     ctx.strokeRect(x*Z+1.5,y*Z+1.5,Z-3,Z-3);
    }else if(c==="-"){
-    ctx.fillStyle="#e8a7c0";
+    ctx.fillStyle=F.tor;
     ctx.fillRect(x*Z+2,y*Z+Z/2-2,Z-4,4);
    }
   }
@@ -621,13 +689,13 @@ function zeichne(){
    if(!feld)continue;
    const c=zentrum(x,y);
    if(feld===1){
-    ctx.fillStyle="#e8cd8e";
+    ctx.fillStyle=F.punkt;
     ctx.beginPath();
     ctx.arc(c.x,c.y,2.2,0,Math.PI*2);
     ctx.fill();
    }else{
     const puls=2+Math.sin(performance.now()/220)*1.4;
-    ctx.fillStyle="#f4e6c2";
+    ctx.fillStyle=F.kraft;
     ctx.beginPath();
     ctx.arc(c.x,c.y,5+puls,0,Math.PI*2);
     ctx.fill();
@@ -649,9 +717,9 @@ function zeichne(){
    ctx.quadraticCurveTo(x1-r/3,unten-r*0.5,x1-2*r/3,unten);
   }
   ctx.closePath();
-  ctx.fillStyle=g.status==="heim"?"#4a6b60":(blau?("#4f7fd9"):g.farbe);
+  ctx.fillStyle=g.status==="heim"?F.heim:(blau?F.blau:GEIST_FARBEN[g.nr]);
   ctx.fill();
-  ctx.strokeStyle="#07130f";
+  ctx.strokeStyle=F.grund;
   ctx.lineWidth=1;
   ctx.stroke();
 
@@ -659,11 +727,11 @@ function zeichne(){
    // Augen
    const dx=g.dir.x*1.6, dy=g.dir.y*1.6;
    [-r*0.35,r*0.35].forEach(off=>{
-    ctx.fillStyle="#f7f3e6";
+    ctx.fillStyle=F.auge;
     ctx.beginPath();
     ctx.ellipse(g.x+off,g.y-2,2.9,3.2,0,0,Math.PI*2);
     ctx.fill();
-    ctx.fillStyle=blau?"#0b241d":"#123a2a";
+    ctx.fillStyle=blau?F.pupilleBlau:F.pupille;
     ctx.beginPath();
     ctx.arc(g.x+off+dx,g.y-2+dy,1.5,0,Math.PI*2);
     ctx.fill();
@@ -680,23 +748,25 @@ function zeichne(){
  else if(pac.dir.y>0)winkel=Math.PI/2;
  else if(pac.dir.y<0)winkel=-Math.PI/2;
  else winkel=0;
- ctx.fillStyle="#e8cd8e";
+ ctx.fillStyle=F.pac;
  ctx.beginPath();
  ctx.moveTo(pac.x,pac.y);
  ctx.arc(pac.x,pac.y,radius,winkel+offen,winkel-offen+Math.PI*2);
  ctx.closePath();
  ctx.fill();
- ctx.strokeStyle="#7a5a1c";
+ ctx.strokeStyle=F.pacRand;
  ctx.lineWidth=1;
  ctx.stroke();
 
  // Todesblitz / Lebensverlust
  if(zustand==="tot"){
-  ctx.fillStyle="rgba(194,96,63,"+Math.min(0.55,todesZeit*0.6)+")";
+  ctx.globalAlpha=Math.min(0.55,todesZeit*0.6);
+  ctx.fillStyle=F.tod;
   ctx.fillRect(0,0,W,H);
+  ctx.globalAlpha=1;
  }
 
- ctx.strokeStyle="#d9bc7c44";
+ ctx.strokeStyle=F.rahmen;
  ctx.lineWidth=3;
  ctx.strokeRect(1.5,1.5,W-3,H-3);
 }
@@ -778,5 +848,17 @@ requestAnimationFrame(schleife);
 })();
 </script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
 </body>
 </html>

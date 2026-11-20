@@ -2,48 +2,82 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
+	"strconv"
+	"time"
 )
 
-// Online-Fassung des Connectors: Sie liegt auf einem Server im Internet, hört
-// auf den Port, den der Hoster vorgibt, öffnet keinen Browser und findet die
-// Webseite dort, wo sie hochgeladen wurde. Alles Spielerische (Räume, Chat,
-// Spiele) kommt unverändert aus ../connector und wird mit sync.py übernommen.
+// port wird beim Start ermittelt, damit ein belegter Port die App nicht lahmlegt.
+var port = "8765"
 
 var (
 	home string
 	page string
-	// port kommt aus PORT; er steht nur in Log und Status.
-	port = "8080"
 )
 
-func envOder(name, standard string) string {
-	if wert := strings.TrimSpace(os.Getenv(name)); wert != "" {
-		return wert
+// findHomepage ermittelt die Homepage-Wurzel ausgehend vom Ordner dieser Datei.
+// Dadurch funktioniert der Connector unabhängig davon, wohin die Homepage
+// kopiert wurde, und ohne dass ein Pfad fest eingebaut ist.
+func findHomepage(connectorDir string) string {
+	// 1. Der zuverlässigste Marker: <Homepage>/spiele/connector. Er findet
+	//    auch dann die richtige Wurzel, wenn index.html fehlt oder umbenannt ist.
+	for dir := connectorDir; ; dir = filepath.Dir(dir) {
+		if info, err := os.Stat(filepath.Join(dir, "spiele", "connector")); err == nil && info.IsDir() {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
 	}
-	return standard
+	// 2. Sonst das nächste Elternverzeichnis mit index.html.
+	for dir := connectorDir; ; dir = filepath.Dir(dir) {
+		if info, err := os.Stat(filepath.Join(dir, "index.html")); err == nil && !info.IsDir() {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+	}
+	// Fallback: der Connector liegt immer unter <Homepage>/spiele/connector.
+	// Nur akzeptieren, wenn dort auch der spiele-Ordner liegt, sonst würde
+	// irgendein Großelternverzeichnis als Homepage herhalten.
+	fallback := filepath.Clean(filepath.Join(connectorDir, "..", ".."))
+	if fallback != connectorDir {
+		if info, err := os.Stat(filepath.Join(fallback, "spiele")); err == nil && info.IsDir() {
+			return fallback
+		}
+	}
+	return connectorDir
 }
 
-// websiteRoot sucht den Ordner mit der Webseite: SITE_DIR, sonst das
-// Verzeichnis der Programmdatei oder dessen Elternordner, wenn dort eine
-// index.html liegt.
-func websiteRoot(exeDir string) string {
-	if wert := strings.TrimSpace(os.Getenv("SITE_DIR")); wert != "" {
-		if abs, err := filepath.Abs(wert); err == nil {
-			return abs
-		}
+// portFrei prüft, ob sich auf dieser Adresse lauschen lässt.
+func portFrei(adresse string) bool {
+	listener, err := net.Listen("tcp", adresse)
+	if err != nil {
+		return false
 	}
-	for _, dir := range []string{exeDir, filepath.Join(exeDir, "..")} {
-		if info, err := os.Stat(filepath.Join(dir, "index.html")); err == nil && !info.IsDir() {
-			if abs, err := filepath.Abs(dir); err == nil {
-				return abs
-			}
+	_ = listener.Close()
+	return true
+}
+
+// freePort liefert den ersten freien Port ab 8765. Geprüft wird auch
+// 127.0.0.1 – sonst kann ein anderer Dienst, der nur auf localhost lauscht,
+// den Port für den Browser "gewinnen" und die Connector-Seite 404 liefern.
+func freePort() string {
+	for p := 8765; p <= 8785; p++ {
+		candidate := strconv.Itoa(p)
+		if !portFrei("127.0.0.1:"+candidate) || !portFrei(":"+candidate) {
+			continue
 		}
+		return candidate
 	}
-	return exeDir
+	return port
 }
 
 func main() {
@@ -51,33 +85,52 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Resolve any symlinks to get the actual executable location
 	exePath, _ = filepath.EvalSymlinks(exePath)
-	exeDir := filepath.Dir(exePath)
+	connectorDir := filepath.Dir(exePath)
 
-	home = websiteRoot(exeDir)
-	port = envOder("PORT", port)
-	binden := strings.TrimSpace(os.Getenv("ADDR"))
+	home = findHomepage(connectorDir)
+	// Ein Argument wird nur übernommen, wenn es ein echtes Verzeichnis ist.
+	// Sonst würde ein versehentlich übergebenes Argument (Drag & Drop,
+	// Verknüpfung mit Parameter) die Homepage unbrauchbar machen.
+	if len(os.Args) > 1 {
+		if info, statErr := os.Stat(os.Args[1]); statErr == nil && info.IsDir() {
+			home = os.Args[1]
+		} else {
+			log.Printf("Argument %q ist kein Verzeichnis und wird ignoriert.", os.Args[1])
+		}
+	}
+	abs, err := filepath.Abs(home)
+	if err != nil {
+		log.Fatal(err)
+	}
+	home = abs
 
-	pagePath := filepath.Join(exeDir, "connector.html")
+	pagePath := filepath.Join(connectorDir, "connector.html")
 	pageData, err := os.ReadFile(pagePath)
 	if err != nil {
-		log.Fatalf("Connector-Oberfläche fehlt neben der Programmdatei (%s): %v", pagePath, err)
+		log.Fatalf("Connector-Oberfläche konnte nicht geladen werden (%s): %v", pagePath, err)
 	}
 	page = string(pageData)
 
 	ensureMainRoom()
 	startRoomJanitor()
 
-	adresse := ":" + port
-	if binden != "" {
-		adresse = binden + ":" + port
-	}
+	port = freePort()
+	addr := "http://localhost:" + port + "/connector"
+	go func() {
+		time.Sleep(700 * time.Millisecond)
+		if openErr := exec.Command("rundll32", "url.dll,FileProtocolHandler", addr).Start(); openErr != nil {
+			log.Printf("Browser konnte nicht automatisch geöffnet werden: %v", openErr)
+		}
+	}()
 
-	log.Printf("TrashyGecko Connector (online) hört auf %s", adresse)
-	log.Printf("Webseite: %s", home)
-	// Ohne spiele-Ordner läuft der Chat, aber jede Spielseite wäre ein 404.
+	log.Printf("TrashyGecko Connector startet: %s", addr)
+	log.Printf("Homepage: %s", home)
+	// Ohne spiele-Ordner läuft der Chat, aber jede Spielseite wäre ein 404 –
+	// das ist beim Kopieren der schnellste Weg in die Verzweiflung.
 	if info, statErr := os.Stat(filepath.Join(home, "spiele")); statErr != nil || !info.IsDir() {
 		log.Printf("WARNUNG: %s enthält keinen spiele-Ordner – die Spielseiten werden nicht gefunden.", home)
 	}
-	log.Fatal(http.ListenAndServe(adresse, routes()))
+	log.Fatal(http.ListenAndServe(":"+port, routes()))
 }

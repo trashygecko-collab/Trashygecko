@@ -68,24 +68,6 @@ button{font-family:inherit;cursor:pointer;touch-action:manipulation}
   margin-top:2px;
 }
 .kopf .rechts{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-
-.stilwahl{display:flex;gap:6px;padding:4px;background:var(--wahl-bg);border-radius:calc(var(--wahl-radius,10px));border:var(--wahl-rand,0)}
-.stilwahl button{
-  border:0;
-  background:transparent;
-  color:var(--wahl-text);
-  padding:7px 12px;
-  border-radius:calc(var(--wahl-radius,10px) - 3px);
-  font-size:clamp(12px,1.2vw,14px);
-  letter-spacing:.04em;
-  transition:background .15s,color .15s,box-shadow .15s;
-}
-.stilwahl button.aktiv{
-  background:var(--wahl-aktiv-bg);
-  color:var(--wahl-aktiv-text);
-  box-shadow:var(--wahl-aktiv-schatten,none);
-  font-weight:700;
-}
 .leise{
   border:1px solid var(--rand-fein);
   background:var(--leise-bg);
@@ -420,6 +402,45 @@ button{font-family:inherit;cursor:pointer;touch-action:manipulation}
   text-transform:uppercase;
 }
 .karte p.unter{margin:0 0 16px;color:var(--muted);font-size:clamp(12px,1.3vw,14px)}
+
+/* ---- Fehlwurf: Würfel bleiben liegen, der Wechsel wird erklärt ---- */
+#pechSchleier{z-index:30}
+.pech-karte{width:min(100%,520px)}
+.pech-karte h2{
+  color:var(--schlecht);
+  font-size:clamp(21px,4.2vw,32px);
+  letter-spacing:.06em;
+}
+.pech-wuerfel{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:clamp(5px,1.2vw,10px);
+  margin:0 0 clamp(10px,2vw,16px);
+  animation:pechRein .28s ease-out both;
+}
+/* Die Würfel in der Meldung sind Bilder, keine Knöpfe. */
+.pech-wuerfel .wuerfel{pointer-events:none;cursor:default;animation:pechWackeln .5s ease-in-out .1s both}
+.pech-verloren{
+  margin:0 0 6px;
+  color:var(--warn);
+  font-weight:700;
+  font-size:clamp(13px,1.6vw,15px);
+}
+.pech-weiter{margin:0;color:var(--text);font-size:clamp(13px,1.7vw,16px);letter-spacing:.03em}
+.pech-weiter b{color:var(--akzent)}
+@keyframes pechRein{
+  from{opacity:0;transform:translateY(6px) scale(.97)}
+  to{opacity:1;transform:none}
+}
+@keyframes pechWackeln{
+  0%,100%{transform:none}
+  20%{transform:rotate(-4deg)}
+  45%{transform:rotate(4deg)}
+  70%{transform:rotate(-2deg)}
+}
+@media (prefers-reduced-motion:reduce){
+  .pech-wuerfel,.pech-wuerfel .wuerfel{animation:none}
+}
 .feld{margin-bottom:12px;text-align:left}
 .feld label{
   display:block;
@@ -441,7 +462,7 @@ button{font-family:inherit;cursor:pointer;touch-action:manipulation}
   font-size:16px;
 }
 .feld input:focus-visible,.feld select:focus-visible,.knoepfe button:focus-visible,
-.stilwahl button:focus-visible,.leise:focus-visible,.wuerfel:focus-visible{
+.leise:focus-visible,.wuerfel:focus-visible{
   outline:2px solid var(--fokus);
   outline-offset:2px;
 }
@@ -595,245 +616,274 @@ body[data-stil="normal"] .bereich::before{
 }
 
 /* ===============================================================
-   Ansicht "Mädchen": Creme und Rosa, Zuckerwürfel
+   Ansicht "Mädchen": dunkles Aubergine, Beere, Altrosa, Roségold
+   Ruhige, tiefe Flächen; Würfel wie mattes Rosé mit dunklen
+   Beeraugen und feiner Roségoldkante.
    =============================================================== */
 body[data-stil="maedchen"]{
   --bg:
-    radial-gradient(circle at 12% 8%,#ffe9f3 0%,#ffe9f300 42%),
-    radial-gradient(circle at 88% 0%,#fff5e0 0%,#fff5e000 40%),
-    linear-gradient(180deg,#fdf3f7 0%,#f7e4ee 60%,#f3dbe7 100%) fixed;
-  --text:#4a2337;
-  --muted:#8a5a71;
-  --titel:#a83a6b;
-  --akzent:#e97aa8;
-  --akzent-text-hell:#7d1f47;
-  --rand-fein:#e3b3c9;
-  --gut:#2f7a55;
-  --schlecht:#b5395b;
-  --warn:#c0517c;
-  --fokus:#c0517c;
-  --kopf-bg:linear-gradient(180deg,#ffffff 0%,#fdeaf2 100%);
-  --kopf-rand:1px solid #f0c4d8;
-  --kopf-radius:20px;
-  --kopf-schatten:0 10px 24px #d9a6bd40,inset 0 1px 0 #fff;
-  --titel-schein:0 1px 0 #fff;
-  --wahl-bg:#fbe3ee;
-  --wahl-radius:16px;
-  --wahl-rand:1px solid #f2c9db;
-  --wahl-text:#8a5a71;
-  --wahl-aktiv-bg:linear-gradient(180deg,#ffffff,#ffe4ef);
-  --wahl-aktiv-text:#a83a6b;
-  --wahl-aktiv-schatten:0 2px 6px #d98aac44;
-  --leise-bg:#fff;
-  --leise-text:#a83a6b;
-  --leise-hover:#fff4f9;
-  --panel:linear-gradient(170deg,#ffffff 0%,#fdf1f6 100%);
-  --panel-rand:1px solid #f3cddd;
-  --panel-radius:22px;
-  --panel-schatten:0 16px 34px #d9a6bd38,inset 0 1px 0 #fff;
-  --wert-bg:#fff6fa;
-  --wert-rand:1px solid #f4d3e1;
-  --wert-radius:14px;
-  --wert-bg-betont:linear-gradient(180deg,#ffd9e7,#ffc3da);
-  --wert-rand-betont:1px solid #eba2c0;
-  --balken-bg:#f7dbe6;
-  --balken-fuellung:linear-gradient(90deg,#f8a8c8,#e97aa8);
-  --balken-fertig:linear-gradient(90deg,#8fd7a9,#4fb47c);
-  --knopf-bg:#fff;
-  --knopf-text:#a83a6b;
-  --knopf-rand:1px solid #f0bfd4;
-  --knopf-radius:16px;
-  --haupt-bg:linear-gradient(180deg,#fbb0cd,#e97aa8);
-  --haupt-text:#4d0f28;
-  --haupt-rand:1px solid #d9699a;
-  --haupt-schatten:0 8px 18px #e97aa855;
-  --hinweis-text:#7b4a60;
-  --spieler-farbe:#e97aa8;
-  --spieler-farbe-schein:#e97aa833;
-  --spieler-farbe-2:#9fd3b6;
-  --spieler-bg:#fff6fa;
-  --spieler-rand:1px solid #f4d3e1;
-  --spieler-radius:16px;
-  --spieler-text:#6d4257;
-  --spieler-bg-aktiv:linear-gradient(180deg,#ffffff,#ffe8f1);
-  --spieler-rand-aktiv:2px solid #eb93b6;
-  --spieler-text-aktiv:#8e2a56;
-  --spieler-schatten-aktiv:0 6px 14px #e97aa833;
-  --punkte-farbe:#a83a6b;
-  --schleier-bg:#fdf3f7cc;
-  --karte-schatten:0 24px 50px #c78cad55;
-  --feld-bg:#fff;
-  --w-radius:26%;
-  --w-bg:linear-gradient(165deg,#ffffff 0%,#ffeff6 55%,#ffe0ec 100%);
-  --w-bg-gewaehlt:linear-gradient(165deg,#ffffff 0%,#fff4f9 55%,#ffd7e7 100%);
-  --w-bg-gesichert:linear-gradient(165deg,#f6fdf9 0%,#dcf1e6 100%);
-  --w-rand:2px solid #ffffff;
-  --w-rand-gewaehlt:3px solid #e97aa8;
-  --w-schatten:0 8px 16px #cf8fab3d,inset 0 -4px 0 #f6c8db99,inset 0 2px 0 #fff;
-  --w-schatten-gewaehlt:0 14px 26px #d1749a59,inset 0 -4px 0 #f6c8db99,inset 0 2px 0 #fff;
-  --w-schatten-gesichert:0 4px 10px #9ec3ae40,inset 0 -4px 0 #bfdccd99;
-  --pip:#d2557f;
-  --pip-schein:0 0 6px #e97aa855;
-  --haken-bg:#3f9c6d;
-  --haken-text:#fff;
-  --haken-gewaehlt-bg:#d2557f;
-  --haken-gewaehlt-text:#fff;
-  --wert-betont-text:#6d1a3d;
-  --wert-betont-etikett:#9a4a68;
-  --leiste-bg:#f3dbe7;
+    radial-gradient(circle at 18% -6%,#3c1c44 0%,#3c1c4400 48%),
+    radial-gradient(circle at 88% 2%,#2b1233 0%,#2b123300 44%),
+    linear-gradient(180deg,#221229 0%,#1b0f21 56%,#150b19 100%) fixed;
+  --text:#f0e5ee;
+  --muted:#c0a8bc;
+  --titel:#e7c9d8;
+  --akzent:#c68b8f;
+  --akzent-text-hell:#f2dcdd;
+  --rand-fein:#c68b8f59;
+  --gut:#8fbfae;
+  --schlecht:#d9738b;
+  --warn:#d69aa2;
+  --fokus:#c68b8f;
+  --kopf-bg:linear-gradient(180deg,#2c1834 0%,#23122a 100%);
+  --kopf-rand:1px solid #c68b8f2b;
+  --kopf-radius:14px;
+  --kopf-schatten:0 12px 28px #00000080,inset 0 1px 0 #ffffff14;
+  --titel-schein:none;
+  --wahl-bg:#24122c;
+  --wahl-radius:10px;
+  --wahl-rand:1px solid #c68b8f26;
+  --wahl-text:#c0a8bc;
+  --wahl-aktiv-bg:linear-gradient(180deg,#d8a6ae,#bd828d);
+  --wahl-aktiv-text:#2b0d18;
+  --leise-bg:#281431;
+  --leise-text:#d8aebc;
+  --leise-hover:#321a3b;
+  --panel:linear-gradient(165deg,#2c1834 0%,#22112a 100%);
+  --panel-rand:1px solid #c68b8f21;
+  --panel-radius:16px;
+  --panel-schatten:0 18px 40px #0000008c,inset 0 1px 0 #ffffff12;
+  --wert-bg:#25132c;
+  --wert-rand:1px solid #c68b8f21;
+  --wert-radius:12px;
+  --wert-bg-betont:linear-gradient(180deg,#d9abb0,#c08b92);
+  --wert-rand-betont:1px solid #9d6670;
+  --balken-bg:#1b0e21;
+  --balken-fuellung:linear-gradient(90deg,#8d4a67,#c68b8f);
+  --balken-fertig:linear-gradient(90deg,#8fbfae,#b9d3c6);
+  --knopf-bg:#281430;
+  --knopf-text:#e0bfca;
+  --knopf-rand:1px solid #c68b8f40;
+  --knopf-radius:10px;
+  --haupt-bg:linear-gradient(180deg,#dcaeb6,#c08b95);
+  --haupt-text:#2b0d16;
+  --haupt-rand:1px solid #a96d78;
+  --haupt-schatten:0 10px 22px #00000073,inset 0 -2px 0 #8f5d68;
+  --hinweis-text:#c9b0c0;
+  --spieler-farbe:#c68b8f;
+  --spieler-farbe-schein:#c68b8f2e;
+  --spieler-farbe-2:#8fbfae;
+  --spieler-bg:#25132c;
+  --spieler-rand:1px solid #c68b8f21;
+  --spieler-radius:10px;
+  --spieler-text:#d6c0cb;
+  --spieler-bg-aktiv:linear-gradient(180deg,#3a1e44 0%,#2c1534 100%);
+  --spieler-rand-aktiv:1px solid #c68b8f;
+  --spieler-text-aktiv:#f7e9ef;
+  --spieler-schatten-aktiv:0 8px 18px #00000073,inset 0 1px 0 #ffffff12;
+  --punkte-farbe:#e9cdd6;
+  --schleier-bg:#120a16dd;
+  --karte-radius:18px;
+  --karte-schatten:0 28px 70px #000000d9;
+  --feld-bg:#25132c;
+  --w-radius:18%;
+  --w-bg:linear-gradient(158deg,#f7dee3 0%,#e4b7c2 52%,#cf9aa9 100%);
+  --w-bg-gewaehlt:linear-gradient(158deg,#fdeef1 0%,#ecc3cd 52%,#d9a8b4 100%);
+  --w-bg-gesichert:linear-gradient(158deg,#dcc6dc 0%,#b89cad 100%);
+  --w-rand:1px solid #fceff2;
+  --w-rand-gewaehlt:2px solid #b8667a;
+  --w-schatten:0 12px 22px #00000099,inset 0 2px 0 #fff9fa,inset 0 -8px 14px #a9717f5c,inset 0 0 0 1px #a9717f47;
+  --w-schatten-gewaehlt:0 16px 28px #000000a6,0 0 0 1px #b8667a66,inset 0 2px 0 #fff9fa,inset 0 -8px 14px #a9717f5c;
+  --w-schatten-gesichert:0 6px 12px #00000080,inset 0 2px 0 #f6ebf2,inset 0 -6px 10px #7f6a8399;
+  --pip:#4a1b2c;
+  --pip-schein:none;
+  --haken-bg:#7d4a63;
+  --haken-text:#f8eaef;
+  --haken-gewaehlt-bg:#a4526a;
+  --haken-gewaehlt-text:#fdf2f5;
+  --wert-betont-text:#2b0f18;
+  --wert-betont-etikett:#3f1c26;
+  --leiste-bg:#1b0e21;
 }
-/* Mädchen: Spitzenborte unter dem Kopf, Herz statt Punkt, kleine Glitzer */
+/* Mädchen: Serifen-Titel, feine Roségoldlinie, samtige Flächen */
+body[data-stil="maedchen"] .kopf{padding-bottom:20px}
 body[data-stil="maedchen"] .kopf::after{
   content:"";
   position:absolute;
-  left:0;right:0;bottom:-8px;
-  height:16px;
-  background:radial-gradient(circle at 8px 0,#fff 6px,#fdf3f7 6.5px,#0000 7px) repeat-x;
-  background-size:16px 16px;
-  opacity:.9;
+  left:18px;right:18px;bottom:7px;
+  height:1px;
+  background:linear-gradient(90deg,#c68b8f00,#c68b8f 18%,#e8c4c7 50%,#c68b8f 82%,#c68b8f00);
+  opacity:.6;
   pointer-events:none;
 }
-body[data-stil="maedchen"] .kopf{border-bottom-left-radius:20px;border-bottom-right-radius:20px}
-body[data-stil="maedchen"] .wer .marke{background:#fff;box-shadow:0 0 0 3px #e97aa8,0 0 14px #e97aa8aa}
-body[data-stil="maedchen"] .wert.betont strong{color:#6d1a3d}
-body[data-stil="maedchen"] .wuerfelFeld{position:relative}
+body[data-stil="maedchen"] .kopf h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:600;
+  letter-spacing:.1em;
+}
+body[data-stil="maedchen"] .karte h2{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:600;
+  letter-spacing:.14em;
+}
+body[data-stil="maedchen"] .bereich::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:
+    radial-gradient(circle at 50% -40%,#ffffff0d,#0000 62%),
+    radial-gradient(circle at 92% 108%,#c68b8f0f,#0000 55%);
+  pointer-events:none;
+}
+body[data-stil="maedchen"] .wer .marke{box-shadow:0 0 0 3px #c68b8f33}
 body[data-stil="maedchen"] .wuerfelFeld::before{
   content:"";
   position:absolute;
-  inset:-6px;
-  border-radius:24px;
+  inset:0;
+  border-radius:20px;
   background:
-    radial-gradient(circle at 6% 20%,#fff 1.4px,#0000 2px),
-    radial-gradient(circle at 94% 70%,#ffd9e8 1.6px,#0000 2px),
-    radial-gradient(circle at 40% 96%,#ffc9dd 1.4px,#0000 2px);
+    radial-gradient(circle at 50% 0%,#ffffff0a,#0000 70%),
+    linear-gradient(180deg,#00000026,#0000 45%);
+  box-shadow:inset 0 0 0 1px #c68b8f1f;
   pointer-events:none;
 }
 body[data-stil="maedchen"] .spieler li .punkt{
-  border-radius:50% 50% 50% 0;
-  transform:rotate(-45deg);
   width:8px;height:8px;
+  box-shadow:0 0 0 2px #c68b8f38;
 }
-body[data-stil="maedchen"] .karte h2::after{content:" ♥";color:#e97aa8;font-size:.8em}
-
 /* ===============================================================
-   Ansicht "Buben": Stahl und Neon
+   Ansicht "Buben": Anthrazit, tiefes Petrol, Stahl und Kupfer
+   Gebürstete, plastische Würfel mit elfenbeinernen Augen; klare
+   Linien statt Gefahrenband und Neon.
    =============================================================== */
 body[data-stil="buben"]{
   --bg:
-    linear-gradient(180deg,#0b1017 0%,#0a0e14 55%,#05080c 100%) fixed;
-  --text:#dfe8f0;
-  --muted:#7e93a5;
-  --titel:#c8ff3d;
-  --akzent:#57f0ff;
-  --akzent-text-hell:#dffcff;
-  --rand-fein:#57f0ff55;
-  --gut:#8dff5a;
-  --schlecht:#ff6b6b;
-  --warn:#ffb020;
-  --fokus:#57f0ff;
-  --kopf-bg:linear-gradient(180deg,#111a24 0%,#0c141c 100%);
-  --kopf-rand:1px solid #57f0ff33;
-  --kopf-radius:4px;
-  --kopf-schatten:0 10px 26px #000000cc,inset 0 1px 0 #57f0ff22;
-  --titel-schein:0 0 16px #c8ff3d66;
-  --wahl-bg:#0a1119;
-  --wahl-radius:4px;
-  --wahl-rand:1px solid #57f0ff33;
-  --wahl-text:#7e93a5;
-  --wahl-aktiv-bg:linear-gradient(180deg,#c8ff3d,#a4e000);
-  --wahl-aktiv-text:#0a1119;
-  --leise-bg:#0d1620;
-  --leise-text:#57f0ff;
-  --leise-hover:#131f2b;
-  --panel:linear-gradient(170deg,#101a24 0%,#0a1119 100%);
-  --panel-rand:1px solid #57f0ff26;
-  --panel-radius:6px;
-  --panel-schatten:0 16px 34px #000000aa,inset 0 1px 0 #57f0ff14;
-  --wert-bg:#0a1119;
-  --wert-rand:1px solid #57f0ff24;
-  --wert-radius:4px;
-  --wert-bg-betont:linear-gradient(180deg,#c8ff3d,#9fd800);
-  --wert-rand-betont:1px solid #d8ff70;
-  --balken-bg:#0a1119;
-  --balken-fuellung:linear-gradient(90deg,#57f0ff,#c8ff3d);
-  --balken-fertig:linear-gradient(90deg,#c8ff3d,#8dff5a);
-  --knopf-bg:#0d1620;
-  --knopf-text:#bcd2e3;
-  --knopf-rand:1px solid #57f0ff40;
-  --knopf-radius:3px;
-  --haupt-bg:linear-gradient(180deg,#d4ff5c,#a8e010);
-  --haupt-text:#0a1119;
-  --haupt-rand:1px solid #e2ff8c;
-  --haupt-schatten:0 0 22px #c8ff3d40,inset 0 -3px 0 #7cae00;
-  --hinweis-text:#a9bece;
-  --spieler-farbe:#c8ff3d;
-  --spieler-farbe-schein:#c8ff3d33;
-  --spieler-farbe-2:#57f0ff;
-  --spieler-bg:#0a1119;
-  --spieler-rand:1px solid #57f0ff1f;
-  --spieler-radius:3px;
-  --spieler-text:#b7c9d7;
-  --spieler-bg-aktiv:#101c26;
-  --spieler-rand-aktiv:1px solid #c8ff3d;
-  --spieler-text-aktiv:#e9ffd0;
-  --spieler-schatten-aktiv:0 0 18px #c8ff3d33;
-  --punkte-farbe:#c8ff3d;
-  --schleier-bg:#04070bcc;
-  --karte-schatten:0 24px 60px #000000ee;
-  --feld-bg:#0a1119;
-  --w-radius:6%;
-  --w-bg:linear-gradient(165deg,#1b2935 0%,#111b24 60%,#0c141c 100%);
-  --w-bg-gewaehlt:linear-gradient(165deg,#243a49 0%,#16232e 60%,#101a23 100%);
-  --w-bg-gesichert:linear-gradient(165deg,#1a3324 0%,#12271a 100%);
-  --w-rand:2px solid #57f0ff55;
-  --w-rand-gewaehlt:3px solid #c8ff3d;
-  --w-schatten:0 8px 16px #000000cc,inset 0 0 18px #57f0ff14,inset 0 -3px 0 #00000066;
-  --w-schatten-gewaehlt:0 12px 26px #000000ee,0 0 20px #c8ff3d40,inset 0 0 22px #c8ff3d1f;
-  --w-schatten-gesichert:0 4px 10px #000000bb,inset 0 0 14px #8dff5a22;
-  --pip:#c8ff3d;
-  --pip-schein:0 0 8px #c8ff3dcc,0 0 2px #ffffff;
-  --haken-bg:#c8ff3d;
-  --haken-text:#0a1119;
-  --haken-gewaehlt-bg:#57f0ff;
-  --haken-gewaehlt-text:#04121a;
-  --wert-betont-text:#0a1119;
-  --wert-betont-etikett:#33501f;
-  --leiste-bg:#05080c;
+    radial-gradient(circle at 74% -12%,#2f3135 0%,#2f313500 52%),
+    radial-gradient(circle at 10% 108%,#242529 0%,#24252900 46%),
+    linear-gradient(180deg,#141517 0%,#141517 60%,#0e0f10 100%) fixed;
+  --text:#e4e5e6;
+  --muted:#9ea1a7;
+  --titel:#d3d5d8;
+  --akzent:#e0242f;
+  --akzent-text-hell:#ffd9db;
+  --rand-fein:#e0242f4d;
+  --gut:#b1b3b8;
+  --schlecht:#ff8a90;
+  --warn:#cfa06a;
+  --fokus:#9fa2a8;
+  --kopf-bg:linear-gradient(180deg,#242529 0%,#1c1d1f 100%);
+  --kopf-rand:1px solid #ffffff14;
+  --kopf-radius:10px;
+  --kopf-schatten:0 14px 30px #050506a6,inset 0 1px 0 #ffffff14;
+  --titel-schein:none;
+  --wahl-bg:#141517;
+  --wahl-radius:8px;
+  --wahl-rand:1px solid #ffffff17;
+  --wahl-text:#9ea1a7;
+  --wahl-aktiv-bg:linear-gradient(180deg,#2f3135,#242529);
+  --wahl-aktiv-text:#f0e6d9;
+  --wahl-aktiv-schatten:inset 0 -2px 0 #e0242f;
+  --leise-bg:#1c1d1f;
+  --leise-text:#adafb4;
+  --leise-hover:#242529;
+  --panel:linear-gradient(165deg,#242529 0%,#1c1d1f 100%);
+  --panel-rand:1px solid #ffffff12;
+  --panel-radius:12px;
+  --panel-schatten:0 18px 38px #050506b3,inset 0 1px 0 #ffffff0d;
+  --wert-bg:#1c1d1f;
+  --wert-rand:1px solid #ffffff12;
+  --wert-radius:8px;
+  --wert-bg-betont:linear-gradient(180deg,#e0242f,#b31722);
+  --wert-rand-betont:1px solid #ff8a90;
+  --balken-bg:#141517;
+  --balken-fuellung:linear-gradient(90deg,#888c94,#e0242f);
+  --balken-fertig:linear-gradient(90deg,#b1b3b8,#e0242f);
+  --knopf-bg:#1c1d1f;
+  --knopf-text:#d0d2d5;
+  --knopf-rand:1px solid #ffffff1a;
+  --knopf-radius:8px;
+  --haupt-bg:linear-gradient(180deg,#e0242f,#b31722);
+  --haupt-text:#ffffff;
+  --haupt-rand:1px solid #ff8a90;
+  --haupt-schatten:0 10px 22px #0505068c,inset 0 -2px 0 #4a070c;
+  --hinweis-text:#b5b7bc;
+  --spieler-farbe:#e0242f;
+  --spieler-farbe-schein:#e0242f29;
+  --spieler-farbe-2:#cfd0d3;
+  --spieler-bg:#1c1d1f;
+  --spieler-rand:1px solid #ffffff12;
+  --spieler-radius:8px;
+  --spieler-text:#c6c8cb;
+  --spieler-bg-aktiv:linear-gradient(180deg,#2f3135 0%,#242529 100%);
+  --spieler-rand-aktiv:1px solid #e0242f;
+  --spieler-text-aktiv:#f2e8dc;
+  --spieler-schatten-aktiv:0 8px 18px #0505068c,inset 0 1px 0 #ffffff12;
+  --punkte-farbe:#c9d1d9;
+  --schleier-bg:#0a0a0bdd;
+  --karte-radius:14px;
+  --karte-schatten:0 28px 70px #050506e6;
+  --feld-bg:#1c1d1f;
+  --w-radius:14%;
+  --w-bg:linear-gradient(158deg,#4f5259 0%,#3d4045 45%,#242529 100%);
+  --w-bg-gewaehlt:linear-gradient(158deg,#63676e 0%,#4f5259 45%,#2f3135 100%);
+  --w-bg-gesichert:linear-gradient(158deg,#3d4045 0%,#2f3135 100%);
+  --w-rand:1px solid #ffffff21;
+  --w-rand-gewaehlt:2px solid #e0242f;
+  --w-schatten:0 14px 24px #050506b3,inset 0 2px 0 #ffffff2b,inset 0 -10px 16px #05050680,inset 0 0 0 1px #ffffff0f;
+  --w-schatten-gewaehlt:0 18px 32px #050506cc,0 0 0 1px #e0242f4d,inset 0 2px 0 #ffffff33,inset 0 -10px 16px #0505068c;
+  --w-schatten-gesichert:0 8px 14px #05050699,inset 0 2px 0 #ffffff1f,inset 0 -8px 12px #05050673;
+  --pip:#e6e9ec;
+  --pip-schein:none;
+  --haken-bg:#e0242f;
+  --haken-text:#ffffff;
+  --haken-gewaehlt-bg:#cfd0d3;
+  --haken-gewaehlt-text:#141517;
+  --wert-betont-text:#ffffff;
+  --wert-betont-etikett:#ffd9db;
+  --leiste-bg:#0e0f10;
 }
-/* Buben: Gefahrenband im Kopf, Rasterlinien, HUD-Ecken */
+/* Buben: Kupferlinie im Kopf, gebürstete Flächen, klare Kanten */
+body[data-stil="buben"] .kopf{padding-top:14px;overflow:hidden}
 body[data-stil="buben"] .kopf::before{
   content:"";
   position:absolute;
   left:0;right:0;top:0;
-  height:4px;
-  background:repeating-linear-gradient(135deg,#c8ff3d 0 10px,#0a1119 10px 20px);
-  opacity:.85;
+  height:1px;
+  background:linear-gradient(90deg,#e0242f00,#e0242f99 30%,#e2bb92 50%,#e0242f99 70%,#e0242f00);
+  opacity:.9;
   pointer-events:none;
 }
-body[data-stil="buben"] .kopf{padding-top:16px;overflow:hidden}
+body[data-stil="buben"] .kopf h1{font-weight:600;letter-spacing:.24em}
+body[data-stil="buben"] .karte h2{letter-spacing:.16em}
 body[data-stil="buben"] .bereich::before{
   content:"";
   position:absolute;
   inset:0;
   border-radius:inherit;
-  background:repeating-linear-gradient(0deg,#ffffff05 0 1px,#0000 1px 3px);
+  background:
+    linear-gradient(180deg,#ffffff08,#0000 18%),
+    repeating-linear-gradient(0deg,#ffffff04 0 1px,#0000 1px 3px);
   pointer-events:none;
 }
 body[data-stil="buben"] .bereich::after{
   content:"";
   position:absolute;
-  inset:6px;
-  border-radius:2px;
-  border:1px dashed #57f0ff14;
+  inset:0;
+  border-radius:inherit;
+  border:1px solid #ffffff08;
   pointer-events:none;
 }
-body[data-stil="buben"] .wuerfel .augen{gap:7%}
-body[data-stil="buben"] .wuerfel .auge{border-radius:2px}
-body[data-stil="buben"] .kopf h1{font-style:italic}
-body[data-stil="buben"] .stilwahl button{font-family:"Courier New",monospace;text-transform:uppercase;letter-spacing:.1em}
-body[data-stil="buben"] .knoepfe button{text-transform:uppercase;letter-spacing:.12em;font-family:"Courier New",monospace}
-body[data-stil="buben"] .spieler li .who{font-family:"Courier New",monospace;text-transform:uppercase;letter-spacing:.06em}
-
+body[data-stil="buben"] .wer .marke{box-shadow:0 0 0 3px #e0242f2e}
+body[data-stil="buben"] .wuerfelFeld::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:16px;
+  background:radial-gradient(circle at 50% -20%,#ffffff0a,#0000 70%);
+  box-shadow:inset 0 0 0 1px #ffffff08;
+  pointer-events:none;
+}
 /* ---- Großer Bildschirm: Spielerleiste oben, Würfel über die volle Breite ---- */
 @media(min-width:1080px){
   .buehne{grid-template-columns:1fr}
@@ -878,10 +928,46 @@ body[data-stil="buben"] .spieler li .who{font-family:"Courier New",monospace;tex
   .regeln{margin-top:8px}
 }
 @media(max-width:380px){
-  .stilwahl button{padding:6px 8px;font-size:11px}
   .leise{padding:7px 9px;font-size:11px}
 }
+
+/* ---- Red Reactor: Titel und Knopfaufschrift in Silber, Rot nur als LED-Akzent ---- */
+body[data-stil="buben"] .titel,
+body[data-stil="jungs"] .titel,
+body[data-stil="maenner"] .titel,
+body[data-stil="buben"] .kopf h1,
+body[data-stil="jungs"] .kopf h1,
+body[data-stil="maenner"] .kopf h1,
+body[data-stil="buben"] h2,
+body[data-stil="jungs"] h2,
+body[data-stil="maenner"] h2 {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button,
+body[data-stil="jungs"] button,
+body[data-stil="maenner"] button,
+body[data-stil="buben"] .knopf,
+body[data-stil="jungs"] .knopf,
+body[data-stil="maenner"] .knopf {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="jungs"] button.aktiv,
+body[data-stil="maenner"] button.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="jungs"] button.haupt,
+body[data-stil="maenner"] button.haupt {
+  color: #ffffff;
+}
+
+/* Red Reactor: Dialog-Hauptknopf trägt weiße Schrift */
+body[data-stil="buben"] .meldung button,
+body[data-stil="jungs"] .meldung button,
+body[data-stil="maenner"] .meldung button {
+  color: #ffffff;
+}
 </style>
+<script src="/spiele/stil.js"></script>
 </head>
 
 <body data-stil="normal">
@@ -894,11 +980,6 @@ body[data-stil="buben"] .spieler li .who{font-family:"Courier New",monospace;tex
       <div class="unterzeile">Sechs Würfel, drei Ansichten, ein Ziel</div>
     </div>
     <div class="rechts">
-      <div class="stilwahl" role="group" aria-label="Ansicht wählen">
-        <button type="button" data-stil="normal">Normal</button>
-        <button type="button" data-stil="maedchen">Mädchen</button>
-        <button type="button" data-stil="buben">Buben</button>
-      </div>
       <button type="button" class="leise" id="neuesSpiel">Neues Spiel</button>
     </div>
   </header>
@@ -981,6 +1062,17 @@ body[data-stil="buben"] .spieler li .who{font-family:"Courier New",monospace;tex
   </div>
 </div>
 
+<!-- Fehlwurf: Würfel bleiben sichtbar, dann wechselt der Spieler -->
+<div class="schleier" id="pechSchleier" hidden role="alert" aria-live="assertive">
+  <div class="karte pech-karte">
+    <h2>Leider Pech gehabt!</h2>
+    <p class="unter">Keine gültigen Punkte gewürfelt. Deine nicht gespeicherten Zugpunkte sind verloren.</p>
+    <div class="pech-wuerfel" id="pechWuerfel" aria-hidden="true"></div>
+    <p class="pech-verloren" id="pechVerloren"></p>
+    <p class="pech-weiter" id="pechWeiter"></p>
+  </div>
+</div>
+
 <!-- Ende -->
 <div class="schleier" id="endeSchleier" hidden>
   <div class="karte">
@@ -1000,6 +1092,8 @@ body[data-stil="buben"] .spieler li .who{font-family:"Courier New",monospace;tex
    ============================================================ */
 const ZIEL = 10000;
 const EINSTIEG = 350;
+// So lange steht die Fehlwurf-Meldung, bevor der Nächste übernimmt.
+const PECH_DAUER = 2600;
 const AUGEN = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 
 const REGELN = {
@@ -1046,7 +1140,6 @@ const REGELN = {
    Spielstand
    ============================================================ */
 const SPEICHER_SPIEL = "tg-zehntausend-spiel";
-const SPEICHER_STIL = "tg-zehntausend-stil";
 
 let zufall = () => 1 + Math.floor(Math.random() * 6);
 
@@ -1274,6 +1367,52 @@ function hinweis(text, art) {
 }
 
 /* ============================================================
+   Fehlwurf-Anzeige
+   Die gewürfelten Würfel bleiben stehen, die Meldung erklärt den
+   Wechsel; nach PECH_DAUER übernimmt der Nächste.
+   ============================================================ */
+let pechTimer = null;
+let pechMarke = 0;   // Nummer des zuletzt gezeigten Fehlwurfs (online)
+
+function wuerfelBild(wert) {
+  const b = document.createElement("div");
+  b.className = "wuerfel" + (wert ? "" : " leer");
+  const augen = document.createElement("span");
+  augen.className = "augen";
+  const muster = AUGEN[wert] || [];
+  for (let k = 0; k < 9; k++) {
+    const p = document.createElement("i");
+    p.className = muster.includes(k) ? "auge an" : "auge";
+    augen.appendChild(p);
+  }
+  b.appendChild(augen);
+  return b;
+}
+
+function zeigePech(geworfen, verloren, naechster) {
+  const feld = $("pechWuerfel");
+  feld.innerHTML = "";
+  geworfen.forEach((w) => feld.appendChild(wuerfelBild(w)));
+  $("pechVerloren").textContent = verloren > 0
+    ? verloren.toLocaleString("de-DE") + " Punkte aus diesem Zug sind verloren."
+    : "In diesem Zug war noch nichts gesichert.";
+  const weiter = $("pechWeiter");
+  weiter.textContent = "Jetzt ist ";
+  const wer = document.createElement("b");
+  wer.textContent = naechster;
+  weiter.append(wer, " an der Reihe!");
+  $("pechSchleier").hidden = false;
+  clearTimeout(pechTimer);
+  pechTimer = setTimeout(versteckePech, PECH_DAUER);
+}
+
+function versteckePech() {
+  clearTimeout(pechTimer);
+  pechTimer = null;
+  $("pechSchleier").hidden = true;
+}
+
+/* ============================================================
    Aktionen
    ============================================================ */
 function wuerfelKlick(i) {
@@ -1343,23 +1482,19 @@ async function wuerfeln() {
 
   const geworfen = ziele.map((i) => S.wuerfel[i]);
   if (!REGELN.hatPunkte(geworfen)) {
+    // Die Würfel bleiben liegen, die Meldung erklärt den Wechsel; erst
+    // danach räumt naechsterSpieler() den Tisch.
     S.gesperrt = true;
     const verloren = S.zugPunkte;
-    hinweis(
-      "Fehlwurf: " + geworfen.join(" · ") + " – kein gültiger Würfel." +
-      (verloren > 0
-        ? " " + verloren.toLocaleString("de-DE") + " Punkte aus diesem Zug sind weg."
-        : " Der Zug wechselt."),
-      "schlecht"
-    );
+    S.zugPunkte = 0;
+    hinweis("", "");
     zeichne();
-    speichern();
-    await warte(1900);
+    const danach = S.spieler[(S.dran + 1) % S.spieler.length].name;
+    zeigePech(geworfen, verloren, danach);
+    await warte(PECH_DAUER);
+    versteckePech();
     S.gesperrt = false;
-    naechsterSpieler(
-      "Fehlwurf – " + (verloren > 0 ? verloren.toLocaleString("de-DE") + " Punkte aus dem Zug sind weg." : "keine Punkte gesichert."),
-      "schlecht"
-    );
+    naechsterSpieler("Jetzt ist " + danach + " an der Reihe!", "gut");
     return;
   }
 
@@ -1467,7 +1602,7 @@ function naechsterSpieler(text, art) {
   S.auswahl = [false, false, false, false, false, false];
   S.zugPunkte = 0;
   S.wuerfe = 0;
-  if (text) hinweis(aktiverSpieler().name + " ist dran. " + text, art || "");
+  if (text) hinweis(text, art || "");
   zeichne();
   speichern();
 }
@@ -1555,14 +1690,8 @@ function laden() {
 function stilSetzen(stil) {
   if (!["normal", "maedchen", "buben"].includes(stil)) stil = "normal";
   document.body.dataset.stil = stil;
-  document.querySelectorAll(".stilwahl button").forEach((b) => {
-    const an = b.dataset.stil === stil;
-    b.classList.toggle("aktiv", an);
-    b.setAttribute("aria-pressed", an ? "true" : "false");
-  });
   const meta = document.querySelector('meta[name="color-scheme"]');
   if (meta) meta.setAttribute("content", stil === "maedchen" ? "light" : "dark");
-  try { localStorage.setItem(SPEICHER_STIL, stil); } catch (e) { /* egal */ }
 }
 
 /* ============================================================
@@ -1628,9 +1757,6 @@ $("wuerfelnKnopf").addEventListener("click", wuerfeln);
 $("weiterKnopf").addEventListener("click", weiterwuerfeln);
 $("sichernKnopf").addEventListener("click", sichern);
 
-document.querySelectorAll(".stilwahl button").forEach((b) => {
-  b.addEventListener("click", () => stilSetzen(b.dataset.stil));
-});
 
 /* Tastatur: Leertaste würfelt, W weiter, S sichern. */
 document.addEventListener("keydown", (e) => {
@@ -1746,6 +1872,12 @@ function uebernehmeOnline(g) {
   }
 
   $("endeSchleier").hidden = true;
+  // Der Server hat schon gewechselt: die Meldung zeigt die Würfel des
+  // Fehlwurfs noch einmal und nennt den Nächsten.
+  if (g.fehlwurf && g.fehlwurf.nr !== pechMarke) {
+    pechMarke = g.fehlwurf.nr;
+    zeigePech(g.fehlwurf.wuerfel || [], g.fehlwurf.verloren || 0, g.fehlwurf.naechster || "der Nächste");
+  }
   const neu = S.wuerfel.some((w, i) => w !== vorher[i]);
   zeichne();
   if (neu) blinkeWuerfel();
@@ -1872,6 +2004,8 @@ function onlineStarten() {
   $("endeSchleier").hidden = true;
   $("startKnopf").hidden = true;
   S = neuerZustand(["Spieler", "Spieler"]);
+  pechMarke = 0;
+  versteckePech();
   setzeHinweis("Verbinde mit dem Spielraum " + ROOM + " …", "");
   zeichne();
   // Erst den Platz im Raum sichern, dann den Stand holen.
@@ -1885,8 +2019,9 @@ function onlineStarten() {
    ============================================================ */
 baueWuerfel();
 let gespeicherterStil = "normal";
-try { gespeicherterStil = localStorage.getItem(SPEICHER_STIL) || "normal"; } catch (e) { /* egal */ }
+gespeicherterStil = TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
 stilSetzen(gespeicherterStil);
+TGStil.beiWechsel(() => stilSetzen(TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" })));
 
 if (ONLINE) {
   // Im Spielraum führt der Server den Stand – nichts aus dem Speicher holen.

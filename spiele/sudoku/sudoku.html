@@ -6,80 +6,129 @@
 <meta name="theme-color" content="#0b241d">
 <title>Sudoku</title>
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--fenster:#0f2b23;--leiste:#0b241d;--buehne:#08120f;
+--titel-1:#1e5645;--titel-2:#144238;--titel-text:#f4e6c2;
+--gold:#e8cd8e;--gold-hell:#f1dca8;--gold-rand:#d9bc7c;
+--rand-schwach:#d9bc7c66;--gitter-rand:#d9bc7c88;
+--text:#efe6d2;--muted:#a9c3b6;
+--knopf:#0f2b23;--knopf-hover:#184536;
+--brett:#0b241d;--zelle:#123329;--zelle-bereich:#173f34;--zelle-geben:#164036;
+--zelle-geben-text:#f7efd8;--zelle-gleich:#1a4a3c;--zelle-gewaehlt:#1e5645;
+--gitter:#d9bc7c22;--gitter-2:#e8cd8e99;
+--fehler-bg:#3b1c18;--fehler-text:#ffb09c;--hinweis-text:#8fd0b4;--notiz:#8fb3a6;
+--pad-knopf:#12312a;--pad-aktiv:#1e5645;
+--schleier:#04100ccc;--meldung-text:#d8edd8;--regeln-text:#d8d2bf;
+}
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
+.fenster{border:1px solid var(--rand-schwach);border-radius:8px;overflow:hidden;background:var(--fenster);
  box-shadow:0 6px 18px #00000055}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--titel-1),var(--titel-2));border-bottom:1px solid var(--rand-schwach)}
+.titelleiste .titel{color:var(--titel-text);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-schwach);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-schwach)}
 .menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
-.menueleiste button.aktiv{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e}
+ border:1px solid var(--rand-schwach);background:var(--knopf);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--knopf-hover)}
+.menueleiste button.aktiv{background:var(--gold);color:var(--leiste);border-color:var(--gold)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-schwach)}
+.statuszeile b{color:var(--gold);font-weight:normal}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
 #brett{display:grid;grid-template-columns:repeat(9,1fr);width:100%;max-width:420px;
- border:2px solid #d9bc7c88;border-radius:8px;overflow:hidden;background:#0b241d}
+ border:2px solid var(--gitter-rand);border-radius:8px;overflow:hidden;background:var(--brett)}
 .zelle{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
- font-size:clamp(16px,4.8vw,22px);color:#e8cd8e;background:#123329;cursor:pointer;
- border-right:1px solid #d9bc7c22;border-bottom:1px solid #d9bc7c22}
-#brett .zelle:nth-child(9n+3),#brett .zelle:nth-child(9n+6){border-right:2px solid #e8cd8e99}
+ font-size:clamp(16px,4.8vw,22px);color:var(--gold);background:var(--zelle);cursor:pointer;
+ border-right:1px solid var(--gitter);border-bottom:1px solid var(--gitter)}
+#brett .zelle:nth-child(9n+3),#brett .zelle:nth-child(9n+6){border-right:2px solid var(--gitter-2)}
 #brett .zelle:nth-child(n+19):nth-child(-n+27),
-#brett .zelle:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #e8cd8e99}
-.zelle.bereich{background:#173f34}
-.zelle.gegeben{color:#f7efd8;background:#164036}
-.zelle.gleich{background:#1a4a3c}
-.zelle.gewaehlt{background:#1e5645;box-shadow:inset 0 0 0 2px #e8cd8e}
+#brett .zelle:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--gitter-2)}
+.zelle.bereich{background:var(--zelle-bereich)}
+.zelle.gegeben{color:var(--zelle-geben-text);background:var(--zelle-geben)}
+.zelle.gleich{background:var(--zelle-gleich)}
+.zelle.gewaehlt{background:var(--zelle-gewaehlt);box-shadow:inset 0 0 0 2px var(--gold)}
 /* Falsche Zahl war vorher nur an der Schriftfarbe zu erkennen, der Grund blieb
    gleich. Jetzt zusätzlich rot eingetönter Hintergrund. */
-.zelle.fehler{background:#3b1c18;color:#ffb09c}
-.zelle.hinweis{color:#8fd0b4}
+.zelle.fehler{background:var(--fehler-bg);color:var(--fehler-text)}
+.zelle.hinweis{color:var(--hinweis-text)}
 .zelle .notizen{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);
- grid-template-rows:repeat(3,1fr);font-size:9px;color:#8fb3a6;line-height:1;padding:1px}
+ grid-template-rows:repeat(3,1fr);font-size:9px;color:var(--notiz);line-height:1;padding:1px}
 .zelle .notizen span{display:flex;align-items:center;justify-content:center}
 
-.pad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px;background:#08120f}
+.pad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px;background:var(--buehne)}
 .pad button{font-family:inherit;font-size:19px;padding:10px 0;border-radius:8px;cursor:pointer;
- border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e;position:relative}
-.pad button:active{background:#1e5645}
+ border:1px solid var(--rand-schwach);background:var(--pad-knopf);color:var(--gold);position:relative}
+.pad button:active{background:var(--pad-aktiv)}
 .pad button.leer{opacity:.35}
-.pad button .rest{position:absolute;top:2px;right:5px;font-size:9px;color:#8fb3a6}
+.pad button .rest{position:absolute;top:2px;right:5px;font-size:9px;color:var(--notiz)}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--fenster);border:1px solid var(--gold-rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--gold-rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln-text)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--fenster:#fff6fa;--leiste:#ffeaf3;--buehne:#fff0f7;
+--titel-1:#ffd0e4;--titel-2:#ffb8d4;--titel-text:#5c0f38;
+--gold:#8f2450;--gold-hell:#5b2340;--gold-rand:#ef7aa8;
+--rand-schwach:#ef7aa899;--gitter-rand:#ef7aa8aa;
+--text:#3a0f24;--muted:#8f2450;
+--knopf:#fff6fa;--knopf-hover:#ffe3ef;
+--brett:#ffeaf3;--zelle:#fff6fa;--zelle-bereich:#ffe3ef;--zelle-geben:#ffd0e4;
+--zelle-geben-text:#3a0f24;--zelle-gleich:#ffd9ec;--zelle-gewaehlt:#ffc2da;
+--gitter:#ef7aa855;--gitter-2:#b0286a;
+--fehler-bg:#ffd7df;--fehler-text:#b0283a;--hinweis-text:#2a8f6a;--notiz:#8f2450;
+--pad-knopf:#fff6fa;--pad-aktiv:#ffe3ef;
+--schleier:#3a0f2473;--meldung-text:#5b2340;--regeln-text:#5b2340;
+}
+html[data-stil="buben"]{
+--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--fenster:#111316;--leiste:#0a0d10;--buehne:#08090b;
+--titel-1:#1b232c;--titel-2:#12171d;--titel-text:#e6e9ec;
+--gold:#c8ff3d;--gold-hell:#e6e9ec;--gold-rand:#e0242f;
+--rand-schwach:#e0242f66;--gitter-rand:#e0242faa;
+--text:#e6e9ec;--muted:#adb4bc;
+--knopf:#1b1e23;--knopf-hover:#23262c;
+--brett:#0a0d10;--zelle:#12161a;--zelle-bereich:#171c22;--zelle-geben:#1b222b;
+--zelle-geben-text:#e6e9ec;--zelle-gleich:#1f2731;--zelle-gewaehlt:#2a3542;
+--gitter:#e0242f33;--gitter-2:#c8ff3d;
+--fehler-bg:#3a0d12;--fehler-text:#ff8a90;--hinweis-text:#6dff4a;--notiz:#7e8892;
+--pad-knopf:#1b1e23;--pad-aktiv:#2b3038;
+--schleier:#04070bbf;--meldung-text:#adb4bc;--regeln-text:#adb4bc;
+}
 </style>
+
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
@@ -499,6 +548,18 @@ window.addEventListener("keydown",e=>{
 brettBauen();
 neuesSpiel();
 
+})();
+</script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#f7a6d4",buben:"#0a0d10"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>

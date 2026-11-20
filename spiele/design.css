@@ -1,0 +1,848 @@
+/* ===========================================================================
+   TRASHYGECKO – DESIGNSYSTEM FÜR DEN SPIELEBEREICH
+
+   Eine Wahl (spiele/stil.js, Schlüssel "tg-stil") färbt die Spielewelt:
+   Spieleübersicht, Connector (auch Online) mit Lobby und Räumen, Menüs,
+   Knöpfe, Dialoge, Eingabefelder.
+
+   klassisch = bisheriger Auftritt (Grün/Gold, unverändert)
+   maedchen  = Candy Pop (Pink/Lila, Akzente Gelb/Orange/Grün/Blau)
+   buben     = dunkles Stahl mit Acidgrün und Cyan
+
+   Aufbau:
+     1. Design-Tokens (Farben, Flächen, Akzente, Rahmen, Schatten)
+     2. Gemeinsame Bausteine (Knöpfe, Eingaben, Panels)
+     3. Spieleübersicht (body.spiele-seite)
+     4. Connector mit Lobby und Räumen (body.connector-seite)
+
+   Diese Datei gilt NUR für die Seiten, die sie einbinden. Die Spiele selbst
+   tragen ihre eigenen Ansichten (body[data-stil]) und werden hier nicht
+   angefasst; klassische Spiele bleiben klassisch.
+
+   Nicht betroffen: Startseite, Musik, Textseiten und alles außerhalb von
+   /spiele.
+   ========================================================================= */
+
+/* ---------------------------------------------------------- 1. Tokens --- */
+
+:root {
+  --tg-bg-1: #1d4b3e;
+  --tg-bg-2: #123329;
+  --tg-bg-3: #0a211b;
+
+  --tg-flaeche: #12332ae8;
+  --tg-flaeche-2: #0b241d;
+  --tg-flaeche-3: #16423a;
+
+  --tg-text: #efe6d2;
+  --tg-sanft: #b9c9bf;
+  --tg-leise: #a9bfb2;
+
+  --tg-akzent: #e8cd8e;
+  --tg-akzent-2: #d9bc7c;
+  --tg-akzent-3: #a9c3b6;
+
+  --tg-knopf-bg: #e8cd8e;
+  --tg-knopf-text: #0b241d;
+  --tg-knopf-hover: #f1dca8;
+
+  --tg-rahmen: #d9bc7c59;
+  --tg-rahmen-stark: #d9bc7c;
+  --tg-linie: #d9bc7c3d;
+
+  --tg-schatten: #00000066;
+  --tg-radius: 10px;
+}
+
+/* Candy Pop: Pink und Lila tragen, Gelb/Orange/Grün/Blau setzen Akzente. */
+html[data-stil="maedchen"] {
+  --tg-bg-1: #ffd9ec;
+  --tg-bg-2: #f3a6d5;
+  --tg-bg-3: #a86bd8;
+
+  --tg-flaeche: #fff8fdf5;
+  --tg-flaeche-2: #ffeef7;
+  --tg-flaeche-3: #ffe0ef;
+
+  --tg-text: #3a1030;
+  --tg-sanft: #6b3a5e;
+  --tg-leise: #8b5f7c;
+
+  --tg-akzent: #a8326e;
+  --tg-akzent-2: #8a4fff;
+  --tg-akzent-3: #f0509f;
+
+  --tg-knopf-bg: #f0509f;
+  --tg-knopf-text: #ffffff;
+  --tg-knopf-hover: #ff6fb2;
+
+  --tg-rahmen: #f0a9d3;
+  --tg-rahmen-stark: #ff8fc4;
+  --tg-linie: #d95f9f4d;
+
+  --tg-schatten: #7a1f5233;
+  --tg-radius: 14px;
+}
+
+/* Red Reactor (Buben): Tiefschwarz und Anthrazit, gebürstetes Metall,
+   dunkles Glas, rote LED als sparsamer Hauptakzent, Silber/Stahl als Beiklang.
+   Kein Giftgrün, kein Blau, kein Neon. */
+html[data-stil="buben"] {
+  --tg-bg-1: #1e2126;
+  --tg-bg-2: #111316;
+  --tg-bg-3: #050607;
+
+  --tg-flaeche: #16181cf2;
+  --tg-flaeche-2: #1b1e23;
+  --tg-flaeche-3: #23262c;
+
+  --tg-text: #e6e9ec;
+  --tg-sanft: #adb4bc;
+  --tg-leise: #868d96;
+
+  --tg-akzent: #e0242f;
+  --tg-akzent-2: #c9d1d9;
+  --tg-akzent-3: #9aa3ad;
+
+  --tg-knopf-bg: #2a2e35;
+  --tg-knopf-text: #eef1f3;
+  --tg-knopf-hover: #343a42;
+
+  --tg-rahmen: #2c313a;
+  --tg-rahmen-stark: #c9202c;
+  --tg-linie: #ffffff12;
+
+  --tg-schatten: #000000b3;
+  --tg-radius: 10px;
+
+  /* Eigene Red-Reactor-Bausteine */
+  --rr-metall: repeating-linear-gradient(90deg, #ffffff05 0 1px, #ffffff00 1px 3px);
+  --rr-glas: linear-gradient(180deg, #ffffff0a 0%, #ffffff00 46%, #00000033 100%);
+  --rr-led: #e0242f;
+  --rr-led-hell: #ff5560;
+  --rr-stahl: #7d858f;
+}
+
+/* ------------------------------------------------- 2. Gemeinsame Bausteine */
+
+/* Nur die beiden neuen Varianten malen um; klassisch bleibt wie gewachsen. */
+html[data-stil="maedchen"] body.spiele-seite,
+html[data-stil="maedchen"] body.connector-seite,
+html[data-stil="buben"] body.spiele-seite,
+html[data-stil="buben"] body.connector-seite {
+  background: radial-gradient(circle 900px at 50% -6%, var(--tg-bg-1) 0%, var(--tg-bg-2) 46%, var(--tg-bg-3) 100%) fixed;
+  color: var(--tg-text);
+}
+
+/* Die Stilwahl selbst passt sich der Variante an. */
+html[data-stil="maedchen"] .tg-stil button,
+html[data-stil="buben"] .tg-stil button {
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] .tg-stil button.aktiv,
+html[data-stil="buben"] .tg-stil button.aktiv {
+  background: var(--tg-akzent);
+  color: var(--tg-knopf-text);
+}
+
+/* --------------------------------------------------- 3. Spieleübersicht */
+
+html[data-stil="maedchen"] body.spiele-seite,
+html[data-stil="buben"] body.spiele-seite {
+  color: var(--tg-text);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .eins,
+html[data-stil="buben"] body.spiele-seite .eins {
+  color: var(--tg-akzent) !important;
+  text-shadow: none !important;
+}
+
+html[data-stil="maedchen"] body.spiele-seite .class1,
+html[data-stil="buben"] body.spiele-seite .class1 {
+  color: var(--tg-akzent) !important;
+  border-color: var(--tg-rahmen-stark) !important;
+  background: var(--tg-flaeche-2) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+html[data-stil="maedchen"] body.spiele-seite .stil-zeile,
+html[data-stil="buben"] body.spiele-seite .stil-zeile {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.spiele-seite .stil-zeile small,
+html[data-stil="buben"] body.spiele-seite .stil-zeile small {
+  color: var(--tg-leise);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .leiste,
+html[data-stil="buben"] body.spiele-seite .leiste {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche);
+  box-shadow: 0 6px 18px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .leiste input[type=search],
+html[data-stil="buben"] body.spiele-seite .leiste input[type=search] {
+  border-color: var(--tg-rahmen-stark);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.spiele-seite .leiste input[type=search]::placeholder,
+html[data-stil="buben"] body.spiele-seite .leiste input[type=search]::placeholder {
+  color: var(--tg-leise);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .leiste .reset,
+html[data-stil="buben"] body.spiele-seite .leiste .reset {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .filter button,
+html[data-stil="buben"] body.spiele-seite .filter button {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-sanft);
+}
+html[data-stil="maedchen"] body.spiele-seite .filter button[aria-pressed=true],
+html[data-stil="buben"] body.spiele-seite .filter button[aria-pressed=true] {
+  border-color: var(--tg-akzent);
+  background: var(--tg-flaeche-3);
+  color: var(--tg-akzent);
+  box-shadow: 0 0 8px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .treffer,
+html[data-stil="buben"] body.spiele-seite .treffer {
+  color: var(--tg-leise);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .kategorie,
+html[data-stil="buben"] body.spiele-seite .kategorie {
+  border-color: var(--tg-rahmen);
+  border-left-color: var(--tg-akzent);
+  background: var(--tg-flaeche);
+  box-shadow: 0 8px 20px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .kategorie-kopf,
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf {
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.spiele-seite .kategorie-kopf:hover,
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf:hover {
+  background: var(--tg-flaeche-3);
+}
+html[data-stil="maedchen"] body.spiele-seite .kategorie-kopf .titel small,
+html[data-stil="maedchen"] body.spiele-seite .bereich-hinweis,
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf .titel small,
+html[data-stil="buben"] body.spiele-seite .bereich-hinweis {
+  color: var(--tg-leise);
+}
+html[data-stil="maedchen"] body.spiele-seite .kategorie-kopf .punkt,
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf .punkt {
+  background: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.spiele-seite .zahl,
+html[data-stil="buben"] body.spiele-seite .zahl {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-text);
+}
+
+html[data-stil="maedchen"] body.spiele-seite a.spiel,
+html[data-stil="buben"] body.spiele-seite a.spiel {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.spiele-seite a.spiel:hover,
+html[data-stil="maedchen"] body.spiele-seite a.spiel:focus-visible,
+html[data-stil="buben"] body.spiele-seite a.spiel:hover,
+html[data-stil="buben"] body.spiele-seite a.spiel:focus-visible {
+  border-color: var(--tg-rahmen-stark);
+  background: var(--tg-flaeche-3);
+  box-shadow: 0 6px 16px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.spiele-seite #local-date-time,
+html[data-stil="buben"] body.spiele-seite #local-date-time {
+  color: var(--tg-akzent);
+}
+
+/* ------------------------------------------------------- 4. Connector --- */
+
+html[data-stil="maedchen"] body.connector-seite,
+html[data-stil="buben"] body.connector-seite {
+  color: var(--tg-text);
+}
+
+html[data-stil="maedchen"] body.connector-seite h1,
+html[data-stil="buben"] body.connector-seite h1 {
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite section,
+html[data-stil="buben"] body.connector-seite section {
+  background: var(--tg-flaeche);
+  border-color: var(--tg-rahmen);
+  border-radius: var(--tg-radius);
+  box-shadow: 0 8px 22px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.connector-seite button,
+html[data-stil="buben"] body.connector-seite button {
+  border-color: var(--tg-rahmen-stark);
+  background: var(--tg-knopf-bg);
+  color: var(--tg-knopf-text);
+}
+html[data-stil="maedchen"] body.connector-seite button:hover:not(:disabled),
+html[data-stil="buben"] body.connector-seite button:hover:not(:disabled) {
+  background: var(--tg-knopf-hover);
+  filter: none;
+}
+
+html[data-stil="maedchen"] body.connector-seite input,
+html[data-stil="maedchen"] body.connector-seite select,
+html[data-stil="maedchen"] body.connector-seite textarea,
+html[data-stil="buben"] body.connector-seite input,
+html[data-stil="buben"] body.connector-seite select,
+html[data-stil="buben"] body.connector-seite textarea {
+  border-color: var(--tg-rahmen-stark);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite input::placeholder,
+html[data-stil="buben"] body.connector-seite input::placeholder {
+  color: var(--tg-leise);
+}
+html[data-stil="maedchen"] body.connector-seite input:focus-visible,
+html[data-stil="maedchen"] body.connector-seite select:focus-visible,
+html[data-stil="maedchen"] body.connector-seite button:focus-visible,
+html[data-stil="buben"] body.connector-seite input:focus-visible,
+html[data-stil="buben"] body.connector-seite select:focus-visible,
+html[data-stil="buben"] body.connector-seite button:focus-visible {
+  outline-color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite #chat,
+html[data-stil="buben"] body.connector-seite #chat {
+  background: var(--tg-flaeche-2);
+  border: 1px solid var(--tg-rahmen);
+  border-radius: var(--tg-radius);
+}
+
+html[data-stil="maedchen"] body.connector-seite .msg,
+html[data-stil="buben"] body.connector-seite .msg {
+  border-bottom-color: var(--tg-linie);
+}
+html[data-stil="maedchen"] body.connector-seite .msg small,
+html[data-stil="maedchen"] body.connector-seite small,
+html[data-stil="buben"] body.connector-seite .msg small,
+html[data-stil="buben"] body.connector-seite small {
+  color: var(--tg-leise);
+}
+html[data-stil="maedchen"] body.connector-seite .msg-system,
+html[data-stil="buben"] body.connector-seite .msg-system {
+  color: var(--tg-sanft);
+}
+
+html[data-stil="maedchen"] body.connector-seite .code,
+html[data-stil="maedchen"] body.connector-seite #roomstatus,
+html[data-stil="buben"] body.connector-seite .code,
+html[data-stil="buben"] body.connector-seite #roomstatus {
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite .room,
+html[data-stil="maedchen"] body.connector-seite .game-player,
+html[data-stil="buben"] body.connector-seite .room,
+html[data-stil="buben"] body.connector-seite .game-player {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen);
+  border-radius: var(--tg-radius);
+}
+html[data-stil="maedchen"] body.connector-seite .room-code,
+html[data-stil="buben"] body.connector-seite .room-code {
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .room-meta,
+html[data-stil="maedchen"] body.connector-seite .empty,
+html[data-stil="maedchen"] body.connector-seite .runde-info,
+html[data-stil="buben"] body.connector-seite .room-meta,
+html[data-stil="buben"] body.connector-seite .empty,
+html[data-stil="buben"] body.connector-seite .runde-info {
+  color: var(--tg-sanft);
+}
+html[data-stil="maedchen"] body.connector-seite .game-player.ziel,
+html[data-stil="maedchen"] body.connector-seite .game-player.gewaehlt,
+html[data-stil="buben"] body.connector-seite .game-player.ziel,
+html[data-stil="buben"] body.connector-seite .game-player.gewaehlt {
+  border-color: var(--tg-akzent);
+  background: var(--tg-flaeche-3);
+  box-shadow: 0 0 12px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.connector-seite .modus-btn,
+html[data-stil="buben"] body.connector-seite .modus-btn {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-sanft);
+}
+html[data-stil="maedchen"] body.connector-seite .modus-btn:hover,
+html[data-stil="buben"] body.connector-seite .modus-btn:hover {
+  color: var(--tg-text);
+  border-color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .modus-btn[aria-selected="true"],
+html[data-stil="buben"] body.connector-seite .modus-btn[aria-selected="true"] {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+  box-shadow: 0 0 10px var(--tg-schatten);
+}
+
+html[data-stil="maedchen"] body.connector-seite .game-invite,
+html[data-stil="maedchen"] body.connector-seite .game-extra-box,
+html[data-stil="maedchen"] body.connector-seite .runde-angebot,
+html[data-stil="buben"] body.connector-seite .game-invite,
+html[data-stil="buben"] body.connector-seite .game-extra-box,
+html[data-stil="buben"] body.connector-seite .runde-angebot {
+  border-color: var(--tg-akzent);
+  background: var(--tg-flaeche-3);
+}
+html[data-stil="maedchen"] body.connector-seite .game-invite strong,
+html[data-stil="maedchen"] body.connector-seite .game-extra-box strong,
+html[data-stil="maedchen"] body.connector-seite .runde-angebot strong,
+html[data-stil="maedchen"] body.connector-seite .name-known strong,
+html[data-stil="buben"] body.connector-seite .game-invite strong,
+html[data-stil="buben"] body.connector-seite .game-extra-box strong,
+html[data-stil="buben"] body.connector-seite .runde-angebot strong,
+html[data-stil="buben"] body.connector-seite .name-known strong {
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite button.mini,
+html[data-stil="buben"] body.connector-seite button.mini {
+  background: transparent;
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-sanft);
+}
+html[data-stil="maedchen"] body.connector-seite button.mini:hover,
+html[data-stil="buben"] body.connector-seite button.mini:hover {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite details summary,
+html[data-stil="buben"] body.connector-seite details summary {
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite details summary::after,
+html[data-stil="buben"] body.connector-seite details summary::after {
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite details summary:hover,
+html[data-stil="buben"] body.connector-seite details summary:hover {
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite .chat-compose,
+html[data-stil="buben"] body.connector-seite .chat-compose {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen);
+}
+html[data-stil="maedchen"] body.connector-seite .chat-send-row input,
+html[data-stil="buben"] body.connector-seite .chat-send-row input {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .chat-name-btn,
+html[data-stil="buben"] body.connector-seite .chat-name-btn {
+  color: var(--tg-akzent-2);
+}
+
+html[data-stil="maedchen"] body.connector-seite .smiley-panel,
+html[data-stil="buben"] body.connector-seite .smiley-panel {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen);
+}
+html[data-stil="maedchen"] body.connector-seite .smiley-tab.aktiv,
+html[data-stil="buben"] body.connector-seite .smiley-tab.aktiv {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .smiley-hinweis,
+html[data-stil="buben"] body.connector-seite .smiley-hinweis,
+html[data-stil="maedchen"] body.connector-seite .name-tipp,
+html[data-stil="buben"] body.connector-seite .name-tipp,
+html[data-stil="maedchen"] body.connector-seite .multi-titel,
+html[data-stil="buben"] body.connector-seite .multi-titel {
+  color: var(--tg-leise);
+}
+
+html[data-stil="maedchen"] body.connector-seite #fullscreenBtn,
+html[data-stil="buben"] body.connector-seite #fullscreenBtn {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite #verbindung[data-zustand="ok"],
+html[data-stil="buben"] body.connector-seite #verbindung[data-zustand="ok"] {
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite #verbindung[data-zustand="start"],
+html[data-stil="maedchen"] body.connector-seite #verbindung[data-zustand="neu"],
+html[data-stil="buben"] body.connector-seite #verbindung[data-zustand="start"],
+html[data-stil="buben"] body.connector-seite #verbindung[data-zustand="neu"] {
+  color: var(--tg-akzent-2);
+}
+
+/* Lobby-Kacheln der Einzelspiele behalten ihre Beschriftung, nur die Fläche
+   und der Rahmen folgen dem Design. */
+html[data-stil="maedchen"] body.connector-seite .solo-liste button,
+html[data-stil="buben"] body.connector-seite .solo-liste button {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .solo-liste button:hover,
+html[data-stil="buben"] body.connector-seite .solo-liste button:hover {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+}
+
+/* Lobby-Kacheln (Einzelspiele), Auswahl-Schalter und Kleinigkeiten im
+   Connector – gleiche Tokens, damit nichts im alten Grün stehen bleibt. */
+html[data-stil="maedchen"] body.connector-seite .stil-zeile,
+html[data-stil="buben"] body.connector-seite .stil-zeile {
+  background: var(--tg-flaeche);
+  border: 1px solid var(--tg-rahmen);
+  border-radius: var(--tg-radius);
+  padding: 6px 10px;
+}
+html[data-stil="maedchen"] body.connector-seite .stil-zeile small,
+html[data-stil="buben"] body.connector-seite .stil-zeile small {
+  color: var(--tg-leise);
+}
+
+html[data-stil="maedchen"] body.connector-seite .solo-link,
+html[data-stil="buben"] body.connector-seite .solo-link {
+  border-color: var(--tg-rahmen);
+  background: var(--tg-flaeche-2);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .solo-link:hover,
+html[data-stil="buben"] body.connector-seite .solo-link:hover {
+  border-color: var(--tg-akzent);
+  background: var(--tg-flaeche-3);
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .solo-gruppe h3,
+html[data-stil="buben"] body.connector-seite .solo-gruppe h3 {
+  color: var(--tg-leise);
+}
+html[data-stil="maedchen"] body.connector-seite #soloSchalter,
+html[data-stil="buben"] body.connector-seite #soloSchalter {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite #soloSchalter:hover,
+html[data-stil="buben"] body.connector-seite #soloSchalter:hover {
+  background: var(--tg-flaeche-3);
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite #game-status.leer,
+html[data-stil="buben"] body.connector-seite #game-status.leer {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen);
+  color: var(--tg-sanft);
+}
+
+html[data-stil="maedchen"] body.connector-seite .spiel-knopf,
+html[data-stil="buben"] body.connector-seite .spiel-knopf {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen);
+  color: var(--tg-sanft);
+}
+html[data-stil="maedchen"] body.connector-seite .spiel-knopf:hover,
+html[data-stil="buben"] body.connector-seite .spiel-knopf:hover {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite .adresse-knopf,
+html[data-stil="buben"] body.connector-seite .adresse-knopf {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .adresse-knopf:hover,
+html[data-stil="buben"] body.connector-seite .adresse-knopf:hover {
+  background: var(--tg-flaeche-3);
+  color: var(--tg-akzent);
+  border-color: var(--tg-akzent);
+}
+
+html[data-stil="maedchen"] body.connector-seite .smiley-bild-btn,
+html[data-stil="buben"] body.connector-seite .smiley-bild-btn {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-rahmen);
+}
+html[data-stil="maedchen"] body.connector-seite .smiley-bild-btn:hover,
+html[data-stil="buben"] body.connector-seite .smiley-bild-btn:hover {
+  border-color: var(--tg-akzent);
+  background: var(--tg-flaeche-2);
+}
+
+/* Dialoge im Connector (Umbenennen, Tonwahl, Stummschaltung, Willkommen). */
+html[data-stil="maedchen"] body.connector-seite .tone-picker,
+html[data-stil="buben"] body.connector-seite .tone-picker {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .tone-btn,
+html[data-stil="buben"] body.connector-seite .tone-btn {
+  background: var(--tg-flaeche-3);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .tone-btn.game,
+html[data-stil="buben"] body.connector-seite .tone-btn.game {
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .tone-head,
+html[data-stil="buben"] body.connector-seite .tone-head,
+html[data-stil="maedchen"] body.connector-seite .tone-rename label,
+html[data-stil="buben"] body.connector-seite .tone-rename label {
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .tone-head strong,
+html[data-stil="buben"] body.connector-seite .tone-head strong,
+html[data-stil="maedchen"] body.connector-seite .tone-rename label strong,
+html[data-stil="buben"] body.connector-seite .tone-rename label strong {
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .tone-rename,
+html[data-stil="buben"] body.connector-seite .tone-rename {
+  border-bottom-color: var(--tg-linie);
+}
+html[data-stil="maedchen"] body.connector-seite .tone-rename input,
+html[data-stil="buben"] body.connector-seite .tone-rename input {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite .mute-popover,
+html[data-stil="buben"] body.connector-seite .mute-popover {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+  color: var(--tg-text);
+}
+html[data-stil="maedchen"] body.connector-seite #chat .willkommen,
+html[data-stil="buben"] body.connector-seite #chat .willkommen {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-rahmen-stark);
+}
+html[data-stil="maedchen"] body.connector-seite #chat .willkommen b,
+html[data-stil="buben"] body.connector-seite #chat .willkommen b {
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .runde-starten,
+html[data-stil="buben"] body.connector-seite .runde-starten {
+  background: var(--tg-flaeche-2);
+  border-color: var(--tg-rahmen-stark);
+  color: var(--tg-akzent);
+}
+html[data-stil="maedchen"] body.connector-seite .runde-starten:hover,
+html[data-stil="buben"] body.connector-seite .runde-starten:hover {
+  background: var(--tg-flaeche-3);
+  border-color: var(--tg-akzent);
+  color: var(--tg-akzent);
+}
+
+/* ==========================================================================
+   Red Reactor – Materialauftrag für den Buben-Stil
+   --------------------------------------------------------------------------
+   Tiefschwarzer Grund, gebürstetes Metall als feine Struktur, dunkles Glas als
+   oberste Schicht, rote LED nur als Kante, Aktiv-Zustand und Fokus. Silberne
+   Schrift, stahlgraue Rahmen. Nichts glüht flächig.
+   ========================================================================== */
+html[data-stil="buben"] body.connector-seite,
+html[data-stil="buben"] body.spiele-seite {
+  background-image:
+    var(--rr-metall),
+    radial-gradient(circle 900px at 50% -6%, #212429 0%, #111316 46%, #050607 100%);
+  background-attachment: fixed;
+}
+
+html[data-stil="buben"] body.connector-seite section,
+html[data-stil="buben"] body.spiele-seite .kategorie {
+  background-image:
+    var(--rr-metall),
+    var(--rr-glas),
+    linear-gradient(180deg, #191c21 0%, #131519 100%);
+  border-color: #2b3038;
+  box-shadow:
+    inset 0 1px 0 #ffffff0d,
+    0 0 0 1px #e0242f1a,
+    0 12px 28px #000000a6;
+}
+
+html[data-stil="buben"] body.connector-seite #modusbox {
+  position: relative;
+}
+html[data-stil="buben"] body.connector-seite #modusbox::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #e0242f00, #e0242f, #e0242f00);
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* Schaltflächen: Metallfläche, rote LED-Kante erst beim Überfahren/Aktiv. */
+html[data-stil="buben"] body.connector-seite button {
+  background: linear-gradient(180deg, #2c3037 0%, #1e2126 100%);
+  border-color: #3a4048;
+  color: var(--tg-text);
+  box-shadow: inset 0 1px 0 #ffffff12, 0 0 0 1px #e0242f24;
+}
+html[data-stil="buben"] body.connector-seite button:hover:not(:disabled) {
+  background: linear-gradient(180deg, #343941 0%, #24282e 100%);
+  border-color: #b8262f;
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 #ffffff18, 0 0 10px #e0242f33;
+}
+html[data-stil="buben"] body.connector-seite button:active:not(:disabled) {
+  box-shadow: inset 0 0 12px #e0242f44, 0 0 0 1px #e0242f66;
+}
+html[data-stil="buben"] body.connector-seite button.mini,
+html[data-stil="buben"] body.connector-seite .spiel-knopf,
+html[data-stil="buben"] body.connector-seite .adresse-knopf {
+  background: #16181c;
+  border-color: #3a4048;
+  box-shadow: none;
+}
+html[data-stil="buben"] body.connector-seite button.mini:hover,
+html[data-stil="buben"] body.connector-seite .spiel-knopf:hover,
+html[data-stil="buben"] body.connector-seite .adresse-knopf:hover {
+  background: #1e2126;
+  border-color: var(--tg-akzent);
+  color: #ffffff;
+}
+
+/* Ausgewähltes bekommt die rote Lichtleiste, nicht die ganze Fläche. */
+html[data-stil="buben"] body.connector-seite .modus-btn[aria-selected="true"] {
+  background: linear-gradient(180deg, #23262c 0%, #17191d 100%);
+  border-color: #e0242f;
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 0 #e0242f, 0 0 12px #e0242f22;
+}
+html[data-stil="buben"] body.connector-seite .game-player.gewaehlt,
+html[data-stil="buben"] body.connector-seite .game-player.ziel {
+  background: linear-gradient(180deg, #1d2025 0%, #141619 100%);
+  border-color: #e0242f;
+  box-shadow: inset 3px 0 0 0 #e0242f, 0 0 12px #e0242f22;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-stil="buben"] body.connector-seite button,
+  html[data-stil="buben"] body.spiele-seite a.spiel {
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+}
+
+/* Red Reactor: Rot bleibt Akzent, nicht Schriftfarbe. Titel und Spiele-Namen
+   stehen in Silber, rot leuchten Punkt, Kante und Aktiv-Zustand. */
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf,
+html[data-stil="buben"] body.spiele-seite a.spiel {
+  color: #e6e9ec;
+}
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf:hover,
+html[data-stil="buben"] body.spiele-seite a.spiel:hover,
+html[data-stil="buben"] body.spiele-seite a.spiel:focus-visible {
+  color: #ffffff;
+}
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf .punkt {
+  background: #e0242f;
+  box-shadow: 0 0 6px #e0242f66;
+}
+html[data-stil="buben"] body.spiele-seite a.spiel {
+  border-color: #2c313a;
+  background: linear-gradient(180deg, #1d2025 0%, #17191d 100%);
+  box-shadow: inset 0 1px 0 #ffffff0a;
+}
+html[data-stil="buben"] body.spiele-seite a.spiel:hover,
+html[data-stil="buben"] body.spiele-seite a.spiel:focus-visible {
+  border-color: #e0242f;
+  background: linear-gradient(180deg, #24282e 0%, #1a1d21 100%);
+  box-shadow: inset 3px 0 0 0 #e0242f, 0 6px 16px #000000a6;
+}
+html[data-stil="buben"] body.spiele-seite .kategorie-kopf .titel small {
+  color: #9aa0a8;
+}
+html[data-stil="buben"] body.spiele-seite #local-date-time {
+  color: #ff7b83;
+}
+
+/* Connector-Titel: Silber mit roter Lichtleiste darunter, wie eine Konsole. */
+html[data-stil="buben"] body.connector-seite h1 {
+  color: #e6e9ec;
+  position: relative;
+  padding-bottom: 8px;
+}
+html[data-stil="buben"] body.connector-seite h1::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: min(220px, 60%);
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e0242f00, #e0242f, #e0242f00);
+  box-shadow: 0 0 8px #e0242f66;
+}
+html[data-stil="buben"] body.connector-seite .room-code,
+html[data-stil="buben"] body.connector-seite .code,
+html[data-stil="buben"] body.connector-seite #roomstatus {
+  color: #e6e9ec;
+}
+html[data-stil="buben"] body.connector-seite .room-code {
+  letter-spacing: .04em;
+  text-shadow: 0 0 10px #e0242f33;
+}
+
+/* Red Reactor: Modus- und Lobby-Knöpfe ebenfalls als Metallfläche. */
+html[data-stil="buben"] body.connector-seite .modus-btn,
+html[data-stil="buben"] body.connector-seite .solo-link {
+  background: linear-gradient(180deg, #23262c 0%, #17191d 100%);
+  border-color: #33383f;
+  color: var(--tg-text);
+  box-shadow: inset 0 1px 0 #ffffff0d;
+}
+html[data-stil="buben"] body.connector-seite .modus-btn:hover,
+html[data-stil="buben"] body.connector-seite .solo-link:hover {
+  border-color: #b8262f;
+  color: #ffffff;
+  background: linear-gradient(180deg, #2b2f36 0%, #1d2025 100%);
+}

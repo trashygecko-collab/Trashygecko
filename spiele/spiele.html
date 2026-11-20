@@ -7,86 +7,239 @@
 <link rel="stylesheet" href="../main.css">
 
 <style>
+/* =========================================================================
+   Spieleübersicht – Kategorien, Filter, Suche
+   Die Daten stehen unten im Skript in einer einzigen Liste (SPIELE).
+   ========================================================================= */
 .spiele-container{
   width:min(1100px,94%);
-  margin:25px auto;
+  margin:22px auto 30px;
 }
 
-.spiele-bereich{
-  margin:25px 0;
-  padding:20px;
-  border:1px solid #444;
-  border-radius:14px;
-  background:rgba(0,0,0,.35);
-}
-
-.spiele-bereich h2{
-  margin:0 0 18px;
-  padding-bottom:10px;
-  text-align:center;
-}
-
-.spiele-kacheln{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:13px;
-}
-
-.spiele-kacheln a{
+/* Grafikstil: eine Wahl für alle Spiele, gespeichert beim Spieler. */
+.stil-zeile{
   display:flex;
+  flex-wrap:wrap;
   align-items:center;
-  justify-content:center;
-  min-height:58px;
-  padding:12px;
-  text-align:center;
-  text-decoration:none;
+  gap:10px;
+  margin:0 0 14px;
+  padding:9px 12px;
+  border:1px solid #d9bc7c33;
+  border-radius:12px;
+  background:#0f2b2380;
+  color:#efe6d2;
+}
+.stil-zeile small{color:#9db3a7;font-size:12px}
+
+/* --- Such- und Filterleiste -------------------------------------------- */
+.leiste{
+  position:sticky;
+  top:0;
+  z-index:5;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin:0 0 18px;
+  padding:10px 12px;
+  border:1px solid #d9bc7c33;
+  border-radius:12px;
+  background:linear-gradient(#123329f2,#0f2b23f2);
+  backdrop-filter:blur(4px);
+}
+
+.leiste input[type=search]{
+  flex:1 1 220px;
+  min-width:0;
+  padding:9px 11px;
+  border:1px solid #d9bc7c66;
+  border-radius:8px;
+  background:#0f2b23;
+  color:#efe6d2;
+  font-size:15px;
+}
+
+.leiste input[type=search]::placeholder{color:#9db3a7}
+
+.leiste .reset{
+  padding:8px 11px;
   border:1px solid #d9bc7c55;
-  border-radius:9px;
+  border-radius:8px;
   background:#0f2b23;
   color:#e8cd8e;
-  font-size:16px;
-  transition:.2s;
+  font-size:13px;
+  cursor:pointer;
 }
 
-.spiele-kacheln a:hover{
+.leiste .reset:hover{border-color:#e8cd8e}
+
+.filter{
+  flex:1 1 100%;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.filter button{
+  padding:5px 10px;
+  border:1px solid #d9bc7c44;
+  border-radius:999px;
+  background:#0e2a22;
+  color:#cfe0d5;
+  font-size:12.5px;
+  cursor:pointer;
+}
+
+.filter button[aria-pressed=true]{
   border-color:#e8cd8e;
-  background:#184536;
-  box-shadow:0 0 12px #e8cd8e44;
-  transform:translateY(-2px);
+  background:#1d5241;
+  color:#fff3d6;
+  box-shadow:0 0 8px #e8cd8e33;
 }
 
-.spiele-bereich h2{
+.treffer{
+  flex:1 1 100%;
+  margin:0;
+  font-size:12.5px;
+  color:#b9c9bf;
+}
+
+/* --- Kategorien --------------------------------------------------------- */
+.kategorie{
+  margin:0 0 14px;
+  border:1px solid #d9bc7c33;
+  border-left:4px solid var(--akzent,#e8cd8e);
+  border-radius:12px;
+  background:rgba(15,43,35,.55);
+  overflow:hidden;
+}
+
+.kategorie-kopf{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  margin:0;
+  padding:11px 14px;
+  border:0;
+  background:none;
   color:#e8cd8e;
+  font-family:var(--tg-schrift,inherit);
+  font-size:17px;
+  text-align:left;
+  cursor:pointer;
 }
 
-/* Kacheln mit Zusatz: Name oben, kleiner Hinweis darunter. */
-.spiele-kacheln a{
-  flex-direction:column;
-  gap:4px;
+.kategorie-kopf:hover{background:#ffffff08}
+.kategorie-kopf:focus-visible{outline:2px solid #e8cd8e;outline-offset:-2px}
+
+.kategorie-kopf .punkt{
+  flex:0 0 auto;
+  width:9px;height:9px;
+  border-radius:50%;
+  background:var(--akzent,#e8cd8e);
 }
 
-.kachel-hinweis{
-  font-size:11px;
+.kategorie-kopf .titel{flex:1 1 auto}
+.kategorie-kopf .titel small{
+  display:block;
+  margin-top:2px;
+  font-family:inherit;
+  font-size:11.5px;
   font-weight:normal;
   color:#b9c9bf;
-  line-height:1.25;
 }
 
-.spiele-hinweis{
-  margin:-8px 0 16px;
-  text-align:center;
+.zahl{
+  flex:0 0 auto;
+  padding:2px 9px;
+  border:1px solid #d9bc7c44;
+  border-radius:999px;
+  font-size:12px;
+  color:#f2e3bc;
+  background:#0d251e;
+}
+
+.pfeil{
+  flex:0 0 auto;
   font-size:13px;
   color:#b9c9bf;
+  transition:transform .15s;
 }
 
-.spiele-suche{
-  text-align:center;
-  margin:20px auto;
+.kategorie-kopf[aria-expanded=false] .pfeil{transform:rotate(-90deg)}
+
+.kacheln{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(152px,1fr));
+  gap:8px;
+  padding:0 12px 13px;
 }
 
-.spiele-suche input[type=text]{
-  max-width:70%;
-  padding:9px;
+.kategorie.zu .kacheln{display:none}
+
+/* --- Spielkarten -------------------------------------------------------- */
+a.spiel{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-height:46px;
+  padding:7px 9px;
+  border:1px solid #d9bc7c33;
+  border-radius:8px;
+  background:#0f2b23;
+  color:#e8cd8e;
+  text-decoration:none;
+  transition:border-color .15s,background .15s,transform .15s;
+}
+
+a.spiel:hover,a.spiel:focus-visible{
+  border-color:#e8cd8e;
+  background:#184536;
+  transform:translateY(-1px);
+}
+
+.spiel-name{
+  font-size:14px;
+  line-height:1.2;
+}
+
+.merkmale{
+  display:flex;
+  flex-wrap:wrap;
+  gap:3px;
+}
+
+.m{
+  padding:0 5px;
+  border-radius:999px;
+  border:1px solid currentColor;
+  font-size:9.5px;
+  line-height:1.5;
+  letter-spacing:.01em;
+  opacity:.92;
+}
+
+.m-solo{color:#9be0a8}
+.m-multi{color:#c9d6cf}
+.m-lokal{color:#7fd8c8}
+.m-online{color:#8ec2f0}
+.m-computer{color:#c9b0f0}
+.m-highscore{color:#f0d27a}
+.m-controller{color:#f0a97a}
+
+/* --- Werkzeuge und Rahmen ---------------------------------------------- */
+.werkzeuge{
+  margin-top:22px;
+  border-left-color:#9aa7a0;
+  --akzent:#9aa7a0;
+}
+
+.bereich-hinweis{
+  margin:0 0 10px;
+  padding:0 14px;
+  font-size:12px;
+  color:#b9c9bf;
 }
 
 .gameboy{
@@ -112,22 +265,24 @@
   margin:15px 0 25px;
 }
 
-@media(max-width:750px){
-  .spiele-kacheln{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-  .spiele-bereich{
-    padding:12px;
-  }
+.spiele-suche{
+  text-align:center;
+  margin:20px auto;
 }
 
-@media(max-width:420px){
-  .spiele-kacheln{
-    grid-template-columns:1fr;
-  }
-  .spiele-kacheln a{
-    min-height:50px;
-  }
+.spiele-suche input[type=text]{
+  max-width:70%;
+  padding:9px;
+}
+
+@media(max-width:640px){
+  .leiste{padding:9px;gap:6px}
+  .leiste input[type=search]{flex:1 1 100%;font-size:16px}
+  .kategorie-kopf{padding:10px 12px;font-size:15.5px}
+  .kategorie-kopf .titel small{font-size:11px}
+  .kacheln{grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:6px;padding:0 9px 10px}
+  .spiel-name{font-size:13px}
+  .spiele-container{width:96%;margin-top:14px}
 }
 
 /* Kopfbereich der Übersicht im Grün-Gold-Look */
@@ -136,12 +291,13 @@ body{background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#
 .class1{color:#e8cd8e!important;border-color:#d9bc7c!important;background:#0f2b23!important;text-shadow:none!important;box-shadow:none!important}
 input[type=text]{background:#0f2b23;color:#efe6d2;border:1px solid #d9bc7c66;border-radius:6px;padding:6px}
 input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;border-radius:6px;padding:6px 10px;text-shadow:none;box-shadow:none}
-.spiele-bereich{border-color:#d9bc7c33;background:rgba(15,43,35,.55)}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<link rel="stylesheet" href="/spiele/design.css">
+<script src="/spiele/stil.js"></script>
 </head>
 
-<body>
+<body class="spiele-seite">
 
 <table>
 <tr><td><a href="../index.html" class="class1" target="_self">&lt;&minus;back</a></td></tr>
@@ -161,149 +317,28 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
 
 <div class="spiele-container">
 
-<section class="spiele-bereich">
-<h2>Single Player Spiele</h2>
-<p class="spiele-hinweis">Allein spielbar – ohne Gegner, ohne zweiten Spieler.</p>
-<div class="spiele-kacheln">
-<a href="1x1/1x1.html">1x1</a>
-<a href="puzzle15/puzzle15.html">15-Puzzle</a>
-<a href="acia/acia.html">Acia</a>
-<a href="arkanoid/arkanoid.html">Arkanoid</a>
-<a href="bejeweled/bejeweled.html">Bejeweled</a>
-<a href="brettspiele/bingo/bingo.html">Bingo</a>
-<a href="bubbleshooter/bubbleshooter.html">Bubble Shooter</a>
-<a href="brettspiele/domino/domino.html">Domino</a>
-<a href="doodlejump/doodlejump.html">Doodle Jump</a>
-<a href="durst/durst.html">Durst</a>
-<a href="flappybird/flappybird.html">Flappy Bird</a>
-<a href="flipper/flipper.html">Flipper</a>
-<a href="frogger/frogger.html">Frogger</a>
-<a href="goldminer/goldminer.html">Gold Miner</a>
-<a href="invaders/invaders.html">Space Invaders</a>
-<a href="brettspiele/galgen/galgen.html">Galgenmännchen</a>
-<a href="brettspiele/labyrinth/labyrinth.html">Labyrinth Plus!</a>
-<a href="lightsout/lightsout.html">Lights Out</a>
-<a href="brettspiele/mahjong/mahjong.html">Mahjong</a>
-<a href="malen/malen.html">Malen</a>
-<a href="brettspiele/mastermind/mastermind.html">Mastermind</a>
-<a href="brettspiele/memory/memory.html">Memory</a>
-<a href="minesweeper/minesweeper.html">Minensucher</a>
-<a href="brettspiele/paare/paare.html">Paare finden</a>
-<a href="pacman/pacman.html">Pac-Man</a>
-<a href="pimmel/spimmel.html">Super Pimmelchen</a>
-<a href="pong/pong.html">Pong</a>
-<a href="samegame/samegame.html">SameGame</a>
-<a href="snake/snake.html">Snake</a>
-<a href="sokoban/sokoban.html">Sokoban</a>
-<a href="brettspiele/solitaer/solitaer.html">Solitär (Brettspiel)</a>
-<a href="kartenspiele/spider/spider.html">Spider Solitär</a>
-<a href="sudoku/sudoku.html">Sudoku</a>
-<a href="tetris/tetris.html">Tetris</a>
-<a href="towerbloxx/towerbloxx.html">Tower Bloxx</a>
-<a href="zone/voigtzone.html">Voigt Zone</a>
-<a href="brettspiele/wortsuche/wortsuche.html">Wortsuche</a>
-</div>
-</section>
+  <div class="stil-zeile">
+    <div data-tg-stil></div>
+    <small>Gilt für alle Spiele – nur für dich.</small>
+  </div>
 
-<section class="spiele-bereich">
-<h2>2 Spieler an einem Handy</h2>
-<p class="spiele-hinweis">Zu zweit (oder mehr) am selben Gerät: einer nach dem anderen, ohne Connector. Einige davon laufen zusätzlich online.</p>
-<div class="spiele-kacheln">
-<a href="brettspiele/zehntausend/zehntausend.html">10.000</a>
-<a href="brettspiele/backgammon/backgammon.html">Backgammon</a>
-<a href="bomberman/bomberman.html">Bomberman</a>
-<a href="bubbleshooter/bubbleshooter.html">Bubble Shooter (2 Spieler)</a>
-<a href="brettspiele/dame/dame.html">Dame</a>
-<a href="brettspiele/domino/domino.html">Domino</a>
-<a href="brettspiele/galgen/galgen.html">Galgenmännchen</a>
-<a href="brettspiele/gaensespiel/gaensespiel.html">Gänsespiel</a>
-<a href="brettspiele/go/go.html">Go</a>
-<a href="brettspiele/hold/holdtheline.html">Hold the Line</a>
-<a href="brettspiele/kaesekaestche/kaesekaestche.html">Käsekästchen</a>
-<a href="brettspiele/kalaha/kalaha.html">Kalaha</a>
-<a href="brettspiele/kniffel/kniffel.html">Kniffel</a>
-<a href="kartenspiele/maumau/maumau.html">Mau Mau</a>
-<a href="brettspiele/menschaerger/menschaerger.html">Mensch ärgere dich nicht</a>
-<a href="brettspiele/muehle/muehle.html">Mühle</a>
-<a href="brettspiele/pig/pig.html">Pig</a>
-<a href="pong/pong.html">Pong (2 Spieler)</a>
-<a href="brettspiele/reversi/reversi.html">Reversi</a>
-<a href="brettspiele/schach/schach.html">Schach</a>
-<a href="brettspiele/schlangen/schlangen.html">Schlangen und Leitern</a>
-<a href="kartenspiele/schwimmen/schwimmen.html">31 Schwimmen</a>
-<a href="brettspiele/sim/sim.html">Sim</a>
-<a href="kartenspiele/skyjo/skyjo.html">Skyjo</a>
-<a href="brettspiele/streichholzspiel/streichholzspiel.html">Streichholzspiel</a>
-<a href="brettspiele/tictac/tictactoe.html">Tic Tac Toe</a>
-<a href="tron/tron.html">Tron</a>
-<a href="kartenspiele/uno/uno.html">UNO</a>
-<a href="brettspiele/viergewinnt/viergewinnt.html">Vier gewinnt</a>
-</div>
-</section>
+  <div class="leiste">
+    <input type="search" id="suche" placeholder="Spiel suchen – z. B. Mau Mau, Kniffel, Halma" aria-label="Spiele durchsuchen" autocomplete="off">
+    <button type="button" class="reset" id="reset">Filter zurücksetzen</button>
+    <div class="filter" id="filter" role="group" aria-label="Nach Eigenschaften filtern"></div>
+    <p class="treffer" id="treffer" aria-live="polite"></p>
+  </div>
 
-<section class="spiele-bereich">
-<h2>Mehrspieler über den Connector</h2>
-<p class="spiele-hinweis">Braucht den Connector: Raum öffnen, Spiel anbieten, mitspielen. Die Brettspiele hier gehen auch zu zweit am selben Handy.</p>
-<div class="spiele-kacheln">
-<a href="brettspiele/zehntausend/zehntausend.html">10.000</a>
-<a href="1x1/1x1.html">1×1-Rennen</a>
-<a href="kartenspiele/arschloch/arschloch.html">Arschloch<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="kartenspiele/baccara/baccara.html">Baccara<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/bingo/bingo.html">Bingo<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/backgammon/backgammon.html">Backgammon</a>
-<a href="bomberman/bomberman.html">Bomberman<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="bubbleshooter/bubbleshooter.html">Bubble Shooter<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="kartenspiele/cabo/cabo.html">Cabo<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/dame/dame.html">Dame</a>
-<a href="brettspiele/domino/domino.html">Domino</a>
-<a href="brettspiele/galgen/galgen.html">Galgenmännchen</a>
-<a href="brettspiele/gaensespiel/gaensespiel.html">Gänsespiel</a>
-<a href="brettspiele/go/go.html">Go</a>
-<a href="brettspiele/hold/holdtheline.html">Hold the Line</a>
-<a href="brettspiele/kaesekaestche/kaesekaestche.html">Käsekästchen</a>
-<a href="brettspiele/kalaha/kalaha.html">Kalaha</a>
-<a href="brettspiele/kniffel/kniffel.html">Kniffel</a>
-<a href="malen/malen.html">Malen</a>
-<a href="kartenspiele/maumau/maumau.html">Mau Mau</a>
-<a href="brettspiele/menschaerger/menschaerger.html">Mensch ärgere dich nicht</a>
-<a href="brettspiele/muehle/muehle.html">Mühle</a>
-<a href="brettspiele/paare/paare.html">Paare finden</a>
-<a href="brettspiele/pig/pig.html">Pig</a>
-<a href="pong/pong.html">Pong<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="kartenspiele/poker/poker.html">Poker<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/reversi/reversi.html">Reversi</a>
-<a href="brettspiele/schach/schach.html">Schach</a>
-<a href="brettspiele/schlangen/schlangen.html">Schlangen und Leitern</a>
-<a href="brettspiele/schiffe/schiffe.html">Schiffe versenken<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="kartenspiele/schwimmen/schwimmen.html">31 Schwimmen</a>
-<a href="kartenspiele/sechsundsechzig/sechsundsechzig.html">Sechsundsechzig<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="kartenspiele/siebzehn/siebzehn.html">17 und 4<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/sim/sim.html">Sim</a>
-<a href="kartenspiele/skyjo/skyjo.html">Skyjo</a>
-<a href="snake/snake.html">Snake<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/streichholzspiel/streichholzspiel.html">21 Streichhölzer</a>
-<a href="tetris/tetris.html">Tetris</a>
-<a href="tron/tron.html">Tron<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-<a href="brettspiele/tictac/tictactoe.html">Neon Tic Tac Toe</a>
-<a href="kartenspiele/uno/uno.html">UNO</a>
-<a href="brettspiele/viergewinnt/viergewinnt.html">Vier gewinnt</a>
-<a href="brettspiele/wortsuche/wortsuche.html">Wortsuche<span class="kachel-hinweis">nur mit Connector-Raum</span></a>
-</div>
-</section>
+  <div id="kategorien"></div>
 
-<section class="spiele-bereich">
-<h2>Extras</h2>
-<div class="spiele-kacheln">
-<a href="zoll.html">Zoll-Vergleich</a>
-<a href="wuerfel/wuerfel.html">Würfelbecher</a>
-<a href="sanduhr/sanduhr.html">Sanduhr</a>
-<a href="rechner/rechner.html">Taschenrechner</a>
-<a href="android/tspiele.apk">Meine Android App</a>
-<a href="ios/ios.html">iOS Apps</a>
-<a href="android/tmahjong.apk">Mahjong</a>
-<a href="https://trashygecko.onrender.com/connector">Trashygeckos Connector</a>
-</div>
-</section>
+  <section class="kategorie werkzeuge" aria-labelledby="werkzeuge-titel">
+    <h2 class="kategorie-kopf" id="werkzeuge-titel" style="cursor:default">
+      <span class="punkt"></span>
+      <span class="titel">Werkzeuge &amp; Extras<small>Keine Spiele – Hilfsmittel, Apps und Editoren, die früher unter „Extras“ standen.</small></span>
+      <span class="zahl" id="werkzeug-zahl"></span>
+    </h2>
+    <div class="kacheln" id="werkzeuge"></div>
+  </section>
 
 </div>
 
@@ -313,7 +348,6 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
 |_|_______________|_|
 |  ,-------------.  |
 | |  .---------.  | |
-| |  |         |  | |
 | |  |         |  | |
 | |  |         |  | |
 | |  |         |  | |
@@ -327,7 +361,7 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
 |   // //           |
 |  // //    \\\\\\  |
 |  `  `      \\\\\\ ,
-|________...______," 
+|________...______,"
 </pre>
 </div>
 
@@ -335,6 +369,405 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
 <div id="local-date"></div>
 <div id="local-time"></div>
 </div>
+
+<table>
+<tr><td><a href="../index.html" class="class1" target="_self">&lt;&minus;back</a></td></tr>
+</table>
+
+<script>
+/* =========================================================================
+   Zentrale Spieleliste
+   -------------------------------------------------------------------------
+   Jedes Spiel steht genau einmal hier:  [Name, Pfad, Kategorie, Merkmale, Suche]
+     Name      Anzeigename (alphabetisch sortiert wird beim Laden)
+     Pfad      Link zur Spielseite, wie bisher
+     Kategorie eine id aus KATEGORIEN – die interne Zuordnung. Eine Kategorie
+               mit „ersatz“ bekommt erst ab zwei Spielen einen eigenen
+               Abschnitt; darunter laufen ihre Spiele unter der Ersatz-
+               Kategorie mit (so bleiben Jump & Run und Abenteuer als Merkmal
+               erhalten, ohne als Ein-Spiel-Kategorie dazustehen).
+     Merkmale  Leerzeichen-getrennte Kennungen aus MERKMALE
+               (solo multi lokal online computer highscore controller)
+     Suche     optional: weitere Suchwörter, z. B. „yahtzee“
+   Neues Spiel = eine Zeile ergänzen, fertig. Keine Sonderfälle im Code.
+   ========================================================================= */
+(function () {
+  "use strict";
+
+  var MERKMALE = {
+    solo:      ["Solo",     "Einzelspieler"],
+    multi:     ["Multi",    "Mehrspieler"],
+    lokal:     ["Lokal",    "Lokal am selben Gerät"],
+    online:    ["Online",   "Online-Multiplayer über den Connector"],
+    computer:  ["Computer", "Gegen den Computer"],
+    highscore: ["Rekord",   "Highscore / Bestwert"],
+    controller:["Pad",      "Controller-Unterstützung"]
+  };
+
+  var KATEGORIEN = [
+    { id: "karten", name: "Kartenspiele", akzent: "#e8cd8e",
+      text: "Mau Mau, Poker, UNO, Solitär – Spiele mit einem Blatt Karten." },
+    { id: "wuerfel", name: "Würfelspiele", akzent: "#8fd0a8",
+      text: "Kniffel, Yahtzee, Würfelpoker & Co. – alles, was mit Würfeln entschieden wird." },
+    { id: "brett", name: "Brettspiele", akzent: "#7fb7e8",
+      text: "Halma, Mahjong, Mensch ärgere dich nicht, Schach, Mühle und andere Brett- und Gesellschaftsspiele." },
+    { id: "denk", name: "Denk- und Knobelspiele", akzent: "#b9a0e8",
+      text: "Sudoku, Rechen- und Logikspiele, Gedächtnis- und Worträtsel." },
+    { id: "arcade", name: "Arcade und Klassiker", akzent: "#f0a35e",
+      text: "Die Klassiker aus der Spielhalle: Pac-Man, Tetris, Snake, Pong, Frogger …" },
+    { id: "action", name: "Action und Geschicklichkeit", akzent: "#ef7d7d",
+      text: "Reaktion, Zielen und ruhige Finger – Bomberman, Flipper, Labyrinth, Tower Bloxx." },
+    { id: "jump", name: "Jump & Run", akzent: "#6ee0c0",
+      text: "Hüpfen, klettern, weiterkommen.", ersatz: "arcade" },
+    { id: "abenteuer", name: "Abenteuer und Strategie", akzent: "#d8c169",
+      text: "Kleine Abenteuer mit Leveln, Wegen und Umwegen.", ersatz: "arcade" },
+    { id: "sonstige", name: "Sonstige Spiele", akzent: "#9aa7a0",
+      text: "Nur für Spiele, die wirklich in keine andere Kategorie passen." }
+  ];
+
+  var SPIELE = [
+    /* --- Kartenspiele -------------------------------------------------- */
+    ["Arschloch", "kartenspiele/arschloch/arschloch.html", "karten", "lokal online multi"],
+    ["Baccara", "kartenspiele/baccara/baccara.html", "karten", "online multi", "baccarat"],
+    ["Cabo", "kartenspiele/cabo/cabo.html", "karten", "online multi"],
+    ["Mau Mau", "kartenspiele/maumau/maumau.html", "karten", "lokal online multi", "maumau"],
+    ["Poker", "kartenspiele/poker/poker.html", "karten", "online multi", "texas holdem"],
+    ["Sechsundsechzig", "kartenspiele/sechsundsechzig/sechsundsechzig.html", "karten", "online multi", "66"],
+    ["17 und 4", "kartenspiele/siebzehn/siebzehn.html", "karten", "online multi", "blackjack siebzehn"],
+    ["SKYJO", "kartenspiele/skyjo/skyjo.html", "karten", "lokal online multi"],
+    ["Solitär", "kartenspiele/solitaer/solitaer.html", "karten", "solo", "klondike spider freecell pyramid tripeaks patience solitaire"],
+    ["31 Schwimmen", "kartenspiele/schwimmen/schwimmen.html", "karten", "lokal online multi", "einunddreissig knack"],
+    ["UNO", "kartenspiele/uno/uno.html", "karten", "lokal online multi"],
+
+    /* --- Würfelspiele -------------------------------------------------- */
+    ["10.000", "brettspiele/zehntausend/zehntausend.html", "wuerfel", "lokal online multi", "10000 zehntausend"],
+    ["Auf nach Boston", "brettspiele/boston/boston.html", "wuerfel", "lokal online multi", "boston"],
+    ["Chicago", "brettspiele/chicago/chicago.html", "wuerfel", "lokal online multi"],
+    ["Kniffel", "brettspiele/kniffel/kniffel.html", "wuerfel", "solo lokal multi", "yahtzee"],
+    ["Lügen Mäxchen", "brettspiele/maexchen/maexchen.html", "wuerfel", "lokal online multi", "maexchen mäxchen"],
+    ["Pig", "brettspiele/pig/pig.html", "wuerfel", "lokal online multi", "schweinchen"],
+    ["Ship Captain Crew", "brettspiele/shipcrew/shipcrew.html", "wuerfel", "lokal online multi", "schiffe versenken"],
+
+    /* --- Brettspiele --------------------------------------------------- */
+    ["Backgammon", "brettspiele/backgammon/backgammon.html", "brett", "lokal online multi"],
+    ["Bingo", "brettspiele/bingo/bingo.html", "brett", "lokal online multi"],
+    ["Dame", "brettspiele/dame/dame.html", "brett", "lokal online multi", "checkers"],
+    ["Domino", "brettspiele/domino/domino.html", "brett", "lokal online multi computer"],
+    ["Gänsespiel", "brettspiele/gaensespiel/gaensespiel.html", "brett", "lokal online multi", "ganzespiel"],
+    ["Go", "brettspiele/go/go.html", "brett", "lokal online multi", "goban baduk"],
+    ["Halma", "brettspiele/halma/halma.html", "brett", "solo lokal online multi computer", "sternhalma sprunghalma"],
+    ["Hold the Line", "brettspiele/hold/holdtheline.html", "brett", "lokal online multi"],
+    ["Käsekästchen", "brettspiele/kaesekaestche/kaesekaestche.html", "brett", "lokal online multi", "punkte verbinden dots boxes"],
+    ["Kalaha", "brettspiele/kalaha/kalaha.html", "brett", "lokal online multi", "mancala"],
+    ["Mahjong", "brettspiele/mahjong/mahjong.html", "brett", "solo", "mahjongg steine"],
+    ["Mensch ärgere dich nicht", "brettspiele/menschaerger/menschaerger.html", "brett", "lokal online multi", "ludo"],
+    ["Mühle", "brettspiele/muehle/muehle.html", "brett", "lokal online multi", "muehle"],
+    ["Reversi", "brettspiele/reversi/reversi.html", "brett", "lokal online multi", "othello"],
+    ["Schach", "brettspiele/schach/schach.html", "brett", "lokal online multi", "chess"],
+    ["Schiffe versenken", "brettspiele/schiffe/schiffe.html", "brett", "online multi", "battleship flotte"],
+    ["Schlangen und Leitern", "brettspiele/schlangen/schlangen.html", "brett", "lokal online multi", "leiterlispiel"],
+    ["Sim", "brettspiele/sim/sim.html", "brett", "lokal online multi", "verbindungslinien"],
+    ["Tic Tac Toe", "brettspiele/tictac/tictactoe.html", "brett", "lokal online multi", "tic-tac-toe drei gewinnt"],
+    ["Vier gewinnt", "brettspiele/viergewinnt/viergewinnt.html", "brett", "lokal online multi", "connect four"],
+
+    /* --- Denk- und Knobelspiele ---------------------------------------- */
+    ["1×1-Training", "1x1/1x1.html", "denk", "solo online multi", "einmaleins rechnen mathe"],
+    ["Bejeweled", "bejeweled/bejeweled.html", "denk", "solo highscore", "juwelen match 3"],
+    ["Galgenmännchen", "brettspiele/galgen/galgen.html", "denk", "lokal online multi", "hangman galgen"],
+    ["Lights Out", "lightsout/lightsout.html", "denk", "solo highscore", "lichter"],
+    ["Mastermind", "brettspiele/mastermind/mastermind.html", "denk", "solo highscore", "farbcode"],
+    ["Memory", "brettspiele/memory/memory.html", "denk", "solo highscore", "kartenspiel gedaechtnis"],
+    ["Minensucher", "minesweeper/minesweeper.html", "denk", "solo highscore", "minesweeper"],
+    ["Paare finden", "brettspiele/paare/paare.html", "denk", "lokal online multi", "memory paare"],
+    ["15-Puzzle", "puzzle15/puzzle15.html", "denk", "solo highscore", "schiebepuzzle puzzel"],
+    ["SameGame", "samegame/samegame.html", "denk", "solo highscore", "steine wegklicken"],
+    ["Sokoban", "sokoban/sokoban.html", "denk", "solo highscore", "kisten schieben"],
+    ["Solitär (Brettspiel)", "brettspiele/solitaer/solitaer.html", "denk", "solo highscore", "peg solitaire steine"],
+    ["21 Streichhölzer", "brettspiele/streichholzspiel/streichholzspiel.html", "denk", "lokal online multi", "streichhoelzer nim"],
+    ["Sudoku", "sudoku/sudoku.html", "denk", "solo highscore"],
+    ["Wortsuche", "brettspiele/wortsuche/wortsuche.html", "denk", "lokal online multi", "wortsalat buchstaben"],
+
+    /* --- Arcade und Klassiker ------------------------------------------ */
+    ["Acia", "acia/acia.html", "arcade", "solo lokal", "farben bloecke leveleditor"],
+    ["Arkanoid", "arkanoid/arkanoid.html", "arcade", "solo highscore", "breakout schlaeger"],
+    ["Bubble Shooter", "bubbleshooter/bubbleshooter.html", "arcade", "solo lokal online multi highscore", "blasen"],
+    ["Flappy Bird", "flappybird/flappybird.html", "arcade", "solo highscore", "flappy"],
+    ["Frogger", "frogger/frogger.html", "arcade", "solo highscore", "frosch"],
+    ["Gold Miner", "goldminer/goldminer.html", "arcade", "solo", "goldgraeber haken"],
+    ["Pac-Man", "pacman/pacman.html", "arcade", "solo highscore", "pacman geister"],
+    ["Pong", "pong/pong.html", "arcade", "solo lokal online multi computer highscore"],
+    ["Snake", "snake/snake.html", "arcade", "solo online multi highscore", "nokia schlange"],
+    ["Space Invaders", "invaders/invaders.html", "arcade", "solo highscore", "invaders alien"],
+    ["Super Pimmelchen", "pimmel/spimmel.html", "arcade", "solo highscore", "spimmel retro"],
+    ["Tetris", "tetris/tetris.html", "arcade", "solo online multi", "kloetze steine"],
+    ["Tron", "tron/tron.html", "arcade", "lokal online multi", "lichtrennen lightcycle"],
+    ["Voigt Zone", "zone/voigtzone.html", "arcade", "solo", "qix flaechen"],
+
+    /* --- Action und Geschicklichkeit ----------------------------------- */
+    ["Bomberman", "bomberman/bomberman.html", "action", "lokal online multi", "bombe"],
+    ["Flipper", "flipper/flipper.html", "action", "solo highscore", "pinball"],
+    ["Labyrinth Plus!", "brettspiele/labyrinth/labyrinth.html", "action", "solo highscore", "kugel kippen"],
+    ["Tower Bloxx", "towerbloxx/towerbloxx.html", "action", "solo highscore", "turm stapeln"],
+
+    /* --- Jump & Run ---------------------------------------------------- */
+    ["Doodle Jump", "doodlejump/doodlejump.html", "jump", "solo highscore", "springen plattformen"],
+
+    /* --- Abenteuer und Strategie --------------------------------------- */
+    ["Durst", "durst/durst.html", "abenteuer", "solo", "bier level abenteuer"]
+  ];
+
+  var WERKZEUGE = [
+    ["Würfelbecher", "wuerfel/wuerfel.html", "Sechs Würfel, einzeln festhalten"],
+    ["Sanduhr", "sanduhr/sanduhr.html", "Neon-Sanduhr mit Laufzeit"],
+    ["Taschenrechner", "rechner/rechner.html", "Neon-Taschenrechner"],
+    ["Zoll-Vergleich", "zoll.html", "Zoll und Zentimeter umrechnen"],
+    ["Malen", "malen/malen.html", "Kritzelbrett, auch mit Connector-Raum"],
+    ["Level-Editor Durst", "durst/leveleditor.html", "Eigene Level für Durst bauen"],
+    ["Level-Editor Schlangenspiel", "pimmel/leveleditor.html", "Eigene Level für Super Pimmelchen"],
+    ["Mahjong-App", "android/tmahjong.apk", "Android-App zum Spiel"],
+    ["Meine Android App", "android/tspiele.apk", "T.Spiele als App"],
+    ["iOS Apps", "ios/ios.html", "T.Spiele fürs iPhone"],
+    ["Trashygeckos Connector", "https://trashygecko.onrender.com/connector", "Spielräume und Chat"]
+  ];
+
+  /* --- Aufbau --------------------------------------------------------- */
+  var suche = document.getElementById("suche");
+  var filterBox = document.getElementById("filter");
+  var trefferText = document.getElementById("treffer");
+  var kategorienBox = document.getElementById("kategorien");
+  var werkzeugeBox = document.getElementById("werkzeuge");
+  var werkzeugZahl = document.getElementById("werkzeug-zahl");
+  var schmal = window.matchMedia("(max-width: 700px)");
+
+  var spiele = SPIELE.map(function (s) {
+    var merk = (s[3] || "").split(" ").filter(function (m) { return m; });
+    merk.forEach(function (m) {
+      if (!MERKMALE[m] && window.console) console.warn("Unbekanntes Merkmal:", m, "bei", s[0]);
+    });
+    return {
+      name: s[0], pfad: s[1], kat: s[2], merk: merk,
+      suche: (s[4] || "").toLowerCase()
+    };
+  });
+
+  var genutzt = {};
+  spiele.forEach(function (s) { s.merk.forEach(function (m) { genutzt[m] = true; }); });
+
+  function gespeichert() {
+    try { return JSON.parse(localStorage.getItem("tg-spiele-zu") || "null"); } catch (e) { return null; }
+  }
+
+  function merken(liste) {
+    try { localStorage.setItem("tg-spiele-zu", JSON.stringify(liste)); } catch (e) { /* egal */ }
+  }
+
+  /* Erster Besuch: am Handy alles eingeklappt, am PC offen. */
+  var zu = gespeichert();
+  if (!zu) {
+    zu = schmal.matches ? KATEGORIEN.map(function (k) { return k.id; }) : [];
+  }
+
+  var aktiv = [];
+
+  function passt(s, q) {
+    if (q && s.name.toLowerCase().indexOf(q) < 0 && s.suche.indexOf(q) < 0) return false;
+    for (var i = 0; i < aktiv.length; i++) {
+      if (s.merk.indexOf(aktiv[i]) < 0) return false;
+    }
+    return true;
+  }
+
+  function kachel(s) {
+    var a = document.createElement("a");
+    a.className = "spiel";
+    a.href = s.pfad;
+    a.dataset.art = s.kat;            // interne Zuordnung, unabhängig vom Abschnitt
+    var name = document.createElement("span");
+    name.className = "spiel-name";
+    name.textContent = s.name;
+    a.appendChild(name);
+    if (s.merk.length) {
+      var box = document.createElement("span");
+      box.className = "merkmale";
+      s.merk.forEach(function (m) {
+        var info = MERKMALE[m];
+        if (!info) return;
+        var b = document.createElement("span");
+        b.className = "m m-" + m;
+        b.textContent = info[0];
+        b.title = info[1];
+        box.appendChild(b);
+      });
+      a.appendChild(box);
+    }
+    return a;
+  }
+
+  function baueKategorie(k, liste, gesamt, gefiltert) {
+    var abschnitt = document.createElement("section");
+    abschnitt.className = "kategorie";
+    abschnitt.style.setProperty("--akzent", k.akzent);
+    if (zu.indexOf(k.id) >= 0 && !gefiltert) abschnitt.classList.add("zu");
+
+    var kopf = document.createElement("button");
+    kopf.type = "button";
+    kopf.className = "kategorie-kopf";
+    kopf.setAttribute("aria-expanded", abschnitt.classList.contains("zu") ? "false" : "true");
+
+    var punkt = document.createElement("span");
+    punkt.className = "punkt";
+    var titel = document.createElement("span");
+    titel.className = "titel";
+    titel.textContent = k.name;
+    var klein = document.createElement("small");
+    klein.textContent = k.text;
+    titel.appendChild(klein);
+    var zahl = document.createElement("span");
+    zahl.className = "zahl";
+    zahl.textContent = gefiltert ? liste.length + " / " + gesamt : String(gesamt);
+    var pfeil = document.createElement("span");
+    pfeil.className = "pfeil";
+    pfeil.textContent = "▼";
+    pfeil.setAttribute("aria-hidden", "true");
+
+    kopf.appendChild(punkt);
+    kopf.appendChild(titel);
+    kopf.appendChild(zahl);
+    kopf.appendChild(pfeil);
+
+    var raster = document.createElement("div");
+    raster.className = "kacheln";
+    raster.id = "kat-" + k.id;
+    kopf.setAttribute("aria-controls", raster.id);
+    liste.forEach(function (s) { raster.appendChild(kachel(s)); });
+
+    kopf.addEventListener("click", function () {
+      var jetztZu = abschnitt.classList.toggle("zu");
+      kopf.setAttribute("aria-expanded", jetztZu ? "false" : "true");
+      var i = zu.indexOf(k.id);
+      if (jetztZu && i < 0) zu.push(k.id);
+      if (!jetztZu && i >= 0) zu.splice(i, 1);
+      merken(zu);
+    });
+
+    abschnitt.appendChild(kopf);
+    abschnitt.appendChild(raster);
+    return abschnitt;
+  }
+
+  var katNach = {};
+  KATEGORIEN.forEach(function (k) { katNach[k.id] = k; });
+
+  function zeichne() {
+    var q = suche.value.trim().toLowerCase();
+    var gefiltert = !!q || aktiv.length > 0;
+    var sichtbar = 0;
+    var gezeigt = 0;
+    kategorienBox.innerHTML = "";
+
+    /* Wie viele Spiele stecken in welcher Kategorie? Eine Kategorie mit
+       „ersatz“, in der weniger als zwei Spiele liegen, bekommt keinen eigenen
+       Abschnitt – ihre Spiele erscheinen unter der Ersatz-Kategorie. */
+    var anzahl = {};
+    spiele.forEach(function (s) { anzahl[s.kat] = (anzahl[s.kat] || 0) + 1; });
+    function abschnittVon(s) {
+      var k = katNach[s.kat];
+      if (k && k.ersatz && anzahl[s.kat] < 2) return katNach[k.ersatz] || k;
+      return k;
+    }
+    var gruppen = {};
+    spiele.forEach(function (s) {
+      var k = abschnittVon(s);
+      if (!k) return;
+      (gruppen[k.id] = gruppen[k.id] || []).push(s);
+    });
+
+    KATEGORIEN.forEach(function (k) {
+      var alle = gruppen[k.id] || [];
+      if (!alle.length) return;
+      var liste = alle.filter(function (s) { return passt(s, q); });
+      if (!liste.length) return;
+      liste.sort(function (a, b) {
+        return a.name.localeCompare(b.name, "de", { numeric: true, sensitivity: "base" });
+      });
+      sichtbar += liste.length;
+      gezeigt++;
+      kategorienBox.appendChild(baueKategorie(k, liste, alle.length, gefiltert));
+    });
+
+    if (!sichtbar) {
+      var leer = document.createElement("p");
+      leer.className = "bereich-hinweis";
+      leer.style.padding = "18px 14px";
+      leer.textContent = "Kein Spiel passt zu Suche und Filtern. „Filter zurücksetzen“ zeigt wieder alle.";
+      kategorienBox.appendChild(leer);
+    }
+
+    if (gefiltert) {
+      trefferText.textContent = sichtbar + " von " + spiele.length + " Spielen" +
+        (gezeigt !== 1 ? " in " + gezeigt + " Kategorien" : " in 1 Kategorie");
+    } else {
+      trefferText.textContent = spiele.length + " Spiele in " + gezeigt + " Kategorien";
+    }
+  }
+
+  /* --- Filterknöpfe --------------------------------------------------- */
+  Object.keys(MERKMALE).forEach(function (m) {
+    if (!genutzt[m]) return;               // keine leeren Filter anbieten
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = (m === "solo" ? "Einzelspieler" :
+                     m === "multi" ? "Mehrspieler" :
+                     m === "lokal" ? "Lokal am Gerät" :
+                     m === "online" ? "Online" :
+                     m === "computer" ? "Gegen Computer" :
+                     m === "highscore" ? "Highscore" : "Controller");
+    b.dataset.merkmal = m;
+    b.setAttribute("aria-pressed", "false");
+    b.title = MERKMALE[m][1];
+    b.addEventListener("click", function () {
+      var i = aktiv.indexOf(m);
+      if (i >= 0) { aktiv.splice(i, 1); b.setAttribute("aria-pressed", "false"); }
+      else { aktiv.push(m); b.setAttribute("aria-pressed", "true"); }
+      zeichne();
+    });
+    filterBox.appendChild(b);
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    suche.value = "";
+    aktiv = [];
+    Array.prototype.forEach.call(filterBox.children, function (b) {
+      b.setAttribute("aria-pressed", "false");
+    });
+    zeichne();
+    suche.focus();
+  });
+
+  suche.addEventListener("input", zeichne);
+
+  /* --- Werkzeuge ------------------------------------------------------ */
+  WERKZEUGE.forEach(function (w) {
+    var a = document.createElement("a");
+    a.className = "spiel";
+    a.href = w[1];
+    var name = document.createElement("span");
+    name.className = "spiel-name";
+    name.textContent = w[0];
+    var hinweis = document.createElement("span");
+    hinweis.className = "m m-multi";
+    hinweis.textContent = w[2];
+    hinweis.style.border = "0";
+    hinweis.style.padding = "0";
+    a.appendChild(name);
+    a.appendChild(hinweis);
+    werkzeugeBox.appendChild(a);
+  });
+  werkzeugZahl.textContent = String(WERKZEUGE.length);
+
+  zeichne();
+})();
+</script>
 
 <script>
 (function(){
@@ -355,32 +788,5 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
   window.setInterval(updateDateTime,1000);
 })();
 </script>
-
-<table>
-<tr><td><a href="../index.html" class="class1" target="_self">&lt;&minus;back</a></td></tr>
-</table>
-
-<script>
-// Kacheln und Gruppen stehen im Alphabet. Neue Spiele kann man oben in der
-// Liste eintragen – die Anzeige sortiert sich beim Laden selbst.
-(function(){
-  const container=document.querySelector(".spiele-container");
-  if(!container)return;
-  const vergleiche=(a,b)=>a.localeCompare(b,"de",{numeric:true,sensitivity:"base"});
-  const gruppen=[...container.querySelectorAll(".spiele-bereich")];
-
-  gruppen.forEach(gruppe=>{
-    const raster=gruppe.querySelector(".spiele-kacheln");
-    if(!raster)return;
-    [...raster.children]
-      .sort((a,b)=>vergleiche((a.textContent||"").trim(),(b.textContent||"").trim()))
-      .forEach(kachel=>raster.appendChild(kachel));
-  });
-
-  // Die Reihenfolge der Bereiche steht bewusst in der Datei: erst allein,
-  // dann zu zweit am Gerät, dann über den Connector, zuletzt die Extras.
-})();
-</script>
-
 </body>
 </html>

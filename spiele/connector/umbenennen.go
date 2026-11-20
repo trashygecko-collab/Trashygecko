@@ -204,6 +204,30 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.ZehnTausend; g != nil {
 		benenne(g.Players, id, neu, func(p *ZTPlayer) string { return p.ID }, func(p *ZTPlayer) *string { return &p.Name })
 	}
+	if g := r.Maexchen; g != nil {
+		benenne(g.Players, id, neu, func(p *MXPlayer) string { return p.ID }, func(p *MXPlayer) *string { return &p.Name })
+		if g.AnsageVon == id {
+			g.AnsageVonName = neu
+		}
+	}
+	if g := r.Boston; g != nil {
+		benenne(g.Players, id, neu, func(p *BostonPlayer) string { return p.ID }, func(p *BostonPlayer) *string { return &p.Name })
+	}
+	if g := r.ShipCrew; g != nil {
+		benenne(g.Players, id, neu, func(p *ScPlayer) string { return p.ID }, func(p *ScPlayer) *string { return &p.Name })
+	}
+	if g := r.Halma; g != nil {
+		benenne(g.Spieler, id, neu, func(p *HalmaSpieler) string { return p.ID }, func(p *HalmaSpieler) *string { return &p.Name })
+	}
+	if g := r.Chicago; g != nil {
+		benenne(g.Players, id, neu, func(p *ChPlayer) string { return p.ID }, func(p *ChPlayer) *string { return &p.Name })
+		if g.HochID == id {
+			g.HochName = neu
+		}
+		if g.TiefID == id {
+			g.TiefName = neu
+		}
+	}
 	if g := r.Menschaerger; g != nil {
 		benenne(g.Players, id, neu, func(p *MaenPlayer) string { return p.ID }, func(p *MaenPlayer) *string { return &p.Name })
 	}

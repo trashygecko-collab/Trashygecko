@@ -138,6 +138,16 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 				game = "Kniffel"
 			} else if room.ZehnTausend != nil && (room.ZehnTausend.Status == "active" || room.ZehnTausend.Status == "invited") {
 				game = "10.000"
+			} else if room.Maexchen != nil && (room.Maexchen.Status == "active" || room.Maexchen.Status == "invited") {
+				game = "Lügen Mäxchen"
+			} else if room.Boston != nil && (room.Boston.Status == "active" || room.Boston.Status == "invited") {
+				game = "Auf nach Boston"
+			} else if room.Chicago != nil && (room.Chicago.Status == "active" || room.Chicago.Status == "invited" || room.Chicago.Status == "runde") {
+				game = "Chicago"
+			} else if room.ShipCrew != nil && (room.ShipCrew.Status == "active" || room.ShipCrew.Status == "invited" || room.ShipCrew.Status == "runde") {
+				game = "Schiffe versenken"
+			} else if room.Halma != nil && (room.Halma.Status == "active" || room.Halma.Status == "invited") {
+				game = "Halma"
 			} else if room.Schach != nil && (room.Schach.Status == "active" || room.Schach.Status == "invited") {
 				game = "Schach"
 			} else if room.Go != nil && (room.Go.Status == "active" || room.Go.Status == "invited") {

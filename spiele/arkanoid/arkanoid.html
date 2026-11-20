@@ -31,11 +31,11 @@ body[data-stil="maedchen"]{
 }
 body[data-stil="jungs"]{
  --bg1:#1c222a;--bg2:#0d1115;--bg3:#040608;
- --rahmen:#3a4650;--rahmen-hell:#c8ff3d;--akzent:#c8ff3d;--akzent-text:#101403;
- --feld:#0d1116;--feld-dunkel:#05080b;--leiste:#0a0e12;
- --text:#dfe7ee;--text-leise:#93a1ad;--titel:#c8ff3d;
+ --rahmen:#3a4650;--rahmen-hell:#e0242f;--akzent:#e0242f;--akzent-text:#101403;
+ --feld:#0d1116;--feld-dunkel:#05080b;--leiste:#08090b;
+ --text:#dfe7ee;--text-leise:#93a1ad;--titel:#e0242f;
  --radius:2px;--radius-klein:2px;--titel-weite:.16em;
- --buehne-schatten:#000000aa;--schleier:#04070ae6;--kasten-titel:#c8ff3d;--gut:#b8c6d2;
+ --buehne-schatten:#000000aa;--schleier:#060708e6;--kasten-titel:#e0242f;--gut:#b8c6d2;
 }
 body{margin:0;padding:6px 6px 18px;
  background:radial-gradient(circle 900px at 50% -6%,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%) fixed;
@@ -57,20 +57,6 @@ main{max-width:760px;margin:auto}
  border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
 .menueleiste button:hover{filter:brightness(1.15);border-color:var(--rahmen-hell)}
 .menueleiste .rechts{margin-left:auto;display:flex;gap:4px}
-
-/* Ansichts-Wahl: der gewählte Knopf zeigt schon seine eigene Farbe. */
-.stilwahl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;
- background:var(--leiste);border-bottom:1px solid var(--rahmen)}
-.stilwahl .stil-titel{font-size:12px;color:var(--text-leise);letter-spacing:.08em;
- text-transform:uppercase;margin-right:2px}
-.stilwahl button{font-family:inherit;font-size:13px;padding:6px 11px;border-radius:var(--radius-klein);
- border:1px solid var(--rahmen);background:var(--feld);color:var(--akzent);cursor:pointer}
-.stilwahl button:hover{filter:brightness(1.12);border-color:var(--rahmen-hell)}
-.stilwahl button[data-stil="klassisch"].aktiv{background:var(--akzent);color:var(--akzent-text);
- border-color:var(--akzent);font-weight:bold}
-.stilwahl button[data-stil="maedchen"].aktiv{background:linear-gradient(#ffd0e4,#ff9ec4);color:#43182c;
- border-color:#ff9ec4;font-weight:bold}
-.stilwahl button[data-stil="jungs"].aktiv{background:#c8ff3d;color:#101403;border-color:#c8ff3d;font-weight:bold}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
  padding:6px 10px;font-size:13px;color:var(--text-leise);background:var(--leiste);border-bottom:1px solid var(--rahmen)}
@@ -101,8 +87,45 @@ a{color:var(--akzent)}
 .mitte{text-align:center}
 
 @media(max-width:430px){ .menueleiste button{font-size:12px;padding:6px 8px} }
+
+/* ---- Red Reactor: Titel in Silber, Rot bleibt der LED-Akzent ------------- */
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel,
+body[data-stil="buben"] .fenster .titel,
+body[data-stil="buben"] h2,
+body[data-stil="buben"] .meldung h2,
+body[data-stil="buben"] #regeln summary {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel {
+  text-shadow: none;
+}
+
+/* Red Reactor: Knopfaufschrift in Silber, Rot nur an Kante und Aktiv-Zustand */
+body[data-stil="buben"] button,
+body[data-stil="buben"] .menueleiste button,
+body[data-stil="buben"] .knopf,
+body[data-stil="buben"] select {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] button:hover:not(:disabled),
+body[data-stil="buben"] .menueleiste button:hover,
+body[data-stil="buben"] .knopf:hover:not(:disabled) {
+  color: #ffffff;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="buben"] .menueleiste button.aktiv,
+body[data-stil="buben"] .knopf.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="buben"] .aktion.haupt,
+body[data-stil="buben"] .meldung button {
+  color: #ffffff;
+  text-shadow: none;
+}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
+<script src="/spiele/stil.js"></script>
 </head>
 <body data-stil="klassisch">
 <main class="fenster">
@@ -119,12 +142,6 @@ a{color:var(--akzent)}
   </span>
  </div>
 
- <div class="stilwahl" id="stilwahl">
-  <span class="stil-titel">Ansicht</span>
-  <button type="button" data-stil="klassisch" class="aktiv">Klassisch</button>
-  <button type="button" data-stil="maedchen">Mädchen</button>
-  <button type="button" data-stil="jungs">Jungs</button>
- </div>
 
  <div class="statuszeile">
   <span>Punkte <b id="punkte">0</b></span>
@@ -461,8 +478,8 @@ const STILE={
  jungs:{
   name:"Jungs",
   farbe:"#070a0d",
-  reihen:["#c8ff3d","#22d3ee","#ff2d95","#ffb020","#a855f7","#39ff88","#f43f5e"],
-  powerFarben:{E:"#39ff88",C:"#ffb020",L:"#ff2d95",D:"#22d3ee",S:"#a855f7",P:"#c8ff3d"},
+  reihen:["#e0242f","#b8c0c8","#ff2d95","#ffb020","#a855f7","#d9713c","#f43f5e"],
+  powerFarben:{E:"#d9713c",C:"#ffb020",L:"#ff2d95",D:"#b8c0c8",S:"#a855f7",P:"#e0242f"},
   hintergrund(g,W,H,t){
    const v=g.createLinearGradient(0,0,0,H);
    v.addColorStop(0,"#0b1014");
@@ -535,7 +552,7 @@ const STILE={
   },
   laser(g,schuesse){
    schuesse.forEach(s=>{
-    g.fillStyle="#c8ff3d33";
+    g.fillStyle="#e0242f33";
     g.fillRect(s.x-3,s.y-13,6,13);
     g.fillStyle="#d9ff7a";
     g.fillRect(s.x-1,s.y-13,2,13);
@@ -553,22 +570,22 @@ const STILE={
    g.strokeStyle="#8f9ca8";
    g.lineWidth=1.8;
    g.stroke();
-   g.fillStyle="#c8ff3d";
+   g.fillStyle="#e0242f";
    g.fillRect(sx+2,H-33.5,w-4,2);
-   g.fillStyle="#22d3ee55";
+   g.fillStyle="#b8c0c855";
    g.fillRect(sx+2,H-26,w-4,1.5);
-   g.fillStyle="#c8ff3d99";
+   g.fillStyle="#e0242f99";
    for(let i=0;i<3;i++)g.fillRect(sx+w/2-10+i*10,H-22,4,1.5);
   },
   ball(g,b){
-   g.fillStyle="#22d3ee3a";
+   g.fillStyle="#b8c0c83a";
    g.beginPath();
    g.arc(b.x,b.y,b.r*1.8,0,Math.PI*2);
    g.fill();
    const v=g.createRadialGradient(b.x-2,b.y-2,1,b.x,b.y,b.r+1);
    v.addColorStop(0,"#ffffff");
    v.addColorStop(.45,"#a9f6ff");
-   v.addColorStop(1,"#22d3ee");
+   v.addColorStop(1,"#b8c0c8");
    g.beginPath();
    g.arc(b.x,b.y,b.r,0,Math.PI*2);
    g.fillStyle=v;
@@ -581,7 +598,7 @@ const STILE={
    g.strokeStyle="#3a465088";
    g.lineWidth=2;
    g.strokeRect(1,1,W-2,H-2);
-   g.strokeStyle="#22d3ee33";
+   g.strokeStyle="#b8c0c833";
    g.beginPath();
    g.moveTo(0,H-34);
    g.lineTo(W,H-34);
@@ -591,7 +608,7 @@ const STILE={
 };
 
 let stilWahl="klassisch";
-try{ const gespeichert=localStorage.getItem("arkanoid-stil"); if(STILE[gespeichert])stilWahl=gespeichert; }catch(e){}
+stilWahl=TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" });
 const STIL=()=>STILE[stilWahl]||STILE.klassisch;
 const powerFarbe=art=>STIL().powerFarben[art]||POWER[art].farbe;
 
@@ -601,8 +618,6 @@ function stilSetzen(neu){
  document.body.dataset.stil=neu;
  const meta=document.querySelector('meta[name="theme-color"]');
  if(meta)meta.content=STILE[neu].farbe;
- document.querySelectorAll("#stilwahl button").forEach(b=>b.classList.toggle("aktiv",b.dataset.stil===neu));
- try{ localStorage.setItem("arkanoid-stil",neu); }catch(e){}
  powerZeigen();
  zeichne();
 }
@@ -1064,9 +1079,7 @@ function neuesSpiel(){
 }
 
 stilSetzen(stilWahl);
-document.querySelectorAll("#stilwahl button").forEach(b=>{
- b.onclick=()=>stilSetzen(b.dataset.stil);
-});
+TGStil.beiWechsel(()=>stilSetzen(TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" })));
 
 neuesSpiel();
 requestAnimationFrame(schleife);

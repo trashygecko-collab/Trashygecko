@@ -26,18 +26,33 @@ type ZTPlayer struct {
 	Ready  bool   `json:"ready"`
 }
 
+// ZTFehlwurf hält den letzten Fehlwurf fest: die gewürfelten Würfel bleiben
+// im Stand, bis der Nächste handelt. Die Seite zeigt sie in ihrer Meldung
+// („Leider Pech gehabt!“) und wechselt erst danach sichtbar den Spieler.
+type ZTFehlwurf struct {
+	Nr        int    `json:"nr"`
+	Name      string `json:"name"`
+	Wuerfel   []int  `json:"wuerfel"`
+	Verloren  int    `json:"verloren"`
+	Naechster string `json:"naechster"`
+}
+
 type ZehnTausendGame struct {
-	ID        string     `json:"id"`
-	HostID    string     `json:"hostId"`
-	Players   []ZTPlayer `json:"players"`
-	Current   int        `json:"current"`
-	Wuerfel   []int      `json:"wuerfel"`
-	Gesichert []bool     `json:"gesichert"`
-	ZugPunkte int        `json:"zugPunkte"`
-	Wuerfe    int        `json:"wuerfe"`
-	Status    string     `json:"status"` // invited, active, finished
-	Winner    string     `json:"winner,omitempty"`
-	Note      string     `json:"note,omitempty"`
+	ID        string      `json:"id"`
+	HostID    string      `json:"hostId"`
+	Players   []ZTPlayer  `json:"players"`
+	Current   int         `json:"current"`
+	Wuerfel   []int       `json:"wuerfel"`
+	Gesichert []bool      `json:"gesichert"`
+	ZugPunkte int         `json:"zugPunkte"`
+	Wuerfe    int         `json:"wuerfe"`
+	Status    string      `json:"status"` // invited, active, finished
+	Winner    string      `json:"winner,omitempty"`
+	Note      string      `json:"note,omitempty"`
+	Fehlwurf  *ZTFehlwurf `json:"fehlwurf,omitempty"`
+
+	// zaehlt die Fehlwürfe; die Seite erkennt daran eine neue Meldung.
+	fehlwurfZaehler int
 }
 
 // ztDreier ist der Wert von drei gleichen: drei 1er = 1.000, drei 6er = 600.
@@ -191,6 +206,14 @@ func ztFehlwurf(g *ZehnTausendGame, geworfen []int, name string) bool {
 	}
 	verloren := g.ZugPunkte
 	ztNaechster(g)
+	g.fehlwurfZaehler++
+	g.Fehlwurf = &ZTFehlwurf{
+		Nr:        g.fehlwurfZaehler,
+		Name:      name,
+		Wuerfel:   append([]int(nil), geworfen...),
+		Verloren:  verloren,
+		Naechster: g.Players[g.Current].Name,
+	}
 	g.Note = name + " hat einen Fehlwurf (" + ztListe(geworfen) + ")"
 	if verloren > 0 {
 		g.Note += " – " + strconv.Itoa(verloren) + " Punkte sind weg."
@@ -217,6 +240,11 @@ func cloneZehnTausend(g *ZehnTausendGame) *ZehnTausendGame {
 	c.Players = append([]ZTPlayer(nil), g.Players...)
 	c.Wuerfel = append([]int(nil), g.Wuerfel...)
 	c.Gesichert = append([]bool(nil), g.Gesichert...)
+	if g.Fehlwurf != nil {
+		f := *g.Fehlwurf
+		f.Wuerfel = append([]int(nil), g.Fehlwurf.Wuerfel...)
+		c.Fehlwurf = &f
+	}
 	return &c
 }
 
@@ -299,6 +327,12 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 		mu.Unlock()
 		http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 		return
+	}
+
+	// Jede Aktion räumt die Fehlwurf-Meldung ab; ein neuer Fehlwurf setzt sie
+	// gleich wieder. So bleibt sie genau bis zum nächsten Zug stehen.
+	if room.ZehnTausend != nil {
+		room.ZehnTausend.Fehlwurf = nil
 	}
 
 	switch action {

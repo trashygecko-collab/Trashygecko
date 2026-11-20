@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Schiffe versenken – Ship Captain Crew</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+/* ---------------------------------------------------------------
+   Schiffe versenken (Ship Captain Crew) – drei Ansichten über
+   body[data-stil]. Fünf Würfel, drei Würfe; gesucht werden 6
+   (Schiff), 5 (Kapitän) und 4 (Maat), danach zählt die Ladung.
+   Der Server würfelt und führt den Stand.
+   --------------------------------------------------------------- */
+:root{ --tg-schrift:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif; }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;font-family:var(--tg-schrift);
+  background:var(--bg);color:var(--text);
+  -webkit-tap-highlight-color:transparent;overflow-wrap:anywhere;
+}
+button,select{font-family:inherit}
+button{cursor:pointer;touch-action:manipulation}
+
+.seite{
+  max-width:1120px;margin:0 auto;padding:clamp(8px,1.4vw,18px);
+  display:flex;flex-direction:column;gap:clamp(8px,1.2vw,14px);
+  min-height:100%;justify-content:center;
+}
+.kopf{
+  display:flex;align-items:center;gap:clamp(8px,1.4vw,16px);flex-wrap:wrap;
+  padding:var(--kopf-polster,10px 14px 18px);
+  background:var(--kopf-bg);border:var(--kopf-rand,1px solid transparent);
+  border-radius:var(--kopf-radius,12px);box-shadow:var(--kopf-schatten,none);
+  position:relative;
+}
+.kopf h1{
+  margin:0;font-size:clamp(18px,2.4vw,26px);letter-spacing:.14em;
+  font-weight:700;color:var(--titel);text-shadow:var(--titel-schein,none);
+  white-space:nowrap;
+}
+.kopf .unterzeile{font-size:clamp(11px,1.1vw,13px);color:var(--muted);letter-spacing:.05em;margin-top:2px}
+.kopf .rechts{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kopf::after{
+  content:"";position:absolute;left:16px;right:16px;bottom:7px;height:1px;
+  background:var(--kopf-linie,#0000);opacity:.7;pointer-events:none;
+}
+
+.buehne{display:grid;grid-template-columns:minmax(360px,1.5fr) minmax(250px,.5fr);gap:clamp(8px,1.2vw,14px);align-items:start}
+.bereich{
+  min-width:0;padding:clamp(10px,1.5vw,18px);
+  background:var(--panel);border:var(--panel-rand,1px solid transparent);
+  border-radius:var(--panel-radius,14px);box-shadow:var(--panel-schatten,none);
+}
+.bereich h2{margin:0 0 10px;font-size:clamp(12px,1.2vw,14px);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* ---- Kopfzeile im Tisch ---- */
+.zeile-oben{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:clamp(8px,1.2vw,12px)}
+.zeile-oben .marke{font-size:clamp(10px,1.1vw,12px);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.zeile-oben .einsatz{
+  font-size:clamp(10px,1.1vw,12px);letter-spacing:.08em;color:var(--akzent);
+  border:1px solid var(--rand-fein);border-radius:999px;padding:2px 9px;
+}
+.zeile-oben .dran{margin-left:auto;font-weight:700;letter-spacing:.04em;color:var(--akzent)}
+.zeile-oben .dran.ich{color:var(--gut)}
+
+/* ---- Fracht: Schiff, Kapitän, Maat, zwei Ladungen ---- */
+.fracht{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:clamp(5px,1vw,10px);margin-bottom:clamp(8px,1.2vw,12px);
+}
+.fach{
+  min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:clamp(5px,0.9vw,9px) 4px clamp(6px,1vw,10px);
+  border-radius:var(--wert-radius,12px);
+  background:var(--fach-bg);border:var(--fach-rand,1px dashed #ffffff26);
+  transition:box-shadow .18s,border-color .18s,background .18s;
+}
+.fach .titel{
+  display:flex;align-items:center;gap:4px;justify-content:center;
+  font-size:clamp(8px,0.95vw,10.5px);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap;
+}
+.fach .titel svg{width:1.15em;height:1.15em;flex:0 0 auto}
+.fach .platz{
+  width:100%;aspect-ratio:1;display:grid;place-items:center;position:relative;
+}
+.fach .leerstrich{font-size:clamp(15px,2vw,20px);color:var(--w-leer-text)}
+.fach .zahl{
+  font-size:clamp(11px,1.4vw,14px);font-weight:700;color:var(--akzent);
+  font-variant-numeric:tabular-nums;letter-spacing:.04em;
+}
+.fach.gesichert{
+  background:var(--fach-bg-voll);border:var(--fach-rand-voll,1px solid var(--akzent));
+  box-shadow:var(--fach-schatten,none);
+}
+.fach.gesichert .titel{color:var(--akzent)}
+.fach.gesucht{
+  border:1px solid var(--gut);
+  box-shadow:0 0 0 1px var(--gut),0 0 16px -4px var(--gut);
+}
+.fach.gesucht .titel{color:var(--gut)}
+.fach.ladung.gesichert{border-style:solid}
+.fach.land{
+  background:var(--fach-bg-voll);border:1px solid var(--rand-fein);
+}
+.fach .w{animation:fachRein .32s ease-out}
+@keyframes fachRein{
+  0%{transform:scale(.4) translateY(-10px);opacity:0}
+  100%{transform:scale(1) translateY(0);opacity:1}
+}
+
+/* ---- Würfel ---- */
+.w{
+  position:relative;aspect-ratio:1;width:100%;border-radius:var(--w-radius,16%);
+  background:var(--w-bg);border:var(--w-rand,0);
+  box-shadow:var(--w-schatten,none);
+  display:grid;place-items:center;
+  transition:box-shadow .15s,transform .15s;
+}
+.w .augen{
+  width:72%;height:72%;display:grid;
+  grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:9%;
+}
+.w .auge{border-radius:50%;background:transparent}
+.w .auge.an{background:var(--pip);box-shadow:var(--pip-schein,none)}
+.w.leer{
+  background:var(--w-bg-leer);border:var(--w-rand-leer,1px dashed #ffffff2e);
+  box-shadow:none;display:grid;place-items:center;color:var(--w-leer-text);
+}
+
+/* ---- Becher ---- */
+.becher-titel{
+  display:flex;align-items:baseline;gap:8px;margin:0 0 6px;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+}
+.becher-titel .rechts{margin-left:auto;letter-spacing:.04em;text-transform:none;font-size:clamp(11px,1.2vw,13px)}
+.becher{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:clamp(6px,1.4vw,14px);margin-bottom:clamp(8px,1.2vw,12px);
+}
+.becher .w{cursor:default}
+.becher .w.klick{
+  cursor:pointer;
+  box-shadow:var(--w-schatten,none),0 0 0 2px var(--gut);
+  animation:laden 2.4s ease-in-out infinite;
+}
+@keyframes laden{
+  0%,100%{box-shadow:var(--w-schatten,none),0 0 0 2px var(--gut),0 0 14px -6px var(--gut)}
+  50%{box-shadow:var(--w-schatten,none),0 0 0 3px var(--gut),0 0 22px -4px var(--gut)}
+}
+.becher .w.klick:hover{transform:translateY(-3px)}
+.becher .w.verdeckt{opacity:.42}
+.becher .w.geworfen{animation:mischer .5s ease-in-out}
+@keyframes mischer{
+  0%{transform:rotate(0) translateY(0)}
+  30%{transform:rotate(-9deg) translateY(-9px)}
+  65%{transform:rotate(7deg) translateY(2px)}
+  100%{transform:rotate(0) translateY(0)}
+}
+.becher .platzhalter{
+  aspect-ratio:1;border-radius:var(--w-radius,16%);
+  border:1px dashed var(--rand-fein);opacity:.5;
+}
+
+/* ---- Werte ---- */
+.summenzeile{
+  display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(8px,1.4vw,14px);
+  margin-bottom:clamp(8px,1.2vw,12px);
+}
+.summenzeile .feld{
+  padding:clamp(8px,1.2vw,12px) clamp(10px,1.5vw,14px);
+  border-radius:var(--wert-radius,12px);background:var(--wert-bg);
+  border:var(--wert-rand,1px solid transparent);
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+}
+.summenzeile .marke{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.summenzeile strong{
+  font-size:clamp(20px,2.8vw,28px);color:var(--akzent);letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.summenzeile .feld.punkte strong{color:var(--gut)}
+.summenzeile .feld.leer strong{color:var(--muted)}
+
+.knopfreihe{display:grid;grid-template-columns:1fr 1.15fr;gap:8px;margin-top:4px}
+.knopf{
+  width:100%;min-height:clamp(46px,6vw,54px);padding:9px 12px;
+  border-radius:var(--knopf-radius,10px);border:var(--haupt-rand,0);
+  background:var(--haupt-bg);color:var(--haupt-text);
+  font-size:clamp(12px,1.4vw,15px);font-weight:700;letter-spacing:.1em;
+  box-shadow:var(--haupt-schatten,none);transition:opacity .12s,transform .12s;
+}
+.knopf.zweit{
+  background:var(--knopf-bg);color:var(--knopf-text);
+  border:var(--knopf-rand,1px solid transparent);box-shadow:none;
+}
+.knopf:disabled{
+  background:var(--knopf-bg);color:var(--muted);border:var(--knopf-rand,0);
+  box-shadow:none;opacity:.55;cursor:not-allowed;
+}
+.knopf:not(:disabled):active{transform:translateY(1px)}
+.hinweis{margin:10px 0 0;min-height:1.2em;font-size:clamp(12px,1.3vw,14px);color:var(--hinweis-text)}
+.hinweis.schlecht{color:var(--schlecht);font-weight:700;letter-spacing:.06em}
+.hinweis.gut{color:var(--gut);font-weight:600}
+
+/* ---- Spieler ---- */
+.spieler{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.spieler li{
+  display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"marke name punkte" "marke stand stand";
+  gap:2px 8px;align-items:center;
+  padding:9px 11px;border-radius:var(--spieler-radius,10px);
+  background:var(--spieler-bg);border:var(--spieler-rand,1px solid transparent);
+  color:var(--spieler-text);font-size:clamp(13px,1.4vw,15px);
+}
+.spieler li .marke{grid-area:marke;width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.85;align-self:start;margin-top:7px}
+.spieler li .name{grid-area:name;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spieler li .siege{
+  grid-area: punkte;font-weight:700;color:var(--punkte-farbe);
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;white-space:nowrap;
+}
+.spieler li .stand{
+  grid-area:stand;font-size:clamp(10px,1.1vw,12px);color:var(--muted);
+  letter-spacing:.02em;font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.spieler li .stand .ladung{color:var(--akzent);font-weight:600}
+.spieler li .stand .nix{color:var(--schlecht)}
+.spieler li.aktiv{
+  background:var(--spieler-bg-aktiv);border:var(--spieler-rand-aktiv,1px solid transparent);
+  color:var(--spieler-text-aktiv);
+}
+.spieler li.aktiv .siege{color:var(--spieler-punkte-aktiv,var(--punkte-farbe))}
+.regeln{margin-top:12px;color:var(--muted);font-size:clamp(11px,1.2vw,13px)}
+.regeln summary{cursor:pointer;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+.regeln ul{margin:8px 0 0;padding-left:18px}
+.regeln li{margin-bottom:4px}
+.regeln b{color:var(--text)}
+
+/* ---- Schleier ---- */
+.schleier{
+  position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;
+  background:var(--schleier-bg);backdrop-filter:blur(6px);
+}
+.schleier[hidden]{display:none}
+.karte{
+  width:min(100%,520px);max-height:100%;overflow:auto;
+  padding:clamp(16px,3vw,26px);border-radius:var(--karte-radius,16px);
+  background:var(--panel);border:var(--panel-rand,1px solid transparent);
+  box-shadow:var(--karte-schatten,0 24px 60px #0006);text-align:center;
+}
+.karte h2{margin:0 0 4px;font-size:clamp(18px,2.4vw,24px);letter-spacing:.12em;color:var(--titel);text-transform:uppercase}
+.karte p.unter{margin:0 0 16px;color:var(--muted);font-size:clamp(12px,1.3vw,14px)}
+.karte .gross{
+  width:100%;min-height:50px;border-radius:var(--knopf-radius,10px);
+  border:var(--haupt-rand,0);background:var(--haupt-bg);color:var(--haupt-text);
+  font-weight:700;font-size:clamp(13px,1.6vw,16px);letter-spacing:.08em;
+  box-shadow:var(--haupt-schatten,none);
+}
+.karte .zweitknopf{
+  width:100%;min-height:44px;margin-top:8px;border-radius:var(--knopf-radius,10px);
+  border:1px solid var(--rand-fein);background:transparent;color:var(--muted);
+  font-size:clamp(12px,1.4vw,14px);
+}
+.karte .namen{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.karte .namen .zeile{
+  display:flex;align-items:center;gap:8px;padding:9px 11px;text-align:left;
+  border-radius:var(--spieler-radius,10px);background:var(--spieler-bg);
+  border:var(--spieler-rand,1px solid transparent);
+  font-size:clamp(13px,1.4vw,15px);color:var(--spieler-text);
+}
+.karte .namen .zeile .nr{width:18px;color:var(--muted);font-size:12px}
+.karte .namen .zeile .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.karte .namen .zeile .st{font-size:10px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.karte .hinweiszeile{margin:0 0 12px;font-size:clamp(11px,1.2vw,13px);color:var(--muted);letter-spacing:.04em}
+
+.modus{margin:0 0 16px}
+.modus .titel{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.modus .wahl{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.modus .wahl button{
+  min-height:52px;border-radius:var(--knopf-radius,10px);
+  border:var(--knopf-rand,1px solid transparent);background:var(--knopf-bg);
+  color:var(--knopf-text);font-size:clamp(12px,1.4vw,14px);line-height:1.25;
+  font-weight:600;letter-spacing:.03em;
+}
+.modus .wahl button b{display:block;font-size:clamp(15px,1.9vw,18px);color:var(--akzent)}
+.modus .wahl button.gewaehlt{
+  background:var(--haupt-bg);color:var(--haupt-text);border:var(--haupt-rand,0);
+  box-shadow:var(--haupt-schatten,none);
+}
+.modus .wahl button.gewaehlt b{color:inherit}
+
+.ergebnis{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:6px}
+.ergebnis li{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:var(--spieler-radius,9px);background:var(--spieler-bg);
+  border:var(--spieler-rand,1px solid transparent);
+  font-size:clamp(13px,1.5vw,15px);text-align:left;
+}
+.ergebnis li .platz{min-width:20px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ergebnis li .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ergebnis li .nm .klein{display:block;font-size:10px;color:var(--muted);letter-spacing:.04em}
+.ergebnis li .summe{font-weight:700;color:var(--akzent);font-variant-numeric:tabular-nums}
+.ergebnis li .plus{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gut)}
+.ergebnis li.sieger{
+  background:var(--spieler-bg-aktiv);border:var(--spieler-rand-aktiv,1px solid transparent);
+  color:var(--spieler-text-aktiv);
+}
+.ergebnis li.sieger .summe{color:var(--spieler-punkte-aktiv,var(--akzent))}
+
+/* Blitzmeldung „KEIN SCHIFF IN SICHT!“ */
+.blitz{
+  position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;
+  pointer-events:none;
+}
+.blitz[hidden]{display:none}
+.blitz .kasten{
+  padding:clamp(14px,3vw,22px) clamp(18px,4vw,32px);
+  border-radius:var(--karte-radius,14px);
+  background:var(--blitz-bg);border:1px solid var(--schlecht);
+  box-shadow:0 18px 44px #000000a6;
+  color:var(--schlecht);font-weight:800;letter-spacing:.12em;
+  font-size:clamp(16px,3vw,24px);text-align:center;
+  animation:blitzEin .25s ease-out;
+}
+.blitz .kasten .letzte{
+  display:block;margin-top:7px;font-size:13px;font-weight:600;
+  letter-spacing:.18em;opacity:.78;
+}
+@keyframes blitzEin{
+  0%{transform:scale(.86);opacity:0}
+  100%{transform:scale(1);opacity:1}
+}
+
+/* ===============================================================
+   NORMAL – Casino-Grün, Elfenbein, Gold
+   =============================================================== */
+body[data-stil="normal"]{
+  --bg:radial-gradient(circle 900px at 50% -10%,#1d4b3e 0%,#12332a 48%,#0a211b 100%) fixed;
+  --text:#efe6d2;--muted:#a9c3b6;--titel:#f1dca8;--akzent:#e8cd8e;--rand-fein:#e8cd8e44;
+  --gut:#8fd6a6;--schlecht:#e8948a;
+  --kopf-bg:linear-gradient(180deg,#154234 0%,#113529 100%);
+  --kopf-rand:1px solid #e8cd8e33;--kopf-radius:12px;
+  --kopf-schatten:inset 0 1px 0 #ffffff12,0 8px 18px #0000003d;
+  --kopf-linie:linear-gradient(90deg,#e8cd8e00,#e8cd8e 14%,#d9bc7c 50%,#e8cd8e 86%,#e8cd8e00);
+  --wahl-bg:#0b2a21;--wahl-radius:10px;--wahl-rand:1px solid #e8cd8e22;--wahl-text:#a9c3b6;
+  --wahl-aktiv-bg:#e8cd8e;--wahl-aktiv-text:#0b241d;
+  --panel:linear-gradient(160deg,#16463a 0%,#113429 100%);
+  --panel-rand:1px solid #ffffff14;--panel-radius:14px;
+  --panel-schatten:0 14px 28px #00000040,inset 0 1px 0 #ffffff0f;
+  --wert-bg:#0d2b22;--wert-rand:1px solid #e8cd8e1f;--wert-radius:12px;
+  --fach-bg:#0b2a21;--fach-bg-voll:linear-gradient(180deg,#1b4c3d,#123a2d);
+  --fach-rand:1px dashed #e8cd8e33;--fach-rand-voll:1px solid #e8cd8e99;
+  --fach-schatten:0 6px 14px #0000004d,inset 0 1px 0 #ffffff0f;
+  --knopf-bg:#0f2b23;--knopf-text:#e8cd8e;--knopf-rand:1px solid #e8cd8e44;--knopf-radius:10px;
+  --haupt-bg:linear-gradient(180deg,#f0d9a2,#dfc07c);--haupt-text:#0b241d;
+  --haupt-rand:1px solid #d9bc7c;--haupt-schatten:0 6px 14px #00000033;
+  --hinweis-text:#c8d9cf;
+  --w-radius:16%;
+  --w-bg:linear-gradient(160deg,#fffaf0 0%,#efe2c8 100%);
+  --w-bg-leer:linear-gradient(160deg,#0d2b22 0%,#0a241b 100%);
+  --w-rand:1px solid #ffffffaa;
+  --w-schatten:0 6px 12px #00000059,inset 0 -3px 0 #c9b48c66,inset 0 2px 0 #ffffff;
+  --w-leer-text:#3f6055;
+  --pip:#20342c;--pip-schein:none;
+  --spieler-bg:#0d2b22;--spieler-rand:1px solid #ffffff12;--spieler-radius:9px;
+  --spieler-text:#c8d9cf;
+  --spieler-bg-aktiv:#184536;--spieler-rand-aktiv:1px solid #e8cd8e;--spieler-text-aktiv:#f6edda;
+  --spieler-punkte-aktiv:#f1dca8;--punkte-farbe:#f1dca8;
+  --schleier-bg:#050f0ccc;--karte-radius:16px;--karte-schatten:0 24px 60px #000000aa;
+  --blitz-bg:#0a1f18ee;
+}
+
+/* ===============================================================
+   MÄDCHEN – Aubergine, Altrosa, Beere, Roségold
+   =============================================================== */
+body[data-stil="maedchen"]{
+  --bg:
+    radial-gradient(circle at 18% -6%,#3c1c44 0%,#3c1c4400 48%),
+    radial-gradient(circle at 88% 2%,#2b1233 0%,#2b123300 44%),
+    linear-gradient(180deg,#221229 0%,#1b0f21 56%,#150b19 100%) fixed;
+  --text:#f0e5ee;--muted:#c0a8bc;--titel:#e7c9d8;--akzent:#c68b8f;--rand-fein:#c68b8f59;
+  --gut:#e0c3cd;--schlecht:#d9738b;
+  --kopf-bg:linear-gradient(180deg,#2c1834 0%,#23122a 100%);
+  --kopf-rand:1px solid #c68b8f2b;--kopf-radius:14px;
+  --kopf-schatten:0 12px 28px #00000080,inset 0 1px 0 #ffffff14;
+  --kopf-linie:linear-gradient(90deg,#c68b8f00,#c68b8f 18%,#e8c4c7 50%,#c68b8f 82%,#c68b8f00);
+  --wahl-bg:#24122c;--wahl-radius:10px;--wahl-rand:1px solid #c68b8f26;--wahl-text:#c0a8bc;
+  --wahl-aktiv-bg:linear-gradient(180deg,#d8a6ae,#bd828d);--wahl-aktiv-text:#2b0d18;
+  --panel:linear-gradient(165deg,#2c1834 0%,#22112a 100%);
+  --panel-rand:1px solid #c68b8f21;--panel-radius:16px;
+  --panel-schatten:0 18px 40px #0000008c,inset 0 1px 0 #ffffff12;
+  --wert-bg:#25132c;--wert-rand:1px solid #c68b8f21;--wert-radius:12px;
+  --fach-bg:#22112a;--fach-bg-voll:linear-gradient(180deg,#3a1e44,#2b1533);
+  --fach-rand:1px dashed #c68b8f3d;--fach-rand-voll:1px solid #c68b8f99;
+  --fach-schatten:0 8px 18px #00000073,inset 0 1px 0 #ffffff14;
+  --knopf-bg:#281430;--knopf-text:#e0bfca;--knopf-rand:1px solid #c68b8f40;--knopf-radius:10px;
+  --haupt-bg:linear-gradient(180deg,#dcaeb6,#c08b95);--haupt-text:#2b0d16;
+  --haupt-rand:1px solid #a96d78;--haupt-schatten:0 10px 22px #00000073,inset 0 -2px 0 #8f5d68;
+  --hinweis-text:#c9b0c0;
+  --w-radius:18%;
+  --w-bg:linear-gradient(158deg,#f7dee3 0%,#e4b7c2 52%,#cf9aa9 100%);
+  --w-bg-leer:linear-gradient(158deg,#2f1737 0%,#241129 100%);
+  --w-rand:1px solid #fceff2;
+  --w-schatten:0 12px 22px #00000099,inset 0 2px 0 #fff9fa,inset 0 -8px 14px #a9717f5c;
+  --w-leer-text:#6c3b4c;
+  --pip:#4a1b2c;--pip-schein:none;
+  --spieler-bg:#25132c;--spieler-rand:1px solid #c68b8f21;--spieler-radius:10px;
+  --spieler-text:#d6c0cb;
+  --spieler-bg-aktiv:linear-gradient(180deg,#3a1e44 0%,#2c1534 100%);--spieler-rand-aktiv:1px solid #c68b8f;
+  --spieler-text-aktiv:#f7e9ef;--spieler-punkte-aktiv:#e9cdd6;--punkte-farbe:#e9cdd6;
+  --schleier-bg:#120a16dd;--karte-radius:18px;--karte-schatten:0 28px 70px #000000d9;
+  --blitz-bg:#1b0f21f2;
+}
+body[data-stil="maedchen"] .kopf h1,
+body[data-stil="maedchen"] .karte h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:600;letter-spacing:.1em;
+}
+
+/* ===============================================================
+   BUBEN – Schwarz, Anthrazit, Cyan, Neonblau
+   =============================================================== */
+body[data-stil="buben"]{
+  --bg:
+    radial-gradient(circle at 72% -12%,#1c1d1f 0%,#1c1d1f00 50%),
+    radial-gradient(circle at 12% 108%,#141517 0%,#14151700 46%),
+    linear-gradient(180deg,#0e0f10 0%,#0a0a0b 58%,#050506 100%) fixed;
+  --text:#e4e5e6;--muted:#b1b3b8;--titel:#ff8a90;--akzent:#e0242f;--rand-fein:#e0242f55;
+  --gut:#f36c7c;--schlecht:#ff6f8f;
+  --kopf-bg:linear-gradient(180deg,#141517 0%,#0e0f10 100%);
+  --kopf-rand:1px solid #e0242f33;--kopf-radius:8px;
+  --kopf-schatten:0 14px 30px #050506b3,inset 0 1px 0 #e0242f1f;
+  --kopf-linie:linear-gradient(90deg,#e0242f00,#e0242f 22%,#ff8a90 50%,#e0242f 78%,#e0242f00);
+  --titel-schein:0 0 18px #e0242f59;
+  --wahl-bg:#0e0f10;--wahl-radius:6px;--wahl-rand:1px solid #e0242f2b;--wahl-text:#b1b3b8;
+  --wahl-aktiv-bg:linear-gradient(180deg,#242529,#141517);--wahl-aktiv-text:#ff8a90;
+  --wahl-aktiv-schatten:inset 0 -2px 0 #e0242f,0 0 14px #e0242f33;
+  --panel:linear-gradient(165deg,#141517 0%,#0e0f10 100%);
+  --panel-rand:1px solid #ffffff12;--panel-radius:10px;
+  --panel-schatten:0 18px 38px #050506b3,inset 0 1px 0 #ffffff0f;
+  --wert-bg:#0e0f10;--wert-rand:1px solid #e0242f1f;--wert-radius:8px;
+  --fach-bg:#0e0f10;--fach-bg-voll:linear-gradient(180deg,#1c1d1f,#141517);
+  --fach-rand:1px dashed #e0242f3d;--fach-rand-voll:1px solid #e0242faa;
+  --fach-schatten:0 8px 20px #050506b3,0 0 18px -8px #e0242f;
+  --knopf-bg:#141517;--knopf-text:#cfd0d3;--knopf-rand:1px solid #e0242f3d;--knopf-radius:8px;
+  --haupt-bg:linear-gradient(180deg,#c9202c,#8f1019);--haupt-text:#0e0f10;
+  --haupt-rand:1px solid #ff8a90;--haupt-schatten:0 0 22px #e0242f3d,inset 0 -2px 0 #4a070c;
+  --hinweis-text:#b2b5ba;
+  --w-radius:12%;
+  --w-bg:linear-gradient(158deg,#64676e 0%,#3d4045 46%,#2f3135 100%);
+  --w-bg-leer:linear-gradient(158deg,#141517 0%,#0e0f10 100%);
+  --w-rand:1px solid #ffffff26;
+  --w-schatten:0 14px 24px #050506b3,inset 0 2px 0 #ffffff2b,inset 0 -10px 16px #05050680;
+  --w-leer-text:#3d4045;
+  --pip:#ff8a90;--pip-schein:0 0 6px #ff8a9059;
+  --spieler-bg:#0e0f10;--spieler-rand:1px solid #ffffff12;--spieler-radius:6px;
+  --spieler-text:#c2c4c8;
+  --spieler-bg-aktiv:linear-gradient(180deg,#1c1d1f 0%,#141517 100%);--spieler-rand-aktiv:1px solid #e0242f;
+  --spieler-text-aktiv:#ff8a90;--spieler-punkte-aktiv:#ff8a90;--punkte-farbe:#ff8a90;
+  --schleier-bg:#050506dd;--karte-radius:10px;--karte-schatten:0 28px 70px #050506e6;
+  --blitz-bg:#0a0a0bf2;
+}
+body[data-stil="buben"] .kopf h1{font-weight:600;letter-spacing:.22em}
+body[data-stil="buben"] .karte h2{letter-spacing:.16em}
+
+/* ---- Platz auf breiten Bildschirmen: Spielerleiste oben ---- */
+@media(min-width:1080px){
+  /* Spielerleiste oben, Tisch darunter – in einer Breite, die ohne Scrollen passt. */
+  .buehne{grid-template-columns:1fr;max-width:940px;margin:0 auto}
+  .kopf{padding-bottom:4px}
+  #spielerbereich{order:-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px}
+  #spielerbereich h2{margin:0}
+  .spieler{flex-direction:row;flex-wrap:wrap;gap:6px;flex:1 1 auto}
+  .spieler li{min-width:210px}
+  .regeln{margin:0 0 0 auto;order:2}
+}
+@media(max-width:860px){
+  .seite{justify-content:flex-start}
+  .buehne{grid-template-columns:1fr}
+  #tischbereich{order:1}
+  #spielerbereich{order:2}
+}
+@media(max-width:720px){
+  .seite{padding:6px;gap:6px}
+  .kopf .unterzeile{display:none}
+  .kopf{padding:8px 10px 18px}
+  .kopf h1{font-size:17px}
+  .kopf .rechts{margin-left:0;width:100%}
+  .bereich{padding:10px}
+  .fracht{gap:4px}
+  .fach .titel{font-size:8px;letter-spacing:.04em;gap:2px}
+  .becher{gap:6px}
+  .knopfreihe{position:sticky;bottom:0;z-index:5;grid-template-columns:1fr}
+  .modus .wahl{grid-template-columns:repeat(2,1fr)}
+  .spieler{flex-direction:row;flex-wrap:wrap;gap:5px}
+  .spieler li{flex:1 1 46%}
+}
+@media(max-width:380px){
+  .summenzeile{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .becher .w.klick,.becher .w.geworfen,.fach .w,.blitz .kasten{animation:none}
+}
+
+/* ---- Red Reactor: Titel und Knopfaufschrift in Silber, Rot nur als LED-Akzent ---- */
+body[data-stil="buben"] .titel,
+body[data-stil="jungs"] .titel,
+body[data-stil="maenner"] .titel,
+body[data-stil="buben"] .kopf h1,
+body[data-stil="jungs"] .kopf h1,
+body[data-stil="maenner"] .kopf h1,
+body[data-stil="buben"] h2,
+body[data-stil="jungs"] h2,
+body[data-stil="maenner"] h2 {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button,
+body[data-stil="jungs"] button,
+body[data-stil="maenner"] button,
+body[data-stil="buben"] .knopf,
+body[data-stil="jungs"] .knopf,
+body[data-stil="maenner"] .knopf {
+  color: #e8e9ea;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="jungs"] button.aktiv,
+body[data-stil="maenner"] button.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="jungs"] button.haupt,
+body[data-stil="maenner"] button.haupt {
+  color: #ffffff;
+}
+
+/* Red Reactor: Dialog-Hauptknopf trägt weiße Schrift */
+body[data-stil="buben"] .meldung button,
+body[data-stil="jungs"] .meldung button,
+body[data-stil="maenner"] .meldung button {
+  color: #ffffff;
+}
+</style>
+<script src="/spiele/stil.js"></script>
+</head>
+
+<body data-stil="normal">
+
+<div class="seite">
+
+  <header class="kopf">
+    <div>
+      <h1>Schiffe versenken</h1>
+      <div class="unterzeile">Ship Captain Crew · fünf Würfel, drei Würfe – 6, 5, 4 und Ladung</div>
+    </div>
+    <div class="rechts">
+    </div>
+  </header>
+
+  <main class="buehne">
+
+    <section class="bereich" id="tischbereich" aria-label="Tisch">
+      <div class="zeile-oben">
+        <span class="marke" id="rundenText">Runde 1 von 3</span>
+        <span class="einsatz" id="stufeText">Wurf 1 von 3</span>
+        <span class="dran" id="dranText">–</span>
+      </div>
+
+      <div class="fracht" id="fracht" aria-label="Schiff, Kapitän, Maat und zwei Ladungen">
+        <div class="fach" data-fach="schiff">
+          <span class="titel"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 12 15.4 4.4 15.4Z"/><path fill="currentColor" d="M13.6 5.4 19 15.4 13.6 15.4Z" opacity=".72"/><path fill="currentColor" d="M3.2 17.2h17.6l-2.1 3.6H5.3Z"/></svg>Schiff</span>
+          <div class="platz"><span class="leerstrich">6</span></div>
+        </div>
+        <div class="fach" data-fach="kapitaen">
+          <span class="titel"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 13.4a7 7 0 0 1 14 0Z"/><path fill="currentColor" d="M3.4 14.6h17.2v2.2H3.4Z"/><circle cx="12" cy="9.4" r="1.5" fill="currentColor"/></svg>Kapitän</span>
+          <div class="platz"><span class="leerstrich">5</span></div>
+        </div>
+        <div class="fach" data-fach="maat">
+          <span class="titel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.6" r="2.1" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="currentColor" d="M11.2 7h1.6v12h-1.6Z"/><path fill="currentColor" d="M7.4 9.8h9.2v1.6H7.4Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M5.2 14.4a6.8 6.8 0 0 0 13.6 0"/></svg>Maat</span>
+          <div class="platz"><span class="leerstrich">4</span></div>
+        </div>
+        <div class="fach ladung" data-fach="ladung1">
+          <span class="titel">Ladung</span>
+          <div class="platz"><span class="leerstrich">–</span></div>
+        </div>
+        <div class="fach ladung" data-fach="ladung2">
+          <span class="titel">Ladung</span>
+          <div class="platz"><span class="leerstrich">–</span></div>
+        </div>
+      </div>
+
+      <div class="becher-titel">
+        <span>Würfelbecher</span>
+        <span class="rechts" id="becherHinweis"></span>
+      </div>
+      <div class="becher" id="becher" aria-label="Würfel im Becher"></div>
+
+      <div class="summenzeile">
+        <div class="feld" id="ladungFeld">
+          <span class="marke">Ladung</span>
+          <strong id="ladungWert">–</strong>
+        </div>
+        <div class="feld punkte">
+          <span class="marke">Würfe übrig</span>
+          <strong id="wuerfeWert">3</strong>
+        </div>
+      </div>
+
+      <div class="knopfreihe">
+        <button type="button" class="knopf" id="wuerfelnKnopf" disabled>WÜRFELN</button>
+        <button type="button" class="knopf zweit" id="bestaetigenKnopf" disabled>ERGEBNIS BESTÄTIGEN</button>
+      </div>
+      <p class="hinweis" id="hinweis" role="status" aria-live="polite"></p>
+    </section>
+
+    <aside class="bereich" id="spielerbereich" aria-label="Spieler">
+      <h2>Spieler</h2>
+      <ul class="spieler" id="spielerListe"></ul>
+
+      <details class="regeln">
+        <summary>Regeln</summary>
+        <ul>
+          <li><b>Fünf Würfel, höchstens drei Würfe.</b> Gesucht werden zuerst die <b>6 (Schiff)</b>, dann die <b>5 (Kapitän)</b>, dann die <b>4 (Maat)</b>.</li>
+          <li>Die Reihenfolge zählt: Ohne Schiff gibt es keinen Kapitän, ohne Kapitän keinen Maat.</li>
+          <li>Gültige Würfel tippst du an – sie wandern in ihr Fach und werden nicht mehr geworfen.</li>
+          <li>Sind alle drei gesichert, sind die <b>zwei übrigen Würfel die Ladung</b>; ihre Summe ist dein Ergebnis (2 bis 12).</li>
+          <li>Nach dem dritten Wurf oder mit <b>ERGEBNIS BESTÄTIGEN</b> ist der Zug vorbei.</li>
+          <li>Fehlt etwas, heißt es <b>„KEIN SCHIFF IN SICHT!“</b> und der Zug zählt 0 Punkte.</li>
+          <li>Höchste Ladung gewinnt die Runde – ein Siegpunkt, bei Gleichstand für alle Besten.</li>
+          <li>Nach der letzten Runde gewinnt, wer die meisten Siegpunkte hat.</li>
+        </ul>
+      </details>
+    </aside>
+
+  </main>
+</div>
+
+<!-- Lobby / Start -->
+<div class="schleier" id="startSchleier" hidden>
+  <div class="karte">
+    <h2 id="startTitel">Schiffe versenken</h2>
+    <p class="unter" id="startUnter">2 bis 6 Spieler, fünf Würfel, drei Würfe.</p>
+    <div class="modus" id="modusBlock" hidden>
+      <div class="titel">Spielmodus</div>
+      <div class="wahl" id="modusWahl">
+        <button type="button" data-runden="1">1 Runde<b>1 €</b></button>
+        <button type="button" data-runden="3">3 Runden<b>3 €</b></button>
+        <button type="button" data-runden="5">5 Runden<b>5 €</b></button>
+        <button type="button" data-runden="10">10 Runden<b>10 €</b></button>
+      </div>
+    </div>
+    <div class="namen" id="lobbyListe"></div>
+    <p class="hinweiszeile" id="lobbyHinweis"></p>
+    <button type="button" class="gross" id="neuKnopf" hidden>Runde eröffnen</button>
+    <button type="button" class="zweitknopf" id="bereitKnopf" hidden>Bereit</button>
+    <button type="button" class="gross" id="startKnopf" hidden>Spiel starten</button>
+  </div>
+</div>
+
+<!-- Ergebnis einer Runde -->
+<div class="schleier" id="ergebnisSchleier" hidden>
+  <div class="karte">
+    <h2 id="ergebnisTitel">Runde 1</h2>
+    <p class="unter" id="ergebnisUnter"></p>
+    <ul class="ergebnis" id="ergebnisListe"></ul>
+    <button type="button" class="gross" id="weiterKnopf">Nächste Runde</button>
+  </div>
+</div>
+
+<!-- Ende -->
+<div class="schleier" id="endeSchleier" hidden>
+  <div class="karte">
+    <h2 id="endeTitel">Gewonnen</h2>
+    <p class="unter" id="endeUnter"></p>
+    <ul class="ergebnis" id="endeListe"></ul>
+    <button type="button" class="gross" id="nochmalKnopf">Neue Partie</button>
+  </div>
+</div>
+
+<div class="blitz" id="blitz" hidden><div class="kasten" id="blitzText">KEIN SCHIFF IN SICHT!</div></div>
+
+<script src="/spiele/token.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   Schiffe versenken (Ship Captain Crew) – Anzeige. Der Server
+   würfelt und führt den Stand; diese Seite zeigt ihn und
+   schickt die Aktionen.
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const AUGEN = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
+const WUERFE = 3;
+const SONDER = [6, 5, 4];
+
+const PARAMS = new URLSearchParams(location.search);
+const ONLINE = PARAMS.has("room") && PARAMS.has("id");
+const ROOM = PARAMS.get("room") || "";
+const ICH = PARAMS.get("id") || "";
+const API = "/api/shipcrew";
+
+let G = null;
+let busy = false;
+let modus = 3;
+let hinweisText = "";
+let hinweisArt = "";
+let blitzUhr = null;
+
+/* ---- Ansichten ---- */
+function stilSetzen(stil) {
+  if (!["normal", "maedchen", "buben"].includes(stil)) stil = "normal";
+  document.body.dataset.stil = stil;
+}
+
+/* ---- Modus ---- */
+function modusZeigen() {
+  document.querySelectorAll("#modusWahl button").forEach((b) => {
+    b.classList.toggle("gewaehlt", Number(b.dataset.runden) === modus);
+  });
+}
+document.querySelectorAll("#modusWahl button").forEach((b) => {
+  b.addEventListener("click", () => {
+    modus = Number(b.dataset.runden) || 3;
+    modusZeigen();
+    // In einer offenen Runde stellt der Gastgeber den Modus direkt um.
+    if (ONLINE && G && G.status === "invited" && G.hostId === ICH) aktion("modus", { runden: modus });
+  });
+});
+
+/* ---- Anzeige ---- */
+function setzeHinweis(text, art) {
+  hinweisText = text || "";
+  hinweisArt = art || "";
+  const h = $("hinweis");
+  h.textContent = hinweisText;
+  h.className = "hinweis" + (hinweisArt ? " " + hinweisArt : "");
+}
+
+function wuerfelBild(wert) {
+  const augen = document.createElement("span");
+  augen.className = "augen";
+  const muster = AUGEN[wert] || [];
+  for (let k = 0; k < 9; k++) {
+    const p = document.createElement("i");
+    p.className = muster.includes(k) ? "auge an" : "auge";
+    augen.appendChild(p);
+  }
+  return augen;
+}
+
+function wurfelElement(wert, klasse) {
+  const d = document.createElement("div");
+  d.className = "w" + (klasse ? " " + klasse : "");
+  d.appendChild(wuerfelBild(wert));
+  d.setAttribute("aria-label", "Würfel " + wert);
+  return d;
+}
+
+function ichDran() {
+  return !!(G && G.status === "active" && G.players[G.current] && G.players[G.current].id === ICH);
+}
+
+function meinSpieler() {
+  return G && G.players ? G.players.find((p) => p.id === ICH) : null;
+}
+
+// Der nächste Wert, der gesichert werden darf (0 = alles gesichert).
+function erwartet(p) {
+  if (!p || !p.halten || p.halten.length >= 3) return 0;
+  return SONDER[p.halten.length];
+}
+
+function ladungVon(p) {
+  if (!p || !p.halten || p.halten.length < 3) return 0;
+  return (p.wuerfel || []).reduce((a, b) => a + b, 0);
+}
+
+/* ---- Frachtfächer ---- */
+function zeichneFracht() {
+  const akt = G && G.players ? (G.players[G.current] || null) : null;
+  const halten = akt ? (akt.halten || []) : [];
+  const offen = (G && akt && G.wer === akt.id && Array.isArray(akt.wuerfel)) ? akt.wuerfel : [];
+  const gesucht = ichDran() ? erwartet(meinSpieler()) : 0;
+
+  const faecher = document.querySelectorAll("#fracht .fach");
+  const faecherListe = [...faecher];
+
+  // 0..2: Schiff, Kapitän, Maat – 3..4: die beiden Ladungswürfel
+  for (let i = 0; i < 3; i++) {
+    const f = faecherListe[i];
+    const platz = f.querySelector(".platz");
+    f.classList.toggle("gesichert", i < halten.length);
+    f.classList.toggle("gesucht", gesucht === SONDER[i]);
+    platz.innerHTML = "";
+    if (i < halten.length) {
+      platz.appendChild(wurfelElement(halten[i]));
+      const z = document.createElement("span");
+      z.className = "zahl";
+      z.textContent = "";
+      platz.title = SONDER[i] === 6 ? "Schiff (6)" : SONDER[i] === 5 ? "Kapitän (5)" : "Maat (4)";
+    } else {
+      const s = document.createElement("span");
+      s.className = "leerstrich";
+      s.textContent = String(SONDER[i]);
+      platz.appendChild(s);
+    }
+  }
+
+  // Ladung: die beiden übrigen Würfel, sobald Schiff, Kapitän und Maat liegen.
+  const ladung = halten.length >= 3 ? (akt.wuerfel || []) : [];
+  for (let i = 0; i < 2; i++) {
+    const f = faecherListe[3 + i];
+    const platz = f.querySelector(".platz");
+    platz.innerHTML = "";
+    f.classList.toggle("gesichert", ladung.length > i);
+    f.classList.toggle("land", ladung.length > i);
+    if (ladung.length > i) {
+      platz.appendChild(wurfelElement(ladung[i]));
+      platz.title = "Ladung " + ladung[i];
+    } else {
+      const s = document.createElement("span");
+      s.className = "leerstrich";
+      s.textContent = "–";
+      platz.appendChild(s);
+    }
+  }
+}
+
+/* ---- Becher ---- */
+function zeichneBecher() {
+  const becher = $("becher");
+  becher.innerHTML = "";
+  const akt = G && G.players ? (G.players[G.current] || null) : null;
+  if (!akt) {
+    for (let i = 0; i < 5; i++) {
+      const ph = document.createElement("div");
+      ph.className = "platzhalter";
+      becher.appendChild(ph);
+    }
+    $("becherHinweis").textContent = "";
+    return;
+  }
+
+  const frei = 5 - (akt.halten || []).length;
+  const offen = (G.wer === akt.id && Array.isArray(akt.wuerfel)) ? akt.wuerfel : [];
+  const geworfen = offen.length > 0;
+  const ziel = ichDran() ? erwartet(meinSpieler()) : 0;
+
+  for (let i = 0; i < frei; i++) {
+    if (geworfen && i < offen.length) {
+      const wert = offen[i];
+      const gueltig = ichDran() && ziel === wert;
+      const w = wurfelElement(wert, "klickbar" + (gueltig ? " klick" : "") + (gueltig ? "" : " verdeckt"));
+      if (gueltig) {
+        w.addEventListener("click", () => aktion("sichern", { index: i }));
+      } else {
+        w.title = ziel
+          ? "Zählt erst, wenn die " + ziel + " gesichert ist"
+          : "Diese Würfel sind die Ladung";
+        w.style.cursor = "default";
+      }
+      becher.appendChild(w);
+    } else {
+      // noch nicht geworfen (oder ein Platz, für den gerade kein Würfel offen ist)
+      const ph = document.createElement("div");
+      ph.className = "platzhalter";
+      becher.appendChild(ph);
+    }
+  }
+
+  $("becherHinweis").textContent = !ichDran()
+    ? (akt.name + " würfelt")
+    : (ziel
+      ? "die " + ziel + " antippen zum Sichern"
+      : (geworfen ? "Ladung würfeln oder bestätigen" : "WÜRFELN drücken"));
+}
+
+function zeichneKnoepfe() {
+  const laeuft = !!(G && G.status === "active");
+  const dran = laeuft && ichDran();
+  const p = dran ? meinSpieler() : null;
+  const uebrig = p ? Math.max(0, WUERFE - p.wuerfe) : WUERFE;
+  const geworfen = !!(p && p.wuerfe > 0);
+
+  const w = $("wuerfelnKnopf");
+  w.disabled = !(dran && uebrig > 0 && !p.fertig);
+  w.textContent = uebrig > 0 ? "WÜRFELN" : "KEINE WÜRFE MEHR";
+
+  const b = $("bestaetigenKnopf");
+  const ladung = p ? ladungVon(p) : 0;
+  b.disabled = !(dran && geworfen && !p.fertig);
+  b.textContent = ladung > 0 ? "ERGEBNIS BESTÄTIGEN · " + ladung : "ERGEBNIS BESTÄTIGEN";
+}
+
+function zeichne() {
+  const laeuft = !!(G && G.status === "active");
+  const gesamt = G && G.runden ? G.runden : modus;
+
+  $("rundenText").textContent = G && G.status !== "invited"
+    ? "Runde " + Math.min(G.runde || 1, gesamt) + " von " + gesamt
+    : "Runde 1 von " + modus;
+  $("stufeText").textContent = laeuft && G.players[G.current]
+    ? "Wurf " + Math.min(G.players[G.current].wuerfe + 1, WUERFE) + " von " + WUERFE
+    : "fünf Würfel";
+
+  const dran = $("dranText");
+  if (laeuft && G.players[G.current]) {
+    const name = G.players[G.current].name;
+    dran.textContent = ichDran() ? "Du bist dran" : name + " ist dran";
+    dran.classList.toggle("ich", ichDran());
+  } else if (G && G.status === "runde") {
+    dran.textContent = "Runde beendet";
+    dran.classList.remove("ich");
+  } else if (G && G.status === "finished") {
+    dran.textContent = "Partie beendet";
+    dran.classList.remove("ich");
+  } else {
+    dran.textContent = "–";
+    dran.classList.remove("ich");
+  }
+
+  zeichneFracht();
+  zeichneBecher();
+
+  const akt = G && G.players ? G.players[G.current] : null;
+  const ladung = akt ? ladungVon(akt) : 0;
+  const feld = $("ladungFeld");
+  const wert = $("ladungWert");
+  feld.classList.toggle("leer", ladung === 0);
+  wert.textContent = ladung > 0 ? String(ladung) : "–";
+  $("ladungWert").title = ladung > 0 ? "Ladung aus zwei Würfeln" : "erst mit Schiff, Kapitän und Maat";
+
+  const p = G && laeuft && ichDran() ? meinSpieler() : akt;
+  $("wuerfeWert").textContent = G && G.status === "invited"
+    ? String(WUERFE)
+    : String(p ? Math.max(0, WUERFE - (p.wuerfe || 0)) : WUERFE);
+
+  zeichneKnoepfe();
+  zeichneSpieler();
+  setzeHinweis(hinweisText || (G && G.note ? G.note : ""), hinweisArt);
+
+  if (G && G.status === "invited") {
+    zeigeLobby();
+  } else if (G) {
+    $("startSchleier").hidden = true;
+  }
+  if (G && G.status !== "runde") $("ergebnisSchleier").hidden = true;
+  if (G && G.status === "runde") zeigeErgebnis();
+  if (G && G.status === "finished") zeigeEnde();
+}
+
+function zeichneSpieler() {
+  const liste = $("spielerListe");
+  liste.innerHTML = "";
+  if (!G || !G.players) return;
+  G.players.forEach((p, i) => {
+    const li = document.createElement("li");
+    if (G.status === "active" && i === G.current) li.classList.add("aktiv");
+
+    const marke = document.createElement("span");
+    marke.className = "marke";
+    marke.setAttribute("aria-hidden", "true");
+
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = p.name + (p.id === ICH ? " (Du)" : "");
+
+    const siege = document.createElement("span");
+    siege.className = "siege";
+    siege.textContent = p.siege + (p.siege === 1 ? " Sieg" : " Siege");
+
+    const stand = document.createElement("span");
+    stand.className = "stand";
+    const h = p.halten || [];
+    if (h.length || p.fertig) {
+      const teile = document.createElement("span");
+      const namen = ["Schiff", "Kapitän", "Maat"];
+      const txt = h.map((v, k) => namen[k] + " " + v).join(" · ");
+      teile.textContent = txt || "nichts gesichert";
+      stand.appendChild(teile);
+      if (h.length >= 3) {
+        const l = document.createElement("span");
+        l.className = "ladung";
+        l.textContent = "Ladung " + (p.fertig ? p.wert : ladungVon(p));
+        stand.appendChild(l);
+      } else if (p.fertig) {
+        const n = document.createElement("span");
+        n.className = "nix";
+        n.textContent = "0 Punkte";
+        stand.appendChild(n);
+      }
+    } else if (G.status === "active" && i === G.current) {
+      stand.textContent = "am Zug";
+    } else {
+      stand.textContent = "wartet";
+    }
+    li.append(marke, name, siege, stand);
+    liste.appendChild(li);
+  });
+}
+
+/* ---- Lobby ---- */
+function zeigeLobby() {
+  $("startSchleier").hidden = false;
+  $("ergebnisSchleier").hidden = true;
+  $("endeSchleier").hidden = true;
+  $("startTitel").textContent = "Schiffe versenken";
+  const n = G.players.length;
+  $("startUnter").textContent = "Im Spielraum " + ROOM + " – " + n +
+    " von 6 am Tisch. Alle drücken BEREIT, dann startet der Gastgeber.";
+  $("lobbyHinweis").textContent = n < 2
+    ? "Ship Captain Crew braucht mindestens zwei Spieler."
+    : G.runden + (G.runden === 1 ? " Runde" : " Runden") + " · gesucht sind 6, 5 und 4.";
+
+  const liste = $("lobbyListe");
+  liste.innerHTML = "";
+  G.players.forEach((p) => {
+    const zeile = document.createElement("div");
+    zeile.className = "zeile";
+    const nr = document.createElement("span");
+    nr.className = "nr";
+    nr.textContent = p.ready ? "✓" : "·";
+    const nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = p.name + (p.id === ICH ? " (Du)" : "") + (p.id === G.hostId ? " · Gastgeber" : "");
+    const st = document.createElement("span");
+    st.className = "st";
+    st.textContent = p.ready ? "bereit" : "wartet";
+    zeile.append(nr, nm, st);
+    liste.appendChild(zeile);
+  });
+
+  const ich = G.players.find((p) => p.id === ICH);
+  const bereit = $("bereitKnopf");
+  bereit.hidden = !ich;
+  bereit.textContent = ich && ich.ready ? "Doch nicht bereit" : "Bereit";
+
+  const alle = G.players.length >= 2 && G.players.every((p) => p.ready);
+  const start = $("startKnopf");
+  start.hidden = G.hostId !== ICH;
+  start.disabled = !alle;
+  start.textContent = alle ? "Spiel starten" : "Erst alle bereit";
+  // Der Gastgeber darf den Modus vor dem Start noch wählen.
+  $("modusBlock").hidden = !(G.hostId === ICH && G.status === "invited");
+  $("neuKnopf").hidden = true;
+}
+
+/* ---- Ergebnis einer Runde ---- */
+function zeigeErgebnis() {
+  $("startSchleier").hidden = true;
+  $("endeSchleier").hidden = true;
+  $("ergebnisSchleier").hidden = false;
+  const r = G.letzte;
+  $("ergebnisTitel").textContent = r ? "Runde " + r.nr + " von " + G.runden : "Runde";
+  $("ergebnisUnter").textContent = r
+    ? (r.sieger.length === 0
+      ? "Diese Runde hatte keine Ladung – kein Siegpunkt."
+      : (r.sieger.length === 1
+        ? r.sieger[0] + " gewinnt die Runde mit Ladung " + r.best + "."
+        : r.sieger.join(" und ") + " teilen sich die Runde mit Ladung " + r.best + "."))
+    : "";
+
+  const liste = $("ergebnisListe");
+  liste.innerHTML = "";
+  const zeilen = r ? [...r.ergebnisse].sort((a, b) => b.wert - a.wert) : [];
+  zeilen.forEach((e, platz) => {
+    const li = document.createElement("li");
+    if (r.sieger.includes(e.name)) li.classList.add("sieger");
+    const a = document.createElement("span");
+    a.className = "platz";
+    a.textContent = (platz + 1) + ".";
+    const b = document.createElement("span");
+    b.className = "nm";
+    b.textContent = e.name + (e.id === ICH ? " (Du)" : "");
+    const klein = document.createElement("span");
+    klein.className = "klein";
+    if (e.voll) {
+      klein.textContent = "Schiff 6 · Kapitän 5 · Maat 4 · Ladung " + (e.ladung || []).join(" + ");
+    } else {
+      klein.textContent = "ohne Schiff, Kapitän und Maat";
+    }
+    b.appendChild(klein);
+    const c = document.createElement("span");
+    c.className = "summe";
+    c.textContent = e.wert > 0 ? String(e.wert) : "0";
+    li.append(a, b, c);
+    if (r.sieger.includes(e.name)) {
+      const d = document.createElement("span");
+      d.className = "plus";
+      d.textContent = "+1";
+      li.appendChild(d);
+    }
+    liste.appendChild(li);
+  });
+
+  const letzte = G.runde >= G.runden;
+  const w = $("weiterKnopf");
+  w.textContent = letzte ? "Endstand ansehen" : "Nächste Runde";
+  w.disabled = false;
+}
+
+/* ---- Ende ---- */
+function zeigeEnde() {
+  $("startSchleier").hidden = true;
+  $("ergebnisSchleier").hidden = true;
+  $("endeSchleier").hidden = false;
+  const sieger = G.siegerNamen || [];
+  $("endeTitel").textContent = sieger.length > 1
+    ? "Geteilte Sieger"
+    : (sieger[0] ? sieger[0] + " gewinnt" : "Partie beendet");
+  const best = G.players.reduce((m, p) => Math.max(m, p.siege), 0);
+  $("endeUnter").textContent = G.runden + (G.runden === 1 ? " Runde" : " Runden") +
+    " gespielt – " + best + (best === 1 ? " Siegpunkt" : " Siegpunkte") + " für Platz 1.";
+
+  const liste = $("endeListe");
+  liste.innerHTML = "";
+  const geordnet = [...G.players].sort((a, b) => b.siege - a.siege);
+  geordnet.forEach((p, platz) => {
+    const li = document.createElement("li");
+    if (sieger.includes(p.name)) li.classList.add("sieger");
+    const a = document.createElement("span");
+    a.className = "platz";
+    a.textContent = (platz + 1) + ".";
+    const b = document.createElement("span");
+    b.className = "nm";
+    b.textContent = p.name + (p.id === ICH ? " (Du)" : "");
+    const c = document.createElement("span");
+    c.className = "summe";
+    c.textContent = p.siege + (p.siege === 1 ? " Sieg" : " Siege");
+    li.append(a, b, c);
+    liste.appendChild(li);
+  });
+}
+
+/* ---- Blitzmeldung ---- */
+function zeigeBlitz(text, zeile) {
+  const kasten = $("blitzText");
+  kasten.textContent = text;
+  if (zeile) {
+    const s = document.createElement("span");
+    s.className = "letzte";
+    s.textContent = zeile;
+    kasten.appendChild(s);
+  }
+  $("blitz").hidden = false;
+  clearTimeout(blitzUhr);
+  blitzUhr = setTimeout(() => { $("blitz").hidden = true; }, 2200);
+}
+
+/* ---- Online ---- */
+async function nachAnmelden() {
+  const ich = G ? G.players.find((p) => p.id === ICH) : null;
+  const name = ich ? ich.name : (PARAMS.get("name") || "Spieler");
+  try {
+    await fetch("/api/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room: ROOM, id: ICH, name: name, active: true })
+    });
+  } catch (e) { /* nächster Takt */ }
+}
+
+async function onlineFetch(url, optionen) {
+  const steuer = new AbortController();
+  const lauf = Object.assign({}, optionen || {}, { signal: steuer.signal });
+  const uhr = setTimeout(() => steuer.abort(), 9000);
+  try {
+    let antwort = await fetch(url, lauf);
+    if (antwort.status === 403) {
+      const text = (await antwort.text()).trim();
+      if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
+      await nachAnmelden();
+      antwort = await fetch(url, lauf);
+    }
+    if (!antwort.ok) throw Error((await antwort.text()).trim() || "Die Aktion ist fehlgeschlagen.");
+    return antwort.json();
+  } finally {
+    clearTimeout(uhr);
+  }
+}
+
+function uebernehme(game) {
+  const alt = G;
+  if (!game) {
+    G = null;
+    $("startSchleier").hidden = false;
+    $("ergebnisSchleier").hidden = true;
+    $("endeSchleier").hidden = true;
+    $("startTitel").textContent = "Schiffe versenken";
+    $("startUnter").textContent = "In diesem Spielraum läuft gerade keine Runde. " +
+      "Eröffne sie hier oder über die Spielkarte im Connector.";
+    $("lobbyListe").innerHTML = "";
+    $("lobbyHinweis").textContent = "";
+    $("bereitKnopf").hidden = true;
+    $("startKnopf").hidden = true;
+    $("modusBlock").hidden = !ONLINE;
+    $("neuKnopf").hidden = !ONLINE;
+    modusZeigen();
+    zeichne();
+    return;
+  }
+
+  const neuerWurf = game.wurfNr > 0 && (!alt || alt.wurfNr !== game.wurfNr);
+  // Eigener Zug, der ohne Kombination endet (dritter Wurf oder bestätigt):
+  // deutliche Meldung, solange sie neu ist.
+  if (alt && alt.status === "active" && alt.wer === ICH &&
+      !!(game.note || "").includes("KEIN SCHIFF IN SICHT") &&
+      (game.note || "") !== (alt.note || "")) {
+    const p = (alt.players || []).find((x) => x.id === ICH);
+    const letzteWuerfel = p && Array.isArray(p.wuerfel) ? p.wuerfel.join(" · ") : "";
+    zeigeBlitz("KEIN SCHIFF IN SICHT!", letzteWuerfel ? "letzter Wurf: " + letzteWuerfel : "");
+  }
+
+  G = game;
+  if (game.runden) modus = game.runden;
+  modusZeigen();
+  $("modusBlock").hidden = true;
+  $("neuKnopf").hidden = true;
+
+  if (neuerWurf && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.querySelectorAll("#becher .w").forEach((w) => w.classList.add("geworfen"));
+    setTimeout(() => document.querySelectorAll("#becher .w").forEach((w) => w.classList.remove("geworfen")), 520);
+  }
+  if (G.status === "finished") $("ergebnisSchleier").hidden = true;
+
+  zeichne();
+}
+
+let rejoinLaeuft = false;
+async function hole() {
+  try {
+    const d = await onlineFetch(
+      API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(ICH),
+      { cache: "no-store" }
+    );
+    // Nach einem Verbindungsabbruch fehlt die eigene Kennung am Tisch –
+    // dann wieder hineinsetzen, statt einen fremden Zug zu zeigen.
+    const g = d.game;
+    if (g && g.status !== "invited" && g.status !== "finished" && Array.isArray(g.players) &&
+        !g.players.some((p) => p.id === ICH) && !rejoinLaeuft) {
+      rejoinLaeuft = true;
+      setTimeout(() => { rejoinLaeuft = false; }, 5000);
+      await aktion("rejoin");
+      return;
+    }
+    uebernehme(d.game);
+  } catch (e) {
+    setzeHinweis("Verbindung wackelt – die Seite versucht es weiter …", "");
+  }
+}
+
+async function aktion(name, zusatz) {
+  if (busy) return;
+  busy = true;
+  try {
+    const d = await onlineFetch(
+      API + "?room=" + encodeURIComponent(ROOM) + "&action=" + encodeURIComponent(name),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.assign({ id: ICH }, zusatz || {}))
+      }
+    );
+    setzeHinweis("", "");
+    uebernehme(d.game);
+  } catch (e) {
+    setzeHinweis(e.message, "schlecht");
+  } finally {
+    busy = false;
+  }
+}
+
+/* ---- Knöpfe ---- */
+$("wuerfelnKnopf").addEventListener("click", () => aktion("wurf"));
+$("bestaetigenKnopf").addEventListener("click", () => aktion("bestaetigen"));
+$("bereitKnopf").addEventListener("click", () => aktion("ready"));
+$("startKnopf").addEventListener("click", () => aktion("start"));
+$("weiterKnopf").addEventListener("click", () => aktion("weiter"));
+$("nochmalKnopf").addEventListener("click", () => aktion("reset"));
+$("neuKnopf").addEventListener("click", () => aktion("create", { runden: modus }));
+
+/* ---- Start ---- */
+let gespeicherterStil = "normal";
+gespeicherterStil = TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
+stilSetzen(gespeicherterStil);
+TGStil.beiWechsel(() => stilSetzen(TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" })));
+modusZeigen();
+
+if (ONLINE) {
+  $("startSchleier").hidden = false;
+  $("startUnter").textContent = "Verbinde mit dem Spielraum " + ROOM + " …";
+  $("modusBlock").hidden = false;
+  $("neuKnopf").hidden = false;
+  $("bereitKnopf").hidden = false;
+  $("startKnopf").hidden = true;
+  nachAnmelden().then(hole);
+  setInterval(nachAnmelden, 5000);
+  setInterval(hole, 1200);
+} else {
+  $("startSchleier").hidden = false;
+  $("startTitel").textContent = "Schiffe versenken";
+  $("startUnter").textContent = "Dieses Spiel läuft im Spielraum: Connector öffnen, " +
+    "Schiffe versenken anbieten, mitspielen. Gewürfelt wird immer auf dem Server.";
+  $("lobbyListe").innerHTML = "";
+  $("lobbyHinweis").textContent = "";
+  $("modusBlock").hidden = true;
+  $("neuKnopf").hidden = true;
+  $("bereitKnopf").hidden = true;
+  $("startKnopf").hidden = true;
+  zeichne();
+}
+
+/* Prüfhaken für die Werkzeuge. */
+window.TGSC = {
+  zustand: () => G,
+  ichDran: ichDran,
+  ladung: () => { const p = G && G.players ? G.players[G.current] : null; return ladungVon(p); },
+  erwartet: () => erwartet(meinSpieler())
+};
+</script>
+</body>
+</html>

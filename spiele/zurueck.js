@@ -144,6 +144,16 @@
             "  background:#184536;color:#f6edda;border-color:#e8cd8e;opacity:1;outline:none;",
             "}",
             // In einer Reihe (Titelleiste, HUD) rutscht der Knopf nach rechts.
+            // Red Reactor (Buben-Ansicht): Metallfläche mit roter LED-Kante.
+            '[data-stil="buben"] .tg-zurueck,[data-stil="jungs"] .tg-zurueck,',
+            '[data-stil="maenner"] .tg-zurueck{',
+            "  color:#e6e9ec;background:#16181c;border-color:#e0242f;opacity:.9;",
+            "}",
+            '[data-stil="buben"] .tg-zurueck:hover,[data-stil="buben"] .tg-zurueck:focus-visible,',
+            '[data-stil="jungs"] .tg-zurueck:hover,[data-stil="jungs"] .tg-zurueck:focus-visible,',
+            '[data-stil="maenner"] .tg-zurueck:hover,[data-stil="maenner"] .tg-zurueck:focus-visible{',
+            "  background:#23262c;color:#ffffff;border-color:#ff5560;",
+            "}",
             ".tg-zurueck--rechts{margin-left:auto}",
             // Eigene Zeile in einer Karte (1×1-Rennen, Paare).
             ".tg-zurueck--karte{display:block;margin:0 0 10px auto}",

@@ -5,10 +5,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a211b">
 <title>Pig – Das Schweinchen-Würfelspiel</title>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <link rel="stylesheet" href="/spiele/brettspiele/wuerfel.css">
 <style>
+
+:root{
+/* Klassisch sind genau die alten Farben. Flaechen, Leisten und Knoepfe
+   kommen aus wuerfel.css (--wg-...), das auch die Stilbloecke traegt.
+   Das Schwein selbst steckt als SVG-Attribut im Zeichencode; nur die
+   Stilbloecke ueberschreiben es (--pig...). */
+--blase:#f6edda;--blase-text:#2b211a;--blase-schlecht:#e8a8a0;
+}
+
 .buehne{align-items:center;justify-content:center;gap:6px}
 .pig-wrap{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
   width:100%}
@@ -28,11 +39,11 @@
   65%{transform:translateY(0) scale(.98)}
   100%{transform:translateY(0) scale(1)}
 }
-.blase{position:absolute;right:8%;top:6%;background:#f6edda;color:#2b211a;border-radius:14px;
+.blase{position:absolute;right:8%;top:6%;background:var(--blase);color:var(--blase-text);border-radius:14px;
   padding:6px 12px;font-weight:bold;font-size:clamp(14px,2vw,20px);opacity:0;transform:translateY(6px);
   transition:opacity .2s,transform .2s;pointer-events:none}
 .blase.an{opacity:1;transform:translateY(0)}
-.blase.schlecht{background:#e8a8a0}
+.blase.schlecht{background:var(--blase-schlecht)}
 .wurfreihe{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;width:100%}
 .rundensumme{display:flex;flex-direction:column;align-items:center;line-height:1.1}
 .rundensumme small{color:var(--wg-muted);font-size:11px;letter-spacing:1px}
@@ -42,6 +53,23 @@
   .pig{max-height:150px}
   .rundensumme b{font-size:20px}
 }
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--blase:#fff6fa;--blase-text:#3a0f24;--blase-schlecht:#ffc2da;
+--pig:#ff9ec4;--pig-ohr:#ff8fb8;--pig-glanz:#ffd0e4;--ruessel:#c85f96;--tief:#5b2340;--auge:#ffffff;--pig-rand:#b0286a;
+}
+html[data-stil="buben"]{
+--blase:#16181c;--blase-text:#e6e9ec;--blase-schlecht:#3a0d12;
+--pig:#ff5560;--pig-ohr:#e0242f;--pig-glanz:#ff8a90;--ruessel:#8f1019;--tief:#0a0d10;--auge:#e6e9ec;--pig-rand:#6d1a1f;
+}
+html[data-stil="maedchen"] .pig [fill="#e79aa8"],html[data-stil="buben"] .pig [fill="#e79aa8"]{fill:var(--pig)}
+html[data-stil="maedchen"] .pig [fill="#ef97a6"],html[data-stil="buben"] .pig [fill="#ef97a6"]{fill:var(--pig-ohr)}
+html[data-stil="maedchen"] .pig [fill="#f2b3bf"],html[data-stil="buben"] .pig [fill="#f2b3bf"]{fill:var(--pig-glanz)}
+html[data-stil="maedchen"] .pig [fill="#7a4550"],html[data-stil="buben"] .pig [fill="#7a4550"]{fill:var(--ruessel)}
+html[data-stil="maedchen"] .pig [fill="#33222a"],html[data-stil="buben"] .pig [fill="#33222a"]{fill:var(--tief)}
+html[data-stil="maedchen"] .pig [fill="#fff6f8"],html[data-stil="buben"] .pig [fill="#fff6f8"]{fill:var(--auge)}
+html[data-stil="maedchen"] .pig [stroke="#8d5661"],html[data-stil="buben"] .pig [stroke="#8d5661"]{stroke:var(--pig-rand)}
+</style>
 </style>
 </head>
 <body>
@@ -363,6 +391,18 @@ if (ONLINE) {
   notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");
   elZug.textContent = "";
 }
+})();
+</script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0a211b",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0a211b";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
 </body>

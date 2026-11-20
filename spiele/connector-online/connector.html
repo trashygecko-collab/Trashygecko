@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <script src="/spiele/token.js"></script>
+<script src="/spiele/stil.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TrashyGecko Connector</title>
@@ -293,6 +294,11 @@ html:fullscreen body{padding:18px 1px}
 .modus-panel{margin-top:14px}
 .multi-titel{margin:16px 0 6px;font-size:12px;color:#a9bfb2;font-weight:normal;letter-spacing:1px;text-transform:uppercase}
 .name-tipp{display:block;margin-top:8px;font-size:11px;color:#467a66;line-height:1.4}
+
+/* Grafikstil: gehoert dem Spieler, nicht dem Raum – steht oben, ohne Reiter. */
+.stil-zeile{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;
+ margin:0 0 12px;color:#efe6d2}
+.stil-zeile small{color:#a9bfb2;font-size:11px}
 .game-player.gewaehlt{border-color:#e8cd8e;background:#1a4a3a;box-shadow:0 0 12px #e8cd8e55}
 /* Multiplayer: offenes Angebot und Startknopf. */
 .runde-info{margin:12px 0 0;font-size:13px;color:#b9c9bf}
@@ -492,11 +498,17 @@ html:fullscreen body{padding:18px 1px}
  body.spiel-offen #soloSchalter{display:block}
 }
 </style>
+<link rel="stylesheet" href="/spiele/design.css">
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
-<body>
+<body class="connector-seite">
 <main>
 <h1>TRASHYGECKO CONNECTOR</h1>
+
+<div class="stil-zeile">
+  <div data-tg-stil></div>
+  <small>gilt für alle Spiele – deine Wahl, der Raum ändert sie nicht</small>
+</div>
 
 <!-- Adresse und QR-Code nur bei Bedarf aufklappen. -->
 <section id="addressbox">
@@ -555,8 +567,8 @@ html:fullscreen body{padding:18px 1px}
 </div>
 <div id="nameKnown" class="name-known">
 <strong id="eigenerName" title="So siehst du für die anderen aus">…</strong>
-<small class="name-tipp">Neuen Namen tippen, Enter oder „Speichern“ übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
-</div>
+      <small class="name-tipp">Neuen Namen tippen, Enter oder „Speichern“ übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
+      </div>
 </div>
 </section>
 
@@ -1310,6 +1322,11 @@ const SUPPORTED_GAMES = [
  { id: "skyjo", name: "Skyjo", path: "/spiele/kartenspiele/skyjo/skyjo.html", api: "/api/skyjo" },
  { id: "kniffel", name: "Kniffel", path: "/spiele/brettspiele/kniffel/kniffel.html", api: "/api/kniffel" },
  { id: "zehntausend", name: "10.000", path: "/spiele/brettspiele/zehntausend/zehntausend.html", api: "/api/zehntausend" },
+ { id: "maexchen", name: "Lügen Mäxchen", path: "/spiele/brettspiele/maexchen/maexchen.html", api: "/api/maexchen" },
+ { id: "boston", name: "Auf nach Boston", path: "/spiele/brettspiele/boston/boston.html", api: "/api/boston" },
+ { id: "chicago", name: "Chicago", path: "/spiele/brettspiele/chicago/chicago.html", api: "/api/chicago" },
+ { id: "shipcrew", name: "Schiffe versenken · Ship Captain Crew", path: "/spiele/brettspiele/shipcrew/shipcrew.html", api: "/api/shipcrew" },
+ { id: "halma", name: "Halma", path: "/spiele/brettspiele/halma/halma.html", api: "/api/halma" },
  { id: "schach", name: "Schach", path: "/spiele/brettspiele/schach/schach.html", api: "/api/schach" },
  { id: "go", name: "Go", path: "/spiele/brettspiele/go/go.html", api: "/api/go" },
  { id: "backgammon", name: "Backgammon", path: "/spiele/brettspiele/backgammon/backgammon.html", api: "/api/backgammon" },
@@ -4629,7 +4646,7 @@ function spielRaster(gruppe,nurSpiele){
    // Malen steht oben in der Spielauswahl – hier wäre es ein zweiter Eintrag.
    return !/^malen\//i.test(ziel);
   })
-  .map(a=>({ ziel:a.getAttribute("href"), text:a.textContent.trim() }))
+  .map(a=>({ ziel:a.getAttribute("href"), text:((a.querySelector(".spiel-name")||a).textContent||"").trim() }))
   // Nach Alphabet, damit man ein Spiel schnell findet.
   .sort((a,b)=>a.text.localeCompare(b.text,"de",{numeric:true,sensitivity:"base"}))
   .forEach(eintrag=>{
@@ -4653,16 +4670,96 @@ function spielRaster(gruppe,nurSpiele){
  return raster;
 }
 
-async function spieleGruppen(){
- const r=await fetch("/spiele/spiele.html",{cache:"no-store"});
- if(!r.ok)throw Error("Status "+r.status);
- const doc=new DOMParser().parseFromString(await r.text(),"text/html");
- const gruppen=[...doc.querySelectorAll(".spiele-bereich")];
+// Die Übersicht baut ihre Kategorien erst im Skript auf (KATEGORIEN/SPIELE in
+// spiele.html). Ein reiner HTML-Text enthält deshalb keine Gruppen mehr; die
+// Seite wird unsichtbar geladen und ihr fertiges DOM gelesen – mit denselben
+// Klassen, die auch ihre eigenen Styles benutzen:
+//   #kategorien > .kategorie > .kategorie-kopf .titel
+//                            > .kacheln > a.spiel > .spiel-name (+ .merkmale .m-…)
+function uebersichtLaden(){
+ return new Promise((fertig,fehler)=>{
+  const rahmen=document.createElement("iframe");
+  rahmen.setAttribute("aria-hidden","true");
+  rahmen.tabIndex=-1;
+  rahmen.style.cssText="position:absolute;left:-20000px;top:0;width:1024px;height:800px;border:0;visibility:hidden";
+  let gemeldet=false;
+  const entfernen=()=>{ if(rahmen.parentNode)rahmen.parentNode.removeChild(rahmen); };
+  const abbruch=text=>{ if(gemeldet)return; gemeldet=true; entfernen(); fehler(Error(text)); };
+  const uhr=setTimeout(()=>abbruch("Zeitüberschreitung"),12000);
+  rahmen.addEventListener("load",()=>{
+   if(gemeldet)return;
+   let doc=null;
+   try{ doc=rahmen.contentDocument; }catch(e){ doc=null; }
+   if(!doc){ clearTimeout(uhr); abbruch("kein Zugriff auf die Seite"); return; }
+   let versuche=0;
+   const pruefen=()=>{
+    if(gemeldet)return;
+    if(doc.querySelectorAll("#kategorien .kategorie").length){
+     gemeldet=true;
+     clearTimeout(uhr);
+     // Ausschnitte kopieren, damit sie das Entfernen des Rahmens überleben.
+     const kategorien=[...doc.querySelectorAll("#kategorien .kategorie")].map(k=>k.cloneNode(true));
+     const werkzeuge=doc.querySelector(".kategorie.werkzeuge");
+     fertig({ kategorien, werkzeuge:werkzeuge?werkzeuge.cloneNode(true):null });
+     entfernen();
+     return;
+    }
+    if(++versuche>60){ clearTimeout(uhr); abbruch("keine Kategorien gefunden"); return; }
+    setTimeout(pruefen,50);
+   };
+   pruefen();
+  });
+  rahmen.src="/spiele/spiele.html?liste=1";
+  document.body.appendChild(rahmen);
+ });
+}
+
+function merkmalListe(kachel){
+ return [...kachel.querySelectorAll(".merkmale .m")]
+  .map(m=>(String(m.className).match(/(?:^|\s)m-([a-z]+)/)||[])[1])
+  .filter(Boolean);
+}
+
+// Die Übersicht wird nur einmal gelesen: beide Reiter („Einzelspieler" und
+// „Weitere Spielmöglichkeiten") teilen sich das Ergebnis. Schlägt der Ladevorgang
+// fehl, wird der Zwischenspeicher geleert – der nächste Aufruf versucht es neu.
+let spieleGruppenCache=null;
+function spieleGruppen(){
+ if(!spieleGruppenCache){
+  spieleGruppenCache=uebersichtGruppen().catch(e=>{ spieleGruppenCache=null; throw e; });
+ }
+ return spieleGruppenCache;
+}
+
+// Gruppen wie in der Übersicht: eine je Kategorie, dazu „2 Spieler an einem
+// Gerät" (Merkmale lokal + multi) und „Extras" (Werkzeuge). Der Reiter
+// „Einzelspieler" zeigt nur Spiele mit dem Merkmal solo.
+async function uebersichtGruppen(){
+ const d=await uebersichtLaden();
+ if(!d.kategorien.length)throw Error("keine Kategorien");
+ const zwei=document.createElement("div");
+ const gruppen=[];
+ d.kategorien.forEach(k=>{
+  if(k.classList.contains("werkzeuge"))return;
+  const titelEl=k.querySelector(".kategorie-kopf .titel");
+  const titel=titelEl?String(titelEl.childNodes[0].textContent||"").trim():"";
+  if(!titel)return;
+  const solo=document.createElement("div");
+  const kacheln=k.querySelector(".kacheln");
+  [...(kacheln?kacheln.querySelectorAll("a.spiel"):[])].forEach(a=>{
+   const merk=merkmalListe(a);
+   if(merk.indexOf("solo")>=0)solo.appendChild(a.cloneNode(true));
+   if(merk.indexOf("lokal")>=0&&merk.indexOf("multi")>=0)zwei.appendChild(a.cloneNode(true));
+  });
+  if(solo.children.length)gruppen.push({ titel, inhalt:solo });
+ });
+ if(zwei.children.length)gruppen.push({ titel:"2 Spieler an einem Gerät", inhalt:zwei });
+ if(d.werkzeuge){
+  const kacheln=d.werkzeuge.querySelector(".kacheln");
+  if(kacheln&&kacheln.children.length)gruppen.push({ titel:"Extras", inhalt:kacheln });
+ }
  if(!gruppen.length)throw Error("keine Gruppen");
- return gruppen.map(g=>({
-  titel:(((g.querySelector("h2")||{}).textContent)||"Spiele").trim(),
-  inhalt:g
- }));
+ return gruppen;
 }
 
 function gruppeBauen(titel,raster){

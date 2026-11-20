@@ -4,9 +4,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a211b">
 <title>Neon Taschenrechner</title>
 
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--bg:#0a211b;--gehaeuse:#0b0b14;--display:#030308;--display-rand:#b06a4a;
+--gold:#e8cd8e;--gold-2:#d9bc7c;--gold-2-schein:#d9bc7c44;
+--text:#fff;--muted:#aaa;--ziffer:#a9c3b6;
+--taste:#101522;--taste-aktiv:#12313b;--warn:#c2765c;--dunkel:#0b241d;
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -15,8 +24,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #0a211b;
-  color: white;
+  background: var(--bg);
+  var(color:var(--text));
   font-family:var(--tg-schrift);
   display: flex;
   align-items: center;
@@ -26,18 +35,18 @@ body {
 .calculator {
   width: min(94vw, 390px);
   padding: 22px;
-  background: #0b0b14;
-  border: 2px solid #e8cd8e;
+  background: var(--gehaeuse);
+  border: 2px solid var(--gold);
   border-radius: 22px;
-  box-shadow: 0 0 18px #e8cd8e55,
-              inset 0 0 15px #e8cd8e18;
+  box-shadow: 0 0 18px var(--gold)55,
+              inset 0 0 15px var(--gold)18;
 }
 
 .display {
   width: 100%;
   min-height: 95px;
-  background: #030308;
-  border: 2px solid #b06a4a;
+  background: var(--display);
+  border: 2px solid var(--display-rand);
   border-radius: 12px;
   margin-bottom: 18px;
   padding: 12px;
@@ -45,21 +54,21 @@ body {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
-  box-shadow: 0 0 13px #b06a4a55;
+  box-shadow: 0 0 13px var(--display-rand)55;
   overflow: hidden;
 }
 
 .previous {
-  color: #aaa;
+  color: var(--muted);
   font-size: 17px;
   min-height: 20px;
 }
 
 .current {
-  color: #a9c3b6;
+  color: var(--ziffer);
   font-size: clamp(28px, 8vw, 38px);
   font-weight: bold;
-  text-shadow: 0 0 12px #a9c3b6;
+  text-shadow: 0 0 12px var(--ziffer);
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
@@ -73,39 +82,39 @@ body {
 
 button {
   height: 65px;
-  border: 1px solid #e8cd8e;
+  border: 1px solid var(--gold);
   border-radius: 12px;
-  background: #101522;
-  color: #e8cd8e;
+  background: var(--taste);
+  color: var(--gold);
   font-size: 25px;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 0 8px #e8cd8e33;
+  box-shadow: 0 0 8px var(--gold)33;
   transition: .12s;
   touch-action: manipulation;
 }
 
 button:active {
   transform: scale(.94);
-  background: #12313b;
-  box-shadow: 0 0 18px #e8cd8e;
+  background: var(--taste-aktiv);
+  box-shadow: 0 0 18px var(--gold);
 }
 
 .operator {
-  color: #d9bc7c;
-  border-color: #d9bc7c;
-  box-shadow: 0 0 8px #d9bc7c44;
+  color: var(--gold-2);
+  border-color: var(--gold-2);
+  box-shadow: 0 0 8px var(--gold-2-schein);
 }
 
 .clear {
-  color: #c2765c;
-  border-color: #c2765c;
+  color: var(--warn);
+  border-color: var(--warn);
 }
 
 .equal {
-  background: #d9bc7c;
-  color: #0b241d;
-  border-color: #e8cd8e;
+  background: var(--gold-2);
+  color: var(--dunkel);
+  border-color: var(--gold);
   box-shadow: none;
 }
 
@@ -119,7 +128,22 @@ button:active {
   .buttons { gap: 7px; }
   button { height: 48px; }
 }
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--bg:#eb7bc0;--gehaeuse:#fff6fa;--display:#ffeaf3;--display-rand:#ff9ec4;
+--gold:#8f2450;--gold-2:#ef7aa8;--gold-2-schein:#ef7aa844;
+--text:#3a0f24;--muted:#8f2450;--ziffer:#b0286a;
+--taste:#ffffff;--taste-aktiv:#ffe3ef;--warn:#b0286a;--dunkel:#fff6fa;
+}
+html[data-stil="buben"]{
+--bg:#04070b;--gehaeuse:#111316;--display:#06080b;--display-rand:#e0242f;
+--gold:#c8ff3d;--gold-2:#e0242f;--gold-2-schein:#e0242f44;
+--text:#e6e9ec;--muted:#adb4bc;--ziffer:#6dff4a;
+--taste:#1b1e23;--taste-aktiv:#23262c;--warn:#ff8a90;--dunkel:#0a0d10;
+}
 </style>
+</style>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 
@@ -260,5 +284,17 @@ document.addEventListener('keydown', e => {
 });
 </script>
 
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0a211b",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0a211b";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
 </body>
 </html>

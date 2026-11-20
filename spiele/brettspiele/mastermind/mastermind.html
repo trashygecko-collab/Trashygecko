@@ -6,81 +6,125 @@
 <meta name="theme-color" content="#0b241d">
 <title>Mastermind</title>
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--gold-1:#e8cd8e88;--leiste:#0b241d;
+--panel:#0f2b23;--flaeche:#0d2a22;--flaeche-hell:#123a2f;--knopf:#12312a;
+--kopf:#1e5645;--kopf-2:#144238;--hover:#184536;
+--buehne:#08120f;--mulde:#0a201a;--schleier:#04100ccc;
+--hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;--nummer:#7f9c8f;
+--rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
+--marke-weiss:#8fb3a6;--marke-weiss-rand:#5d7f73;--marke-schwarz-rand:#c8b489;
+--schatten:#00000088;--schatten-2:#00000055;--schatten-3:#00000044;
+/* Spielsteine: reine Farbzuordnung, der Zeichencode liest nur diese Namen. */
+--stein-rot:#c2603f;--stein-gelb:var(--gold);--stein-gruen:#4fb3a0;--stein-blau:#6f9fd8;
+--stein-lila:#b08bc8;--stein-orange:#d9915c;--stein-grau:#9fb3a6;
+}
+
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:1px solid var(--rand-1);border-radius:8px;overflow:hidden;background:var(--panel);
+ box-shadow:0 6px 18px var(--schatten-2)}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
+.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-3)}
 .menueleiste button,.menueleiste select{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--hover)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
+.statuszeile b{color:var(--gold);font-weight:normal}
 
-.buehne{position:relative;padding:8px;background:#08120f}
+.buehne{position:relative;padding:8px;background:var(--buehne)}
 #reihen{display:flex;flex-direction:column;gap:5px}
 .reihe{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:7px;
- border:1px solid transparent;background:#0d2a22}
-.reihe.aktiv{border-color:#e8cd8e88;background:#123a2f}
-.reihe .nr{width:20px;font-size:11px;color:#7f9c8f;text-align:right}
+ border:1px solid transparent;background:var(--flaeche)}
+.reihe.aktiv{border-color:var(--gold-1);background:var(--flaeche-hell)}
+.reihe .nr{width:20px;font-size:11px;color:var(--nummer);text-align:right}
 .slots{display:flex;gap:5px}
-.slot{width:30px;height:30px;border-radius:50%;border:2px solid #1e5645;background:#0a201a;cursor:pointer;
- box-shadow:inset 0 2px 4px #00000088}
-.slot.gefuellt{border-color:#00000055;box-shadow:inset 0 -2px 4px #00000055,0 0 6px #00000044}
+.slot{width:30px;height:30px;border-radius:50%;border:2px solid var(--kopf);background:var(--mulde);cursor:pointer;
+ box-shadow:inset 0 2px 4px var(--schatten)}
+.slot.gefuellt{border-color:var(--schatten-2);box-shadow:inset 0 -2px 4px var(--schatten-2),0 0 6px var(--schatten-3)}
 .rueck{display:grid;grid-template-columns:repeat(2,9px);grid-template-rows:repeat(2,9px);gap:3px;
  margin-left:auto;padding-right:4px}
-.rueck span{width:9px;height:9px;border-radius:50%;background:#0a201a;border:1px solid #1e5645}
-.rueck span.schwarz{background:#f4e6c2;border-color:#c8b489}
-.rueck span.weiss{background:#8fb3a6;border-color:#5d7f73}
+.rueck span{width:9px;height:9px;border-radius:50%;background:var(--mulde);border:1px solid var(--kopf)}
+.rueck span.schwarz{background:var(--hell);border-color:var(--marke-schwarz-rand)}
+.rueck span.weiss{background:var(--marke-weiss);border-color:var(--marke-weiss-rand)}
 
-.palette{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px;background:#08120f}
-.palette button{aspect-ratio:1/1;border-radius:50%;border:2px solid #00000055;cursor:pointer;
- box-shadow:inset 0 -3px 6px #00000055,0 0 0 2px transparent}
-.palette button.gewaehlt{box-shadow:inset 0 -3px 6px #00000055,0 0 0 3px #e8cd8e}
+.palette{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px;background:var(--buehne)}
+.palette button{aspect-ratio:1/1;border-radius:50%;border:2px solid var(--schatten-2);cursor:pointer;
+ box-shadow:inset 0 -3px 6px var(--schatten-2),0 0 0 2px transparent}
+.palette button.gewaehlt{box-shadow:inset 0 -3px 6px var(--schatten-2),0 0 0 3px var(--gold)}
 .palette button:active{transform:scale(.94)}
 
-.aktions{display:flex;gap:8px;padding:0 8px 8px;background:#08120f;flex-wrap:wrap}
+.aktions{display:flex;gap:8px;padding:0 8px 8px;background:var(--buehne);flex-wrap:wrap}
 .aktions button{flex:1;font-family:inherit;font-size:15px;padding:11px 10px;border-radius:8px;cursor:pointer;
- border:1px solid #d9bc7c66;background:#12312a;color:#e8cd8e}
-.aktions button.haupt{background:#e8cd8e;color:#0b241d;border-color:#e8cd8e;font-weight:bold}
+ border:1px solid var(--rand-1);background:var(--knopf);color:var(--gold)}
+.aktions button.haupt{background:var(--gold);color:var(--leiste);border-color:var(--gold);font-weight:bold}
 .aktions button:disabled{opacity:.4;cursor:default}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
 .meldung .loesung{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
-.meldung .loesung i{width:22px;height:22px;border-radius:50%;border:2px solid #00000055}
+.meldung .loesung i{width:22px;height:22px;border-radius:50%;border:2px solid var(--schatten-2)}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#8f2450;--gold-1:#8f245088;--leiste:#ffeaf3;
+--panel:#ffe3ef;--flaeche:#fff0f7;--flaeche-hell:var(--leiste);--knopf:var(--leiste);
+--kopf:var(--bg-2);--kopf-2:#ef7aa8;--hover:var(--leiste);
+--buehne:#fff6fa;--mulde:var(--bg-1);--schleier:#fff6facc;
+--hell:var(--text);--muted:#7a2b52;--regeln:var(--text);--meldung-text:var(--text);--nummer:#a2557a;
+--rand:var(--kopf-2);--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
+--marke-weiss:#b0286a;--marke-weiss-rand:var(--bg-2);--marke-schwarz-rand:var(--gold);
+--schatten:#8f245040;--schatten-2:#8f245033;--schatten-3:#8f245026;
+--stein-rot:#d81f4f;--stein-gelb:#f2b207;--stein-gruen:#17a06a;--stein-blau:#2f6fd0;
+--stein-lila:#8a4bd6;--stein-orange:#f2762e;--stein-grau:#6b5464;
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:var(--text);--gold:#c8ff3d;--gold-1:#c8ff3d88;--leiste:#0a0d10;
+--panel:#111316;--flaeche:#171c22;--flaeche-hell:#20262e;--knopf:var(--flaeche);
+--kopf:#1c2530;--kopf-2:#111820;--hover:var(--flaeche-hell);
+--buehne:#080b0e;--mulde:#0d1116;--schleier:#04070bcc;
+--hell:var(--gold);--muted:#adb4bc;--regeln:#c2c8cf;--meldung-text:#c9d4dc;--nummer:#7e8892;
+--rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
+--marke-weiss:var(--stein-grau);--marke-weiss-rand:#2b3540;--marke-schwarz-rand:#5c7d15;
+--schatten:#00000088;--schatten-2:#00000066;--schatten-3:#00000044;
+--stein-rot:#ff4b5c;--stein-gelb:#ffe066;--stein-gruen:#6dff4a;--stein-blau:#57c8ff;
+--stein-lila:#b98cff;--stein-orange:#ff9f3d;--stein-grau:#8e9aa6;
+}
 </style>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
@@ -146,13 +190,13 @@ a{color:#e8cd8e}
 const $=id=>document.getElementById(id);
 
 const FARBEN=[
- {name:"Rot",   hex:"#c2603f"},
- {name:"Gelb",  hex:"#e8cd8e"},
- {name:"Grün",  hex:"#4fb3a0"},
- {name:"Blau",  hex:"#6f9fd8"},
- {name:"Lila",  hex:"#b08bc8"},
- {name:"Orange",hex:"#d9915c"},
- {name:"Grau",  hex:"#9fb3a6"}
+ {name:"Rot",   hex:"var(--stein-rot)"},
+ {name:"Gelb",  hex:"var(--stein-gelb)"},
+ {name:"Grün",  hex:"var(--stein-gruen)"},
+ {name:"Blau",  hex:"var(--stein-blau)"},
+ {name:"Lila",  hex:"var(--stein-lila)"},
+ {name:"Orange",hex:"var(--stein-orange)"},
+ {name:"Grau",  hex:"var(--stein-grau)"}
 ];
 
 const STUFEN={
@@ -388,5 +432,17 @@ neuesSpiel();
 })();
 </script>
 <script src="../../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
 </body>
 </html>

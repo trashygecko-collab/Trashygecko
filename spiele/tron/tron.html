@@ -8,60 +8,77 @@
 <meta name="theme-color" content="#0b241d">
 <title>Tron – Lichtrennen</title>
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--leiste:#0b241d;
+--panel:#0f2b23;--kopf:#1e5645;--kopf-2:#144238;--hover:#184536;
+--buehne:#08120f;--tief:#02080a;--schleier:#02080acc;
+--hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;
+--rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
+--schatten:#00000055;
+/* Feld: der Zeichencode liest genau diese, nichts steht doppelt im JS. */
+--tron-grund-1:#07201f;--tron-grund-2:#02080a;--tron-gitter:rgba(90,220,220,.07);
+--tron-p1:#ff8a5c;--tron-p1-hell:#ffb08a;--tron-p1-spur:rgba(255,138,92,.85);
+--tron-p2:#5ce0ff;--tron-p2-hell:#a8ecff;--tron-p2-spur:rgba(92,224,255,.85);
+--tron-kern:#ffffff;
+--tron-rahmen:rgba(232,205,142,.55);--tron-trenn:rgba(232,205,142,.2);--tron-label:rgba(232,205,142,.45);
+}
+
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 14px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:820px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:1px solid var(--rand-1);border-radius:8px;overflow:hidden;background:var(--panel);
+ box-shadow:0 6px 18px var(--schatten)}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
+.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-3)}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--hover)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
 .statuszeile b{font-weight:normal}
-#p1Stand{color:#ff8a5c}
-#p2Stand{color:#5ce0ff}
+#p1Stand{color:var(--tron-p1)}
+#p2Stand{color:var(--tron-p2)}
 .statuszeile .runde{font-size:12px}
 
 /* Das Feld bekommt die Größe, die in den Bildschirm passt – berechnet in
    passeAn(), damit es weder winzig noch abgeschnitten ist. */
-.tisch{padding:8px;background:#08120f;display:flex;justify-content:center}
+.tisch{padding:8px;background:var(--buehne);display:flex;justify-content:center}
 .leinwand{position:relative;width:fit-content;max-width:100%;margin:0 auto}
-canvas{display:block;border-radius:8px;border:1px solid #d9bc7c33;
- background:#02080a;touch-action:none}
+canvas{display:block;border-radius:8px;border:1px solid var(--rand-3);
+ background:var(--tief);touch-action:none}
 
 .meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
- background:#02080acc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.12em;font-size:18px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.12em;font-size:18px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
 .meldung .knoepfe{display:flex;flex-direction:column;gap:7px}
-.meldung button.still{background:#0f2b23;color:#e8cd8e}
+.meldung button.still{background:var(--panel);color:var(--gold)}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
-.tasten{display:flex;gap:8px;padding:0 8px 8px;background:#08120f;justify-content:space-between;
- font-size:12.5px;color:#a9c3b6;flex-wrap:wrap}
-.tasten .block{flex:1 1 220px;border:1px solid #d9bc7c33;border-radius:7px;padding:7px 9px;background:#0b241d}
+.tasten{display:flex;gap:8px;padding:0 8px 8px;background:var(--buehne);justify-content:space-between;
+ font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.tasten .block{flex:1 1 220px;border:1px solid var(--rand-3);border-radius:7px;padding:7px 9px;background:var(--leiste)}
 .tasten .block b{font-weight:normal}
-.pi{display:inline-block;border:1px solid #d9bc7c66;border-radius:4px;padding:1px 5px;
- font-family:Consolas,monospace;font-size:12px;color:#e8cd8e}
+.pi{display:inline-block;border:1px solid var(--rand-1);border-radius:4px;padding:1px 5px;
+ font-family:Consolas,monospace;font-size:12px;color:var(--gold)}
 
-.fuss{padding:6px 10px 10px;font-size:13px;color:#a9c3b6;min-height:24px}
+.fuss{padding:6px 10px 10px;font-size:13px;color:var(--muted);min-height:24px}
 
 /* Auf flachen Bildschirmen (Handy quer) bleibt mehr Platz fürs Feld. */
 @media (max-height:560px){
@@ -73,14 +90,44 @@ canvas{display:block;border-radius:8px;border:1px solid #d9bc7c33;
  .fuss{padding:3px 10px 6px;min-height:0;font-size:12px}
 }
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#8f2450;--leiste:#ffeaf3;
+--panel:#ffe3ef;--kopf:#f7a6d4;--kopf-2:#ef7aa8;--hover:var(--leiste);
+--buehne:#fff6fa;--tief:#fffafc;--schleier:#fff6facc;
+--hell:var(--text);--muted:#7a2b52;--regeln:var(--text);--meldung-text:var(--text);
+--rand:#ef7aa8;--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
+--schatten:#8f245040;
+--tron-grund-1:#fff6fa;--tron-grund-2:#ffe0ef;--tron-gitter:rgba(239,122,168,.16);
+--tron-p1:#b0286a;--tron-p1-hell:#d81f4f;--tron-p1-spur:rgba(176,40,106,.75);
+--tron-p2:#4a34b8;--tron-p2-hell:#6b4ce6;--tron-p2-spur:rgba(74,52,184,.7);
+--tron-kern:#ffffff;
+--tron-rahmen:rgba(143,36,80,.5);--tron-trenn:rgba(143,36,80,.18);--tron-label:rgba(143,36,80,.55);
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:var(--text);--gold:#c8ff3d;--leiste:#0a0d10;
+--panel:#111316;--kopf:#1c2530;--kopf-2:#111820;--hover:#20262e;
+--buehne:#080b0e;--tief:#05080b;--schleier:#04070bcc;
+--hell:var(--gold);--muted:#adb4bc;--regeln:#c2c8cf;--meldung-text:#c9d4dc;
+--rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
+--schatten:#00000088;
+--tron-grund-1:#10202b;--tron-grund-2:#04070b;--tron-gitter:rgba(87,200,255,.10);
+--tron-p1:#ff5a6a;--tron-p1-hell:#ff8a90;--tron-p1-spur:rgba(255,90,106,.8);
+--tron-p2:#c8ff3d;--tron-p2-hell:#e6ff86;--tron-p2-spur:rgba(200,255,61,.8);
+--tron-kern:#ffffff;
+--tron-rahmen:rgba(200,255,61,.5);--tron-trenn:rgba(200,255,61,.18);--tron-label:rgba(200,255,61,.5);
+}
 </style>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
@@ -168,6 +215,27 @@ let runde=1, sieg1=0, sieg2=0, unentschieden=false;
 let sammler=0, letzte=0, rundenEnde=null;
 let staub=[];
 
+/* Die Feld-Farben stehen als Tokens im Stylesheet (dieselben, die auch die
+   Statuszeile faerbt). Einmal lesen, bei Stilwechsel neu lesen. */
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let F={};
+function paletteLaden(){
+ F={
+  grund1:tok("--tron-grund-1"), grund2:tok("--tron-grund-2"), gitter:tok("--tron-gitter"),
+  p1:tok("--tron-p1"), p1Hell:tok("--tron-p1-hell"), p1Spur:tok("--tron-p1-spur"),
+  p2:tok("--tron-p2"), p2Hell:tok("--tron-p2-hell"), p2Spur:tok("--tron-p2-spur"),
+  kern:tok("--tron-kern"), rahmen:tok("--tron-rahmen"),
+  trenn:tok("--tron-trenn"), label:tok("--tron-label")
+ };
+ if(spieler&&spieler.length){
+  spieler[0].farbe=F.p1; spieler[0].farbe2=F.p1Hell;
+  spieler[1].farbe=F.p2; spieler[1].farbe2=F.p2Hell;
+ }
+}
+paletteLaden();
+if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(paletteLaden);
+
+
 function setzeFeld(hoch){
  hochkant=hoch;
  SPALTEN=hoch?32:44; ZEILEN=hoch?44:32;
@@ -180,8 +248,8 @@ function neuerRenner(nr){
  return {
   nr, x:start.x, y:start.y, dx:start.dx, dy:start.dy,
   naechste:null, tot:false, sieg:false,
-  farbe:nr===1?"#ff8a5c":"#5ce0ff",
-  farbe2:nr===1?"#ffb08a":"#a8ecff",
+  farbe:nr===1?F.p1:F.p2,
+  farbe2:nr===1?F.p1Hell:F.p2Hell,
   spur:nr===1?1:2
  };
 }
@@ -310,13 +378,13 @@ function starteRunde(){
 function zeichne(){
  // Hintergrund
  const g=ctx.createRadialGradient(W/2,H/2,40,W/2,H/2,W*0.75);
- g.addColorStop(0,"#07201f");
- g.addColorStop(1,"#02080a");
+ g.addColorStop(0,F.grund1);
+ g.addColorStop(1,F.grund2);
  ctx.fillStyle=g;
  ctx.fillRect(0,0,W,H);
 
  // Gitter
- ctx.strokeStyle="rgba(90,220,220,0.07)";
+ ctx.strokeStyle=F.gitter;
  ctx.lineWidth=1;
  ctx.beginPath();
  for(let x=1;x<SPALTEN;x++){ ctx.moveTo(x*ZELLE,0); ctx.lineTo(x*ZELLE,H); }
@@ -330,8 +398,8 @@ function zeichne(){
   for(let x=0;x<SPALTEN;x++){
    const v=raster[y*SPALTEN+x];
    if(!v)continue;
-   ctx.fillStyle=v===1?"rgba(255,138,92,0.85)":"rgba(92,224,255,0.85)";
-   ctx.shadowColor=v===1?"#ff8a5c":"#5ce0ff";
+   ctx.fillStyle=v===1?F.p1Spur:F.p2Spur;
+   ctx.shadowColor=v===1?F.p1:F.p2;
    ctx.fillRect(x*ZELLE+1.5,y*ZELLE+1.5,ZELLE-3,ZELLE-3);
   }
  }
@@ -359,13 +427,13 @@ function zeichne(){
   ctx.shadowColor=s.farbe;
   ctx.fillStyle=s.farbe2;
   ctx.beginPath(); ctx.arc(cx,cy,ZELLE*0.44,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle="#ffffff";
+  ctx.fillStyle=F.kern;
   ctx.beginPath(); ctx.arc(cx,cy,ZELLE*0.2,0,Math.PI*2); ctx.fill();
   ctx.restore();
  }
 
  // Rahmen
- ctx.strokeStyle="rgba(232,205,142,0.55)";
+ ctx.strokeStyle=F.rahmen;
  ctx.lineWidth=2;
  ctx.strokeRect(1,1,W-2,H-2);
 
@@ -373,10 +441,10 @@ function zeichne(){
  if(zustand==="bereit"){
   ctx.save();
   ctx.setLineDash([6,7]);
-  ctx.strokeStyle="rgba(232,205,142,0.2)";
+  ctx.strokeStyle=F.trenn;
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.restore();
-  ctx.fillStyle="rgba(232,205,142,0.45)";
+  ctx.fillStyle=F.label;
   ctx.font="13px Georgia, serif";
   ctx.textAlign="center";
   ctx.fillText("Spieler 1",W*0.25,H-14);
@@ -461,7 +529,7 @@ function uebernehmen(g){
  raster=rasterAusLauflaengen(g.raster);
  spieler=g.spieler.map((p,i)=>({
   nr:i+1,x:p.x,y:p.y,dx:p.dx,dy:p.dy,naechste:null,tot:p.tot,sieg:p.sieg,
-  farbe:i===0?"#ff8a5c":"#5ce0ff", farbe2:i===0?"#ffb08a":"#a8ecff", spur:i+1
+  farbe:i===0?F.p1:F.p2, farbe2:i===0?F.p1Hell:F.p2Hell, spur:i+1
  }));
  staub=[];
  runde=g.runde;
@@ -687,5 +755,17 @@ requestAnimationFrame(zeit=>{ letzte=zeit; schleife(zeit); });
 })();
 </script>
 <script src="/spiele/verlassen.js"></script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
 </body>
 </html>

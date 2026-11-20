@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
+  <script src="/spiele/stil.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Super Pimmelchen — Retro Arcade Edition (20×11)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -420,6 +421,28 @@ button:hover:not(:disabled){background:#184536}
 button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
 h1,h2,h3{color:#f1dca8;font-weight:normal}
 small,.muted,.hint{color:#a9c3b6}
+
+/* ---- Grafikstil (zentral): Klassisch bleibt unverändert ---- */
+html[data-stil="maedchen"]{background:#eb7bc0;--cyan:#ef7aa8;--pink:#b06bff;--text:#3a0f24;--muted:#8f2450}
+html[data-stil="maedchen"] body{background:#eb7bc0;color:#3a0f24}
+html[data-stil="maedchen"] .cabinet{background:#fff6fa}
+html[data-stil="maedchen"] .brand-title{color:#8f2450;text-shadow:none}
+html[data-stil="maedchen"] .hud-box{background:#ffe3ef;border-color:#ef7aa8}
+html[data-stil="maedchen"] .hud-label{color:#8f2450}
+html[data-stil="maedchen"] .hud-value{color:#7a2fbf}
+html[data-stil="maedchen"] .screen-wrapper{background:#ffeaf3;border-color:#ef7aa8}
+html[data-stil="maedchen"] button,html[data-stil="maedchen"] .arcade-btn{background:#fff6fa;border-color:#ef7aa8;color:#8f2450}
+html[data-stil="maedchen"] #level-picker select{background:#fff6fa;color:#3a0f24;border-color:#ef7aa8}
+html[data-stil="buben"]{background:#04070b;--cyan:#c8ff3d;--pink:#ff8a90;--text:#e6e9ec;--muted:#adb4bc}
+html[data-stil="buben"] body{background:#04070b;color:#e6e9ec}
+html[data-stil="buben"] .cabinet{background:#111316}
+html[data-stil="buben"] .brand-title{color:#c8ff3d;text-shadow:none}
+html[data-stil="buben"] .hud-box{background:#16181c;border-color:#e0242f}
+html[data-stil="buben"] .hud-label{color:#adb4bc}
+html[data-stil="buben"] .hud-value{color:#ff8a90}
+html[data-stil="buben"] .screen-wrapper{background:#0a0d10;border-color:#23262c}
+html[data-stil="buben"] button,html[data-stil="buben"] .arcade-btn{background:#1b1e23;border-color:#e0242f;color:#ff8a90}
+html[data-stil="buben"] #level-picker select{background:#12161a;color:#e6e9ec;border-color:#2b3540}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
@@ -660,9 +683,18 @@ small,.muted,.hint{color:#a9c3b6}
     ui.startButton.addEventListener('click', () => start());
 
     // ---- Level-Daten ----
+    /* Drei Farbwelten für dieselbe Spielfläche. Klassisch ist die alte
+       Grün-Gold-Tafel; die anderen beiden tauschen nur die Farben, das
+       Level selbst bleibt unverändert. */
     const palettes = [
-      { floor: '#12332a', wall: '#2c5a49', trim: '#d9bc7c', dot: '#e8cd8e', ink: '#0b241d', cream: '#efe6d2' }
+      { floor: '#12332a', wall: '#2c5a49', trim: '#d9bc7c', dot: '#e8cd8e', ink: '#0b241d', cream: '#efe6d2' },
+      { floor: '#ffd0e4', wall: '#ef7aa8', trim: '#b06bff', dot: '#ff9ec4', ink: '#3a0f24', cream: '#fff6fa' },
+      { floor: '#12171d', wall: '#e0242f', trim: '#c8ff3d', dot: '#6dff4a', ink: '#0a0d10', cream: '#c9d1d9' }
     ];
+    function stilPalette(){
+      const s = (window.TGStil && TGStil.hole) ? TGStil.hole() : 'klassisch';
+      return s === 'maedchen' ? palettes[1] : (s === 'buben' ? palettes[2] : palettes[0]);
+    }
 
     const LEVEL_1_MAP = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -2315,7 +2347,7 @@ function getLevelMap(levelIndex) {
     }
 
     function draw(message = '') {
-      const p = palettes[stage % palettes.length];
+      const p = stilPalette();
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
       for (let y = 0; y < H; y++)

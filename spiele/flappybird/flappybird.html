@@ -6,55 +6,110 @@
 <meta name="theme-color" content="#0b241d">
 <title>Flappy Bird</title>
 <style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--leiste:#0b241d;
+--panel:#0f2b23;--kopf:#1e5645;--kopf-2:#144238;--hover:#184536;
+--buehne:#08120f;--schleier:#04100ccc;
+--hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;
+--rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
+--schatten:#00000055;--schatten-tief:#00000088;
+/* Feld: der Zeichencode liest genau diese. */
+--fb-himmel-1:#123f31;--fb-himmel-2:#0d3026;--fb-himmel-3:#081c16;
+--fb-wolke:#ffffff0e;--fb-huegel:#0f3a2d;
+--fb-rohr-1:#3f8f6f;--fb-rohr-2:#5fb891;--fb-rohr-3:#2c6b52;--fb-rohr-rand:#163d2e;
+--fb-rohr-gold:#d9bc7c;--fb-rohr-gold-rand:#7a5a1c;--fb-glanz:#ffffff22;
+--fb-boden-1:#1f5b46;--fb-boden-2:#0d2a21;--fb-boden-linie:#d9bc7c66;--fb-boden-streifen:#ffffff10;
+--fb-vogel-1:#f0d79c;--fb-vogel-2:#c99f47;--fb-vogel-rand:#6b4c14;--fb-fluegel:#f7ecc9;
+--fb-auge:#ffffff;--fb-pupille:#0b241d;--fb-schnabel:#d98b3a;--fb-schnabel-rand:#7a4a12;
+--fb-zahl-rand:#07190fcc;--fb-zahl:#f4e6c2;--fb-rahmen:#d9bc7c44;
+}
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#8f2450;--leiste:#ffeaf3;
+--panel:#ffe3ef;--kopf:#ffd0e4;--kopf-2:#ffb8d4;--hover:#ffd0e4;
+--buehne:#ffd8e7;--schleier:#fff6fae0;
+--hell:#8f2450;--muted:#7a2b52;--regeln:#5b2340;--meldung-text:#5b2340;
+--rand:#ef7aa8;--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
+--schatten:#8f245033;--schatten-tief:#8f245055;
+--fb-himmel-1:#fff6fa;--fb-himmel-2:#ffe9f2;--fb-himmel-3:#ffd8e7;
+--fb-wolke:#ffffffaa;--fb-huegel:#ffc2da;
+--fb-rohr-1:#e0245e;--fb-rohr-2:#ff5f9e;--fb-rohr-3:#b0286a;--fb-rohr-rand:#8f2450;
+--fb-rohr-gold:#b06b00;--fb-rohr-gold-rand:#5b2340;--fb-glanz:#ffffff66;
+--fb-boden-1:#ffd0e4;--fb-boden-2:#ffb8d4;--fb-boden-linie:#8f245088;--fb-boden-streifen:#ffffff88;
+--fb-vogel-1:#a98cf5;--fb-vogel-2:#6a3fd0;--fb-vogel-rand:#4a2a80;--fb-fluegel:#ffffff;
+--fb-auge:#ffffff;--fb-pupille:#4a2a80;--fb-schnabel:#ff5f9e;--fb-schnabel-rand:#8f2450;
+--fb-zahl-rand:#ffffffcc;--fb-zahl:#8f2450;--fb-rahmen:#8f245055;
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:var(--text);--gold:#c8ff3d;--leiste:#0a0d10;
+--panel:#111316;--kopf:#1c2530;--kopf-2:#111820;--hover:#20262e;
+--buehne:#080b0e;--schleier:#04070bcc;
+--hell:var(--gold);--muted:#adb4bc;--regeln:#c2c8cf;--meldung-text:#c9d4dc;
+--rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
+--schatten:#00000088;--schatten-tief:#000000cc;
+--fb-himmel-1:#08141c;--fb-himmel-2:#050d12;--fb-himmel-3:#02050a;
+--fb-wolke:#c8ff3d14;--fb-huegel:#0e2a33;
+--fb-rohr-1:#1f7f9e;--fb-rohr-2:#4de0ff;--fb-rohr-3:#12556b;--fb-rohr-rand:#04070b;
+--fb-rohr-gold:#c8ff3d;--fb-rohr-gold-rand:#4a6b00;--fb-glanz:#ffffff33;
+--fb-boden-1:#12303a;--fb-boden-2:#08181f;--fb-boden-linie:#4de0ff88;--fb-boden-streifen:#c8ff3d33;
+--fb-vogel-1:#e6ff86;--fb-vogel-2:#8fd400;--fb-vogel-rand:#2b3a00;--fb-fluegel:#ffffff;
+--fb-auge:#ffffff;--fb-pupille:#04070b;--fb-schnabel:#ff8a3d;--fb-schnabel-rand:#6b2a00;
+--fb-zahl-rand:#000000cc;--fb-zahl:#c8ff3d;--fb-rahmen:#c8ff3d44;
+}
+
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font:15px var(--tg-schrift);
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
 main{max-width:760px;margin:auto}
 
-.fenster{border:1px solid #d9bc7c66;border-radius:8px;overflow:hidden;background:#0f2b23;
- box-shadow:0 6px 18px #00000055}
+.fenster{border:1px solid var(--rand-1);border-radius:8px;overflow:hidden;background:var(--panel);
+ box-shadow:0 6px 18px var(--schatten)}
 .titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(#1e5645,#144238);border-bottom:1px solid #d9bc7c44}
-.titelleiste .titel{color:#f4e6c2;font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:#e8cd8e;border:1px solid #d9bc7c66;border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:#0b241d}
+ padding:7px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
+.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:#0b241d;
- border-bottom:1px solid #d9bc7c33}
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-3)}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid #d9bc7c66;background:#0f2b23;color:#e8cd8e;cursor:pointer}
-.menueleiste button:hover{background:#184536}
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--hover)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:#a9c3b6;background:#0b241d;border-bottom:1px solid #d9bc7c22}
-.statuszeile b{color:#e8cd8e;font-weight:normal}
+ padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
+.statuszeile b{color:var(--gold);font-weight:normal}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:#08120f}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
 canvas{display:block;width:100%;max-width:400px;height:auto;border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px #00000088}
+ box-shadow:inset 0 0 40px var(--schatten-tief)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:#0f2b23;border:1px solid #d9bc7c;border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:#f1dca8;font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:#d8edd8;font-size:14px;line-height:1.5}
+ background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:16px 18px;max-width:320px}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:19px}
+.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid #d9bc7c;background:#e8cd8e;color:#0b241d;font-weight:bold}
+ border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
-.fuss{padding:6px 10px;font-size:13px;color:#a9c3b6;min-height:28px}
+.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
 
 #regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:#e8cd8e;font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:#d8d2bf}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
 #regeln li{margin-bottom:5px}
-#regeln b{color:#f1dca8;font-weight:normal}
-.klein{color:#a9c3b6;font-size:13px}
-a{color:#e8cd8e}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:13px}
+a{color:var(--gold)}
 .mitte{text-align:center}
 </style>
+<script src="/spiele/stil.js"></script>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
 <body>
@@ -111,6 +166,29 @@ const $=id=>document.getElementById(id);
 const W=400, H=600;
 canvas.width=W;
 canvas.height=H;
+/* Die Feld-Farben stehen als Tokens im Stylesheet. Einmal lesen, bei
+   Stilwechsel neu lesen - alles Gezeichnete faerbt mit. */
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let F={};
+function paletteLaden(){
+ F={
+  himmel1:tok("--fb-himmel-1"), himmel2:tok("--fb-himmel-2"), himmel3:tok("--fb-himmel-3"),
+  wolke:tok("--fb-wolke"), huegel:tok("--fb-huegel"),
+  rohr1:tok("--fb-rohr-1"), rohr2:tok("--fb-rohr-2"), rohr3:tok("--fb-rohr-3"),
+  rohrRand:tok("--fb-rohr-rand"), rohrGold:tok("--fb-rohr-gold"),
+  rohrGoldRand:tok("--fb-rohr-gold-rand"), glanz:tok("--fb-glanz"),
+  boden1:tok("--fb-boden-1"), boden2:tok("--fb-boden-2"),
+  bodenLinie:tok("--fb-boden-linie"), bodenStreifen:tok("--fb-boden-streifen"),
+  vogel1:tok("--fb-vogel-1"), vogel2:tok("--fb-vogel-2"),
+  vogelRand:tok("--fb-vogel-rand"), fluegel:tok("--fb-fluegel"),
+  auge:tok("--fb-auge"), pupille:tok("--fb-pupille"),
+  schnabel:tok("--fb-schnabel"), schnabelRand:tok("--fb-schnabel-rand"),
+  zahlRand:tok("--fb-zahl-rand"), zahl:tok("--fb-zahl"), rahmen:tok("--fb-rahmen")
+ };
+}
+paletteLaden();
+if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(()=>{paletteLaden();zeichne();});
+
 
 const BODEN=64;           // Höhe des Bodens
 const GRAV=0.42;          // Schwerkraft pro Frame
@@ -301,15 +379,15 @@ function ende(){
 function zeichne(){
  // Himmel
  const g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,"#123f31");
- g.addColorStop(.55,"#0d3026");
- g.addColorStop(1,"#081c16");
+ g.addColorStop(0,F.himmel1);
+ g.addColorStop(.55,F.himmel2);
+ g.addColorStop(1,F.himmel3);
  ctx.fillStyle=g;
  ctx.fillRect(0,0,W,H);
 
  // Wolken
  wolken.forEach(w=>{
-  ctx.fillStyle="#ffffff0e";
+  ctx.fillStyle=F.wolke;
   ctx.beginPath();
   ctx.ellipse(w.x,w.y,38*w.s,15*w.s,0,0,Math.PI*2);
   ctx.ellipse(w.x+22*w.s,w.y+5*w.s,26*w.s,12*w.s,0,0,Math.PI*2);
@@ -318,7 +396,7 @@ function zeichne(){
  });
 
  // ferne Hügel
- ctx.fillStyle="#0f3a2d";
+ ctx.fillStyle=F.huegel;
  ctx.beginPath();
  ctx.moveTo(0,H-BODEN);
  for(let x=0;x<=W;x+=20){
@@ -337,17 +415,17 @@ function zeichne(){
 
  // Boden
  const bg=ctx.createLinearGradient(0,H-BODEN,0,H);
- bg.addColorStop(0,"#1f5b46");
- bg.addColorStop(1,"#0d2a21");
+ bg.addColorStop(0,F.boden1);
+ bg.addColorStop(1,F.boden2);
  ctx.fillStyle=bg;
  ctx.fillRect(0,H-BODEN,W,BODEN);
- ctx.strokeStyle="#d9bc7c66";
+ ctx.strokeStyle=F.bodenLinie;
  ctx.lineWidth=2;
  ctx.beginPath();
  ctx.moveTo(0,H-BODEN+1);
  ctx.lineTo(W,H-BODEN+1);
  ctx.stroke();
- ctx.fillStyle="#ffffff10";
+ ctx.fillStyle=F.bodenStreifen;
  for(let x=-bodenX;x<W;x+=48){
   ctx.fillRect(x,H-BODEN+14,26,5);
   ctx.fillRect(x+14,H-BODEN+34,26,5);
@@ -360,42 +438,42 @@ function zeichne(){
  ctx.rotate(vogel.drall);
  // Körper
  const kg=ctx.createLinearGradient(0,-VOGEL_R,0,VOGEL_R);
- kg.addColorStop(0,"#f0d79c");
- kg.addColorStop(1,"#c99f47");
+ kg.addColorStop(0,F.vogel1);
+ kg.addColorStop(1,F.vogel2);
  ctx.fillStyle=kg;
  ctx.beginPath();
  ctx.ellipse(0,0,VOGEL_R+2,VOGEL_R,0,0,Math.PI*2);
  ctx.fill();
- ctx.strokeStyle="#6b4c14";
+ ctx.strokeStyle=F.vogelRand;
  ctx.lineWidth=2;
  ctx.stroke();
  // Flügel
  const hoch=vogel.fluegel>0.4?-1:1;
- ctx.fillStyle="#f7ecc9";
+ ctx.fillStyle=F.fluegel;
  ctx.beginPath();
  ctx.ellipse(-3,2+hoch*4,9,6,hoch*0.5,0,Math.PI*2);
  ctx.fill();
- ctx.strokeStyle="#6b4c14";
+ ctx.strokeStyle=F.vogelRand;
  ctx.lineWidth=1.6;
  ctx.stroke();
  // Auge
- ctx.fillStyle="#ffffff";
+ ctx.fillStyle=F.auge;
  ctx.beginPath();
  ctx.arc(5,-5,5.4,0,Math.PI*2);
  ctx.fill();
- ctx.fillStyle="#0b241d";
+ ctx.fillStyle=F.pupille;
  ctx.beginPath();
  ctx.arc(6.4,-5,2.4,0,Math.PI*2);
  ctx.fill();
  // Schnabel
- ctx.fillStyle="#d98b3a";
+ ctx.fillStyle=F.schnabel;
  ctx.beginPath();
  ctx.moveTo(VOGEL_R+1,1);
  ctx.lineTo(VOGEL_R+12,4);
  ctx.lineTo(VOGEL_R+1,8);
  ctx.closePath();
  ctx.fill();
- ctx.strokeStyle="#7a4a12";
+ ctx.strokeStyle=F.schnabelRand;
  ctx.lineWidth=1.4;
  ctx.stroke();
  ctx.restore();
@@ -405,13 +483,13 @@ function zeichne(){
   ctx.font="bold 34px Georgia,serif";
   ctx.textAlign="center";
   ctx.lineWidth=4;
-  ctx.strokeStyle="#07190fcc";
+  ctx.strokeStyle=F.zahlRand;
   ctx.strokeText(String(punkte),W/2,86);
-  ctx.fillStyle="#f4e6c2";
+  ctx.fillStyle=F.zahl;
   ctx.fillText(String(punkte),W/2,86);
  }
 
- ctx.strokeStyle="#d9bc7c44";
+ ctx.strokeStyle=F.rahmen;
  ctx.lineWidth=3;
  ctx.strokeRect(1.5,1.5,W-3,H-3);
 }
@@ -419,23 +497,23 @@ function zeichne(){
 function rohrZeichnen(x,y,w,h){
  if(h<=0)return;
  const grad=ctx.createLinearGradient(x,0,x+w,0);
- grad.addColorStop(0,"#3f8f6f");
- grad.addColorStop(.45,"#5fb891");
- grad.addColorStop(1,"#2c6b52");
+ grad.addColorStop(0,F.rohr1);
+ grad.addColorStop(.45,F.rohr2);
+ grad.addColorStop(1,F.rohr3);
  ctx.fillStyle=grad;
  ctx.fillRect(x,y,w,h);
- ctx.strokeStyle="#163d2e";
+ ctx.strokeStyle=F.rohrRand;
  ctx.lineWidth=2;
  ctx.strokeRect(x+1,y+1,w-2,h-2);
  // Goldrand an der Öffnung
- ctx.fillStyle="#d9bc7c";
+ ctx.fillStyle=F.rohrGold;
  const kappe=18;
  const ky=(y<0)?y+h-kappe:y;
  ctx.fillRect(x-5,ky,w+10,kappe);
- ctx.strokeStyle="#7a5a1c";
+ ctx.strokeStyle=F.rohrGoldRand;
  ctx.lineWidth=2;
  ctx.strokeRect(x-5,ky,w+10,kappe);
- ctx.fillStyle="#ffffff22";
+ ctx.fillStyle=F.glanz;
  ctx.fillRect(x+6,ky+3,w-12,4);
 }
 
@@ -471,5 +549,17 @@ requestAnimationFrame(schleife);
 })();
 </script>
 <script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
 </body>
 </html>

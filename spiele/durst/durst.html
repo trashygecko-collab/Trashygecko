@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<script src="/spiele/stil.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>DURST – Das Spiel</title>
 <style>
@@ -230,6 +231,34 @@ button:hover:not(:disabled){background:#184536}
 button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
 h1,h2,h3{color:#f1dca8;font-weight:normal}
 small,.muted,.hint{color:#a9c3b6}
+
+/* ---- Grafikstil (zentral): Klassisch bleibt unverändert ---- */
+html[data-stil="maedchen"]{--bg:#eb7bc0;--panel:#fff6fa;--line:#ef7aa8;--pink:#b06bff;--cyan:#8f2450;--gold:#8f2450;--text:#3a0f24}
+html[data-stil="maedchen"] body{background:radial-gradient(circle 900px at 50% -6%,#ffe0ef 0%,#f7a6d4 42%,#eb7bc0 100%) fixed;color:#3a0f24}
+html[data-stil="maedchen"] #hud{background:#fff6fa;border-color:#ef7aa8}
+html[data-stil="maedchen"] #boardWrap{background:#ffeaf3;border-color:#ef7aa8;box-shadow:0 8px 18px #b52a6340}
+html[data-stil="maedchen"] canvas{background:#ffeaf3}
+html[data-stil="maedchen"] #status{color:#8f2450}
+html[data-stil="maedchen"] button,html[data-stil="maedchen"] select{background:#fff6fa;color:#8f2450;border-color:#ef7aa8}
+html[data-stil="maedchen"] button:hover{background:#ffeaf3;border-color:#b06bff}
+html[data-stil="maedchen"] #dialog{background:#fff6fa;border-color:#b06bff;box-shadow:0 10px 26px #b52a6340}
+html[data-stil="maedchen"] #dialogTitle{color:#8f2450;text-shadow:none}
+html[data-stil="maedchen"] #dialogText{color:#5b2340}
+html[data-stil="maedchen"] #overlay{background:rgba(255,246,250,.86)}
+html[data-stil="maedchen"] #mobilePad button{background:rgba(255,246,250,.85);border-color:#ef7aa8;color:#8f2450}
+html[data-stil="buben"]{--bg:#04070b;--panel:#111316;--line:#2b3540;--pink:#ff5560;--cyan:#c8ff3d;--gold:#c8ff3d;--text:#e6e9ec}
+html[data-stil="buben"] body{background:radial-gradient(circle 900px at 50% -6%,#1c2a3d 0%,#0c1219 46%,#04070b 100%) fixed;color:#e6e9ec}
+html[data-stil="buben"] #hud{background:#16181c;border-color:#23262c}
+html[data-stil="buben"] #boardWrap{background:#0a0d10;border-color:#23262c;box-shadow:0 8px 18px #000000aa}
+html[data-stil="buben"] canvas{background:#0a0d10}
+html[data-stil="buben"] #status{color:#c8ff3d}
+html[data-stil="buben"] button,html[data-stil="buben"] select{background:#1b1e23;color:#ff8a90;border-color:#e0242f}
+html[data-stil="buben"] button:hover{background:#23262c;border-color:#ff5560}
+html[data-stil="buben"] #dialog{background:#16181c;border-color:#e0242f;box-shadow:0 10px 26px #000000aa}
+html[data-stil="buben"] #dialogTitle{color:#ff8a90;text-shadow:none}
+html[data-stil="buben"] #dialogText{color:#adb4bc}
+html[data-stil="buben"] #overlay{background:rgba(4,7,11,.88)}
+html[data-stil="buben"] #mobilePad button{background:rgba(17,19,22,.85);border-color:#e0242f;color:#ff8a90}
 </style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 </head>
@@ -673,6 +702,16 @@ const $=id=>document.getElementById(id);
 const images={};
 const imageNames={1:'mauer',2:'sand',3:'stein',4:'gegner',5:'spieler',6:'bier',7:'portal'};
 
+/* Die Bildchen sind gemalte Kacheln – ihre Formen bleiben, die Farben kommen
+   aus der gewählten Ansicht. Der Tint wird über die Kachel gelegt, ohne sie
+   auszutauschen; klassisch wird gar nicht eingefärbt. */
+function stilName(){ return (window.TGStil&&TGStil.hole)?TGStil.hole():'klassisch'; }
+const TINTEN={
+ maedchen:{1:'#ef7aa8',2:'#ffc2da',3:'#b06bff',4:'#8f2450',5:'#3a0f24',6:'#7be0b0',7:'#b06bff'},
+ buben:{1:'#e0242f',2:'#2a3138',3:'#57f0ff',4:'#ff5560',5:'#c9d1d9',6:'#c8ff3d',7:'#e0242f'}
+};
+const GRUND={klassisch:'#0a211b',maedchen:'#ffeaf3',buben:'#0a0d10'};
+
 for(const [id,name] of Object.entries(imageNames)){
  const im=new Image();
  im.src=`bilder/${name}.png`;
@@ -808,7 +847,7 @@ function updateHud(){
 }
 
 function draw(){
- ctx.fillStyle='#0a211b';
+ ctx.fillStyle=GRUND[stilName()]||'#0a211b';
  ctx.fillRect(0,0,800,480);
 
  for(let y=0;y<H;y++){
@@ -831,6 +870,15 @@ function drawTile(v,x,y){
 
  if(im&&im.complete&&im.naturalWidth){
   ctx.drawImage(im,px,py,TILE,TILE);
+  const tint=(TINTEN[stilName()]||{})[imageId];
+  if(tint){
+   ctx.save();
+   ctx.globalCompositeOperation='color';
+   ctx.globalAlpha=.9;
+   ctx.fillStyle=tint;
+   ctx.fillRect(px,py,TILE,TILE);
+   ctx.restore();
+  }
   if(portal){
    ctx.fillStyle='#f6edda';
    ctx.font='bold 13px monospace';
@@ -841,10 +889,12 @@ function drawTile(v,x,y){
   return;
  }
 
- const colors={
-  1:'#2c5a49',2:'#5b4a2c',3:'#a9c3b6',
-  4:'#e8b3a6',5:'#e8cd8e',6:'#d9bc7c',7:'#a9c3b6'
+ const paletten={
+  klassisch:{1:'#2c5a49',2:'#5b4a2c',3:'#a9c3b6',4:'#e8b3a6',5:'#e8cd8e',6:'#d9bc7c',7:'#a9c3b6'},
+  maedchen:{1:'#ff9ec4',2:'#ffd0e4',3:'#b06bff',4:'#e0242f',5:'#ffd23f',6:'#7be0b0',7:'#b06bff'},
+  buben:{1:'#1b2128',2:'#5b4a2c',3:'#57f0ff',4:'#ff5560',5:'#c8ff3d',6:'#c9d1d9',7:'#e0242f'}
  };
+ const colors=paletten[(window.TGStil&&TGStil.hole)?TGStil.hole():'klassisch']||paletten.klassisch;
 
  ctx.fillStyle=portal?colors[7]:(colors[v]||'#0a211b');
  ctx.fillRect(px+1,py+1,TILE-2,TILE-2);

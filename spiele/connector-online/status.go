@@ -1,51 +1,76 @@
 package main
 
 import (
+	"net"
 	"net/http"
-	"os"
 	"strings"
-	"time"
 )
 
-// startZeit ist der Beginn dieses Prozesses. Zusammen mit dem Commit zeigt sie,
-// ob wirklich der neue Stand läuft: Ein Deploy startet den Dienst neu, ein
-// Kaltstart nach dem Einschlafen (Free-Plan) ändert nur die Startzeit.
-var startZeit = time.Now()
+// localIPv4s sammelt alle nutzbaren IPv4-Adressen dieses PCs, die primäre zuerst.
+func localIPv4s() []string {
+	primary := ""
+	// Determine primary IP via UDP dial.
+	if conn, err := net.Dial("udp", "192.0.2.1:80"); err == nil {
+		if local, ok := conn.LocalAddr().(*net.UDPAddr); ok && local.IP.To4() != nil {
+			primary = local.IP.To4().String()
+		}
+		_ = conn.Close()
+	}
 
-// bauCommit liefert den Commit-Kurz-Hash des laufenden Abbilds. Render setzt
-// RENDER_GIT_COMMIT bei jedem Deploy; lokal oder im eigenen Container kann
-// BAU_COMMIT gesetzt werden. Ohne beides bleibt es bei "unbekannt" – dann sagt
-// wenigstens die Startzeit, ob der Dienst neu gestartet wurde.
-func bauCommit() string {
-	for _, name := range []string{"BAU_COMMIT", "RENDER_GIT_COMMIT"} {
-		if wert := strings.TrimSpace(os.Getenv(name)); wert != "" {
-			if len(wert) > 7 {
-				wert = wert[:7]
+	ips := []string{}
+	if primary != "" {
+		ips = append(ips, primary)
+	}
+
+	interfaces, _ := net.Interfaces()
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, _ := iface.Addrs()
+		for _, addr := range addrs {
+			ipnet, ok := addr.(*net.IPNet)
+			if !ok || ipnet.IP.To4() == nil {
+				continue
 			}
-			return wert
+			candidate := ipnet.IP.To4().String()
+			if strings.HasPrefix(candidate, "169.254.") || strings.HasPrefix(candidate, "192.168.56.") {
+				continue
+			}
+			duplicate := false
+			for _, known := range ips {
+				if known == candidate {
+					duplicate = true
+					break
+				}
+			}
+			if !duplicate {
+				ips = append(ips, candidate)
+			}
 		}
 	}
-	return "unbekannt"
+	return ips
 }
 
-// Online ist die LAN-Adresse des Servers uninteressant. Die Liste bleibt aber
-// vorhanden, weil die Admin-Prüfung in lobby.go (isServerMachine) sie liest –
-// als leere Liste ist dort niemand "der Server-PC".
-func localIPv4s() []string {
-	return nil
-}
-
-// status liefert der Connector-Oberfläche die Adresse, die Mitspieler
-// eintippen sollen – und die Build-Kennung für die Veröffentlichungsprüfung.
+// status returns server IP information.
 func status(w http.ResponseWriter, r *http.Request) {
+	ips := localIPv4s()
+	primary := ""
+	if len(ips) > 0 {
+		primary = ips[0]
+	}
+	// url ist die Adresse, die Mitspieler eintippen sollen. Lokal ist das die
+	// LAN-Adresse; die Online-Fassung setzt hier ihre öffentliche Adresse ein.
+	url := ""
+	if primary != "" {
+		url = "http://" + primary + ":" + port + "/connector"
+	}
 	jsonResponse(w, map[string]any{
-		"port":     "",
-		"ip":       "",
-		"ips":      []string{},
-		"url":      publicURL(r) + "/connector",
+		"port":     port,
+		"ip":       primary,
+		"ips":      ips,
+		"url":      url,
 		"homepage": home,
-		"online":   true,
-		"commit":   bauCommit(),
-		"started":  startZeit.UTC().Format(time.RFC3339),
+		"online":   false,
 	})
 }
