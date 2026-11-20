@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -90,6 +91,18 @@ func main() {
 	connectorDir := filepath.Dir(exePath)
 
 	home = findHomepage(connectorDir)
+	// Ein Abbild (Docker/Render) legt die Webseite getrennt vom Programm ab und
+	// nennt ihren Ordner in SITE_DIR. Ohne diese Prüfung sucht der Connector
+	// die Seite neben der Programmdatei: /spiele/token.js und
+	// /spiele/spiele.html wären dann 404, und damit fallen Verbindung und
+	// Spieleliste aus.
+	if site := strings.TrimSpace(os.Getenv("SITE_DIR")); site != "" {
+		if info, statErr := os.Stat(filepath.Join(site, "spiele")); statErr == nil && info.IsDir() {
+			home = site
+		} else {
+			log.Printf("WARNUNG: SITE_DIR %q enthält keinen spiele-Ordner und wird ignoriert.", site)
+		}
+	}
 	// Ein Argument wird nur übernommen, wenn es ein echtes Verzeichnis ist.
 	// Sonst würde ein versehentlich übergebenes Argument (Drag & Drop,
 	// Verknüpfung mit Parameter) die Homepage unbrauchbar machen.
