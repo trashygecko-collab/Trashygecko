@@ -58,6 +58,11 @@
 
   function anwenden(wert) {
     document.documentElement.dataset.stil = wert;
+    /* Natives Erscheinungsbild mitführen: Auswahlfelder, Kontrollkästchen und
+       Bildlaufleisten zeichnet der Browser sonst nach dem Betriebssystem.
+       Im System-Dunkelmodus würden so schwarze Felder auf den hellen
+       Mädchen- und Klassisch-Flächen entstehen. */
+    document.documentElement.style.colorScheme = wert === "buben" ? "dark" : "light";
     var gruppen = document.querySelectorAll("[data-tg-stil]");
     for (var i = 0; i < gruppen.length; i++) zeigeKnopfZustand(gruppen[i], wert);
   }
