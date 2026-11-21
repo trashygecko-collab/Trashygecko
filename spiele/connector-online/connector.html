@@ -1057,11 +1057,33 @@ let userActed=false;
 /* Verbindungsanzeige: eigener Kanal. Sie schreibt nur in #verbindung und lässt
    #roomstatus (Hinweise) und #game-status (Spiel/Einladung/Angebot) in Ruhe.
    Geprüft wird mit dem vorhandenen Lebenszeichen – kein neuer Endpunkt. */
+/* Fehlt spiele/token.js, hängt die Seite an keinen API-Ruf ein Token: Der
+   Server weist ihn dann mit 403 ab. Das ist keine Netzstörung, sondern eine
+   fehlende eigene Datei - und soll auch so dastehen. */
+function eigeneDateienFehlen(){
+ return typeof window.fetchMitToken!=="function";
+}
+
+/* Wird eine eigene Seite gar nicht ausgeliefert? 0 = Datei ist da, sonst der
+   HTTP-Status, -1 = gar nicht erreichbar. */
+async function eigeneDateiStatus(pfad){
+ try{
+  const r=await fetch(pfad,{method:"HEAD",cache:"no-store"});
+  return r.ok?0:(r.status||0);
+ }catch(e){ return -1; }
+}
+
+function eigeneDateiText(pfad,status){
+ const grund=status>0?"HTTP "+status:"nicht erreichbar";
+ return "Die Seite lädt ihre eigenen Dateien nicht: "+pfad+" ("+grund+"). Der Server liefert /spiele/ nicht aus.";
+}
+
 const VERBINDUNG_TEXT={
  start:"Verbindung wird hergestellt",
  ok:"Verbunden",
  weg:"Verbindung unterbrochen",
- neu:"Wiederverbindung läuft"
+ neu:"Wiederverbindung läuft",
+ dateien:"Connector-Dateien fehlen"
 };
 let verbindungStand="";
 let verbindungLaeuft=false;
@@ -1079,7 +1101,7 @@ function verbindungZeigen(zustand){
 }
 
 async function heartbeat(){
- if(!activeRoom){ verbindungZeigen("start"); return; }
+ if(!activeRoom){ verbindungZeigen(eigeneDateienFehlen()?"dateien":"start"); return; }
  // Nach einem Fehlschlag heißt der nächste Versuch "Wiederverbindung läuft".
  if(verbindungStand==="weg"){ verbindungZeigen("neu"); verbindungNeuBis=Date.now()+1000; }
  if(verbindungLaeuft)return;          // bei schwachem Netz keine Anfragen stauen
@@ -1125,11 +1147,15 @@ async function heartbeat(){
  verbindungLaeuft=false;
  // Ein erfolgreiches Lebenszeichen räumt einen alten Fehler von selbst weg – höchstens
  // eine Sekunde später, damit "Wiederverbindung läuft" überhaupt sichtbar wird.
- const ziel=ok?"ok":"weg";
+ const ziel=ok?"ok":(eigeneDateienFehlen()?"dateien":"weg");
  if(ok){
   verbindungFehlschlaege=0;
  }else{
   verbindungFehlschlaege+=1;
+  // Fehlende eigene Datei ist die Ursache - dann nicht "unterbrochen" sagen.
+  if(eigeneDateienFehlen()){
+   setRoomStatus("Die Seite lädt ihre eigenen Dateien nicht: /spiele/token.js fehlt. Ohne Token weist der Server jede Anfrage ab - das liegt an der Auslieferung, nicht an der Verbindung.");
+  }
   // Ein einzelner Aussetzer ist noch keine Unterbrechung: ein kurzes Funkloch
   // oder ein verschluckter Ruf darf eine laufende Partie nicht als kaputt
   // anzeigen. Erst zwei Fehlschläge hintereinander (rund 10 s) heißen "weg".
@@ -4797,7 +4823,8 @@ async function ladeAlleinSpiele(){
    });
  }catch(e){
   liste.dataset.geladen="0";
-  fehlerKachel(liste,"Die Spieleliste konnte nicht geladen werden.");
+  const status=await eigeneDateiStatus("/spiele/spiele.html");
+  fehlerKachel(liste,status?eigeneDateiText("/spiele/spiele.html",status):"Die Spieleliste konnte nicht geladen werden.");
  }
 }
 
@@ -4827,7 +4854,8 @@ async function ladeWeitere(){
   if(!extra.children.length)fehlerKachel(extra,"Keine Extras gefunden.");
  }catch(e){
   zwei.dataset.geladen="0";
-  fehlerKachel(zwei,"Die Liste konnte nicht geladen werden.");
+  const status=await eigeneDateiStatus("/spiele/spiele.html");
+  fehlerKachel(zwei,status?eigeneDateiText("/spiele/spiele.html",status):"Die Liste konnte nicht geladen werden.");
  }
 }
 
@@ -4850,6 +4878,11 @@ function zeigeHinweisAusUrl(){
 }
 
 loadStatus();
+// Ohne token.js kann kein Beitritt gelingen: Ursache gleich beim Start nennen.
+if(eigeneDateienFehlen()){
+ verbindungZeigen("dateien");
+ setRoomStatus("Die Seite lädt ihre eigenen Dateien nicht: /spiele/token.js fehlt. Ohne Token weist der Server jede Anfrage ab - das liegt an der Auslieferung, nicht an der Verbindung.");
+}
 // Ohne gespeicherten Raum direkt hinein – ohne Klick und ohne Namen.
 restoreRoom().finally(()=>{ if(!activeRoom)joinSingleRoom(); });
 // Im Hintergrund (Handy in der Tasche, anderer Tab) laufen die schnellen

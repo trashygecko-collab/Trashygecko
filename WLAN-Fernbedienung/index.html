@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b241d">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Lokale Universalfernbedienung für kompatible Android-TV- und Google-TV-Geräte im eigenen WLAN.">
+  <title>Trashy Remote</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="#top" aria-label="Trashy Remote – nach oben">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="brand-copy"><strong>TRASHY<span>REMOTE</span></strong><small>UNIVERSAL CONTROL</small></span>
+    </a>
+    <div class="bar-actions">
+      <span id="bridgeBadge" class="badge"><i></i> Browser-Modus</span>
+      <button id="scanBtn" class="btn ghost" type="button"><span aria-hidden="true">⌕</span> Suchen</button>
+    </div>
+  </header>
+
+  <main class="wrap" id="top">
+    <section class="chips-bar" aria-label="Gespeicherte Geräte">
+      <div id="chips" class="chips-row"></div>
+      <button id="addDeviceBtn" class="chip add" type="button" aria-label="Gerät hinzufügen">＋ Gerät</button>
+    </section>
+
+    <p id="modeNote" class="mode-note" role="status" aria-live="polite"></p>
+
+    <section id="emptyState" class="card empty hidden">
+      <div class="empty-mark" aria-hidden="true">▣</div>
+      <strong>Noch kein Gerät</strong>
+      <p>Geräte im selben WLAN suchen oder ein Android-TV-Gerät über seine IP-Adresse eintragen. Gestreamt wird nichts – die Tasten gehen direkt an den Fernseher.</p>
+      <button id="emptyAdd" class="btn primary" type="button">Gerät hinzufügen</button>
+    </section>
+
+    <section id="remoteCard" class="card hidden" aria-labelledby="remoteTitle">
+      <div class="remote-head">
+        <div class="remote-title">
+          <h2 id="remoteTitle">Fernbedienung</h2>
+          <p id="connectionDetail" class="subline">Kein Gerät ausgewählt</p>
+        </div>
+        <div class="remote-state">
+          <span id="connection" class="connection"><i></i><span id="connectionText">Getrennt</span></span>
+          <button id="reconnectBtn" class="btn ghost small" type="button">Verbinden</button>
+          <button id="pairBtn" class="btn ghost small" type="button" hidden>Koppeln</button>
+        </div>
+      </div>
+      <p id="capabilityNote" class="capability-note"></p>
+
+      <div class="pad">
+        <div class="dpad" role="group" aria-label="Steuerkreuz">
+          <button class="key dpad-key north" type="button" data-command="up" aria-label="Nach oben">▲</button>
+          <button class="key dpad-key west" type="button" data-command="left" aria-label="Nach links">◀</button>
+          <button class="key dpad-key center" type="button" data-command="ok" aria-label="OK">OK</button>
+          <button class="key dpad-key east" type="button" data-command="right" aria-label="Nach rechts">▶</button>
+          <button class="key dpad-key south" type="button" data-command="down" aria-label="Nach unten">▼</button>
+        </div>
+        <div class="side" role="group" aria-label="Lautstärke">
+          <button class="key wide" type="button" data-command="volUp" aria-label="Lauter">＋<small>Lauter</small></button>
+          <button class="key wide" type="button" data-command="mute" aria-label="Stummschalten">◖<small>Stumm</small></button>
+          <button class="key wide" type="button" data-command="volDown" aria-label="Leiser">−<small>Leiser</small></button>
+        </div>
+        <div class="side" role="group" aria-label="Programm">
+          <button class="key wide" type="button" data-command="channelUp" aria-label="Nächster Kanal">CH ＋<small>Kanal</small></button>
+          <button class="key wide" type="button" data-command="channelDown" aria-label="Vorheriger Kanal">CH −<small>Kanal</small></button>
+          <button class="key wide" type="button" data-command="power" aria-label="Standby"><svg class="power" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M12 3v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><small>Standby</small></button>
+        </div>
+      </div>
+
+      <div class="row nav-row" role="group" aria-label="Navigation">
+        <button class="key" type="button" data-command="home">⌂<small>Home</small></button>
+        <button class="key" type="button" data-command="back">↶<small>Zurück</small></button>
+        <button class="key" type="button" data-command="menu">☰<small>Menü</small></button>
+        <button class="key" type="button" data-command="settings">⚙<small>Einstellungen</small></button>
+      </div>
+      <div class="row media-row" role="group" aria-label="Wiedergabe">
+        <button class="key" type="button" data-command="rewind">◀◀<small>Zurückspulen</small></button>
+        <button class="key" type="button" data-command="playPause">▶Ⅱ<small>Play/Pause</small></button>
+        <button class="key" type="button" data-command="fastForward">▶▶<small>Vorspulen</small></button>
+        <button class="key" type="button" data-command="info">ⓘ<small>Info</small></button>
+        <button class="key" type="button" data-command="guide">▤<small>Guide</small></button>
+        <button class="key" type="button" data-command="source">▣<small>Quelle</small></button>
+        <button class="key" type="button" data-command="text">⌨<small>Tastatur</small></button>
+      </div>
+
+      <details class="numbers">
+        <summary><span>Ziffernblock</span><span class="plus" aria-hidden="true">＋</span></summary>
+        <div id="numberGrid" class="number-grid" role="group" aria-label="Ziffern"></div>
+      </details>
+
+      <p class="legend"><span class="dot on"></span> vom Gerät bestätigt <span class="dot off"></span> nicht gemeldet – antippen erklärt warum</p>
+    </section>
+
+    <details class="card" id="managePanel">
+      <summary><span>Geräte &amp; Räume</span><span id="manageCount" class="summary-note">0</span></summary>
+      <div class="manage-head">
+        <label class="sr-only" for="roomFilter">Raum filtern</label>
+        <select id="roomFilter" class="room-filter"><option value="all">Alle Räume</option></select>
+      </div>
+      <div id="manageList" class="manage-list"></div>
+    </details>
+
+    <details class="card" id="discoverPanel">
+      <summary><span>Geräte im WLAN suchen</span><span id="discoveryState" class="summary-note">Noch nicht gesucht</span></summary>
+      <div id="foundDevices" class="found-list"></div>
+      <p id="discoveryStatus" class="message-line" role="status" aria-live="polite">Die Suche braucht die Android-App; im Browser ist sie abgeschaltet.</p>
+    </details>
+
+    <footer class="foot">
+      <span>Lokale Steuerung · keine Anmeldung · keine Cloud</span>
+      <a href="README.md">Kompatibilität &amp; Funktionsstand</a>
+    </footer>
+  </main>
+
+  <dialog id="deviceDialog" class="dialog">
+    <form id="deviceForm">
+      <div class="dialog-head">
+        <div><p class="eyebrow">GERÄT EINRICHTEN</p><h2 id="dialogTitle">Gerät hinzufügen</h2></div>
+        <button id="closeDialog" class="icon-btn" type="button" aria-label="Schließen">×</button>
+      </div>
+      <label for="deviceName">Name</label>
+      <input id="deviceName" name="name" placeholder="z. B. Wohnzimmer" required maxlength="40" autocomplete="off">
+      <label for="deviceBrand">Plattform</label>
+      <select id="deviceBrand" name="brand"></select>
+      <p id="pairHint" class="hint"></p>
+      <label for="deviceManufacturer">Hersteller <span class="optional">optional</span></label>
+      <input id="deviceManufacturer" name="manufacturer" list="manufacturerOptions" maxlength="60" placeholder="z. B. Xiaomi, Vestel">
+      <datalist id="manufacturerOptions"></datalist>
+      <label for="deviceModel">Modell <span class="optional">optional</span></label>
+      <input id="deviceModel" name="model" placeholder="z. B. OLED55…" maxlength="80" autocomplete="off">
+      <div class="two">
+        <div><label for="deviceRoom">Raum</label><input id="deviceRoom" name="room" list="roomOptions" value="Zuhause" maxlength="40" autocomplete="off"><datalist id="roomOptions"></datalist></div>
+        <div><label for="deviceHost">IP-Adresse</label><input id="deviceHost" name="host" placeholder="192.168.1.42" autocomplete="off" inputmode="decimal"></div>
+      </div>
+      <p class="fine-print">Kopplungscodes und Schlüssel bleiben im Gerät bzw. im Android-Schlüsselspeicher – nie in der Weboberfläche.</p>
+      <button class="btn primary full" type="submit">Speichern und verbinden</button>
+    </form>
+  </dialog>
+
+  <dialog id="pairDialog" class="dialog">
+    <form id="pairForm">
+      <div class="dialog-head">
+        <div><p class="eyebrow">SICHERE VERBINDUNG</p><h2>Gerät koppeln</h2></div>
+        <button id="closePair" class="icon-btn" type="button" aria-label="Schließen">×</button>
+      </div>
+      <p id="pairPrompt" class="hint">Gib den Code ein, der auf dem Fernseher angezeigt wird.</p>
+      <label for="pairCode">Sechsstelliger Code (0–9, A–F)</label>
+      <input id="pairCode" name="code" type="text" inputmode="text" autocomplete="one-time-code" maxlength="6" autocapitalize="characters" spellcheck="false" required>
+      <button class="btn primary full" type="submit">Kopplung bestätigen</button>
+      <p class="fine-print">Der Code gilt nur für diesen Vorgang und wird nach dem Absenden aus dem Feld gelöscht.</p>
+    </form>
+  </dialog>
+
+  <dialog id="textDialog" class="dialog">
+    <form id="textForm">
+      <div class="dialog-head">
+        <div><p class="eyebrow">TEXTEINGABE</p><h2>Auf dem Fernseher tippen</h2></div>
+        <button id="closeText" class="icon-btn" type="button" aria-label="Schließen">×</button>
+      </div>
+      <label for="remoteText">Text</label>
+      <input id="remoteText" name="text" maxlength="256" autocomplete="off">
+      <button class="btn primary full" type="submit">Senden</button>
+    </form>
+  </dialog>
+
+  <dialog id="sourceDialog" class="dialog">
+    <form id="sourceForm">
+      <div class="dialog-head">
+        <div><p class="eyebrow">EINGANG</p><h2>Quelle wechseln</h2></div>
+        <button id="closeSource" class="icon-btn" type="button" aria-label="Schließen">×</button>
+      </div>
+      <label for="sourceChoice">TV-Eingang</label>
+      <select id="sourceChoice" name="source">
+        <option value="HDMI1">HDMI 1</option>
+        <option value="HDMI2">HDMI 2</option>
+        <option value="HDMI3">HDMI 3</option>
+        <option value="HDMI4">HDMI 4</option>
+        <option value="TV">TV-Tuner</option>
+      </select>
+      <button class="btn primary full" type="submit">Quelle wechseln</button>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

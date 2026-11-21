@@ -38,18 +38,20 @@ type ZTFehlwurf struct {
 }
 
 type ZehnTausendGame struct {
-	ID        string      `json:"id"`
-	HostID    string      `json:"hostId"`
-	Players   []ZTPlayer  `json:"players"`
-	Current   int         `json:"current"`
-	Wuerfel   []int       `json:"wuerfel"`
-	Gesichert []bool      `json:"gesichert"`
-	ZugPunkte int         `json:"zugPunkte"`
-	Wuerfe    int         `json:"wuerfe"`
-	Status    string      `json:"status"` // invited, active, finished
-	Winner    string      `json:"winner,omitempty"`
-	Note      string      `json:"note,omitempty"`
-	Fehlwurf  *ZTFehlwurf `json:"fehlwurf,omitempty"`
+	ID            string      `json:"id"`
+	HostID        string      `json:"hostId"`
+	Players       []ZTPlayer  `json:"players"`
+	Current       int         `json:"current"`
+	Wuerfel       []int       `json:"wuerfel"`
+	Gesichert     []bool      `json:"gesichert"`
+	WurfGesichert []bool      `json:"wurfGesichert"`
+	WurfPunkte    int         `json:"wurfPunkte"`
+	ZugPunkte     int         `json:"zugPunkte"`
+	Wuerfe        int         `json:"wuerfe"`
+	Status        string      `json:"status"` // invited, active, finished
+	Winner        string      `json:"winner,omitempty"`
+	Note          string      `json:"note,omitempty"`
+	Fehlwurf      *ZTFehlwurf `json:"fehlwurf,omitempty"`
 
 	// zaehlt die Fehlwürfe; die Seite erkennt daran eine neue Meldung.
 	fehlwurfZaehler int
@@ -138,8 +140,19 @@ func ztIDs(g *ZehnTausendGame) []string {
 func ztNeuerZug(g *ZehnTausendGame) {
 	g.Wuerfel = make([]int, 6)
 	g.Gesichert = make([]bool, 6)
+	g.WurfGesichert = make([]bool, 6)
+	g.WurfPunkte = 0
 	g.ZugPunkte = 0
 	g.Wuerfe = 0
+}
+
+// ztNaechsterWurf räumt nur die Würfel ab (alle sechs kommen zurück);
+// die im Zug gesammelten Punkte bleiben erhalten.
+func ztNaechsterWurf(g *ZehnTausendGame) {
+	g.Wuerfel = make([]int, 6)
+	g.Gesichert = make([]bool, 6)
+	g.WurfGesichert = make([]bool, 6)
+	g.WurfPunkte = 0
 }
 
 func ztNaechster(g *ZehnTausendGame) {
@@ -147,9 +160,14 @@ func ztNaechster(g *ZehnTausendGame) {
 	ztNeuerZug(g)
 }
 
-// ztSichere übernimmt die Auswahl in den Zug: nur vollständige Sätze und
-// einzelne 1er/5er zählen, unvollständige Auswahlen bleiben liegen.
+// ztSichere legt die Auswahl fest: nur vollständige Sätze und einzelne 1er/5er
+// zählen, unvollständige Auswahlen bleiben liegen. Gerechnet wird die ganze
+// Gruppe des laufenden Wurfs neu; gutgeschrieben wird nur der Unterschied,
+// damit auch der vierte gleiche Würfel seinen vollen Satz bringt.
 func ztSichere(g *ZehnTausendGame, auswahl []bool) (int, bool) {
+	if len(g.WurfGesichert) != 6 {
+		g.WurfGesichert = make([]bool, 6)
+	}
 	// Gezählt wird nur, was ausgewählt ist: eine einzelne 2 zählt auch dann
 	// nichts, wenn drei 2er auf dem Tisch liegen.
 	gewaehlt := make([]int, 7)
@@ -161,7 +179,6 @@ func ztSichere(g *ZehnTausendGame, auswahl []bool) (int, bool) {
 			gewaehlt[w]++
 		}
 	}
-	werte := []int{}
 	for i := 0; i < 6; i++ {
 		if i >= len(auswahl) || !auswahl[i] || g.Gesichert[i] {
 			continue
@@ -170,11 +187,19 @@ func ztSichere(g *ZehnTausendGame, auswahl []bool) (int, bool) {
 		if w == 0 || !ztZaehlt(w, gewaehlt[w]) {
 			continue
 		}
-		werte = append(werte, w)
 		g.Gesichert[i] = true
+		g.WurfGesichert[i] = true
+	}
+	werte := []int{}
+	for i := 0; i < 6; i++ {
+		if g.Gesichert[i] && g.WurfGesichert[i] && g.Wuerfel[i] >= 1 && g.Wuerfel[i] <= 6 {
+			werte = append(werte, g.Wuerfel[i])
+		}
 	}
 	punkte := ztPunkte(werte)
-	g.ZugPunkte += punkte
+	dazu := punkte - g.WurfPunkte
+	g.ZugPunkte += dazu
+	g.WurfPunkte = punkte
 	alle := true
 	for _, s := range g.Gesichert {
 		if !s {
@@ -182,11 +207,14 @@ func ztSichere(g *ZehnTausendGame, auswahl []bool) (int, bool) {
 			break
 		}
 	}
-	return punkte, alle
+	return dazu, alle
 }
 
 // ztWuerfle würfelt alle nicht gesicherten Würfel neu.
 func ztWuerfle(g *ZehnTausendGame) []int {
+	// Ein neuer Wurf beginnt eine eigene Punktgruppe.
+	g.WurfGesichert = make([]bool, 6)
+	g.WurfPunkte = 0
 	geworfen := []int{}
 	for i := 0; i < 6; i++ {
 		if g.Gesichert[i] {
@@ -240,6 +268,7 @@ func cloneZehnTausend(g *ZehnTausendGame) *ZehnTausendGame {
 	c.Players = append([]ZTPlayer(nil), g.Players...)
 	c.Wuerfel = append([]int(nil), g.Wuerfel...)
 	c.Gesichert = append([]bool(nil), g.Gesichert...)
+	c.WurfGesichert = append([]bool(nil), g.WurfGesichert...)
 	if g.Fehlwurf != nil {
 		f := *g.Fehlwurf
 		f.Wuerfel = append([]int(nil), g.Fehlwurf.Wuerfel...)
@@ -304,7 +333,7 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID     string `json:"id"`
+		ID      string `json:"id"`
 		Auswahl []bool `json:"auswahl"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -486,10 +515,11 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		sicher, alle := ztSichere(game, input.Auswahl)
 		if alle {
-			// Alle sechs Würfel sind verbraucht und kommen zurück.
-			ztNeuerZug(game)
+			// Alle sechs Würfel sind verbraucht und kommen zurück; die Zugpunkte bleiben.
+			punkte := game.ZugPunkte
+			ztNaechsterWurf(game)
 			game.Note = player.Name + " hat alle sechs Würfel verbraucht – sie kommen alle zurück. Zug: " +
-				strconv.Itoa(game.ZugPunkte) + " Punkte."
+				strconv.Itoa(punkte) + " Punkte."
 			break
 		}
 		geworfen := ztWuerfle(game)
@@ -501,6 +531,40 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 			game.Note = strconv.Itoa(sicher) + " Punkte gesichert. " + game.Note
 		}
 		game.Note += " Zug: " + strconv.Itoa(game.ZugPunkte) + " Punkte."
+
+	case "merken":
+		// Einen Würfel sofort festlegen (1, 5 oder vollständiger Pasch).
+		game := room.ZehnTausend
+		if game == nil || game.Status != "active" {
+			mu.Unlock()
+			http.Error(w, "Es läuft gerade keine aktive Partie.", http.StatusConflict)
+			return
+		}
+		seat := ztFindPlayer(game, input.ID)
+		if seat < 0 {
+			mu.Unlock()
+			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
+			return
+		}
+		if game.Current != seat {
+			mu.Unlock()
+			http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
+			return
+		}
+		if game.Wuerfe == 0 {
+			mu.Unlock()
+			http.Error(w, "Du musst zuerst würfeln.", http.StatusConflict)
+			return
+		}
+		punkte, alle := ztSichere(game, input.Auswahl)
+		game.Note = player.Name + " wählt Würfel aus."
+		if punkte > 0 {
+			game.Note = player.Name + " legt " + strconv.Itoa(punkte) + " Punkte beiseite. Zug: " +
+				strconv.Itoa(game.ZugPunkte) + " Punkte."
+		}
+		if alle {
+			game.Note += " Alle sechs Würfel liegen – sichern oder weiterwürfeln."
+		}
 
 	case "sichern":
 		game := room.ZehnTausend

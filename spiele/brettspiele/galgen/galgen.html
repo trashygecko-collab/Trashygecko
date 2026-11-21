@@ -174,6 +174,13 @@ body[data-stil="buben"] .meldung button {
     </div>
     <div class="leiste versteckt" id="onlineLeiste">
       <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
+      <select id="varianteLokal" class="versteckt" aria-label="Variante im lokalen Raum">
+        <option value="klassisch">Klassisch (8 Fehler)</option>
+        <option value="streng">Streng (6 Fehler)</option>
+        <option value="ohnehilfe">Ohne Hinweis</option>
+        <option value="leicht">Leicht (kurze Wörter)</option>
+      </select>
+      <button class="aktion versteckt" id="btnBeitreten">Mitspielen</button>
       <button class="aktion" id="btnBereit">Bereit</button>
       <button class="aktion" id="btnLos">Los</button>
     </div>
@@ -280,6 +287,11 @@ const ROOM = (P.get("room") || "").trim().toUpperCase();
 const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
 const MYID = (P.get("id") || "").trim();
 const MYNAME = (P.get("name") || "").trim() || "Spieler";
+/* Lokales Netz: Die App startet die Seite mit ?lokal=1 und reicht die Züge
+   über ihre eigene Raum-Brücke weiter (window.TGLokal). Der Bildschirm ist
+   derselbe wie online, nur ohne Server und ohne /api. */
+const LOKAL = !!window.TGLokal && P.get("lokal") === "1";
+const GEMEINSAM = ONLINE || LOKAL;
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyzäöüß".split("");
 const VARIANTEN = {
@@ -422,7 +434,38 @@ function zeichneGalgen(fehler, max) {
 /* ---------------------------- online ------------------------------ */
 let onlineGame = null, onlineBusy = false;
 
+/* Lokaler Raum: Anfrage an die App, Antwort kommt asynchron als
+   window.TGLokalAntwort({game}) bzw. ({fehler}). */
+let lanNr = 0;
+const lanOffen = new Map();
+
+window.TGLokalAntwort = (antwort) => {
+  const wartet = lanOffen.get(antwort.anfrage);
+  if (!wartet) return;
+  lanOffen.delete(antwort.anfrage);
+  clearTimeout(wartet.uhr);
+  if (antwort.fehler) { wartet.fehler(new Error(antwort.fehler)); return; }
+  if ("game" in antwort) { onlineGame = antwort.game; zeichneOnline(); }
+  wartet.fertig(antwort);
+};
+
+function lanZug(aktion, koerper) {
+  return new Promise((fertig, fehler) => {
+    const anfrage = "a" + (++lanNr);
+    const uhr = setTimeout(() => {
+      if (!lanOffen.delete(anfrage)) return;
+      fehler(new Error("Keine Antwort aus dem Raum."));
+    }, 5000);
+    lanOffen.set(anfrage, { fertig, fehler, uhr });
+    window.TGLokal.schicke(JSON.stringify({ anfrage, aktion, koerper: koerper || {} }));
+  });
+}
+
 async function api(aktion, koerper) {
+  if (LOKAL) {
+    if (!aktion) return JSON.parse(window.TGLokal.hole() || "{\"game\":null}");
+    return lanZug(aktion, koerper);
+  }
   /* Beim Lesen steht die Kennung in der Adresse, beim Schreiben im Rumpf –
      genau da, wo der Server sie erwartet. */
   const url = "/api/galgen?room=" + encodeURIComponent(ROOM) +
@@ -436,7 +479,7 @@ async function api(aktion, koerper) {
 }
 
 async function hole() {
-  if (!ONLINE || onlineBusy) return;
+  if (!GEMEINSAM || onlineBusy) return;
   onlineBusy = true;
   try {
     const d = await api(null);
@@ -519,6 +562,8 @@ function zeichneOnline() {
   });
 
   $("btnErstellen").classList.toggle("versteckt", !!g);
+  $("varianteLokal").classList.toggle("versteckt", !(LOKAL && !g));
+  $("btnBeitreten").classList.toggle("versteckt", !(LOKAL && g && g.status === "invited" && !ich));
   $("btnBereit").classList.toggle("versteckt", !g || g.status !== "invited");
   $("btnLos").classList.toggle("versteckt", !g || g.status !== "invited");
   if (g.status === "invited") {
@@ -540,7 +585,7 @@ elTastatur.addEventListener("click", (e) => {
   const t = e.target.closest(".taste");
   if (!t || t.disabled) return;
   const b = t.dataset.b;
-  if (ONLINE) { schicke("raten", { buchstabe: b }); }
+  if (GEMEINSAM) { schicke("raten", { buchstabe: b }); }
   else { localRaten(b); }
 });
 
@@ -549,19 +594,20 @@ $("btnStart").addEventListener("click", () => {
   zeichne();
 });
 $("btnNochmal").addEventListener("click", () => {
-  if (ONLINE) schicke("naechste");
+  if (GEMEINSAM) schicke("naechste");
   else { const v = lokal.variante; localNeueRunde(v); lokal.runde++; zeichne(); }
 });
 $("btnNeu").addEventListener("click", () => {
-  if (ONLINE) schicke("reset");
+  if (GEMEINSAM) schicke("reset");
   else { const v = $("variante").value; localNeueRunde(v); zeichne(); }
 });
-$("btnErstellen").addEventListener("click", () => schicke("create", { variante: $("variante").value }));
+$("btnErstellen").addEventListener("click", () => schicke("create", { variante: LOKAL ? $("varianteLokal").value : $("variante").value }));
+$("btnBeitreten").addEventListener("click", () => schicke("join"));
 $("btnBereit").addEventListener("click", () => schicke("ready"));
 $("btnLos").addEventListener("click", () => schicke("start"));
 
 function zeichne() {
-  if (ONLINE) zeichneOnline();
+  if (GEMEINSAM) zeichneOnline();
   else if (lokal) zeichneLokal();
   else {
     /* Vor dem ersten Start: leeres Gerüst mit Hinweis. */
@@ -573,7 +619,7 @@ function zeichne() {
     elSpieler.innerHTML = "";
     elLog.innerHTML = "";
     elEnde.classList.add("versteckt");
-    elLage.textContent = ONLINE ? "Verbinde …" : "Bereit";
+    elLage.textContent = GEMEINSAM ? "Verbinde …" : "Bereit";
     zeichneGalgen(0, 1);
   }
 }
@@ -587,11 +633,16 @@ let startStil = TGStil.lokal();
 stilSetzen(startStil);
 TGStil.beiWechsel(() => stilSetzen(TGStil.lokal()));
 
-if (ONLINE) {
-  // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
-  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
-  // Hintergrund und meldet sich nur als "nicht aktiv".
-  WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
+if (GEMEINSAM) {
+  if (ONLINE) {
+    // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+    // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+    // Hintergrund und meldet sich nur als "nicht aktiv".
+    WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
+  } else {
+    // Lokal: kein Server, kein Lebenszeichen – der Stand liegt in der App.
+    hole();
+  }
   setInterval(hole, 1500);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
 } else {

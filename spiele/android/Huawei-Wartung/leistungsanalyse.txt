@@ -1,0 +1,54 @@
+TrashyGecko – Leistungsanalyse Huawei FIG-LX1
+Messung: 20.11.2026, nur lesende ADB-Abfragen. Während dieses Auftrags keine Geräteeinstellungen, Pakete, Berechtigungen oder Daten geändert.
+
+GERAET / ZUSTAND
+- Huawei FIG-LX1, Android 9/API 28, ARM64/ARMv7, 8 CPU-Kerne.
+- Laufzeit beim Messende: ungefähr 11 Minuten seit dem vorherigen regulären Neustart; WLAN verbunden.
+- Paketstatus aus dem Wartungsauftrag blieb bestehen: com.huawei.tips ist bereits aus dem vorherigen Auftrag deaktiviert. Dieser Analyseauftrag änderte daran nichts.
+
+RAM UND SWAP
+- Physischer RAM: 2,842,120 kB (ca. 2.71 GiB).
+- MemAvailable beim aktuellen Snapshot: 1,547,552 kB (ca. 1.48 GiB). MemFree lag nur bei etwa 51 MB, der Linux-Seitencache bei etwa 1.5 GB; deshalb MemAvailable statt MemFree als besseren Druckindikator verwenden.
+- Swap/ZRAM: 1,572,860 kB gesamt, 927,092 kB frei, also rund 646 MB in Benutzung. Das allein beweist keinen akuten Engpass; Android kann ausgelagerte, inaktive Seiten halten.
+- PSS-Beispiele aus dumpsys meminfo: Google Play Services 110 MB, GMS persistent 101 MB, SystemUI 67 MB, TrashyGecko-App (nach explizitem Start) 24 MB, Huawei System Manager Service 22 MB. Shared RAM wird in PSS aufgeteilt; RSS-Werte verschiedener Prozesse darf man nicht einfach als exklusiven Verbrauch addieren.
+
+CPU / LAST
+- 15-Sekunden-Messung aus /proc/stat im ruhigen Zustand: Gesamtbusy 0.7%; CPU0 2.2%, CPU1 1.4%, CPU2 1.1%, CPU3 0.8%, CPU4 0.3%, CPU5–7 0.0% gerundet.
+- Vier `top`-Snapshots: ungefähr 753% von 800% CPU idle (~94% idle, ~6% busy). `top` selbst war dabei der größte angezeigte Nutzer (~40.6% eines Kerns), danach kswapd0 (~6.2%) und system_server (~3.1%).
+- Aktuelles dumpsys-cpuinfo-Zeitfenster: system_server 2.2%, Google Play Services 0.8%, übrige einzelne Prozesse darunter.
+- Direkt nach Neustart und während umfangreicher ADB-Abfragen gab es deutlich höhere Momentwerte. Der längere ruhige Snapshot zeigt keine dauerhafte CPU-Sättigung.
+- `uptime` meldete dennoch Load Average etwa 38.4 / 36.0 / 21.6. Erklärung: 38 Prozesse im Zustand D (uninterruptible sleep) wurden in `ps -A` gezählt. Es sind überwiegend fest eingebaute Huawei/Kirin-Modem-/Treiber-Threads, z.B. bbox/mailbox/RNIC/USIM sowie mmc-cmdqd und rcc. Sie verbrauchten im `top`-Snapshot praktisch keine CPU. Der hohe Load Average ist daher kein Beleg für eine entsprechende CPU-Auslastung. Diese Kernel-/Treiber-Threads nicht beenden oder deaktivieren.
+
+PROZESSE UND HINTERGRUNDDIENSTE
+- `ps -A`: ungefähr 562 Prozesszeilen; Zustände im Snapshot: 522 S (schlafend), 2 R (bereit/laufend), 38 D (Kernel-/Treiber-Wartezustand). `top` zählte 564 Tasks/Threads, davon 525 schlafend und 1 laufend; Zähler unterscheiden sich wegen Zeitpunkt und Threadzählung. Keine Zombies.
+- Aktive `ServiceRecord`s schwankten zwischen etwa 114 und 120 während der Messungen; das ist dynamisch und enthält gebundene/bedarfsabhängige Dienste.
+- Häufige/legitime Prozesse: system_server, SystemUI, Huawei Launcher, SwiftKey, Telefonie/Contacts Provider, Google Play Services (normal + persistent), Huawei ID/HMS, Huawei System Manager, HiAI/HiAction, Google-Suche/Voice, WebView. Diese gehören zu Systemfunktionen, Push, Eingabe, Konten oder der gerade gestarteten Test-App. Nicht abschalten.
+- Drittanbieterprozesse im Snapshot: WhatsApp, außerdem App-/WebView-Prozesse für den explizit gestarteten TrashyGecko-Test. Anwesenheit eines schlafenden Prozesses allein bedeutet keine aktive CPU-Last.
+
+REGELMAESSIGE HINTERGRUNDAKTIVITAET (BATTERYSTATS)
+`dumpsys batterystats --charged` enthält angesammelte Job-/Alarm-/Wake-Lock-Zähler. Der genaue Zeitraum seit Reset/Ladung ließ sich nicht sicher bestimmen; Werte sind keine Tagesrate.
+- WhatsApp: Kontakt-Sync/Job ungefähr 23 Läufe und rund 11–12 Minuten aufsummierte Laufzeit; weitere Push-, Registrierungs- und Alarmjobs. Das passt zu Nachrichten, Kontaktsync und Backups.
+- Facebook: MQTT-/Push-Weckalarme im Zählerstand rund 25 Mal; zahlreiche kurze Jobs.
+- Messenger: MQTT-/Push-Weckalarme rund 24 Mal; ebenfalls wiederkehrende kurze Jobs.
+- Google Play Services und Huawei-Dienste halten erwartete dauerhafte Push-, Standort-, Geräteintegritäts-, Konto-, Energiemanagement- und Framework-Dienste. Hohe Zahl gebundener Dienste ist nicht gleich hohe CPU-Last.
+- BOOT_COMPLETED-Abfrage nach der früheren Deaktivierung listete weiterhin rund 129 Komponenten aus 60 Paketen; com.huawei.tips war nicht mehr enthalten. Facebook/Messenger besitzen Boot-/Push-Komponenten.
+
+BEWERTUNG UND KONKRETE MOEGLICHE VERBESSERUNGEN
+Sofort und ohne Funktionsrisiko:
+1. Keine weitere System-App deaktivieren: RAM-Verfügbarkeit und 15-s-CPU-Snapshot sind gut. Die drei Animationsskalen stehen bereits auf 0.0; diese Option ist schon ausgeschöpft.
+2. Keine Cache-/„RAM Cleaner“-Aktion: aktuell rund 1.5 GB MemAvailable und 8.7 GB freier Datenspeicher (letzter `df`-Snapshot); Cache-Löschen bringt wenig dauerhaften Nutzen und kann Daten/Neuladevorgänge verursachen.
+3. Unbenutzte Apps normal über Android-Einstellungen deinstallieren oder deaktivieren wäre nur nach Nutzerentscheidung sinnvoll; in diesem Auftrag wurden keine weiteren Kandidaten festgelegt.
+
+Nur wenn die jeweilige Funktion entbehrlich ist (mögliche Wirkung jeweils beachten):
+- Facebook/Messenger: Huawei-Einstellungen > Akku > App-Start/Manuell verwalten bzw. Hintergrundaktivität einschränken. Senkt Push-/Weckaktivität, kann aber Nachrichten, Anrufe, Standortfreigabe und Benachrichtigungen verspäten. Nicht empfohlen, wenn zuverlässige Erreichbarkeit nötig ist.
+- WhatsApp: Hintergrundbeschränkung reduziert Sync/Jobs, kann aber Nachrichten, Backup, Kontakte und Anrufe verzögern. Für ein zuverlässiges Alltagskonto nicht einschränken.
+- Google-Suche/Assistant (`com.google.android.googlequicksearchbox`): Autostart/Hintergrund nur einschränken, wenn Voice Assistant, Discover und Suchvorschläge nicht gebraucht werden; sonst Funktionen/Antworten verzögert.
+- Discord/Pocket FM/NewPipe/LIFX: Hintergrundstart nur einschränken, wenn keine Push-Mitteilungen (Discord), Hintergrundwiedergabe/Downloads (Pocket FM/NewPipe) oder Geräte-/Automationsmeldungen (LIFX) benötigt werden. Sonst mögliche Funktionsbeeinträchtigung.
+- Huawei Account/HMS, HiAI/HiAction, System Manager, Telefon/SMS, Bluetooth, Kontakte, Launcher/SystemUI, SwiftKey, Google Play Services/Store, WebView, Package Installer und Update-Dienste: behalten. Keine sichere Einschränkung ohne Folgewirkung festgestellt.
+- Die Apps YouTube, Duo, Drive, Maps, Chrome, Videos, Huawei Scanner und Work OOB waren bereits vor dieser Analyse deaktiviert. Keine davon wurde jetzt geändert. Der Huawei Feature Advisor ist bereits im vorherigen Wartungsauftrag deaktiviert.
+
+TESTGERAET-HINWEIS
+Für einen schlanken Testlauf vor dem Start der TrashyGecko-App nur nutzerseitig nicht benötigte Apps in Huawei „App-Start“ auf Manuell setzen, jeweils einzeln und mit Test auf Push/Audio/Smart-Home-Funktionen. Die Test-App, Android System WebView, WLAN, Play Services und Systemdienste nicht einschränken. Wegen des hohen Load-Average-Zählers bei gleichzeitig sehr geringer CPU-Auslastung sollten spürbare UI-Hänger separat reproduziert und mit `top`/Logcat zeitgleich gemessen werden; die 38 D-State-Einträge sind Kernel-/Treiberthreads und keine Apps zum Beenden.
+
+AUSGEFUEHRTE AKTIONEN IN DIESEM AUFTRAG
+Keine Änderungen am Telefon. Nur ADB-Messungen und dieser lokale Bericht.

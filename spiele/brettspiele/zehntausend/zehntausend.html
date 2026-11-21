@@ -1027,8 +1027,8 @@ body[data-stil="maenner"] .meldung button {
           <li><b>Einzelwertung:</b> eine 1 = 100, eine 5 = 50.</li>
           <li><b>Dreierpasch:</b> drei 1er = 1.000, drei 2er = 200, drei 3er = 300, drei 4er = 400, drei 5er = 500, drei 6er = 600. Jeder weitere gleiche Würfel zählt den Satz noch einmal (vier 2er = 400).</li>
           <li>Andere Augenzahlen zählen nur als Dreierpasch – eine einzelne 2 bringt nichts.</li>
-          <li>Gewürfelte Würfel antippen, die Punkte erscheinen sofort.</li>
-          <li><b>Weiterwürfeln</b> sichert die Auswahl und würfelt mit den übrigen Würfeln weiter.</li>
+          <li>Gewürfelte Würfel antippen – eine 1, eine 5 oder ein vollständiger Pasch wird sofort fest gesichert und bleibt liegen.</li>
+          <li><b>Weiterwürfeln</b> würfelt nur mit den übrigen, nicht gesicherten Würfeln.</li>
           <li>Wer <b>keinen gültigen Wurf</b> hat, verliert alle Punkte dieses Zugs.</li>
           <li>Sind <b>alle sechs Würfel</b> verbraucht, kommen alle sechs zurück.</li>
           <li>Gespeichert wird erst ab <b>350 Punkten</b> im Zug – darunter bleibt der Knopf gesperrt.</li>
@@ -1152,6 +1152,8 @@ function neuerZustand(namen) {
     wuerfel: [0, 0, 0, 0, 0, 0],
     gesichert: [false, false, false, false, false, false],
     auswahl: [false, false, false, false, false, false],
+    wurfGesichert: [false, false, false, false, false, false], // in diesem Wurf festgelegt
+    wurfPunkte: 0,        // Punkte dieser Würfel (für die Anzeige „Wurf“)
     zugPunkte: 0,
     wuerfe: 0,        // Würfe im laufenden Zug
     laeuft: false,    // ein Spiel ist gestartet
@@ -1180,8 +1182,13 @@ function auswahlPunkte() {
   return REGELN.punkte(auswahlWerte());
 }
 
+// Die in diesem Wurf festgelegten Würfel – nur sie zählen für „Wurf“.
+function wurfWerte() {
+  return S.wuerfel.filter((w, i) => S.gesichert[i] && S.wurfGesichert[i] && w > 0);
+}
+
 function zugSumme() {
-  return S.zugPunkte + auswahlPunkte();
+  return S.zugPunkte;
 }
 
 // Gezählt wird nur, was ausgewählt ist: eine einzelne 2 zählt auch dann
@@ -1207,29 +1214,20 @@ function freieWuerfel() {
   return S.laeuft && !S.beendet && !S.gesperrt && freieWuerfel().length > 0;
 }
 
-// Würfel, die nach dem Sichern der Auswahl liegen bleiben.
-function freieNachSicherung() {
-  return S.wuerfel
-    .map((w, i) => (S.gesichert[i] || (S.auswahl[i] && w > 0 && auswahlGilt(w)) ? null : i))
-    .filter((i) => i !== null);
-}
-
-// Sind alle sechs Würfel verbraucht (gesichert oder gerade ausgewählt und gültig)?
+// Sind alle sechs Würfel festgelegt? (Eine Auswahl ohne Punkte zählt nicht.)
 function allesVerbraucht() {
-  return S.wuerfel.every((w, i) =>
-    S.gesichert[i] || (S.auswahl[i] && w > 0 && auswahlGilt(w))
-  );
+  return S.gesichert.every(Boolean);
 }
 
 function darfWeiter() {
   if (!S.laeuft || S.beendet || S.gesperrt || S.wuerfe === 0) return false;
   // Weiterwürfeln mit den übrigen Würfeln – oder alle sechs zurück, wenn sie alle verbraucht sind.
-  return allesVerbraucht() || freieNachSicherung().length > 0;
+  return allesVerbraucht() || freieWuerfel().length > 0;
 }
 
 function darfSichern() {
   if (!S.laeuft || S.beendet || S.gesperrt || S.wuerfe === 0) return false;
-  return zugSumme() >= EINSTIEG;
+  return S.zugPunkte >= EINSTIEG;
 }
 
 /* ============================================================
@@ -1309,12 +1307,12 @@ function zeichne() {
     else if (haken) haken.remove();
   });
 
-  $("wertWurf").textContent = auswahlPunkte().toLocaleString("de-DE");
-  $("wertZug").textContent = zugSumme().toLocaleString("de-DE");
+  $("wertWurf").textContent = S.wurfPunkte.toLocaleString("de-DE");
+  $("wertZug").textContent = S.zugPunkte.toLocaleString("de-DE");
   $("wertKonto").textContent = (p ? p.punkte : 0).toLocaleString("de-DE");
   $("wertZiel").textContent = ZIEL.toLocaleString("de-DE");
 
-  const summe = zugSumme();
+  const summe = S.zugPunkte;
   const anteil = Math.min(100, (summe / EINSTIEG) * 100);
   $("balkenFuellung").style.width = S.wuerfe > 0 ? anteil + "%" : "0%";
   $("schwelle").classList.toggle("offen", summe >= EINSTIEG);
@@ -1420,29 +1418,41 @@ function wuerfelKlick(i) {
   if (S.gesichert[i] || S.wuerfel[i] === 0) return;
   S.auswahl[i] = !S.auswahl[i];
 
+  // Online legt der Server den Würfel fest; die Antwort bringt Stand und Punkte.
+  if (ONLINE) {
+    if (S.auswahl[i]) onlineAktion("merken");
+    else zeichne();
+    return;
+  }
+
   const wert = S.wuerfel[i];
   if (S.auswahl[i]) {
-    if (auswahlGilt(wert)) {
-      const p = REGELN.punkte(auswahlWerte());
-      const einzeln = wert === 1 || wert === 5;
+    const vorher = S.zugPunkte;
+    sichereAuswahl();
+    if (S.gesichert[i]) {
+      // Der Würfel ist jetzt fest beiseitegelegt und wird nicht mehr geworfen.
+      const dazu = S.zugPunkte - vorher;
       hinweis(
-        "Wurf: " + p.toLocaleString("de-DE") + " Punkte" +
-        (einzeln ? "" : " (Dreierpasch)") +
-        " – Zug " + zugSumme().toLocaleString("de-DE") + ".",
+        wert + " gesichert" + (dazu > 0 ? ": +" + dazu.toLocaleString("de-DE") + " Punkte" : "") +
+        " – Zug " + S.zugPunkte.toLocaleString("de-DE") + ".",
         "gut"
       );
     } else {
-      const gewaehlt = S.wuerfel.map((w, i) => (S.auswahl[i] && w > 0 ? w : 0));
+      // Einzelne 2/3/4/6 zählen noch nicht; sie bleiben nur vorgemerkt liegen.
+      const gewaehlt = S.wuerfel.map((w, k) => (S.auswahl[k] && w > 0 ? w : 0));
       const noch = 3 - REGELN.zaehle(gewaehlt)[wert];
       hinweis(
-        "Eine " + wert + " zählt nicht einzeln. Noch " + noch +
+        "Eine " + wert + " zählt nicht einzeln. Noch " + Math.max(1, noch) +
         " × die " + wert + ", dann gibt es " + REGELN.dreier(wert).toLocaleString("de-DE") +
-        " Punkte – der Würfel bleibt beim Weiterwürfeln draußen, bis der Pasch voll ist.",
+        " Punkte – bis dahin bleibt der Würfel liegen.",
         ""
       );
     }
+  } else {
+    hinweis("");
   }
   zeichne();
+  speichern();
 }
 
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1458,6 +1468,8 @@ async function wuerfeln() {
 
   S.gesperrt = true;
   S.auswahl = [false, false, false, false, false, false];
+  S.wurfGesichert = [false, false, false, false, false, false];
+  S.wurfPunkte = 0;
   hinweis("");
   zeichne();
 
@@ -1508,20 +1520,25 @@ async function wuerfeln() {
   speichern();
 }
 
-// Auswahl in den Zug übernehmen: nur vollständige Sätze/1er/5er werden gesichert.
+// Auswahl festlegen: einzelne 1er/5er und vollständige Sätze kommen beiseite.
+// Gerechnet wird die ganze Gruppe dieses Wurfs neu; gespeichert wird nur der
+// Unterschied, damit auch der vierte gleiche Würfel seinen vollen Satz bringt.
 function sichereAuswahl() {
-  const gruppen = REGELN.zaehle(S.wuerfel);
-  const werte = [];
+  const gewaehlt = REGELN.zaehle(
+    S.auswahl.map((an, i) => (an && S.wuerfel[i] > 0 ? S.wuerfel[i] : 0))
+  );
   S.wuerfel.forEach((w, i) => {
     if (!S.auswahl[i] || S.gesichert[i] || w === 0) return;
-    if (!REGELN.zaehlt(w, gruppen[w])) return;
-    werte.push(w);
+    if (!REGELN.zaehlt(w, gewaehlt[w])) return;
     S.gesichert[i] = true;
+    S.wurfGesichert[i] = true;
     S.auswahl[i] = false;
   });
-  const p = REGELN.punkte(werte);
-  S.zugPunkte += p;
-  return p;
+  const p = REGELN.punkte(wurfWerte());
+  const dazu = p - S.wurfPunkte;
+  S.zugPunkte += dazu;
+  S.wurfPunkte = p;
+  return dazu;
 }
 
 async function weiterwuerfeln() {
@@ -1537,6 +1554,8 @@ async function weiterwuerfeln() {
     S.wuerfel = [0, 0, 0, 0, 0, 0];
     S.gesichert = [false, false, false, false, false, false];
     S.auswahl = [false, false, false, false, false, false];
+    S.wurfGesichert = [false, false, false, false, false, false];
+    S.wurfPunkte = 0;
     hinweis(
       "Alle sechs Würfel verbraucht – sie kommen alle zurück. Zug: " +
       S.zugPunkte.toLocaleString("de-DE") + " Punkte.",
@@ -1563,7 +1582,7 @@ async function sichern() {
     return;
   }
   if (!darfSichern()) return;
-  const nachtrag = sichereAuswahl();
+  sichereAuswahl();
   const summe = S.zugPunkte;
   if (summe < EINSTIEG) {
     hinweis("Erst ab " + EINSTIEG + " Punkten speichern – es fehlen noch " +
@@ -1582,11 +1601,10 @@ async function sichern() {
     return;
   }
 
-  const zusatz = nachtrag > 0 ? nachtrag.toLocaleString("de-DE") + " aus dem letzten Wurf" : "Zug";
   const danach = S.spieler[(S.dran + 1) % S.spieler.length];
   hinweis(
-    sp.name + " sichert " + summe.toLocaleString("de-DE") + " Punkte (" + zusatz +
-    "). Konto: " + sp.punkte.toLocaleString("de-DE") + " von " + ZIEL.toLocaleString("de-DE") +
+    sp.name + " sichert " + summe.toLocaleString("de-DE") +
+    " Punkte. Konto: " + sp.punkte.toLocaleString("de-DE") + " von " + ZIEL.toLocaleString("de-DE") +
     ". " + danach.name + " ist dran.",
     "gut"
   );
@@ -1600,6 +1618,8 @@ function naechsterSpieler(text, art) {
   S.wuerfel = [0, 0, 0, 0, 0, 0];
   S.gesichert = [false, false, false, false, false, false];
   S.auswahl = [false, false, false, false, false, false];
+  S.wurfGesichert = [false, false, false, false, false, false];
+  S.wurfPunkte = 0;
   S.zugPunkte = 0;
   S.wuerfe = 0;
   if (text) hinweis(text, art || "");
@@ -1672,6 +1692,8 @@ function laden() {
     z.wuerfel = Array.isArray(d.wuerfel) && d.wuerfel.length === 6 ? d.wuerfel.map(Number) : [0, 0, 0, 0, 0, 0];
     z.gesichert = Array.isArray(d.gesichert) ? d.gesichert.slice(0, 6).map(Boolean) : [false, false, false, false, false, false];
     z.auswahl = [false, false, false, false, false, false];
+    z.wurfGesichert = [false, false, false, false, false, false];
+    z.wurfPunkte = 0;
     z.zugPunkte = Number(d.zugPunkte) || 0;
     z.wuerfe = Number(d.wuerfe) || 0;
     z.laeuft = !!d.laeuft;
@@ -1843,12 +1865,15 @@ function uebernehmeOnline(g) {
   S.dran = Math.min(g.current || 0, Math.max(0, S.spieler.length - 1));
   S.wuerfel = Array.from({ length: 6 }, (_, i) => (g.wuerfel ? g.wuerfel[i] || 0 : 0));
   S.gesichert = Array.from({ length: 6 }, (_, i) => !!(g.gesichert && g.gesichert[i]));
-  // Die Abfrage läuft alle 1,2 s: nur bei einem neuen Serverstand darf die
-  // eigene Auswahl wegfallen, sonst könnte man nie einen Würfel antippen.
+  S.wurfGesichert = Array.from({ length: 6 }, (_, i) => !!(g.wurfGesichert && g.wurfGesichert[i]));
+  S.wurfPunkte = g.wurfPunkte || 0;
+  // Die Abfrage läuft alle 1,2 s: bei einem neuen Wurf fällt die eigene
+  // Auswahl weg, sonst bleiben nur die inzwischen gesicherten Würfel draußen.
   const neuerStand = !alt || alt.wuerfe !== g.wuerfe ||
     JSON.stringify(alt.wuerfel) !== JSON.stringify(g.wuerfel) ||
-    alt.current !== g.current || alt.zugPunkte !== g.zugPunkte;
+    alt.current !== g.current;
   if (neuerStand) S.auswahl = [false, false, false, false, false, false];
+  else S.auswahl = S.auswahl.map((an, i) => an && !S.gesichert[i]);
   S.zugPunkte = g.zugPunkte || 0;
   S.wuerfe = g.wuerfe || 0;
   S.laeuft = g.status === "active";

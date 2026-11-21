@@ -30,7 +30,7 @@ body{margin:0;padding:6px 6px 18px;
  background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
  color:var(--text);font:15px var(--tg-schrift);
  -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
-main{max-width:760px;margin:auto}
+main{max-width:760px;margin:auto;height:calc(100dvh - 24px);display:flex;flex-direction:column}
 
 .fenster{border:1px solid var(--rand-1);border-radius:8px;overflow:hidden;background:var(--panel);
  box-shadow:0 6px 18px var(--schatten)}
@@ -50,12 +50,13 @@ main{max-width:760px;margin:auto}
  padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
 .statuszeile b{color:var(--gold);font-weight:normal}
 
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
-/* Spielfeld: Seitenverhaeltnis 19:21 bleibt, die Hoehe passt sich dem
-   Fenster an, damit am PC nicht gescrollt werden muss. */
-canvas{display:block;margin:0 auto;height:auto;aspect-ratio:19/21;
- width:min(100%,calc((100vh - 220px) * 19 / 21));border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px var(--schatten-tief)}
+.buehne{position:relative;padding:8px;display:flex;justify-content:center;align-items:center;
+ background:var(--buehne);flex:1 1 auto;min-height:0}
+/* Spielfeld: Seitenverhaeltnis 19:21 bleibt. Die Groesse setzt passeFeld()
+   aus dem freien Platz der Buehne – so passt das Feld am PC wie am Handy
+   genau ins Fenster, ohne abgeschnitten zu werden. */
+canvas{display:block;margin:0 auto;height:auto;aspect-ratio:19/21;width:100%;max-height:100%;
+ border-radius:8px;touch-action:none;box-shadow:inset 0 0 40px var(--schatten-tief)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
  background:var(--schleier);border-radius:8px;padding:14px;text-align:center}
@@ -82,6 +83,23 @@ canvas{display:block;margin:0 auto;height:auto;aspect-ratio:19/21;
 #regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
 #regeln li{margin-bottom:5px}
 #regeln b{color:var(--gold-hell);font-weight:normal}
+/* Handy quer: Feld und Steuerkreuz nebeneinander, damit das Feld die volle
+   Hoehe bekommt (vorher blieben 28 px). Die Regeln stehen im Hochformat und
+   am PC; hier waeren sie nur ein Scrollrest ohne Platz. */
+@media (orientation:landscape) and (max-height:560px){
+ body{padding:4px}
+ main{max-width:100%;height:calc(100dvh - 8px);display:grid;gap:0;
+  grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr) auto;
+  grid-template-areas:"titel status" "menu menu" "buehne pad" "fuss fuss"}
+ .titelleiste{grid-area:titel;padding:4px 8px}
+ .menueleiste{grid-area:menu;padding:4px 6px}
+ .statuszeile{grid-area:status;justify-content:flex-end;border-bottom:0;padding:4px 8px}
+ .buehne{grid-area:buehne;min-height:0;padding:4px}
+ .pad{grid-area:pad;align-self:center;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,38px);gap:4px;padding:4px}
+ .fuss{grid-area:fuss;padding:2px 8px;font-size:12px;min-height:0}
+ #regeln{display:none}
+}
+
 .klein{color:var(--muted);font-size:13px}
 a{color:var(--gold)}
 .mitte{text-align:center}
@@ -150,7 +168,7 @@ html[data-stil="buben"]{
   </div>
  </div>
 
- <div class="pad">
+   <div class="pad" id="pad">
   <button class="oben" data-dir="hoch">▲</button>
   <button class="links" data-dir="links">◀</button>
   <button class="runter" data-dir="runter">▼</button>
@@ -798,6 +816,23 @@ function richtungWunsch(d){
  if(zustand!=="laeuft")return;
  pac.wunsch={...d};
 }
+
+/* Feldgroesse aus dem freien Platz: Breite und Hoehe im Verhaeltnis 19:21,
+   nie groesser als die Buehne.  Ohne diese Rechnung blieb am Handy quer ein
+   154 px kleines Feld uebrig, am PC ragte die Seite 139 px ueber das Fenster. */
+function passeFeld(){
+ const buehne=document.querySelector(".buehne");
+ if(!buehne)return;
+ const platzH=buehne.clientHeight-16, platzW=buehne.clientWidth-16;
+ if(platzH<=0||platzW<=0)return;
+ const w=Math.min(platzW, platzH*19/21);
+ canvas.style.width=Math.floor(w)+"px";
+ canvas.style.height=Math.floor(w*21/19)+"px";
+}
+window.addEventListener("resize",passeFeld);
+window.addEventListener("orientationchange",()=>setTimeout(passeFeld,120));
+if(window.ResizeObserver) new ResizeObserver(passeFeld).observe(document.querySelector(".buehne"));
+passeFeld();
 
 let wischStart=null;
 canvas.addEventListener("pointerdown",e=>{ wischStart={x:e.clientX,y:e.clientY}; e.preventDefault(); });

@@ -2,21 +2,51 @@ plugins {
     id "com.android.application"
 }
 
+// Release-Signatur: keystore.properties (lokal, per .gitignore ausgenommen) oder TRASHY_RELEASE_*.
+def keystoreWerte = new Properties()
+def keystoreDatei = rootProject.file("keystore.properties")
+if (keystoreDatei.isFile()) {
+    keystoreDatei.withInputStream { keystoreWerte.load(it) }
+}
+def releaseKeyPath = keystoreWerte.getProperty("storeFile") ?: System.getenv("TRASHY_RELEASE_KEYSTORE")
+def releaseStorePassword = keystoreWerte.getProperty("storePassword") ?: System.getenv("TRASHY_RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = keystoreWerte.getProperty("keyAlias") ?: System.getenv("TRASHY_RELEASE_KEY_ALIAS")
+def releaseKeyPassword = keystoreWerte.getProperty("keyPassword") ?: System.getenv("TRASHY_RELEASE_KEY_PASSWORD")
+def releaseValues = [releaseKeyPath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword]
+def hasReleaseSigning = releaseValues.every { it != null && !it.trim().isEmpty() }
+if (releaseValues.any { it != null && !it.trim().isEmpty() } && !hasReleaseSigning) {
+    throw new GradleException("Für Release-Signierung müssen alle vier Werte gesetzt sein (keystore.properties oder TRASHY_RELEASE_*).")
+}
+
 android {
     namespace "de.trashygecko.tmahjong"
     compileSdk 34
 
     defaultConfig {
         applicationId "de.trashygecko.tmahjong"
-        minSdk 24
+        minSdk 21
         targetSdk 34
-        versionCode 7
-        versionName "1.6"
+        versionCode 15
+        versionName "1.14"
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseKeyPath)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -42,44 +72,97 @@ dependencies {
 // werden beim Bauen in die Assets kopiert - so kann die App nicht von der
 // Webfassung abweichen.  file() zaehlt vom App-Modul (spiele/android/app) aus:
 // ../../ ist spiele/.
-def spielQuelle = file("../../brettspiele/mahjong")
+def homepageQuelle = file("../../../")
 def wwwZiel = file("src/main/assets/www")
+def remoteQuelle = file("../../../WLAN-Fernbedienung")
 
-tasks.register("spielKopieren", Copy) {
-    from(spielQuelle) {
-        exclude "README.md"
+tasks.register("homepageKopieren", Sync) {
+    // Nur was zur App gehoert: Spiele, Fernbedienung und die zwei geteilten
+    // Grunddateien. Die uebrige Homepage (Tagebuch, Cheats, Quellcode) bleibt draussen.
+    from(homepageQuelle) {
+        include "spiele/**", "main.css", "monofonto.ttf"
+        exclude "spiele/android/**", "spiele/connector/**", "spiele/connector-online/**"
+        exclude "spiele/tests/**", "spiele/node_modules/**", "spiele/downloads/**"
+        exclude "**/node_modules/**", "**/test-results/**", "**/playwright-report/**"
+        exclude "**/backup-before-*/**", "**/*.backup-*"
+        exclude "**/*.go", "**/*_test.go", "**/go.mod", "**/go.sum", "**/*.exe", "**/*-linux"
+        exclude "**/*.apk", "**/*.log", "spiele/package.json", "spiele/package-lock.json", "spiele/playwright.config.js"
+        // Keine Geheimnisse ins APK: das Betriebshandbuch nennt Passwoerter im Klartext,
+        // schluessel.jks ist der Signaturschluessel selbst.
+        exclude "ANLEITUNG.txt", "**/*.jks", "**/*.keystore"
     }
-    // Der Ordnerbaum der Homepage wird nachgebaut: mahjong.html laedt die
-    // Spruchliste als ../../lob.js, also liegt www/lob.js zwei Ebenen darueber.
-    into(file("${wwwZiel}/brettspiele/mahjong"))
-}
-
-// lob.js liegt in der Homepage neben spiele/ - hier also direkt unter www/.
-tasks.register("lobKopieren", Copy) {
-    from(file("../../lob.js"))
-    into(wwwZiel)
-}
-
-// zurueck.js ebenfalls: das Spiel laedt es mit ../../zurueck.js, also unter
-// www/.  In der App tut es nichts (siehe Kommentar in der Datei selbst).
-tasks.register("zurueckKopieren", Copy) {
-    from(file("../../zurueck.js"))
-    into(wwwZiel)
-}
-
-// Gemeinsame Schrift der Homepage: die Spielseiten laden sie absolut als
-// /spiele/schrift.css und /spiele/schrift/*.woff2.  Deshalb liegen die Dateien
-// unter assets/spiele/ - MainActivity liefert sie unter /spiele/ aus.
-tasks.register("schriftKopieren", Copy) {
-    from(file("../../schrift.css"))
-    from(file("../../schrift")) {
-        include "*.woff2"
-        include "OFL.txt"
-        into "schrift"
+    from(remoteQuelle) {
+        include "index.html", "styles.css", "README.md", "js/**"
+        into "fernbedienung"
     }
-    into(file("src/main/assets/spiele"))
+    // Startbildschirm der App; zusaetzlich als index.html, damit alte
+    // "../index.html"-Verweise aus den Spielen hier landen.
+    from(rootProject.file("start")) {
+        include "app.html"
+    }
+    from(rootProject.file("start")) {
+        include "app.html"
+        rename { "index.html" }
+    }
+    into(wwwZiel)
+    doLast {
+        // Alte Installationsdateien sind keine Spiele und liegen absichtlich nicht im App-Paket.
+        File katalog = new File(wwwZiel, "spiele/spiele.html")
+        String html = katalog.getText("UTF-8")
+        String bereinigt = html.replaceAll(/(?m)^\s*\["[^"]+",\s*"android\/[^"]*\.apk",[^\r\n]*\r?\n/, "")
+        if (html == bereinigt) throw new GradleException("Android-Installer-Einträge in der lokalen Spieleübersicht nicht gefunden")
+        // In der App ist die Fernbedienung ausschließlich über „Extras“ erreichbar – auf der
+        // Website bleibt die Kachel erhalten.
+        String ohneFernbedienung = bereinigt.replaceAll(/(?m)^\s*\["[^"]+",\s*"\.\.\/WLAN-Fernbedienung\/[^"]*",[^\r\n]*\r?\n/, "")
+        if (ohneFernbedienung == bereinigt) throw new GradleException("Fernbedienungs-Kachel in der lokalen Spieleübersicht nicht gefunden")
+        katalog.setText(ohneFernbedienung, "UTF-8")
+    }
 }
 
+tasks.register("verifyHomepageGames") {
+    dependsOn "homepageKopieren"
+    doLast {
+        File katalog = new File(homepageQuelle, "spiele/spiele.html")
+        String inhalt = katalog.getText("UTF-8")
+        def matcher = (inhalt =~ /(?m)^\s*\["([^"]+)",\s*"([^"]+\.html)",\s*"([^"]+)",\s*"([^"]*)"/)
+        List<String> rows = []
+        while (matcher.find()) {
+            String name = matcher.group(1)
+            String relative = matcher.group(2).replace('\\', '/')
+            if (relative.split('/').any { it == '..' }) throw new GradleException("Unsicherer Spielepfad: ${relative}")
+            File quelle = new File(new File(homepageQuelle, "spiele"), relative)
+            File asset = new File(new File(wwwZiel, "spiele"), relative)
+            if (!quelle.isFile()) throw new GradleException("Spielekatalog verweist auf fehlende Quelldatei: ${relative}")
+            if (!asset.isFile()) throw new GradleException("Spiel fehlt in den Android-Assets: ${relative}")
+            rows.add("| ${name.replace('|','\\|')} | `spiele/${relative}` | `${matcher.group(3)}` | `${matcher.group(4).trim()}` |")
+        }
+        if (rows.isEmpty()) throw new GradleException("Keine aktiven Spiele im Homepage-Katalog erkannt")
+        File report = new File(buildDir, "reports/homepage-integration/spiele-manifest.md")
+        report.parentFile.mkdirs()
+        report.setText("# Homepage-Spiele in TrashyGecko\n\nAktive Katalogeinträge: ${rows.size()}. Die HTML-Seite und ihre Unterordner sowie gemeinsam genutzte Dateien unter `spiele/` werden in gleicher relativer Struktur nach `app/src/main/assets/www/` kopiert.\n\n| Spiel | Homepage-Datei | Kategorie | Katalogmerkmale |\n|---|---|---|---|\n${rows.join('\n')}\n\nSkripte, CSS, Grafiken, Audio und Schriften werden aus dem vollständigen statischen `spiele/`-Baum mitkopiert. Online-Mehrspieler benötigt weiterhin den vorhandenen TrashyGecko-Connector-Server. Der Kopierschritt lässt Connector-Quellcode, Testläufe, `node_modules`, Android-Projekt/Backups und alte APK-Installer aus.\n", "UTF-8")
+        println("Android-Homepage: ${rows.size()} aktive Spiele geprüft und eingebettet. Manifest: ${report}")
+    }
+}
+
+def apkQuelle = hasReleaseSigning
+        ? layout.buildDirectory.file("outputs/apk/release/app-release.apk")
+        : layout.buildDirectory.file("outputs/apk/debug/app-debug.apk")
+tasks.register("packageTrashyGeckoApk", Copy) {
+    dependsOn([hasReleaseSigning ? "assembleRelease" : "assembleDebug", "verifyHomepageGames"])
+    from(apkQuelle)
+    into(layout.buildDirectory.dir("outputs/apk/universal"))
+    rename { "TrashyGecko.apk" }
+}
+tasks.register("remoteProtocolTest", JavaExec) {
+    dependsOn "compileDebugUnitTestJavaWithJavac"
+    classpath = files("${buildDir}/intermediates/javac/debugUnitTest/compileDebugUnitTestJavaWithJavac/classes", "${buildDir}/intermediates/javac/debug/compileDebugJavaWithJavac/classes") + files(android.bootClasspath)
+    mainClass = "de.trashygecko.tmahjong.remote.RemoteProtocolSelfTest"
+}
 tasks.named("preBuild") {
-    dependsOn "spielKopieren", "lobKopieren", "zurueckKopieren", "schriftKopieren"
+    dependsOn "homepageKopieren"
 }
+
+
+
+
+

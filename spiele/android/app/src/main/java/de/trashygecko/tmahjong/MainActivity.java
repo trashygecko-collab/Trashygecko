@@ -2,8 +2,11 @@ package de.trashygecko.tmahjong;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,259 +19,279 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.WebViewAssetLoader;
 
-/**
- * TMahjong - das Mahjong-Spiel aus spiele/mahjong in einer WebView.
- *
- * Die Spieldateien liegen unter assets/www und werden ueber den
- * WebViewAssetLoader als https://appassets.androidplatform.net/... ausgeliefert.
- * Damit hat das Spiel eine echte Herkunft; localStorage und die
- * Sicherheitsregeln der Webfassung greifen unveraendert.
- *
- * Die einzige Bruecke ins Spiel ist TMahjong.verlassen() - der Knopf
- * "SPIEL VERLASSEN" ganz unten in den Einstellungen.
- */
-public class MainActivity extends Activity {
+import java.io.InputStream;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
-    public static final String START_URL =
-            "https://appassets.androidplatform.net/assets/www/brettspiele/mahjong/mahjong.html";
-
-    private static final String HERKUNFT = "appassets.androidplatform.net";
-
-    private static final String TAG = "TMahjong";
+/** Local-first Homepage and games host. All static content is loaded from the APK assets. */
+public final class MainActivity extends Activity {
+    public static final String EXTRA_START_PATH = "de.trashygecko.tmahjong.START_PATH";
+    private static final String TAG = "TrashyGeckoHome";
+    private static final String HOST = "appassets.androidplatform.net";
+    private static final String LOCAL_ROOT = "https://" + HOST + "/";
+    private static final String HOME_URL = LOCAL_ROOT + "app.html";
+    private static final String ONLINE_HOST = "trashygecko.onrender.com";
+    private static final String ONLINE_ROOT = "https://" + ONLINE_HOST;
+    private static final Pattern SAFE_GAME = Pattern.compile("[A-Za-z0-9._/-]+\\.html");
 
     private WebView webView;
+    private volatile boolean trustedLocalPage;
+    private volatile String currentPagePath = "";
+    private volatile boolean onlineGamePage;
+    private AlertDialog modeDialog;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
         vollbild();
-
-        final WebViewAssetLoader lader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-                // Die Spielseiten laden gemeinsame Dateien mit absolutem Pfad:
-                // /spiele/schrift.css und /spiele/schrift/*.woff2.  Sie liegen in
-                // den Assets unter spiele/ und bekommen hier dieselbe Adresse wie
-                // auf der Homepage - kein 404, kein Systemschrift-Rueckfall.
-                .addPathHandler("/spiele/", new WebViewAssetLoader.PathHandler() {
-                    @Override
-                    public WebResourceResponse handle(String pfad) {
-                        return spieleDatei(pfad);
-                    }
-                })
-                .build();
-
-        webView = new WebView(this);
-
-        // In Debug-Builds mitschreiben, was im Spiel passiert (chrome://inspect
-        // am Rechner und Logcat). Release-Builds bleiben unveraendert.
-        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
-            WebView.setWebContentsDebuggingEnabled(true);
+        WebViewAssetLoader loader = HomepageAssets.baue(this);
+        try {
+            webView = new WebView(this);
+        } catch (RuntimeException error) {
+            showWebViewError();
+            return;
         }
-
-        WebSettings einstellungen = webView.getSettings();
-        einstellungen.setJavaScriptEnabled(true);
-        einstellungen.setDomStorageEnabled(true);      // Spielstand (localStorage)
-        einstellungen.setAllowFileAccess(false);
-        einstellungen.setAllowContentAccess(false);
-        einstellungen.setSupportZoom(false);
-        einstellungen.setBuiltInZoomControls(false);
-        einstellungen.setTextZoom(100);                // Systemschrift skaliert nicht mit
-
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setTextZoom(100);
+        // Die Seiten liegen im APK-Paket und ändern sich nur mit einem App-Update.
+        // Ein WebView-Cache würde nach dem Update noch die alten Dateien zeigen.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
+        settings.setSupportMultipleWindows(false);
         webView.setBackgroundColor(0xFF0B241D);
         webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest anfrage) {
-                return lader.shouldInterceptRequest(anfrage.getUrl());
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                Log.i(TAG, "Seite geladen: " + url);
-            }
-
-            @Override
-            public void onReceivedError(WebView view, WebResourceRequest anfrage,
-                                        WebResourceError fehler) {
-                Log.e(TAG, "Ladefehler " + fehler.getErrorCode() + " "
-                        + fehler.getDescription() + ": " + anfrage.getUrl());
-            }
-
-            @Override
-            public void onReceivedHttpError(WebView view, WebResourceRequest anfrage,
-                                            WebResourceResponse antwort) {
-                Log.e(TAG, "HTTP " + antwort.getStatusCode() + " " + antwort.getReasonPhrase()
-                        + ": " + anfrage.getUrl());
-            }
-
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest anfrage) {
-                Uri ziel = anfrage.getUrl();
-
-                // Alles aus den App-Assets bleibt in der WebView, externe Links
-                // (z.B. "ZURUECK ZU DEN SPIELEN") gehen an den Browser.
-                if (HERKUNFT.equals(ziel.getHost())) {
-                    return false;
-                }
-
-                startActivity(new Intent(Intent.ACTION_VIEW, ziel));
-
-                return true;
-            }
-        });
-
+        webView.addJavascriptInterface(new HomepageBridge(), "TGApp");
         webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onConsoleMessage(ConsoleMessage meldung) {
-                Log.i(TAG, "Konsole: " + meldung.message() + " ("
-                        + meldung.sourceId() + ":" + meldung.lineNumber() + ")");
-
+            @Override public boolean onConsoleMessage(ConsoleMessage message) {
+                Log.i(TAG, message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
                 return true;
             }
         });
-
-        webView.addJavascriptInterface(new Bruecke(), "TMahjong");
-
+        webView.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return loader.shouldInterceptRequest(request.getUrl());
+            }
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
+                trustedLocalPage = isLocalAsset(url);
+                try { currentPagePath = Uri.parse(url).getPath() == null ? "" : Uri.parse(url).getPath(); } catch (RuntimeException ignored) { currentPagePath = ""; }
+                if (trustedLocalPage) onlineGamePage = false;
+                if (isMahjongPage(url)) webView.addJavascriptInterface(new MahjongBridge(), "TMahjong");
+                else webView.removeJavascriptInterface("TMahjong");
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                trustedLocalPage = isLocalAsset(url);
+                try { currentPagePath = Uri.parse(url).getPath() == null ? "" : Uri.parse(url).getPath(); } catch (RuntimeException ignored) { currentPagePath = ""; }
+                Log.i(TAG, "Seite geladen: " + url);
+                if (trustedLocalPage && url.contains("/spiele/spiele.html")) injectGameModeChooser();
+            }
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) Log.e(TAG, "Seitenfehler " + error.getErrorCode() + " " + error.getDescription() + ": " + request.getUrl());
+            }
+            // Ab API 26: ein abgestürzter WebView-Prozess darf die App nicht mit einem
+            // schwarzen Bild zurücklassen. Ansicht verwerfen und den Startbildschirm neu aufbauen.
+            @Override public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                Log.e(TAG, "WebView-Prozess beendet (Absturz=" + (detail != null && detail.didCrash()) + ")");
+                if (webView != null && webView == view) {
+                    webView.removeJavascriptInterface("TGApp");
+                    webView.removeJavascriptInterface("TMahjong");
+                    webView.destroy();
+                    webView = null;
+                }
+                Toast.makeText(MainActivity.this, "Die Anzeige wurde neu gestartet.", Toast.LENGTH_SHORT).show();
+                recreate();
+                return true;
+            }
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return routeNavigation(request.getUrl());
+            }
+            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return routeNavigation(Uri.parse(url));
+            }
+        });
         setContentView(webView);
-        webView.loadUrl(START_URL);
+        String path = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_START_PATH);
+        String target = localGameUrl(path);
+        webView.loadUrl(target == null ? HOME_URL : target);
     }
 
-    /**
-     * Liefert eine Datei aus assets/spiele/ fuer die Adresse /spiele/... .
-     *
-     * Je nach Fassung des WebViewAssetLoader kommt der Pfad mit oder ohne
-     * "/spiele/" an; beides fuehrt auf denselben Assetnamen.
-     */
-    private WebResourceResponse spieleDatei(String pfad) {
-        if (pfad == null || pfad.contains("..")) {
-            return null;
+    private boolean routeNavigation(Uri uri) {
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String path = uri.getPath() == null ? "" : uri.getPath();
+        if (HOST.equals(host)) {
+            // Startbildschirm-Kacheln, die eine native Ansicht brauchen.
+            if (path.equalsIgnoreCase("/lokal") || path.equalsIgnoreCase("/lokal/")) {
+                openConnector("local");
+                return true;
+            }
+            if (path.equalsIgnoreCase("/extras") || path.equalsIgnoreCase("/extras/")) {
+                openConnector("extras");
+                return true;
+            }
+            // Die Universalfernbedienung ist ausschließlich über „Extras“ erreichbar.
+            if (path.equalsIgnoreCase("/WLAN-Fernbedienung/index.html") || path.startsWith("/WLAN-Fernbedienung/")) {
+                openConnector("extras");
+                return true;
+            }
+            return false;
         }
-
-        String name = pfad;
-        int stelle = name.indexOf("/spiele/");
-
-        if (stelle >= 0) {
-            name = name.substring(stelle + "/spiele/".length());
+        if (ONLINE_HOST.equals(host)) {
+            if (path.equals("/connector") || path.startsWith("/connector/")) {
+                openConnector("online");
+                return true;
+            }
+            if (onlineGamePage) return false;
+            // The user's own TrashyGecko site stays in-app; other external sites use the browser.
+            if (path.startsWith("/spiele/")) {
+                onlineGamePage = true;
+                return false;
+            }
         }
-
-        while (name.startsWith("/")) {
-            name = name.substring(1);
+        if ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) {
+            try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
+            catch (ActivityNotFoundException unavailable) { Toast.makeText(this, "Kein Browser für diesen Link verfügbar.", Toast.LENGTH_SHORT).show(); }
+            return true;
         }
-
-        if (name.isEmpty()) {
-            return null;
-        }
-
-        String typ = "application/octet-stream";
-        String kodierung = null;
-
-        if (name.endsWith(".css")) {
-            typ = "text/css";
-            kodierung = "utf-8";
-        } else if (name.endsWith(".woff2")) {
-            typ = "font/woff2";
-        } else if (name.endsWith(".js")) {
-            typ = "application/javascript";
-            kodierung = "utf-8";
-        }
-
-        Map<String, String> kopf = new HashMap<>();
-        kopf.put("Cache-Control", "max-age=86400");
-
-        try {
-            InputStream strom = getAssets().open("spiele/" + name);
-
-            return new WebResourceResponse(typ, kodierung, 200, "OK", kopf, strom);
-        } catch (IOException fehler) {
-            Log.w(TAG, "Nicht in den Assets: spiele/" + name);
-
-            return new WebResourceResponse("text/plain", "utf-8", 404, "Nicht gefunden",
-                    kopf, new ByteArrayInputStream(new byte[0]));
-        }
+        return true;
     }
 
-    /** Randlos und ohne Systemleisten - die App laeuft im Vollbild. */
+    private void openConnector(String screen) {
+        Intent intent = new Intent(this, ConnectorActivity.class);
+        intent.putExtra(ConnectorActivity.EXTRA_INITIAL_SCREEN, screen);
+        startActivity(intent);
+    }
+
+    private void injectGameModeChooser() {
+        if (webView == null) return;
+        // One listener on the document: the catalog rebuilds its tiles on every search,
+        // so listeners bound to single tiles would be lost with the old nodes.
+        String script = "(function(){if(window.__tgAndroidModeChooser)return;window.__tgAndroidModeChooser=1;"
+                + "document.addEventListener('click',function(ev){var t=ev.target;"
+                + "if(!t||!t.closest)return;var a=t.closest('a.spiel');"
+                + "if(!a||!a.querySelector('.m-online')||!window.TGApp)return;ev.preventDefault();"
+                + "var n=a.querySelector('.spiel-name');"
+                + "window.TGApp.chooseOnlineGame(a.getAttribute('href'),n?n.textContent:'');"
+                + "},true);})();";
+        webView.evaluateJavascript(script, null);
+    }
+
+    private String safeGamePath(String value) {
+        if (!trustedLocalPage || value == null || value.length() > 240) return null;
+        if (!"/spiele/spiele.html".equals(currentPagePath)) return null;
+        String path = value.trim().replace('\\', '/');
+        while (path.startsWith("./")) path = path.substring(2);
+        if (path.startsWith("/") || path.contains("..") || path.indexOf('%') >= 0 || !SAFE_GAME.matcher(path).matches()) return null;
+        return "/spiele/" + path;
+    }
+
+    private String localGameUrl(String value) {
+        if (value == null || value.length() > 240) return null;
+        String path = value.trim().replace('\\', '/');
+        if (path.startsWith("/")) path = path.substring(1);
+        if (path.startsWith("spiele/")) path = path.substring("spiele/".length());
+        if (path.contains("..") || path.indexOf('%') >= 0 || !SAFE_GAME.matcher(path).matches()) return null;
+        return LOCAL_ROOT + "spiele/" + path;
+    }
+
+    private void showGameModeDialog(String path, String name) {
+        runOnUiThread(() -> {
+            // A quick double tap can arrive twice before the dialog is on screen.
+            if (modeDialog != null && modeDialog.isShowing()) return;
+            modeDialog = new AlertDialog.Builder(this)
+                .setTitle(name == null || name.trim().isEmpty() ? "Spielmodus" : name.trim().substring(0, Math.min(80, name.trim().length())))
+                .setMessage("Lokal/offline öffnet die eingebettete Spielseite. Online nutzt die vorhandenen Spielräume und den TrashyGecko-Server; dafür ist Internet erforderlich.")
+                .setNegativeButton("Lokal / offline", (dialog, which) -> {
+                    String local = LOCAL_ROOT + path.substring(1);
+                    onlineGamePage = false;
+                    webView.loadUrl(local);
+                })
+                .setPositiveButton("Online-Spiel", (dialog, which) -> {
+                    onlineGamePage = true;
+                    webView.loadUrl(ONLINE_ROOT + path);
+                })
+                .setNeutralButton("Abbrechen", null)
+                .show();
+        });
+    }
+
+    private static boolean isLocalAsset(String url) {
+        try { Uri uri = Uri.parse(url); return "https".equals(uri.getScheme()) && HOST.equals(uri.getHost()); }
+        catch (RuntimeException ignored) { return false; }
+    }
+
+    private static boolean isMahjongPage(String url) {
+        try { return isLocalAsset(url) && "/spiele/brettspiele/mahjong/mahjong.html".equals(Uri.parse(url).getPath()); }
+        catch (RuntimeException ignored) { return false; }
+    }
+
+    private void showWebViewError() {
+        TextView message = new TextView(this);
+        message.setText("TrashyGecko benötigt eine verfügbare Android System WebView. Aktiviere oder aktualisiere WebView/Chrome und starte die App erneut.");
+        message.setTextColor(Color.WHITE);
+        message.setPadding(32, 32, 32, 32);
+        setContentView(message);
+    }
+
     private void vollbild() {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-
-        WindowInsetsControllerCompat steuerung =
-                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-
-        steuerung.hide(WindowInsetsCompat.Type.systemBars());
-        steuerung.setSystemBarsBehavior(
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
     }
 
-    @Override
-    public void onWindowFocusChanged(boolean hatFokus) {
-        super.onWindowFocusChanged(hatFokus);
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) vollbild();
+    }
 
-        // Nach Wischen oder einem Dialog die Leisten wieder ausblenden.
-        if (hatFokus) {
-            vollbild();
+    private final class HomepageBridge {
+        @JavascriptInterface public void chooseOnlineGame(String relativePath, String name) {
+            String path = safeGamePath(relativePath);
+            if (path != null) showGameModeDialog(path, name);
         }
     }
 
-    /** Wird aus dem Spiel aufgerufen: window.TMahjong.verlassen() */
-    private class Bruecke {
-
-        @JavascriptInterface
-        public void verlassen() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    finishAffinity();
-                }
+    private final class MahjongBridge {
+        @JavascriptInterface public void verlassen() {
+            if (!"/spiele/brettspiele/mahjong/mahjong.html".equals(currentPagePath)) return;
+            runOnUiThread(() -> {
+                if (webView != null && webView.canGoBack()) webView.goBack();
+                else if (webView != null) webView.loadUrl(HOME_URL);
             });
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        // Zurueck beendet die App - im Vollbild gibt es keine Leiste zu verlassen.
-        finishAffinity();
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String target = localGameUrl(intent == null ? null : intent.getStringExtra(EXTRA_START_PATH));
+        if (target != null && webView != null) webView.loadUrl(target);
+    }
+    @Override public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else finishAffinity();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        if (webView != null) {
-            webView.onPause();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (webView != null) {
-            webView.onResume();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (webView != null) {
-            webView.destroy();
-            webView = null;
-        }
-
+    @Override protected void onPause() { if (webView != null) webView.onPause(); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); if (webView != null) webView.onResume(); }
+    @Override protected void onDestroy() {
+        trustedLocalPage = false;
+        if (modeDialog != null) { modeDialog.dismiss(); modeDialog = null; }
+        if (webView != null) { webView.removeJavascriptInterface("TGApp"); webView.removeJavascriptInterface("TMahjong"); webView.stopLoading(); webView.destroy(); webView = null; }
         super.onDestroy();
     }
 }

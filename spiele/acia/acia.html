@@ -92,6 +92,21 @@ main.fenster{max-width:830px;margin:auto;background:linear-gradient(180deg,var(-
  border:1px solid var(--kante-mittel);box-shadow:0 18px 40px var(--schatten-2)}
 canvas#leinwand{display:block;width:100%;height:auto;background:var(--ac-c64-0);
  image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+/* Das Feld passt in den freien Platz (15:12 wie der Puffer 960x768).  Vorher
+   war es fest 640 px breit und lag am Handy quer mit 510 px Höhe über den
+   ganzen Bildschirm – man musste zwischen Feld und Steuerkreuz scrollen. */
+.tisch .leinwand{width:min(100%,calc((100dvh - 250px) * 15 / 12))}
+@media (orientation:landscape) and (max-height:600px){
+ main.fenster{max-width:none;border-radius:0}
+ .titelleiste{padding:6px 12px 0}
+ .menueleiste{padding:4px 10px 6px;gap:6px}
+ .menueleiste button{padding:5px 10px;font-size:12px}
+ .statuszeile{padding:0 10px 6px;gap:5px;font-size:11.5px}
+ .statuszeile>span{padding:3px 8px}
+ .tisch{flex-direction:row;align-items:center;justify-content:center;gap:8px;padding:0 8px 6px}
+ .tisch .leinwand{width:calc((100dvh - 130px) * 15 / 12)}
+ .pads{gap:6px}
+}
 .meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
  background:var(--schleier);padding:16px;text-align:center}
 .meldung .kasten{background:linear-gradient(180deg,var(--kasten-1),var(--kasten-2));border:1px solid var(--kante);
@@ -608,6 +623,11 @@ function eckeLeuchtet(i,zeit){
 
 const TEMPO=6.25;       // Kacheln je Sekunde = 2 Pixel je Bild bei 50 Hz
 const BILDZEIT=1/50;    // ein Originalbild: 2 Pixel Fahrt, 0.02 s
+// Gespielt wird meist am Handy, und dort ist kein Joystick zur Hand: alles
+// laeuft deshalb langsamer als im Original. Skaliert wird nur die Zeit, nicht
+// die Regel – Fahrt je Bild, Kollisionen, Kachelfolge und Punkte bleiben gleich,
+// die Ablaeufe dauern nur laenger (auch Uhr und Treffer-Animation).
+const ZEITFAKTOR=0.7;
                         // (fahrten_pruefen.js: Original genau 2.00 px/Bild)
 
 function feldAusZellen(f){
@@ -1158,7 +1178,7 @@ function update(dt){
 
 // ---------------------------------------------------------------- Schleife
 function schleife(jetzt){
- const dt=Math.min(0.05,(jetzt-letzte)/1000||0);
+ const dt=Math.min(0.05,(jetzt-letzte)/1000||0)*ZEITFAKTOR;
  letzte=jetzt;
  update(dt);
  zeichne();
