@@ -29,7 +29,7 @@
    nachziehen, fertig. Kein weiterer Ort muss angefasst werden.
    ========================================================================= */
 window.TGMultiplayer = {
-  "stand": "2026-11-21",
+  "stand": "2026-11-22",
   "kategorien": [
     {
       "id": "wuerfel",
@@ -151,6 +151,10 @@ window.TGMultiplayer = {
       "text": "Hold the Line: die eigene Linie gegen den Gegner halten." },
     { "id": "halma", "name": "Halma", "kat": "brett", "pfad": "/spiele/brettspiele/halma/halma.html", "api": "halma", "min": 2, "max": 6, "art": "tisch",
       "text": "Halma: die eigenen Figuren ins gegenüberliegende Haus bringen." },
+    { "id": "risiko", "name": "Risiko", "kat": "brett", "pfad": "/spiele/brettspiele/risiko/risiko.html", "api": "risiko", "min": 2, "max": 6, "art": "tisch",
+      "text": "Risiko: Welteroberung mit Armeen, Würfeln und geheimen Missionen für zwei bis sechs Spieler." },
+    { "id": "labyrinth", "name": "Das verrückte Labyrinth", "kat": "brett", "pfad": "/spiele/brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", "api": "labyrinth", "min": 2, "max": 4, "art": "tisch",
+      "text": "Das verrückte Labyrinth: Gänge verschieben und Gegenstände einsammeln." },
     { "id": "schach", "name": "Schach", "kat": "brett", "pfad": "/spiele/brettspiele/schach/schach.html", "api": "schach", "min": 2, "max": 2, "art": "einladung",
       "text": "Schach mit allen Regeln – matt oder Aufgabe." },
     { "id": "go", "name": "Go", "kat": "brett", "pfad": "/spiele/brettspiele/go/go.html", "api": "go", "min": 2, "max": 2, "art": "einladung",

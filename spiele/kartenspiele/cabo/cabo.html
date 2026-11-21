@@ -103,6 +103,48 @@ a{color:var(--gold)}
 #regeln ol{margin:0;padding-left:20px;line-height:1.6;font-size:14px;color:var(--regeln)}
 #regeln li{margin-bottom:6px}
 #regeln b{color:var(--gold-hell);font-weight:normal}
+/* ---------- Aktionskarten ---------- */
+.karte.aktion{padding-bottom:21px;border-color:var(--akt)}
+.karte.aktion .aktion-name{position:absolute;left:0;right:0;bottom:0;
+ font-size:7.5px;letter-spacing:.04em;text-align:center;line-height:1;
+ padding:4px 0 3px;background:var(--akt);color:#fff;border-radius:0 0 7px 7px;
+ font-weight:bold;white-space:nowrap;overflow:hidden}
+.karte.aktion-blick{--akt:#8a5a00}
+.karte.aktion-spaeh{--akt:#1c5f6b}
+.karte.aktion-swap{--akt:#5b3596}
+.karte.gross.aktion{padding-bottom:25px}
+.karte.gross .aktion-name{font-size:9px;padding:5px 0 4px}
+.karte.klein.aktion{padding-bottom:13px}
+.karte.klein .aktion-name{font-size:5px;padding:2px 0;border-radius:0 0 2px 2px}
+
+/* ---------- Auswahl vor dem Spiel ---------- */
+.wahl{margin-top:14px}
+.wahl .titel{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.stufen{display:flex;gap:6px;flex-wrap:wrap}
+.stufen button.stufe{flex:0 0 auto;padding:8px 14px;border-radius:7px;border:1px solid var(--rand-6);
+ background:var(--panel);color:var(--gold);font-weight:normal}
+.stufen button.stufe[aria-pressed="true"]{background:var(--gold);color:var(--leiste);
+ border-color:var(--rand);font-weight:bold}
+#stufeText{margin:6px 0 0}
+
+/* ---------- Erklärungen und Computer ---------- */
+.hilfe{margin-top:14px;border-top:1px solid var(--rand-4);padding-top:9px}
+.hilfe summary{cursor:pointer;color:var(--gold-hell);font-size:14px;letter-spacing:.04em;
+ list-style:none;display:inline-block}
+.hilfe summary::-webkit-details-marker{display:none}
+.hilfe summary::before{content:"ⓘ  ";color:var(--gold)}
+.hilfe summary:hover{color:var(--gold)}
+.hilfe-inhalt{margin-top:9px;font-size:13.5px;line-height:1.55;color:var(--regeln)}
+.hilfe-inhalt p{margin:0 0 7px}
+.hilfe-inhalt b{color:var(--gold-hell);font-weight:normal}
+.hilfe .marke{display:inline-block;min-width:46px;padding:1px 5px;border-radius:4px;color:#fff;
+ font-size:11px;text-align:center;letter-spacing:.04em;margin-right:2px}
+.sitz .bot{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
+ border:1px solid var(--rand-2);color:var(--gold);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.sitz.dran .bot{border-color:var(--rand)}
+.sieg{margin:0 0 12px;padding:10px 12px;border-radius:7px;border:1px solid var(--rand-2);
+ background:var(--panel);color:var(--gold-hell);text-align:center;letter-spacing:.04em}
+
 /* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
 html[data-stil="maedchen"]{
 --text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
@@ -137,8 +179,21 @@ html[data-stil="buben"]{
 <section id="start" hidden>
  <h2>Tisch</h2>
  <p class="klein" id="startText"></p>
- <div class="zeile" style="margin-top:12px">
-  <button id="btnCreate">Tisch eröffnen</button>
+ <div class="wahl" id="wahl">
+  <div class="titel">Spielmodus</div>
+  <div class="zeile">
+   <button id="btnCreate">Mehrspieler</button>
+   <button id="btnSolo">Gegen Computer</button>
+  </div>
+  <div class="wahl">
+   <div class="titel">Schwierigkeit des Computers</div>
+   <div class="stufen" id="stufen">
+    <button class="stufe" data-stufe="leicht" aria-pressed="false">Leicht</button>
+    <button class="stufe" data-stufe="mittel" aria-pressed="true">Mittel</button>
+    <button class="stufe" data-stufe="schwer" aria-pressed="false">Schwer</button>
+   </div>
+   <p class="klein" id="stufeText"></p>
+  </div>
  </div>
  <div class="fehler" id="fehlerStart"></div>
 </section>
@@ -178,10 +233,20 @@ html[data-stil="buben"]{
  <div class="gezogen" id="gezogen" hidden>
   <span class="klein">Gezogen:</span>
   <div id="gezogenKarte"></div>
+  <div id="gezogenText" class="klein"></div>
   <div id="gezogenAktionen" class="zeile"></div>
  </div>
 
  <div class="zug" id="zug"></div>
+ <details class="hilfe" id="aktionsHilfe">
+  <summary>Aktionen erklärt</summary>
+  <div class="hilfe-inhalt">
+   <p><span class="marke" style="background:#8a5a00">7 · 8</span> <b>Anschauen (Peek)</b> – eine eigene Karte ansehen.</p>
+   <p><span class="marke" style="background:#1c5f6b">9 · 10</span> <b>Spähen (Spy)</b> – eine verdeckte Karte bei einem Mitspieler ansehen.</p>
+   <p><span class="marke" style="background:#5b3596">11 · 12</span> <b>Tauschen (Swap)</b> – eine eigene Karte gegen eine Karte eines Mitspielers tauschen.</p>
+   <p class="klein">Jede Aktion gilt nur für eine Karte vom Nachziehstapel; sie kommt danach offen auf die Ablage. Vom Ablagestapel genommene Karten haben keine Aktion.</p>
+  </div>
+ </details>
  <div class="hinweis" id="hinweis"></div>
  <div class="note" id="note"></div>
  <div class="fehler" id="fehlerSpiel"></div>
@@ -189,6 +254,7 @@ html[data-stil="buben"]{
 
 <section id="wertung" hidden>
  <h2 id="wertungTitel">Wertung</h2>
+ <div class="sieg" id="siegZeile" hidden></div>
  <div id="wertungInhalt"></div>
  <div class="zeile" style="margin-top:12px">
   <button id="btnWeiter">Nächste Runde</button>
@@ -250,6 +316,16 @@ function ichDran(){
  return game&&game.status==="active"&&meinSitz()===game.zug;
 }
 
+// Die Aktionskarten des Spiels: Nummer, Name und Farbe stehen zusammen.
+const AKTIONEN={
+ 7:{name:"ANSCHAUEN",art:"blick",text:"Anschauen – eine eigene Karte ansehen."},
+ 8:{name:"ANSCHAUEN",art:"blick",text:"Anschauen – eine eigene Karte ansehen."},
+ 9:{name:"SPÄHEN",art:"spaeh",text:"Spähen – eine verdeckte Karte bei einem Mitspieler ansehen."},
+ 10:{name:"SPÄHEN",art:"spaeh",text:"Spähen – eine verdeckte Karte bei einem Mitspieler ansehen."},
+ 11:{name:"TAUSCHEN",art:"swap",text:"Tauschen – eine eigene Karte gegen eine Karte eines Mitspielers tauschen."},
+ 12:{name:"TAUSCHEN",art:"swap",text:"Tauschen – eine eigene Karte gegen eine Karte eines Mitspielers tauschen."}
+};
+
 function karteHtml(wert, opts){
  const o=opts||{};
  const klassen=["karte"];
@@ -257,11 +333,14 @@ function karteHtml(wert, opts){
  if(wert==null)klassen.push("zu");
  if(o.waehlbar)klassen.push("waehlbar");
  if(o.gewaehlt)klassen.push("gewaehlt");
+ const akt=wert==null?null:AKTIONEN[wert];
+ if(akt)klassen.push("aktion","aktion-"+akt.art);
  const inhalt=wert==null
   ? (o.gemerkt!=null?'<span class="gemerkt">'+o.gemerkt+'</span>':'<span class="frage">✦</span>')
   : String(wert);
  return '<div class="'+klassen.join(" ")+'"'+(o.daten||"")+'>'+
-  (o.ecke?'<span class="ecke">'+o.ecke+'</span>':"")+inhalt+'</div>';
+  (o.ecke?'<span class="ecke">'+o.ecke+'</span>':"")+inhalt+
+  (akt?'<span class="aktion-name">'+akt.name+'</span>':"")+'</div>';
 }
 
 function fehler(text){
@@ -323,14 +402,14 @@ function zeichne(){
  if(!ONLINE){
   zeige("start",true); zeige("lobby",false); zeige("spiel",false); zeige("wertung",false);
   $("startText").textContent="Cabo läuft über den Connector: Raum öffnen, „Cabo“ anbieten, Karte im Chat antippen – dann sitzt du am Tisch.";
-  $("btnCreate").hidden=true;
+  $("wahl").hidden=true;
   return;
  }
 
  if(!game){
   zeige("start",true); zeige("lobby",false); zeige("spiel",false); zeige("wertung",false);
-  $("btnCreate").hidden=false;
-  $("startText").textContent="Noch kein Tisch in diesem Raum. Eröffne einen – die anderen steigen über die Spielkarte ein.";
+  $("wahl").hidden=false;
+  $("startText").textContent="Noch kein Tisch in diesem Raum. Eröffne einen – allein gegen den Computer oder mit anderen über die Spielkarte.";
   return;
  }
 
@@ -342,6 +421,7 @@ function zeichne(){
    '<span class="bereit">'+(p.ready?"bereit":p.punkte+" Punkte")+'</span></div>').join("");
   $("btnBereit").textContent=!ichSitze?"Mitspielen":(ich().ready?"Doch nicht bereit":"Bereit");
   $("btnBereit").onclick=()=>tu(ichSitze?"ready":"join");
+  $("btnStart").onclick=()=>tu("start");
   $("btnStart").hidden=!(ichSitze&&game.spieler[meinSitz()].id===game.hostId);
   $("btnStart").disabled=game.spieler.length<2||!game.spieler.every(p=>p.ready);
   $("lobbyNote").textContent=game.note||"";
@@ -379,7 +459,7 @@ function zeichne(){
    hand.push(karteHtml(null,{waehlbar:waehlbar,gemerkt:gemerkt,daten:' data-ziel="'+i+'" data-pos="'+k+'"'}));
   }
   return '<div class="sitz'+(game.zug===i&&game.status==="active"?" dran":"")+'">'+
-   '<div class="name">'+escapeHtml(p.name)+'</div>'+
+   '<div class="name">'+escapeHtml(p.name)+(p.bot?'<span class="bot">'+stufeName(p.stufe)+'</span>':"")+'</div>'+
    '<div class="punkte">'+p.punkte+' Punkte'+(p.runden?' · Runde '+p.runden:"")+'</div>'+
    '<div class="hand">'+hand.join("")+'</div></div>';
  }).join("");
@@ -412,11 +492,13 @@ function zeichne(){
   $("gezogenKarte").innerHTML=karteHtml(gz,{groesse:"gross"});
   const akt=$("gezogenAktionen");
   akt.innerHTML="";
+  $("gezogenText").textContent=AKTIONEN[gz]?gz+" · "+AKTIONEN[gz].text:"";
   if(ichDran()){
-   const knopf=(text,aktion,klasse)=>{
+   const knopf=(text,aktion,klasse,tip)=>{
     const b=document.createElement("button");
     b.textContent=text;
     if(klasse)b.className=klasse;
+    if(tip)b.title=tip;
     b.onclick=aktion;
     akt.appendChild(b);
    };
@@ -426,9 +508,12 @@ function zeichne(){
    }else{
     knopf("Behalten",()=>{ modus="legen"; zeichne(); });
     knopf("Abwerfen",()=>tu("abwerfen"),"still");
-    if(gz===7||gz===8)knopf("Anschauen",()=>{ modus="peek"; zeichne(); },"still");
-    if(gz===9||gz===10)knopf("Spähen",()=>{ modus="spy"; zeichne(); },"still");
-    if(gz===11||gz===12)knopf("Tauschen",()=>{ modus="swap1"; swapEigen=null; zeichne(); },"still");
+    if(gz===7||gz===8)knopf("Anschauen",()=>{ modus="peek"; zeichne(); },"still",
+     "Peek: eine eigene Karte ansehen. Die gezogene Karte kommt danach offen auf die Ablage.");
+    if(gz===9||gz===10)knopf("Spähen",()=>{ modus="spy"; zeichne(); },"still",
+     "Spy: eine verdeckte Karte bei einem Mitspieler ansehen. Die gezogene Karte kommt danach offen auf die Ablage.");
+    if(gz===11||gz===12)knopf("Tauschen",()=>{ modus="swap1"; swapEigen=null; zeichne(); },"still",
+     "Swap: eine eigene Karte gegen eine Karte eines Mitspielers tauschen. Die gezogene Karte kommt danach offen auf die Ablage.");
     if(modus==="satz"){
      knopf("Satz abwerfen ("+satzWahl.length+")",()=>{
       if(satzWahl.length<2){ fehler("Wähle mindestens zwei gleiche Karten."); return; }
@@ -467,7 +552,8 @@ function zeichne(){
   $("hinweis").textContent=game.status==="active"?zielText():"";
  }
  if(game.status==="active"&&!ichDran()){
-  $("hinweis").textContent=(game.spieler[game.zug]?game.spieler[game.zug].name:"Jemand")+" ist am Zug.";
+  const wer=game.spieler[game.zug];
+  $("hinweis").textContent=wer?(wer.bot?wer.name+" überlegt …":wer.name+" ist am Zug."):"Jemand ist am Zug.";
  }
 
  // Bindung der Kartenklicks
@@ -521,9 +607,24 @@ function fremdKlick(ziel,pos){
  }
 }
 
+function stufeName(stufe){
+ return {leicht:"Bot · leicht",mittel:"Bot · mittel",schwer:"Bot · schwer"}[stufe]||"Bot";
+}
+
 function zeichneWertung(){
  const ende=game.status==="ende";
  $("wertungTitel").textContent=ende?"Spiel beendet":"Wertung – Runde "+game.runde;
+ const sieg=$("siegZeile");
+ if(ende&&game.sieger){
+  const gegner=game.spieler.filter(p=>p.bot);
+  const ichGewinne=meinSitz()>=0&&game.spieler[meinSitz()].name===game.sieger;
+  sieg.hidden=false;
+  if(gegner.length&&ichGewinne)sieg.textContent="Du gewinnst gegen den Computer.";
+  else if(gegner.length)sieg.textContent="Der Computer gewinnt – "+(game.spieler[meinSitz()]?game.spieler[meinSitz()].punkte:0)+" zu "+gegner[0].punkte+" Punkte.";
+  else sieg.textContent=game.sieger+" gewinnt die Partie.";
+ }else{
+  sieg.hidden=true;
+ }
  const zeilen=game.spieler.map(p=>{
   const karten=(p.werte||[]).map(w=>karteHtml(w,{groesse:"klein"})).join("");
   const summe=(p.werte||[]).reduce((a,b)=>a+b,0);
@@ -538,6 +639,24 @@ function zeichneWertung(){
 }
 
 $("btnCreate").onclick=()=>tu("create");
+let stufe="mittel";
+const stufeTexte={
+ leicht:"Spielt eher einfach und trifft auch mal eine zufällige Entscheidung.",
+ mittel:"Achtet auf die eigene Auslage und nutzt Aktionen, wenn sie etwas bringen.",
+ schwer:"Spielt strategisch, merkt sich Karten und tauscht gezielt gegen kleine Karten."
+};
+function setzeStufe(neu){
+ stufe=neu;
+ document.querySelectorAll("#stufen .stufe").forEach(b=>{
+  b.setAttribute("aria-pressed",b.dataset.stufe===neu?"true":"false");
+ });
+ $("stufeText").textContent=stufeTexte[neu]||"";
+}
+document.querySelectorAll("#stufen .stufe").forEach(b=>{
+ b.onclick=()=>setzeStufe(b.dataset.stufe);
+});
+setzeStufe("mittel");
+$("btnSolo").onclick=()=>tu("solo",{stufe:stufe});
 $("btnWeiter").onclick=()=>tu("naechste");
 $("btnNeu").onclick=()=>tu("reset");
 
@@ -549,7 +668,13 @@ if(!ONLINE){
  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
  // Hintergrund und meldet sich nur als „nicht aktiv“.
  WG.leben({room:ROOM,id:ID,name:(ich()&&ich().name)||NAME}).then(holen);
- setInterval(holen,1300);
+ // Gegen den Computer wird dichter gefragt, damit seine Schritte sichtbar
+ // werden; im Mehrspieler bleibt es beim ruhigen Takt.
+ const takt=()=>game&&game.spieler&&game.spieler.some(p=>p.bot)?600:1300;
+ (async function schleife(){
+  await holen();
+  setTimeout(schleife,takt());
+ })();
 }
 </script>
 <script src="/spiele/verlassen.js"></script>

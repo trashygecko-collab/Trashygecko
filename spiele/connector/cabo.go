@@ -30,6 +30,9 @@ type CaboSpieler struct {
 	Runden   int            `json:"runden"`
 	Ready    bool           `json:"ready"`
 	Geschaut int            `json:"geschaut"`
+	Bot      bool           `json:"bot,omitempty"`
+	Stufe    string         `json:"stufe,omitempty"`
+	Zuege    int            `json:"-"`
 }
 
 type CaboGame struct {
@@ -50,6 +53,7 @@ type CaboGame struct {
 	Sieger       string        `json:"sieger,omitempty"`
 	RundenSieger int           `json:"rundenSieger"`
 	RundenPunkte []int         `json:"rundenPunkte"`
+	BotMoment    time.Time     `json:"-"`
 }
 
 type CaboSpielerSicht struct {
@@ -62,6 +66,8 @@ type CaboSpielerSicht struct {
 	Ready    bool           `json:"ready"`
 	Geschaut int            `json:"geschaut"`
 	Werte    []int          `json:"werte,omitempty"`
+	Bot      bool           `json:"bot,omitempty"`
+	Stufe    string         `json:"stufe,omitempty"`
 }
 
 type CaboAnsicht struct {
@@ -113,6 +119,7 @@ func caboNeueRunde(g *CaboGame) {
 		}
 		p.Bekannt = map[string]int{}
 		p.Geschaut = 0
+		p.Zuege = 0
 	}
 	g.Stapel = deck
 	g.Ablage = []int{g.Stapel[0]}
@@ -125,6 +132,7 @@ func caboNeueRunde(g *CaboGame) {
 	g.Zug = g.Start
 	g.Runde++
 	g.Status = "anschauen"
+	g.BotMoment = time.Now()
 	g.Note = "Runde " + strconv.Itoa(g.Runde) + ": Jeder schaut sich zwei eigene Karten an."
 }
 
@@ -225,6 +233,9 @@ func caboZugWeiter(g *CaboGame) {
 	g.Zug = (g.Zug + 1) % len(g.Spieler)
 	if g.Spieler[g.Zug].ID == "" {
 		g.Zug = 0
+	}
+	if g.Spieler[g.Zug].Bot {
+		g.BotMoment = time.Now()
 	}
 }
 
@@ -394,6 +405,8 @@ func caboAnsicht(g *CaboGame, id string) *CaboAnsicht {
 			Runden:   p.Runden,
 			Ready:    p.Ready,
 			Geschaut: p.Geschaut,
+			Bot:      p.Bot,
+			Stufe:    p.Stufe,
 			Bekannt:  map[string]int{},
 		}
 		if p.ID == id {
@@ -408,6 +421,604 @@ func caboAnsicht(g *CaboGame, id string) *CaboAnsicht {
 		a.Spieler = append(a.Spieler, sicht)
 	}
 	return a
+}
+
+// ---------------------------------------------------------------- Aktionen
+
+type caboEingabe struct {
+	Pos   int
+	Pos2  int
+	Ziel  int
+	Ziele []int
+}
+
+type caboFehler struct {
+	Text string
+	Nr   int
+}
+
+func (f *caboFehler) Error() string { return f.Text }
+
+func caboNeu(text string, nr int) *caboFehler { return &caboFehler{Text: text, Nr: nr} }
+
+// caboPruefeAnschauen schaltet weiter, sobald jeder seine zwei Karten gesehen
+// hat. Mensch und Computer laufen beide hier durch.
+func caboPruefeAnschauen(g *CaboGame) {
+	for _, sp := range g.Spieler {
+		if sp.Geschaut < caboStartBlick {
+			return
+		}
+	}
+	g.Status = "active"
+	g.Zug = g.Start
+	g.Note = "Los geht's – " + g.Spieler[g.Zug].Name + " beginnt."
+	if g.Spieler[g.Zug].Bot {
+		g.BotMoment = time.Now()
+	}
+}
+
+// caboAktion führt eine Spielaktion aus. Menschen kommen über den Endpunkt
+// hierher, der Computer über caboBotSchritt – die Regeln stehen nur einmal da.
+func caboAktion(g *CaboGame, sitz int, action string, in caboEingabe) *caboFehler {
+	if g == nil {
+		return caboNeu("Gerade läuft keine Runde.", http.StatusConflict)
+	}
+	if sitz < 0 || sitz >= len(g.Spieler) {
+		return caboNeu("Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
+	}
+	p := &g.Spieler[sitz]
+
+	switch action {
+	case "anschauen":
+		if g.Status != "anschauen" {
+			return caboNeu("Gerade wird nicht angeschaut.", http.StatusConflict)
+		}
+		if p.Geschaut >= caboStartBlick {
+			return caboNeu("Du hast schon zwei Karten gesehen.", http.StatusConflict)
+		}
+		if in.Pos < 0 || in.Pos >= len(p.Karten) {
+			return caboNeu("Diese Karte gibt es nicht.", http.StatusBadRequest)
+		}
+		scl := caboSchluessel(sitz, in.Pos)
+		if _, schon := p.Bekannt[scl]; schon {
+			return caboNeu("Diese Karte kennst du schon – nimm eine andere.", http.StatusConflict)
+		}
+		p.Bekannt[scl] = p.Karten[in.Pos]
+		p.Geschaut++
+		g.Note = p.Name + " schaut sich Karten an."
+		caboPruefeAnschauen(g)
+		return nil
+
+	case "nehmen", "ziehen":
+		if g.Status != "active" {
+			return caboNeu("Gerade läuft kein Zug.", http.StatusConflict)
+		}
+		if sitz != g.Zug {
+			return caboNeu("Du bist nicht an der Reihe.", http.StatusConflict)
+		}
+		if g.Gezogen != nil {
+			return caboNeu("Du hast schon eine Karte gezogen.", http.StatusConflict)
+		}
+		if action == "nehmen" {
+			if len(g.Ablage) == 0 {
+				return caboNeu("Der Ablagestapel ist leer.", http.StatusConflict)
+			}
+			wert := g.Ablage[len(g.Ablage)-1]
+			g.Ablage = g.Ablage[:len(g.Ablage)-1]
+			g.Gezogen = &wert
+			g.Quelle = "ablage"
+			g.Note = p.Name + " nimmt die " + strconv.Itoa(wert) + " vom Ablagestapel und tauscht sie ein."
+		} else {
+			caboNachziehen(g)
+			wert := g.Stapel[len(g.Stapel)-1]
+			g.Stapel = g.Stapel[:len(g.Stapel)-1]
+			g.Gezogen = &wert
+			g.Quelle = "stapel"
+			g.Note = p.Name + " zieht eine Karte vom Stapel."
+		}
+		return nil
+
+	case "legen":
+		if g.Gezogen == nil {
+			return caboNeu("Du hast keine Karte in der Hand.", http.StatusConflict)
+		}
+		if sitz != g.Zug {
+			return caboNeu("Du bist nicht an der Reihe.", http.StatusConflict)
+		}
+		if in.Pos < 0 || in.Pos >= len(p.Karten) {
+			return caboNeu("Diese Karte gibt es nicht.", http.StatusBadRequest)
+		}
+		alt := p.Karten[in.Pos]
+		p.Karten[in.Pos] = *g.Gezogen
+		p.Bekannt[caboSchluessel(sitz, in.Pos)] = *g.Gezogen
+		g.Ablage = append(g.Ablage, alt)
+		g.Note = p.Name + " legt " + strconv.Itoa(*g.Gezogen) + " ab und wirft " + strconv.Itoa(alt) + " weg."
+		g.Gezogen = nil
+		caboZugWeiter(g)
+		return nil
+
+	case "abwerfen":
+		if g.Gezogen == nil {
+			return caboNeu("Du hast keine Karte in der Hand.", http.StatusConflict)
+		}
+		if sitz != g.Zug {
+			return caboNeu("Du bist nicht an der Reihe.", http.StatusConflict)
+		}
+		g.Note = p.Name + " wirft " + strconv.Itoa(*g.Gezogen) + " ab."
+		caboZugWeiter(g)
+		return nil
+
+	case "peek", "spy", "swap":
+		if g.Gezogen == nil {
+			return caboNeu("Dafür musst du zuerst eine Karte gezogen.", http.StatusConflict)
+		}
+		if g.Quelle != "stapel" {
+			return caboNeu("Vom Ablagestapel genommene Karten haben keine Aktion.", http.StatusConflict)
+		}
+		if sitz != g.Zug {
+			return caboNeu("Du bist nicht an der Reihe.", http.StatusConflict)
+		}
+		wert := *g.Gezogen
+		moeglich := false
+		switch action {
+		case "peek":
+			moeglich = wert == 7 || wert == 8
+		case "spy":
+			moeglich = wert == 9 || wert == 10
+		case "swap":
+			moeglich = wert == 11 || wert == 12
+		}
+		if !moeglich {
+			return caboNeu("Diese Karte hat keine solche Aktion.", http.StatusConflict)
+		}
+
+		switch action {
+		case "peek":
+			if in.Pos < 0 || in.Pos >= len(p.Karten) {
+				return caboNeu("Diese Karte gibt es nicht.", http.StatusBadRequest)
+			}
+			p.Bekannt[caboSchluessel(sitz, in.Pos)] = p.Karten[in.Pos]
+			g.Note = p.Name + " nutzt die Aktion " + strconv.Itoa(wert) + " und schaut sich eine eigene Karte an."
+
+		case "spy":
+			if in.Ziel < 0 || in.Ziel >= len(g.Spieler) || in.Ziel == sitz {
+				return caboNeu("Wähle einen Mitspieler.", http.StatusBadRequest)
+			}
+			z := &g.Spieler[in.Ziel]
+			if in.Pos < 0 || in.Pos >= len(z.Karten) {
+				return caboNeu("Diese Karte gibt es nicht.", http.StatusBadRequest)
+			}
+			p.Bekannt[caboSchluessel(in.Ziel, in.Pos)] = z.Karten[in.Pos]
+			g.Note = p.Name + " späht bei " + z.Name + "."
+
+		case "swap":
+			if in.Ziel < 0 || in.Ziel >= len(g.Spieler) || in.Ziel == sitz {
+				return caboNeu("Wähle einen Mitspieler.", http.StatusBadRequest)
+			}
+			z := &g.Spieler[in.Ziel]
+			if in.Pos < 0 || in.Pos >= len(p.Karten) || in.Pos2 < 0 || in.Pos2 >= len(z.Karten) {
+				return caboNeu("Diese Karte gibt es nicht.", http.StatusBadRequest)
+			}
+			p.Karten[in.Pos], z.Karten[in.Pos2] = z.Karten[in.Pos2], p.Karten[in.Pos]
+			delete(p.Bekannt, caboSchluessel(sitz, in.Pos))
+			delete(p.Bekannt, caboSchluessel(in.Ziel, in.Pos2))
+			delete(z.Bekannt, caboSchluessel(in.Ziel, in.Pos2))
+			delete(z.Bekannt, caboSchluessel(sitz, in.Pos))
+			g.Note = p.Name + " tauscht eine Karte mit " + z.Name + "."
+		}
+		caboZugWeiter(g)
+		return nil
+
+	case "satz":
+		if g.Gezogen == nil {
+			return caboNeu("Dafür musst du zuerst eine Karte gezogen haben.", http.StatusConflict)
+		}
+		if sitz != g.Zug {
+			return caboNeu("Du bist nicht an der Reihe.", http.StatusConflict)
+		}
+		if !caboSatz(g, sitz, in.Ziele) {
+			g.Note = p.Name + " behauptet einen Satz – falsch, der Zug ist vorbei."
+			caboZugWeiter(g)
+			return nil
+		}
+		g.Note = p.Name + " wirft einen Satz ab und legt " + strconv.Itoa(*g.Gezogen) + " hinein."
+		g.Gezogen = nil
+		caboZugWeiter(g)
+		return nil
+
+	case "cabo":
+		if g.Status != "active" {
+			return caboNeu("Gerade läuft kein Zug.", http.StatusConflict)
+		}
+		if sitz != g.Zug {
+			return caboNeu("Du bist nicht an der Reihe.", http.StatusConflict)
+		}
+		if g.CaboVon >= 0 {
+			return caboNeu("Cabo wurde in dieser Runde schon gerufen.", http.StatusConflict)
+		}
+		if g.Gezogen != nil {
+			return caboNeu("Cabo ruft man, bevor man eine Karte zieht.", http.StatusConflict)
+		}
+		g.CaboVon = sitz
+		// Der Rufende zählt mit: sein eigener Zug wird gleich beendet, danach
+		// kommt jeder andere noch genau einmal dran.
+		g.RestZuege = len(g.Spieler)
+		g.Note = p.Name + " ruft CABO! Alle anderen sind noch einmal dran."
+		caboZugWeiter(g)
+		return nil
+
+	case "naechste":
+		if g.Status != "wertung" {
+			return caboNeu("Die Runde ist noch nicht gewertet.", http.StatusConflict)
+		}
+		caboNeueRunde(g)
+		return nil
+	}
+	return caboNeu("Unbekannte Cabo-Aktion.", http.StatusBadRequest)
+}
+
+// ---------------------------------------------------------------- Computer
+
+const (
+	// Kurze Pause zwischen zwei Schritten des Computers: Der Mensch sieht
+	// ziehen und handeln getrennt, ohne auf etwas zu warten.
+	caboBotVerzug = 520 * time.Millisecond
+	// Erwartungswert einer unbekannten Karte (54 Karten, Summe 338).
+	caboKartenWert = 6.26
+)
+
+func (g *CaboGame) hatBot() bool {
+	for _, p := range g.Spieler {
+		if p.Bot {
+			return true
+		}
+	}
+	return false
+}
+
+func caboBotAmZug(g *CaboGame) bool {
+	if g == nil {
+		return false
+	}
+	if g.Status == "anschauen" {
+		for _, p := range g.Spieler {
+			if p.Bot && p.Geschaut < caboStartBlick {
+				return true
+			}
+		}
+		return false
+	}
+	if g.Status != "active" || g.Zug < 0 || g.Zug >= len(g.Spieler) {
+		return false
+	}
+	return g.Spieler[g.Zug].Bot
+}
+
+// caboBotTreiben lässt den Computer genau einen Schritt machen, sobald die
+// kurze Pause vorbei ist. Aufgerufen wird es beim Abholen des Spielstands –
+// der Browser fragt im Sekundentakt nach, damit der Mensch jeden Schritt sieht.
+func caboBotTreiben(g *CaboGame, jetzt time.Time) bool {
+	if !caboBotAmZug(g) || jetzt.Sub(g.BotMoment) < caboBotVerzug {
+		return false
+	}
+	if !caboBotSchritt(g) {
+		return false
+	}
+	g.BotMoment = jetzt
+	return true
+}
+
+func caboBotSchritt(g *CaboGame) bool {
+	if g == nil {
+		return false
+	}
+	if g.Status == "anschauen" {
+		for i := range g.Spieler {
+			p := &g.Spieler[i]
+			if !p.Bot || p.Geschaut >= caboStartBlick || len(p.Karten) == 0 {
+				continue
+			}
+			pos := caboBotUnbekannt(p, i, -1)
+			p.Bekannt[caboSchluessel(i, pos)] = p.Karten[pos]
+			p.Geschaut++
+			g.Note = p.Name + " schaut sich Karten an."
+			caboPruefeAnschauen(g)
+			return true
+		}
+		return false
+	}
+	if g.Status != "active" || g.Zug < 0 || g.Zug >= len(g.Spieler) {
+		return false
+	}
+	sitz := g.Zug
+	if !g.Spieler[sitz].Bot {
+		return false
+	}
+	return caboBotZug(g, sitz)
+}
+
+// caboBotZug entscheidet einen Zug. Der Computer sieht nur, was ein Mensch
+// auch sieht: den Ablagestapel, die Zahl der Karten, seine eigenen gemerkten
+// Karten und alles, was er sich per Anschauen oder Spähen gemerkt hat.
+func caboBotZug(g *CaboGame, sitz int) bool {
+	p := &g.Spieler[sitz]
+	stufe := caboStufe(p.Stufe)
+
+	if g.Gezogen == nil {
+		p.Zuege++
+		if g.CaboVon < 0 && caboBotRuftCabo(p, sitz, stufe) {
+			if caboAktion(g, sitz, "cabo", caboEingabe{}) == nil {
+				return true
+			}
+		}
+		if len(g.Ablage) > 0 {
+			oben := g.Ablage[len(g.Ablage)-1]
+			if caboBotNimmtAblage(p, sitz, oben, stufe) {
+				if caboAktion(g, sitz, "nehmen", caboEingabe{}) == nil {
+					return true
+				}
+			}
+		}
+		return caboAktion(g, sitz, "ziehen", caboEingabe{}) == nil
+	}
+
+	wert := *g.Gezogen
+	if g.Quelle == "stapel" {
+		if akt, ziel, pos, pos2, ok := caboBotAktion(p, g, sitz, wert, stufe); ok {
+			if caboAktion(g, sitz, akt, caboEingabe{Ziel: ziel, Pos: pos, Pos2: pos2}) == nil {
+				return true
+			}
+		}
+		if ziele, ok := caboBotSatzWahl(p, sitz, wert, stufe); ok {
+			if caboAktion(g, sitz, "satz", caboEingabe{Ziele: ziele}) == nil {
+				return true
+			}
+		}
+	}
+	if pos, legen := caboBotLegen(p, sitz, wert, stufe); legen {
+		if caboAktion(g, sitz, "legen", caboEingabe{Pos: pos}) == nil {
+			return true
+		}
+	}
+	if g.Quelle == "ablage" {
+		// Vom Ablagestapel genommene Karten landen immer in der Auslage.
+		return caboAktion(g, sitz, "legen", caboEingabe{Pos: caboBotUnbekannt(p, sitz, -1)}) == nil
+	}
+	return caboAktion(g, sitz, "abwerfen", caboEingabe{}) == nil
+}
+
+func caboStufe(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "leicht":
+		return "leicht"
+	case "schwer":
+		return "schwer"
+	}
+	return "mittel"
+}
+
+// caboBotSumme schätzt die eigene Auslage: bekannte Karten zählen genau,
+// unbekannte mit dem Durchschnittswert des Decks.
+func caboBotSumme(p *CaboSpieler, sitz int) float64 {
+	summe := 0.0
+	for pos := 0; pos < len(p.Karten); pos++ {
+		if wert, ok := p.Bekannt[caboSchluessel(sitz, pos)]; ok {
+			summe += float64(wert)
+		} else {
+			summe += caboKartenWert
+		}
+	}
+	return summe
+}
+
+// caboBotUnbekannt liefert eine eigene Kartenposition, deren Wert der Computer
+// nicht kennt; ohne solche eine zufällige andere (nicht die ausgenommene).
+func caboBotUnbekannt(p *CaboSpieler, sitz, ausser int) int {
+	frei := []int{}
+	for pos := 0; pos < len(p.Karten); pos++ {
+		if pos == ausser {
+			continue
+		}
+		if _, bekannt := p.Bekannt[caboSchluessel(sitz, pos)]; !bekannt {
+			frei = append(frei, pos)
+		}
+	}
+	if len(frei) == 0 {
+		alle := []int{}
+		for pos := 0; pos < len(p.Karten); pos++ {
+			if pos != ausser {
+				alle = append(alle, pos)
+			}
+		}
+		if len(alle) == 0 {
+			return 0
+		}
+		return alle[rand.Intn(len(alle))]
+	}
+	return frei[rand.Intn(len(frei))]
+}
+
+// caboBotRuftCabo: Der Computer ruft, wenn seine Auslage nach eigener Schätzung
+// klein ist. Damit eine Runde überhaupt endet, ruft er nach einer Weile
+// Geduld auch ohne sichere Schätzung – wie ein Mensch, der die Runde beenden will.
+func caboBotRuftCabo(p *CaboSpieler, sitz int, stufe string) bool {
+	summe := caboBotSumme(p, sitz)
+	schwelle, geduld := 12.0, 6
+	switch stufe {
+	case "schwer":
+		schwelle, geduld = 7.0, 12
+	case "mittel":
+		schwelle, geduld = 9.5, 9
+	}
+	if summe <= schwelle {
+		return true
+	}
+	return p.Zuege >= geduld && summe <= 18
+}
+
+func caboBotNimmtAblage(p *CaboSpieler, sitz, oben int, stufe string) bool {
+	if stufe == "leicht" {
+		return oben == 0 || (oben <= 2 && rand.Intn(100) < 40)
+	}
+	bester := -1
+	for pos := 0; pos < len(p.Karten); pos++ {
+		if wert, ok := p.Bekannt[caboSchluessel(sitz, pos)]; ok && wert > bester {
+			bester = wert
+		}
+	}
+	if stufe == "schwer" {
+		return oben <= 4 && (bester < 0 || bester > oben)
+	}
+	return oben <= 3 && bester > oben
+}
+
+// caboBotAktion nutzt die Aktion einer gezogenen Karte, wenn sie etwas bringt.
+func caboBotAktion(p *CaboSpieler, g *CaboGame, sitz, wert int, stufe string) (string, int, int, int, bool) {
+	switch {
+	case wert == 7 || wert == 8:
+		pos := -1
+		for k := 0; k < len(p.Karten); k++ {
+			if _, bekannt := p.Bekannt[caboSchluessel(sitz, k)]; !bekannt {
+				pos = k
+				break
+			}
+		}
+		if pos < 0 {
+			return "", 0, 0, 0, false
+		}
+		if stufe == "leicht" && rand.Intn(100) < 35 {
+			return "", 0, 0, 0, false
+		}
+		return "peek", 0, pos, 0, true
+
+	case wert == 9 || wert == 10:
+		ziel, pos := -1, -1
+		// Erst beim Menschen spähen, dann bei anderen; unbekannte Karten zuerst.
+		for i := range g.Spieler {
+			if i == sitz || i == ziel {
+				continue
+			}
+			for k := 0; k < len(g.Spieler[i].Karten); k++ {
+				if _, kennt := p.Bekannt[caboSchluessel(i, k)]; kennt {
+					continue
+				}
+				if ziel < 0 || (!g.Spieler[i].Bot && g.Spieler[ziel].Bot) {
+					ziel, pos = i, k
+				}
+			}
+		}
+		if ziel < 0 {
+			return "", 0, 0, 0, false
+		}
+		if stufe == "leicht" && rand.Intn(100) < 35 {
+			return "", 0, 0, 0, false
+		}
+		return "spy", ziel, pos, 0, true
+
+	case wert == 11 || wert == 12:
+		// Eigene höchste bekannte Karte weggeben, möglichst gegen eine beim
+		// Mitspieler, die der Computer als klein kennt.
+		eigen, eigenWert := -1, -1
+		for k := 0; k < len(p.Karten); k++ {
+			if v, ok := p.Bekannt[caboSchluessel(sitz, k)]; ok && v > eigenWert {
+				eigen, eigenWert = k, v
+			}
+		}
+		grenze := 7
+		if stufe == "leicht" {
+			grenze = 5
+		}
+		if eigen < 0 || eigenWert < grenze {
+			return "", 0, 0, 0, false
+		}
+		ziel, pos, posWert := -1, -1, 99
+		for i := range g.Spieler {
+			if i == sitz {
+				continue
+			}
+			for k := 0; k < len(g.Spieler[i].Karten); k++ {
+				v, kennt := p.Bekannt[caboSchluessel(i, k)]
+				if kennt && v < posWert {
+					ziel, pos, posWert = i, k, v
+				}
+			}
+		}
+		if ziel < 0 {
+			// Nichts bekannt: irgendeine Karte eines Mitspielers, bevorzugt
+			// beim Menschen (dort ist die Auslage am ehesten interessant).
+			for i := range g.Spieler {
+				if i == sitz || len(g.Spieler[i].Karten) == 0 {
+					continue
+				}
+				if ziel < 0 || (!g.Spieler[i].Bot && g.Spieler[ziel].Bot) {
+					ziel = i
+				}
+			}
+			if ziel < 0 {
+				return "", 0, 0, 0, false
+			}
+			pos = rand.Intn(len(g.Spieler[ziel].Karten))
+		}
+		if stufe == "leicht" && rand.Intn(100) < 40 {
+			return "", 0, 0, 0, false
+		}
+		return "swap", ziel, eigen, pos, true
+	}
+	return "", 0, 0, 0, false
+}
+
+// caboBotSatzWahl sucht einen Satz aus Karten, deren Wert der Computer kennt –
+// ein falscher Satz würde den Zug beenden, das riskiert er nicht.
+func caboBotSatzWahl(p *CaboSpieler, sitz, wert int, stufe string) ([]int, bool) {
+	if stufe == "leicht" && rand.Intn(100) >= 40 {
+		return nil, false
+	}
+	gruppen := map[int][]int{}
+	for pos := 0; pos < len(p.Karten); pos++ {
+		if v, ok := p.Bekannt[caboSchluessel(sitz, pos)]; ok {
+			gruppen[v] = append(gruppen[v], pos)
+		}
+	}
+	besterWert, beste := -1, []int{}
+	for v, pos := range gruppen {
+		if len(pos) < 2 {
+			continue
+		}
+		if float64(v*len(pos)) <= float64(wert) {
+			continue
+		}
+		if v*len(pos) > besterWert {
+			besterWert, beste = v*len(pos), pos
+		}
+	}
+	if len(beste) < 2 {
+		return nil, false
+	}
+	sort.Ints(beste)
+	return beste, true
+}
+
+// caboBotLegen wählt die eigene Karte, die weichen soll: die höchste bekannte,
+// wenn die gezogene kleiner ist. Sonst wandert die Karte weg.
+func caboBotLegen(p *CaboSpieler, sitz, wert int, stufe string) (int, bool) {
+	bester, besteWert := -1, -1
+	for pos := 0; pos < len(p.Karten); pos++ {
+		if v, ok := p.Bekannt[caboSchluessel(sitz, pos)]; ok && v > besteWert {
+			bester, besteWert = pos, v
+		}
+	}
+	if bester >= 0 && besteWert > wert {
+		return bester, true
+	}
+	if stufe != "leicht" && wert <= 3 {
+		if pos := caboBotUnbekannt(p, sitz, bester); pos >= 0 {
+			return pos, true
+		}
+	}
+	if stufe == "leicht" && rand.Intn(100) < 45 {
+		return caboBotUnbekannt(p, sitz, -1), true
+	}
+	return 0, false
 }
 
 // ---------------------------------------------------------------- Endpunkt
@@ -433,6 +1044,10 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		// Der Computer zieht beim Abholen des Stands – ein Schritt je Abruf.
+		if room.Cabo != nil {
+			caboBotTreiben(room.Cabo, time.Now())
+		}
 		game := caboAnsicht(room.Cabo, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -445,12 +1060,12 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID     string `json:"id"`
-		Pos    int    `json:"pos"`
-		Pos2   int    `json:"pos2"`
-		Ziel   int    `json:"ziel"`
-		Ziele  []int  `json:"ziele"`
-		Quelle string `json:"quelle"`
+		ID    string `json:"id"`
+		Pos   int    `json:"pos"`
+		Pos2  int    `json:"pos2"`
+		Ziel  int    `json:"ziel"`
+		Ziele []int  `json:"ziele"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -475,33 +1090,52 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	zeit := time.Now().Format("15:04:05")
+	var problem *caboFehler
 
 	switch action {
-	case "create":
+	case "create", "solo":
 		if room.Cabo != nil && room.Cabo.Status != "ende" {
 			mu.Unlock()
 			http.Error(w, "Es läuft schon eine Cabo-Runde.", http.StatusConflict)
 			return
 		}
-		room.Cabo = &CaboGame{
+		game := &CaboGame{
 			ID:      randomCode(),
 			HostID:  input.ID,
 			Status:  "invited",
 			Spieler: []CaboSpieler{caboNeuerSpieler(input.ID, player.Name)},
 			Note:    "Tisch eröffnet – 2 bis 4 Spieler, vier Karten vor jedem.",
 		}
+		room.Cabo = game
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "eröffnet eine Cabo-Runde – mitspielen über die Spielkarte.",
 			Time:     zeit,
 			SenderID: input.ID,
 		})
+		if action == "solo" {
+			stufe := caboStufe(input.Stufe)
+			game.Spieler[0].Ready = true
+			game.Spieler = append(game.Spieler, CaboSpieler{
+				ID: "bot-1", Name: "Computer", Karten: []int{}, Bekannt: map[string]int{},
+				Ready: true, Bot: true, Stufe: stufe,
+			})
+			game.Start = 0
+			game.Runde = 0
+			caboNeueRunde(game)
+			game.Note = "Einzelspieler gegen den Computer (" + stufe + "). " + game.Note
+		}
 
 	case "join":
 		game := room.Cabo
 		if game == nil || game.Status != "invited" {
 			mu.Unlock()
 			http.Error(w, "Es wartet kein Cabo-Tisch auf Mitspieler.", http.StatusConflict)
+			return
+		}
+		if game.hatBot() {
+			mu.Unlock()
+			http.Error(w, "Diese Runde läuft gegen den Computer.", http.StatusConflict)
 			return
 		}
 		drin := false
@@ -571,8 +1205,6 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		game.Status = "anschauen"
-		game.Start = 0
 		game.Runde = 0
 		caboNeueRunde(game)
 		room.addMessage(Message{
@@ -581,278 +1213,6 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 			Time:     zeit,
 			SenderID: input.ID,
 		})
-
-	case "anschauen":
-		game := room.Cabo
-		if game == nil || game.Status != "anschauen" {
-			mu.Unlock()
-			http.Error(w, "Gerade wird nicht angeschaut.", http.StatusConflict)
-			return
-		}
-		sitz := caboFinde(game, input.ID)
-		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
-		}
-		p := &game.Spieler[sitz]
-		if p.Geschaut >= caboStartBlick {
-			mu.Unlock()
-			http.Error(w, "Du hast schon zwei Karten gesehen.", http.StatusConflict)
-			return
-		}
-		if input.Pos < 0 || input.Pos >= len(p.Karten) {
-			mu.Unlock()
-			http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-			return
-		}
-		scl := caboSchluessel(sitz, input.Pos)
-		if _, schon := p.Bekannt[scl]; schon {
-			mu.Unlock()
-			http.Error(w, "Diese Karte kennst du schon – nimm eine andere.", http.StatusConflict)
-			return
-		}
-		p.Bekannt[scl] = p.Karten[input.Pos]
-		p.Geschaut++
-		game.Note = player.Name + " schaut sich Karten an."
-		alleFertig := true
-		for _, sp := range game.Spieler {
-			if sp.Geschaut < caboStartBlick {
-				alleFertig = false
-			}
-		}
-		if alleFertig {
-			game.Status = "active"
-			game.Zug = game.Start
-			game.Note = "Los geht's – " + game.Spieler[game.Zug].Name + " beginnt."
-		}
-
-	case "nehmen", "ziehen":
-		game := room.Cabo
-		if game == nil || game.Status != "active" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Zug.", http.StatusConflict)
-			return
-		}
-		if caboFinde(game, input.ID) != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		if game.Gezogen != nil {
-			mu.Unlock()
-			http.Error(w, "Du hast schon eine Karte gezogen.", http.StatusConflict)
-			return
-		}
-		if action == "nehmen" {
-			if len(game.Ablage) == 0 {
-				mu.Unlock()
-				http.Error(w, "Der Ablagestapel ist leer.", http.StatusConflict)
-				return
-			}
-			wert := game.Ablage[len(game.Ablage)-1]
-			game.Ablage = game.Ablage[:len(game.Ablage)-1]
-			game.Gezogen = &wert
-			game.Quelle = "ablage"
-			game.Note = player.Name + " nimmt die " + strconv.Itoa(wert) + " vom Ablagestapel und tauscht sie ein."
-		} else {
-			caboNachziehen(game)
-			wert := game.Stapel[len(game.Stapel)-1]
-			game.Stapel = game.Stapel[:len(game.Stapel)-1]
-			game.Gezogen = &wert
-			game.Quelle = "stapel"
-			game.Note = player.Name + " zieht eine Karte vom Stapel."
-		}
-
-	case "legen":
-		game := room.Cabo
-		if game == nil || game.Gezogen == nil {
-			mu.Unlock()
-			http.Error(w, "Du hast keine Karte in der Hand.", http.StatusConflict)
-			return
-		}
-		sitz := caboFinde(game, input.ID)
-		if sitz != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		p := &game.Spieler[sitz]
-		if input.Pos < 0 || input.Pos >= len(p.Karten) {
-			mu.Unlock()
-			http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-			return
-		}
-		alt := p.Karten[input.Pos]
-		p.Karten[input.Pos] = *game.Gezogen
-		p.Bekannt[caboSchluessel(sitz, input.Pos)] = *game.Gezogen
-		game.Ablage = append(game.Ablage, alt)
-		game.Note = player.Name + " legt " + strconv.Itoa(*game.Gezogen) + " ab und wirft " + strconv.Itoa(alt) + " weg."
-		game.Gezogen = nil
-		caboZugWeiter(game)
-
-	case "abwerfen":
-		game := room.Cabo
-		if game == nil || game.Gezogen == nil {
-			mu.Unlock()
-			http.Error(w, "Du hast keine Karte in der Hand.", http.StatusConflict)
-			return
-		}
-		if caboFinde(game, input.ID) != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		game.Note = player.Name + " wirft " + strconv.Itoa(*game.Gezogen) + " ab."
-		caboZugWeiter(game)
-
-	case "peek", "spy", "swap":
-		game := room.Cabo
-		if game == nil || game.Gezogen == nil {
-			mu.Unlock()
-			http.Error(w, "Dafür musst du zuerst eine Karte ziehen.", http.StatusConflict)
-			return
-		}
-		if game.Quelle != "stapel" {
-			mu.Unlock()
-			http.Error(w, "Vom Ablagestapel genommene Karten haben keine Aktion.", http.StatusConflict)
-			return
-		}
-		sitz := caboFinde(game, input.ID)
-		if sitz != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		wert := *game.Gezogen
-		moeglich := false
-		switch action {
-		case "peek":
-			moeglich = wert == 7 || wert == 8
-		case "spy":
-			moeglich = wert == 9 || wert == 10
-		case "swap":
-			moeglich = wert == 11 || wert == 12
-		}
-		if !moeglich {
-			mu.Unlock()
-			http.Error(w, "Diese Karte hat keine solche Aktion.", http.StatusConflict)
-			return
-		}
-		p := &game.Spieler[sitz]
-
-		switch action {
-		case "peek":
-			if input.Pos < 0 || input.Pos >= len(p.Karten) {
-				mu.Unlock()
-				http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-				return
-			}
-			p.Bekannt[caboSchluessel(sitz, input.Pos)] = p.Karten[input.Pos]
-			game.Note = player.Name + " schaut sich eine eigene Karte an (" + strconv.Itoa(wert) + " abgeworfen)."
-
-		case "spy":
-			if input.Ziel < 0 || input.Ziel >= len(game.Spieler) || input.Ziel == sitz {
-				mu.Unlock()
-				http.Error(w, "Wähle einen Mitspieler.", http.StatusBadRequest)
-				return
-			}
-			ziel := input.Ziel
-			z := &game.Spieler[ziel]
-			if input.Pos < 0 || input.Pos >= len(z.Karten) {
-				mu.Unlock()
-				http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-				return
-			}
-			p.Bekannt[caboSchluessel(ziel, input.Pos)] = z.Karten[input.Pos]
-			game.Note = player.Name + " späht bei " + z.Name + "."
-
-		case "swap":
-			if input.Ziel < 0 || input.Ziel >= len(game.Spieler) || input.Ziel == sitz {
-				mu.Unlock()
-				http.Error(w, "Wähle einen Mitspieler.", http.StatusBadRequest)
-				return
-			}
-			z := &game.Spieler[input.Ziel]
-			if input.Pos < 0 || input.Pos >= len(p.Karten) || input.Pos2 < 0 || input.Pos2 >= len(z.Karten) {
-				mu.Unlock()
-				http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-				return
-			}
-			p.Karten[input.Pos], z.Karten[input.Pos2] = z.Karten[input.Pos2], p.Karten[input.Pos]
-			delete(p.Bekannt, caboSchluessel(sitz, input.Pos))
-			delete(p.Bekannt, caboSchluessel(input.Ziel, input.Pos2))
-			delete(z.Bekannt, caboSchluessel(input.Ziel, input.Pos2))
-			delete(z.Bekannt, caboSchluessel(sitz, input.Pos))
-			game.Note = player.Name + " tauscht eine Karte mit " + z.Name + "."
-		}
-		caboZugWeiter(game)
-
-	case "satz":
-		game := room.Cabo
-		if game == nil || game.Gezogen == nil {
-			mu.Unlock()
-			http.Error(w, "Dafür musst du zuerst eine Karte gezogen haben.", http.StatusConflict)
-			return
-		}
-		sitz := caboFinde(game, input.ID)
-		if sitz != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		if !caboSatz(game, sitz, input.Ziele) {
-			game.Note = player.Name + " behauptet einen Satz – falsch, der Zug ist vorbei."
-			caboZugWeiter(game)
-			break
-		}
-		game.Note = player.Name + " wirft einen Satz ab und legt " + strconv.Itoa(*game.Gezogen) + " hinein."
-		game.Gezogen = nil
-		caboZugWeiter(game)
-
-	case "cabo":
-		game := room.Cabo
-		if game == nil || game.Status != "active" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Zug.", http.StatusConflict)
-			return
-		}
-		sitz := caboFinde(game, input.ID)
-		if sitz != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		if game.CaboVon >= 0 {
-			mu.Unlock()
-			http.Error(w, "Cabo wurde in dieser Runde schon gerufen.", http.StatusConflict)
-			return
-		}
-		if game.Gezogen != nil {
-			mu.Unlock()
-			http.Error(w, "Cabo ruft man, bevor man eine Karte zieht.", http.StatusConflict)
-			return
-		}
-		game.CaboVon = sitz
-		// Der Rufende zählt mit: sein eigener Zug wird gleich beendet, danach
-		// kommt jeder andere noch genau einmal dran.
-		game.RestZuege = len(game.Spieler)
-		game.Note = player.Name + " ruft CABO! Alle anderen sind noch einmal dran."
-		caboZugWeiter(game)
-
-	case "naechste":
-		game := room.Cabo
-		if game == nil || game.Status != "wertung" {
-			mu.Unlock()
-			http.Error(w, "Die Runde ist noch nicht gewertet.", http.StatusConflict)
-			return
-		}
-		if caboFinde(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
-		}
-		caboNeueRunde(game)
 
 	case "reset":
 		game := room.Cabo
@@ -874,17 +1234,36 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 			Note:    "Neue Partie – erst BEREIT drücken.",
 		}
 		for _, p := range game.Spieler {
-			frisch.Spieler = append(frisch.Spieler, caboNeuerSpieler(p.ID, p.Name))
+			neu := caboNeuerSpieler(p.ID, p.Name)
+			neu.Bot = p.Bot
+			neu.Stufe = p.Stufe
+			neu.Ready = p.Bot
+			frisch.Spieler = append(frisch.Spieler, neu)
 		}
 		room.Cabo = frisch
+		if frisch.hatBot() {
+			// Gegen den Computer geht es ohne Wartezeit gleich weiter.
+			frisch.Runde = 0
+			caboNeueRunde(frisch)
+			frisch.Note = "Neue Partie gegen den Computer. " + frisch.Note
+		}
 
 	default:
-		mu.Unlock()
-		http.Error(w, "Unbekannte Cabo-Aktion.", http.StatusBadRequest)
-		return
+		sitz := caboFinde(room.Cabo, input.ID)
+		problem = caboAktion(room.Cabo, sitz, action, caboEingabe{
+			Pos: input.Pos, Pos2: input.Pos2, Ziel: input.Ziel, Ziele: input.Ziele,
+		})
+		if problem != nil {
+			mu.Unlock()
+			http.Error(w, problem.Text, problem.Nr)
+			return
+		}
 	}
 
 	room.LastActive = time.Now()
+	if room.Cabo != nil {
+		caboBotTreiben(room.Cabo, time.Now())
+	}
 	result := caboAnsicht(room.Cabo, input.ID)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})

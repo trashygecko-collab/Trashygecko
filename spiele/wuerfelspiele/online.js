@@ -23,10 +23,10 @@
   var stand = null;      // letzte Antwort des Servers
   var gefragt = false;   // läuft gerade ein Ruf?
   var ersterRuf = true;  // der erste Abruf geht auch im Hintergrund-Tab raus
-  var takt = null;
   var kasten = null;
   var zustandZeile = null;
   var namenZeile = null;
+  var variantenZeile = null;
   var tastenZeile = null;
 
   /* --- Server ---------------------------------------------------------- */
@@ -79,10 +79,6 @@
     ruf("stand").then(function () { gefragt = false; }, function () { gefragt = false; });
   }
 
-  function tue(aktion, felder) {
-    return ruf(aktion, felder);
-  }
-
   /* --- Anzeige --------------------------------------------------------- */
 
   function zeige(daten) {
@@ -108,14 +104,59 @@
     b.textContent = text;
     b.addEventListener("click", function () {
       b.disabled = true;
-      tue(art, felder).then(function () { b.disabled = false; }, function () { b.disabled = false; });
+      ruf(art, felder).then(function () { b.disabled = false; }, function () { b.disabled = false; });
     });
     return b;
+  }
+
+  /* Zusatzregeln: Die Liste kommt vom Server (Regelmodul des Spiels), die
+     Haken setzt der Gastgeber vor dem Start – dieselben Optionen wie lokal. */
+  function variantenSenden() {
+    var werte = {};
+    Array.prototype.forEach.call(
+      variantenZeile.querySelectorAll("input[type=checkbox]"),
+      function (kasten) { werte[kasten.value] = kasten.checked; }
+    );
+    ruf("varianten", { varianten: werte });
+  }
+
+  function zeichneVarianten() {
+    variantenZeile.innerHTML = "";
+    var liste = (stand && stand.varianten) || [];
+    if (!liste.length) {
+      return;
+    }
+    var warte = stand.status === "invited";
+    var ichBinHost = stand.hostId === kennung;
+    var titel = document.createElement("div");
+    titel.className = "online-varianten-titel";
+    titel.textContent = warte
+      ? (ichBinHost ? "Zusatzregeln – du wählst" : "Zusatzregeln – der Gastgeber wählt")
+      : "Zusatzregeln der laufenden Partie";
+    variantenZeile.appendChild(titel);
+    liste.forEach(function (variante) {
+      var zeile = document.createElement("label");
+      zeile.className = "online-variante" + (variante.an ? " an" : "");
+      var kasten = document.createElement("input");
+      kasten.type = "checkbox";
+      kasten.value = variante.id;
+      kasten.checked = !!variante.an;
+      /* Vor dem Start darf nur der Gastgeber ändern; danach zeigen alle nur. */
+      kasten.disabled = !warte || !ichBinHost;
+      if (!kasten.disabled) {
+        kasten.addEventListener("change", variantenSenden);
+      }
+      var text = document.createElement("span");
+      text.textContent = variante.text || variante.id;
+      zeile.append(kasten, text);
+      variantenZeile.appendChild(zeile);
+    });
   }
 
   function zeichne() {
     tastenZeile.innerHTML = "";
     namenZeile.innerHTML = "";
+    zeichneVarianten();
 
     if (!stand) {
       zustandZeile.className = "online-stand";
@@ -194,10 +235,13 @@
     namenZeile = document.createElement("div");
     namenZeile.className = "online-namen";
 
+    variantenZeile = document.createElement("div");
+    variantenZeile.className = "online-varianten";
+
     tastenZeile = document.createElement("div");
     tastenZeile.className = "tasten";
 
-    kasten.append(kopf, zustandZeile, namenZeile, tastenZeile);
+    kasten.append(kopf, zustandZeile, namenZeile, variantenZeile, tastenZeile);
 
     var einrichten = rahmen.querySelector(".einrichten");
     if (einrichten) {
@@ -206,14 +250,16 @@
       rahmen.insertBefore(kasten, rahmen.firstChild);
     }
 
-    // Lebenszeichen: hält Platz und Partie im Raum am Leben (dieselbe
-    // Anbindung wie bei den anderen Online-Würfelspielen).
-    if (window.WG && WG.leben) {
-      WG.leben({ room: raum, id: kennung, name: (frage.get("name") || "").trim() });
-    }
-
-    hole();
-    takt = setInterval(hole, 900);
+    /* Lebenszeichen und Stand: WG.leben aus wuerfel-common.js meldet Platz
+       und Partie an (anwesend, im Hintergrund als „versteckt") und liefert
+       ein Versprechen, das nach dem ersten Lebenszeichen erfüllt ist – erst
+       danach wird gefragt. Der eigene Sichtwechsel holt nur den Stand nach,
+       weil hole() im Hintergrund-Tab pausiert; gemeldet wird von WG. */
+    var start = window.WG && WG.leben
+      ? WG.leben({ room: raum, id: kennung, name: (frage.get("name") || "").trim() })
+      : Promise.resolve();
+    start.then(hole, hole);
+    setInterval(hole, 900);
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) {
         hole();
@@ -226,10 +272,10 @@
   TGW.online = {
     aktion: function (art, daten) {
       if (art === "neu") {
-        tue("neu");
+        ruf("neu");
         return;
       }
-      tue("aktion", { art: art, daten: daten || null });
+      ruf("aktion", { art: art, daten: daten || null });
     }
   };
 

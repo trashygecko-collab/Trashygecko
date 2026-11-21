@@ -106,8 +106,9 @@
     stil.textContent =
       "#tg-mobil-knopf{position:fixed;left:0;top:0;z-index:2147483000;display:none;" +
       "width:" + GROESSE + "px;height:" + GROESSE + "px;align-items:center;justify-content:center;" +
-      "padding:0;margin:0;border-radius:50%;border:1px solid #e8cd8e;background:#144238f2;" +
-      "color:#e8cd8e;box-shadow:0 4px 14px rgba(0,0,0,.45);cursor:pointer;touch-action:none;" +
+      "padding:0;margin:0;border-radius:50%;border:1px solid var(--c-aktiv-rand,#ffd0e4);" +
+      "background:var(--c-aktiv,#b02c72);" +
+      "color:#fff;box-shadow:0 4px 14px rgba(90,20,60,.35);cursor:pointer;touch-action:none;" +
       "-webkit-tap-highlight-color:transparent;user-select:none}" +
       "#tg-mobil-knopf>span{pointer-events:none;font-size:21px;line-height:1}" +
       "#tg-mobil-knopf>b{position:absolute;top:-5px;right:-3px;min-width:20px;height:20px;" +

@@ -341,11 +341,7 @@
 
   /* ---------------------------------------------------------- Menüwechsel */
   Shell.menue = function () {
-    if (Shell.spiel && Shell.sekunden > 3 && !Shell.verlauf.length) {
-      // nichts Besonderes – die Partie wird nur verlassen
-    }
     uhrAnhalten();
-    if (Shell.spiel) Shell.spiel = Shell.spiel;   // Zustand bleibt für ein späteres "Neues Spiel"
     $("spielbereich").hidden = true;
     $("modusAuswahl").hidden = false;
     $("kopfTitel").textContent = "Solitär";
@@ -477,7 +473,6 @@
     });
     document.addEventListener("keydown", tasten);
 
-    if (TG.MODI[Shell.modus || "klondike"]) menueBauen();
     $("modusAuswahl").hidden = false;
     $("spielbereich").hidden = true;
   }

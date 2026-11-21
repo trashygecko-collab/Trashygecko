@@ -77,6 +77,16 @@ main{max-width:760px;margin:auto}
  body{padding:4px 4px 14px}
  .buehne.duell{padding:3px;gap:8px}
 }
+/* Quer gehaltene Handys sind flach: Hier zählt jeder Höhenpixel, darum fallen
+   Hinweiszeile und Regelblock weg und die Leisten werden schmaler. */
+@media (max-height:540px){
+ body{padding-top:2px}
+ .fuss,#regeln{display:none}
+ .titelleiste{padding:4px 8px}
+ .menueleiste{padding:4px 6px}
+ .statuszeile{padding:3px 8px}
+ .buehne{padding:4px}
+}
 .buehne canvas{display:block;width:100%;height:auto;
  border-radius:var(--radius);touch-action:none;box-shadow:inset 0 0 40px var(--buehne-schatten)}
 .buehne.duell canvas{max-width:196px;border-radius:var(--radius-klein);
@@ -87,6 +97,12 @@ main{max-width:760px;margin:auto}
 .brettwrap{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 0;
  max-width:min(400px,calc((100vh - 200px) * 0.667))}
 .buehne.duell .brettwrap{max-width:min(196px,calc((100vh - 200px) * 0.35))}
+/* Am Handy zählt die sichtbare Höhe: 100dvh lässt die Adressleisten weg.
+   Die Feinabstimmung macht passeAn() im Skript, das hier ist der Rückfall. */
+@supports (height: 100dvh){
+ .brettwrap{max-width:min(400px,calc((100dvh - 210px) * 0.667))}
+ .buehne.duell .brettwrap{max-width:min(196px,calc((100dvh - 210px) * 0.35))}
+}
 
 /* Schussknopf: Geschossen wird nur hier, nicht beim Tippen ins Feld. */
 .schuss{display:block;width:100%;margin-top:6px;padding:13px 8px;
@@ -1180,6 +1196,7 @@ function spielAufbauen(){
 
  $("meldungKnopf").onclick=starten;
  verbinden();
+ passeAn();
 }
 
 function verbinden(){
@@ -1221,6 +1238,44 @@ function verbinden(){
   };
  });
 }
+
+/* Feld samt Schussknopf an die freie Höhe anpassen: Die Breite des Feldes
+   folgt der Höhe, das Seitenverhältnis bleibt (400×600 bzw. 196×560). Damit
+   passt am Handy alles ins Bild, ohne dass das Feld höher wird als der
+   Bildschirm; am PC bleibt es wie bisher bei höchstens 400 px Breite. */
+function passeAn(){
+ if(!bretter.length)return;
+ const vv=window.visualViewport;
+ const hoehe=(vv&&vv.height)||window.innerHeight;
+ const buehne=$("buehne");
+ if(!buehne)return;
+ const feld0=$("feld1"), knopf0=$("schuss1");
+ const f0=feld0.getBoundingClientRect();
+ /* Alles, was unter dem Feld steht (Kopfzeile, Abstand, Schussknopf), bleibt
+    in seiner Höhe gleich – darum einmal messen und von der Fensterhöhe
+    abziehen. Gerechnet wird in Seitenkoordinaten, damit Scrollen nichts
+    verschiebt. */
+ const extra=(knopf0&&!$("wrap1").hidden)?(knopf0.getBoundingClientRect().bottom-f0.bottom)+2:0;
+ const oben=f0.top+window.scrollY;
+ const platz=Math.max(80,hoehe-oben-extra-6);
+ const stil=getComputedStyle(buehne);
+ const innen=buehne.clientWidth-(parseFloat(stil.paddingLeft)||0)-(parseFloat(stil.paddingRight)||0);
+ const n=bretter.length;
+ const luecke=n>1?(parseFloat(stil.columnGap)||0):0;
+ const proBreite=(innen-luecke*(n-1))/n;
+ ["wrap1","wrap2"].forEach(id=>{ const el=$(id); if(el)el.style.maxWidth="none"; });
+ bretter.forEach(({canvas})=>{
+  const ar=canvas.width/canvas.height;
+  const w=Math.max(64,Math.min(proBreite,platz*ar));
+  canvas.style.maxWidth="none";        // keine feste Grenze mehr aus dem CSS
+  canvas.style.width=Math.round(w)+"px";
+  canvas.style.height=Math.round(w/ar)+"px";
+ });
+}
+
+window.addEventListener("resize",passeAn);
+window.addEventListener("orientationchange",()=>setTimeout(passeAn,120));
+if(window.visualViewport)window.visualViewport.addEventListener("resize",passeAn);
 
 function gesamtZustand(){
  if(!bretter.length)return "start";

@@ -8,31 +8,47 @@
 <title>TrashyGecko Connector</title>
 <style>
 *{box-sizing:border-box}
+/* Eine Palette für die ganze Connector-Oberfläche: Pink, Altrosa, Beere.
+   Die Spiele behalten ihre eigene Ansicht (TGStil) – der Rahmen hier ist
+   immer derselbe. Alle Flächen, Rahmen und aktiven Zustände hängen an
+   diesen Werten, damit kein Grün mehr durch eine Einzelregel hereinkommt. */
+:root{
+ --c-bg-1:#ffd9ec; --c-bg-2:#f3a6d5; --c-bg-3:#b8478a;
+ --c-flaeche:#fff8fdf5; --c-flaeche-2:#ffeef7; --c-flaeche-3:#ffe0ef; --c-grund:#ffe3f1;
+ --c-text:#3a1030; --c-sanft:#6b3a5e; --c-leise:#8b5f7c;
+ --c-akzent:#a8326e; --c-akzent-2:#c2417f; --c-akzent-hell:#d15f9c;
+ --c-knopf:#c9317a; --c-knopf-hover:#a8265f; --c-knopf-text:#ffffff;
+ --c-rahmen:#e598c2; --c-rahmen-2:#e9a8ca; --c-linie:#c2417f3d;
+ --c-aktiv:#b02c72; --c-aktiv-hover:#c23a80; --c-aktiv-rand:#ffd0e4; --c-aktiv-text:#ffffff;
+ --c-schatten:#7a1f5233;
+}
 /* hidden muss immer gewinnen – sonst zeigen Regeln mit display:flex Dinge an,
    die eigentlich versteckt sind (z. B. das Stummschalten für Nicht-Admins). */
 [hidden]{display:none !important}
-body{margin:0;padding:8px 1px;color:#efe6d2;
- /* Wie in der App: helles Grün oben, dunkel zum Rand. */
- background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
+body{margin:0;padding:8px 1px;color:var(--c-text);
+ /* Pink wie die Mädchen-Ansicht der Spiele: hell oben, satt zum Rand. */
+ background:radial-gradient(circle 900px at 50% -6%,var(--c-bg-1) 0%,var(--c-bg-2) 46%,var(--c-bg-3) 100%) fixed;
  font:16px var(--tg-schrift)}
 main{max-width:760px;margin:auto}
-h1{color:#f1dca8;text-align:center;font-size:clamp(19px,4.4vw,27px);
+h1{color:var(--c-akzent);text-align:center;font-size:clamp(19px,4.4vw,27px);
  font-weight:normal;letter-spacing:.12em;margin:6px 0 14px}
 h2{font-size:20px;margin-top:0}
 /* Feine Goldlinie wie die Rahmen auf dem Startbildschirm der App. */
-section{background:#12332ae8;border:1px solid #d9bc7c59;border-radius:8px;
+section{background:var(--c-flaeche);border:1px solid var(--c-rahmen);border-radius:8px;
  padding:18px;margin:10px 0}
-button,input,select{padding:12px;border-radius:7px;border:1px solid #3f7360;font-size:16px}
-button{background:#e8cd8e;color:#0b241d;font-weight:bold;cursor:pointer}
-button:hover{filter:brightness(1.1)}
-input,select{background:#0b241d;color:white;max-width:100%;min-width:0}
+button,input,select{padding:12px;border-radius:7px;border:1px solid var(--c-rahmen);font-size:16px}
+button{background:var(--c-knopf);color:var(--c-knopf-text);font-weight:bold;cursor:pointer}
+button:hover{background:var(--c-knopf-hover);filter:none}
+/* Abgeschaltet bleibt lesbar, ist aber erkennbar nicht bedienbar. */
+button:disabled{opacity:.55;cursor:default;filter:none}
+input,select{background:var(--c-flaeche-2);color:var(--c-text);max-width:100%;min-width:0}
 .line{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .line input{flex:1}
 #addresses{text-align:center;margin-top:12px}
 #addresses p{overflow-wrap:anywhere;margin:0}
-#chat{height:230px;overflow:auto;background:#0b241d;padding:10px;border-radius:8px}
+#chat{height:230px;overflow:auto;background:var(--c-flaeche-2);padding:10px;border-radius:8px}
 /* Jede Nachricht sitzt auf einer feinen Goldlinie, die letzte ohne. */
-.msg{padding:9px 0;border-bottom:1px solid #d9bc7c3d;overflow-wrap:anywhere}
+.msg{padding:9px 0;border-bottom:1px solid var(--c-linie);overflow-wrap:anywhere}
 /* Eigene Zeile, die noch unterwegs ist: bleibt sichtbar, bis der Server sie
    bestätigt – bei einem Fehler mit Knopf zum erneuten Senden. */
 .msg.ausgang{opacity:.7;font-style:italic}
@@ -43,36 +59,36 @@ input,select{background:#0b241d;color:white;max-width:100%;min-width:0}
 .msg:last-child{border-bottom:none;padding-bottom:2px}
 /* Uhrzeit hinter der Nachricht: klein, in Serife, gedämpftes Gold. */
 .msg small{font-family:var(--tg-schrift);font-size:11px;
- font-weight:normal;letter-spacing:.08em;color:rgba(217,188,124,.55);
+ font-weight:normal;letter-spacing:.08em;color:#8b5f7c;
  white-space:nowrap}
-.msg-system{color:#a9c3b6;font-style:italic;text-align:center;border-bottom:none;padding:4px 0;font-size:13px}
-small{color:#b3c6ba}
-.code{font-size:28px;color:#e8cd8e;font-weight:bold}
-.room{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#0b241d;border:1px solid #2f5a4b;border-radius:9px;padding:12px;margin:9px 0}
+.msg-system{color:var(--c-leise);font-style:italic;text-align:center;border-bottom:none;padding:4px 0;font-size:13px}
+small{color:var(--c-leise)}
+.code{font-size:28px;color:var(--c-akzent);font-weight:bold}
+.room{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--c-flaeche-2);border:1px solid var(--c-rahmen);border-radius:9px;padding:12px;margin:9px 0}
 .room-info{min-width:0}
-.room-code{font-size:20px;font-weight:bold;color:#e8cd8e}
-.room-meta{font-size:13px;color:#b9c9bf;margin-top:5px}
-.empty{color:#b9c9bf;padding:12px 0}
-#roomstatus{color:#e8cd8e}
+.room-code{font-size:20px;font-weight:bold;color:var(--c-akzent)}
+.room-meta{font-size:13px;color:var(--c-sanft);margin-top:5px}
+.empty{color:var(--c-sanft);padding:12px 0}
+#roomstatus{color:var(--c-akzent)}
 /* Eigene Verbindungsanzeige – getrennt von #roomstatus (Hinweise) und
    #game-status (Spielstatus). Vier Zustände, Farbe plus Punkt. */
 #verbindung{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.03em;
- color:#b9c9bf;margin:8px 0 0}
+ color:var(--c-sanft);margin:8px 0 0}
 #verbindung::before{content:"";width:8px;height:8px;border-radius:50%;
  background:currentColor;flex:0 0 auto;opacity:.75}
-#verbindung[data-zustand="ok"]{color:#8fd6a8}
-#verbindung[data-zustand="start"]{color:#e8cd8e}
-#verbindung[data-zustand="neu"]{color:#e8cd8e}
+#verbindung[data-zustand="ok"]{color:#b0267a}
+#verbindung[data-zustand="start"]{color:var(--c-akzent)}
+#verbindung[data-zustand="neu"]{color:var(--c-akzent)}
 #verbindung[data-zustand="neu"]::before{animation:verbindung-puls 1s ease-in-out infinite}
-#verbindung[data-zustand="weg"]{color:#e88a7a}
+#verbindung[data-zustand="weg"]{color:#a3123f}
 @keyframes verbindung-puls{0%,100%{opacity:.25}50%{opacity:1}}
 #qrwrap{display:flex;align-items:center;justify-content:center;margin-top:14px}
 #qrcode{width:176px;height:176px;background:white;padding:8px;border-radius:8px;image-rendering:pixelated}
-/* Leiser Knopf im Grün der Seite, klein und ohne Goldfüllung. */
+/* Leiser Knopf in Altrosa, klein und ohne kräftige Füllung. */
 .adresse-knopf{display:block;margin:12px auto 0;padding:6px 11px;font-size:12px;
- font-weight:normal;letter-spacing:.03em;background:#12332a;color:#b9c9bf;
- border:1px solid #2f5a4b;border-radius:6px;cursor:pointer}
-.adresse-knopf:hover{background:#17423a;color:#f1dca8;border-color:#3f7360;filter:none}
+ font-weight:normal;letter-spacing:.03em;background:var(--c-flaeche-2);color:var(--c-sanft);
+ border:1px solid var(--c-rahmen);border-radius:6px;cursor:pointer}
+.adresse-knopf:hover{background:var(--c-flaeche-3);color:var(--c-akzent);border-color:var(--c-rahmen-2);filter:none}
 @media(max-width:430px){
  body{padding:5px 1px}
  section{padding:13px}
@@ -83,10 +99,10 @@ small{color:#b3c6ba}
  height:380px;
  min-height:180px;
  overflow-y:auto;
- background:#0b241d;
+ background:var(--c-flaeche-2);
  padding:12px;
  /* genau 1 px, in Gold – wie die Rahmen in der App */
- border:1px solid #d9bc7c8c;
+ border:1px solid rgba(229,152,194,0.55);
  border-radius:6px;
 }
 .chat-compose{
@@ -99,8 +115,8 @@ small{color:#b3c6ba}
  width:100%;
  padding:12px;
  border-radius:7px;
- border:1px solid #3f7360;
- background:#0b241d;
+ border:1px solid var(--c-rahmen);
+ background:var(--c-flaeche-2);
  color:white;
  font-size:16px;
 }
@@ -110,7 +126,7 @@ small{color:#b3c6ba}
  width:100%;
  /* feine Goldlinie um die ganze Sendezeile */
  padding:6px;
- border:1px solid #d9bc7c73;
+ border:1px solid rgba(229,152,194,0.45);
  border-radius:8px;
  background:transparent;
 }
@@ -118,58 +134,58 @@ small{color:#b3c6ba}
  flex:1;
  width:0;
  min-width:0;
- background:#0b241d;
- border:1px solid #d9bc7c40;
+ background:var(--c-flaeche-2);
+ border:1px solid rgba(229,152,194,0.25);
 }
 .chat-send-row button{
  flex:0 0 auto;
  min-width:88px;
- /* richtig golden: heller Verlauf, dunkle Schrift */
- background:linear-gradient(#f6e6bc,#d9b878);
- border:1px solid #f1dca8;
- color:#0b241d;
+ /* wie alle Knöpfe: pinke Fläche, weiße Schrift */
+ background:var(--c-knopf);
+ border:1px solid var(--c-rahmen);
+ color:#fff;
  font-weight:bold;
  letter-spacing:.04em;
 }
-.chat-send-row button:hover{filter:brightness(1.06);border-color:#fff3d4}
+.chat-send-row button:hover{background:var(--c-knopf-hover);border-color:var(--c-rahmen-2);filter:none}
 /* --- Eigene Smilies und GIFs ---------------------------------------------
    Der Knopf sitzt direkt vor „Senden“ und öffnet ein kleines Panel über der
    Eingabezeile. Die Kacheln bleiben klein, damit viele Grafiken hineinpassen. */
 .chat-compose{position:relative}
 .chat-send-row button.smiley-btn{flex:0 0 auto;width:42px;min-width:42px;height:38px;padding:0;
- font-size:19px;line-height:1;background:#0b241d;border:1px solid #d9bc7c66;
- color:#e8cd8e;border-radius:7px;cursor:pointer}
-.smiley-btn:hover,.smiley-btn[aria-expanded="true"]{background:#184536;border-color:#e8cd8e}
-.smiley-btn:focus-visible{outline:2px solid #e8cd8e66;outline-offset:2px}
+ font-size:19px;line-height:1;background:var(--c-flaeche-2);border:1px solid rgba(229,152,194,0.40);
+ color:var(--c-akzent);border-radius:7px;cursor:pointer}
+.smiley-btn:hover,.smiley-btn[aria-expanded="true"]{background:var(--c-flaeche-3);border-color:var(--c-aktiv)}
+.smiley-btn:focus-visible{outline:2px solid var(--c-rahmen-2);outline-offset:2px}
 .smiley-panel{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:30;
  display:flex;flex-direction:column;gap:6px;max-height:min(50vh,340px);padding:8px;
- background:#0b241d;border:1px solid #d9bc7c8c;border-radius:10px;box-shadow:0 10px 26px #0008}
+ background:var(--c-flaeche-2);border:1px solid var(--c-rahmen);border-radius:10px;box-shadow:0 10px 26px #7a1f5226}
 .smiley-panel[hidden]{display:none}
 .smiley-kopf{display:flex;gap:6px}
-.smiley-kopf input{flex:1;min-width:0;padding:7px 9px;font-size:14px;background:#08120f;
- border:1px solid #3f7360;border-radius:6px;color:#f4efe2}
-.smiley-zu{flex:0 0 auto;width:30px;min-width:30px;padding:0;font-size:16px;background:#0b241d;
- border:1px solid #3f7360;border-radius:6px;color:#e8cd8e;cursor:pointer}
-.smiley-zu:hover{background:#184536}
+.smiley-kopf input{flex:1;min-width:0;padding:7px 9px;font-size:14px;background:#fff;
+ border:1px solid var(--c-rahmen);border-radius:6px;color:var(--c-text)}
+.smiley-zu{flex:0 0 auto;width:30px;min-width:30px;padding:0;font-size:16px;background:var(--c-flaeche-3);
+ border:1px solid var(--c-rahmen);border-radius:6px;color:var(--c-aktiv);cursor:pointer}
+.smiley-zu:hover{background:var(--c-rahmen)}
 .smiley-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px}
 .smiley-tab{flex:0 0 auto;padding:4px 10px;font-size:12px;border-radius:999px;
- background:#0b241d;border:1px solid #3f7360;color:#b9c9bf;cursor:pointer;white-space:nowrap}
-.smiley-tab.aktiv{background:#184536;border-color:#e8cd8e;color:#f1dca8}
+ background:var(--c-flaeche-2);border:1px solid var(--c-rahmen);color:var(--c-sanft);cursor:pointer;white-space:nowrap}
+.smiley-tab.aktiv{background:var(--c-aktiv);border-color:var(--c-aktiv-rand);color:var(--c-aktiv-text)}
 .smiley-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;
  overflow-y:auto;min-height:52px;padding-right:2px}
 .smiley-bild-btn{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;
- padding:2px;background:#08120f;border:1px solid #2f5a4b;border-radius:7px;cursor:pointer}
-.smiley-bild-btn:hover,.smiley-bild-btn:focus-visible{border-color:#e8cd8e;background:#12332a}
+ padding:2px;background:#fff;border:1px solid var(--c-rahmen);border-radius:7px;cursor:pointer}
+.smiley-bild-btn:hover,.smiley-bild-btn:focus-visible{border-color:var(--c-aktiv);background:var(--c-flaeche-3)}
 .smiley-bild-btn img{max-width:100%;max-height:100%;object-fit:contain}
-.smiley-hinweis{margin:2px 0 0;font-size:12px;line-height:1.35;color:#a9bfb2}
+.smiley-hinweis{margin:2px 0 0;font-size:12px;line-height:1.35;color:var(--c-leise)}
 .smiley-anhang{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:12px;
- border:1px solid #d9bc7c66;border-radius:8px;background:#0b241d;color:#b9c9bf}
+ border:1px solid var(--c-rahmen);border-radius:8px;background:var(--c-flaeche-2);color:var(--c-sanft)}
 .smiley-anhang[hidden]{display:none}
-.smiley-anhang img{max-width:34px;max-height:34px;border-radius:5px;background:#08120f}
+.smiley-anhang img{max-width:34px;max-height:34px;border-radius:5px;background:#fff}
 .smiley-anhang button{margin-left:auto;min-width:0;padding:1px 7px;font-size:13px;
- background:none;border:1px solid #3f7360;border-radius:5px;color:#e8cd8e;cursor:pointer}
+ background:none;border:1px solid var(--c-rahmen);border-radius:5px;color:var(--c-aktiv);cursor:pointer}
 .chat-bild{display:inline-block;max-width:132px;max-height:132px;margin-left:6px;
- vertical-align:middle;border:1px solid #2f5a4b;border-radius:9px;background:#08120f}
+ vertical-align:middle;border:1px solid var(--c-rahmen);border-radius:9px;background:#fff}
 @media(max-width:430px){
  .chat-send-row button.smiley-btn{width:40px;min-width:40px;height:40px;font-size:18px}
  .chat-bild{max-width:112px;max-height:112px}
@@ -186,23 +202,23 @@ small{color:#b3c6ba}
 #game-status{line-height:1.45;margin-top:12px;box-sizing:border-box;min-height:140px;display:flex;flex-direction:column;gap:8px;justify-content:flex-start}
 /* Kein offenes Spiel: ein kurzer, stiller Satz in einem leisen Kästchen. */
 #game-status.leer{margin-top:12px;padding:9px 12px;text-align:center;
- border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;
- color:#a9bfb2;font-size:13px;line-height:1.35;font-style:italic;
+ border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);
+ color:var(--c-leise);font-size:13px;line-height:1.35;font-style:italic;
  box-sizing:border-box;min-height:140px;display:flex;align-items:center;justify-content:center}
 /* Aufklappbarer Kopf der Bereiche (Lokale Verbindung). */
 details summary{cursor:pointer;font-size:20px;font-weight:bold;color:#fff;padding:2px 0;outline:none}
 details summary::-webkit-details-marker{display:none}
-details summary::after{content:" ▾";color:#e8cd8e;font-size:14px}
+details summary::after{content:" ▾";color:var(--c-akzent);font-size:14px}
 details[open] summary::after{content:" ▴"}
-details summary:hover{color:#e8cd8e}
+details summary:hover{color:var(--c-akzent)}
 details p{margin:10px 0 6px}
 /* Name bekannt: nur noch eine Zeile statt Eingabefeld. */
 .name-known{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
-.name-known strong{color:#e8cd8e}
-button.mini{background:none;border:1px solid #3f7360;color:#b9c9bf;font-size:13px;padding:7px 11px;font-weight:normal}
-button.mini:hover{color:#fff;border-color:#e8cd8e}
+.name-known strong{color:var(--c-akzent)}
+button.mini{background:none;border:1px solid var(--c-rahmen);color:var(--c-sanft);font-size:13px;padding:7px 11px;font-weight:normal}
+button.mini:hover{color:#fff;border-color:var(--c-akzent)}
 /* Vollbild-Knopf: immer erreichbar, auch wenn weit gescrollt wurde. */
-#fullscreenBtn{position:fixed;right:12px;top:12px;z-index:60;font-size:13px;padding:9px 13px;background:#12332a;color:#e8cd8e;border:1px solid #e8cd8e;font-weight:bold;opacity:.94}
+#fullscreenBtn{position:fixed;right:12px;top:12px;z-index:60;font-size:13px;padding:9px 13px;background:var(--c-flaeche-3);color:var(--c-akzent);border:1px solid var(--c-akzent);font-weight:bold;opacity:.94}
 #fullscreenBtn #fsWord{margin-left:6px}
 /* Auf schmalen Geräten bleibt nur das Symbol, damit der Knopf oben rechts nicht
    in die Überschrift hineinragt. */
@@ -214,106 +230,108 @@ button.mini:hover{color:#fff;border-color:#e8cd8e}
 }
 html:fullscreen,html:fullscreen body{overflow-y:auto;height:auto}
 html:fullscreen body{padding:18px 1px}
-.game-player{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#0b241d;border:1px solid #2f5a4b;border-radius:9px;padding:10px 12px;margin:8px 0}
+.game-player{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--c-flaeche-2);border:1px solid var(--c-rahmen-2);border-radius:9px;padding:10px 12px;margin:8px 0}
 .game-player span{min-width:0;overflow-wrap:anywhere}
 .game-player button{flex:0 0 auto}
 .game-invite-controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .game-invite-controls select{flex:1;min-width:150px}
 .game-invite-controls button{flex:0 0 auto}
 /* Zusatzangaben zum Spiel (z. B. Paare finden): eigener, sichtbarer Kasten. */
-.game-extra-box{border:1px solid #e8cd8e;border-radius:9px;padding:10px 12px;margin:10px 0;background:#16423a;display:flex;flex-direction:column;gap:8px}
-.game-extra-box strong{color:#e8cd8e;font-size:14px}
+.game-extra-box{border:1px solid var(--c-akzent);border-radius:9px;padding:10px 12px;margin:10px 0;background:var(--c-flaeche-3);display:flex;flex-direction:column;gap:8px}
+.game-extra-box strong{color:var(--c-akzent);font-size:14px}
 .game-extra-row{display:flex;align-items:center;gap:8px}
-.game-extra-row label{flex:0 0 auto;color:#f4efe2;font-size:14px}
+.game-extra-row label{flex:0 0 auto;color:var(--c-text);font-size:14px}
 .game-extra-row select{flex:1 1 auto;min-width:0}
-.game-invite{border:1px solid #e8cd8e;border-radius:9px;padding:12px;margin:10px 0;background:#16423a}
-.game-invite strong{color:#e8cd8e}
+.game-invite{border:1px solid var(--c-akzent);border-radius:9px;padding:12px;margin:10px 0;background:var(--c-flaeche-3)}
+.game-invite strong{color:var(--c-akzent)}
 .game-invite-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .game-invite-actions button{flex:1 1 0;min-width:0;white-space:nowrap;padding:9px 10px}
 .chat-name-btn{background:none;border:none;padding:0;cursor:pointer;text-decoration:none;
  font-family:var(--tg-schrift);font-size:16px;font-weight:normal;
- letter-spacing:.05em;color:#f1dca8}
-.chat-name-btn:hover{text-decoration:underline;color:#fff3d4}
+ letter-spacing:.05em;color:var(--c-akzent-2)}
+.chat-name-btn:hover{text-decoration:underline;color:var(--c-akzent)}
 /* Admin sieht beim Überfahren einen dezenten Stift als Hinweis. */
 .chat-name-btn.admin::after{content:"\270e";margin-left:4px;font-size:12px;opacity:0;
- transition:opacity .15s;color:#e8cd8e}
+ transition:opacity .15s;color:var(--c-akzent)}
 .chat-name-btn.admin:hover::after,.chat-name-btn.admin:focus-visible::after{opacity:.7}
 /* Namen ändern im Namensfenster (nur für den Admin sichtbar). */
-.tone-rename{padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid #2f5a4b}
-.tone-rename label{display:block;margin-bottom:6px;font-size:15px;color:#f4efe2}
-.tone-rename label strong{color:#e8cd8e}
+.tone-rename{padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--c-rahmen-2)}
+.tone-rename label{display:block;margin-bottom:6px;font-size:15px;color:var(--c-text)}
+.tone-rename label strong{color:var(--c-akzent)}
 .tone-rename input{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;
- border:1px solid #3f7360;background:#0b241d;color:#f4efe2;font-family:var(--tg-schrift);
+ border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);color:var(--c-text);font-family:var(--tg-schrift);
  font-size:16px;min-height:44px}
-.tone-rename input:focus{outline:none;border-color:#e8cd8e;box-shadow:0 0 0 2px #e8cd8e33}
+.tone-rename input:focus{outline:none;border-color:var(--c-akzent);box-shadow:0 0 0 2px rgba(176,44,114,0.20)}
 .tone-rename-aktionen{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .tone-rename-aktionen button{min-height:44px}
 .tone-fehler{margin:6px 0 0;font-size:13px;color:#ff9c9c}
 /* Begrüßung für Neue: eigener kleiner Kasten mit genau einem Knopf. */
-#chat .willkommen{border:1px solid #d9bc7c66;border-radius:9px;padding:10px 12px;margin:8px 0;background:#14392f}
-#chat .willkommen b{color:#e8cd8e}
+#chat .willkommen{border:1px solid rgba(229,152,194,0.40);border-radius:9px;padding:10px 12px;margin:8px 0;background:var(--c-flaeche-3)}
+#chat .willkommen b{color:var(--c-akzent)}
 #chat .willkommen button{display:block;width:100%;margin-top:8px;padding:9px 10px;min-height:40px;font-size:15px}
-.mute-popover{margin-top:4px;padding:6px;background:#17423a;border:1px solid #e8cd8e;border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
+.mute-popover{margin-top:4px;padding:6px;background:var(--c-flaeche-3);border:1px solid var(--c-akzent);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
 .mute-popover button{padding:4px 8px;font-size:12px;border-radius:4px}
 .mute-list-tag{color:#ffd36a;font-size:12px;margin-top:4px}
 /* Geklickte Sprüche im Chat: lieb rosa, witzig grün, böse rot. */
 .msg.t-love{border-left:3px solid #ff8be4;padding-left:8px}
-.msg.t-joke{border-left:3px solid #7dffb0;padding-left:8px}
+.msg.t-joke{border-left:3px solid #b06bd8;padding-left:8px}
 .msg.t-evil{border-left:3px solid #ff7b7b;padding-left:8px}
 .tone-love{color:#ff8be4}
-.tone-joke{color:#7dffb0}
+.tone-joke{color:#b06bd8}
 .tone-evil{color:#ff7b7b}
 /* Auswahl nach Klick auf einen Namen */
 .tone-picker{
  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
  z-index:40;width:min(440px,94vw);
- background:#0f2a22;border:1px solid #e8cd8e;border-radius:12px;
+ background:var(--c-flaeche-2);border:1px solid var(--c-akzent);border-radius:12px;
  padding:12px;box-shadow:0 10px 30px #000a;
 }
-.tone-head{font-size:15px;margin-bottom:9px;color:#f4efe2}
-.tone-head strong{color:#e8cd8e}
+.tone-head{font-size:15px;margin-bottom:9px;color:var(--c-text)}
+.tone-head strong{color:var(--c-akzent)}
 .tone-buttons{display:grid;gap:7px;grid-template-columns:1fr}
 .tone-btn{
  padding:12px;border-radius:8px;font-size:15px;font-weight:bold;
- background:#0b241d;border:2px solid #3f7360;color:#f4efe2;cursor:pointer;
+ background:var(--c-flaeche-2);border:2px solid var(--c-rahmen);color:var(--c-text);cursor:pointer;
 }
 .tone-btn.love{border-color:#ff8be4;color:#ff8be4}
-.tone-btn.joke{border-color:#7dffb0;color:#7dffb0}
+.tone-btn.joke{border-color:#b06bd8;color:#b06bd8}
 .tone-btn.evil{border-color:#ff7b7b;color:#ff7b7b}
 .tone-btn.whisper{border-color:#ffd36a;color:#ffd36a}
-.tone-btn.game{border-color:#e8cd8e;color:#e8cd8e}
+.tone-btn.game{border-color:var(--c-akzent);color:var(--c-akzent)}
 /* Spieler, den man gerade einladen möchte, wird hervorgehoben. */
-.game-player.ziel{border-color:#e8cd8e;box-shadow:0 0 12px #e8cd8e55}
+.game-player.ziel{border-color:var(--c-akzent);box-shadow:0 0 12px rgba(176,44,114,0.33)}
 /* Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern. */
 .modus-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 /* "Namen ändern" steht oben über den beiden Spielarten und nimmt die volle Zeile. */
 #modusName{grid-column:1 / -1}
-.modus-btn{padding:12px 9px;border:1px solid #2f5a4b;background:#0b241d;color:#b9c9bf;border-radius:9px;font-size:16px;font-weight:bold;cursor:pointer}
-.modus-btn:hover{color:#fff;border-color:#e8cd8e}
-.modus-btn[aria-selected="true"]{background:#1a4a3a;border-color:#e8cd8e;color:#e8cd8e;box-shadow:0 0 10px #e8cd8e33}
+.modus-btn{padding:12px 9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);color:var(--c-sanft);border-radius:9px;font-size:16px;font-weight:bold;cursor:pointer}
+.modus-btn:hover{color:var(--c-akzent);border-color:var(--c-rahmen-2)}
+.modus-btn[aria-selected="true"]{background:var(--c-aktiv);border-color:var(--c-aktiv-rand);color:var(--c-aktiv-text);
+ box-shadow:0 2px 10px #7a1f5244}
 .modus-panel{margin-top:14px}
-.multi-titel{margin:16px 0 6px;font-size:12px;color:#a9bfb2;font-weight:normal;letter-spacing:1px;text-transform:uppercase}
-.name-tipp{display:block;margin-top:8px;font-size:11px;color:#467a66;line-height:1.4}
+.multi-titel{margin:16px 0 6px;font-size:12px;color:var(--c-leise);font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.name-tipp{display:block;margin-top:8px;font-size:11px;color:var(--c-leise);line-height:1.4}
 
 /* Grafikstil: gehoert dem Spieler, nicht dem Raum – steht oben, ohne Reiter. */
 .stil-zeile{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;
- margin:0 0 12px;color:#efe6d2}
-.stil-zeile small{color:#a9bfb2;font-size:11px}
-.game-player.gewaehlt{border-color:#e8cd8e;background:#1a4a3a;box-shadow:0 0 12px #e8cd8e55}
+ margin:0 0 12px;color:var(--c-text)}
+.stil-zeile small{color:var(--c-leise);font-size:11px}
+.game-player.gewaehlt{border-color:var(--c-aktiv-rand);background:var(--c-aktiv);color:var(--c-aktiv-text);
+ box-shadow:0 2px 12px #7a1f5244}
 /* Multiplayer: offenes Angebot und Startknopf. */
-.runde-info{margin:12px 0 0;font-size:13px;color:#b9c9bf}
+.runde-info{margin:12px 0 0;font-size:13px;color:var(--c-sanft)}
 /* Kein fetter Balken mehr: ein leiser Knopf mit Goldrand. */
 .runde-starten{width:auto;margin-top:12px;align-self:flex-start;padding:9px 16px;
- background:none;border:1px solid #d9bc7c;border-radius:6px;color:#f1dca8;
+ background:none;border:1px solid var(--c-akzent-2);border-radius:6px;color:var(--c-akzent-2);
  font-weight:normal;font-size:14px;letter-spacing:.06em}
-.runde-starten:hover{background:#17423a;border-color:#fff3d4;color:#fff3d4}
-.runde-angebot{margin-top:12px;padding:12px;border:1px solid #e8cd8e;border-radius:10px;background:#1a4a3a}
-.runde-angebot strong{display:block;color:#e8cd8e;margin-bottom:4px}
-.runde-angebot small{display:block;font-size:12px;color:#b9c9bf}
+.runde-starten:hover{background:var(--c-flaeche-3);border-color:var(--c-akzent);color:var(--c-akzent)}
+.runde-angebot{margin-top:12px;padding:12px;border:1px solid var(--c-rahmen-2);border-radius:10px;background:var(--c-flaeche-3)}
+.runde-angebot strong{display:block;color:var(--c-akzent);margin-bottom:4px}
+.runde-angebot small{display:block;font-size:12px;color:var(--c-sanft)}
 .runde-knoepfe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .runde-knoepfe .los{flex:1 1 120px}
-.runde-knoepfe .sekundaer{flex:0 0 auto;background:none;border:1px solid #3f7360;color:#b9c9bf;font-weight:normal}
-.angebot-ende{display:block;margin-top:6px;font-size:11px;color:#9db3a6}
+.runde-knoepfe .sekundaer{flex:0 0 auto;background:none;border:1px solid var(--c-rahmen);color:var(--c-sanft);font-weight:normal}
+.angebot-ende{display:block;margin-top:6px;font-size:11px;color:var(--c-leise)}
 /* Die drei Reiter waren auf dem Handy zu klein (14 px, dann 16 px). Jetzt
    19 px: "Namen ändern" steht oben über die volle Breite, darunter
    "Einzelspieler" und "Multiplayer" nebeneinander. */
@@ -322,56 +340,56 @@ html:fullscreen body{padding:18px 1px}
 }
 /* Alle Spiele aus der Übersicht, direkt im Connector. */
 .solo-gruppe{margin:20px 0 0}
-.solo-gruppe h3{margin:0 0 10px;font-size:12px;color:#a9bfb2;font-weight:normal;
+.solo-gruppe h3{margin:0 0 10px;font-size:12px;color:var(--c-leise);font-weight:normal;
  letter-spacing:1.2px;text-transform:uppercase}
 /* Alle Kacheln einer Gruppe gleich hoch, mit Luft dazwischen. */
 .solo-raster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;
  grid-auto-rows:1fr}
 @media(min-width:560px){.solo-raster{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .solo-link{display:flex;align-items:center;justify-content:center;min-height:58px;
- padding:12px 10px;border:1px solid #3f7360;border-radius:8px;background:#0b241d;
- color:#e8cd8e;text-decoration:none;font-size:16px;text-align:center;line-height:1.3}
-.solo-link:hover{border-color:#e8cd8e;background:#1a4a3a}
+ padding:12px 10px;border:1px solid var(--c-rahmen);border-radius:8px;background:var(--c-flaeche-2);
+ color:var(--c-akzent);text-decoration:none;font-size:16px;text-align:center;line-height:1.3}
+.solo-link:hover{border-color:var(--c-rahmen-2);background:var(--c-flaeche-3)}
 /* Status und Link unter der Spieleliste: gleicher stiller Stil wie der
    Spielstatus im Multiplayer. */
 #soloListe .empty{margin:10px 0 0;padding:9px 12px;text-align:center;
- border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;
- color:#a9bfb2;font-size:13px;line-height:1.35;font-style:italic}
+ border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);
+ color:var(--c-leise);font-size:13px;line-height:1.35;font-style:italic}
 .solo-hinweis{margin:10px 0 0;font-size:13px}
 .solo-hinweis a{display:block;padding:9px 12px;text-align:center;text-decoration:none;
- border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;color:#f1dca8}
-.solo-hinweis a:hover{border-color:#d9bc7c8c;background:#17423a;color:#fff3d4}
+ border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);color:var(--c-akzent-2)}
+.solo-hinweis a:hover{border-color:rgba(229,152,194,0.55);background:var(--c-flaeche-3);color:var(--c-akzent)}
 /* Handy: solange eine Partie offen ist, liegt die lange Spieleliste zu und
    dieser Knopf holt sie zurück (eingeblendet nur im Handy-Block weiter unten). */
 .solo-schalter{display:none;width:100%;margin:10px 0 0;padding:9px 12px;
- font:inherit;font-size:13px;color:#f1dca8;background:#0b241d;text-align:left;
- border:1px solid #d9bc7c33;border-radius:6px;cursor:pointer}
-.solo-schalter:hover{border-color:#d9bc7c8c;background:#17423a;color:#fff3d4}
+ font:inherit;font-size:13px;color:var(--c-akzent-2);background:var(--c-flaeche-2);text-align:left;
+ border:1px solid rgba(229,152,194,0.20);border-radius:6px;cursor:pointer}
+.solo-schalter:hover{border-color:rgba(229,152,194,0.55);background:var(--c-flaeche-3);color:var(--c-akzent)}
 /* „Weitere Spielmöglichkeiten": steht als zweiter Knopf neben dem QR-Code und
    klappt genauso auf und zu. Zugeklappt ist nur der Knopf zu sehen. */
 #addressbox{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 #addressbox details{flex:0 0 auto;min-width:0}
 #addressbox details[open]{flex:1 1 100%}
 #weitereBox summary{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;
- border:1px solid #d9bc7c66;border-radius:7px;background:#0b241d;color:#e8cd8e;
+ border:1px solid rgba(229,152,194,0.40);border-radius:7px;background:var(--c-flaeche-2);color:var(--c-akzent);
  font-size:14px;line-height:1.25;cursor:pointer;list-style:none;white-space:nowrap}
 #weitereBox summary::-webkit-details-marker{display:none}
 #weitereBox summary::after{content:"\25B8";font-size:11px;transition:transform .15s}
 #weitereBox[open] summary::after{transform:rotate(90deg)}
-#weitereBox summary:hover{background:#184536}
-#weitereBox summary:focus-visible{outline:2px solid #e8cd8e66;outline-offset:2px}
+#weitereBox summary:hover{background:var(--c-flaeche-3)}
+#weitereBox summary:focus-visible{outline:2px solid rgba(176,44,114,0.40);outline-offset:2px}
 #weitereInhalt{margin-top:12px}
 #weitereInhalt .solo-gruppe:first-child{margin-top:0}
 #weitereInhalt .empty{margin:8px 0 0;padding:9px 12px;text-align:center;
- border:1px solid #d9bc7c33;border-radius:6px;background:#0b241d;color:#a9bfb2;
+ border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);color:var(--c-leise);
  font-size:13px;line-height:1.35;font-style:italic}
 /* Ganz unten: leiser Hinweis, ohne eigene Karte. */
 .tone-btn:hover{filter:brightness(1.25)}
-.tone-mute{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:#b9c9bf;flex-wrap:wrap}
+.tone-mute{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:var(--c-sanft);flex-wrap:wrap}
 .tone-mute button{padding:5px 8px;font-size:12px;border-radius:5px}
-.tone-close{margin-top:9px;width:100%;padding:9px;border-radius:7px;background:#17423a;border:1px solid #3f7360;color:#f4efe2;font-size:14px;cursor:pointer}
-.players-head{color:#e8cd8e;font-weight:bold;font-size:14px;margin:14px 0 6px}
-.game-player{color:#efe6d2;font-weight:normal;text-align:left;width:100%;background:#0b241d}
+.tone-close{margin-top:9px;width:100%;padding:9px;border-radius:7px;background:var(--c-flaeche-3);border:1px solid var(--c-rahmen);color:var(--c-text);font-size:14px;cursor:pointer}
+.players-head{color:var(--c-akzent);font-weight:bold;font-size:14px;margin:14px 0 6px}
+.game-player{color:var(--c-text);font-weight:normal;text-align:left;width:100%;background:var(--c-flaeche-2)}
 .game-player:hover{filter:brightness(1.3)}
 .game-player:disabled{opacity:.55;cursor:default}
 .open-game{margin-top:0;width:100%;padding:9px 10px;font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -380,8 +398,8 @@ html:fullscreen body{padding:18px 1px}
 .games-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:14px;align-items:start}
 @media (max-width:720px){.games-grid{grid-template-columns:1fr}}
 .games-main{min-width:0}
-.games-side{background:#0b241d;border:1px solid #2f5a4b;border-radius:10px;padding:10px 12px}
-.games-side h3{margin:0 0 6px;font-size:14px;color:#e8cd8e}
+.games-side{background:var(--c-flaeche-2);border:1px solid var(--c-rahmen-2);border-radius:10px;padding:10px 12px}
+.games-side h3{margin:0 0 6px;font-size:14px;color:var(--c-akzent)}
 .games-side #game-status,.games-side #game-status.leer{margin-top:0}
 /* --- Kleine Handys (etwa 6 Zoll): eine Spur kompakter, aber lesbar ------ */
 @media(max-width:600px){
@@ -391,7 +409,7 @@ html:fullscreen body{padding:18px 1px}
  section h2{font-size:16px;margin:0 0 6px}
  /* Adresse und QR-Code nur noch eine schmale Zeile, kein eigener Kasten. */
  #addressbox{padding:0;margin:0 0 4px;background:none;border:none}
- #addressbox summary{font-size:13px;color:#a9bfb2;font-weight:normal;padding:2px 0}
+ #addressbox summary{font-size:13px;color:var(--c-leise);font-weight:normal;padding:2px 0}
  #addressbox summary::after{font-size:11px}
  #addressbox details p,#addressbox details button{font-size:13px}
  .solo-link{min-height:64px;font-size:19px;padding:12px 8px;line-height:1.3}
@@ -415,14 +433,14 @@ html:fullscreen body{padding:18px 1px}
  #game-status{margin-top:6px}
  /* Chat: flacher, die Eingabe bleibt beim Lesen unten kleben. */
  #chat{height:380px;padding:8px;font-size:14px;line-height:1.35}
- .chat-compose{position:sticky;bottom:0;background:#0b241d;padding-top:6px;gap:6px}
+ .chat-compose{position:sticky;bottom:0;background:var(--c-flaeche-2);padding-top:6px;gap:6px}
 }
 /* --- Chat: Chat und Eingabe bilden einen Kasten ohne Innenrand ----------
    Der Seitenrand ist 1 px, also sitzt dieser Rahmen genau 1 px daneben. */
 #chatbox{padding:0;border:none;background:none}
-#chat{border:1px solid #d9bc7c8c;border-bottom:none;border-radius:6px 6px 0 0}
-.chat-compose{margin-top:0;padding:8px;background:#0b241d;
- border:1px solid #d9bc7c8c;border-top:none;
+#chat{border:1px solid rgba(229,152,194,0.55);border-bottom:none;border-radius:6px 6px 0 0}
+.chat-compose{margin-top:0;padding:8px;background:var(--c-flaeche-2);
+ border:1px solid rgba(229,152,194,0.55);border-top:none;
  border-radius:0 0 6px 6px}
 .chat-send-row{border:none;padding:0;background:none}
 /* --- Handy: der Chat wird ein eigener großer Bildschirm -------------------
@@ -444,21 +462,21 @@ html:fullscreen body{padding:18px 1px}
 /* --- Spiel neben dem Chat: nur auf großen Bildschirmen (PC) -------------- */
 #spielFenster{display:none}
 .spiel-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:8px 12px;background:linear-gradient(#1e5645,#144238);
- border-bottom:1px solid #d9bc7c44;color:#f4e6c2;font-size:14px}
+ padding:8px 12px;background:linear-gradient(#e0559f,#b02c72);
+ border-bottom:1px solid #ffd0e455;color:#fff;font-size:14px}
 .spiel-kopf .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em}
 .spiel-knoepfe{display:flex;gap:6px}
 .spiel-knopf{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;
- padding:0;font-size:15px;line-height:1;border-radius:6px;border:1px solid #d9bc7c66;
- background:#0b241d;color:#e8cd8e;text-decoration:none;cursor:pointer;font-family:inherit}
-.spiel-knopf:hover{background:#184536;filter:none}
-#spielRahmen{flex:1;width:100%;border:0;background:#08120f;display:block}
+ padding:0;font-size:15px;line-height:1;border-radius:6px;border:1px solid #ffd0e499;
+ background:#ffffff26;color:#fff;text-decoration:none;cursor:pointer;font-family:inherit}
+.spiel-knopf:hover{background:#ffffff40;filter:none}
+#spielRahmen{flex:1;width:100%;border:0;background:var(--c-grund);display:block}
 #spielGriff{display:none;position:fixed;top:0;bottom:0;left:var(--links-breite,42%);
  width:14px;margin-left:-7px;cursor:col-resize;z-index:40;touch-action:none;outline:none}
 #spielGriff::after{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;
- background:#d9bc7c44;border-radius:2px;transition:background .15s}
-#spielGriff:hover::after,#spielGriff:focus-visible::after,body.griff-aktiv #spielGriff::after{background:#e8cd8e}
-#spielGriff:focus-visible{box-shadow:inset 0 0 0 1px #e8cd8e66}
+ background:var(--c-rahmen-2);border-radius:2px;transition:background .15s}
+#spielGriff:hover::after,#spielGriff:focus-visible::after,body.griff-aktiv #spielGriff::after{background:var(--c-aktiv)}
+#spielGriff:focus-visible{box-shadow:inset 0 0 0 1px var(--c-rahmen)}
 .solo-pch{display:none}
 @media(min-width:1024px){
  body.spiel-offen{display:grid;
@@ -473,8 +491,8 @@ html:fullscreen body{padding:18px 1px}
  body.spiel-offen main{max-width:none;width:100%;height:100vh;overflow-y:auto;
   margin:0;padding:8px 14px 14px}
  body.spiel-offen #spielFenster{display:flex;flex-direction:column;height:100vh;min-width:0;
-  border-left:1px solid #d9bc7c55;background:#08120f}
- .solo-pch{display:block;margin:10px 0 0;font-size:13px;color:#a9bfb2}
+  border-left:1px solid var(--c-rahmen);background:var(--c-grund)}
+ .solo-pch{display:block;margin:10px 0 0;font-size:13px;color:var(--c-leise)}
 }
 
 /* --- Handy und Tablet: Spiel unter dem Chat, über die volle Breite --------
@@ -484,7 +502,7 @@ html:fullscreen body{padding:18px 1px}
    Der schwebende Chat-Knopf kommt aus /spiele/mobil.js. */
 @media (max-width:1023px){
  body.spiel-offen #spielFenster{display:flex;flex-direction:column;
-  border-top:1px solid #d9bc7c55}
+  border-top:1px solid var(--c-rahmen)}
  /* Das Feld nimmt die Höhe unter dem Kopf des Spielfensters (44 px) ein. */
  body.spiel-offen #spielRahmen{flex:0 0 auto;
   height:calc(100vh - 44px);height:calc(100dvh - 44px)}
@@ -497,33 +515,52 @@ html:fullscreen body{padding:18px 1px}
  body.spiel-offen #soloListe.offen{display:block}
  body.spiel-offen #soloSchalter{display:block}
 }
-/* Spielauswahl im Multiplayer-Tab: Reiter je Kategorie, darunter die Spiele
-   mit Spielerzahl, darunter der Satz zum gewählten Spiel. */
+/* Spielauswahl im Multiplayer-Tab: ein Auswahlfeld mit einer Gruppe je
+   Kategorie (optgroup), darunter der Satz zum gewählten Spiel. */
 .spiel-wahl{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px;flex:1 1 100%}
-.spiel-wahl .sw-reiter{display:flex;flex-wrap:wrap;gap:6px}
-.spiel-wahl .sw-reiter-knopf{flex:1 1 auto;min-height:38px;padding:7px 10px;
- border:1px solid #2f5a4b;background:#0b241d;color:#b9c9bf;border-radius:9px;
- font:inherit;font-size:13px;font-weight:bold;cursor:pointer}
-.spiel-wahl .sw-reiter-knopf:hover{color:#fff;border-color:#e8cd8e}
-.spiel-wahl .sw-reiter-knopf.aktiv{background:#1a4a3a;border-color:#e8cd8e;color:#e8cd8e;
- box-shadow:0 0 10px #e8cd8e33}
-.spiel-wahl .sw-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));
- gap:6px;max-height:264px;overflow:auto;padding:2px}
-.spiel-wahl .sw-spiel{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
- padding:8px 10px;border:1px solid #2f5a4b;background:#0b241d;color:#efe6d2;
- border-radius:9px;font:inherit;text-align:left;cursor:pointer;min-height:44px}
-.spiel-wahl .sw-spiel:hover{border-color:#e8cd8e}
-.spiel-wahl .sw-spiel strong{font-size:14px;font-weight:bold}
-.spiel-wahl .sw-spiel small{font-size:11px;color:#a9bfb2}
-.spiel-wahl .sw-spiel.aktiv{background:#1a4a3a;border-color:#e8cd8e;box-shadow:0 0 10px #e8cd8e44}
-.spiel-wahl .sw-spiel.aktiv small{color:#e8cd8e}
+.spiel-wahl .sw-auswahl{width:100%;min-height:44px;padding:9px 10px;
+ border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);color:var(--c-text);
+ border-radius:9px;font:inherit;font-size:15px;font-weight:bold}
+.spiel-wahl .sw-auswahl:hover{border-color:var(--c-rahmen-2)}
+.spiel-wahl .sw-auswahl:focus-visible{outline:2px solid var(--c-aktiv);outline-offset:2px}
+.spiel-wahl .sw-auswahl:disabled{opacity:.55}
+.spiel-wahl .sw-auswahl option{background:var(--c-flaeche-2);color:var(--c-text)}
+/* Hinweis, wenn die Spieleliste nicht aus der Seite kommt (Rückfall) */
+.mp-hinweis{margin:8px 0;padding:9px 11px;border-radius:6px;font-size:13px;line-height:1.4;
+ background:var(--c-flaeche-3);border:1px solid var(--c-rahmen);border-left:4px solid var(--c-aktiv);
+ color:var(--c-text)}
+.mp-hinweis[data-quelle="server"]{border-left-color:var(--c-rahmen-2);font-size:12px;color:var(--c-sanft)}
+.mp-hinweis-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}
+.mp-hinweis-zeile a{color:var(--c-akzent);font-weight:bold}
+.mp-hinweis-zeile button{min-height:0;margin:0;padding:6px 12px;font-size:12px;
+ background:var(--c-knopf);border-color:var(--c-knopf);color:#fff}
 .spiel-wahl .sw-info{display:flex;flex-direction:column;gap:2px;margin:2px 0 0}
-.spiel-wahl .sw-info strong{font-size:15px;color:#f1dca8}
-.spiel-wahl .sw-info small{font-size:11px;color:#a9bfb2}
-.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:#d8e2da}
-@media (max-width:520px){
- .spiel-wahl .sw-liste{grid-template-columns:repeat(auto-fill,minmax(126px,1fr));max-height:220px}
- .spiel-wahl .sw-reiter-knopf{font-size:12px;padding:6px 8px}
+.spiel-wahl .sw-info strong{font-size:15px;color:var(--c-akzent-2)}
+.spiel-wahl .sw-info small{font-size:11px;color:var(--c-leise)}
+.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:var(--c-text)}
+/* --- Handy: Spielauswahl, Beschreibung, eingebettetes Spiel --------------
+   Kein eigenes Scrollfenster in der Spieleliste: sonst haengt die oberste
+   Kartenreihe halb unter dem Rand und die letzten Spiele sind unsichtbar.
+   Die Seite scrollt, die Beschreibung steht im Fluss darunter und
+   "Runde anbieten" folgt direkt - nichts ueberlagert etwas. */
+@media (max-width:600px){
+ .spiel-wahl{gap:10px}
+ .spiel-wahl .sw-auswahl{min-height:48px;font-size:16px}
+ .spiel-wahl .sw-info{position:static;margin:2px 0 0;padding:10px 12px;gap:3px;
+  background:var(--c-flaeche-3);border:1px solid var(--c-rahmen);border-radius:10px}
+ .spiel-wahl .sw-info strong{font-size:16px}
+ .spiel-wahl .sw-text{font-size:14px;line-height:1.45}
+ .runde-starten{width:100%;align-self:stretch;min-height:46px}
+ #game-status{min-height:0}
+ .solo-gruppe{margin:16px 0 0}
+ .solo-raster{gap:9px;grid-auto-rows:auto}
+ .solo-link{min-height:56px;padding:10px 8px;font-size:17px;line-height:1.25;
+  overflow-wrap:anywhere;hyphens:auto}
+ /* Kopf des eingebetteten Spiels: 44 px hoch (dazu passt die Hoehe des
+    Rahmens weiter oben) und Knoepfe in Daumengroesse. */
+ .spiel-kopf{min-height:44px;padding:4px 6px 4px 12px}
+ .spiel-kopf .name{font-size:14px}
+ .spiel-knopf{width:40px;height:36px;font-size:16px}
 }
 </style>
 <link rel="stylesheet" href="/spiele/design.css">
@@ -1366,18 +1403,59 @@ let currentGaenseGame=null;
 // Beschreibung und Startseite je Spiel gepflegt – hier wird nur noch die
 // Form gebaut, die der übrige Code kennt (id/name/path/api).
 const MP_REGISTER = window.TGMultiplayer || { kategorien: [], spiele: [] };
-const SUPPORTED_GAMES = MP_REGISTER.spiele.map(g => ({
- id: g.id,
- name: g.name,
- path: g.pfad,
- api: g.api ? "/api/" + g.api : "",
- kat: g.kat || "weitere",
- min: g.min || 2,
- max: g.max || 2,
- art: g.art || "einladung",
- text: g.text || ""
-}));
+function baueSpiele(liste){
+ return (liste||[]).map(g => ({
+  id: g.id,
+  name: g.name,
+  path: g.pfad,
+  api: g.api ? "/api/" + g.api : "",
+  kat: g.kat || "weitere",
+  min: g.min || 2,
+  max: g.max || 2,
+  art: g.art || "einladung",
+  text: g.text || ""
+ }));
+}
+let SUPPORTED_GAMES = baueSpiele(MP_REGISTER.spiele);
 SUPPORTED_GAMES.sort((a,b)=>a.name.localeCompare(b.name,"de",{numeric:true,sensitivity:"base"}));
+
+// Fehlt /spiele/multiplayer-register.js im Browser, wäre die Auswahl einfach
+// leer – niemand sähe den Grund. Deshalb zwei Rückfallebenen:
+//   1. /api/spiele: derselbe Inhalt, vom Server aus derselben Datei gelesen.
+//   2. Geht auch das nicht, steht ein Hinweis über der Auswahl.
+// mpQuelle sagt, woher die Liste gerade kommt: "seite", "server" oder "fehlt".
+let mpQuelle = window.TGMultiplayer ? "seite" : "fehlt";
+let mpMeldung = "";
+function mpRegisterPruefen(){
+ if(window.TGMultiplayer)return;
+ fetch("/api/spiele",{cache:"no-store"}).then(r=>{
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  return r.json();
+ }).then(d=>{
+  if(!d||!Array.isArray(d.spiele)||!d.spiele.length)throw new Error("leer");
+  MP_REGISTER.kategorien = d.kategorien || [];
+  MP_REGISTER.spiele = d.spiele;
+  SUPPORTED_GAMES = baueSpiele(d.spiele);
+  SUPPORTED_GAMES.sort((a,b)=>a.name.localeCompare(b.name,"de",{numeric:true,sensitivity:"base"}));
+  mpQuelle = "server";
+  mpMeldung = "Die Spieleliste (multiplayer-register.js) wurde im Browser nicht geladen. Die Auswahl kommt deshalb direkt vom Server und ist vollständig.";
+  mpPickerNeu();
+ }).catch(()=>{
+  mpQuelle = "fehlt";
+  mpMeldung = "Die Spieleliste konnte nicht geladen werden: multiplayer-register.js fehlt oder ist nicht erreichbar. Deshalb ist die Spielauswahl leer. Bitte die Seite neu laden – bleibt es dabei, fehlt die Datei auf dem Server.";
+  mpPickerNeu();
+ });
+}
+// Nach dem Nachladen muss die Auswahl einmal komplett neu gebaut werden.
+function mpPickerNeu(){
+ pickerZusatz = "";
+ const w = document.querySelector(".spiel-wahl");
+ const feld = w && w.querySelector(".sw-auswahl");
+ if(feld)feld.dataset.liste = "";
+ renderGamePicker(currentPlayersList);
+}
+// Beim Start einmal nachsehen, ob die Liste angekommen ist.
+mpRegisterPruefen();
 
 // refreshGames fragt alle Spiele nacheinander ab, und jedes schreibt in
 // dieselbe Statusbox. Vorher schrieb jedes Spiel sofort in die Seite: erst
@@ -3396,86 +3474,82 @@ let angebot = null;
 // Multiplayer: ein Spiel aussuchen und es dem ganzen Raum anbieten. Wer
 // mitspielen will, klickt im Chat auf "Mitspielen" – Einladungen an einzelne
 // Spieler gibt es nicht mehr.
-// Spielauswahl im Multiplayer-Tab: oben ein Reiter je Kategorie, darunter die
-// Spiele dieser Kategorie mit ihrer Spielerzahl, darunter Name, Spielerzahl und
-// ein Satz zum gewählten Spiel. Die Inhalte kommen vollständig aus der
-// zentralen Spieleverwaltung – hier steht keine Spieleliste mehr.
-let pickerKategorie="";
+// Spielauswahl im Multiplayer-Tab: ein Auswahlfeld, nach Kategorien gruppiert
+// (optgroup), darunter Name, Spielerzahl und ein Satz zum gewählten Spiel. Die
+// Inhalte kommen vollständig aus der zentralen Spieleverwaltung – hier steht
+// keine Spieleliste.
 
 function spielWahlBauen(){
  const wrap=document.createElement("div");
  wrap.className="spiel-wahl";
- wrap.setAttribute("role","group");
- wrap.setAttribute("aria-label","Spiel auswählen");
- const reiter=document.createElement("div");
- reiter.className="sw-reiter";
- reiter.setAttribute("role","tablist");
- (MP_REGISTER.kategorien||[]).forEach(k=>{
-  const b=document.createElement("button");
-  b.type="button";
-  b.className="sw-reiter-knopf";
-  b.dataset.kat=k.id;
-  b.setAttribute("role","tab");
-  if(k.text)b.title=k.text;
-  const zahl=(MP_REGISTER.spiele||[]).filter(g=>g.kat===k.id).length;
-  b.textContent=k.name+" ("+zahl+")";
-  b.onclick=()=>{
-   pickerKategorie=k.id;
-   spielWahlZeichnen(wrap);
-  };
-  reiter.appendChild(b);
- });
- const liste=document.createElement("div");
- liste.className="sw-liste";
+ const auswahl=document.createElement("select");
+ auswahl.className="sw-auswahl";
+ auswahl.id="spielwahl";
+ auswahl.setAttribute("aria-label","Spiel auswählen");
+ auswahl.onchange=()=>{
+  selectedGame=auswahl.value;
+  renderGamePicker(currentPlayersList);
+ };
  const info=document.createElement("p");
  info.className="sw-info";
- wrap.append(reiter,liste,info);
+ wrap.append(auswahl,info);
  return wrap;
 }
 
+// Die Gruppen werden nur gebaut, wenn sich die Liste geändert hat (etwa beim
+// Rückfall vom Server). Sonst bliebe das Feld stehen, statt im Takt neu
+// aufzuklappen.
 function spielWahlZeichnen(wrap){
  if(!wrap)return;
- const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
+ const auswahl=wrap.querySelector(".sw-auswahl");
+ if(!auswahl)return;
  const kats=MP_REGISTER.kategorien||[];
- if(!pickerKategorie||!kats.some(k=>k.id===pickerKategorie)){
-  pickerKategorie=(def&&def.kat)||(kats[0]?kats[0].id:"weitere");
+ const liste=kats.map(k=>k.id+"|"+k.name).join(";")+"#"
+  +SUPPORTED_GAMES.map(g=>g.id+"|"+g.name+"|"+g.kat+"|"+g.min+"|"+g.max).join(";");
+ if(auswahl.dataset.liste!==liste){
+  auswahl.dataset.liste=liste;
+  auswahl.innerHTML="";
+  kats.forEach(k=>{
+   const spiele=SUPPORTED_GAMES.filter(g=>g.kat===k.id);
+   if(!spiele.length)return;
+   const gruppe=document.createElement("optgroup");
+   gruppe.label=k.name;
+   spiele.forEach(g=>{
+    const o=document.createElement("option");
+    o.value=g.id;
+    o.textContent=g.name+" – "+(g.min===g.max?g.min+" Spieler":g.min+"–"+g.max+" Spieler");
+    gruppe.appendChild(o);
+   });
+   auswahl.appendChild(gruppe);
+  });
+  // Spiele ohne passende Kategorie nicht verschlucken (falls die Verwaltung
+  // eine Kategorie umbenennt).
+  const rest=SUPPORTED_GAMES.filter(g=>!kats.some(k=>k.id===g.kat));
+  if(rest.length){
+   const gruppe=document.createElement("optgroup");
+   gruppe.label="Weitere";
+   rest.forEach(g=>{
+    const o=document.createElement("option");
+    o.value=g.id;
+    o.textContent=g.name;
+    gruppe.appendChild(o);
+   });
+   auswahl.appendChild(gruppe);
+  }
  }
- // Nur neu bauen, wenn sich Reiter oder Auswahl geändert haben: sonst würde
- // jeder Takt die Knöpfe unter dem Finger ersetzen.
- const sig=pickerKategorie+"|"+selectedGame+"|"+kats.map(k=>k.id+k.name).join(",");
- if(wrap.dataset.sig===sig)return;
- wrap.dataset.sig=sig;
+ auswahl.disabled=!SUPPORTED_GAMES.length;
+ if(selectedGame&&auswahl.value!==selectedGame)auswahl.value=selectedGame;
 
- wrap.querySelectorAll(".sw-reiter-knopf").forEach(b=>{
-  const an=b.dataset.kat===pickerKategorie;
-  b.classList.toggle("aktiv",an);
-  b.setAttribute("aria-selected",an?"true":"false");
-  b.setAttribute("tabindex",an?"0":"-1");
- });
-
- const liste=wrap.querySelector(".sw-liste");
- liste.innerHTML="";
- SUPPORTED_GAMES.filter(g=>g.kat===pickerKategorie).forEach(g=>{
-  const b=document.createElement("button");
-  b.type="button";
-  b.className="sw-spiel"+(g.id===selectedGame?" aktiv":"");
-  b.setAttribute("aria-pressed",g.id===selectedGame?"true":"false");
-  const nm=document.createElement("strong");
-  nm.textContent=g.name;
-  const zl=document.createElement("small");
-  zl.textContent=g.min===g.max?g.min+" Spieler":g.min+"–"+g.max+" Spieler";
-  b.append(nm,zl);
-  b.onclick=()=>{
-   selectedGame=g.id;
-   renderGamePicker(currentPlayersList);
-  };
-  liste.appendChild(b);
- });
-
+ const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
  const info=wrap.querySelector(".sw-info");
+ // Der Text hängt nur am gewählten Spiel – im Takt also nur bei Wechsel neu bauen.
+ const kennung=(def?def.id:"")+"|"+SUPPORTED_GAMES.length;
+ if(info.dataset.kennung===kennung)return;
+ info.dataset.kennung=kennung;
  info.innerHTML="";
  if(!def){
-  info.textContent="Bitte ein Spiel auswählen.";
+  // Ohne Spieleliste wäre "Bitte ein Spiel auswählen" irreführend.
+  info.textContent=SUPPORTED_GAMES.length?"Bitte ein Spiel auswählen.":"Keine Spiele verfügbar – siehe Hinweis oben.";
   return;
  }
  const stark=document.createElement("strong");
@@ -3496,6 +3570,36 @@ function spielWahlZeichnen(wrap){
 function renderGamePicker(players){
  const box=document.getElementById("gameplayers");
  if(!box)return;
+
+ // Ohne die zentrale Spieleliste bliebe die Auswahl leer. Der Grund steht
+ // dann als Kasten über den Reitern, nicht nur in der Konsole.
+ let mpHinweis=box.querySelector(".mp-hinweis");
+ if(!mpMeldung){
+  if(mpHinweis)mpHinweis.remove();
+ }else{
+  if(!mpHinweis){
+   mpHinweis=document.createElement("p");
+   mpHinweis.className="mp-hinweis";
+   box.insertBefore(mpHinweis,box.firstChild);
+  }
+  if(mpHinweis.textContent!==mpMeldung)mpHinweis.textContent=mpMeldung;
+  mpHinweis.dataset.quelle=mpQuelle;
+  // Bei "fehlt" bekommt der Hinweis einen Weg heraus: Übersicht öffnen oder
+  // neu laden. Beim Nachladen bleibt er stehen, weil der Text gleich bleibt.
+  if(mpQuelle==="fehlt"&&!mpHinweis.querySelector(".mp-hinweis-zeile")){
+   const zeile=document.createElement("span");
+   zeile.className="mp-hinweis-zeile";
+   const uebersicht=document.createElement("a");
+   uebersicht.href="/spiele/spiele.html";
+   uebersicht.textContent="Alle Spiele in der Übersicht";
+   const neu=document.createElement("button");
+   neu.type="button";
+   neu.textContent="Seite neu laden";
+   neu.onclick=()=>location.reload();
+   zeile.append(uebersicht,neu);
+   mpHinweis.appendChild(zeile);
+  }
+ }
 
  let controls=box.querySelector(".game-invite-controls");
  if(!controls){

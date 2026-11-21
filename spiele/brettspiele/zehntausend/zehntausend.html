@@ -983,6 +983,7 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
       <div class="unterzeile">Sechs Würfel, drei Ansichten, ein Ziel</div>
     </div>
     <div class="rechts">
+      <div class="stil-stelle" id="stilStelle"></div>
       <button type="button" class="leise" id="neuesSpiel">Neues Spiel</button>
     </div>
   </header>
@@ -1527,8 +1528,12 @@ async function wuerfeln() {
 // Gerechnet wird die ganze Gruppe dieses Wurfs neu; gespeichert wird nur der
 // Unterschied, damit auch der vierte gleiche Würfel seinen vollen Satz bringt.
 function sichereAuswahl() {
+  // Mitgezählt werden auch die Würfel, die in diesem Wurf schon beiseite
+  // liegen – sonst bliebe der vierte gleiche Würfel (vier 2er = 400) liegen.
   const gewaehlt = REGELN.zaehle(
-    S.auswahl.map((an, i) => (an && S.wuerfel[i] > 0 ? S.wuerfel[i] : 0))
+    S.wuerfel.map((w, i) =>
+      (S.auswahl[i] || S.wurfGesichert[i]) && w > 0 ? w : 0
+    )
   );
   S.wuerfel.forEach((w, i) => {
     if (!S.auswahl[i] || S.gesichert[i] || w === 0) return;
@@ -2048,6 +2053,9 @@ function onlineStarten() {
 baueWuerfel();
 let gespeicherterStil = "normal";
 gespeicherterStil = TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
+/* Dieselbe Stilwahl wie in allen anderen Spielen – sie steht jetzt auch hier
+   im Kopf und speichert unter demselben Schlüssel (tg-stil). */
+if (TGStil.steuerung) TGStil.steuerung(document.getElementById("stilStelle"));
 stilSetzen(gespeicherterStil);
 TGStil.beiWechsel(() => stilSetzen(TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" })));
 

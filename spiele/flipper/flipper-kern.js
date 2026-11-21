@@ -21,8 +21,13 @@
      Ausgänge (Mitte unten ins Hauptfeld, rechts unten in die rechte Inlane). */
   var DECK = {
     x1: 78, y1: 70, x2: 356, y2: 320,
+    ecke: { x: 32, y: 18 },             // abgeschrägte obere Ecken der Deckplatte
     ein: { x: 338, y: 116 },            // hier kommt die Kugel aus dem Aufzug an
     rinne: { x1: 150, x2: 214 },        // Auslass in der Decke (Mitte unten)
+    /* Umlaufschiene: Mittellinie der Bahn, auf der die Kugel aus dem Aufzug
+       einmal quer über das Deck läuft. Kollision und Zeichner nehmen dieselben
+       Punkte – gezeichnete und echte Schiene können nicht auseinanderlaufen. */
+    schiene: [{ x: 100, y: 156 }, { x: 132, y: 136 }, { x: 288, y: 136 }, { x: 320, y: 156 }],
     loch: { x: 330, y: 300, r: 17 },    // Seitenausgang rechts unten
     ausRinne: { x: 182, y: 386, vx: 0, vy: 130 },
     spinner: { x: 214, y: 104, len: 22, punkte: 150 },   // Umlauf-Spinner im Oberdeck
@@ -70,6 +75,9 @@
   var SLING_L = { x1: 92, y1: 600, x2: 158, y2: 655, nx: 0.7071, ny: -0.7071 };
   var SLING_R = { x1: 310, y1: 600, x2: 244, y2: 655, nx: -0.7071, ny: -0.7071 };
 
+  /* Zielbank auf dem Oberdeck – auf allen vier Tischen dieselbe (linke Bande). */
+  var DECK_ZIELE = [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]];
+
   /* --------------------------------------------------------------- Tische
      Gemeinsame Architektur, je Tisch eigene Bumper, Bänke, Rampen und Werte. */
   var TISCHE = [
@@ -79,7 +87,7 @@
       bumper: [[152, 372, 19, 130, 280], [252, 372, 19, 130, 280], [202, 442, 20, 150, 285],
                [124, 478, 16, 170, 270], [280, 478, 16, 170, 270]],
       deckBumper: [[146, 196, 23], [226, 234, 26], [306, 196, 23], [226, 168, 15]],
-      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
+      deckZiele: DECK_ZIELE,
       zieleL: [[31, 380], [31, 412], [31, 444]],
       zieleR: [[353, 380], [353, 412]],
       fallen: [[124, 494], [152, 494], [180, 494], [208, 494]],
@@ -105,7 +113,7 @@
       bumper: [[150, 378, 17, 140, 290], [252, 378, 17, 140, 290], [201, 368, 18, 140, 290],
                [176, 438, 16, 150, 280], [226, 438, 16, 150, 280], [201, 494, 15, 160, 285]],
       deckBumper: [[140, 200, 21], [226, 240, 24], [310, 200, 21], [226, 166, 15]],
-      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
+      deckZiele: DECK_ZIELE,
       zieleL: [[31, 376], [31, 408], [31, 440]],
       zieleR: [[353, 376], [353, 408]],
       fallen: [[118, 496], [146, 496], [174, 496], [202, 496]],
@@ -131,7 +139,7 @@
       bumper: [[152, 366, 18, 130, 285], [250, 366, 18, 130, 285],
                [112, 438, 15, 170, 275], [292, 438, 15, 170, 275], [201, 476, 19, 150, 280]],
       deckBumper: [[146, 192, 24], [224, 232, 25], [304, 192, 24], [226, 168, 16]],
-      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
+      deckZiele: DECK_ZIELE,
       zieleL: [[31, 386], [31, 418], [31, 450]],
       zieleR: [[353, 386], [353, 418]],
       fallen: [[126, 498], [154, 498], [182, 498], [210, 498]],
@@ -157,7 +165,7 @@
       bumper: [[150, 368, 21, 180, 310], [252, 368, 21, 180, 310], [201, 440, 18, 200, 300],
                [118, 484, 15, 210, 295], [284, 484, 15, 210, 295], [201, 498, 14, 220, 300]],
       deckBumper: [[144, 190, 25], [226, 238, 27], [308, 190, 25], [226, 164, 16]],
-      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
+      deckZiele: DECK_ZIELE,
       zieleL: [[31, 374], [31, 406], [31, 438]],
       zieleR: [[353, 374], [353, 406]],
       fallen: [[122, 500], [150, 500], [178, 500], [206, 500]],
@@ -202,21 +210,32 @@
   /* --------------------------------------------------------------- Aufbau */
   function strecke(s) { return { x1: s[0], y1: s[1], x2: s[2], y2: s[3] }; }
 
+  function strecken(punkte) {
+    var s = [];
+    for (var i = 1; i < punkte.length; i++) {
+      s.push([punkte[i - 1].x, punkte[i - 1].y, punkte[i].x, punkte[i].y]);
+    }
+    return s;
+  }
+
   /* Deckrahmen: Außenkanten mit abgeschrägten Ecken, Boden mit Auslass in der
      Mitte und die Umlaufschiene unter der Decke (durch sie läuft die Kugel aus
-     dem Aufzug einmal quer über das Deck). */
+     dem Aufzug einmal quer über das Deck). Alles aus DECK abgeleitet – der
+     Zeichner nimmt dieselben Zahlen. */
   var DECK_WAENDE = [
-    [78, 320, 78, 88], [78, 88, 110, 70], [110, 70, 324, 70],
-    [324, 70, 356, 88], [356, 88, 356, 320],
-    [78, 320, 150, 320], [214, 320, 356, 320],
-    [100, 156, 132, 136], [132, 136, 288, 136], [288, 136, 320, 156]
-  ].map(strecke);
+    [DECK.x1, DECK.y2, DECK.x1, DECK.y1 + DECK.ecke.y],
+    [DECK.x1, DECK.y1 + DECK.ecke.y, DECK.x1 + DECK.ecke.x, DECK.y1],
+    [DECK.x1 + DECK.ecke.x, DECK.y1, DECK.x2 - DECK.ecke.x, DECK.y1],
+    [DECK.x2 - DECK.ecke.x, DECK.y1, DECK.x2, DECK.y1 + DECK.ecke.y],
+    [DECK.x2, DECK.y1 + DECK.ecke.y, DECK.x2, DECK.y2],
+    [DECK.x1, DECK.y2, DECK.rinne.x1, DECK.y2],
+    [DECK.rinne.x2, DECK.y2, DECK.x2, DECK.y2]
+  ].concat(strecken(DECK.schiene)).map(strecke);
 
   function tischKopie(def) {
     var t = {
       id: def.id, name: def.name, satz: def.satz, grav: def.grav, tipp: def.tipp, bonus: def.bonus,
       waende: RAHMEN.concat(def.waende || []).map(strecke),
-      eigene: (def.waende || []).map(strecke),
       bumper: def.bumper.map(function (b) {
         return { x: b[0], y: b[1], r: b[2], punkte: b[3], kick: b[4], blitz: 0, cooldown: 0 };
       }),
@@ -274,7 +293,7 @@
     return {
       x: x, y: y, vx: vx || 0, vy: vy || 0,
       ebene: ebene || "haupt", zustand: "feld",
-      bahn: null, sperre: 0, saver: 0, ruhig: 0,
+      bahn: null, sperre: 0,
       anker: null, still: 0, stups: 0
     };
   }
@@ -299,12 +318,11 @@
       schloss: [],                  // gefangene Kugeln {x,y}
       multiball: 0,
       mission: { folge: [0, 2, 4], stand: 0, fertig: 0 },
-      zieleRunter: 0,
       kickback: 1,                  // 1 = geladen
       extraBall: false,
       jackpot: false, schlossOffen: false,
       popups: [], ereignisse: [], meldung: "",
-      auslaufSperre: 0, rampenSperre: 0, klemme: null, ruhig: 0
+      auslaufSperre: 0, rampenSperre: 0
     };
     if (typeof kugeln === "number") { sp.kugelnGesamt = kugeln; sp.kugelnUebrig = kugeln; }
     return sp;
@@ -344,10 +362,10 @@
   }
 
   function wand(k, a, e) {
-    var d = abstandSegment(k.x, k.y, a.x1, a.y1, a.x2, a.y2);
-    if (d >= RK) return false;
     var c = naechsterPunkt(k.x, k.y, a.x1, a.y1, a.x2, a.y2);
     var dx = k.x - c.x, dy = k.y - c.y;
+    var d = Math.hypot(dx, dy);
+    if (d >= RK) return false;
     if (d < 0.0001) { dx = 0; dy = -1; }
     var l = Math.hypot(dx, dy) || 1;
     stoss(k, c, dx / l, dy / l, e, 0.03, 0);
@@ -644,12 +662,10 @@
       s.y = 392;
       s.vx = (i ? 220 : -220);
       s.vy = 180;
-      s.saver = 0.6;
     });
     sp.kugeln = sp.kugeln.concat(los);
     if (grund !== "extra") {
       var k = neueKugel(DECK.ein.x, DECK.ein.y, -280, 10, "deck");
-      k.saver = 0.6;
       sp.kugeln.push(k);
     }
     sp.meldung = "MULTIBALL! " + sp.kugeln.length + " Kugeln im Spiel";
@@ -809,7 +825,6 @@
       }
       if (rechteck(sp, k, f, f.punkte, "fallziel")) {
         f.runter = true; f.blitz = 1; f.wecker = 10;
-        sp.zieleRunter++;
         var alle = true;
         for (var q = 0; q < sp.tisch.fallen.length; q++) if (!sp.tisch.fallen[q].runter) alle = false;
         if (alle) {
@@ -988,7 +1003,6 @@
   function schritt(sp, dt) {
     if (!(dt > 0)) return;
     if (dt > 1 / 30) dt = 1 / 30;
-    sp.zeit += dt;
     flipperDrehen(sp, dt);
     if (sp.bonusZeit > 0) sp.bonusZeit = Math.max(0, sp.bonusZeit - dt);
     deckTakt(sp, dt);

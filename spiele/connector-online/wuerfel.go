@@ -50,13 +50,21 @@ func wuerfelBekannt(id string) bool {
 
 // --- Regeln laden -----------------------------------------------------------
 
+// wuerfelVariante ist eine Zusatzregel, die das Regelmodul anbietet
+// (varianten:[{id,text}]). Der Gastgeber wählt sie vor dem Start.
+type wuerfelVariante struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
 type wuerfelRegeln struct {
-	id    string
-	vm    *goja.Runtime
-	def   goja.Value
-	titel string
-	min   int
-	max   int
+	id        string
+	vm        *goja.Runtime
+	def       goja.Value
+	titel     string
+	min       int
+	max       int
+	varianten []wuerfelVariante
 }
 
 var (
@@ -197,8 +205,46 @@ func wuerfelRegelnHolen(spiel string) (*wuerfelRegeln, error) {
 	if r.max < r.min {
 		r.max = r.min
 	}
+	if vs := o.Get("varianten"); vs != nil && !goja.IsUndefined(vs) && !goja.IsNull(vs) {
+		liste := vs.ToObject(vm)
+		for i := 0; ; i++ {
+			eintrag := liste.Get(strconv.Itoa(i))
+			if eintrag == nil || goja.IsUndefined(eintrag) || goja.IsNull(eintrag) {
+				break
+			}
+			eo := eintrag.ToObject(vm)
+			id := strings.TrimSpace(eo.Get("id").String())
+			if id == "" {
+				continue
+			}
+			text := ""
+			if t := eo.Get("text"); t != nil && !goja.IsUndefined(t) && !goja.IsNull(t) {
+				text = t.String()
+			}
+			r.varianten = append(r.varianten, wuerfelVariante{ID: id, Text: text})
+		}
+	}
 	wuerfelRegler[spiel] = r
 	return r, nil
+}
+
+// regelFn holt eine Funktion des Regelmoduls (start, sicht, aktion).
+func (p *wuerfelPartie) regelFn(name string) (goja.Callable, error) {
+	f, ok := goja.AssertFunction(p.reg.def.ToObject(p.reg.vm).Get(name))
+	if !ok {
+		return nil, errors.New("Regelmodul " + p.Spiel + " hat kein " + name)
+	}
+	return f, nil
+}
+
+// rahmenFn holt eine Funktion des Rahmens (nur neuePartie).
+func (p *wuerfelPartie) rahmenFn(name string) (goja.Callable, error) {
+	vm := p.reg.vm
+	f, ok := goja.AssertFunction(vm.Get("TGW").ToObject(vm).Get(name))
+	if !ok {
+		return nil, errors.New("Rahmen hat kein " + name)
+	}
+	return f, nil
 }
 
 // --- Partie -----------------------------------------------------------------
@@ -217,6 +263,21 @@ type wuerfelPartie struct {
 	Ende   string
 	reg    *wuerfelRegeln
 	z      goja.Value
+	// Varianten sind die Zusatzregeln, die der Gastgeber im Wartebereich
+	// angekreuzt hat. Sie gehören zur Runde (nicht zum Spielstand), damit sie
+	// beim Neuaufbau des Tisches – Join, Start, Neue Runde – erhalten bleiben.
+	Varianten map[string]bool
+}
+
+// setzeVarianten übernimmt nur Regeln, die dieses Spiel wirklich anbietet.
+func (p *wuerfelPartie) setzeVarianten(wahl map[string]bool) {
+	gewaehlt := map[string]bool{}
+	for _, v := range p.reg.varianten {
+		if wahl[v.ID] {
+			gewaehlt[v.ID] = true
+		}
+	}
+	p.Varianten = gewaehlt
 }
 
 func wuerfelSaat() int64 {
@@ -255,11 +316,17 @@ func (p *wuerfelPartie) wurfAufbauen() error {
 	for _, s := range p.Sitze {
 		namen = append(namen, s.Name)
 	}
-	fn, ok := goja.AssertFunction(vm.Get("TGW").ToObject(vm).Get("neuePartie"))
-	if !ok {
-		return errors.New("neuePartie fehlt")
+	fn, err := p.rahmenFn("neuePartie")
+	if err != nil {
+		return err
 	}
-	z, err := fn(goja.Undefined(), vm.ToValue(namen), vm.NewObject(), vm.ToValue(wuerfelSaat()))
+	varianten := vm.NewObject()
+	for id, an := range p.Varianten {
+		if an {
+			_ = varianten.Set(id, true)
+		}
+	}
+	z, err := fn(goja.Undefined(), vm.ToValue(namen), varianten, vm.ToValue(wuerfelSaat()))
 	if err != nil {
 		return err
 	}
@@ -280,9 +347,16 @@ func wuerfelSitzeFiltern(p *wuerfelPartie, anwesend map[string]bool) {
 		}
 	}
 	p.Sitze = behalten
-	if p.Host != "" && p.sitz(p.Host) < 0 && len(p.Sitze) > 0 {
-		p.Host = p.Sitze[0].ID
+	p.hostNachruecken()
+}
+
+// hostNachruecken gibt den Vorsitz an den ersten Sitz, wenn der Gastgeber
+// nicht mehr am Tisch ist.
+func (p *wuerfelPartie) hostNachruecken() {
+	if p.Host == "" || len(p.Sitze) == 0 || p.sitz(p.Host) >= 0 {
+		return
 	}
+	p.Host = p.Sitze[0].ID
 }
 
 func (p *wuerfelPartie) starten(anwesend map[string]bool) error {
@@ -292,9 +366,9 @@ func (p *wuerfelPartie) starten(anwesend map[string]bool) error {
 	if err := p.wurfAufbauen(); err != nil {
 		return err
 	}
-	fn, ok := goja.AssertFunction(p.reg.def.ToObject(p.reg.vm).Get("start"))
-	if !ok {
-		return errors.New("start fehlt")
+	fn, err := p.regelFn("start")
+	if err != nil {
+		return err
 	}
 	if _, err := fn(p.reg.def, p.z); err != nil {
 		return err
@@ -306,9 +380,9 @@ func (p *wuerfelPartie) starten(anwesend map[string]bool) error {
 // aktion gibt den Zug an das Regelmodul. false heißt: so nicht erlaubt.
 func (p *wuerfelPartie) aktion(art string, daten json.RawMessage) (bool, error) {
 	vm := p.reg.vm
-	fn, ok := goja.AssertFunction(p.reg.def.ToObject(vm).Get("aktion"))
-	if !ok {
-		return false, errors.New("aktion fehlt")
+	fn, err := p.regelFn("aktion")
+	if err != nil {
+		return false, err
 	}
 	var wert any
 	if len(daten) > 0 && string(daten) != "null" {
@@ -336,24 +410,17 @@ func (p *wuerfelPartie) aktion(art string, daten json.RawMessage) (bool, error) 
 	return true, nil
 }
 
-// stand liefert den Spielstand als JSON. Funktionen (wurf, rng) verschwinden
-// dabei von selbst – die braucht nur der Server.
-func (p *wuerfelPartie) stand() json.RawMessage {
-	return wuerfelJson(p.reg.vm, p.z)
-}
-
 // sichtWerte ruft sicht(z) des Regelmoduls auf: Knopf, Auswahl, Hinweis.
 func (p *wuerfelPartie) sichtWerte() json.RawMessage {
-	vm := p.reg.vm
-	fn, ok := goja.AssertFunction(p.reg.def.ToObject(vm).Get("sicht"))
-	if !ok {
+	fn, err := p.regelFn("sicht")
+	if err != nil {
 		return nil
 	}
 	wert, err := fn(p.reg.def, p.z)
 	if err != nil {
 		return nil
 	}
-	return wuerfelJson(vm, wert)
+	return wuerfelJson(p.reg.vm, wert)
 }
 
 func wuerfelJson(vm *goja.Runtime, wert goja.Value) json.RawMessage {
@@ -395,6 +462,16 @@ type wuerfelSicht struct {
 	// Die Spielseite zeichnet daraus; Prüfungen können damit wie ein Spieler
 	// ziehen, ohne die Regeln nachzubauen.
 	Sicht json.RawMessage `json:"sicht,omitempty"`
+	// Varianten sind die Zusatzregeln des Spiels samt Auswahl – der
+	// Wartebereich zeigt daraus die Kästchen für den Gastgeber.
+	Varianten []wuerfelVarianteSicht `json:"varianten,omitempty"`
+}
+
+// wuerfelVarianteSicht ist eine Zusatzregel mit dem Haken des Gastgebers.
+type wuerfelVarianteSicht struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+	An   bool   `json:"an"`
 }
 
 func (p *wuerfelPartie) sicht(fuerID string) wuerfelSicht {
@@ -414,8 +491,13 @@ func (p *wuerfelPartie) sicht(fuerID string) wuerfelSicht {
 	if s.Dran >= 0 && s.Dran < len(p.Sitze) {
 		s.DranID = p.Sitze[s.Dran].ID
 	}
+	for _, v := range p.reg.varianten {
+		s.Varianten = append(s.Varianten, wuerfelVarianteSicht{ID: v.ID, Text: v.Text, An: p.Varianten[v.ID]})
+	}
 	if p.Status != "invited" {
-		s.Zustand = p.stand()
+		// Zustand ist der Spielstand (Funktionen wie wurf/rng fallen beim
+		// Serialisieren weg), Sicht der Vorschlag des Regelmoduls.
+		s.Zustand = wuerfelJson(p.reg.vm, p.z)
 		s.Sicht = p.sichtWerte()
 	}
 	return s
@@ -442,9 +524,7 @@ func wuerfelSitzWeg(g *wuerfelPartie, id, name string) (bool, bool, int) {
 		return false, false, len(g.Sitze)
 	}
 	g.Sitze = append(g.Sitze[:idx], g.Sitze[idx+1:]...)
-	if g.Host == id && len(g.Sitze) > 0 {
-		g.Host = g.Sitze[0].ID
-	}
+	g.hostNachruecken()
 	if g.Status == "active" {
 		g.Status = "finished"
 		g.Ende = name + " hat den Tisch verlassen – die Runde ist zu Ende."
@@ -485,24 +565,26 @@ func wuerfelSpielerUmbenennen(p *wuerfelPartie, id, name string) {
 	_ = platz.ToObject(p.reg.vm).Set("name", name)
 }
 
-// wuerfelAktiv sagt, ob der Spieler gerade in einer laufenden Runde sitzt.
-func wuerfelAktiv(p *wuerfelPartie, id string) bool {
+// wuerfelLage liest Sitzplatz und Status unter der einen Sperre.
+func wuerfelLage(p *wuerfelPartie, id string) (int, string) {
 	if p == nil {
-		return false
+		return -1, ""
 	}
 	wuerfelMu.Lock()
 	defer wuerfelMu.Unlock()
-	return p.Status == "active" && p.sitz(id) >= 0
+	return p.sitz(id), p.Status
+}
+
+// wuerfelAktiv sagt, ob der Spieler gerade in einer laufenden Runde sitzt.
+func wuerfelAktiv(p *wuerfelPartie, id string) bool {
+	sitz, status := wuerfelLage(p, id)
+	return sitz >= 0 && status == "active"
 }
 
 // wuerfelSitzt sagt, ob der Spieler überhaupt an diesem Tisch sitzt.
 func wuerfelSitzt(p *wuerfelPartie, id string) bool {
-	if p == nil {
-		return false
-	}
-	wuerfelMu.Lock()
-	defer wuerfelMu.Unlock()
-	return p.sitz(id) >= 0
+	sitz, _ := wuerfelLage(p, id)
+	return sitz >= 0
 }
 
 // --- Endpunkt ---------------------------------------------------------------
@@ -514,10 +596,11 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	aktion := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("action")))
 	var input struct {
-		ID    string          `json:"id"`
-		Spiel string          `json:"spiel"`
-		Art   string          `json:"art"`
-		Daten json.RawMessage `json:"daten"`
+		ID        string          `json:"id"`
+		Spiel     string          `json:"spiel"`
+		Art       string          `json:"art"`
+		Daten     json.RawMessage `json:"daten"`
+		Varianten map[string]bool `json:"varianten"`
 	}
 	if r.Method == http.MethodPost {
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -535,6 +618,25 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 	fehler := func(text string, nr int) {
 		http.Error(w, text, nr)
 	}
+	// sende schickt den Stand des Tisches – oder null, wenn keiner läuft.
+	var room *Room
+	sende := func() {
+		if room == nil || room.Wuerfel == nil {
+			antwort(nil)
+			return
+		}
+		s := room.Wuerfel.sicht(input.ID)
+		antwort(&s)
+	}
+	// aufbauen erzeugt den Stand neu (Sitze geändert); im Fehlerfall ist die
+	// Antwort schon geschrieben.
+	aufbauen := func(p *wuerfelPartie) bool {
+		if err := p.wurfAufbauen(); err != nil {
+			fehler("Das Spiel lässt sich gerade nicht öffnen.", http.StatusInternalServerError)
+			return false
+		}
+		return true
+	}
 
 	if code == "" || input.ID == "" {
 		fehler("Raum und Spieler fehlen.", http.StatusBadRequest)
@@ -544,7 +646,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 	// Erst der Raum (mu), dann die Regelmaschine (wuerfelMu). Die beiden
 	// Sperren werden nie gleichzeitig gehalten.
 	mu.Lock()
-	room := rooms[code]
+	room = rooms[code]
 	var sitz wuerfelSitz
 	anwesend := map[string]bool{}
 	da := false
@@ -580,20 +682,14 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 	// Stand abholen: ohne Partie bleibt das Feld leer, die Seite zeigt dann
 	// den Wartebereich.
 	if aktion == "" || aktion == "stand" {
-		if tisch == nil {
-			antwort(nil)
-			return
-		}
-		s := tisch.sicht(input.ID)
-		antwort(&s)
+		sende()
 		return
 	}
 
 	if aktion == "create" {
 		if tisch != nil && tisch.Status != "finished" {
 			// Schon offen: der Ersteller wollte nur seine Runde sehen.
-			s := tisch.sicht(input.ID)
-			antwort(&s)
+			sende()
 			return
 		}
 		spiel := strings.ToLower(strings.TrimSpace(input.Spiel))
@@ -613,13 +709,12 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 			Status: "invited",
 			reg:    reg,
 		}
-		if err := p.wurfAufbauen(); err != nil {
-			fehler("Das Spiel lässt sich gerade nicht öffnen.", http.StatusInternalServerError)
+		p.setzeVarianten(input.Varianten)
+		if !aufbauen(p) {
 			return
 		}
 		room.Wuerfel = p
-		s := p.sicht(sitz.ID)
-		antwort(&s)
+		sende()
 		return
 	}
 
@@ -631,8 +726,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 	switch aktion {
 	case "join":
 		if tisch.sitz(sitz.ID) >= 0 {
-			s := tisch.sicht(sitz.ID)
-			antwort(&s)
+			sende()
 			return
 		}
 		if tisch.Status != "invited" {
@@ -649,8 +743,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 				fehler("Das Spiel lässt sich gerade nicht starten.", http.StatusInternalServerError)
 				return
 			}
-		} else if err := tisch.wurfAufbauen(); err != nil {
-			fehler("Das Spiel lässt sich gerade nicht öffnen.", http.StatusInternalServerError)
+		} else if !aufbauen(tisch) {
 			return
 		}
 
@@ -660,8 +753,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if aktion == "start" && tisch.Status == "active" {
-			s := tisch.sicht(sitz.ID)
-			antwort(&s)
+			sende()
 			return
 		}
 		if aktion == "neu" && tisch.Status != "finished" {
@@ -674,6 +766,22 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := tisch.starten(anwesend); err != nil {
 			fehler("Das Spiel lässt sich gerade nicht starten.", http.StatusInternalServerError)
+			return
+		}
+
+	case "varianten":
+		// Nur der Gastgeber stellt die Zusatzregeln ein – und nur, solange
+		// die Runde noch nicht läuft.
+		if tisch.Host != sitz.ID {
+			fehler("Nur der Gastgeber wählt die Zusatzregeln.", http.StatusForbidden)
+			return
+		}
+		if tisch.Status != "invited" {
+			fehler("Die Zusatzregeln stehen erst nach dem Start fest.", http.StatusConflict)
+			return
+		}
+		tisch.setzeVarianten(input.Varianten)
+		if !aufbauen(tisch) {
 			return
 		}
 
@@ -711,10 +819,5 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if room.Wuerfel == nil {
-		antwort(nil)
-		return
-	}
-	s := room.Wuerfel.sicht(sitz.ID)
-	antwort(&s)
+	sende()
 }

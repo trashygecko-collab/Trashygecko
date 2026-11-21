@@ -86,6 +86,17 @@
       feld.className = "pyramide";
       var w = feld.clientWidth || brett.clientWidth || 560;
       var kartenBreite = Math.min(w / 7.4, 92);
+      /* Auch die Hoehe muss reichen: Pyramide, 14 px Abstand und die beiden
+         Stapel darunter (Karte = --sfw breit, 7/5 hoch). Sonst muss am PC in
+         der Bahn gerollt werden (bei 1280 x 800 fehlten 133 px). Die 4 px
+         Luft verhindern, dass ein Rundungsrest eine Bildlaufleiste ausloest. */
+      var bahn = document.getElementById("bahn");
+      if (bahn) {
+        var ps = getComputedStyle(bahn);
+        var platz = bahn.clientHeight - parseFloat(ps.paddingTop) - parseFloat(ps.paddingBottom);
+        var sfw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sfw")) || 82;
+        if (platz > 240) kartenBreite = Math.min(kartenBreite, (platz - 18 - sfw * 1.4) / 6.272);
+      }
       var kartenHoehe = kartenBreite * 1.4;
       var schrittY = kartenHoehe * 0.58;
       feld.style.width = (kartenBreite * 7.4) + "px";

@@ -34,15 +34,15 @@
       fahneRand: tok("--fl-fahne-rand"), spinner: tok("--fl-spinner"), spinnerRand: tok("--fl-spinner-rand"),
       scoopAussen: tok("--fl-scoop-aussen"), scoopInnen: tok("--fl-scoop-innen"),
       rampe: tok("--fl-rampe"), rampeRand: tok("--fl-rampe-rand"), zinne: tok("--fl-zinne"),
-      leitblech: tok("--fl-leitblech"), bumperRing: tok("--fl-bumper-ring"),
+      bumperRing: tok("--fl-bumper-ring"),
       bumperKante: tok("--fl-bumper-kante"), bumperKappe: tok("--fl-bumper-kappe"),
       arm1: tok("--fl-arm-1"), arm2: tok("--fl-arm-2"), arm3: tok("--fl-arm-3"),
       armRand: tok("--fl-arm-rand"), armLinie: tok("--fl-arm-linie"),
       lager: tok("--fl-lager"), lagerRand: tok("--fl-lager-rand"), lagerSchlitz: tok("--fl-lager-schlitz"),
       schraube: tok("--fl-schraube"), schraubSchlitz: tok("--fl-schraub-schlitz"),
-      zierrand: tok("--fl-zierrand"), lampeAus: tok("--fl-lampe-aus"), spur: tok("--fl-spur"),
-      kugelRand: tok("--fl-kugel-rand"), kugelEnde: tok("--fl-kugel-ende"), ring: tok("--fl-ring"),
-      feder: tok("--fl-feder"), ladeWarn: tok("--fl-lade-warn"), lichtText: tok("--fl-licht-text"),
+      zierrand: tok("--fl-zierrand"),
+      kugelRand: tok("--fl-kugel-rand"), kugelEnde: tok("--fl-kugel-ende"),
+      ladeWarn: tok("--fl-lade-warn"), lichtText: tok("--fl-licht-text"),
       punkte: tok("--punkte"), text: tok("--text")
     };
     var s = sp.tisch.satz;
@@ -74,6 +74,14 @@
   var tonAn = true;
   try { tonAn = localStorage.getItem("flipper-ton") !== "aus"; } catch (e) { }
   var audio = null;
+  /* Schlitzschraube: Gehäuse, Spielfeld und Deckplatte teilen sich die Form. */
+  function schraube(x, y, r, halb, dicke) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = F.schraube; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - halb, y); ctx.lineTo(x + halb, y);
+    ctx.strokeStyle = F.schraubSchlitz; ctx.lineWidth = dicke; ctx.stroke();
+  }
+
   function audioHolen() {
     if (!tonAn) return null;
     if (!audio) {
@@ -424,10 +432,7 @@
     ctx.strokeStyle = F.zierrand; ctx.lineWidth = 1;
     rundeFlaeche(44, 342, 314, 424, 16); ctx.stroke();
     [[47, 350], [355, 350], [47, 560], [355, 560], [47, 760], [355, 760]].forEach(function (p) {
-      ctx.beginPath(); ctx.arc(p[0], p[1], 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = F.schraube; ctx.fill();
-      ctx.beginPath(); ctx.moveTo(p[0] - 1.5, p[1]); ctx.lineTo(p[0] + 1.5, p[1]);
-      ctx.strokeStyle = F.schraubSchlitz; ctx.lineWidth = 1; ctx.stroke();
+      schraube(p[0], p[1], 3.2, 1.5, 1);
     });
     /* Lichteinsätze: Bereiche, die im Betrieb leuchten */
     ctx.save();
@@ -456,7 +461,7 @@
     ctx.save();
     var g = ctx.createLinearGradient(0, 0, W, H);
     g.addColorStop(0, mitAlpha(TF.wand, 0.75));
-    g.addColorStop(0.5, mitAlpha(F.stange3 || TF.wand, 0.5));
+    g.addColorStop(0.5, mitAlpha(F.stange3, 0.5));
     g.addColorStop(1, mitAlpha(TF.wand, 0.7));
     ctx.strokeStyle = g;
     ctx.lineWidth = 9;
@@ -465,10 +470,7 @@
     ctx.lineWidth = 1.4;
     rundeFlaeche(9.5, 9.5, W - 19, H - 19, 13); ctx.stroke();
     [[22, 22], [W - 22, 22], [22, H - 22], [W - 22, H - 22]].forEach(function (p) {
-      ctx.beginPath(); ctx.arc(p[0], p[1], 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = F.schraube; ctx.fill();
-      ctx.beginPath(); ctx.moveTo(p[0] - 2.2, p[1]); ctx.lineTo(p[0] + 2.2, p[1]);
-      ctx.strokeStyle = F.schraubSchlitz; ctx.lineWidth = 1.2; ctx.stroke();
+      schraube(p[0], p[1], 4.5, 2.2, 1.2);
     });
     ctx.restore();
   }
@@ -476,12 +478,13 @@
   /* Umriss der Deckplatte (abgeschrägte obere Ecken). */
   function deckFlaeche(d) {
     var x1 = DECK.x1 - d, y1 = DECK.y1 + d * 0.4, x2 = DECK.x2 + d, y2 = DECK.y2 + d;
+    var ex = DECK.ecke.x, ey = DECK.ecke.y;
     ctx.beginPath();
     ctx.moveTo(x1, y2);
-    ctx.lineTo(x1, y1 + 18);
-    ctx.lineTo(x1 + 32, y1);
-    ctx.lineTo(x2 - 32, y1);
-    ctx.lineTo(x2, y1 + 18);
+    ctx.lineTo(x1, y1 + ey);
+    ctx.lineTo(x1 + ex, y1);
+    ctx.lineTo(x2 - ex, y1);
+    ctx.lineTo(x2, y1 + ey);
     ctx.lineTo(x2, y2);
     ctx.closePath();
   }
@@ -537,26 +540,29 @@
     ctx.fillStyle = mitAlpha(TF.licht, 0.8);
     ctx.fillText("OBERDECK · " + sp.tisch.name.toUpperCase(), 215, 80);
     /* Schrauben an den Ecken */
-    [[94, 106], [340, 106], [94, 316], [340, 316]].forEach(function (p) {
-      ctx.beginPath(); ctx.arc(p[0], p[1], 3.4, 0, Math.PI * 2);
-      ctx.fillStyle = F.schraube; ctx.fill();
-      ctx.beginPath(); ctx.moveTo(p[0] - 1.6, p[1]); ctx.lineTo(p[0] + 1.6, p[1]);
-      ctx.strokeStyle = F.schraubSchlitz; ctx.lineWidth = 1; ctx.stroke();
+    [[DECK.x1 + 16, DECK.y1 + 36], [DECK.x2 - 16, DECK.y1 + 36],
+     [DECK.x1 + 16, DECK.y2 - 4], [DECK.x2 - 16, DECK.y2 - 4]].forEach(function (p) {
+      schraube(p[0], p[1], 3.4, 1.6, 1);
     });
-    /* Umlaufschiene unter der Decke */
+    /* Umlaufschiene unter der Decke – dieselben Punkte wie in der Kollision
+       (FL.DECK.schiene, flipper-kern.js). */
+    var bahn = DECK.schiene;
     ctx.save();
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     function schiene(breite, farbe) {
       ctx.beginPath();
-      ctx.moveTo(100, 156); ctx.lineTo(132, 136); ctx.lineTo(288, 136); ctx.lineTo(320, 156);
+      ctx.moveTo(bahn[0].x, bahn[0].y);
+      for (var b = 1; b < bahn.length; b++) ctx.lineTo(bahn[b].x, bahn[b].y);
       ctx.strokeStyle = farbe; ctx.lineWidth = breite; ctx.stroke();
     }
     schiene(10, mitAlpha(F.s4, 0.9));
     schiene(6.5, F.stange1);
     schiene(3.4, F.stange2);
     ctx.strokeStyle = mitAlpha(F.glanz, 0.7); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(135, 132.5); ctx.lineTo(285, 132.5); ctx.stroke();
-    [[132, 136], [288, 136]].forEach(function (p) {
+    ctx.beginPath();
+    ctx.moveTo(bahn[1].x + 3, bahn[1].y - 3.5);
+    ctx.lineTo(bahn[2].x - 3, bahn[2].y - 3.5); ctx.stroke();
+    [[bahn[1].x, bahn[1].y], [bahn[2].x, bahn[2].y]].forEach(function (p) {
       ctx.beginPath(); ctx.arc(p[0], p[1] + 5, 4.6, 0, Math.PI * 2);
       ctx.fillStyle = F.lager; ctx.fill();
       ctx.strokeStyle = F.lagerRand; ctx.lineWidth = 1.2; ctx.stroke();
@@ -565,7 +571,7 @@
     /* Einlaufmarke rechts */
     ctx.fillStyle = mitAlpha(TF.licht, 0.5);
     ctx.font = "bold 6.5px Arial"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
-    ctx.fillText("UMLAUF", 300, 112);
+    ctx.fillText("UMLAUF", bahn[3].x - 20, bahn[3].y - 44);
 
     /* Zielbank an der linken Bande (drei Aufrechtziele) */
     d.ziele.forEach(function (z, i) {
@@ -666,7 +672,7 @@
     /* Beschriftung der Ausgänge */
     ctx.fillStyle = mitAlpha(TF.licht, 0.6);
     ctx.font = "bold 7px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("▼ AUSLASS", 182, DECK.y2 - 20);
+    ctx.fillText("▼ AUSLASS", (DECK.rinne.x1 + DECK.rinne.x2) / 2, DECK.y2 - 20);
   }
 
   function zeichneRampen() {
@@ -674,21 +680,13 @@
       var b = r.bahn;
       ctx.save();
       ctx.lineCap = "round"; ctx.lineJoin = "round";
-      /* Schiene als Band */
-      ctx.strokeStyle = mitAlpha(F.rampeRand, 0.9);
-      ctx.lineWidth = 11;
+      /* Schiene als Band: ein Weg, drei Mal mit anderer Breite und Farbe */
       ctx.beginPath(); ctx.moveTo(b[0].x, b[0].y);
       for (var i = 1; i < b.length; i++) ctx.lineTo(b[i].x, b[i].y);
-      ctx.stroke();
-      ctx.strokeStyle = F.rampe; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(b[0].x, b[0].y);
-      for (var j = 1; j < b.length; j++) ctx.lineTo(b[j].x, b[j].y);
-      ctx.stroke();
+      ctx.strokeStyle = mitAlpha(F.rampeRand, 0.9); ctx.lineWidth = 11; ctx.stroke();
+      ctx.strokeStyle = F.rampe; ctx.lineWidth = 4; ctx.stroke();
       ctx.strokeStyle = mitAlpha(TF.licht, r.blitz > 0 ? 0.95 : 0.5);
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(b[0].x, b[0].y);
-      for (var q = 1; q < b.length; q++) ctx.lineTo(b[q].x, b[q].y);
-      ctx.stroke();
+      ctx.lineWidth = 2; ctx.stroke();
       /* Einfahrt */
       ctx.beginPath(); ctx.arc(r.ein.x, r.ein.y, r.ein.r, 0, Math.PI * 2);
       ctx.fillStyle = mitAlpha(TF.licht, 0.2); ctx.fill();
@@ -716,10 +714,9 @@
   function zeichneWaende() {
     ctx.lineCap = "round";
     sp.tisch.waende.forEach(function (w) {
-      ctx.strokeStyle = mitAlpha(TF.wand, 0.28); ctx.lineWidth = 10;
-      ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
-      ctx.strokeStyle = TF.wand; ctx.lineWidth = 4.5;
-      ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2);
+      ctx.strokeStyle = mitAlpha(TF.wand, 0.28); ctx.lineWidth = 10; ctx.stroke();
+      ctx.strokeStyle = TF.wand; ctx.lineWidth = 4.5; ctx.stroke();
     });
     ctx.strokeStyle = mitAlpha(F.zinne, 0.4); ctx.lineWidth = 1.4;
     sp.tisch.waende.forEach(function (w) {
@@ -1087,20 +1084,17 @@
     /* Feder: oben am Kolbenkopf, unten am Kanalboden. Je stärker gespannt,
        desto enger liegen die Windungen zusammen. */
     var oben = 770 + hub, unten = KANAL.boden + 32, windungen = 6;
-    function wicklung(breite, farbe) {
-      ctx.beginPath();
-      for (var i = 0; i <= 36; i++) {
-        var t = i / 36;
-        var yy = oben + (unten - oben) * t;
-        var xx = x + Math.sin(t * Math.PI * 2 * windungen) * 9;
-        if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(xx, yy);
-      }
-      ctx.strokeStyle = farbe; ctx.lineWidth = breite; ctx.stroke();
+    ctx.beginPath();
+    for (var i = 0; i <= 36; i++) {
+      var t = i / 36;
+      var yy = oben + (unten - oben) * t;
+      var xx = x + Math.sin(t * Math.PI * 2 * windungen) * 9;
+      if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(xx, yy);
     }
     ctx.lineCap = "round";
-    wicklung(5.4, mitAlpha(F.s4, 0.95));
-    wicklung(2.8, F.stange2);
-    wicklung(1, mitAlpha(F.glanz, 0.6));
+    [[5.4, mitAlpha(F.s4, 0.95)], [2.8, F.stange2], [1, mitAlpha(F.glanz, 0.6)]].forEach(function (w) {
+      ctx.strokeStyle = w[1]; ctx.lineWidth = w[0]; ctx.stroke();
+    });
     /* Kolbenkopf, auf dem die Kugel liegt */
     var kh = ctx.createLinearGradient(x - 14, 0, x + 14, 0);
     kh.addColorStop(0, F.stange3); kh.addColorStop(0.35, F.glanz); kh.addColorStop(1, F.stange1);
@@ -1299,8 +1293,7 @@
     var k = sp.abschuss.kraft;
     if (k > 0.01) el.style.setProperty("--lade", Math.round(k * 100) + "%");
     else if (el.style.getPropertyValue("--lade")) el.style.removeProperty("--lade");
-    var t = $("stiftKraft");
-    if (t) t.textContent = k > 0.01 ? Math.round(k * 100) + " %" : "";
+    $("stiftKraft").textContent = k > 0.01 ? Math.round(k * 100) + " %" : "";
   }
 
   /* ------------------------------------------------------------- Tischgröße */
