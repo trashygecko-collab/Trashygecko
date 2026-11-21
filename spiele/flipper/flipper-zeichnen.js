@@ -14,9 +14,9 @@
   var pause = 0;
   var blitz = 0;
   var meldungZeit = 0;
-  var ziehId = null;
   var flipperZeiger = {};
   var dpr = 1;
+  var rueck = 0;              // Nachlauf des Kolbens nach dem Schuss
   var spur = {};              // Kugelindex → letzte Punkte
 
   /* ---------------------------------------------------------------- Farben */
@@ -183,13 +183,14 @@
     FL.partieStarten(sp);
     laeuft = true;
     pause = 0; spur = {}; blitz = 0; meldungZeit = 0;
-    ziehId = null; flipperZeiger = {};
+    ladung = null; feldLadung = null; flipperZeiger = {};
     $("links").classList.remove("drueckt");
     $("rechts").classList.remove("drueckt");
+    $("stift").classList.remove("drueckt");
     farbenLaden();
     tischInfo();
     meldungZu();
-    $("hinweis").textContent = "Kugel mit Leertaste oder dem Knopf schießen – je länger halten, desto stärker.";
+    $("hinweis").textContent = "Abschuss halten (Leertaste, Knopf oder Kanal) – je länger, desto kräftiger; loslassen schießt.";
     audioHolen();
   }
   function startbildschirm() {
@@ -217,25 +218,43 @@
     FL.fluegel(sp, links, an);
     $(links ? "links" : "rechts").classList.toggle("drueckt", !!an && sp.zustand !== "vorbei");
   }
-  function alleFlipperLos() { fluegelSetzen(true, false); fluegelSetzen(false, false); }
-  function stiftLaden(an, id) {
-    if (sp.zustand !== "bereit") return;
-    if (an) {
-      ziehId = id === undefined ? "taste" : id;
-      FL.abschussLaden(sp, true);
-      $("stift").classList.add("drueckt");
-    } else {
-      if (ziehId === null) return;
-      ziehId = null;
-      FL.abschussLaden(sp, false);
-      $("stift").classList.remove("drueckt");
-      var kraft = sp.abschuss.kraft;
-      if (FL.abschuss(sp, Math.max(0.28, kraft))) {
-        spur = {};
-        klaenge.abschuss();
-        $("hinweis").textContent = kraft > 0.75 ? "Voller Schuss!" : "Kugel im Spiel.";
-      }
+  /* ------------------------------------------------------------ Abschuss
+     Genau ein Zeiger lädt die Feder, alle anderen lösen nichts aus. Loslassen
+     schießt mit der aufgebauten Kraft, Abbrechen (pointercancel, Fokus weg,
+     Lagwechsel) setzt sie zurück. So kann weder Touch noch Maus doppelt
+     zünden, und nach dem Drehen des Geräts bleibt nichts hängen. */
+  var ladung = null;
+  function ladungStarten(id, quelle) {
+    if (sp.zustand !== "bereit" || ladung !== null) return false;
+    ladung = { id: String(id), quelle: quelle };
+    FL.abschussLaden(sp, true);
+    $("stift").classList.add("drueckt");
+    return true;
+  }
+  function ladungBeenden(id, schiessen) {
+    if (ladung === null) return false;
+    if (id !== undefined && String(id) !== ladung.id) return false;
+    ladung = null;
+    FL.abschussLaden(sp, false);
+    $("stift").classList.remove("drueckt");
+    var kraft = sp.abschuss.kraft;
+    if (schiessen === false) { sp.abschuss.kraft = 0; return false; }
+    if (FL.abschuss(sp, Math.max(0.28, kraft))) {
+      spur = {}; rueck = 1; klaenge.abschuss();
+      $("hinweis").textContent = kraft > 0.88 ? "Voller Schuss!" :
+        (kraft > 0.5 ? "Kräftiger Schuss." : "Kugel im Spiel.");
+      return true;
     }
+    return false;
+  }
+  /* Alles loslassen, ohne zu schießen. */
+  function allesLos() {
+    ladungBeenden(undefined, false);
+    feldLadung = null;
+    flipperZeiger = {};
+    tasten = {};
+    fluegelSetzen(true, false);
+    fluegelSetzen(false, false);
   }
   var tasten = {};
   window.addEventListener("keydown", function (e) {
@@ -244,7 +263,7 @@
     if (t === "ArrowRight" || t === "d" || t === "D") { fluegelSetzen(false, true); e.preventDefault(); }
     if (t === " " || t === "Spacebar") {
       if ($("meldung").hidden === false) { $("meldungKnopf").click(); }
-      else if (!tasten[" "]) { tasten[" "] = true; stiftLaden(true); }
+      else if (!tasten[" "]) { tasten[" "] = true; ladungStarten("taste", "taste"); }
       e.preventDefault();
     }
     if (t === "Enter") {
@@ -256,12 +275,10 @@
     var t = e.key;
     if (t === "ArrowLeft" || t === "a" || t === "A") { fluegelSetzen(true, false); e.preventDefault(); }
     if (t === "ArrowRight" || t === "d" || t === "D") { fluegelSetzen(false, false); e.preventDefault(); }
-    if (t === " " || t === "Spacebar") { tasten[" "] = false; stiftLaden(false); e.preventDefault(); }
+    if (t === " " || t === "Spacebar") { tasten[" "] = false; ladungBeenden("taste"); e.preventDefault(); }
   });
-  window.addEventListener("blur", function () { alleFlipperLos(); tasten = {}; stiftLaden(false); });
-  document.addEventListener("visibilitychange", function () {
-    if (document.hidden) { alleFlipperLos(); tasten = {}; stiftLaden(false); }
-  });
+  window.addEventListener("blur", allesLos);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) allesLos(); });
 
   function knopfFlipper(id, links) {
     var el = $(id);
@@ -288,42 +305,57 @@
   stiftEl.addEventListener("pointerdown", function (e) {
     e.preventDefault();
     if (stiftEl.setPointerCapture) { try { stiftEl.setPointerCapture(e.pointerId); } catch (err) { } }
-    stiftLaden(true, "knopf" + e.pointerId);
+    ladungStarten(e.pointerId, "knopf");
   });
-  ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (typ) {
-    stiftEl.addEventListener(typ, function () { stiftLaden(false); });
+  stiftEl.addEventListener("pointerup", function (e) { ladungBeenden(e.pointerId); });
+  ["pointercancel", "lostpointercapture"].forEach(function (typ) {
+    stiftEl.addEventListener(typ, function (e) { ladungBeenden(e.pointerId, false); });
   });
+  /* Maus verlässt den Knopf ohne Capture: Spannung zurücknehmen statt hängen. */
+  stiftEl.addEventListener("pointerleave", function (e) {
+    if (e.pointerType === "mouse") ladungBeenden(e.pointerId, false);
+  });
+  stiftEl.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
   function feldPunkt(e) {
     var r = leinwand.getBoundingClientRect();
     return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
   }
+  var feldLadung = null;
   leinwand.addEventListener("pointerdown", function (e) {
     e.preventDefault();
-    if (leinwand.setPointerCapture) { try { leinwand.setPointerCapture(e.pointerId); } catch (err) { } }
     var p = feldPunkt(e);
-    if (sp.zustand === "bereit" && (p.x > KANAL.x1 - 14 || p.y > 720)) {
-      stiftLaden(true, "feld" + e.pointerId);
+    if (sp.zustand === "bereit" && (p.x > KANAL.x1 - 16 || p.y > 720)) {
+      if (ladungStarten(e.pointerId, "feld")) {
+        feldLadung = e.pointerId;
+        if (leinwand.setPointerCapture) { try { leinwand.setPointerCapture(e.pointerId); } catch (err) { } }
+      }
       return;
     }
+    if (leinwand.setPointerCapture) { try { leinwand.setPointerCapture(e.pointerId); } catch (err) { } }
     var links = p.x < W / 2;
     flipperZeiger[e.pointerId] = links;
     fluegelSetzen(links, true);
   });
   leinwand.addEventListener("pointermove", function (e) {
-    if (ziehId !== "feld" + e.pointerId) return;
+    if (feldLadung !== e.pointerId) return;
+    if (ladung === null) return;
     var p = feldPunkt(e);
-    var tiefe = Math.max(0, Math.min(1, (p.y - KANAL.stift) / 90));
+    var tiefe = Math.max(0, Math.min(1, (p.y - KANAL.stift) / 110));
     if (tiefe > sp.abschuss.kraft) sp.abschuss.kraft = tiefe;
   });
   function feldLos(e) {
-    if (ziehId === "feld" + e.pointerId) { stiftLaden(false); return; }
+    if (feldLadung === e.pointerId) { feldLadung = null; ladungBeenden(e.pointerId); return; }
     var links = flipperZeiger[e.pointerId];
     if (links !== undefined) { delete flipperZeiger[e.pointerId]; fluegelSetzen(links, false); }
   }
   leinwand.addEventListener("pointerup", feldLos);
-  leinwand.addEventListener("pointercancel", feldLos);
-  leinwand.addEventListener("lostpointercapture", feldLos);
+  function feldAbbrechen(e) {
+    if (feldLadung === e.pointerId) { feldLadung = null; ladungBeenden(e.pointerId, false); return; }
+    feldLos(e);
+  }
+  leinwand.addEventListener("pointercancel", feldAbbrechen);
+  leinwand.addEventListener("lostpointercapture", feldAbbrechen);
 
   function baueTischLeiste() {
     var leiste = $("automatLeiste");
@@ -382,16 +414,16 @@
     ctx.strokeStyle = TF.licht;
     ctx.lineWidth = 1;
     for (var i = -6; i < 18; i++) {
-      ctx.beginPath(); ctx.moveTo(i * 44, 300); ctx.lineTo(i * 44 + 200, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i * 44, 336); ctx.lineTo(i * 44 + 200, H); ctx.stroke();
     }
     ctx.restore();
     /* Spielfeldfläche mit Rand und Schrauben */
     ctx.strokeStyle = mitAlpha(TF.wand, 0.32);
     ctx.lineWidth = 2;
-    rundeFlaeche(38, 306, 326, 466, 20); ctx.stroke();
+    rundeFlaeche(38, 336, 326, 436, 20); ctx.stroke();
     ctx.strokeStyle = F.zierrand; ctx.lineWidth = 1;
-    rundeFlaeche(44, 312, 314, 454, 16); ctx.stroke();
-    [[47, 318], [355, 318], [47, 560], [355, 560], [47, 760], [355, 760]].forEach(function (p) {
+    rundeFlaeche(44, 342, 314, 424, 16); ctx.stroke();
+    [[47, 350], [355, 350], [47, 560], [355, 560], [47, 760], [355, 760]].forEach(function (p) {
       ctx.beginPath(); ctx.arc(p[0], p[1], 3.2, 0, Math.PI * 2);
       ctx.fillStyle = F.schraube; ctx.fill();
       ctx.beginPath(); ctx.moveTo(p[0] - 1.5, p[1]); ctx.lineTo(p[0] + 1.5, p[1]);
@@ -400,10 +432,10 @@
     /* Lichteinsätze: Bereiche, die im Betrieb leuchten */
     ctx.save();
     ctx.globalAlpha = sp.bonusZeit > 0 ? 0.16 : 0.06;
-    var rg = ctx.createRadialGradient(202, 430, 20, 202, 430, 190);
+    var rg = ctx.createRadialGradient(202, 452, 20, 202, 452, 200);
     rg.addColorStop(0, TF.licht); rg.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = rg;
-    ctx.fillRect(30, 330, 344, 220);
+    ctx.fillRect(30, 356, 344, 200);
     ctx.restore();
     /* Bahnmarkierungen links und rechts */
     ctx.save();
@@ -441,118 +473,200 @@
     ctx.restore();
   }
 
+  /* Umriss der Deckplatte (abgeschrägte obere Ecken). */
+  function deckFlaeche(d) {
+    var x1 = DECK.x1 - d, y1 = DECK.y1 + d * 0.4, x2 = DECK.x2 + d, y2 = DECK.y2 + d;
+    ctx.beginPath();
+    ctx.moveTo(x1, y2);
+    ctx.lineTo(x1, y1 + 18);
+    ctx.lineTo(x1 + 32, y1);
+    ctx.lineTo(x2 - 32, y1);
+    ctx.lineTo(x2, y1 + 18);
+    ctx.lineTo(x2, y2);
+    ctx.closePath();
+  }
+
   function zeichneDeck() {
     var d = sp.tisch.deck;
-    /* Schatten unter dem erhöhten Deck */
+    var kugelOben = false;
+    sp.kugeln.forEach(function (k) { if (k.ebene === "deck" && k.zustand !== "weg") kugelOben = true; });
+    /* Schattenwurf: das Deck liegt sichtbar über dem Hauptfeld */
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.55)";
-    ctx.shadowBlur = 18; ctx.shadowOffsetY = 8;
-    ctx.fillStyle = TF.grund2;
-    rundeFlaeche(DECK.x1 - 6, DECK.y1 - 8, DECK.x2 - DECK.x1 + 12, DECK.y2 - DECK.y1 + 10, 16);
-    ctx.fill();
+    ctx.shadowColor = "rgba(0,0,0,0.65)";
+    ctx.shadowBlur = 22; ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "rgba(0,0,0,0.9)";
+    deckFlaeche(-3); ctx.fill();
     ctx.restore();
     /* Deckplatte */
     var g = ctx.createLinearGradient(0, DECK.y1, 0, DECK.y2);
-    g.addColorStop(0, mitAlpha(TF.licht, 0.16));
-    g.addColorStop(1, mitAlpha(TF.grund2, 0.96));
-    ctx.fillStyle = g;
-    rundeFlaeche(DECK.x1, DECK.y1, DECK.x2 - DECK.x1, DECK.y2 - DECK.y1, 14);
-    ctx.fill();
-    /* Rahmen */
-    ctx.strokeStyle = TF.wand; ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(DECK.x1, DECK.y2); ctx.lineTo(DECK.x1, DECK.y1);
-    ctx.lineTo(DECK.x1 + 44, DECK.y1 - 16); ctx.lineTo(DECK.x2 - 44, DECK.y1 - 16);
-    ctx.lineTo(DECK.x2, DECK.y1); ctx.lineTo(DECK.x2, DECK.y2);
-    ctx.stroke();
-    ctx.strokeStyle = mitAlpha(F.zinne, 0.45); ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(DECK.x1 + 1, DECK.y2); ctx.lineTo(DECK.x1 + 1, DECK.y1 + 1);
-    ctx.lineTo(DECK.x1 + 45, DECK.y1 - 15); ctx.lineTo(DECK.x2 - 45, DECK.y1 - 15);
-    ctx.lineTo(DECK.x2 - 1, DECK.y1 + 1); ctx.lineTo(DECK.x2 - 1, DECK.y2);
-    ctx.stroke();
-    /* Deckboden mit Auslass in der Mitte */
-    ctx.strokeStyle = TF.wand; ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(DECK.x1, DECK.y2); ctx.lineTo(160, DECK.y2);
-    ctx.moveTo(240, DECK.y2); ctx.lineTo(DECK.x2, DECK.y2);
-    ctx.stroke();
-    /* Frontkante (Höhe des Decks) */
-    var fk = ctx.createLinearGradient(0, DECK.y2, 0, DECK.y2 + 16);
+    g.addColorStop(0, mitAlpha(TF.licht, 0.2));
+    g.addColorStop(0.45, mitAlpha(TF.grund1, 0.98));
+    g.addColorStop(1, mitAlpha(TF.grund2, 0.99));
+    deckFlaeche(0); ctx.fillStyle = g; ctx.fill();
+    /* Lichtinseln: eingesetzte Leuchtflächen unter der Decke */
+    ctx.save();
+    ctx.globalAlpha = kugelOben ? 0.26 : 0.13;
+    [[152, 124, 76], [296, 152, 70], [214, 296, 104]].forEach(function (l) {
+      var rg = ctx.createRadialGradient(l[0], l[1], 4, l[0], l[1], l[2]);
+      rg.addColorStop(0, TF.licht); rg.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = rg;
+      ctx.fillRect(l[0] - l[2], l[1] - l[2], l[2] * 2, l[2] * 2);
+    });
+    ctx.restore();
+    /* Rand: dunkle Fuge, Metallband, Glanzkante */
+    ctx.lineJoin = "round";
+    deckFlaeche(-3); ctx.strokeStyle = mitAlpha(F.s4, 0.95); ctx.lineWidth = 9; ctx.stroke();
+    deckFlaeche(0); ctx.strokeStyle = TF.wand; ctx.lineWidth = 5; ctx.stroke();
+    deckFlaeche(-2.5); ctx.strokeStyle = mitAlpha(F.zinne, 0.55); ctx.lineWidth = 1.4; ctx.stroke();
+    /* Deckboden: Auslass in der Mitte */
+    ctx.fillStyle = "rgba(0,0,0,0.9)";
+    rundeFlaeche(DECK.rinne.x1, DECK.y2 - 8, DECK.rinne.x2 - DECK.rinne.x1, 12, 4); ctx.fill();
+    ctx.strokeStyle = mitAlpha(TF.licht, 0.65); ctx.lineWidth = 1.4;
+    rundeFlaeche(DECK.rinne.x1, DECK.y2 - 9, DECK.rinne.x2 - DECK.rinne.x1, 10, 4); ctx.stroke();
+    /* Frontkante (Höhe des Decks) mit Lichtkante und Beschriftung */
+    var fk = ctx.createLinearGradient(0, DECK.y2, 0, DECK.y2 + 10);
     fk.addColorStop(0, mitAlpha(TF.wand, 0.55));
     fk.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = fk;
-    ctx.fillRect(DECK.x1, DECK.y2, DECK.x2 - DECK.x1, 16);
-    /* Beschriftung */
+    ctx.fillRect(DECK.x1, DECK.y2, DECK.x2 - DECK.x1, 10);
+    ctx.strokeStyle = mitAlpha(F.glanz, 0.35); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(DECK.x1 + 2, DECK.y2 + 1); ctx.lineTo(DECK.x2 - 2, DECK.y2 + 1); ctx.stroke();
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = "bold 8px Arial";
-    ctx.fillStyle = mitAlpha(TF.licht, 0.75);
-    ctx.fillText("OBERDECK", 218, 126);
-    ctx.font = "bold 7px Arial";
-    ctx.fillStyle = mitAlpha(TF.licht, 0.45);
-    ctx.fillText("AUFZUG →", 300, 150);
+    /* Deckname oben auf der Platte, frei über der Umlaufbahn */
+    ctx.font = "bold 9px Arial";
+    ctx.fillStyle = mitAlpha(TF.licht, 0.8);
+    ctx.fillText("OBERDECK · " + sp.tisch.name.toUpperCase(), 215, 80);
+    /* Schrauben an den Ecken */
+    [[94, 106], [340, 106], [94, 316], [340, 316]].forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p[0], p[1], 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = F.schraube; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(p[0] - 1.6, p[1]); ctx.lineTo(p[0] + 1.6, p[1]);
+      ctx.strokeStyle = F.schraubSchlitz; ctx.lineWidth = 1; ctx.stroke();
+    });
+    /* Umlaufschiene unter der Decke */
+    ctx.save();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    function schiene(breite, farbe) {
+      ctx.beginPath();
+      ctx.moveTo(100, 156); ctx.lineTo(132, 136); ctx.lineTo(288, 136); ctx.lineTo(320, 156);
+      ctx.strokeStyle = farbe; ctx.lineWidth = breite; ctx.stroke();
+    }
+    schiene(10, mitAlpha(F.s4, 0.9));
+    schiene(6.5, F.stange1);
+    schiene(3.4, F.stange2);
+    ctx.strokeStyle = mitAlpha(F.glanz, 0.7); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(135, 132.5); ctx.lineTo(285, 132.5); ctx.stroke();
+    [[132, 136], [288, 136]].forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p[0], p[1] + 5, 4.6, 0, Math.PI * 2);
+      ctx.fillStyle = F.lager; ctx.fill();
+      ctx.strokeStyle = F.lagerRand; ctx.lineWidth = 1.2; ctx.stroke();
+    });
+    ctx.restore();
+    /* Einlaufmarke rechts */
+    ctx.fillStyle = mitAlpha(TF.licht, 0.5);
+    ctx.font = "bold 6.5px Arial"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText("UMLAUF", 300, 112);
 
-    /* Elemente auf dem Deck */
-    d.ziele.forEach(function (z) {
+    /* Zielbank an der linken Bande (drei Aufrechtziele) */
+    d.ziele.forEach(function (z, i) {
       ctx.save();
-      ctx.globalAlpha = z.runter ? 0.28 : 1;
-      ctx.fillStyle = z.runter ? TF.grund2 : TF.ziel;
-      ctx.strokeStyle = TF.licht; ctx.lineWidth = 1.4;
-      rundeFlaeche(z.x, z.y, z.w, z.h, 4); ctx.fill(); ctx.stroke();
-      if (z.blitz > 0) { ctx.globalAlpha = z.blitz; ctx.fillStyle = F.glanz; rundeFlaeche(z.x, z.y, z.w, z.h, 4); ctx.fill(); }
+      if (z.runter) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        rundeFlaeche(z.x - 2, z.y, z.w + 4, z.h, 3); ctx.fill();
+        ctx.strokeStyle = mitAlpha(TF.licht, 0.25); ctx.lineWidth = 1;
+        rundeFlaeche(z.x - 2, z.y, z.w + 4, z.h, 3); ctx.stroke();
+      } else {
+        var zg = ctx.createLinearGradient(z.x, 0, z.x + z.w, 0);
+        zg.addColorStop(0, mitAlpha(TF.licht, 0.95));
+        zg.addColorStop(1, TF.ziel);
+        ctx.shadowColor = z.blitz > 0 ? F.glanz : TF.licht;
+        ctx.shadowBlur = z.blitz > 0 ? 16 : 3;
+        ctx.fillStyle = zg;
+        rundeFlaeche(z.x, z.y, z.w, z.h, 4); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = mitAlpha(F.glanz, 0.8); ctx.lineWidth = 1.3; ctx.stroke();
+        ctx.fillStyle = F.lichtText;
+        ctx.font = "bold 9px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(String(i + 1), z.x + z.w / 2, z.y + z.h / 2);
+      }
       ctx.restore();
     });
-    /* Gleitziel */
+    /* Gleitziel auf seiner Schiene */
     var gz = d.gleiter;
+    ctx.strokeStyle = mitAlpha(F.s4, 0.9); ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(gz.x0 - 9, gz.y + gz.h / 2); ctx.lineTo(gz.x1 + gz.w + 9, gz.y + gz.h / 2); ctx.stroke();
+    ctx.strokeStyle = mitAlpha(F.stange2, 0.85); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(gz.x0 - 9, gz.y + gz.h / 2); ctx.lineTo(gz.x1 + gz.w + 9, gz.y + gz.h / 2); ctx.stroke();
     ctx.save();
-    ctx.shadowColor = TF.licht; ctx.shadowBlur = gz.blitz > 0 ? 16 : 4;
-    ctx.fillStyle = gz.blitz > 0 ? F.glanz : TF.ziel;
-    ctx.strokeStyle = TF.licht; ctx.lineWidth = 1.4;
-    rundeFlaeche(gz.x, gz.y, gz.w, gz.h, 5); ctx.fill(); ctx.stroke();
+    ctx.shadowColor = gz.blitz > 0 ? F.glanz : TF.licht;
+    ctx.shadowBlur = gz.blitz > 0 ? 18 : 6;
+    var gg = ctx.createLinearGradient(0, gz.y, 0, gz.y + gz.h);
+    gg.addColorStop(0, F.glanz); gg.addColorStop(0.4, TF.ziel); gg.addColorStop(1, TF.bumper2);
+    ctx.fillStyle = gg;
+    rundeFlaeche(gz.x, gz.y, gz.w, gz.h, 6); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = mitAlpha(TF.licht, 0.95); ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.fillStyle = F.lichtText; ctx.font = "bold 8px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("GLEITZIEL", gz.x + gz.w / 2, gz.y + gz.h / 2 + 0.5);
     ctx.restore();
-    /* Laufschiene des Gleiters */
-    ctx.strokeStyle = mitAlpha(TF.wand, 0.35); ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(gz.x0 - 4, gz.y + gz.h / 2); ctx.lineTo(gz.x1 + gz.w + 4, gz.y + gz.h / 2); ctx.stroke();
     /* Bumper */
     zeichneBumper(d.bumper);
-    /* Jackpot-Loch / Ausgang */
+    /* Deck-Spinner in der Umlaufbahn */
+    var sn = d.spinner;
+    ctx.save();
+    ctx.translate(sn.x, sn.y); ctx.rotate(sn.winkel);
+    ctx.shadowColor = TF.licht; ctx.shadowBlur = sn.dreh > 2 ? 12 : 4;
+    var sg = ctx.createLinearGradient(0, -6, 0, 6);
+    sg.addColorStop(0, F.fahne1); sg.addColorStop(0.5, F.fahne2); sg.addColorStop(1, F.fahne3);
+    ctx.fillStyle = sg;
+    rundeFlaeche(-sn.len, -5, sn.len * 2, 10, 4); ctx.fill();
+    ctx.strokeStyle = F.fahneRand; ctx.lineWidth = 1.3; ctx.stroke();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(sn.x, sn.y, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = F.spinner; ctx.fill();
+    ctx.strokeStyle = F.spinnerRand; ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.fillStyle = mitAlpha(TF.licht, 0.8);
+    ctx.font = "bold 7px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("SPIN", sn.x, 128);
+    /* Jackpot-Loch / Seitenausgang */
     var lo = d.loch;
     ctx.save();
     ctx.shadowColor = sp.jackpot ? F.glanz : TF.licht;
-    ctx.shadowBlur = sp.jackpot ? 20 : 5;
-    ctx.beginPath(); ctx.arc(lo.x, lo.y, lo.r + 4, 0, Math.PI * 2);
-    ctx.fillStyle = F.scoopAussen; ctx.fill();
+    ctx.shadowBlur = sp.jackpot ? 22 : 7;
+    var lg = ctx.createRadialGradient(lo.x - 5, lo.y - 6, 2, lo.x, lo.y, lo.r + 5);
+    lg.addColorStop(0, F.stange2); lg.addColorStop(0.5, F.scoopAussen); lg.addColorStop(1, F.scoopInnen);
+    ctx.beginPath(); ctx.arc(lo.x, lo.y, lo.r + 5, 0, Math.PI * 2);
+    ctx.fillStyle = lg; ctx.fill();
     ctx.beginPath(); ctx.arc(lo.x, lo.y, lo.r, 0, Math.PI * 2);
     ctx.fillStyle = F.scoopInnen; ctx.fill();
-    ctx.strokeStyle = sp.jackpot ? F.glanz : TF.licht;
+    ctx.strokeStyle = sp.jackpot ? F.glanz : mitAlpha(TF.licht, 0.9);
     ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = sp.jackpot ? F.glanz : mitAlpha(TF.licht, 0.8);
-    ctx.font = "bold 6.5px Arial"; ctx.textAlign = "center";
-    ctx.fillText(sp.jackpot ? "JACKPOT" : "AUS", lo.x, lo.y + 2);
+    ctx.beginPath(); ctx.arc(lo.x, lo.y, lo.r * 0.55, 0, Math.PI * 2);
+    ctx.strokeStyle = mitAlpha(F.stange2, 0.5); ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = sp.jackpot ? F.glanz : mitAlpha(TF.licht, 0.85);
+    ctx.font = "bold 7px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(sp.jackpot ? "JACK" : "AUS", lo.x, lo.y + 1);
     ctx.restore();
     /* Halteklammer */
     var kl = d.klammer;
     ctx.save();
     ctx.shadowColor = TF.licht; ctx.shadowBlur = kl.haelt > 0 ? 18 : 4;
     ctx.beginPath(); ctx.arc(kl.x, kl.y, kl.r, 0, Math.PI * 2);
-    ctx.fillStyle = mitAlpha(TF.licht, 0.12); ctx.fill();
-    ctx.strokeStyle = kl.haelt > 0 ? F.glanz : TF.licht; ctx.lineWidth = 2.4; ctx.stroke();
-    /* zwei Klemmen */
-    ctx.strokeStyle = F.stange2; ctx.lineWidth = 3;
+    ctx.fillStyle = mitAlpha(TF.licht, 0.16); ctx.fill();
+    ctx.strokeStyle = kl.haelt > 0 ? F.glanz : mitAlpha(TF.licht, 0.9); ctx.lineWidth = 2.4; ctx.stroke();
+    ctx.strokeStyle = F.stange2; ctx.lineWidth = 3.4; ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(kl.x - 9, kl.y - 72); ctx.lineTo(kl.x - 9, kl.y - 9);
-    ctx.moveTo(kl.x + 9, kl.y - 72); ctx.lineTo(kl.x + 9, kl.y - 9);
+    ctx.moveTo(kl.x - 15, kl.y); ctx.lineTo(kl.x - 4, kl.y - 9);
+    ctx.moveTo(kl.x + 15, kl.y); ctx.lineTo(kl.x + 4, kl.y - 9);
     ctx.stroke();
     ctx.fillStyle = mitAlpha(TF.licht, 0.7);
-    ctx.font = "bold 6px Arial"; ctx.textAlign = "center";
-    ctx.fillText("KLAMMER", kl.x, kl.y + kl.r + 8);
+    ctx.font = "bold 6.5px Arial"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText("KLAMMER", kl.x + kl.r + 6, kl.y);
     ctx.restore();
-    /* Deck-Auslässen Pfeile */
-    ctx.fillStyle = mitAlpha(TF.licht, 0.5);
-    ctx.font = "bold 7px Arial"; ctx.textAlign = "center";
-    ctx.fillText("▼", 200, 292);
-    ctx.textAlign = "right";
-    ctx.fillText("AUS ▶", 336, 250);
+    /* Beschriftung der Ausgänge */
+    ctx.fillStyle = mitAlpha(TF.licht, 0.6);
+    ctx.font = "bold 7px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("▼ AUSLASS", 182, DECK.y2 - 20);
   }
 
   function zeichneRampen() {
@@ -698,29 +812,51 @@
     ctx.restore();
   }
 
+  /* Bumper mit Gummi, Chromring, gewölbter Kappe und Glanzkante – so plastisch
+     wie möglich, ohne externe Bilder. */
   function zeichneBumper(liste) {
     liste.forEach(function (b) {
       var puls = 0.5 + 0.5 * Math.sin(performance.now() / 260 + b.x);
-      var g = ctx.createRadialGradient(b.x - b.r * 0.34, b.y - b.r * 0.42, 1, b.x, b.y, b.r + 5);
-      g.addColorStop(0, F.glanz);
-      g.addColorStop(0.22, TF.licht);
-      g.addColorStop(0.48, TF.bumper1);
-      g.addColorStop(1, TF.bumper2);
+      var blitz = Math.max(0, b.blitz || 0);
+      /* Schattenwurf nach unten rechts */
+      ctx.beginPath();
+      ctx.ellipse(b.x + 4, b.y + 6, b.r + 3, b.r + 2, 0, 0, Math.PI * 2);
+      ctx.fillStyle = mitAlpha(F.s4, 0.7); ctx.fill();
+      /* Gummiring */
       ctx.save();
-      ctx.shadowColor = b.blitz > 0 ? F.glanz : TF.licht;
-      ctx.shadowBlur = b.blitz > 0 ? 24 : 4 + puls * 3;
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
+      ctx.shadowColor = blitz > 0 ? F.glanz : TF.licht;
+      ctx.shadowBlur = blitz > 0 ? 26 : 3 + puls * 4;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 5, 0, Math.PI * 2);
       ctx.fillStyle = F.bumperRing; ctx.fill();
-      ctx.lineWidth = 2.5; ctx.strokeStyle = F.bumperKante; ctx.stroke();
+      ctx.lineWidth = 2.6; ctx.strokeStyle = F.bumperKante; ctx.stroke();
+      /* Chromrand */
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1.5, 0, Math.PI * 2);
+      ctx.lineWidth = 2.4; ctx.strokeStyle = mitAlpha(F.stange2, 0.9); ctx.stroke();
+      /* gewölbter Körper */
+      var g = ctx.createRadialGradient(b.x - b.r * 0.36, b.y - b.r * 0.44, 1, b.x, b.y, b.r + 4);
+      g.addColorStop(0, F.glanz);
+      g.addColorStop(0.2, TF.licht);
+      g.addColorStop(0.5, TF.bumper1);
+      g.addColorStop(1, TF.bumper2);
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
       ctx.fillStyle = g; ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = b.blitz > 0 ? F.glanz : TF.licht; ctx.stroke();
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.34, 0, Math.PI * 2);
+      ctx.lineWidth = 2; ctx.strokeStyle = blitz > 0 ? F.glanz : mitAlpha(TF.licht, 0.85); ctx.stroke();
+      /* Reflexbogen oben links */
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r * 0.78, Math.PI * 1.05, Math.PI * 1.55);
+      ctx.strokeStyle = mitAlpha(F.glanz, 0.65); ctx.lineWidth = Math.max(1.4, b.r * 0.12); ctx.stroke();
+      /* Kappe mit Kreuz */
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.4, 0, Math.PI * 2);
       ctx.fillStyle = F.bumperKappe; ctx.fill();
+      ctx.strokeStyle = mitAlpha(F.s4, 0.35); ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(b.x - b.r * 0.22, b.y); ctx.lineTo(b.x + b.r * 0.22, b.y);
+      ctx.moveTo(b.x, b.y - b.r * 0.22); ctx.lineTo(b.x, b.y + b.r * 0.22);
+      ctx.strokeStyle = mitAlpha(TF.bumper2, 0.5); ctx.lineWidth = 1.4; ctx.stroke();
       ctx.restore();
-      if (b.blitz > 0) {
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 10 * b.blitz, 0, Math.PI * 2);
-        ctx.strokeStyle = mitAlpha(F.glanz, b.blitz * 0.5);
+      if (blitz > 0) {
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 12 * blitz, 0, Math.PI * 2);
+        ctx.strokeStyle = mitAlpha(F.glanz, blitz * 0.45);
         ctx.lineWidth = 3; ctx.stroke();
       }
     });
@@ -808,21 +944,32 @@
 
   function zeichneSpinner() {
     var s = sp.tisch.spinner;
+    /* Gehäuse mit Licht, damit die Fahne auch hinter der Bumperreihe auffällt */
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    var hg = ctx.createRadialGradient(s.x, s.y, 4, s.x, s.y, 44);
+    hg.addColorStop(0, TF.licht); hg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = hg; ctx.fillRect(s.x - 44, s.y - 40, 88, 80);
+    ctx.restore();
     ctx.save();
     ctx.translate(s.x, s.y); ctx.rotate(sp.spinnerWinkel);
-    ctx.shadowColor = TF.licht; ctx.shadowBlur = 7;
-    var g = ctx.createLinearGradient(0, -5, 0, 5);
+    ctx.shadowColor = TF.licht; ctx.shadowBlur = 10;
+    var g = ctx.createLinearGradient(0, -7, 0, 7);
     g.addColorStop(0, F.fahne1); g.addColorStop(0.5, F.fahne2); g.addColorStop(1, F.fahne3);
     ctx.fillStyle = g;
-    rundeFlaeche(-s.len, -5, s.len * 2, 10, 4);
+    rundeFlaeche(-s.len, -7, s.len * 2, 14, 5);
     ctx.fill();
-    ctx.strokeStyle = F.fahneRand; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.strokeStyle = F.fahneRand; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-s.len + 5, 0); ctx.lineTo(s.len - 5, 0);
+    ctx.strokeStyle = mitAlpha(F.glanz, 0.5); ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
-    ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(s.x, s.y, 8.5, 0, Math.PI * 2);
     ctx.fillStyle = F.spinner; ctx.fill();
-    ctx.strokeStyle = F.spinnerRand; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = mitAlpha(TF.licht, 0.6); ctx.font = "bold 6.5px Arial"; ctx.textAlign = "center";
-    ctx.fillText("SPINNER", s.x, s.y + 18);
+    ctx.strokeStyle = F.spinnerRand; ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = mitAlpha(F.glanz, 0.8); ctx.fill();
+    ctx.fillStyle = mitAlpha(TF.licht, 0.65); ctx.font = "bold 7px Arial"; ctx.textAlign = "center";
+    ctx.fillText("SPINNER", s.x, s.y + 22);
   }
 
   function zeichneScoop() {
@@ -915,50 +1062,81 @@
     });
   }
 
+  /* Abschusskanal mit sichtbarem Kolben und sichtbarer Feder: beim Halten
+     wandert der Kolben nach unten, die Windungen rücken zusammen, die Kugel
+     wird mitgedrückt. Nach dem Schuss federt der Kolben zurück. */
   function zeichneKanal() {
+    var kraft = sp.abschuss.kraft;
+    var hub = kraft * 20 + (rueck > 0 ? -rueck * 6 : 0);
+    var x = KANAL.mitte;
     /* Schacht */
     var kg = ctx.createLinearGradient(KANAL.x1, 0, KANAL.x2, 0);
     kg.addColorStop(0, F.s1);
     kg.addColorStop(0.45, mitAlpha(F.stange1, 0.5));
     kg.addColorStop(1, F.s2);
     ctx.fillStyle = kg;
-    ctx.fillRect(KANAL.x1 + 2, 320, KANAL.x2 - KANAL.x1 - 4, KANAL.boden - 322);
+    ctx.fillRect(KANAL.x1 + 2, KANAL.oben + 10, KANAL.x2 - KANAL.x1 - 4, KANAL.boden - KANAL.oben - 10);
     ctx.strokeStyle = mitAlpha(F.zinne, 0.3); ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(KANAL.x1 + 6, 326); ctx.lineTo(KANAL.x1 + 6, KANAL.boden - 6); ctx.stroke();
-    var hub = sp.abschuss.kraft * 18;
-    var x = KANAL.mitte;
-    ctx.fillStyle = TF.licht;
-    rundeFlaeche(x - 5, KANAL.boden - 10 + hub, 10, 18, 4);
-    ctx.fill();
-    ctx.strokeStyle = F.s4; ctx.lineWidth = 1; ctx.stroke();
-    ctx.strokeStyle = F.feder; ctx.lineWidth = 2;
-    ctx.beginPath();
-    var von = KANAL.boden + 12 + hub, bis = H - 14;
-    for (var i = 0; i <= 6; i++) {
-      var yy = von + (bis - von) * i / 6;
-      var xx = x + (i === 0 ? 0 : (i % 2 ? 7 : -7));
-      if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(xx, yy);
+    ctx.beginPath(); ctx.moveTo(KANAL.x1 + 6, KANAL.oben + 18); ctx.lineTo(KANAL.x1 + 6, KANAL.boden - 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(KANAL.x2 - 6, KANAL.oben + 18); ctx.lineTo(KANAL.x2 - 6, KANAL.boden - 6); ctx.stroke();
+    /* Kolbenstange */
+    ctx.strokeStyle = mitAlpha(F.stange2, 0.85); ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(x, 758 + hub); ctx.lineTo(x, KANAL.boden + 34); ctx.stroke();
+    ctx.strokeStyle = mitAlpha(F.stange3, 0.75); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - 2.4, 758 + hub); ctx.lineTo(x - 2.4, KANAL.boden + 34); ctx.stroke();
+    /* Feder: oben am Kolbenkopf, unten am Kanalboden. Je stärker gespannt,
+       desto enger liegen die Windungen zusammen. */
+    var oben = 770 + hub, unten = KANAL.boden + 32, windungen = 6;
+    function wicklung(breite, farbe) {
+      ctx.beginPath();
+      for (var i = 0; i <= 36; i++) {
+        var t = i / 36;
+        var yy = oben + (unten - oben) * t;
+        var xx = x + Math.sin(t * Math.PI * 2 * windungen) * 9;
+        if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(xx, yy);
+      }
+      ctx.strokeStyle = farbe; ctx.lineWidth = breite; ctx.stroke();
     }
-    ctx.stroke();
-    /* Ladeanzeige */
-    var gx = KANAL.x1 + 4, gy = 660, gh = 70;
-    ctx.fillStyle = F.s3; rundeFlaeche(gx, gy, 6, gh, 3); ctx.fill();
-    var hh = Math.round(gh * sp.abschuss.kraft);
+    ctx.lineCap = "round";
+    wicklung(5.4, mitAlpha(F.s4, 0.95));
+    wicklung(2.8, F.stange2);
+    wicklung(1, mitAlpha(F.glanz, 0.6));
+    /* Kolbenkopf, auf dem die Kugel liegt */
+    var kh = ctx.createLinearGradient(x - 14, 0, x + 14, 0);
+    kh.addColorStop(0, F.stange3); kh.addColorStop(0.35, F.glanz); kh.addColorStop(1, F.stange1);
+    ctx.fillStyle = kh;
+    rundeFlaeche(x - 14, 755 + hub, 28, 15, 4); ctx.fill();
+    ctx.strokeStyle = mitAlpha(F.s4, 0.9); ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = mitAlpha(F.glanz, 0.55); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 11, 758 + hub); ctx.lineTo(x + 11, 758 + hub); ctx.stroke();
+    /* Spannungsanzeige */
+    var gx = KANAL.x1 + 4, gy = 620, gh = 96;
+    ctx.fillStyle = F.s3; rundeFlaeche(gx, gy, 7, gh, 3.5); ctx.fill();
+    var hh = Math.round(gh * kraft);
     if (hh > 1) {
       var g2 = ctx.createLinearGradient(0, gy + gh - hh, 0, gy + gh);
       g2.addColorStop(0, F.ladeWarn); g2.addColorStop(1, TF.licht);
-      ctx.fillStyle = g2; rundeFlaeche(gx, gy + gh - hh, 6, hh, 3); ctx.fill();
+      ctx.fillStyle = g2; rundeFlaeche(gx, gy + gh - hh, 7, hh, 3.5); ctx.fill();
     }
-    ctx.strokeStyle = mitAlpha(TF.licht, 0.4); ctx.lineWidth = 1;
-    rundeFlaeche(gx, gy, 6, gh, 3); ctx.stroke();
+    ctx.strokeStyle = mitAlpha(F.text, 0.3); ctx.lineWidth = 1;
+    for (var s2 = 1; s2 < 4; s2++) {
+      var my = gy + gh * s2 / 4;
+      ctx.beginPath(); ctx.moveTo(gx + 8, my); ctx.lineTo(gx + 11, my); ctx.stroke();
+    }
+    ctx.strokeStyle = mitAlpha(TF.licht, 0.45); ctx.lineWidth = 1;
+    rundeFlaeche(gx, gy, 7, gh, 3.5); ctx.stroke();
+    ctx.fillStyle = mitAlpha(TF.licht, kraft > 0.02 ? 0.95 : 0.5);
+    ctx.font = "bold 7px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(kraft > 0.02 ? Math.round(kraft * 100) + "%" : "0%", gx + 3.5, gy - 8);
     if (sp.zustand === "bereit") {
       ctx.save();
-      ctx.translate(x, 600); ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = mitAlpha(TF.licht, 0.55); ctx.font = "bold 9px Arial"; ctx.textAlign = "center";
-      ctx.fillText("HALTEN = STÄRKER", 0, 3);
+      ctx.translate(x, 560); ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = mitAlpha(TF.licht, kraft > 0.02 ? 0.9 : 0.55);
+      ctx.font = "bold 9px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(kraft > 0.02 ? "FEDER GESPANNT" : "HALTEN = STÄRKER", 0, 3);
       ctx.restore();
-      /* wartende Kugel am Stift */
-      kugelBild(x, KANAL.stift, 1);
+      /* wartende Kugel, beim Spannen mit dem Kolben nach unten */
+      kugelBild(x, KANAL.stift + hub, 1);
     }
     ctx.save();
     ctx.translate(x, 500); ctx.rotate(-Math.PI / 2);
@@ -1089,15 +1267,23 @@
     if (!document.hidden) {
       if (pause > 0) pause -= dt;
       else if (laeuft) {
-        sammler += dt;
-        var n = 0;
-        while (sammler >= FL.TAKT && n < 14) {
-          FL.schritt(sp, FL.TAKT);
-          sammler -= FL.TAKT;
-          n++;
-          if (sp.zustand === "bereit" || sp.zustand === "vorbei") { sammler = 0; break; }
+        if (sp.zustand === "bereit") {
+          /* Feder laden: echter Bildabstand, damit die Spannung in Echtzeit
+             steigt – vorher lief pro Bild nur ein einziger Rechenschritt. */
+          FL.schritt(sp, dt);
+          sammler = 0;
+        } else {
+          sammler += dt;
+          var n = 0;
+          while (sammler >= FL.TAKT && n < 14) {
+            FL.schritt(sp, FL.TAKT);
+            sammler -= FL.TAKT;
+            n++;
+            if (sp.zustand === "bereit" || sp.zustand === "vorbei") { sammler = 0; break; }
+          }
         }
       }
+      if (rueck > 0) rueck = Math.max(0, rueck - dt * 3.4);
       verarbeite();
       if (sp.meldung && sp.meldung !== "") { meldungZeit = 2.2; sp.meldung = ""; }
       meldungZeit = Math.max(0, meldungZeit - dt);
@@ -1110,8 +1296,11 @@
 
   function ziehStand() {
     var el = $("stift");
-    if (sp.abschuss.kraft > 0.01) el.style.setProperty("--lade", Math.round(sp.abschuss.kraft * 100) + "%");
+    var k = sp.abschuss.kraft;
+    if (k > 0.01) el.style.setProperty("--lade", Math.round(k * 100) + "%");
     else if (el.style.getPropertyValue("--lade")) el.style.removeProperty("--lade");
+    var t = $("stiftKraft");
+    if (t) t.textContent = k > 0.01 ? Math.round(k * 100) + " %" : "";
   }
 
   /* ------------------------------------------------------------- Tischgröße */
@@ -1133,8 +1322,19 @@
     if (leinwand.width !== bw || leinwand.height !== bh) { leinwand.width = bw; leinwand.height = bh; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  window.addEventListener("resize", passeTisch);
-  window.addEventListener("orientationchange", passeTisch);
+  var quer = window.innerWidth > window.innerHeight;
+  function lageWechsel() {
+    /* Beim Drehen gehen pointerup/pointercancel schon einmal verloren: alles
+       lösen, damit weder Flipper noch Abschussfeder hängen bleiben. */
+    allesLos();
+    passeTisch();
+  }
+  window.addEventListener("orientationchange", function () { setTimeout(lageWechsel, 120); });
+  window.addEventListener("resize", function () {
+    var jetzt = window.innerWidth > window.innerHeight;
+    if (jetzt !== quer) { quer = jetzt; lageWechsel(); }
+    passeTisch();
+  });
   if (window.ResizeObserver) new ResizeObserver(function () { passeTisch(); }).observe(document.querySelector(".tisch"));
   document.getElementById("regeln").addEventListener("toggle", passeTisch);
 

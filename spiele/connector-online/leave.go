@@ -99,6 +99,14 @@ func (r *Room) partien() []partie {
 	}
 
 	return []partie{
+		sitz("Würfelspiel",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Wuerfel; g != nil {
+					return wuerfelRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Wuerfel = nil }),
 		duell("Tic Tac Toe",
 			func() (string, string) {
 				if g := r.TicTacToe; g != nil {
@@ -619,6 +627,9 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 // dieser Spieler sitzt. Damit springt die Connector-Seite von selbst ins Spiel,
 // sobald eine Einladung angenommen oder ein Tisch gestartet wurde.
 func (r *Room) aktivesSpiel(id string) string {
+	if wuerfelAktiv(r.Wuerfel, id) {
+		return "wuerfel"
+	}
 	zwei := func(name, status, a, b string) string {
 		if status == "active" && (a == id || b == id) {
 			return name
@@ -902,6 +913,9 @@ func (r *Room) aktivesSpiel(id string) string {
 
 // playerInGame prüft alle Partien des Raums auf diesen Spieler.
 func (r *Room) playerInGame(id string) bool {
+	if wuerfelSitzt(r.Wuerfel, id) {
+		return true
+	}
 	if g := r.TicTacToe; g != nil && (g.XID == id || g.OID == id) {
 		return true
 	}

@@ -295,6 +295,8 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
 <link rel="stylesheet" href="/spiele/schrift.css">
 <link rel="stylesheet" href="/spiele/design.css">
 <script src="/spiele/stil.js"></script>
+<!-- Zentrale Spieleverwaltung: welche Spiele der Connector online anbietet. -->
+<script src="/spiele/multiplayer-register.js"></script>
 </head>
 
 <body class="spiele-seite">
@@ -436,7 +438,6 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
     ["17 und 4", "kartenspiele/siebzehn/siebzehn.html", "karten", "online multi", "blackjack siebzehn"],
     ["SKYJO", "kartenspiele/skyjo/skyjo.html", "karten", "lokal online multi"],
     ["Solitär", "kartenspiele/solitaer/solitaer.html", "karten", "solo", "klondike spider freecell pyramid tripeaks patience solitaire"],
-    ["Spider Solitär", "kartenspiele/spider/spider.html", "karten", "solo", "spider solitaire zwei farben patience"],
     ["31 Schwimmen", "kartenspiele/schwimmen/schwimmen.html", "karten", "lokal online multi", "einunddreissig knack"],
     ["UNO", "kartenspiele/uno/uno.html", "karten", "lokal online multi"],
 
@@ -563,8 +564,18 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
   var werkzeugZahl = document.getElementById("werkzeug-zahl");
   var schmal = window.matchMedia("(max-width: 700px)");
 
+  // Welche Spiele der Connector wirklich anbietet, steht in der zentralen
+  // Spieleverwaltung (/spiele/multiplayer-register.js). Die Merkmale „Multi“
+  // und „Online“ kommen von dort – so können Übersicht und Connector nicht
+  // auseinanderlaufen, wenn ein Spiel dazukommt.
+  var online = (window.TGMultiplayer && window.TGMultiplayer.spiele) || [];
+
   var spiele = SPIELE.map(function (s) {
     var merk = (s[3] || "").split(" ").filter(function (m) { return m; });
+    if (online.some(function (g) { return g.pfad === "/spiele/" + s[1]; })) {
+      if (merk.indexOf("multi") < 0) merk.push("multi");
+      if (merk.indexOf("online") < 0) merk.push("online");
+    }
     merk.forEach(function (m) {
       if (!MERKMALE[m] && window.console) console.warn("Unbekanntes Merkmal:", m, "bei", s[0]);
     });

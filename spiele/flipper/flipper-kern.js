@@ -13,18 +13,19 @@
   var GRAV = 1160;
 
   /* ------------------------------------------------------------- Abschusskanal */
-  var KANAL = { x1: 372, x2: 420, mitte: 396, boden: 770, stift: 748, oben: 306 };
+  var KANAL = { x1: 372, x2: 420, mitte: 396, boden: 770, stift: 748, oben: 322 };
 
   /* --------------------------------------------------------------- Oberdeck
      Eigene Spielebene über dem Hauptfeld. Sie hat einen eigenen Rahmen, eigene
      Bumper, ein eigenes Zielband, ein Jackpot-Loch, eine Halteklammer und zwei
      Ausgänge (Mitte unten ins Hauptfeld, rechts unten in die rechte Inlane). */
   var DECK = {
-    x1: 96, y1: 124, x2: 344, y2: 302,
-    ein: { x: 330, y: 172 },            // hier kommt die Kugel aus dem Aufzug an
-    rinne: { x1: 160, x2: 240 },        // Auslass in der Decke (Mitte unten)
-    loch: { x: 306, y: 272, r: 14 },    // Seitenausgang rechts unten
-    ausRinne: { x: 200, y: 330, vx: 0, vy: 140 },
+    x1: 78, y1: 70, x2: 356, y2: 320,
+    ein: { x: 338, y: 116 },            // hier kommt die Kugel aus dem Aufzug an
+    rinne: { x1: 150, x2: 214 },        // Auslass in der Decke (Mitte unten)
+    loch: { x: 330, y: 300, r: 17 },    // Seitenausgang rechts unten
+    ausRinne: { x: 182, y: 386, vx: 0, vy: 130 },
+    spinner: { x: 214, y: 104, len: 22, punkte: 150 },   // Umlauf-Spinner im Oberdeck
     ausLoch: { x: 326, y: 632, vx: -30, vy: 200 }   // in die rechte Inlane
   };
 
@@ -48,9 +49,9 @@
   }
 
   var RAHMEN = [
-    [30, 300, 340, 300],          // Decke des Hauptfelds
-    [30, 300, 30, 772],           // linke Bande
-    [372, 306, 372, 806],         // Kanalwand
+    [30, 322, 340, 322],          // Decke des Hauptfelds
+    [30, 322, 30, 772],           // linke Bande
+    [372, 322, 372, 806],         // Kanalwand
     [420, 120, 420, 806],         // rechte Außenwand
     [372, 806, 420, 806]          // Kanalboden
   ].concat(
@@ -61,9 +62,9 @@
   /* Der Weg aus dem Kanal ins Feld: oben rechts hinein und nach links weg. */
   var AUSLAUF = {
     name: "Auslauf", tempo: 900, punkte: 0,
-    ein: { x: 396, y: 306, r: 30 },
-    bahn: [{ x: 396, y: 304 }, { x: 366, y: 300 }, { x: 336, y: 304 }, { x: 312, y: 316 }],
-    aus: { x: 300, y: 322, vx: -330, vy: 50 }
+    ein: { x: 396, y: 326, r: 30 },
+    bahn: [{ x: 396, y: 324 }, { x: 366, y: 322 }, { x: 336, y: 326 }, { x: 312, y: 338 }],
+    aus: { x: 300, y: 344, vx: -330, vy: 50 }
   };
 
   var SLING_L = { x1: 92, y1: 600, x2: 158, y2: 655, nx: 0.7071, ny: -0.7071 };
@@ -77,8 +78,8 @@
       tipp: "Stollenwerk mit sechs Bumpern, Aufzug zum Oberdeck und Schloss links.",
       bumper: [[152, 372, 19, 130, 280], [252, 372, 19, 130, 280], [202, 442, 20, 150, 285],
                [124, 478, 16, 170, 270], [280, 478, 16, 170, 270]],
-      deckBumper: [[254, 176, 14], [198, 212, 15], [142, 176, 14]],
-      deckZiele: [[196, 268, 20, 9], [220, 268, 20, 9], [244, 268, 20, 9]],
+      deckBumper: [[146, 196, 23], [226, 234, 26], [306, 196, 23], [226, 168, 15]],
+      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
       zieleL: [[31, 380], [31, 412], [31, 444]],
       zieleR: [[353, 380], [353, 412]],
       fallen: [[124, 494], [152, 494], [180, 494], [208, 494]],
@@ -89,11 +90,11 @@
       rampen: [
         { name: "Aufzug", punkte: 1200, tempo: 620, ziel: "deck",
           ein: { x: 330, y: 466, r: 14 },
-          bahn: [[330, 466], [356, 430], [360, 350], [350, 300], [344, 240], [336, 196]],
+          bahn: [[330, 466], [348, 436], [358, 400], [364, 340], [364, 280], [356, 220], [348, 160]],
           aus: { x: DECK.ein.x, y: DECK.ein.y, vx: -280, vy: 20 } },
         { name: "Schleife", punkte: 900, tempo: 600, ziel: "weiche",
           ein: { x: 96, y: 466, r: 14 },
-          bahn: [[96, 466], [70, 430], [62, 350], [72, 300], [92, 320]],
+          bahn: [[96, 466], [70, 430], [60, 370], [58, 300], [66, 292], [74, 330]],
           aus: { x: 78, y: 344, vx: 210, vy: 150 },
           aus2: { x: 326, y: 632, vx: -30, vy: 210 } }
       ]
@@ -101,10 +102,10 @@
     {
       id: "neon", name: "Neon-Stadt", satz: 2, grav: GRAV + 40, bonus: 3500,
       tipp: "Sechs Bumper im Rautenmuster, schnelle Schleife, breites Zielband.",
-      bumper: [[150, 360, 17, 140, 290], [252, 360, 17, 140, 290], [201, 352, 18, 140, 290],
+      bumper: [[150, 378, 17, 140, 290], [252, 378, 17, 140, 290], [201, 368, 18, 140, 290],
                [176, 438, 16, 150, 280], [226, 438, 16, 150, 280], [201, 494, 15, 160, 285]],
-      deckBumper: [[258, 180, 13], [200, 164, 15], [142, 180, 13]],
-      deckZiele: [[196, 268, 20, 9], [220, 268, 20, 9], [244, 268, 20, 9]],
+      deckBumper: [[140, 200, 21], [226, 240, 24], [310, 200, 21], [226, 166, 15]],
+      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
       zieleL: [[31, 376], [31, 408], [31, 440]],
       zieleR: [[353, 376], [353, 408]],
       fallen: [[118, 496], [146, 496], [174, 496], [202, 496]],
@@ -115,11 +116,11 @@
       rampen: [
         { name: "Aufzug", punkte: 1300, tempo: 660, ziel: "deck",
           ein: { x: 330, y: 462, r: 14 },
-          bahn: [[330, 462], [358, 424], [362, 344], [352, 296], [344, 236], [336, 194]],
+          bahn: [[330, 462], [348, 432], [358, 396], [364, 336], [364, 276], [356, 216], [348, 158]],
           aus: { x: DECK.ein.x, y: DECK.ein.y, vx: -300, vy: 10 } },
         { name: "Datenloop", punkte: 1000, tempo: 640, ziel: "weiche",
           ein: { x: 96, y: 462, r: 14 },
-          bahn: [[96, 462], [68, 424], [60, 344], [70, 296], [92, 318]],
+          bahn: [[96, 462], [70, 428], [60, 368], [58, 298], [66, 290], [74, 330]],
           aus: { x: 78, y: 342, vx: 220, vy: 160 },
           aus2: { x: 336, y: 640, vx: -40, vy: 260 } }
       ]
@@ -129,8 +130,8 @@
       tipp: "Fünf Bumper, zwei Zielbänke, Planke oben rechts, Schloss am Heck.",
       bumper: [[152, 366, 18, 130, 285], [250, 366, 18, 130, 285],
                [112, 438, 15, 170, 275], [292, 438, 15, 170, 275], [201, 476, 19, 150, 280]],
-      deckBumper: [[250, 172, 14], [196, 210, 15], [144, 172, 14]],
-      deckZiele: [[200, 266, 20, 9], [224, 266, 20, 9], [248, 266, 20, 9]],
+      deckBumper: [[146, 192, 24], [224, 232, 25], [304, 192, 24], [226, 168, 16]],
+      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
       zieleL: [[31, 386], [31, 418], [31, 450]],
       zieleR: [[353, 386], [353, 418]],
       fallen: [[126, 498], [154, 498], [182, 498], [210, 498]],
@@ -141,11 +142,11 @@
       rampen: [
         { name: "Planke", punkte: 1100, tempo: 630, ziel: "deck",
           ein: { x: 330, y: 458, r: 14 },
-          bahn: [[330, 458], [358, 420], [362, 340], [352, 292], [344, 232], [336, 190]],
+          bahn: [[330, 458], [348, 428], [358, 392], [364, 334], [364, 274], [356, 214], [348, 156]],
           aus: { x: DECK.ein.x, y: DECK.ein.y, vx: -290, vy: 15 } },
         { name: "Kombüse", punkte: 950, tempo: 610, ziel: "weiche",
           ein: { x: 96, y: 458, r: 14 },
-          bahn: [[96, 458], [68, 420], [60, 340], [70, 292], [92, 314]],
+          bahn: [[96, 458], [70, 424], [60, 364], [58, 296], [66, 290], [74, 330]],
           aus: { x: 78, y: 340, vx: 215, vy: 155 },
           aus2: { x: 326, y: 632, vx: -30, vy: 205 } }
       ]
@@ -155,8 +156,8 @@
       tipp: "Meisterklasse: große Bumper, sieben Ziele, hohe Werte, lange Wege.",
       bumper: [[150, 368, 21, 180, 310], [252, 368, 21, 180, 310], [201, 440, 18, 200, 300],
                [118, 484, 15, 210, 295], [284, 484, 15, 210, 295], [201, 498, 14, 220, 300]],
-      deckBumper: [[252, 174, 15], [198, 212, 16], [144, 174, 15]],
-      deckZiele: [[194, 268, 20, 9], [218, 268, 20, 9], [242, 268, 20, 9]],
+      deckBumper: [[144, 190, 25], [226, 238, 27], [308, 190, 25], [226, 164, 16]],
+      deckZiele: [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]],
       zieleL: [[31, 374], [31, 406], [31, 438]],
       zieleR: [[353, 374], [353, 406]],
       fallen: [[122, 500], [150, 500], [178, 500], [206, 500]],
@@ -167,11 +168,11 @@
       rampen: [
         { name: "Sternenbahn", punkte: 1500, tempo: 680, ziel: "deck",
           ein: { x: 330, y: 470, r: 14 },
-          bahn: [[330, 470], [360, 430], [364, 348], [354, 298], [346, 238], [336, 194]],
+          bahn: [[330, 470], [350, 440], [360, 402], [366, 340], [366, 278], [358, 218], [350, 160]],
           aus: { x: DECK.ein.x, y: DECK.ein.y, vx: -310, vy: 5 } },
         { name: "Kometenschleife", punkte: 1200, tempo: 660, ziel: "weiche",
           ein: { x: 96, y: 470, r: 14 },
-          bahn: [[96, 470], [66, 430], [58, 348], [68, 298], [90, 320]],
+          bahn: [[96, 470], [68, 434], [58, 372], [56, 296], [66, 288], [74, 330]],
           aus: { x: 76, y: 344, vx: 225, vy: 165 },
           aus2: { x: 326, y: 632, vx: -30, vy: 215 } }
       ]
@@ -201,16 +202,14 @@
   /* --------------------------------------------------------------- Aufbau */
   function strecke(s) { return { x1: s[0], y1: s[1], x2: s[2], y2: s[3] }; }
 
-  /* Deckrahmen: drei Wände plus Boden mit Auslass in der Mitte. */
+  /* Deckrahmen: Außenkanten mit abgeschrägten Ecken, Boden mit Auslass in der
+     Mitte und die Umlaufschiene unter der Decke (durch sie läuft die Kugel aus
+     dem Aufzug einmal quer über das Deck). */
   var DECK_WAENDE = [
-    [96, 302, 96, 124], [96, 124, 140, 104], [140, 104, 300, 104],
-    [300, 104, 344, 124], [344, 124, 344, 302],
-    [96, 302, 160, 302], [240, 302, 344, 302]
-  ].map(strecke);
-
-  var DECK_RAHMEN = [
-    [96, 110, 96, 300], [96, 108, 344, 108], [344, 110, 344, 300],
-    [96, 300, 160, 300], [240, 300, 344, 300]
+    [78, 320, 78, 88], [78, 88, 110, 70], [110, 70, 324, 70],
+    [324, 70, 356, 88], [356, 88, 356, 320],
+    [78, 320, 150, 320], [214, 320, 356, 320],
+    [100, 156, 132, 136], [132, 136, 288, 136], [288, 136, 320, 156]
   ].map(strecke);
 
   function tischKopie(def) {
@@ -235,9 +234,9 @@
       schloss: { x: def.schloss.x, y: def.schloss.y, r: def.schloss.r, sperre: 0, blitz: 0 },
       magnet: { x: def.magnet.x, y: def.magnet.y, r: def.magnet.r, an: 0 },
       rollover: [
-        { x: 152, y: 314, w: 30, h: 24, an: false, blitz: 0 },
-        { x: 202, y: 310, w: 30, h: 26, an: false, blitz: 0 },
-        { x: 252, y: 314, w: 30, h: 24, an: false, blitz: 0 }
+        { x: 152, y: 326, w: 30, h: 24, an: false, blitz: 0 },
+        { x: 202, y: 324, w: 30, h: 26, an: false, blitz: 0 },
+        { x: 252, y: 326, w: 30, h: 24, an: false, blitz: 0 }
       ],
       rampen: def.rampen.map(function (r) {
         return {
@@ -250,16 +249,17 @@
         };
       }),
       deck: {
-        waende: DECK_RAHMEN.slice(),
+        waende: DECK_WAENDE.slice(),
         bumper: def.deckBumper.map(function (b) {
           return { x: b[0], y: b[1], r: b[2], punkte: 400, kick: 230, blitz: 0, cooldown: 0 };
         }),
         ziele: def.deckZiele.map(function (p) {
           return { x: p[0], y: p[1], w: p[2], h: p[3], punkte: 600, runter: false, blitz: 0, wecker: 0, sperre: 0 };
         }),
-        gleiter: { x: 210, y: 238, w: 34, h: 10, x0: 130, x1: 288, phase: 0, richtung: 1, punkte: 700, blitz: 0, sperre: 0 },
+        gleiter: { x: 202, y: 276, w: 44, h: 14, x0: 138, x1: 258, phase: 0, richtung: 1, punkte: 700, blitz: 0, sperre: 0 },
         loch: { x: DECK.loch.x, y: DECK.loch.y, r: DECK.loch.r, sperre: 0, blitz: 0 },
-        klammer: { x: 104, y: 264, r: 15, sperre: 0, haelt: 0, blitz: 0 }
+        klammer: { x: 100, y: 296, r: 17, sperre: 0, haelt: 0, blitz: 0 },
+        spinner: { x: DECK.spinner.x, y: DECK.spinner.y, len: DECK.spinner.len, punkte: DECK.spinner.punkte, winkel: 0, dreh: 0, treffer: 0, sperre: 0 }
       }
     };
     t.rampen.forEach(function (r) {
@@ -470,10 +470,13 @@
   }
 
   /* -------------------------------------------------------------- Abschuss */
+  /* Nur das Laden beginnt hier. Beim Loslassen bleibt die aufgebaute Kraft
+     stehen, damit der Aufrufer sie an abschuss() weitergeben kann; erst der
+     Schuss selbst setzt sie zurück. */
   function abschussLaden(sp, an) {
-    if (sp.zustand !== "bereit") return;
+    if (an && sp.zustand !== "bereit") return;
     sp.abschuss.laedt = !!an;
-    if (!an) sp.abschuss.kraft = 0;
+    if (an) sp.abschuss.kraft = 0;
   }
 
   /* Erste Kugel der Partie bereitstellen (verbraucht einen der drei Bälle). */
@@ -638,7 +641,7 @@
       s.zustand = "feld";
       s.ebene = "haupt";
       s.x = 200 + (i ? 60 : -60);
-      s.y = 360;
+      s.y = 392;
       s.vx = (i ? 220 : -220);
       s.vy = 180;
       s.saver = 0.6;
@@ -657,6 +660,17 @@
   /* ------------------------------------------------------ Spielelemente Deck */
   function deckSchritt(sp, k, dt) {
     var d = sp.tisch.deck, i;
+    /* Spinner in der Umlaufbahn: zählt jede Fahrt, bremst die Kugel leicht. */
+    var sn = d.spinner;
+    if (sn.sperre > 0) sn.sperre -= dt;
+    sn.winkel += dt * (sn.dreh + Math.hypot(k.vx, k.vy) * 0.02);
+    if (sn.dreh > 0) sn.dreh = Math.max(0, sn.dreh - dt * 2.4);
+    if (sn.sperre <= 0 && Math.abs(k.y - sn.y) < 17 && Math.abs(k.x - sn.x) < sn.len) {
+      sn.sperre = 0.13; sn.dreh = Math.min(22, sn.dreh + 10); sn.treffer++;
+      k.vx *= 0.9;
+      addiere(sp, sn.punkte, sn.x, sn.y - 18, "spinner");
+      sp.ereignisse.push({ art: "spinner", x: sn.x, y: sn.y, wert: sn.treffer });
+    }
     for (i = 0; i < d.bumper.length; i++) {
       var b = d.bumper[i];
       if (b.cooldown > 0) b.cooldown -= dt;
@@ -982,7 +996,7 @@
     if (sp.saverZeit > 0) sp.saverZeit -= dt;
 
     if (sp.zustand === "bereit") {
-      if (sp.abschuss.laedt) sp.abschuss.kraft = Math.min(1, sp.abschuss.kraft + dt * 1.5);
+      if (sp.abschuss.laedt) sp.abschuss.kraft = Math.min(1, sp.abschuss.kraft + dt * 1.15);
       return;
     }
     if (sp.zustand !== "spiel") return;

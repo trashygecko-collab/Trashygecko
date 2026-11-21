@@ -497,6 +497,34 @@ html:fullscreen body{padding:18px 1px}
  body.spiel-offen #soloListe.offen{display:block}
  body.spiel-offen #soloSchalter{display:block}
 }
+/* Spielauswahl im Multiplayer-Tab: Reiter je Kategorie, darunter die Spiele
+   mit Spielerzahl, darunter der Satz zum gewählten Spiel. */
+.spiel-wahl{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px;flex:1 1 100%}
+.spiel-wahl .sw-reiter{display:flex;flex-wrap:wrap;gap:6px}
+.spiel-wahl .sw-reiter-knopf{flex:1 1 auto;min-height:38px;padding:7px 10px;
+ border:1px solid #2f5a4b;background:#0b241d;color:#b9c9bf;border-radius:9px;
+ font:inherit;font-size:13px;font-weight:bold;cursor:pointer}
+.spiel-wahl .sw-reiter-knopf:hover{color:#fff;border-color:#e8cd8e}
+.spiel-wahl .sw-reiter-knopf.aktiv{background:#1a4a3a;border-color:#e8cd8e;color:#e8cd8e;
+ box-shadow:0 0 10px #e8cd8e33}
+.spiel-wahl .sw-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));
+ gap:6px;max-height:264px;overflow:auto;padding:2px}
+.spiel-wahl .sw-spiel{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+ padding:8px 10px;border:1px solid #2f5a4b;background:#0b241d;color:#efe6d2;
+ border-radius:9px;font:inherit;text-align:left;cursor:pointer;min-height:44px}
+.spiel-wahl .sw-spiel:hover{border-color:#e8cd8e}
+.spiel-wahl .sw-spiel strong{font-size:14px;font-weight:bold}
+.spiel-wahl .sw-spiel small{font-size:11px;color:#a9bfb2}
+.spiel-wahl .sw-spiel.aktiv{background:#1a4a3a;border-color:#e8cd8e;box-shadow:0 0 10px #e8cd8e44}
+.spiel-wahl .sw-spiel.aktiv small{color:#e8cd8e}
+.spiel-wahl .sw-info{display:flex;flex-direction:column;gap:2px;margin:2px 0 0}
+.spiel-wahl .sw-info strong{font-size:15px;color:#f1dca8}
+.spiel-wahl .sw-info small{font-size:11px;color:#a9bfb2}
+.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:#d8e2da}
+@media (max-width:520px){
+ .spiel-wahl .sw-liste{grid-template-columns:repeat(auto-fill,minmax(126px,1fr));max-height:220px}
+ .spiel-wahl .sw-reiter-knopf{font-size:12px;padding:6px 8px}
+}
 </style>
 <link rel="stylesheet" href="/spiele/design.css">
 <link rel="stylesheet" href="/spiele/schrift.css">
@@ -647,6 +675,8 @@ html:fullscreen body{padding:18px 1px}
 
 <script src="/spiele/netz.js"></script>
 <script src="/spiele/mobil.js"></script>
+<!-- Zentrale Spieleverwaltung: Kategorien, Spielerzahlen, Beschreibungen. -->
+<script src="/spiele/multiplayer-register.js"></script>
 <script>
 // Harte Obergrenze für jeden API-Ruf. Ohne sie kann ein einziger hängender
 // Request die Seite dauerhaft blockieren: refresh() setzt chatBusy und würde
@@ -1331,61 +1361,22 @@ let currentSchlangenGame=null;
 let currentPigGame=null;
 let currentGaenseGame=null;
 
-const SUPPORTED_GAMES = [
- { id: "tictactoe", name: "Neon Tic Tac Toe", path: "/spiele/brettspiele/tictac/tictactoe.html", api: "/api/tictactoe" },
- { id: "viergewinnt", name: "Vier gewinnt", path: "/spiele/brettspiele/viergewinnt/viergewinnt.html", api: "/api/viergewinnt" },
- { id: "dame", name: "Dame", path: "/spiele/brettspiele/dame/dame.html", api: "/api/dame" },
- { id: "paare", name: "Paare finden", path: "/spiele/brettspiele/paare/paare.html", api: "/api/paare" },
- { id: "menschaerger", name: "Mensch ärgere dich nicht", path: "/spiele/brettspiele/menschaerger/menschaerger.html", api: "/api/menschaerger" },
- { id: "kaesekaestche", name: "Käsekästchen", path: "/spiele/brettspiele/kaesekaestche/kaesekaestche.html", api: "/api/kaesekaestche" },
- { id: "sim", name: "Sim", path: "/spiele/brettspiele/sim/sim.html", api: "/api/sim" },
- { id: "tetris", name: "Tetris", path: "/spiele/tetris/tetris.html", api: "/api/tetris" },
- { id: "kalaha", name: "Kalaha", path: "/spiele/brettspiele/kalaha/kalaha.html", api: "/api/kalaha" },
- { id: "streichholzspiel", name: "21 Streichhölzer", path: "/spiele/brettspiele/streichholzspiel/streichholzspiel.html", api: "/api/streichholz" },
- { id: "muehle", name: "Mühle", path: "/spiele/brettspiele/muehle/muehle.html", api: "/api/muehle" },
- { id: "reversi", name: "Reversi", path: "/spiele/brettspiele/reversi/reversi.html", api: "/api/reversi" },
- { id: "hold", name: "Hold the Line", path: "/spiele/brettspiele/hold/holdtheline.html", api: "/api/hold" },
- { id: "skyjo", name: "Skyjo", path: "/spiele/kartenspiele/skyjo/skyjo.html", api: "/api/skyjo" },
- { id: "kniffel", name: "Kniffel", path: "/spiele/brettspiele/kniffel/kniffel.html", api: "/api/kniffel" },
- { id: "zehntausend", name: "10.000", path: "/spiele/brettspiele/zehntausend/zehntausend.html", api: "/api/zehntausend" },
- { id: "maexchen", name: "Lügen Mäxchen", path: "/spiele/brettspiele/maexchen/maexchen.html", api: "/api/maexchen" },
- { id: "boston", name: "Auf nach Boston", path: "/spiele/brettspiele/boston/boston.html", api: "/api/boston" },
- { id: "chicago", name: "Chicago", path: "/spiele/brettspiele/chicago/chicago.html", api: "/api/chicago" },
- { id: "shipcrew", name: "Schiffe versenken · Ship Captain Crew", path: "/spiele/brettspiele/shipcrew/shipcrew.html", api: "/api/shipcrew" },
- { id: "halma", name: "Halma", path: "/spiele/brettspiele/halma/halma.html", api: "/api/halma" },
- { id: "schach", name: "Schach", path: "/spiele/brettspiele/schach/schach.html", api: "/api/schach" },
- { id: "go", name: "Go", path: "/spiele/brettspiele/go/go.html", api: "/api/go" },
- { id: "backgammon", name: "Backgammon", path: "/spiele/brettspiele/backgammon/backgammon.html", api: "/api/backgammon" },
- { id: "maumau", name: "Mau Mau", path: "/spiele/kartenspiele/maumau/maumau.html", api: "/api/maumau" },
- { id: "siebzehn", name: "17 und 4", path: "/spiele/kartenspiele/siebzehn/siebzehn.html", api: "/api/siebzehn" },
- { id: "baccara", name: "Baccara", path: "/spiele/kartenspiele/baccara/baccara.html", api: "/api/baccara" },
- { id: "schiffe", name: "Schiffe versenken", path: "/spiele/brettspiele/schiffe/schiffe.html", api: "/api/schiffe" },
- { id: "pong", name: "Pong", path: "/spiele/pong/pong.html", api: "/api/pong" },
- { id: "tron", name: "Tron", path: "/spiele/tron/tron.html", api: "/api/tron" },
- { id: "bomberman", name: "Bomberman", path: "/spiele/bomberman/bomberman.html", api: "/api/bomberman" },
- { id: "bubble", name: "Bubble Shooter", path: "/spiele/bubbleshooter/bubbleshooter.html", api: "/api/bubble" },
- { id: "snake", name: "Snake", path: "/spiele/snake/snake.html", api: "/api/snake" },
- { id: "cabo", name: "Cabo", path: "/spiele/kartenspiele/cabo/cabo.html", api: "/api/cabo" },
- { id: "poker", name: "Poker", path: "/spiele/kartenspiele/poker/poker.html", api: "/api/poker" },
- { id: "uno", name: "UNO", path: "/spiele/kartenspiele/uno/uno.html", api: "/api/uno" },
- { id: "schwimmen", name: "31 Schwimmen", path: "/spiele/kartenspiele/schwimmen/schwimmen.html", api: "/api/schwimmen" },
- { id: "arschloch", name: "Arschloch", path: "/spiele/kartenspiele/arschloch/arschloch.html", api: "/api/arschloch" },
- { id: "einsxeins", name: "1×1-Rennen", path: "/spiele/1x1/1x1.html", api: "/api/einsxeins" },
- { id: "sechsundsechzig", name: "Sechsundsechzig", path: "/spiele/kartenspiele/sechsundsechzig/sechsundsechzig.html", api: "/api/sechsundsechzig" },
- { id: "galgen", name: "Galgenmännchen", path: "/spiele/brettspiele/galgen/galgen.html", api: "/api/galgen" },
- { id: "bingo", name: "Bingo", path: "/spiele/brettspiele/bingo/bingo.html", api: "/api/bingo" },
- { id: "wortsuche", name: "Wortsuche", path: "/spiele/brettspiele/wortsuche/wortsuche.html", api: "/api/wortsuche" },
- { id: "domino", name: "Domino", path: "/spiele/brettspiele/domino/domino.html", api: "/api/domino" },
- { id: "schlangen", name: "Schlangen und Leitern", path: "/spiele/brettspiele/schlangen/schlangen.html", api: "/api/schlangen" },
- { id: "pig", name: "Pig", path: "/spiele/brettspiele/pig/pig.html", api: "/api/pig" },
- { id: "gaensespiel", name: "Gänsespiel", path: "/spiele/brettspiele/gaensespiel/gaensespiel.html", api: "/api/gaensespiel" },
- // Malen braucht keine Einladung: alle im Raum landen auf derselben Fläche.
- { id: "malen", name: "Malen", path: "/spiele/malen/malen.html", api: "" }
-];
-
-// Im Alphabet, damit die Auswahl nicht in der Reihenfolge dasteht, in der die
-// Spiele eingetragen wurden. "de" ordnet ä/ö/ü richtig ein, numeric vergleicht
-// Zahlen in Namen richtig (21 vor 31).
+// Die Spieleliste steht in der zentralen Spieleverwaltung
+// (/spiele/multiplayer-register.js). Dort sind Kategorie, Spielerzahl,
+// Beschreibung und Startseite je Spiel gepflegt – hier wird nur noch die
+// Form gebaut, die der übrige Code kennt (id/name/path/api).
+const MP_REGISTER = window.TGMultiplayer || { kategorien: [], spiele: [] };
+const SUPPORTED_GAMES = MP_REGISTER.spiele.map(g => ({
+ id: g.id,
+ name: g.name,
+ path: g.pfad,
+ api: g.api ? "/api/" + g.api : "",
+ kat: g.kat || "weitere",
+ min: g.min || 2,
+ max: g.max || 2,
+ art: g.art || "einladung",
+ text: g.text || ""
+}));
 SUPPORTED_GAMES.sort((a,b)=>a.name.localeCompare(b.name,"de",{numeric:true,sensitivity:"base"}));
 
 // refreshGames fragt alle Spiele nacheinander ab, und jedes schreibt in
@@ -3347,6 +3338,10 @@ function zusatzKurz(gameId){
  return " ("+selectedPairs+" Paare · "+art+")";
 }
 let selectedSeats=4;
+// Halma braucht Brettform und Spielerzahl, Ship Captain Crew eine Rundenzahl.
+let selectedHalmaVariante="klassisch";
+let selectedHalmaAnzahl=2;
+let selectedRunden=5;
 
 function gameName(id){
  const def=SUPPORTED_GAMES.find(g=>g.id===id);
@@ -3401,6 +3396,103 @@ let angebot = null;
 // Multiplayer: ein Spiel aussuchen und es dem ganzen Raum anbieten. Wer
 // mitspielen will, klickt im Chat auf "Mitspielen" – Einladungen an einzelne
 // Spieler gibt es nicht mehr.
+// Spielauswahl im Multiplayer-Tab: oben ein Reiter je Kategorie, darunter die
+// Spiele dieser Kategorie mit ihrer Spielerzahl, darunter Name, Spielerzahl und
+// ein Satz zum gewählten Spiel. Die Inhalte kommen vollständig aus der
+// zentralen Spieleverwaltung – hier steht keine Spieleliste mehr.
+let pickerKategorie="";
+
+function spielWahlBauen(){
+ const wrap=document.createElement("div");
+ wrap.className="spiel-wahl";
+ wrap.setAttribute("role","group");
+ wrap.setAttribute("aria-label","Spiel auswählen");
+ const reiter=document.createElement("div");
+ reiter.className="sw-reiter";
+ reiter.setAttribute("role","tablist");
+ (MP_REGISTER.kategorien||[]).forEach(k=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="sw-reiter-knopf";
+  b.dataset.kat=k.id;
+  b.setAttribute("role","tab");
+  if(k.text)b.title=k.text;
+  const zahl=(MP_REGISTER.spiele||[]).filter(g=>g.kat===k.id).length;
+  b.textContent=k.name+" ("+zahl+")";
+  b.onclick=()=>{
+   pickerKategorie=k.id;
+   spielWahlZeichnen(wrap);
+  };
+  reiter.appendChild(b);
+ });
+ const liste=document.createElement("div");
+ liste.className="sw-liste";
+ const info=document.createElement("p");
+ info.className="sw-info";
+ wrap.append(reiter,liste,info);
+ return wrap;
+}
+
+function spielWahlZeichnen(wrap){
+ if(!wrap)return;
+ const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
+ const kats=MP_REGISTER.kategorien||[];
+ if(!pickerKategorie||!kats.some(k=>k.id===pickerKategorie)){
+  pickerKategorie=(def&&def.kat)||(kats[0]?kats[0].id:"weitere");
+ }
+ // Nur neu bauen, wenn sich Reiter oder Auswahl geändert haben: sonst würde
+ // jeder Takt die Knöpfe unter dem Finger ersetzen.
+ const sig=pickerKategorie+"|"+selectedGame+"|"+kats.map(k=>k.id+k.name).join(",");
+ if(wrap.dataset.sig===sig)return;
+ wrap.dataset.sig=sig;
+
+ wrap.querySelectorAll(".sw-reiter-knopf").forEach(b=>{
+  const an=b.dataset.kat===pickerKategorie;
+  b.classList.toggle("aktiv",an);
+  b.setAttribute("aria-selected",an?"true":"false");
+  b.setAttribute("tabindex",an?"0":"-1");
+ });
+
+ const liste=wrap.querySelector(".sw-liste");
+ liste.innerHTML="";
+ SUPPORTED_GAMES.filter(g=>g.kat===pickerKategorie).forEach(g=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="sw-spiel"+(g.id===selectedGame?" aktiv":"");
+  b.setAttribute("aria-pressed",g.id===selectedGame?"true":"false");
+  const nm=document.createElement("strong");
+  nm.textContent=g.name;
+  const zl=document.createElement("small");
+  zl.textContent=g.min===g.max?g.min+" Spieler":g.min+"–"+g.max+" Spieler";
+  b.append(nm,zl);
+  b.onclick=()=>{
+   selectedGame=g.id;
+   renderGamePicker(currentPlayersList);
+  };
+  liste.appendChild(b);
+ });
+
+ const info=wrap.querySelector(".sw-info");
+ info.innerHTML="";
+ if(!def){
+  info.textContent="Bitte ein Spiel auswählen.";
+  return;
+ }
+ const stark=document.createElement("strong");
+ stark.textContent=def.name;
+ const klein=document.createElement("small");
+ const artText=def.art==="tisch"
+  ?"Tisch – Mitspieler kommen über die Spielkarte im Chat dazu"
+  :def.art==="gemeinsam"
+   ?"Gemeinsame Fläche – alle malen gleichzeitig"
+   :"Einladung – der Gegner tritt bei, dann geht es los";
+ klein.textContent=(def.min===def.max?def.min+" Spieler":def.min+"–"+def.max+" Spieler")+" · "+artText;
+ const satz=document.createElement("span");
+ satz.className="sw-text";
+ satz.textContent=def.text||"";
+ info.append(stark, klein, satz);
+}
+
 function renderGamePicker(players){
  const box=document.getElementById("gameplayers");
  if(!box)return;
@@ -3409,29 +3501,13 @@ function renderGamePicker(players){
  if(!controls){
   controls=document.createElement("div");
   controls.className="game-invite-controls";
-  const label=document.createElement("label");
-  label.htmlFor="game-choice";
-  label.textContent="Spiel:";
-  const select=document.createElement("select");
-  select.id="game-choice";
-  select.setAttribute("aria-label","Spiel auswählen");
-  SUPPORTED_GAMES.forEach(g=>{
-   const opt=document.createElement("option");
-   opt.value=g.id;
-   opt.textContent=g.name;
-   select.appendChild(opt);
-  });
-  select.onchange=()=>{
-   selectedGame=select.value;
-   renderGamePicker(currentPlayersList);
-  };
-  controls.append(label,select);
+  controls.appendChild(spielWahlBauen());
   box.appendChild(controls);
   pickerZusatz="";
  }
 
- const select=document.getElementById("game-choice");
- if(select.value!==selectedGame)select.value=selectedGame;
+ const wahl=controls.querySelector(".spiel-wahl");
+ if(wahl)spielWahlZeichnen(wahl);
 
  // Zusatzfelder (Paare, Sitze) nur neu bauen, wenn sich das Spiel geändert hat.
  if(pickerZusatz!==selectedGame){
@@ -3577,7 +3653,9 @@ async function angebotAktion(action,spiel){
    method:"POST",headers:{"Content-Type":"application/json"},
    body:JSON.stringify(Object.assign({id:sessionID,action,game:spiel||selectedGame},
     (spiel||selectedGame)==="paare"?{pairs:selectedPairs,kind:selectedKind}:{},
-    (spiel||selectedGame)==="menschaerger"?{maxPlayers:selectedSeats}:{}))
+    (spiel||selectedGame)==="menschaerger"?{maxPlayers:selectedSeats}:{},
+    (spiel||selectedGame)==="halma"?{variante:selectedHalmaVariante,anzahl:selectedHalmaAnzahl}:{},
+    (spiel||selectedGame)==="shipcrew"?{runden:selectedRunden}:{}))
   });
   if(!r.ok){
    tttStatus((await r.text()).trim()||"Das hat nicht geklappt.");
@@ -3673,6 +3751,77 @@ function zusatzFelder(controls){
   seatsSelect.value=String(selectedSeats);
   seatsSelect.onchange=()=>{ selectedSeats=Number(seatsSelect.value)||4; };
   controls.append(seatsLabel,seatsSelect);
+ }
+
+ // Halma: Brettform und Spielerzahl. Stern erlaubt bis zu sechs, klassisch
+ // und Sprung zwei oder vier – die Zahlen kommen aus dem Spiel selbst
+ // (halmaStartPlaetze), hier stehen sie nur zur Auswahl.
+ if(selectedGame==="halma"){
+  const artLabel=document.createElement("label");
+  artLabel.className="game-extra";
+  artLabel.htmlFor="halma-art";
+  artLabel.textContent="Brett:";
+  const art=document.createElement("select");
+  art.className="game-extra";
+  art.id="halma-art";
+  art.setAttribute("aria-label","Halma-Brettform");
+  [["klassisch","Klassisch"],["stern","Stern"],["sprung","Sprung"]].forEach(([wert,text])=>{
+   const opt=document.createElement("option");
+   opt.value=wert;
+   opt.textContent=text;
+   art.appendChild(opt);
+  });
+  art.value=selectedHalmaVariante;
+
+  const zahlLabel=document.createElement("label");
+  zahlLabel.className="game-extra";
+  zahlLabel.htmlFor="halma-zahl";
+  zahlLabel.textContent="Spieler:";
+  const zahl=document.createElement("select");
+  zahl.className="game-extra";
+  zahl.id="halma-zahl";
+  zahl.setAttribute("aria-label","Anzahl der Halma-Spieler");
+  const zahlenFuer=()=>selectedHalmaVariante==="stern"?[2,3,4,6]:[2,4];
+  const zahlenFuellen=()=>{
+   const moeglich=zahlenFuer();
+   if(moeglich.indexOf(selectedHalmaAnzahl)<0)selectedHalmaAnzahl=moeglich[0];
+   zahl.innerHTML="";
+   moeglich.forEach(n=>{
+    const opt=document.createElement("option");
+    opt.value=String(n);
+    opt.textContent=n+" Spieler";
+    zahl.appendChild(opt);
+   });
+   zahl.value=String(selectedHalmaAnzahl);
+  };
+  zahlenFuellen();
+  art.onchange=()=>{
+   selectedHalmaVariante=art.value;
+   zahlenFuellen();
+  };
+  zahl.onchange=()=>{ selectedHalmaAnzahl=Number(zahl.value)||2; };
+  controls.append(artLabel,art,zahlLabel,zahl);
+ }
+
+ // Ship Captain Crew: ein, drei, fünf oder zehn Runden.
+ if(selectedGame==="shipcrew"){
+  const rundenLabel=document.createElement("label");
+  rundenLabel.className="game-extra";
+  rundenLabel.htmlFor="runden-wahl";
+  rundenLabel.textContent="Runden:";
+  const runden=document.createElement("select");
+  runden.className="game-extra";
+  runden.id="runden-wahl";
+  runden.setAttribute("aria-label","Anzahl der Runden");
+  [1,3,5,10].forEach(n=>{
+   const opt=document.createElement("option");
+   opt.value=String(n);
+   opt.textContent=n===1?"1 Runde":n+" Runden";
+   runden.appendChild(opt);
+  });
+  runden.value=String(selectedRunden);
+  runden.onchange=()=>{ selectedRunden=Number(runden.value)||5; };
+  controls.append(rundenLabel,runden);
  }
 }
 

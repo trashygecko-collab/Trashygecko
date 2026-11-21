@@ -385,7 +385,7 @@ func dominoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID    string   `json:"id"`
+		ID    string `json:"id"`
 		Stein [2]int `json:"stein"`
 		Seite string `json:"seite"`
 	}

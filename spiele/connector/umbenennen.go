@@ -216,6 +216,9 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.ShipCrew; g != nil {
 		benenne(g.Players, id, neu, func(p *ScPlayer) string { return p.ID }, func(p *ScPlayer) *string { return &p.Name })
 	}
+	if g := r.Wuerfel; g != nil {
+		wuerfelSpielerUmbenennen(g, id, neu)
+	}
 	if g := r.Halma; g != nil {
 		benenne(g.Spieler, id, neu, func(p *HalmaSpieler) string { return p.ID }, func(p *HalmaSpieler) *string { return &p.Name })
 	}

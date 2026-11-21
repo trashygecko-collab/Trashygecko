@@ -434,6 +434,9 @@
 
   /* --- Aktionen -------------------------------------------------------- */
   function druecken(art, daten) {
+    /* Online zählt allein der Server: online.js schickt den Zug dorthin und
+       zeichnet danach den Stand, den er zurückgibt. */
+    if (TGW.online) { TGW.online.aktion(art, daten); return; }
     if (art === "neu") { startePartie(); return; }
     if (!z || z.ende) return;
     var ergebnis = spiel.aktion(z, art, daten);
@@ -670,6 +673,9 @@
     regelnBox.append(summary, liste);
     el.einrichten.appendChild(regelnBox);
     rahmen.appendChild(el.einrichten);
+    /* Online gibt es keine lokalen Mitspieler – online.js zeigt dort seinen
+       eigenen Bereich (beitreten, starten, warten). */
+    if (TGW.online) el.einrichten.hidden = true;
 
     /* Spieltafel */
     el.tafel = document.createElement("section");
@@ -718,20 +724,23 @@
     el.tafel.appendChild(verlaufKasten);
     rahmen.appendChild(el.tafel);
 
-    /* Fußzeile: Neustart */
-    var fuss = document.createElement("div");
-    fuss.className = "tasten";
-    fuss.style.marginTop = "12px";
-    var neu = document.createElement("button");
-    neu.type = "button";
-    neu.className = "knopf";
-    neu.textContent = "Neu aufstellen";
-    neu.addEventListener("click", function () {
-      el.tafel.hidden = true;
-      el.einrichten.hidden = false;
-    });
-    fuss.appendChild(neu);
-    rahmen.appendChild(fuss);
+    /* Fußzeile: Neustart. Online gibt es kein lokales Aufstellen – dort
+       startet der Gastgeber die nächste Runde über online.js. */
+    if (!TGW.online) {
+      var fuss = document.createElement("div");
+      fuss.className = "tasten";
+      fuss.style.marginTop = "12px";
+      var neu = document.createElement("button");
+      neu.type = "button";
+      neu.className = "knopf";
+      neu.textContent = "Neu aufstellen";
+      neu.addEventListener("click", function () {
+        el.tafel.hidden = true;
+        el.einrichten.hidden = false;
+      });
+      fuss.appendChild(neu);
+      rahmen.appendChild(fuss);
+    }
 
     document.body.appendChild(rahmen);
     baueRegeln();
@@ -787,6 +796,19 @@
     document.title = spiel.titel + " – TrashyGecko";
     baueSeite();
   }
+
+  /* --- Für die Online-Runde (online.js) --------------------------------
+     Der Rahmen selbst spielt hier nicht: setzeStand zeigt den Stand des
+     Servers, neuePartie baut den Anfangszustand auch außerhalb des Browsers
+     (der Connector führt dieselben Regelmodule in Go aus). */
+  TGW.neuePartie = neuerZustand;
+  TGW.setzeStand = function (zustand) {
+    if (!zustand) return;
+    z = zustand;
+    if (el.einrichten) el.einrichten.hidden = true;
+    if (el.tafel) el.tafel.hidden = false;
+    zeichne();
+  };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", los);
   else los();

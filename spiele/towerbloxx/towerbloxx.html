@@ -185,6 +185,12 @@ const ctx=flaeche.getContext("2d");
 const BW=84;            // Blockbreite
 const BH=28;            // Blockhöhe
 const SEIL=112;         // Länge des Krans
+/* Der Block haengt am Kran bei y = 54 + cos(winkel)*SEIL; seine Unterkante
+   liegt also zwischen 173 und 194. Die Turmspitze muss darunter bleiben,
+   sonst waechst der Turm in den Kran und der Block wird ohne Fallweg
+   abgesetzt. Deshalb: Kopfhoehe = tiefste Blockunterkante + Fallweg. */
+const KRAN_Y=54;                 // Aufhaengung des Krans (Bildschirm-y)
+const KOPF_LINIE=KRAN_Y+SEIL+BH+26;  // 220 – hier steht die Turmspitze still
 let FARBEN=[];
 
 let W=0,H=0,dpr=1;
@@ -244,6 +250,17 @@ function messen(){
  flaeche.width=Math.round(W*dpr);
  flaeche.height=Math.round(H*dpr);
  ctx.setTransform(dpr,0,0,dpr,0,0);
+ // Turm bleibt auf dem Boden, wenn sich die Feldhoehe aendert (Handy drehen,
+ // Fenster ziehen). Welt-y so verschieben, dass das Fundament wieder auf
+ // grundY() sitzt, danach die Kopfhoehe nachziehen.
+ if(bloecke.length){
+  const d=bloecke[0].y-(grundY()-bloecke[0].h);
+  if(Math.abs(d)>0.5){
+   bloecke.forEach(b=>{b.y-=d;});
+   if(block)block.y-=d;
+  }
+  versatzZiel=Math.max(versatzZiel,KOPF_LINIE-bloecke[bloecke.length-1].y);
+ }
 }
 
 function grundY(){ return H-46; }
@@ -321,16 +338,16 @@ function zeichne(){
   if(zustand==="schwingen"){
    ctx.strokeStyle=F.falllinie; ctx.setLineDash([4,6]); ctx.lineWidth=1;
    ctx.beginPath();
-   ctx.moveTo(block.x+BW/2,block.y+BH);
-   ctx.lineTo(block.x+BW/2,oberkante());
+   ctx.moveTo(block.x+BW/2,block.y+BH+versatz);
+   ctx.lineTo(block.x+BW/2,oberkante()+versatz);
    ctx.stroke();
    ctx.setLineDash([]);
   }
   if(zustand==="schwingen"){
    ctx.strokeStyle=F.seil; ctx.lineWidth=1.5;
-   ctx.beginPath(); ctx.moveTo(pivotX,pivotY); ctx.lineTo(block.x+BW/2,block.y); ctx.stroke();
+   ctx.beginPath(); ctx.moveTo(pivotX,pivotY); ctx.lineTo(block.x+BW/2,block.y+versatz); ctx.stroke();
   }
-  zeichneBlock(block.x,block.y,BW,BH,FARBEN[block.ton]);
+  zeichneBlock(block.x,block.y+versatz,BW,BH,FARBEN[block.ton]);
  }
 
  // Staub beim Aufsetzen
@@ -352,14 +369,14 @@ function zeichne(){
 }
 
 // ------------------------------------------------------------------ Spiellogik
+/* Oberkante des Turms in WELTkoordinaten. Bildschirm-y = Welt-y + versatz. */
 function oberkante(){
- const oben=bloecke[bloecke.length-1];
- return oben.y+versatz;
+ return bloecke[bloecke.length-1].y;
 }
 
 function neuerBlock(){
  const ton=Math.floor(Math.random()*FARBEN.length);
- block={x:W/2-BW/2,y:54+SEIL,vy:0,ton};
+ block={x:W/2-BW/2,y:KRAN_Y+SEIL-versatz,vy:0,ton};
  zustand="schwingen";
  winkel=0;
  tempo=1.05+Math.min(1.5,etage*0.028);
@@ -388,7 +405,7 @@ function ablegen(){
 
 function landen(){
  const oben=bloecke[bloecke.length-1];
- const obenY=oben.y+versatz;
+ const obenY=oben.y;                 // Weltkoordinate des Turmdachs
  const blockUnten=block.y+BH;
 
  // Überlappung mit dem Block darunter
@@ -407,13 +424,14 @@ function landen(){
   buehne.classList.remove("rummst");
   void buehne.offsetWidth;
   buehne.classList.add("rummst");
-  staub(block.x+BW/2,block.y+BH,16,F.staub1);
+  staub(block.x+BW/2,block.y+BH+versatz,16,F.staub1);
   return;
  }
 
  // Aufsetzen: der Block bleibt, wo er ist
- const neuerY=obenY-BH;
- bloecke.push({x:block.x,y:neuerY-versatz,w:BW,h:BH,ton:block.ton});
+ const neuerY=obenY-BH;                       // Weltkoordinate, direkt auf dem Dach
+ bloecke.push({x:block.x,y:neuerY,w:BW,h:BH,ton:block.ton});
+ const neuerScreen=neuerY+versatz;            // nur fuer Staub und Punkte
  etage++;
 
  const versatzMitte=block.x+BW/2, obenMitte=oben.x+oben.w/2;
@@ -424,25 +442,24 @@ function landen(){
   serie+=1;
   besteSerie=Math.max(besteSerie,serie);
   bonus=25*Math.min(5,serie);
-  schwebe("PERFEKT +"+bonus,block.x+BW/2,neuerY-6,F.perfekt);
+  schwebe("PERFEKT +"+bonus,block.x+BW/2,neuerScreen-6,F.perfekt);
   $("hinweis").textContent=serie>1
    ? "Perfekt! Serie "+serie+" – "+bonus+" Punkte extra."
    : "Perfekt! +"+bonus+" Punkte extra.";
  }else{
   serie=0;
-  schwebe("+"+grund,block.x+BW/2,neuerY-6,F.plus);
+  schwebe("+"+grund,block.x+BW/2,neuerScreen-6,F.plus);
   $("hinweis").textContent="Etage "+etage+" steht.";
  }
  punkte+=grund+bonus;
- staub(block.x+6,neuerY+BH,7,F.staub2);
- staub(block.x+BW-6,neuerY+BH,7,F.staub2);
+ staub(block.x+6,neuerScreen+BH,7,F.staub2);
+ staub(block.x+BW-6,neuerScreen+BH,7,F.staub2);
  zeigeZahlen();
 
- // Kamera nachziehen, damit der Turm oben Platz hat. neuerY ist schon
- // Bildschirm-y; versatz ein zweites Mal dazuzurechnen liess die Bedingung
- // stehen und den Turm ueber den Kran wachsen.
- const neuerOben=neuerY;
- if(neuerOben<190)versatzZiel+=190-neuerOben;
+ // Kamera: Ziel ABSOLUT aus der Weltkoordinate, nicht additiv. Additiv hob
+ // jede Etage den Versatz um den Restbetrag der noch nachlaufenden Kamera
+ // mit an – der Turm kroch dadurch Zeile um Zeile in den Kran.
+ versatzZiel=Math.max(versatzZiel,KOPF_LINIE-neuerY);
 
  block=null;
  zustand="pause";
@@ -476,23 +493,29 @@ function rechnen(dt){
 
  if(zustand==="schwingen"){
   winkel=Math.sin(zeit*tempo)*0.62;
+  // Der Kran haengt fest im Bild; die Welt-y rechnet den Kameraversatz heraus.
   block.x=W/2+Math.sin(winkel)*SEIL-BW/2;
-  block.y=54+Math.cos(winkel)*SEIL;
+  block.y=KRAN_Y+Math.cos(winkel)*SEIL-versatz;
  }else if(zustand==="fallen"){
+  // Fall und Aufprall in WELTkoordinaten: die Kamera darf waehrend des
+  // Falls weiterlaufen, ohne dass der Block zu frueh oder zu spaet landet.
   block.vy+=1500*dt;
   block.y+=block.vy*dt;
   if(block.y+BH>=oberkante())landen();
  }else if(zustand==="sturz"){
   block.vy+=1500*dt;
   block.y+=block.vy*dt;
-  if(block.y>H+80){ block=null; vorbei(); }
+  if(block.y+versatz>H+80){ block=null; vorbei(); }
  }else if(zustand==="pause"){
   meldungTimer-=dt;
   if(meldungTimer<=0)neuerBlock();
  }
 
  // Kamera weich nachziehen
- versatz+=(versatzZiel-versatz)*Math.min(1,dt*6);
+ versatz+=(versatzZiel-versatz)*Math.min(1,dt*8);
+ // Sicherheitsnetz: die Kamera darf hoechstens 8 px nachlaufen, sonst
+ // wuerde die Turmspitze kurzzeitig doch in den Kranbereich ragen.
+ if(versatz<versatzZiel-8)versatz=versatzZiel-8;
 }
 
 function schritt(ms){
@@ -503,7 +526,11 @@ function schritt(ms){
   // Staub und Schwebetexte leben nur kurz
   for(const t of teilchen){ t.x+=t.vx*dt; t.y+=t.vy*dt; t.vy+=220*dt; t.leben-=dt; }
   teilchen=teilchen.filter(t=>t.leben>0);
-  for(const s of schwebetexte){ s.y-=26*dt; s.leben-=dt; }
+  for(const s of schwebetexte){
+   // nicht ueber die Kopfhoehe hinaus: dort haengt der Kranblock
+   s.y=Math.max(KOPF_LINIE-14,s.y-26*dt);
+   s.leben-=dt;
+  }
   schwebetexte=schwebetexte.filter(s=>s.leben>0);
  }
  zeichne();

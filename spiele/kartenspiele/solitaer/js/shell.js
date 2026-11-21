@@ -127,7 +127,9 @@
 
     $("modusAuswahl").hidden = true;
     $("spielbereich").hidden = false;
-    $("hudModus").textContent = m.name;
+    $("kopfTitel").textContent = m.name;
+    document.body.classList.add("spielt");
+    document.title = m.name + " – Solitär";
     optionenZeigen();
     uhrStarten();
     var stat = statModus(id);
@@ -346,6 +348,9 @@
     if (Shell.spiel) Shell.spiel = Shell.spiel;   // Zustand bleibt für ein späteres "Neues Spiel"
     $("spielbereich").hidden = true;
     $("modusAuswahl").hidden = false;
+    $("kopfTitel").textContent = "Solitär";
+    document.body.classList.remove("spielt");
+    document.title = "Solitär – fünf Varianten";
     menueBauen();
   };
 

@@ -18,38 +18,38 @@ import (
 // Flamme 0,62 s, Tempo 3,05 Kacheln je Sekunde, drei Rundensiege.
 
 const (
-	bomberSpalten     = 15
-	bomberZeilen      = 13
-	bomberRadius      = 0.33 // Spielerradius in Kacheln
-	bomberBombenzeit  = 2.4
-	bomberFlammenzeit = 0.62
-	bomberZiel        = 3
-	bomberVorlauf     = 1.9
-	bomberTempo       = 3.05
-	bomberMaxSpieler  = 2
-	bomberTakt        = 1.0 / 60.0
-	bomberMaxSchritte = 240 // höchstens vier Sekunden auf einmal nachrechnen
+	bomberSpalten      = 15
+	bomberZeilen       = 13
+	bomberRadius       = 0.33 // Spielerradius in Kacheln
+	bomberBombenzeit   = 2.4
+	bomberFlammenzeit  = 0.62
+	bomberZiel         = 3
+	bomberVorlauf      = 1.9
+	bomberTempo        = 3.05
+	bomberMaxSpieler   = 2
+	bomberTakt         = 1.0 / 60.0
+	bomberMaxSchritte  = 240 // höchstens vier Sekunden auf einmal nachrechnen
 	bomberMaxVorsprung = 3.0
 )
 
 type BomberSpieler struct {
-	ID       string  `json:"id"`
-	Name     string  `json:"name"`
-	Ready    bool    `json:"ready"`
-	Nr       int     `json:"-"`
-	X        float64 `json:"-"`
-	Y        float64 `json:"-"`
-	DX       int     `json:"-"` // gehaltene Richtung
-	DY       int     `json:"-"`
-	BlickDX  int     `json:"-"` // zuletzt gelaufene Richtung (für die Augen)
-	BlickDY  int     `json:"-"`
-	BombMax  int     `json:"-"`
-	Feuer    int     `json:"-"`
-	Tempo    float64 `json:"-"`
-	Leben    bool    `json:"-"`
-	Sieg     int     `json:"-"`
-	LaufT    float64 `json:"-"`
-	TotSeit  float64 `json:"-"`
+	ID      string  `json:"id"`
+	Name    string  `json:"name"`
+	Ready   bool    `json:"ready"`
+	Nr      int     `json:"-"`
+	X       float64 `json:"-"`
+	Y       float64 `json:"-"`
+	DX      int     `json:"-"` // gehaltene Richtung
+	DY      int     `json:"-"`
+	BlickDX int     `json:"-"` // zuletzt gelaufene Richtung (für die Augen)
+	BlickDY int     `json:"-"`
+	BombMax int     `json:"-"`
+	Feuer   int     `json:"-"`
+	Tempo   float64 `json:"-"`
+	Leben   bool    `json:"-"`
+	Sieg    int     `json:"-"`
+	LaufT   float64 `json:"-"`
+	TotSeit float64 `json:"-"`
 }
 
 type BomberBombe struct {
@@ -96,23 +96,23 @@ type BomberGame struct {
 }
 
 type BomberSpielerSicht struct {
-	ID       string  `json:"id"`
-	Name     string  `json:"name"`
-	Ready    bool    `json:"ready"`
-	Nr       int     `json:"nr"`
-	X        float64 `json:"x"`
-	Y        float64 `json:"y"`
-	DX       int     `json:"dx"`
-	DY       int     `json:"dy"`
-	BlickDX  int     `json:"blickX"`
-	BlickDY  int     `json:"blickY"`
-	BombMax  int     `json:"bombenMax"`
-	Feuer    int     `json:"feuer"`
-	Tempo    float64 `json:"tempo"`
-	Leben    bool    `json:"leben"`
-	Sieg     int     `json:"sieg"`
-	LaufT    float64 `json:"laufT"`
-	TotSeit  float64 `json:"totSeit"`
+	ID      string  `json:"id"`
+	Name    string  `json:"name"`
+	Ready   bool    `json:"ready"`
+	Nr      int     `json:"nr"`
+	X       float64 `json:"x"`
+	Y       float64 `json:"y"`
+	DX      int     `json:"dx"`
+	DY      int     `json:"dy"`
+	BlickDX int     `json:"blickX"`
+	BlickDY int     `json:"blickY"`
+	BombMax int     `json:"bombenMax"`
+	Feuer   int     `json:"feuer"`
+	Tempo   float64 `json:"tempo"`
+	Leben   bool    `json:"leben"`
+	Sieg    int     `json:"sieg"`
+	LaufT   float64 `json:"laufT"`
+	TotSeit float64 `json:"totSeit"`
 }
 
 type BomberBombeSicht struct {
@@ -238,14 +238,14 @@ func bomberNeueRunde(g *BomberGame) {
 
 func bomberNeu(ID, hostID string, spieler []BomberSpieler) *BomberGame {
 	g := &BomberGame{
-		ID:      ID,
-		HostID:  hostID,
-		Status:  "invited",
-		Spieler: spieler,
-		Runde:   1,
+		ID:       ID,
+		HostID:   hostID,
+		Status:   "invited",
+		Spieler:  spieler,
+		Runde:    1,
 		Gewinner: -1,
-		Zuletzt: time.Now(),
-		Note:    "Tisch eröffnet – gesucht wird ein zweiter Bomber.",
+		Zuletzt:  time.Now(),
+		Note:     "Tisch eröffnet – gesucht wird ein zweiter Bomber.",
 	}
 	g.Raster = bomberNeueKarte()
 	return g

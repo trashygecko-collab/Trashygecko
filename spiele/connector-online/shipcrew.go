@@ -31,16 +31,16 @@ var scSonder = []struct {
 }
 
 type ScPlayer struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Color  string `json:"color"`
-	Ready  bool   `json:"ready"`
-	Halten []int  `json:"halten"`  // gesicherte Spezialwürfel: Schiff, Kapitän, Maat
-	Wuerfel []int `json:"wuerfel"` // der letzte Wurf der noch freien Würfel
-	Wuerfe int    `json:"wuerfe"`
-	Wert   int    `json:"wert"` // Ladungssumme, 0 = keine Kombination
-	Fertig bool   `json:"fertig"`
-	Siege  int    `json:"siege"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Color   string `json:"color"`
+	Ready   bool   `json:"ready"`
+	Halten  []int  `json:"halten"`  // gesicherte Spezialwürfel: Schiff, Kapitän, Maat
+	Wuerfel []int  `json:"wuerfel"` // der letzte Wurf der noch freien Würfel
+	Wuerfe  int    `json:"wuerfe"`
+	Wert    int    `json:"wert"` // Ladungssumme, 0 = keine Kombination
+	Fertig  bool   `json:"fertig"`
+	Siege   int    `json:"siege"`
 }
 
 type ScErgebnis struct {

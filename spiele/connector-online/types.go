@@ -199,12 +199,12 @@ type Room struct {
 	Hold            *HoldGame
 	Skyjo           *SkyjoGame
 	Kniffel         *KniffelGame
-	ZehnTausend     *ZehnTausendGame   // 10.000 (Würfelspiel online)
-	Maexchen        *MaexchenGame      // Lügen Mäxchen (Bluff-Würfelspiel online)
-	Boston          *BostonGame        // Auf nach Boston (Würfelrennen online)
-	Chicago         *ChicagoGame       // Chicago (Würfelspiel mit Bierfilzen)
-	ShipCrew        *ShipCrewGame      // Schiffe versenken (Ship Captain Crew, Würfel)
-	Halma           *HalmaGame         // Halma (klassisch, Stern, Sprung)
+	ZehnTausend     *ZehnTausendGame // 10.000 (Würfelspiel online)
+	Maexchen        *MaexchenGame    // Lügen Mäxchen (Bluff-Würfelspiel online)
+	Boston          *BostonGame      // Auf nach Boston (Würfelrennen online)
+	Chicago         *ChicagoGame     // Chicago (Würfelspiel mit Bierfilzen)
+	ShipCrew        *ShipCrewGame    // Schiffe versenken (Ship Captain Crew, Würfel)
+	Halma           *HalmaGame       // Halma (klassisch, Stern, Sprung)
 	Schach          *ChessGame
 	Go              *GoGame
 	Backgammon      *BackgammonGame
@@ -215,11 +215,11 @@ type Room struct {
 	Siebzehn        *SiebzehnGame
 	Baccara         *BaccaraGame
 	Schiffe         *SchiffeGame
-	Pong            *PongGame              // Pong (Online-Duell)
-	Tron            *TronGame              // Tron (Lichtrennen online)
-	Bomberman       *BomberGame            // Bomberman (Bomben-Duell online)
-	Bubble          *BubbleGame            // Bubble Shooter (Duell online)
-	Snake           *SnakeGame             // Snake (Duell online)
+	Pong            *PongGame   // Pong (Online-Duell)
+	Tron            *TronGame   // Tron (Lichtrennen online)
+	Bomberman       *BomberGame // Bomberman (Bomben-Duell online)
+	Bubble          *BubbleGame // Bubble Shooter (Duell online)
+	Snake           *SnakeGame  // Snake (Duell online)
 	Schwimmen       *SchwimmenGame
 	Arschloch       *ArschlochGame
 	Sechsundsechzig *SechsundsechzigGame
@@ -232,6 +232,7 @@ type Room struct {
 	Schlangen       *SchlangenGame         // Schlangen und Leitern
 	Pig             *PigGame               // Pig
 	Gaense          *GaenseGame            // Gänsespiel
+	Wuerfel         *wuerfelPartie         // Würfelspiele der Sammlung (18 Regelmodule, Server würfelt)
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
 	Mutes           map[string]time.Time   // playerID -> unmute time
 	MsgTimes        map[string][]time.Time // for spam protection

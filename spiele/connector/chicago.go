@@ -59,27 +59,27 @@ type ChRunde struct {
 }
 
 type ChicagoGame struct {
-	ID         string     `json:"id"`
-	HostID     string     `json:"hostId"`
-	Players    []ChPlayer `json:"players"`
-	Current    int        `json:"current"`
-	Status     string     `json:"status"` // invited, active, runde, finished
-	Phase      int        `json:"phase"`  // 1 oder 2
-	Runde      int        `json:"runde"`
-	Wurfzahl   int        `json:"wurfzahl"` // 0 = noch offen (der Vorleger bestimmt sie)
-	Wuerfel    []int      `json:"wuerfel"`  // der letzte Wurf
-	WurfNr     int        `json:"wurfNr"`
-	Wer        string     `json:"wer"`
-	Hoch       int        `json:"hoch"` // bester Wert der Runde
-	HochID     string     `json:"hochId"`
-	HochName   string     `json:"hochName"`
-	TiefID     string     `json:"tiefId"`
-	TiefName   string     `json:"tiefName"`
-	Filze      int        `json:"filze"`     // verteilte Bierfilze
-	FilzeMax   int        `json:"filzeMax"`  // Spieler + 1
-	Letzte     *ChRunde   `json:"letzte,omitempty"`
-	Verlierer  string     `json:"verlierer,omitempty"`
-	Note       string     `json:"note,omitempty"`
+	ID        string     `json:"id"`
+	HostID    string     `json:"hostId"`
+	Players   []ChPlayer `json:"players"`
+	Current   int        `json:"current"`
+	Status    string     `json:"status"` // invited, active, runde, finished
+	Phase     int        `json:"phase"`  // 1 oder 2
+	Runde     int        `json:"runde"`
+	Wurfzahl  int        `json:"wurfzahl"` // 0 = noch offen (der Vorleger bestimmt sie)
+	Wuerfel   []int      `json:"wuerfel"`  // der letzte Wurf
+	WurfNr    int        `json:"wurfNr"`
+	Wer       string     `json:"wer"`
+	Hoch      int        `json:"hoch"` // bester Wert der Runde
+	HochID    string     `json:"hochId"`
+	HochName  string     `json:"hochName"`
+	TiefID    string     `json:"tiefId"`
+	TiefName  string     `json:"tiefName"`
+	Filze     int        `json:"filze"`    // verteilte Bierfilze
+	FilzeMax  int        `json:"filzeMax"` // Spieler + 1
+	Letzte    *ChRunde   `json:"letzte,omitempty"`
+	Verlierer string     `json:"verlierer,omitempty"`
+	Note      string     `json:"note,omitempty"`
 }
 
 func chNewPlayer(id, name string, seat int) ChPlayer {

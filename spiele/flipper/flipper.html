@@ -171,14 +171,28 @@ canvas{display:block;width:100%;height:100%;border-radius:10px;
 .meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
  border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
 
-.fluegel{display:flex;gap:6px;padding:0 6px 6px;background:var(--tief)}
-.fluegel button{flex:1;font-family:inherit;font-size:14px;padding:16px 6px;border-radius:8px;
- border:1px solid var(--rand-1);background:var(--fluegel);color:var(--gold);cursor:pointer;
- touch-action:none;-webkit-user-select:none;user-select:none}
-.fluegel button:active,.fluegel button.drueckt{background:var(--gold);color:var(--leiste)}
-.fluegel button.stift{flex:0 0 104px;font-size:12.5px;background:var(--panel);white-space:nowrap;
- background-image:linear-gradient(var(--lade,0%),transparent 0);background-repeat:no-repeat}
-.fluegel button.stift.drueckt{background:var(--gold);color:var(--leiste)}
+/* Bedienfeld: zwei große Flippertasten nebeneinander, darunter der
+   Abschussknopf über die volle Breite. Getrennte Flächen, keine Überlappung,
+   große Treffer für Daumen; der Balken zeigt die Federspannung. */
+.fluegel{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 6px 6px;background:var(--tief)}
+.fluegel button{position:relative;overflow:hidden;min-height:58px;font-family:inherit;font-size:15px;
+ padding:16px 6px;border-radius:10px;border:1px solid var(--rand-1);background:var(--fluegel);
+ color:var(--gold);cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;
+ -webkit-touch-callout:none}
+.fluegel button:active,.fluegel button.drueckt{background:var(--gold);color:var(--leiste);
+ box-shadow:inset 0 0 0 2px var(--hell)}
+.fluegel button.stift{grid-column:1 / -1;min-height:48px;font-size:13px;letter-spacing:.04em;
+ background:var(--panel);border-color:var(--rand-2);display:flex;align-items:center;
+ justify-content:center;gap:10px}
+.fluegel button.stift .wort{font-weight:bold}
+.fluegel button.stift .kraft{font-size:12px;color:var(--muted);min-width:42px;text-align:right;
+ font-variant-numeric:tabular-nums}
+.fluegel button.stift .balken{position:absolute;left:0;bottom:0;height:5px;width:var(--lade,0%);
+ background:linear-gradient(90deg,var(--gold),var(--hell));transition:width .05s linear}
+.fluegel button.stift.drueckt{background:var(--panel);color:var(--gold);
+ box-shadow:inset 0 0 0 2px var(--gold)}
+.fluegel button.stift.drueckt .balken{background:linear-gradient(90deg,var(--gold),var(--hell))}
+.fluegel button.stift.drueckt .kraft{color:var(--gold)}
 
 .fuss{padding:5px 10px 8px;font-size:12.5px;color:var(--muted);min-height:24px}
 #regeln{margin-top:8px;padding:0 10px 10px}
@@ -200,11 +214,24 @@ a{color:var(--gold)}
  .statuszeile{grid-area:status;flex-direction:column;align-items:flex-start;gap:4px}
  .extras{grid-area:extras}
  .tisch{grid-area:tisch;min-height:0}
- .fluegel{grid-area:fluegel;flex-direction:column;padding:6px 0 0}
- .fluegel button{padding:14px 6px}
- .fluegel button.stift{flex:0 0 auto}
+ .fluegel{grid-area:fluegel;display:flex;flex-direction:column;padding:6px 0 0}
+ .fluegel button{padding:14px 6px;min-height:0}
+ .fluegel button.stift{flex:1 1 auto;min-height:52px}
  .fuss{grid-area:fuss}
  #regeln{grid-area:regeln}
+}
+/* Handy hoch: kein Seitenrollen, Bedienung bleibt erreichbar */
+@media (max-width:899px){
+ body{padding:4px 4px 6px;overflow:hidden}
+ main{height:100%}
+ .menueleiste{padding:4px 6px;gap:4px}
+ .menueleiste button{font-size:11px;padding:5px 6px}
+ .statuszeile{font-size:11.5px;padding:4px 8px;gap:6px}
+ #punkte{font-size:15px}
+ .extras{font-size:10.5px;padding:4px 8px}
+ .tisch{padding:4px;gap:6px}
+ .fuss{font-size:11px;padding:3px 8px 4px;min-height:0}
+ #regeln{margin-top:4px;max-height:32vh;overflow:auto}
 }
 /* Quer auf dem Handy: Tisch links, Bedienung rechts – kein Scrollen */
 @media (max-height:620px) and (orientation:landscape){
@@ -221,9 +248,10 @@ a{color:var(--gold)}
  #punkte{font-size:14px}
  .extras{grid-area:extras;font-size:10px;padding:3px 6px;max-height:44px;overflow:hidden}
  .tisch{grid-area:tisch;padding:3px;min-height:0}
- .fluegel{grid-area:fluegel;flex-direction:column;gap:4px;padding:4px 0 0;background:transparent}
- .fluegel button{padding:10px 4px;font-size:12px}
- .fluegel button.stift{flex:0 0 auto;font-size:11px}
+ .fluegel{grid-area:fluegel;display:flex;flex-direction:column;gap:4px;padding:4px 0 0;background:transparent}
+ .fluegel button{padding:10px 4px;font-size:12px;min-height:44px}
+ .fluegel button.stift{flex:1 1 auto;min-height:44px;font-size:11px}
+ .fluegel button.stift .kraft{font-size:10.5px;min-width:34px}
  .fuss,#regeln{display:none}
 }
 </style>
@@ -267,21 +295,21 @@ a{color:var(--gold)}
 
  <div class="fluegel">
   <button id="links">◀ Flipper</button>
-  <button id="stift" class="stift">Kugel schießen</button>
   <button id="rechts">Flipper ▶</button>
+  <button id="stift" class="stift" aria-label="Abschussfeder spannen: halten und loslassen"><span class="balken"></span><span class="wort">Abschuss halten</span><span class="kraft" id="stiftKraft"></span></button>
  </div>
 
  <div class="fuss">
-  <span id="hinweis">Enter startet. Kugel mit Leertaste (halten) oder dem Knopf in den Kanal schießen.</span>
+  <span id="hinweis">Enter startet. <b>Abschuss halten</b> (Leertaste, Knopf oder Kanal) – je länger, desto stärker; loslassen schießt.</span>
  </div>
 
  <details id="regeln">
   <summary>Regeln &amp; Steuerung</summary>
   <ol>
    <li><b>Ziel:</b> Drei Kugeln, zwei Flipper und ein eigenes <b>Oberdeck</b> – die Kugel im Spiel halten und Punkte sammeln.</li>
-   <li><b>Abschuss:</b> Die Kugel liegt rechts im Kanal auf dem Stift. <b>Leertaste</b> (oder den Knopf <b>Kugel schießen</b>, die Maus im Kanal oder die Abschussfläche am Handy) <b>halten</b> – je länger, desto kräftiger. Beim Loslassen fliegt sie oben ins Feld.</li>
+   <li><b>Abschuss:</b> Die Kugel liegt rechts im Kanal auf dem Stift. <b>Leertaste</b> (oder den Knopf <b>Abschuss halten</b>, die Maus im Kanal oder die Abschussfläche am Handy) <b>halten</b> – je länger, desto kräftiger. Beim Loslassen fliegt sie oben ins Feld.</li>
    <li><b>Flipper:</b> <b>←</b> oder <b>A</b> links, <b>→</b> oder <b>D</b> rechts. Am Handy die beiden großen Flächen unter dem Tisch (mehrere Finger gleichzeitig), mit der Maus die Knöpfe.</li>
-   <li><b>Oberdeck:</b> Die rechte Rampe <b>Aufzug</b> bringt die Kugel hinauf. Dort warten drei Bumper, ein bewegliches Gleitziel, drei Fallziele, eine <b>Halteklammer</b> und das <b>Jackpot-Loch</b>. Zwei Ausgänge führen zurück: der Auslass in der Mitte und das Seitenloch rechts in die Inlane.</li>
+   <li><b>Oberdeck:</b> Die rechte Rampe <b>Aufzug</b> bringt die Kugel hinauf. Oben läuft sie durch die <b>Umlaufbahn</b> mit eigenem Spinner, darunter warten vier große Bumper, ein bewegliches Gleitziel, drei Aufrechtziele an der linken Bande, eine <b>Halteklammer</b> und das <b>Jackpot-Loch</b>. Zwei Ausgänge führen zurück: der Auslass in der Mitte und das Seitenloch rechts in die Inlane.</li>
    <li><b>Weiche:</b> Die linke Rampe <b>Schleife</b> schaltet die Weiche um und läuft dann entweder oben ins Feld oder in die rechte Inlane aus.</li>
    <li><b>Kugelschloss:</b> Missionen öffnen das Schloss rechts über der Inlane. Zwei eingeschlossene Kugeln starten den <b>Multiball</b> – mehrere Kugeln gleichzeitig, jede mit eigener Physik.</li>
    <li><b>Missionen:</b> Die fünf Aufrechtziele links und rechts müssen in der Reihenfolge getroffen werden, die als leuchtendes <b>!</b> markiert ist. Drei erfüllte Missionen geben eine <b>Extrakugel</b>, zwei davon schalten den <b>Jackpot</b> frei.</li>

@@ -50,9 +50,9 @@ type BostonGame struct {
 	HostID      string         `json:"hostId"`
 	Players     []BostonPlayer `json:"players"`
 	Current     int            `json:"current"`
-	Status      string         `json:"status"` // invited, active, runde, finished
-	Runden      int            `json:"runden"` // gewählt: 1, 3, 5 oder 10
-	Runde       int            `json:"runde"`  // 1-basiert
+	Status      string         `json:"status"`  // invited, active, runde, finished
+	Runden      int            `json:"runden"`  // gewählt: 1, 3, 5 oder 10
+	Runde       int            `json:"runde"`   // 1-basiert
 	Wuerfel     []int          `json:"wuerfel"` // der letzte Wurf (für alle sichtbar)
 	WurfNr      int            `json:"wurfNr"`  // Zähler, damit die Seite neu animiert
 	Wer         string         `json:"wer"`     // wer zuletzt gewürfelt hat

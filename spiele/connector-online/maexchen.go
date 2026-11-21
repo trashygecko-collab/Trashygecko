@@ -74,8 +74,8 @@ type MaexchenGame struct {
 
 	// Wurf zur stehenden Ansage – für die Prüfung beim Aufdecken, nie im JSON
 	// an andere Spieler.
-	wurf      []int
-	revealNr  int
+	wurf     []int
+	revealNr int
 }
 
 // mxCombo ordnet ein Würfelpaar so, dass Hoch >= Tief ist.
