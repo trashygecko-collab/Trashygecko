@@ -232,6 +232,8 @@ type Room struct {
 	Schlangen       *SchlangenGame         // Schlangen und Leitern
 	Pig             *PigGame               // Pig
 	Gaense          *GaenseGame            // Gänsespiel
+	Risiko          *SyncGame              // Risiko (Online, Stand vom Client)
+	Labyrinth       *SyncGame              // Das verrückte Labyrinth (Online)
 	Wuerfel         *wuerfelPartie         // Würfelspiele der Sammlung (18 Regelmodule, Server würfelt)
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
 	Mutes           map[string]time.Time   // playerID -> unmute time

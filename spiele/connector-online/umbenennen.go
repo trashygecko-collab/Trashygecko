@@ -137,6 +137,20 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 			*qname = neu
 		}
 	}
+	if g := r.Risiko; g != nil {
+		for i := range g.Spieler {
+			if g.Spieler[i].ID == id {
+				g.Spieler[i].Name = neu
+			}
+		}
+	}
+	if g := r.Labyrinth; g != nil {
+		for i := range g.Spieler {
+			if g.Spieler[i].ID == id {
+				g.Spieler[i].Name = neu
+			}
+		}
+	}
 	if g := r.TicTacToe; g != nil {
 		duell(&g.XID, &g.XName, &g.OID, &g.OName)
 	}

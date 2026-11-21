@@ -99,6 +99,12 @@ func (r *Room) partien() []partie {
 	}
 
 	return []partie{
+		ohneSitz("Risiko",
+			func() []string { return syncIDs(r.Risiko) },
+			func() { r.Risiko = nil }),
+		ohneSitz("Das verrückte Labyrinth",
+			func() []string { return syncIDs(r.Labyrinth) },
+			func() { r.Labyrinth = nil }),
 		sitz("Würfelspiel",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Wuerfel; g != nil {
@@ -630,6 +636,20 @@ func (r *Room) aktivesSpiel(id string) string {
 	if wuerfelAktiv(r.Wuerfel, id) {
 		return "wuerfel"
 	}
+	if g := r.Risiko; g != nil && g.Status == "active" {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return "risiko"
+			}
+		}
+	}
+	if g := r.Labyrinth; g != nil && g.Status == "active" {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return "labyrinth"
+			}
+		}
+	}
 	zwei := func(name, status, a, b string) string {
 		if status == "active" && (a == id || b == id) {
 			return name
@@ -1034,6 +1054,22 @@ func (r *Room) playerInGame(id string) bool {
 			}
 			return nil
 		},
+	}
+	// Risiko und Das verrückte Labyrinth: der Stand liegt beim Client, die
+	// Sitze beim Server.
+	if g := r.Risiko; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Labyrinth; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
 	}
 	for _, liste := range sitzliste {
 		if enthaelt(liste(), id) {
