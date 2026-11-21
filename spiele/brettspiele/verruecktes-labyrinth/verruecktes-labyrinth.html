@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="/spiele/stil.js"></script>
 <meta name="theme-color" content="#0d241d">
 <title>Das verrückte Labyrinth – TrashyGecko</title>
 <link rel="stylesheet" href="/spiele/schrift.css">
@@ -23,6 +24,15 @@ body[data-thema="wald"]{--seite1:#1d3325;--seite2:#102318;--seite3:#08150e;--pan
 body[data-thema="eis"]{--seite1:#20394a;--seite2:#102534;--seite3:#081722;--panel:#1c3444;--panel2:#112633;--gold:#cfe9f5;--gold2:#9cc4d8}
 body[data-thema="maedchen"]{--seite1:#4d1439;--seite2:#360e28;--seite3:#220718;--panel:#521c40;--panel2:#3a112c;--gold:#ffc2e4;--gold2:#e08fc0;--muted:#e3b4d0}
 body[data-thema="buben"]{--seite1:#16222e;--seite2:#0e171f;--seite3:#070c11;--panel:#1b2b3a;--panel2:#101c26;--gold:#9ef7ff;--gold2:#46b8cf;--muted:#a8c4d2}
+
+/* Die Wahl aus spiele/stil.js: dieselben Farben wie in den Spielen. Nur
+   Farben – die Aufgaben und Namen des Themas bleiben, wie sie sind. */
+html[data-stil="maedchen"] body[data-thema="maedchen"]{--seite1:#3c1c44;--seite2:#2b1233;--seite3:#150b19;
+ --panel:#2c1834;--panel2:#22112a;--text:#f0e5ee;--muted:#c0a8bc;--gold:#c68b8f;--gold2:#e8c4c7;
+ --linie:#c68b8f26;--linie2:#c68b8f40}
+html[data-stil="buben"] body[data-thema="buben"]{--seite1:#1c1d1f;--seite2:#141517;--seite3:#0a0a0b;
+ --panel:#141517;--panel2:#0e0f10;--text:#e4e5e6;--muted:#b1b3b8;--gold:#d1242f;--gold2:#8f1019;
+ --linie:#e0242f26;--linie2:#e0242f40}
 
 body{margin:0;padding:10px 8px 26px;
  background:
@@ -2303,6 +2313,37 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     if (!brett || !freiCanvas) return;
     vorbelegen();
     document.body.dataset.thema = S.thema;
+    /* Zentraler Grafikstil (spiele/stil.js): gilt, solange im Spiel kein
+       eigenes Thema gewählt wurde. Die Themenauswahl unten bleibt die Wahl
+       des Spielers – sobald er dort etwas anklickt, gewinnt seine Wahl. */
+    function stilThema() {
+      return window.TGStil
+        ? TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "buben" })
+        : "klassisch";
+    }
+    function eigenesThema() {
+      try { return localStorage.getItem("labyrinth-thema"); } catch (e) { return "1"; }
+    }
+    function stilSetzen(id) {
+      if (!THEMEN[id]) return;
+      S.thema = id;
+      document.body.dataset.thema = id;
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        var farben = { klassisch: "#0d241d", maedchen: "#330d26", buben: "#0e171f", schloss: "#1c1630", dungeon: "#191410", wald: "#102318", eis: "#102534" };
+        meta.setAttribute("content", farben[id] || "#0d241d");
+      }
+    }
+    if (!eigenesThema() && window.TGStil) stilSetzen(stilThema());
+    if (window.TGStil) {
+      TGStil.beiWechsel(function () {
+        if (eigenesThema()) return;
+        stilSetzen(stilThema());
+        document.querySelectorAll("#themenLeiste .wahl").forEach(function (b) {
+          b.setAttribute("aria-pressed", b.dataset.thema === S.thema ? "true" : "false");
+        });
+      });
+    }
     baueThemen();
     verdrahte();
     var meta = document.querySelector('meta[name="theme-color"]');

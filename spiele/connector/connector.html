@@ -8,25 +8,65 @@
 <title>TrashyGecko Connector</title>
 <style>
 *{box-sizing:border-box}
-/* Eine Palette für die ganze Connector-Oberfläche: Pink, Altrosa, Beere.
-   Die Spiele behalten ihre eigene Ansicht (TGStil) – der Rahmen hier ist
-   immer derselbe. Alle Flächen, Rahmen und aktiven Zustände hängen an
-   diesen Werten, damit kein Grün mehr durch eine Einzelregel hereinkommt. */
-:root{
+/* Eine Oberfläche, drei Ansichten. Die Palette hängt an derselben Wahl wie
+   die Spiele (stil.js setzt html[data-stil]); jeder Browser sieht seine
+   eigene Wahl, der Raum und die Mitspieler ändern daran nichts. Die Werte
+   sind die der Spiele: Casino-Grün/Gold, Aubergine/Rosé, Anthrazit/Rot. */
+:root,html[data-stil="klassisch"]{
+ --c-bg-1:#1d4b3e; --c-bg-2:#12332a; --c-bg-3:#0a211b;
+ --c-flaeche:#12332af5; --c-flaeche-2:#0f3128; --c-flaeche-3:#16463a; --c-grund:#0b241d;
+ --c-text:#efe6d2; --c-sanft:#a9c3b6; --c-leise:#8aa79a;
+ --c-akzent:#e8cd8e; --c-akzent-2:#d9bc7c; --c-akzent-hell:#f0d9a2;
+ --c-knopf:linear-gradient(180deg,#f0d9a2,#dfc07c); --c-knopf-hover:linear-gradient(180deg,#f6e5b8,#e6c98a);
+ --c-knopf-text:#0b241d;
+ --c-rahmen:#e8cd8e59; --c-rahmen-2:#e8cd8e80; --c-linie:#e8cd8e3d;
+ --c-rahmen-20:#e8cd8e2e; --c-rahmen-25:#e8cd8e3d; --c-rahmen-40:#e8cd8e66;
+ --c-rahmen-45:#e8cd8e73; --c-rahmen-55:#e8cd8e8c;
+ --c-aktiv:#e8cd8e; --c-aktiv-hover:#f0d9a2; --c-aktiv-rand:#f0d9a2; --c-aktiv-text:#0b241d;
+ --c-schatten:#00000059; --c-schatten-schwach:#00000040; --c-schatten-mittel:#00000073;
+ --c-fokus-20:#e8cd8e33; --c-fokus-33:#e8cd8e55; --c-fokus-40:#e8cd8e66;
+ --c-ok:#8fd6a6; --c-weg:#e8948a; --c-fehler:#e8948a; --c-fluester:#e8cd8e;
+ --c-kopf:linear-gradient(#154234,#113529); --c-kopf-rand:#e8cd8e55;
+}
+html[data-stil="maedchen"]{
  --c-bg-1:#ffd9ec; --c-bg-2:#f3a6d5; --c-bg-3:#b8478a;
  --c-flaeche:#fff8fdf5; --c-flaeche-2:#ffeef7; --c-flaeche-3:#ffe0ef; --c-grund:#ffe3f1;
  --c-text:#3a1030; --c-sanft:#6b3a5e; --c-leise:#8b5f7c;
  --c-akzent:#a8326e; --c-akzent-2:#c2417f; --c-akzent-hell:#d15f9c;
  --c-knopf:#c9317a; --c-knopf-hover:#a8265f; --c-knopf-text:#ffffff;
  --c-rahmen:#e598c2; --c-rahmen-2:#e9a8ca; --c-linie:#c2417f3d;
+ --c-rahmen-20:var(--c-rahmen-20); --c-rahmen-25:var(--c-rahmen-25);
+ --c-rahmen-40:var(--c-rahmen-40); --c-rahmen-45:var(--c-rahmen-45);
+ --c-rahmen-55:var(--c-rahmen-55);
  --c-aktiv:#b02c72; --c-aktiv-hover:#c23a80; --c-aktiv-rand:#ffd0e4; --c-aktiv-text:#ffffff;
- --c-schatten:#7a1f5233;
+ --c-schatten:#7a1f5233; --c-schatten-schwach:var(--c-schatten-schwach); --c-schatten-mittel:var(--c-schatten-mittel);
+ --c-fokus-20:var(--c-fokus-20); --c-fokus-33:var(--c-fokus-33);
+ --c-fokus-40:var(--c-fokus-40);
+ --c-ok:#b0267a; --c-weg:#a3123f; --c-fehler:#ff9c9c; --c-fluester:#ffd36a;
+ --c-kopf:linear-gradient(#e0559f,#b02c72); --c-kopf-rand:#ffd0e455;
+}
+html[data-stil="buben"]{
+ --c-bg-1:#1c1d1f; --c-bg-2:#141517; --c-bg-3:#0a0a0b;
+ --c-flaeche:#141517f5; --c-flaeche-2:#0e0f10; --c-flaeche-3:#1c1d1f; --c-grund:#0e0f10;
+ --c-text:#e4e5e6; --c-sanft:#b1b3b8; --c-leise:#8d9095;
+ --c-akzent:#e0242f; --c-akzent-2:#ff8a90; --c-akzent-hell:#ffb3b8;
+ --c-knopf:linear-gradient(180deg,#d1242f,#8f1019); --c-knopf-hover:linear-gradient(180deg,#e8333d,#a5131d);
+ --c-knopf-text:#ffffff;
+ --c-rahmen:#e0242f40; --c-rahmen-2:#e0242f66; --c-linie:#e0242f33;
+ --c-rahmen-20:#e0242f26; --c-rahmen-25:#e0242f33; --c-rahmen-40:#e0242f59;
+ --c-rahmen-45:#e0242f66; --c-rahmen-55:#e0242f80;
+ --c-aktiv:linear-gradient(180deg,#242529,#141517); --c-aktiv-hover:linear-gradient(180deg,#2c2d32,#1a1b1e);
+ --c-aktiv-rand:#e0242f; --c-aktiv-text:#ff8a90;
+ --c-schatten:#050506cc; --c-schatten-schwach:#05050680; --c-schatten-mittel:#050506b3;
+ --c-fokus-20:#e0242f33; --c-fokus-33:#e0242f59; --c-fokus-40:#e0242f73;
+ --c-ok:#ff8a90; --c-weg:#ff6f8f; --c-fehler:#ff9db3; --c-fluester:#ffc357;
+ --c-kopf:linear-gradient(#141517,#0e0f10); --c-kopf-rand:#e0242f55;
 }
 /* hidden muss immer gewinnen – sonst zeigen Regeln mit display:flex Dinge an,
    die eigentlich versteckt sind (z. B. das Stummschalten für Nicht-Admins). */
 [hidden]{display:none !important}
 body{margin:0;padding:8px 1px;color:var(--c-text);
- /* Pink wie die Mädchen-Ansicht der Spiele: hell oben, satt zum Rand. */
+ /* Grund in der Farbe des gewählten Stils: hell oben, satt zum Rand. */
  background:radial-gradient(circle 900px at 50% -6%,var(--c-bg-1) 0%,var(--c-bg-2) 46%,var(--c-bg-3) 100%) fixed;
  font:16px var(--tg-schrift)}
 main{max-width:760px;margin:auto}
@@ -59,7 +99,7 @@ input,select{background:var(--c-flaeche-2);color:var(--c-text);max-width:100%;mi
 .msg:last-child{border-bottom:none;padding-bottom:2px}
 /* Uhrzeit hinter der Nachricht: klein, in Serife, gedämpftes Gold. */
 .msg small{font-family:var(--tg-schrift);font-size:11px;
- font-weight:normal;letter-spacing:.08em;color:#8b5f7c;
+ font-weight:normal;letter-spacing:.08em;color:var(--c-leise);
  white-space:nowrap}
 .msg-system{color:var(--c-leise);font-style:italic;text-align:center;border-bottom:none;padding:4px 0;font-size:13px}
 small{color:var(--c-leise)}
@@ -76,11 +116,11 @@ small{color:var(--c-leise)}
  color:var(--c-sanft);margin:8px 0 0}
 #verbindung::before{content:"";width:8px;height:8px;border-radius:50%;
  background:currentColor;flex:0 0 auto;opacity:.75}
-#verbindung[data-zustand="ok"]{color:#b0267a}
+#verbindung[data-zustand="ok"]{color:var(--c-ok)}
 #verbindung[data-zustand="start"]{color:var(--c-akzent)}
 #verbindung[data-zustand="neu"]{color:var(--c-akzent)}
 #verbindung[data-zustand="neu"]::before{animation:verbindung-puls 1s ease-in-out infinite}
-#verbindung[data-zustand="weg"]{color:#a3123f}
+#verbindung[data-zustand="weg"]{color:var(--c-weg)}
 @keyframes verbindung-puls{0%,100%{opacity:.25}50%{opacity:1}}
 #qrwrap{display:flex;align-items:center;justify-content:center;margin-top:14px}
 #qrcode{width:176px;height:176px;background:white;padding:8px;border-radius:8px;image-rendering:pixelated}
@@ -102,7 +142,7 @@ small{color:var(--c-leise)}
  background:var(--c-flaeche-2);
  padding:12px;
  /* genau 1 px, in Gold – wie die Rahmen in der App */
- border:1px solid rgba(229,152,194,0.55);
+ border:1px solid var(--c-rahmen-55);
  border-radius:6px;
 }
 .chat-compose{
@@ -117,7 +157,7 @@ small{color:var(--c-leise)}
  border-radius:7px;
  border:1px solid var(--c-rahmen);
  background:var(--c-flaeche-2);
- color:white;
+ color:var(--c-text);
  font-size:16px;
 }
 .chat-send-row{
@@ -126,7 +166,7 @@ small{color:var(--c-leise)}
  width:100%;
  /* feine Goldlinie um die ganze Sendezeile */
  padding:6px;
- border:1px solid rgba(229,152,194,0.45);
+ border:1px solid var(--c-rahmen-45);
  border-radius:8px;
  background:transparent;
 }
@@ -135,15 +175,15 @@ small{color:var(--c-leise)}
  width:0;
  min-width:0;
  background:var(--c-flaeche-2);
- border:1px solid rgba(229,152,194,0.25);
+ border:1px solid var(--c-rahmen-25);
 }
 .chat-send-row button{
  flex:0 0 auto;
  min-width:88px;
- /* wie alle Knöpfe: pinke Fläche, weiße Schrift */
+ /* wie alle Knöpfe: Fläche und Schrift des Stils */
  background:var(--c-knopf);
  border:1px solid var(--c-rahmen);
- color:#fff;
+ color:var(--c-knopf-text);
  font-weight:bold;
  letter-spacing:.04em;
 }
@@ -153,16 +193,16 @@ small{color:var(--c-leise)}
    Eingabezeile. Die Kacheln bleiben klein, damit viele Grafiken hineinpassen. */
 .chat-compose{position:relative}
 .chat-send-row button.smiley-btn{flex:0 0 auto;width:42px;min-width:42px;height:38px;padding:0;
- font-size:19px;line-height:1;background:var(--c-flaeche-2);border:1px solid rgba(229,152,194,0.40);
+ font-size:19px;line-height:1;background:var(--c-flaeche-2);border:1px solid var(--c-rahmen-40);
  color:var(--c-akzent);border-radius:7px;cursor:pointer}
 .smiley-btn:hover,.smiley-btn[aria-expanded="true"]{background:var(--c-flaeche-3);border-color:var(--c-aktiv)}
 .smiley-btn:focus-visible{outline:2px solid var(--c-rahmen-2);outline-offset:2px}
 .smiley-panel{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:30;
  display:flex;flex-direction:column;gap:6px;max-height:min(50vh,340px);padding:8px;
- background:var(--c-flaeche-2);border:1px solid var(--c-rahmen);border-radius:10px;box-shadow:0 10px 26px #7a1f5226}
+ background:var(--c-flaeche-2);border:1px solid var(--c-rahmen);border-radius:10px;box-shadow:0 10px 26px var(--c-schatten-schwach)}
 .smiley-panel[hidden]{display:none}
 .smiley-kopf{display:flex;gap:6px}
-.smiley-kopf input{flex:1;min-width:0;padding:7px 9px;font-size:14px;background:#fff;
+.smiley-kopf input{flex:1;min-width:0;padding:7px 9px;font-size:14px;background:var(--c-flaeche-3);
  border:1px solid var(--c-rahmen);border-radius:6px;color:var(--c-text)}
 .smiley-zu{flex:0 0 auto;width:30px;min-width:30px;padding:0;font-size:16px;background:var(--c-flaeche-3);
  border:1px solid var(--c-rahmen);border-radius:6px;color:var(--c-aktiv);cursor:pointer}
@@ -174,18 +214,18 @@ small{color:var(--c-leise)}
 .smiley-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;
  overflow-y:auto;min-height:52px;padding-right:2px}
 .smiley-bild-btn{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;
- padding:2px;background:#fff;border:1px solid var(--c-rahmen);border-radius:7px;cursor:pointer}
+ padding:2px;background:var(--c-flaeche);border:1px solid var(--c-rahmen);border-radius:7px;cursor:pointer}
 .smiley-bild-btn:hover,.smiley-bild-btn:focus-visible{border-color:var(--c-aktiv);background:var(--c-flaeche-3)}
 .smiley-bild-btn img{max-width:100%;max-height:100%;object-fit:contain}
 .smiley-hinweis{margin:2px 0 0;font-size:12px;line-height:1.35;color:var(--c-leise)}
 .smiley-anhang{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:12px;
  border:1px solid var(--c-rahmen);border-radius:8px;background:var(--c-flaeche-2);color:var(--c-sanft)}
 .smiley-anhang[hidden]{display:none}
-.smiley-anhang img{max-width:34px;max-height:34px;border-radius:5px;background:#fff}
+.smiley-anhang img{max-width:34px;max-height:34px;border-radius:5px;background:var(--c-flaeche)}
 .smiley-anhang button{margin-left:auto;min-width:0;padding:1px 7px;font-size:13px;
  background:none;border:1px solid var(--c-rahmen);border-radius:5px;color:var(--c-aktiv);cursor:pointer}
 .chat-bild{display:inline-block;max-width:132px;max-height:132px;margin-left:6px;
- vertical-align:middle;border:1px solid var(--c-rahmen);border-radius:9px;background:#fff}
+ vertical-align:middle;border:1px solid var(--c-rahmen);border-radius:9px;background:var(--c-flaeche)}
 @media(max-width:430px){
  .chat-send-row button.smiley-btn{width:40px;min-width:40px;height:40px;font-size:18px}
  .chat-bild{max-width:112px;max-height:112px}
@@ -202,11 +242,11 @@ small{color:var(--c-leise)}
 #game-status{line-height:1.45;margin-top:12px;box-sizing:border-box;min-height:140px;display:flex;flex-direction:column;gap:8px;justify-content:flex-start}
 /* Kein offenes Spiel: ein kurzer, stiller Satz in einem leisen Kästchen. */
 #game-status.leer{margin-top:12px;padding:9px 12px;text-align:center;
- border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);
+ border:1px solid var(--c-rahmen-20);border-radius:6px;background:var(--c-flaeche-2);
  color:var(--c-leise);font-size:13px;line-height:1.35;font-style:italic;
  box-sizing:border-box;min-height:140px;display:flex;align-items:center;justify-content:center}
 /* Aufklappbarer Kopf der Bereiche (Lokale Verbindung). */
-details summary{cursor:pointer;font-size:20px;font-weight:bold;color:#fff;padding:2px 0;outline:none}
+details summary{cursor:pointer;font-size:20px;font-weight:bold;color:var(--c-akzent-2);padding:2px 0;outline:none}
 details summary::-webkit-details-marker{display:none}
 details summary::after{content:" ▾";color:var(--c-akzent);font-size:14px}
 details[open] summary::after{content:" ▴"}
@@ -216,7 +256,7 @@ details p{margin:10px 0 6px}
 .name-known{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
 .name-known strong{color:var(--c-akzent)}
 button.mini{background:none;border:1px solid var(--c-rahmen);color:var(--c-sanft);font-size:13px;padding:7px 11px;font-weight:normal}
-button.mini:hover{color:#fff;border-color:var(--c-akzent)}
+button.mini:hover{color:var(--c-knopf-text);border-color:var(--c-akzent)}
 /* Vollbild-Knopf: immer erreichbar, auch wenn weit gescrollt wurde. */
 #fullscreenBtn{position:fixed;right:12px;top:12px;z-index:60;font-size:13px;padding:9px 13px;background:var(--c-flaeche-3);color:var(--c-akzent);border:1px solid var(--c-akzent);font-weight:bold;opacity:.94}
 #fullscreenBtn #fsWord{margin-left:6px}
@@ -261,17 +301,17 @@ html:fullscreen body{padding:18px 1px}
 .tone-rename input{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;
  border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);color:var(--c-text);font-family:var(--tg-schrift);
  font-size:16px;min-height:44px}
-.tone-rename input:focus{outline:none;border-color:var(--c-akzent);box-shadow:0 0 0 2px rgba(176,44,114,0.20)}
+.tone-rename input:focus{outline:none;border-color:var(--c-akzent);box-shadow:0 0 0 2px var(--c-fokus-20)}
 .tone-rename-aktionen{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .tone-rename-aktionen button{min-height:44px}
-.tone-fehler{margin:6px 0 0;font-size:13px;color:#ff9c9c}
+.tone-fehler{margin:6px 0 0;font-size:13px;color:var(--c-fehler)}
 /* Begrüßung für Neue: eigener kleiner Kasten mit genau einem Knopf. */
-#chat .willkommen{border:1px solid rgba(229,152,194,0.40);border-radius:9px;padding:10px 12px;margin:8px 0;background:var(--c-flaeche-3)}
+#chat .willkommen{border:1px solid var(--c-rahmen-40);border-radius:9px;padding:10px 12px;margin:8px 0;background:var(--c-flaeche-3)}
 #chat .willkommen b{color:var(--c-akzent)}
 #chat .willkommen button{display:block;width:100%;margin-top:8px;padding:9px 10px;min-height:40px;font-size:15px}
 .mute-popover{margin-top:4px;padding:6px;background:var(--c-flaeche-3);border:1px solid var(--c-akzent);border-radius:6px;display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap}
 .mute-popover button{padding:4px 8px;font-size:12px;border-radius:4px}
-.mute-list-tag{color:#ffd36a;font-size:12px;margin-top:4px}
+.mute-list-tag{color:var(--c-fluester);font-size:12px;margin-top:4px}
 /* Geklickte Sprüche im Chat: lieb rosa, witzig grün, böse rot. */
 .msg.t-love{border-left:3px solid #ff8be4;padding-left:8px}
 .msg.t-joke{border-left:3px solid #b06bd8;padding-left:8px}
@@ -296,10 +336,10 @@ html:fullscreen body{padding:18px 1px}
 .tone-btn.love{border-color:#ff8be4;color:#ff8be4}
 .tone-btn.joke{border-color:#b06bd8;color:#b06bd8}
 .tone-btn.evil{border-color:#ff7b7b;color:#ff7b7b}
-.tone-btn.whisper{border-color:#ffd36a;color:#ffd36a}
+.tone-btn.whisper{border-color:var(--c-fluester);color:var(--c-fluester)}
 .tone-btn.game{border-color:var(--c-akzent);color:var(--c-akzent)}
 /* Spieler, den man gerade einladen möchte, wird hervorgehoben. */
-.game-player.ziel{border-color:var(--c-akzent);box-shadow:0 0 12px rgba(176,44,114,0.33)}
+.game-player.ziel{border-color:var(--c-akzent);box-shadow:0 0 12px var(--c-fokus-33)}
 /* Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern. */
 .modus-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 /* "Namen ändern" steht oben über den beiden Spielarten und nimmt die volle Zeile. */
@@ -307,7 +347,7 @@ html:fullscreen body{padding:18px 1px}
 .modus-btn{padding:12px 9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);color:var(--c-sanft);border-radius:9px;font-size:16px;font-weight:bold;cursor:pointer}
 .modus-btn:hover{color:var(--c-akzent);border-color:var(--c-rahmen-2)}
 .modus-btn[aria-selected="true"]{background:var(--c-aktiv);border-color:var(--c-aktiv-rand);color:var(--c-aktiv-text);
- box-shadow:0 2px 10px #7a1f5244}
+ box-shadow:0 2px 10px var(--c-schatten-mittel)}
 .modus-panel{margin-top:14px}
 .multi-titel{margin:16px 0 6px;font-size:12px;color:var(--c-leise);font-weight:normal;letter-spacing:1px;text-transform:uppercase}
 .name-tipp{display:block;margin-top:8px;font-size:11px;color:var(--c-leise);line-height:1.4}
@@ -317,7 +357,7 @@ html:fullscreen body{padding:18px 1px}
  margin:0 0 12px;color:var(--c-text)}
 .stil-zeile small{color:var(--c-leise);font-size:11px}
 .game-player.gewaehlt{border-color:var(--c-aktiv-rand);background:var(--c-aktiv);color:var(--c-aktiv-text);
- box-shadow:0 2px 12px #7a1f5244}
+ box-shadow:0 2px 12px var(--c-schatten-mittel)}
 /* Multiplayer: offenes Angebot und Startknopf. */
 .runde-info{margin:12px 0 0;font-size:13px;color:var(--c-sanft)}
 /* Kein fetter Balken mehr: ein leiser Knopf mit Goldrand. */
@@ -353,35 +393,35 @@ html:fullscreen body{padding:18px 1px}
 /* Status und Link unter der Spieleliste: gleicher stiller Stil wie der
    Spielstatus im Multiplayer. */
 #soloListe .empty{margin:10px 0 0;padding:9px 12px;text-align:center;
- border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);
+ border:1px solid var(--c-rahmen-20);border-radius:6px;background:var(--c-flaeche-2);
  color:var(--c-leise);font-size:13px;line-height:1.35;font-style:italic}
 .solo-hinweis{margin:10px 0 0;font-size:13px}
 .solo-hinweis a{display:block;padding:9px 12px;text-align:center;text-decoration:none;
- border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);color:var(--c-akzent-2)}
-.solo-hinweis a:hover{border-color:rgba(229,152,194,0.55);background:var(--c-flaeche-3);color:var(--c-akzent)}
+ border:1px solid var(--c-rahmen-20);border-radius:6px;background:var(--c-flaeche-2);color:var(--c-akzent-2)}
+.solo-hinweis a:hover{border-color:var(--c-rahmen-55);background:var(--c-flaeche-3);color:var(--c-akzent)}
 /* Handy: solange eine Partie offen ist, liegt die lange Spieleliste zu und
    dieser Knopf holt sie zurück (eingeblendet nur im Handy-Block weiter unten). */
 .solo-schalter{display:none;width:100%;margin:10px 0 0;padding:9px 12px;
  font:inherit;font-size:13px;color:var(--c-akzent-2);background:var(--c-flaeche-2);text-align:left;
- border:1px solid rgba(229,152,194,0.20);border-radius:6px;cursor:pointer}
-.solo-schalter:hover{border-color:rgba(229,152,194,0.55);background:var(--c-flaeche-3);color:var(--c-akzent)}
+ border:1px solid var(--c-rahmen-20);border-radius:6px;cursor:pointer}
+.solo-schalter:hover{border-color:var(--c-rahmen-55);background:var(--c-flaeche-3);color:var(--c-akzent)}
 /* „Weitere Spielmöglichkeiten": steht als zweiter Knopf neben dem QR-Code und
    klappt genauso auf und zu. Zugeklappt ist nur der Knopf zu sehen. */
 #addressbox{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 #addressbox details{flex:0 0 auto;min-width:0}
 #addressbox details[open]{flex:1 1 100%}
 #weitereBox summary{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;
- border:1px solid rgba(229,152,194,0.40);border-radius:7px;background:var(--c-flaeche-2);color:var(--c-akzent);
+ border:1px solid var(--c-rahmen-40);border-radius:7px;background:var(--c-flaeche-2);color:var(--c-akzent);
  font-size:14px;line-height:1.25;cursor:pointer;list-style:none;white-space:nowrap}
 #weitereBox summary::-webkit-details-marker{display:none}
 #weitereBox summary::after{content:"\25B8";font-size:11px;transition:transform .15s}
 #weitereBox[open] summary::after{transform:rotate(90deg)}
 #weitereBox summary:hover{background:var(--c-flaeche-3)}
-#weitereBox summary:focus-visible{outline:2px solid rgba(176,44,114,0.40);outline-offset:2px}
+#weitereBox summary:focus-visible{outline:2px solid var(--c-fokus-40);outline-offset:2px}
 #weitereInhalt{margin-top:12px}
 #weitereInhalt .solo-gruppe:first-child{margin-top:0}
 #weitereInhalt .empty{margin:8px 0 0;padding:9px 12px;text-align:center;
- border:1px solid rgba(229,152,194,0.20);border-radius:6px;background:var(--c-flaeche-2);color:var(--c-leise);
+ border:1px solid var(--c-rahmen-20);border-radius:6px;background:var(--c-flaeche-2);color:var(--c-leise);
  font-size:13px;line-height:1.35;font-style:italic}
 /* Ganz unten: leiser Hinweis, ohne eigene Karte. */
 .tone-btn:hover{filter:brightness(1.25)}
@@ -438,9 +478,9 @@ html:fullscreen body{padding:18px 1px}
 /* --- Chat: Chat und Eingabe bilden einen Kasten ohne Innenrand ----------
    Der Seitenrand ist 1 px, also sitzt dieser Rahmen genau 1 px daneben. */
 #chatbox{padding:0;border:none;background:none}
-#chat{border:1px solid rgba(229,152,194,0.55);border-bottom:none;border-radius:6px 6px 0 0}
+#chat{border:1px solid var(--c-rahmen-55);border-bottom:none;border-radius:6px 6px 0 0}
 .chat-compose{margin-top:0;padding:8px;background:var(--c-flaeche-2);
- border:1px solid rgba(229,152,194,0.55);border-top:none;
+ border:1px solid var(--c-rahmen-55);border-top:none;
  border-radius:0 0 6px 6px}
 .chat-send-row{border:none;padding:0;background:none}
 /* --- Handy: der Chat wird ein eigener großer Bildschirm -------------------
@@ -462,12 +502,12 @@ html:fullscreen body{padding:18px 1px}
 /* --- Spiel neben dem Chat: nur auf großen Bildschirmen (PC) -------------- */
 #spielFenster{display:none}
 .spiel-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:8px 12px;background:linear-gradient(#e0559f,#b02c72);
- border-bottom:1px solid #ffd0e455;color:#fff;font-size:14px}
+ padding:8px 12px;background:var(--c-kopf);
+ border-bottom:1px solid var(--c-kopf-rand);color:#fff;font-size:14px}
 .spiel-kopf .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em}
 .spiel-knoepfe{display:flex;gap:6px}
 .spiel-knopf{display:inline-flex;align-items:center;justify-content:center;width:28px;height:26px;
- padding:0;font-size:15px;line-height:1;border-radius:6px;border:1px solid #ffd0e499;
+ padding:0;font-size:15px;line-height:1;border-radius:6px;border:1px solid var(--c-kopf-rand);
  background:#ffffff26;color:#fff;text-decoration:none;cursor:pointer;font-family:inherit}
 .spiel-knopf:hover{background:#ffffff40;filter:none}
 #spielRahmen{flex:1;width:100%;border:0;background:var(--c-grund);display:block}
@@ -533,7 +573,7 @@ html:fullscreen body{padding:18px 1px}
 .mp-hinweis-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}
 .mp-hinweis-zeile a{color:var(--c-akzent);font-weight:bold}
 .mp-hinweis-zeile button{min-height:0;margin:0;padding:6px 12px;font-size:12px;
- background:var(--c-knopf);border-color:var(--c-knopf);color:#fff}
+ background:var(--c-knopf);border-color:var(--c-knopf);color:var(--c-knopf-text)}
 .spiel-wahl .sw-info{display:flex;flex-direction:column;gap:2px;margin:2px 0 0}
 .spiel-wahl .sw-info strong{font-size:15px;color:var(--c-akzent-2)}
 .spiel-wahl .sw-info small{font-size:11px;color:var(--c-leise)}
@@ -4276,7 +4316,7 @@ async function refresh(){
      nameWrapper.appendChild(b);
     }
     if(m.whisper && m.name!=="Der Raum"){
-     d.style.color="#ffd36a";
+     d.style.color="var(--c-fluester)";
     }
     const t=document.createElement("span");
     t.textContent=m.text;
@@ -4496,19 +4536,37 @@ async function send(){
  if((!text&&!bild)||!activeRoom)return;
 
  let toId="";
- const fluester=/^\/f\s+([^:]+):\s*([\s\S]*)$/i.exec(text);
+ // Flüstern: "/f Name: Text" (so setzt es der Knopf ein) und ebenso
+ // "/f Name Text". Der Name darf Leerzeichen haben – es gewinnt der
+ // längste Spielername, der am Anfang steht.
+ const fluester=/^\/f\s+([\s\S]+)$/i.exec(text);
  if(fluester){
-  const ziel=spielerMitNamen(fluester[1]);
+  let ziel=null, inhalt="";
+  const mitDoppelpunkt=/^([^:]+):\s*([\s\S]*)$/.exec(fluester[1]);
+  if(mitDoppelpunkt){
+   ziel=spielerMitNamen(mitDoppelpunkt[1]);
+   inhalt=mitDoppelpunkt[2].trim();
+  }
   if(!ziel){
-   setRoomStatus("Niemand namens \""+fluester[1].trim()+"\" ist im Raum – dann geht der Text an alle.");
+   const namen=(currentPlayersList||[]).map(p=>p.name.trim()).filter(Boolean)
+    .sort((a,b)=>b.length-a.length);
+   for(const name of namen){
+    if(fluester[1].toLowerCase().indexOf(name.toLowerCase()+" ")!==0)continue;
+    const treffer=spielerMitNamen(name);
+    if(treffer){ ziel=treffer; inhalt=fluester[1].slice(name.length).trim(); break; }
+   }
+  }
+  if(!ziel){
+   const wen=mitDoppelpunkt?mitDoppelpunkt[1].trim():fluester[1].trim().split(/\s+/)[0];
+   setRoomStatus("Niemand namens \""+wen+"\" ist im Raum – die Nachricht wurde nicht gesendet.");
+   return;
+  }
+  if(!inhalt){
+   setRoomStatus("Schreib hinter \"/f "+ziel.name+"\" noch deinen Text.");
    return;
   }
   toId=ziel.id;
-  text=fluester[2].trim();
-  if(!text){
-   setRoomStatus("Schreib hinter \"/f "+ziel.name+":\" noch deinen Text.");
-   return;
-  }
+  text=inhalt;
  }
 
  // Die Nachricht wandert zuerst in den Ausgang: Sie ist damit sofort sichtbar
