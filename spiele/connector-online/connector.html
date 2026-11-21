@@ -537,7 +537,13 @@ html:fullscreen body{padding:18px 1px}
 .spiel-wahl .sw-info{display:flex;flex-direction:column;gap:2px;margin:2px 0 0}
 .spiel-wahl .sw-info strong{font-size:15px;color:var(--c-akzent-2)}
 .spiel-wahl .sw-info small{font-size:11px;color:var(--c-leise)}
-.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:var(--c-text)}
+.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:var(--c-text)}
+.spiel-wahl .sw-liste{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;max-height:min(38vh,320px);overflow:auto;padding:2px 2px 4px;margin:0;overscroll-behavior:contain}
+.spiel-wahl .sw-liste h4{flex:1 1 100%;margin:4px 0 0;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--c-leise);font-weight:600}
+.spiel-wahl .sw-chip{font:inherit;font-size:13px;line-height:1.2;padding:7px 10px;border-radius:9px;border:1px solid var(--c-rahmen-2);background:var(--c-flaeche-2);color:var(--c-text);cursor:pointer}
+.spiel-wahl .sw-chip:hover{border-color:var(--c-aktiv)}
+.spiel-wahl .sw-chip:focus-visible{outline:2px solid var(--c-aktiv);outline-offset:2px}
+.spiel-wahl .sw-chip[aria-current="true"]{border-color:var(--c-aktiv);box-shadow:inset 0 0 0 2px var(--c-aktiv);font-weight:700}
 /* --- Handy: Spielauswahl, Beschreibung, eingebettetes Spiel --------------
    Kein eigenes Scrollfenster in der Spieleliste: sonst haengt die oberste
    Kartenreihe halb unter dem Rand und die letzten Spiele sind unsichtbar.
@@ -546,6 +552,7 @@ html:fullscreen body{padding:18px 1px}
 @media (max-width:600px){
  .spiel-wahl{gap:10px}
  .spiel-wahl .sw-auswahl{min-height:48px;font-size:16px}
+ .spiel-wahl .sw-liste{max-height:34vh}
  .spiel-wahl .sw-info{position:static;margin:2px 0 0;padding:10px 12px;gap:3px;
   background:var(--c-flaeche-3);border:1px solid var(--c-rahmen);border-radius:10px}
  .spiel-wahl .sw-info strong{font-size:16px}
@@ -3492,13 +3499,68 @@ function spielWahlBauen(){
  };
  const info=document.createElement("p");
  info.className="sw-info";
- wrap.append(auswahl,info);
+ const listeFeld=document.createElement("div");
+ listeFeld.className="sw-liste";
+ listeFeld.setAttribute("aria-label","Alle Mehrspieler-Spiele");
+ wrap.append(auswahl,listeFeld,info);
  return wrap;
 }
 
 // Die Gruppen werden nur gebaut, wenn sich die Liste geändert hat (etwa beim
 // Rückfall vom Server). Sonst bliebe das Feld stehen, statt im Takt neu
 // aufzuklappen.
+// Alle Mehrspieler-Spiele als Knöpfe unter der Auswahl: im langen Aufklappfeld
+// findet man ein einzelnes Spiel sonst kaum. Der Knopf setzt dieselbe Wahl wie
+// das Feld, der Rest der Seite bleibt unverändert.
+function spielChipsZeichnen(wrap){
+ const feld=wrap.querySelector(".sw-liste");
+ if(!feld)return;
+ const kats=MP_REGISTER.kategorien||[];
+ const kennung=SUPPORTED_GAMES.map(g=>g.id).join(",")+"#"+kats.map(k=>k.id).join(",");
+ // Die Knöpfe hängen nur an der Spieleliste. Wechselt die Auswahl, wird
+ // nichts neu gebaut – es wandert allein die Markierung.
+ if(feld.dataset.kennung===kennung){
+  chipsMarkieren(feld);
+  return;
+ }
+ feld.dataset.kennung=kennung;
+ feld.innerHTML="";
+ const gruppen=kats.map(k=>({name:k.name,spiele:SUPPORTED_GAMES.filter(g=>g.kat===k.id)}));
+ const rest=SUPPORTED_GAMES.filter(g=>!kats.some(k=>k.id===g.kat));
+ if(rest.length)gruppen.push({name:"Weitere",spiele:rest});
+ gruppen.forEach(gr=>{
+  if(!gr.spiele.length)return;
+  const h=document.createElement("h4");
+  h.textContent=gr.name;
+  feld.appendChild(h);
+  gr.spiele.forEach(g=>{
+   const b=document.createElement("button");
+   b.type="button";
+   b.className="sw-chip";
+   b.dataset.spiel=g.id;
+   b.textContent=g.name;
+   b.title=g.name+" – "+(g.min===g.max?g.min:g.min+"–"+g.max)+" Spieler";
+   b.setAttribute("aria-current",g.id===selectedGame?"true":"false");
+   b.onclick=()=>{
+    selectedGame=g.id;
+    const sel=wrap.querySelector(".sw-auswahl");
+    if(sel)sel.value=g.id;
+    renderGamePicker(currentPlayersList);
+   };
+   feld.appendChild(b);
+  });
+ });
+ chipsMarkieren(feld);
+}
+
+// Setzt nur aria-current um – kein Knoten wird angefasst.
+function chipsMarkieren(feld){
+ Array.prototype.slice.call(feld.querySelectorAll(".sw-chip")).forEach(function(b){
+  const an=b.dataset.spiel===(selectedGame||"");
+  if(b.getAttribute("aria-current")!==(an?"true":"false"))b.setAttribute("aria-current",an?"true":"false");
+ });
+}
+
 function spielWahlZeichnen(wrap){
  if(!wrap)return;
  const auswahl=wrap.querySelector(".sw-auswahl");
@@ -3539,6 +3601,7 @@ function spielWahlZeichnen(wrap){
  }
  auswahl.disabled=!SUPPORTED_GAMES.length;
  if(selectedGame&&auswahl.value!==selectedGame)auswahl.value=selectedGame;
+ spielChipsZeichnen(wrap);
 
  const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
  const info=wrap.querySelector(".sw-info");
