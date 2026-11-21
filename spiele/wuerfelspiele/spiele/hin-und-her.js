@@ -4,6 +4,18 @@ TGW.anmelden({
   titel: "Hin und her",
   unter: "Ein Würfel · Zahlen 1–6 umschalten",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Jede gewürfelte Zahl wird umgeschaltet – wer alle sechs gleichzeitig gestrichen hat, gewinnt.",
+  erklaerung: {
+    ziel: "Alle sechs Zahlen von 1 bis 6 gleichzeitig gestrichen haben.",
+    zug: "Einmal würfeln; die gewürfelte Zahl wird auf dem eigenen Blatt umgeschaltet: offen wird gestrichen, gestrichen wird wieder offen.",
+    wuerfel: "Ein Würfel, 1 bis 6 – er bestimmt nur, welche Zahl umgeschaltet wird.",
+    nochmal: "Nein, nach jedem Wurf ist der Nächste dran.",
+    sieg: "Wer nach seinem Wurf alle sechs Zahlen gestrichen hat.",
+    besonders: [
+      "Jede Zahl kann mehrfach kommen – ein Wurf auf eine gestrichene Zahl macht sie wieder offen.",
+      "Kurz vor dem Ziel ist jeder Wurf ein Risiko: Die letzte fehlende Zahl will erst kommen."
+    ]
+  },
   regeln: [
     "Jeder Spieler beginnt mit den Zahlen 1 bis 6, alle sind offen.",
     "Wer am Zug ist, würfelt einmal.",

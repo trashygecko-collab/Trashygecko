@@ -104,6 +104,8 @@
       titel: def.titel,
       unter: def.unter,
       regeln: def.regeln,
+      kurz: def.kurz,
+      erklaerung: def.erklaerung,
       spieler: { min: 1, max: 6, standard: 2 },
       start: function (z) {
         z.spieler.forEach(function (p) { p.punkte = 0; p.runde = 0; p.fertig = false; p.letzte = null; });
@@ -160,6 +162,8 @@
       titel: def.titel,
       unter: def.unter,
       regeln: def.regeln,
+      kurz: def.kurz,
+      erklaerung: def.erklaerung,
       spieler: { min: 1, max: 6, standard: 2 },
       start: function (z) {
         def.start(z);
@@ -460,6 +464,106 @@
     }, 55);
   }
 
+  /* --- Regelblatt -------------------------------------------------------
+     Ein reines Anzeigefenster: es liest nur den Spielnamen und den Text aus
+     dem Regelmodul und fasst den Spielstand nicht an. */
+  var ABSCHNITTE = [
+    ["ziel", "Ziel"],
+    ["zug", "Ein Zug"],
+    ["wuerfel", "Die Würfel"],
+    ["nochmal", "Nochmal würfeln?"],
+    ["sieg", "Gewinnen"],
+    ["besonders", "Besonderes"]
+  ];
+  var regelBlatt = null;
+  var regelAusloeser = null;
+
+  function regelnOffen() { return !!(regelBlatt && !regelBlatt.hidden); }
+
+  function regelnOeffnen(ausloeser) {
+    if (!regelBlatt) return;
+    regelAusloeser = ausloeser || null;
+    regelBlatt.hidden = false;
+    var zu = regelBlatt.querySelector(".regeln-zu");
+    if (zu) zu.focus();
+  }
+
+  function regelnSchliessen() {
+    if (!regelnOffen()) return;
+    regelBlatt.hidden = true;
+    if (regelAusloeser && regelAusloeser.focus) regelAusloeser.focus();
+  }
+
+  function baueRegeln() {
+    var e = spiel.erklaerung || {};
+    var schleier = document.createElement("div");
+    schleier.className = "regeln-schleier";
+    schleier.hidden = true;
+    schleier.addEventListener("click", function (ereignis) {
+      if (ereignis.target === schleier) regelnSchliessen();
+    });
+
+    var blatt = document.createElement("div");
+    blatt.className = "regeln-blatt";
+    blatt.setAttribute("role", "dialog");
+    blatt.setAttribute("aria-modal", "true");
+    blatt.setAttribute("aria-labelledby", "regeln-titel");
+
+    var kopf = document.createElement("div");
+    kopf.className = "regeln-kopf";
+    var texte = document.createElement("div");
+    var marke = document.createElement("marke");
+    marke.textContent = "Spielregeln";
+    var titel = document.createElement("h2");
+    titel.id = "regeln-titel";
+    titel.textContent = spiel.titel;
+    texte.append(marke, titel);
+    var zu = document.createElement("button");
+    zu.type = "button";
+    zu.className = "regeln-zu";
+    zu.textContent = "Schließen";
+    zu.addEventListener("click", regelnSchliessen);
+    kopf.append(texte, zu);
+
+    var inhalt = document.createElement("div");
+    inhalt.className = "regeln-inhalt";
+    if (spiel.kurz) {
+      var intro = document.createElement("p");
+      intro.className = "regeln-intro";
+      intro.textContent = spiel.kurz;
+      inhalt.appendChild(intro);
+    }
+    ABSCHNITTE.forEach(function (abschnitt) {
+      var wert = e[abschnitt[0]];
+      if (!wert || (Array.isArray(wert) && !wert.length)) return;
+      var box = document.createElement("section");
+      box.className = "regeln-abschnitt";
+      var ueberschrift = document.createElement("h3");
+      ueberschrift.textContent = abschnitt[1];
+      box.appendChild(ueberschrift);
+      (Array.isArray(wert) ? wert : [wert]).forEach(function (zeile) {
+        var p = document.createElement("p");
+        p.textContent = zeile;
+        box.appendChild(p);
+      });
+      inhalt.appendChild(box);
+    });
+
+    var fuss = document.createElement("div");
+    fuss.className = "regeln-fuss";
+    var weiter = document.createElement("button");
+    weiter.type = "button";
+    weiter.className = "knopf";
+    weiter.textContent = "Weiterspielen";
+    weiter.addEventListener("click", regelnSchliessen);
+    fuss.appendChild(weiter);
+
+    blatt.append(kopf, inhalt, fuss);
+    schleier.appendChild(blatt);
+    document.body.appendChild(schleier);
+    regelBlatt = schleier;
+  }
+
   /* --- Aufbau der Seite ------------------------------------------------ */
   function baueSeite() {
     var kopf = document.createElement("header");
@@ -468,6 +572,26 @@
       '<div class="zurueck"><a href="../spiele.html">← alle Spiele</a></div>';
     kopf.querySelector("h1").textContent = spiel.titel;
     kopf.querySelector("p").textContent = spiel.unter || "";
+
+    /* Zentraler Grafikstil aus /spiele/stil.js – dieselbe Wahl wie in allen
+       anderen Spielen, gespeichert beim Spieler (localStorage "tg-stil").
+       Hier wird nur das fertige Bedienfeld des zentralen Skripts eingesetzt,
+       es gibt keine eigene Einstellung. Die Ansicht selbst hängt allein an
+       html[data-stil] in stil.css und rührt keinen Spielstand an. */
+    if (window.TGStil) {
+      var stilStelle = document.createElement("div");
+      stilStelle.className = "stil-stelle";
+      kopf.insertBefore(stilStelle, kopf.querySelector(".zurueck"));
+      TGStil.steuerung(stilStelle);
+      var stilFarbe = function () {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        var farben = { klassisch: "#07140f", maedchen: "#eb7bc0", buben: "#04070b" };
+        meta.setAttribute("content", farben[TGStil.hole()] || "#07140f");
+      };
+      TGStil.beiWechsel(stilFarbe);
+      stilFarbe();
+    }
 
     var rahmen = document.createElement("div");
     rahmen.className = "rahmen";
@@ -563,9 +687,29 @@
     el.leisten.className = "leisten";
     el.tabelle = document.createElement("div");
     el.sieg = document.createElement("div");
+
+    /* Kurzerklärung direkt unter dem Spielfeld – eine Zeile, mehr nicht. */
+    el.hilfe = document.createElement("p");
+    el.hilfe.className = "so-gehts";
+    var soMarke = document.createElement("b");
+    soMarke.textContent = "So geht's";
+    var soText = document.createElement("span");
+    soText.className = "so-text";
+    soText.textContent = spiel.kurz || "";
+    el.hilfe.append(soMarke, soText);
+    if (spiel.erklaerung) {
+      var soMehr = document.createElement("button");
+      soMehr.type = "button";
+      soMehr.className = "so-mehr";
+      soMehr.textContent = "Spielregeln";
+      soMehr.setAttribute("aria-label", "Spielregeln ausführlich anzeigen");
+      soMehr.addEventListener("click", function () { regelnOeffnen(soMehr); });
+      el.hilfe.appendChild(soMehr);
+    }
+
     el.verlauf = document.createElement("ul");
     el.verlauf.className = "verlauf";
-    el.tafel.append(el.spieler, el.wuerfel, el.hinweis, el.tasten, el.leisten, el.tabelle, el.sieg);
+    el.tafel.append(el.spieler, el.wuerfel, el.hinweis, el.tasten, el.hilfe, el.leisten, el.tabelle, el.sieg);
     var verlaufKasten = document.createElement("details");
     verlaufKasten.className = "regeln";
     var verlaufTitel = document.createElement("summary");
@@ -590,9 +734,18 @@
     rahmen.appendChild(fuss);
 
     document.body.appendChild(rahmen);
+    baueRegeln();
 
     /* Tastatur: Leertaste = Haupttaste, 1–9 = Auswahl */
     document.addEventListener("keydown", function (ereignis) {
+      /* Das Regelblatt fängt die Tasten ab, sonst würde Leertaste würfeln. */
+      if (regelnOffen()) {
+        if (ereignis.key === "Escape" || ereignis.code === "Escape") {
+          ereignis.preventDefault();
+          regelnSchliessen();
+        }
+        return;
+      }
       if (!z || z.ende || el.tafel.hidden) return;
       if (ereignis.target && /input|textarea/i.test(ereignis.target.tagName)) return;
       var s = spiel.sicht(z) || {};

@@ -4,6 +4,18 @@ TGW.anmelden(TGW.wurfDannWahl({
   id: "rentmeister",
   titel: "Rentmeister",
   unter: "Drei Würfel · sechs Würfe · Zahlen 3 bis 8",
+  kurz: "Sechs feste Zahlen von 3 bis 8, jede mal einem gewählten Würfel – Summe sammeln.",
+  erklaerung: {
+    ziel: "Aus sechs Würfen die höchste Gesamtsumme holen.",
+    zug: "Die festen Zahlen 3, 4, 5, 6, 7 und 8 werden der Reihe nach gespielt. Für jede wird mit drei Würfeln gewürfelt, dann genau ein Würfel gewählt.",
+    wuerfel: "Drei Würfel. Der gewählte Würfel wird mit der festen Zahl multipliziert (bei der 5 also 5 × 4 = 20).",
+    nochmal: "Nein – jede Zahl kommt genau einmal, danach ist der Nächste dran.",
+    sieg: "Höchste Gesamtsumme nach allen sechs Zahlen.",
+    besonders: [
+      "Bei großen Zahlen lohnt sich ein hoher Würfel: 8 × 6 = 48 Punkte.",
+      "Die gewählte Zahl wird sofort addiert – man sieht nach jedem Wurf den neuen Stand."
+    ]
+  },
   regeln: [
     "Die festen Zahlen 3, 4, 5, 6, 7 und 8 werden der Reihe nach abgearbeitet.",
     "Für jede Zahl wird mit drei Würfeln gewürfelt; danach wird genau ein Würfel ausgewählt.",

@@ -4,6 +4,18 @@ TGW.anmelden({
   titel: "Dufte Hundert",
   unter: "Zwei Würfel · Pasch zählt doppelt · Ziel 100 Punkte",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Zwei Würfel: Pasch wird multipliziert, sonst addiert. Wer zuerst 100 Punkte hat, gewinnt.",
+  erklaerung: {
+    ziel: "Als Erster 100 Punkte sammeln.",
+    zug: "Zwei Würfel werfen und das Ergebnis zu den eigenen Punkten addieren. Danach ist der Nächste dran.",
+    wuerfel: "Ohne Pasch werden beide Augen addiert (3 und 5 = 8). Bei einem Pasch werden sie multipliziert (4 und 4 = 16).",
+    nochmal: "Nein – ein Wurf pro Zug.",
+    sieg: "Wer 100 Punkte erreicht oder überschreitet.",
+    besonders: [
+      "Ein Pasch ist der große Gewinn: 6 und 6 bringen 36 Punkte.",
+      "Wer zuerst über die 100 kommt, gewinnt sofort – es wird nicht überboten."
+    ]
+  },
   regeln: [
     "Wer am Zug ist, würfelt mit zwei Würfeln.",
     "Ohne Pasch werden die beiden Augenzahlen addiert.",

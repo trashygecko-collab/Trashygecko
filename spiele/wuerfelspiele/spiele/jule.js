@@ -5,6 +5,18 @@ TGW.anmelden({
   unter: "Ein Würfel · 1 bis 6 vorwärts, dann 6 bis 1 rückwärts",
   spieler: { min: 1, max: 6, standard: 2 },
   varianten: [{ id: "stumm", text: "Stumme Jule (es wird nicht gesprochen)" }],
+  kurz: "Würfle die Treppe 1 bis 6 hoch und 6 bis 1 zurück; ein Treffer lässt dich gleich weiterwürfeln.",
+  erklaerung: {
+    ziel: "Die Treppe einmal hoch (1 bis 6) und wieder herunter (6 bis 1) – zwölf Stufen.",
+    zug: "Einmal würfeln. Zeigt der Würfel die gesuchte Zahl, ist die Stufe geschafft; ein Fehlwurf beendet den Zug.",
+    wuerfel: "Ein Würfel. Welche Zahl gesucht ist, steht unter dem Feld: 1, 2, 3, 4, 5, 6, dann 6, 5, 4, 3, 2, 1.",
+    nochmal: "Nach jedem Treffer sofort weiter – derselbe Spieler bleibt am Zug, bis er danebenwürfelt.",
+    sieg: "Wer zuerst alle zwölf Stufen geschafft hat.",
+    besonders: [
+      "Variante „Stumme Jule“: Während der Partie wird nicht gesprochen, der Verlauf bleibt aus.",
+      "Eine Trefferserie kann einen in einem Zug bis ans Ziel tragen."
+    ]
+  },
   regeln: [
     "Gebraucht werden der Reihe nach die Zahlen 1, 2, 3, 4, 5, 6 – danach 6, 5, 4, 3, 2, 1.",
     "Wer am Zug ist, würfelt einmal.",

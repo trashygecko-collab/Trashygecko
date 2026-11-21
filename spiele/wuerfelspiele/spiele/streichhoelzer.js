@@ -4,6 +4,19 @@ TGW.anmelden({
   titel: "Streichhölzer auswürfeln",
   unter: "Drei Würfel · zehn Hölzer je Spieler · Einsen und Sechsen wandern",
   spieler: { min: 2, max: 6, standard: 3 },
+  kurz: "Zehn Hölzer: Einsen wandern nach links, Sechsen in die Mitte. Wer zuletzt Hölzer hat, gewinnt.",
+  erklaerung: {
+    ziel: "Als Letzter noch Streichhölzer haben. Jeder startet mit zehn.",
+    zug: "Mit drei Würfeln werfen: Jede Eins gibt ein Hölzchen an den nächsten Spieler, jede Sechs wandert in die Mitte.",
+    wuerfel: "Eins = ein Hölzchen nach links (an den Nächsten in der Runde). Sechs = ein Hölzchen in die Mitte, also aus dem Spiel. 2 bis 5 bewirken nichts.",
+    nochmal: "Nein, ein Wurf pro Zug.",
+    sieg: "Wer als Einziger noch Hölzer hat.",
+    besonders: [
+      "Wer keine Hölzer mehr hat, scheidet aus.",
+      "Kann man nicht mehr genug abgeben, wandert der Rest in die Mitte.",
+      "Die Mitte ist der Ablageplatz für alle Hölzer, die aus dem Spiel sind."
+    ]
+  },
   regeln: [
     "Jeder Spieler beginnt mit zehn virtuellen Streichhölzern.",
     "Wer am Zug ist, würfelt mit drei Würfeln.",

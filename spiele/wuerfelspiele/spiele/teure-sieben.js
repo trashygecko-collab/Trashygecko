@@ -4,6 +4,19 @@ TGW.anmelden({
   titel: "Teure Sieben",
   unter: "Zwei Würfel · Zahlen 2–6 und 8–12 · Sieben streicht doppelt",
   spieler: { min: 2, max: 6, standard: 2 },
+  kurz: "Streiche 2–6 und 8–12; die Sieben erlaubt zwei Striche, doppelte Zahlen wandern weiter.",
+  erklaerung: {
+    ziel: "Als Erster alle zehn Zahlen (2–6 und 8–12) streichen.",
+    zug: "Zwei Würfel werfen. Ist die Summe noch offen, wird sie gestrichen.",
+    wuerfel: "Summen von 2 bis 12; die Sieben fehlt auf dem Blatt und ist der Sonderfall.",
+    nochmal: "Nein, ein Wurf pro Zug – außer bei einer Sieben: dann dürfen bis zu zwei beliebige offene Zahlen gestrichen werden.",
+    sieg: "Wer zuerst alle zehn Zahlen gestrichen hat – auch durch einen Bonus.",
+    besonders: [
+      "Ist die gewürfelte Zahl schon gestrichen, wandert sie als Bonus zum nächsten Spieler und wird dort gestrichen, falls sie offen ist.",
+      "Hat der Nächste sie auch schon, verfällt der Bonus.",
+      "Ein Bonus kann dem Nächsten zum Sieg verhelfen – deshalb ist die Sieben teuer."
+    ]
+  },
   regeln: [
     "Jeder Spieler hat ein Blatt mit den Zahlen 2 bis 6 und 8 bis 12 – die Sieben fehlt.",
     "Wer am Zug ist, würfelt zwei Würfel; die Summe bestimmt die Zahl.",

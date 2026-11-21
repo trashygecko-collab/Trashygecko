@@ -4,6 +4,19 @@ TGW.anmelden({
   titel: "Gestrichene Zwölf",
   unter: "Zwei Würfel · Zahlen 2–12 · drei Runden mit Bonus und Minus",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Würfle Summen von 2 bis 12 und streiche sie; die Sieben zählt immer.",
+  erklaerung: {
+    ziel: "Nach drei Runden die meisten Punkte haben.",
+    zug: "Zwei Würfel werfen; die Summe bestimmt eine Zahl auf dem eigenen Blatt.",
+    wuerfel: "Summen von 2 bis 12. Eine offene Zahl wird gestrichen und bringt ihre Zahl als Punkte. Die Sieben wird nie gestrichen und bringt bei jedem Wurf 7 Punkte.",
+    nochmal: "Nein, ein Wurf pro Zug – sechs Züge je Spieler und Runde.",
+    sieg: "Höchste Gesamtpunktzahl nach drei Runden.",
+    besonders: [
+      "Eine schon gestrichene Zahl (außer der Sieben) kostet 2 Minuspunkte.",
+      "Am Rundenende: Sind alle zehn Zahlen von 2–6 und 8–12 gestrichen, gibt es 20 Bonuspunkte.",
+      "Zu Beginn jeder Runde wird das Blatt neu ausgelegt, die Punkte bleiben."
+    ]
+  },
   regeln: [
     "Jeder Spieler hat ein Blatt mit den Zahlen 2 bis 12.",
     "Wer am Zug ist, würfelt zwei Würfel; die Summe bestimmt die Zahl.",

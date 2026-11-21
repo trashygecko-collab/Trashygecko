@@ -4,6 +4,18 @@ TGW.anmelden(TGW.wurfDannWahl({
   id: "hohe-hausnummer",
   titel: "Hohe Hausnummer",
   unter: "Ein Würfel · drei Würfe · höchste dreistellige Zahl",
+  kurz: "Drei Würfe, drei Stellen: Setze jede Zahl auf Hunderter, Zehner oder Einer – die höchste Hausnummer gewinnt.",
+  erklaerung: {
+    ziel: "Eine möglichst hohe dreistellige Zahl – die Hausnummer – aus drei Würfen bauen.",
+    zug: "Würfeln, dann die Zahl auf eine noch freie Stelle legen: Hunderter, Zehner oder Einer. Danach würfelt derselbe Spieler weiter, bis alle drei Stellen belegt sind.",
+    wuerfel: "Ein Würfel mit 1 bis 6. Der Wurf wird zur Ziffer an der gewählten Stelle – aus 5, 2, 6 wird also die 526.",
+    nochmal: "Immer nach jedem Wurf, bis die drei Stellen voll sind.",
+    sieg: "Wer am Ende die höchste Hausnummer hat. Bei Gleichstand teilen sich die Spieler den Sieg.",
+    besonders: [
+      "Eine belegte Stelle lässt sich nicht mehr ändern – eine 6 auf dem Einer ist verschenkt.",
+      "Wer zuerst alle drei Stellen gefüllt hat, ist fertig; die anderen spielen ihre Würfe zu Ende."
+    ]
+  },
   regeln: [
     "Jeder Spieler würfelt dreimal.",
     "Nach jedem Wurf muss die Zahl einer noch freien Stelle zugeordnet werden: Hunderter, Zehner oder Einer.",

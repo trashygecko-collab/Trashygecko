@@ -4,6 +4,19 @@ TGW.anmelden({
   titel: "Der Turm",
   unter: "Drei Würfel · eigene Stichzahl · gemeinsamer Turm",
   spieler: { min: 2, max: 6, standard: 2 },
+  kurz: "Jeder hat eine eigene Stichzahl; Treffer holen Steine aus dem Turm – oder geben sie weiter.",
+  erklaerung: {
+    ziel: "Als Erster keine Steine mehr haben, während der Turm leer ist.",
+    zug: "Zuerst würfelt jeder einmal mit einem Würfel seine persönliche Stichzahl. Danach wirft jeder pro Zug drei Würfel.",
+    wuerfel: "Drei Würfel; jeder Würfel mit der eigenen Stichzahl ist ein Treffer.",
+    nochmal: "Nein, ein Wurf pro Zug.",
+    sieg: "Wer keine Steine mehr hat, sobald der Turm leer ist.",
+    besonders: [
+      "Solange Steine im Turm liegen, nimmt man für jeden Treffer einen Stein zu sich.",
+      "Ist der Turm leer, gibt man für jeden Treffer einen eigenen Stein an den nächsten Spieler weiter.",
+      "Der Turm hat drei Steine je Spieler."
+    ]
+  },
   regeln: [
     "Zuerst würfelt jeder Spieler einmal mit einem Würfel – das ist seine persönliche Stichzahl.",
     "Aus allen Steinen wird ein gemeinsamer Turm gebaut: drei Steine je Spieler.",

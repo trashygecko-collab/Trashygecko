@@ -4,6 +4,18 @@ TGW.anmelden({
   titel: "Plus-Minus",
   unter: "Ein Würfel · neun Würfe · plus, plus, minus",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Neun Würfe im Muster plus, plus, minus – am Ende zählt die Summe.",
+  erklaerung: {
+    ziel: "Nach neun Würfen die höchste Summe haben.",
+    zug: "Neunmal würfeln. Die Reihenfolge der Vorzeichen ist fest: + + − + + − + + −.",
+    wuerfel: "Ein Würfel. Unter dem Feld steht, ob der Wurf gerade addiert oder abgezogen wird.",
+    nochmal: "Immer weiter, bis alle neun Würfe gespielt sind – man hat keine Wahl.",
+    sieg: "Höchste Endsumme nach neun Würfen.",
+    besonders: [
+      "Der 3., 6. und 9. Wurf werden abgezogen – eine 6 dort kostet sechs Punkte.",
+      "Zwischenstände dürfen negativ werden."
+    ]
+  },
   regeln: [
     "Jeder Spieler würfelt neunmal.",
     "Der erste und der zweite Wurf werden addiert, der dritte wird abgezogen.",

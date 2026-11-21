@@ -4,6 +4,18 @@ TGW.anmelden({
   titel: "Die böse Eins",
   unter: "Ein Würfel · fünf Würfe · eine Eins stoppt sofort",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Fünf Würfe, alles wird addiert – aber eine Eins stoppt dich sofort.",
+  erklaerung: {
+    ziel: "In fünf Würfen so viele Augen wie möglich sammeln.",
+    zug: "Wer am Zug ist, würfelt fünfmal hintereinander. Alle Augen kommen auf die eigene Summe.",
+    wuerfel: "Ein Würfel; 2 bis 6 zählen voll zur Summe.",
+    nochmal: "Nach jedem Wurf wird weitergewürfelt – bis fünf Würfe gespielt sind oder eine Eins fällt.",
+    sieg: "Höchste Summe nach fünf Würfen.",
+    besonders: [
+      "Eine Eins beendet den Durchgang sofort; die bis dahin gesammelte Summe bleibt stehen.",
+      "Wer eine Eins würfelt, steht oft schlechter da als jemand mit lauter kleinen Zahlen."
+    ]
+  },
   regeln: [
     "Jeder Spieler hat fünf Würfe.",
     "Alle gewürfelten Augen werden zusammengezählt.",

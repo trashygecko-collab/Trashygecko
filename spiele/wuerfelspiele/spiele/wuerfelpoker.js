@@ -4,6 +4,19 @@ TGW.anmelden({
   titel: "Würfelpoker",
   unter: "Fünf Würfel · zwei Nachwürfe · drei Blätter je Spieler",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Fünf Würfel, zwei Nachwürfe, drei Blätter – volle Pokerwertung, höchste Summe gewinnt.",
+  erklaerung: {
+    ziel: "Mit drei Blättern die höchste Blattsumme sammeln.",
+    zug: "Fünf Würfel werfen. Würfel, die bleiben sollen, antippen, dann nachwürfeln. Mit „Blatt werten“ wird das Blatt gezählt.",
+    wuerfel: "Gewertet wird von oben nach unten: Fünfling, Vierling, Full House, Straße (1–5 oder 2–6), Drilling, zwei Paare, Paar.",
+    nochmal: "Zweimal pro Blatt – nur die nicht angetippten Würfel werden neu geworfen.",
+    sieg: "Höchste Summe aus drei Blättern.",
+    besonders: [
+      "Bei gleicher Kombination entscheidet die höhere Zahl (Dreier-Sechs schlägt Dreier-Vier), danach der höchste übrige Würfel.",
+      "Ein Fünfling ist das höchste Blatt.",
+      "Es geht nur um Spielpunkte."
+    ]
+  },
   regeln: [
     "Jeder Spieler spielt drei Blätter.",
     "Ein Blatt besteht aus fünf Würfeln; es darf zweimal nachgewürfelt werden.",

@@ -4,6 +4,18 @@ TGW.anmelden({
   titel: "Fenster würfeln",
   unter: "Drei Würfel · bis zu drei Würfe · nur Zweien zählen · Ziel 30",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Drei Würfel, nur Zweien zählen: eine = 1, zwei = 4, drei = 9. Ziel sind 30.",
+  erklaerung: {
+    ziel: "Zuerst 30 Zweierpunkte sammeln.",
+    zug: "Mit drei Würfeln werfen; gezählt werden nur Zweien. Danach „Halten“ oder weiterwürfeln.",
+    wuerfel: "Eine Zwei = 1 Punkt, zwei Zweien = 4 Punkte, drei Zweien = 9 Punkte. Alle anderen Zahlen bringen nichts.",
+    nochmal: "Bis zu drei Würfe pro Zug. Jeder Wurf zählt sofort, auch wenn später nichts mehr kommt.",
+    sieg: "Wer zuerst 30 Punkte erreicht.",
+    besonders: [
+      "„Halten“ beendet den Zug nur früher – die Punkte bleiben in jedem Fall.",
+      "Drei Zweien auf einmal sind fast ein Drittel des Ziels."
+    ]
+  },
   regeln: [
     "Wer am Zug ist, hat bis zu drei Würfe mit drei Würfeln.",
     "Es zählen nur Zweien: eine einzelne Zwei bringt 1 Punkt, ein Zweierpasch 4 Punkte, drei Zweien 9 Punkte.",

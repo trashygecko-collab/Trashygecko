@@ -4,6 +4,19 @@ TGW.anmelden({
   titel: "Eins bis Sechzehn",
   unter: "Drei Würfel · Zahlen 1–16 vorwärts und rückwärts",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Bilde die Zahlen 1 bis 16 aus drei Würfeln – erst vorwärts, dann rückwärts.",
+  erklaerung: {
+    ziel: "Alle Zahlen von 1 bis 16 bilden – erst vorwärts, dann rückwärts.",
+    zug: "Drei Würfel werfen und die gesuchte Zahl daraus bilden: mit einem Würfel oder durch Plus und Minus mehrerer Würfel. Die Tasten unter dem Feld zeigen alle Möglichkeiten.",
+    wuerfel: "Drei Würfel. Für die 7 ginge zum Beispiel 6 + 1, 5 + 3 − 1 oder 4 + 4 − 1.",
+    nochmal: "Nach jedem Treffer sofort weiter; nach einem Fehlwurf ist der Nächste dran.",
+    sieg: "Wer zuerst vorwärts und rückwärts alle 16 Zahlen gebildet hat.",
+    besonders: [
+      "Gesucht ist immer die kleinste noch offene Zahl.",
+      "Ist das Feld voll, beginnt es von vorn – dann von 16 herunter bis 1.",
+      "Die Auswahl erscheint nur, wenn sich die Zahl wirklich bilden lässt."
+    ]
+  },
   regeln: [
     "Jeder Spieler hat ein Feld mit den Zahlen 1 bis 16.",
     "Wer am Zug ist, würfelt mit drei Würfeln.",

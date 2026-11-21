@@ -4,6 +4,20 @@ TGW.anmelden({
   titel: "Unter oder über sieben",
   unter: "Zwei Würfel · Ansage vor dem Wurf · nur Spielpunkte",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Sage vor dem Wurf unter, über oder genau sieben an – richtig bringt Punkte, falsch kostet.",
+  erklaerung: {
+    ziel: "Nach acht Zügen die meisten Spielpunkte haben. Jeder startet mit 50.",
+    zug: "Erst ansagen – unter sieben, über sieben oder genau sieben –, dann würfeln.",
+    wuerfel: "Zwei Würfel, Summe 2 bis 12. Unter sieben sind 2–6, über sieben sind 8–12.",
+    nochmal: "Nein, ein Wurf pro Zug.",
+    sieg: "Höchste Punktzahl nach acht Zügen je Spieler.",
+    besonders: [
+      "Richtige Ansage: +5, falsche: −5.",
+      "Genau sieben ist doppelt: richtig +10, falsch −10.",
+      "Wer unter oder über ansagt und eine Sieben würfelt, verliert 10 Punkte.",
+      "Es geht ausschließlich um Spielpunkte, niemals um Geld."
+    ]
+  },
   regeln: [
     "Jeder Spieler startet mit 50 virtuellen Punkten.",
     "Vor jedem Wurf wird angesagt: unter sieben (2–6), über sieben (8–12) oder genau sieben.",

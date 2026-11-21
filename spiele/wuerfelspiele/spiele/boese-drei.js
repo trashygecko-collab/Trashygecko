@@ -4,6 +4,18 @@ TGW.anmelden({
   titel: "Die böse Drei",
   unter: "Ein Würfel · beliebig viele Würfe · eine Drei löscht alles",
   spieler: { min: 1, max: 6, standard: 2 },
+  kurz: "Würfle so oft du willst und sichere mit „Halten“ – eine Drei löscht den ganzen Zug.",
+  erklaerung: {
+    ziel: "In einem Durchgang so viele Punkte wie möglich sichern. Jeder ist einmal dran.",
+    zug: "Beliebig oft würfeln und alle Augen zur Zugsumme addieren – oder mit „Halten“ freiwillig aufhören und die Summe sichern.",
+    wuerfel: "Ein Würfel. 1, 2, 4, 5 und 6 zählen; die Drei ist die böse Zahl.",
+    nochmal: "So oft man will. Nach jedem Wurf heißt es weiterwürfeln oder halten.",
+    sieg: "Wer am Ende das höchste gesicherte Ergebnis hat.",
+    besonders: [
+      "Eine Drei löscht die komplette Zugsumme und beendet den Zug sofort – gesicherte Punkte bleiben.",
+      "Nur „Halten“ bringt die Punkte aufs Konto; wer zu gierig wird, verliert alles."
+    ]
+  },
   regeln: [
     "Wer am Zug ist, darf beliebig oft würfeln.",
     "Alle gewürfelten Augen werden zur Rundensumme addiert.",

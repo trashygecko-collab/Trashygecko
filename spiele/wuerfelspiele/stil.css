@@ -13,6 +13,24 @@
   --gruen: #8fd0a8;
   --rot: #e88b8b;
   --gelb: #f0cf7a;
+
+  /* Bausteine der Ansichten. Klassisch sind genau die alten Werte; Mädchen
+     und Buben überschreiben sie weiter unten. Reine Farben – nichts hiervon
+     geht in ein Würfelergebnis oder in den Spielstand ein. */
+  --schein: var(--schein);
+  --linie-leise: var(--linie-leise);
+  --feld: var(--feld);
+  --aus-bg: var(--aus-bg);
+  --aus-text: var(--aus-text);
+  --w1: #fbf7ec; --w2: #ded5c1; --w-punkt: #16302a;
+  --n1: #f7dcd6; --n2: #d9a49c; --n-punkt: #6b1c22;
+  --w-schatten: 0 6px 14px rgba(0, 0, 0, .45), inset 0 1px 0 #fff, inset 0 -2px 0 rgba(0, 0, 0, .12);
+  --n-schatten: 0 6px 14px rgba(0, 0, 0, .45), inset 0 1px 0 #fff5f2, inset 0 -2px 0 rgba(0, 0, 0, .12);
+  --tafel-schatten: 0 10px 30px rgba(0, 0, 0, .35) inset, 0 1px 0 rgba(255, 255, 255, .03);
+  --aktiv-bg: linear-gradient(180deg, #1d4033, #16342a);
+  --aktiv-ring: rgba(232, 205, 142, .25);
+  --aktiv-schein: rgba(232, 205, 142, .12);
+  --haupt-1: #f3e0b0; --haupt-rand: #f3e0b0; --haupt-text: #23301f;
 }
 
 * { box-sizing: border-box; }
@@ -23,7 +41,7 @@
 html, body { margin: 0; min-height: 100%; }
 
 body {
-  background: radial-gradient(120% 90% at 50% -10%, #123b2c 0%, var(--bg) 62%) fixed;
+  background: radial-gradient(120% 90% at 50% -10%, var(--schein) 0%, var(--bg) 62%) fixed;
   color: var(--text);
   font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   -webkit-text-size-adjust: 100%;
@@ -51,7 +69,7 @@ marke {
 .tafel {
   background: linear-gradient(180deg, var(--flaeche), var(--bg2));
   border: 1px solid var(--linie); border-radius: 16px; padding: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .35) inset, 0 1px 0 rgba(255, 255, 255, .03);
+  box-shadow: var(--tafel-schatten);
 }
 
 /* --- Spieler ---------------------------------------------------------- */
@@ -62,8 +80,8 @@ marke {
 }
 .spieler.aktiv {
   border-color: var(--gold);
-  background: linear-gradient(180deg, #1d4033, #16342a);
-  box-shadow: 0 0 0 1px rgba(232, 205, 142, .25), 0 0 18px rgba(232, 205, 142, .12);
+  background: var(--aktiv-bg);
+  box-shadow: 0 0 0 1px var(--aktiv-ring), 0 0 18px var(--aktiv-schein);
 }
 .spieler .name { font-size: 13px; color: var(--text); display: flex; justify-content: space-between; gap: 6px; }
 .spieler .name .jetzt { color: var(--gold); font-size: 11px; }
@@ -79,19 +97,19 @@ marke {
   width: 74px; height: 74px; padding: 9px; border-radius: 14px;
   display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
   gap: 2px;
-  background: linear-gradient(160deg, #fbf7ec, #ded5c1);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, .45), inset 0 1px 0 #fff, inset 0 -2px 0 rgba(0, 0, 0, .12);
+  background: linear-gradient(160deg, var(--w1), var(--w2));
+  box-shadow: var(--w-schatten);
 }
 .wuerfel.negativ {
-  background: linear-gradient(160deg, #f7dcd6, #d9a49c);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, .45), inset 0 1px 0 #fff5f2, inset 0 -2px 0 rgba(0, 0, 0, .12);
+  background: linear-gradient(160deg, var(--n1), var(--n2));
+  box-shadow: var(--n-schatten);
 }
 .wuerfel .punkt { position: relative; }
 .wuerfel .punkt.an::after {
   content: ""; position: absolute; inset: 12%;
-  border-radius: 50%; background: #16302a;
+  border-radius: 50%; background: var(--w-punkt);
 }
-.wuerfel.negativ .punkt.an::after { background: #6b1c22; }
+.wuerfel.negativ .punkt.an::after { background: var(--n-punkt); }
 .wuerfel.rollend .punkt.an::after { opacity: .55; }
 
 .wurf-summe {
@@ -115,8 +133,8 @@ marke {
 }
 .knopf:active { transform: translateY(1px); }
 .knopf.haupt {
-  background: linear-gradient(180deg, #f3e0b0, var(--gold)); color: #23301f;
-  border-color: #f3e0b0; min-width: 170px;
+  background: linear-gradient(180deg, var(--haupt-1), var(--gold)); color: var(--haupt-text);
+  border-color: var(--haupt-rand); min-width: 170px;
 }
 .knopf:disabled { opacity: .45; cursor: default; }
 .knopf.wahl { font-weight: 500; font-size: 15px; }
@@ -131,20 +149,20 @@ marke {
   background: var(--flaeche2); border: 1px solid var(--linie);
   font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.zahl.aus { background: #0b1d16; color: #5d7a6c; border-color: #1b3a2d; text-decoration: line-through; }
+.zahl.aus { background: var(--aus-bg); color: var(--aus-text); border-color: var(--linie-leise); text-decoration: line-through; }
 .zahl.frisch { border-color: var(--gold); color: var(--gold); }
 
 /* --- Tabelle ---------------------------------------------------------- */
 .tabelle { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabelle caption { text-align: left; color: var(--matt); font-size: 12px; padding-bottom: 6px; }
-.tabelle th, .tabelle td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #1b3a2d; }
+.tabelle th, .tabelle td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--linie-leise); }
 .tabelle th { color: var(--matt); font-weight: 500; font-size: 12px; }
 .tabelle td.zahl-spalte, .tabelle th.zahl-spalte { text-align: right; font-variant-numeric: tabular-nums; }
 .tabelle tr.dran td { color: var(--gold); }
 
 /* --- Verlauf ---------------------------------------------------------- */
 .verlauf { margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--matt); }
-.verlauf li { padding: 3px 0; border-bottom: 1px dashed #1b3a2d; }
+.verlauf li { padding: 3px 0; border-bottom: 1px dashed var(--linie-leise); }
 .verlauf li:last-child { border-bottom: 0; color: var(--text); }
 
 /* --- Aufbau der Partie ------------------------------------------------ */
@@ -152,7 +170,7 @@ marke {
 .namenszeile { display: flex; gap: 8px; align-items: center; }
 .namenszeile input {
   flex: 1; min-width: 0; height: 44px; padding: 0 12px; border-radius: 10px;
-  border: 1px solid var(--linie); background: #0d2018; color: var(--text); font: inherit;
+  border: 1px solid var(--linie); background: var(--feld); color: var(--text); font: inherit;
 }
 .rundenzahl { display: flex; gap: 8px; align-items: center; color: var(--matt); font-size: 13px; flex-wrap: wrap; }
 .rundenzahl .chip {
@@ -197,6 +215,106 @@ details.regeln .variante { color: var(--gruen); }
 .karte span { display: block; font-size: 12.5px; color: var(--matt); margin-top: 3px; }
 .karte:hover, .karte:focus-visible { border-color: var(--gold); }
 
+/* --- Kurzerklärung und Regelblatt -------------------------------------
+   Eine Zeile unter dem Spielfeld, das Ausführliche erst auf Wunsch. */
+.so-gehts {
+  margin: 0; padding: 9px 2px 0; border-top: 1px dashed var(--linie-leise);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px;
+  font-size: 12.5px; line-height: 1.45; color: var(--matt);
+}
+.so-gehts b {
+  color: var(--gold); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.so-gehts .so-text { flex: 1 1 220px; min-width: 0; }
+.so-mehr {
+  margin-left: auto; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--linie); background: transparent; color: var(--gold);
+  font: inherit; font-size: 11.5px; cursor: pointer; white-space: nowrap;
+}
+.so-mehr:hover, .so-mehr:focus-visible { border-color: var(--gold); }
+
+.regeln-schleier {
+  position: fixed; inset: 0; z-index: 40; display: flex;
+  align-items: center; justify-content: center; padding: 16px;
+  background: rgba(3, 10, 8, .72);
+}
+.regeln-blatt {
+  width: min(560px, 100%); max-height: min(86vh, 680px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(180deg, var(--flaeche), var(--bg2));
+  border: 1px solid var(--linie); border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+}
+.regeln-kopf {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 16px 10px; border-bottom: 1px solid var(--linie-leise);
+}
+.regeln-kopf h2 { margin: 2px 0 0; font-size: 19px; }
+.regeln-zu {
+  margin-left: auto; flex: 0 0 auto; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--linie); background: transparent; color: var(--matt);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.regeln-zu:hover, .regeln-zu:focus-visible { border-color: var(--gold); color: var(--gold); }
+.regeln-inhalt { padding: 2px 16px 12px; overflow: auto; -webkit-overflow-scrolling: touch; }
+.regeln-intro { margin: 10px 0 2px; font-size: 14px; line-height: 1.5; color: var(--text); }
+.regeln-abschnitt { margin-top: 13px; }
+.regeln-abschnitt h3 {
+  margin: 0 0 3px; font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--gold);
+}
+.regeln-abschnitt p { margin: 0 0 4px; font-size: 14px; line-height: 1.5; color: var(--matt); }
+.regeln-fuss { padding: 10px 16px 14px; border-top: 1px solid var(--linie-leise); }
+.regeln-fuss .knopf { width: 100%; }
+
+/* --- Ansichten --------------------------------------------------------
+   Nur Farbe. Die Wahl kommt vom zentralen spiele/stil.js (html[data-stil]),
+   also vom Spieler und nicht vom Spiel. */
+html[data-stil="maedchen"] {
+  color-scheme: light;
+  --bg: #f7a6d4; --bg2: #ffeaf4;
+  --schein: #ffd9ec;
+  --flaeche: #fff6fa; --flaeche2: #ffe3ef;
+  --linie: #ef7aa8; --linie-leise: #ffc4dc;
+  --text: #3a0f24; --matt: #7b2c4e;
+  --gold: #a11e57; --gruen: #2f7d55; --rot: #b0283a; --gelb: #a35f16;
+  --feld: #ffffff; --aus-bg: #ffe0ec; --aus-text: #b0729a;
+  --w1: #ffffff; --w2: #ffeaf3; --w-punkt: #8f2450;
+  --n1: #ffd3df; --n2: #ff9ec4; --n-punkt: #7a1030;
+  --w-schatten: 0 6px 14px rgba(150, 40, 85, .22), inset 0 0 0 1px #ef7aa8, inset 0 1px 0 #fff;
+  --n-schatten: 0 6px 14px rgba(150, 40, 85, .22), inset 0 0 0 1px #d9628f, inset 0 1px 0 #fff2f7;
+  --tafel-schatten: 0 10px 26px rgba(160, 40, 90, .12) inset, 0 1px 0 #fff;
+  --aktiv-bg: linear-gradient(180deg, #ffe3ef, #ffd0e4);
+  --aktiv-ring: rgba(200, 42, 110, .38);
+  --aktiv-schein: rgba(200, 42, 110, .16);
+  --haupt-1: #ffffff; --haupt-rand: #c85f96; --haupt-text: #4a1030;
+}
+html[data-stil="buben"] {
+  color-scheme: dark;
+  --bg: #04070b; --bg2: #0b0f14;
+  --schein: #122036;
+  --flaeche: #12161c; --flaeche2: #1a1f26;
+  --linie: #33445a; --linie-leise: #222c36;
+  --text: #e6ecf2; --matt: #9fb0c0;
+  --gold: #c8ff3d; --gruen: #6dff4a; --rot: #ff5560; --gelb: #ffd23f;
+  --feld: #0a0e13; --aus-bg: #0b1016; --aus-text: #5d7183;
+  --w1: #232b34; --w2: #141a21; --w-punkt: #c8ff3d;
+  --n1: #3a1116; --n2: #210d11; --n-punkt: #ff5560;
+  --w-schatten: 0 6px 14px rgba(0, 0, 0, .6), inset 0 0 0 1px #3c4b5c, inset 0 1px 0 rgba(255, 255, 255, .08);
+  --n-schatten: 0 6px 14px rgba(0, 0, 0, .6), inset 0 0 0 1px #6d1a1f, inset 0 1px 0 rgba(255, 255, 255, .06);
+  --tafel-schatten: 0 10px 30px rgba(0, 0, 0, .55) inset, 0 1px 0 rgba(200, 255, 61, .06);
+  --aktiv-bg: linear-gradient(180deg, #1d232b, #151a20);
+  --aktiv-ring: rgba(200, 255, 61, .45);
+  --aktiv-schein: rgba(200, 255, 61, .14);
+  --haupt-1: #d8ff6e; --haupt-rand: #c8ff3d; --haupt-text: #0a0d10;
+}
+
+/* Die zentrale Stilwahl sitzt im Kopf neben „alle Spiele“. */
+.kopf .stil-stelle { margin-left: auto; }
+.kopf .stil-stelle .tg-stil { justify-content: flex-end; }
+.kopf .stil-stelle .tg-stil button { color: var(--text); }
+
 /* --- Kleine Bildschirme ----------------------------------------------- */
 @media (max-width: 560px) {
   .rahmen { padding: 10px 10px 24px; }
@@ -211,6 +329,25 @@ details.regeln .variante { color: var(--gruen); }
   .spieler .wert { font-size: 19px; }
   .tabelle { font-size: 13px; }
   .tabelle th, .tabelle td { padding: 6px 5px; }
+
+  /* Am Handy fließt die Zeile als Absatz: Label, Text und Knopf hintereinander,
+     damit sie nur zwei bis drei Zeilen hoch wird. */
+  .kopf .stil-stelle { margin-left: 0; width: 100%; }
+  .kopf .stil-stelle .tg-stil { justify-content: flex-start; }
+  .so-gehts { display: block; padding-top: 8px; font-size: 11.8px; line-height: 1.45; }
+  .so-gehts b { margin-right: 5px; }
+  .so-gehts .so-text { display: inline; }
+  .so-mehr {
+    display: inline-block; margin: 1px 0 0 5px; padding: 1px 9px;
+    font-size: 11px; vertical-align: baseline;
+  }
+
+  /* Regelblatt fährt als Blatt von unten herein – kein Hüpfen des Feldes. */
+  .regeln-schleier { padding: 0; align-items: flex-end; }
+  .regeln-blatt { width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+  .regeln-kopf { padding: 12px 14px 9px; }
+  .regeln-inhalt { padding: 0 14px 10px; }
+  .regeln-abschnitt p { font-size: 13.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
