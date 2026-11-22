@@ -184,6 +184,12 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.Hold; g != nil {
 		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)
 	}
+	if g := r.Memory; g != nil {
+		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)
+	}
+	if g := r.Mastermind; g != nil {
+		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)
+	}
 	if g := r.Skyjo; g != nil {
 		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)
 	}

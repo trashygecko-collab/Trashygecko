@@ -574,6 +574,7 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = player.Name + " setzt sich dazu."
 
 	case "bot":
+		room.botNamenNeu()
 		if room.Baccara != nil && room.Baccara.Status != "ende" {
 			mu.Unlock()
 			http.Error(w, "Es läuft schon eine Runde Baccara.", http.StatusConflict)
@@ -590,10 +591,10 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 			BotID:     botID(1),
 			Bots:      []string{botID(1)},
 			BotStufe:  stufe,
-			Note:      botName(1) + " sitzt bereit am Tisch (" + botStufeText(stufe) + ").",
+			Note:      room.botName(1) + " sitzt bereit am Tisch (" + botStufeText(stufe) + ").",
 		}
 		spiel.Spieler = append(spiel.Spieler, baccaraNeuerSpieler(input.ID, player.Name))
-		spiel.Spieler = append(spiel.Spieler, baccaraNeuerSpieler(botID(1), botName(1)))
+		spiel.Spieler = append(spiel.Spieler, baccaraNeuerSpieler(botID(1), room.botName(1)))
 		for i := range spiel.Spieler {
 			spiel.Spieler[i].Ready = true
 		}
@@ -607,10 +608,10 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 		room.Baccara.BankSitz = 1
 		room.Baccara.Bank = 0
 		room.Baccara.Status = "bank"
-		room.Baccara.Note = botName(1) + " hat die Bank – wie viel legt er auf den Tisch?"
+		room.Baccara.Note = room.botName(1) + " hat die Bank – wie viel legt er auf den Tisch?"
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt Baccara gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt Baccara gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     zeit,
 			SenderID: input.ID,
 		})

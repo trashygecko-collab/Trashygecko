@@ -642,6 +642,7 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 		})
 
 	case "bot":
+		room.botNamenNeu()
 		if room.Poker != nil && room.Poker.Status != "ende" {
 			mu.Unlock()
 			http.Error(w, "An diesem Tisch läuft schon eine Partie.", http.StatusConflict)
@@ -660,7 +661,7 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		spiel.Spieler = append(spiel.Spieler, pokerNeuerSpieler(input.ID, player.Name))
 		for n := 1; n <= 2; n++ {
-			spiel.Spieler = append(spiel.Spieler, pokerNeuerSpieler(botID(n), botName(n)))
+			spiel.Spieler = append(spiel.Spieler, pokerNeuerSpieler(botID(n), room.botName(n)))
 		}
 		for i := range spiel.Spieler {
 			spiel.Spieler[i].Ready = true
@@ -673,7 +674,7 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt Poker gegen " + botName(1) + " und " + botName(2) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt Poker gegen " + room.botName(1) + " und " + room.botName(2) + " (" + botStufeText(stufe) + ").",
 			Time:     zeit,
 			SenderID: input.ID,
 		})
@@ -785,9 +786,14 @@ func pokerAktion(room *Room, id, aktion string, betrag int) (int, string) {
 			if ziel <= p.Einsatz {
 				return http.StatusBadRequest, "Der Einsatz muss höher sein."
 			}
-			ziel = (ziel / pokerSchritt) * pokerSchritt
-			if ziel > p.Einsatz+p.Chips {
-				ziel = p.Einsatz + p.Chips
+			// All-in geht ohne Rundung: die ganzen Chips sind selten ein
+			// Vielfaches von 10 Cent, abgerundet lägen sie unter dem
+			// Mindestbetrag und der Tisch stünde.
+			if aktion != "allin" {
+				ziel = (ziel / pokerSchritt) * pokerSchritt
+				if ziel > p.Einsatz+p.Chips {
+					ziel = p.Einsatz + p.Chips
+				}
 			}
 			minimum := game.Hoechster + pokerSchritt
 			if ziel < minimum && ziel < p.Einsatz+p.Chips {

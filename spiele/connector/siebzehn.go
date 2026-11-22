@@ -755,6 +755,7 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 		})
 
 	case "bot":
+		room.botNamenNeu()
 		if room.Siebzehn != nil && room.Siebzehn.Status != "ende" {
 			mu.Unlock()
 			http.Error(w, "Es läuft schon eine Runde 17 und 4.", http.StatusConflict)
@@ -774,13 +775,13 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		spiel.Spieler = append(spiel.Spieler, siebzehnNeuerSpieler(input.ID, player.Name))
 		for n := 1; n <= 2; n++ {
-			spiel.Spieler = append(spiel.Spieler, siebzehnNeuerSpieler(botID(n), botName(n)))
+			spiel.Spieler = append(spiel.Spieler, siebzehnNeuerSpieler(botID(n), room.botName(n)))
 		}
-		spiel.Note = botName(1) + " hat die Bank – wie viel Geld legt er auf den Tisch?"
+		spiel.Note = room.botName(1) + " hat die Bank – wie viel Geld legt er auf den Tisch?"
 		room.Siebzehn = spiel
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt 17 und 4 gegen " + botName(1) + " und " + botName(2) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt 17 und 4 gegen " + room.botName(1) + " und " + room.botName(2) + " (" + botStufeText(stufe) + ").",
 			Time:     zeit,
 			SenderID: input.ID,
 		})

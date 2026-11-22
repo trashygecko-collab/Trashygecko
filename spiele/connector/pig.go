@@ -228,6 +228,7 @@ func pigHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Pig != nil {
 			slot := room.Pig.Status
@@ -240,12 +241,12 @@ func pigHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		g := pigNeuesSpiel(input.ID, player.Name, randomCode())
-		g.Spieler = append(g.Spieler, PigSpieler{ID: botID(1), Name: botName(1), Farbe: 1, Ready: true})
+		g.Spieler = append(g.Spieler, PigSpieler{ID: botID(1), Name: room.botName(1), Farbe: 1, Ready: true})
 		g.Spieler[0].Ready = true
 		g.Runde = 1
 		g.pigRunde()
 		g.BotID, g.BotStufe = botID(1), stufe
-		g.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Pig = g
 
 	case "create":

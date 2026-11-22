@@ -558,15 +558,16 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.Skyjo != nil && !room.gameSlotFree(room.Skyjo.Status, room.Skyjo.RedID, room.Skyjo.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Skyjo-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		g := skyjoNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		g := skyjoNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
 		g.Status = "active"
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(g.BotStufe) + "). Decke zwei Karten auf."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(g.BotStufe) + "). Decke zwei Karten auf."
 		room.Skyjo = g
 	case "invite":
 		target, ok := room.Players[input.ToID]

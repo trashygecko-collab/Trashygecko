@@ -756,6 +756,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if aktion == "bot" {
+		room.botNamenNeu()
 		// Gegen den Computer: Der Mensch sitzt, der Bot nimmt den zweiten
 		// Platz, dann läuft die Runde sofort los. Der Bot muss nicht
 		// beitreten – er sitzt schon.
@@ -777,7 +778,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 			ID:    randomCode(),
 			Spiel: spiel,
 			Host:  sitz.ID,
-			Sitze: []wuerfelSitz{sitz, wuerfelSitz{ID: botID(1), Name: botName(1)}},
+			Sitze: []wuerfelSitz{sitz, wuerfelSitz{ID: botID(1), Name: room.botName(1)}},
 			// Der Status wird von starten() auf „active“ gesetzt.
 			Status:   "invited",
 			reg:      reg,

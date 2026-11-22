@@ -554,6 +554,7 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Schiffe != nil && room.Schiffe.Status != "ende" {
 			mu.Unlock()
@@ -564,7 +565,7 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 			ID: randomCode(), HostID: input.ID, Status: "setzen", Zug: -1,
 			Spieler: []SchiffeSpieler{
 				schiffeNeuerSpieler(input.ID, player.Name),
-				schiffeNeuerSpieler(botID(1), botName(1)),
+				schiffeNeuerSpieler(botID(1), room.botName(1)),
 			},
 			BotID: botID(1), BotStufe: stufe,
 		}
@@ -575,11 +576,11 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fehler, http.StatusInternalServerError)
 			return
 		}
-		game.Note = player.Name + " setzt gegen " + botName(1) + " (" + botStufeText(stufe) + ") die eigene Flotte."
+		game.Note = player.Name + " setzt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ") die eigene Flotte."
 		room.Schiffe = game
 		room.addMessage(Message{
 			Name: player.Name, Time: zeit, SenderID: input.ID,
-			Text: "spielt Schiffe versenken gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Schiffe versenken gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

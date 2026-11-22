@@ -537,6 +537,7 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = player.Name + " sitzt jetzt mit am Tisch."
 
 	case "bot":
+		room.botNamenNeu()
 		if room.Sechsundsechzig != nil && room.Sechsundsechzig.Status != "ende" {
 			mu.Unlock()
 			http.Error(w, "Es läuft schon eine Runde Sechsundsechzig.", http.StatusConflict)
@@ -552,10 +553,10 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 			BotID:    botID(1),
 			Bots:     []string{botID(1)},
 			BotStufe: stufe,
-			Note:     botName(1) + " sitzt bereit am Tisch (" + botStufeText(stufe) + ").",
+			Note:     room.botName(1) + " sitzt bereit am Tisch (" + botStufeText(stufe) + ").",
 		}
 		spiel.Spieler = append(spiel.Spieler, sechsundsechzigNeuerSpieler(input.ID, player.Name))
-		spiel.Spieler = append(spiel.Spieler, sechsundsechzigNeuerSpieler(botID(1), botName(1)))
+		spiel.Spieler = append(spiel.Spieler, sechsundsechzigNeuerSpieler(botID(1), room.botName(1)))
 		for i := range spiel.Spieler {
 			spiel.Spieler[i].Ready = true
 		}
@@ -567,7 +568,7 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt Sechsundsechzig gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt Sechsundsechzig gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     zeit,
 			SenderID: input.ID,
 		})

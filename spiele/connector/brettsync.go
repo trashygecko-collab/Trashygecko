@@ -1,6 +1,7 @@
 package main
 
-// Online-Mehrspieler für Risiko und Das verrückte Labyrinth.
+// Online-Mehrspieler für Das verrückte Labyrinth (Risiko hat seit dem
+// 22.11.2026 ein eigenes, servergeprüftes Spiel in risiko.go/risiko_raum.go).
 //
 // Beide Spiele rechnen ihre Regeln im Browser (dort stehen Karten, Armeen,
 // Kacheln, Missionen – dieselben Regeln wie im Einzelspiel). Der Server führt
@@ -54,16 +55,12 @@ type syncArt struct {
 }
 
 var syncArten = map[string]syncArt{
-	"risiko":    {Name: "Risiko", Min: 2, Max: 6},
 	"labyrinth": {Name: "Das verrückte Labyrinth", Min: 2, Max: 4},
 }
 
 // syncFeld liefert den Platz im Raum, an dem die Partie dieser Art liegt.
 func syncFeld(room *Room, art string) **SyncGame {
-	if art == "labyrinth" {
-		return &room.Labyrinth
-	}
-	return &room.Risiko
+	return &room.Labyrinth
 }
 
 func syncSicht(g *SyncGame) *SyncGame {
@@ -106,7 +103,6 @@ func syncName(art string) string {
 	return art
 }
 
-func risikoHandler(w http.ResponseWriter, r *http.Request)    { syncHandler(w, r, "risiko") }
 func labyrinthHandler(w http.ResponseWriter, r *http.Request) { syncHandler(w, r, "labyrinth") }
 
 // syncHandler bedient beide Spiele: ?room=…&action=… (POST) bzw. GET.

@@ -395,6 +395,7 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.ZehnTausend != nil && room.ZehnTausend.Status != "finished" {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine 10.000-Runde.", http.StatusConflict)
@@ -410,14 +411,14 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		ztNeuerZug(g)
 		g.Players = append(g.Players, ztNewPlayer(input.ID, player.Name, 0))
-		g.Players = append(g.Players, ztNewPlayer(g.BotID, botName(1), 1))
+		g.Players = append(g.Players, ztNewPlayer(g.BotID, room.botName(1), 1))
 		g.Players[0].Ready = true
 		g.Players[1].Ready = true
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.ZehnTausend = g
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt 10.000 gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt 10.000 gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})

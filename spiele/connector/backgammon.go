@@ -399,20 +399,21 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 		game.Status = "declined"
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Backgammon != nil && !room.gameSlotFree(room.Backgammon.Status, room.Backgammon.RedID, room.Backgammon.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Backgammon-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Backgammon = bgNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Backgammon = bgNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Backgammon.Status = "active"
 		room.Backgammon.BotID = botID(1)
 		room.Backgammon.BotStufe = stufe
-		room.Backgammon.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Backgammon.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Backgammon gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Backgammon gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "roll", "move", "reset":

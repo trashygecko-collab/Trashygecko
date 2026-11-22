@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -61,7 +62,7 @@ func karteBauen() []int {
 		for i := range zahlen {
 			zahlen[i] = spalte*bingoSpalten + i + 1
 		}
-		rand.Shuffle(len(zahlen), func(i, j int) { zahlen[i], zahlen[j] = zahlen[j], zahlen[i] })
+		bingoZufall().Shuffle(len(zahlen), func(i, j int) { zahlen[i], zahlen[j] = zahlen[j], zahlen[i] })
 		for zeile := 0; zeile < 5; zeile++ {
 			karte[zeile*5+spalte] = zahlen[zeile]
 		}
@@ -160,7 +161,7 @@ func (g *BingoGame) bingoKarten() {
 	g.Gezogen = []int{}
 	g.Letzte = []string{}
 	g.Sieger = ""
-	g.Zug = rand.Intn(len(g.Spieler))
+	g.Zug = bingoZufall().Intn(len(g.Spieler))
 	g.Status = "spiel"
 	g.bingoAuffrischen()
 }
@@ -172,6 +173,22 @@ func (g *BingoGame) sitz(id string) int {
 		}
 	}
 	return -1
+}
+
+// bingoSaat stellt den Zufall der Karten und Züge auf einen festen Wert
+// (Tests). 0 heißt: echter Zufall.
+var bingoSaat atomic.Int64
+
+var bingoZaehler atomic.Int64
+
+// bingoZufall liefert den Zufall für Karten, Startspieler und Züge. Mit
+// gesetzter Saat entsteht je Aufruf dieselbe Folge – so sind Prüfläufe
+// wiederholbar.
+func bingoZufall() *rand.Rand {
+	if s := bingoSaat.Load(); s != 0 {
+		return rand.New(rand.NewSource(s + bingoZaehler.Add(1)))
+	}
+	return rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
 func bingoZahlText(zahl int) string {
@@ -202,7 +219,7 @@ func (g *BingoGame) bingoZiehen() (int, string) {
 	if len(offen) == 0 {
 		return 0, "Alle 75 Zahlen sind gezogen."
 	}
-	zahl := offen[rand.Intn(len(offen))]
+	zahl := offen[bingoZufall().Intn(len(offen))]
 	g.Gezogen = append(g.Gezogen, zahl)
 	g.Letzte = append(g.Letzte, bingoZahlText(zahl))
 	if len(g.Letzte) > 8 {

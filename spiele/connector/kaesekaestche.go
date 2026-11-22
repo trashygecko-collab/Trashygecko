@@ -36,6 +36,11 @@ type KaeseGame struct {
 	BotID     string    `json:"botId,omitempty"`
 	BotStufe  string    `json:"-"`
 	BotFrist  time.Time `json:"-"`
+	// BotZug ist eine fertig gerechnete Linie. BotRechnet zeigt auf die Partie,
+	// für die die Suche außerhalb der Sperre gerade läuft – „Neue Runde“ und ein
+	// neuer Bot-Start ersetzen die Partie, damit verfällt ihre Rechnung.
+	BotZug     *kaeseBotLinie `json:"-"`
+	BotRechnet *KaeseGame     `json:"-"`
 }
 
 func kaeseNewGame(hostID, hostName, guestID, guestName, id string) *KaeseGame {
@@ -124,6 +129,7 @@ func cloneKaese(g *KaeseGame) *KaeseGame {
 		return nil
 	}
 	c := *g
+	c.BotRechnet = nil // der Schnappschuss rechnet nicht selbst
 	c.H = append([]string(nil), g.H...)
 	c.V = append([]string(nil), g.V...)
 	c.Boxes = append([]string(nil), g.Boxes...)
@@ -152,10 +158,10 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		kaeseBotTreiben(room.Kaese, time.Now())
-		kaeseBotTreiben(room.Kaese, time.Now())
-		kaeseBotTreiben(room.Kaese, time.Now())
-		kaeseBotTreiben(room.Kaese, time.Now())
+		// Der erste Aufruf startet die Rechnung im Hintergrund, der zweite
+		// spielt die fertige Linie aus. Beides kehrt sofort zurück.
+		kaeseBotTreiben(room, time.Now())
+		kaeseBotTreiben(room, time.Now())
 		game := cloneKaese(room.Kaese)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -318,20 +324,21 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Kaese != nil && !room.gameSlotFree(room.Kaese.Status, room.Kaese.RedID, room.Kaese.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Käsekästchen-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Kaese = kaeseNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Kaese = kaeseNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Kaese.Status = "active"
 		room.Kaese.BotID = botID(1)
 		room.Kaese.BotStufe = stufe
-		room.Kaese.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Kaese.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Käsekästchen gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Käsekästchen gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":
@@ -341,15 +348,13 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Eine neue Runde ist erst nach Spielende möglich.", http.StatusConflict)
 			return
 		}
-		game.H = make([]string, (game.Rows+1)*game.Cols)
-		game.V = make([]string, game.Rows*(game.Cols+1))
-		game.Boxes = make([]string, game.Rows*game.Cols)
-		game.RedScore = 0
-		game.BlueScore = 0
-		game.Current = "red"
-		game.Winner = ""
-		game.Note = ""
-		game.Status = "active"
+		// Neue Partie statt Zurücksetzen an Ort und Stelle: Eine noch laufende
+		// Rechnung hängt an der alten Instanz und kann so nicht auf die neue
+		// Runde treffen.
+		frisch := kaeseNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
+		frisch.BotID, frisch.BotStufe = game.BotID, game.BotStufe
+		frisch.Status = "active"
+		room.Kaese = frisch
 
 	default:
 		mu.Unlock()

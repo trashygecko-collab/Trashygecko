@@ -60,6 +60,11 @@ type BostonGame struct {
 	Sieger      []string       `json:"sieger,omitempty"`
 	SiegerNamen []string       `json:"siegerNamen,omitempty"`
 	Note        string         `json:"note,omitempty"`
+	// Bot: Kennung, Stufe und die Zeit, zu der der Bot würfelt.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"bots,omitempty"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 func bostonNewPlayer(id, name string, seat int) BostonPlayer {
@@ -324,6 +329,7 @@ func bostonHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		bostonBotTreiben(room, time.Now())
 		sicht := bostonSicht(room.Boston)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": sicht})
@@ -338,6 +344,7 @@ func bostonHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID     string `json:"id"`
 		Runden int    `json:"runden"`
+		Stufe  string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -415,42 +422,84 @@ func bostonHandler(w http.ResponseWriter, r *http.Request) {
 			SenderID: input.ID,
 		})
 
-	case "ready":
-		game := room.Boston
-		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Bereit drücken geht nur, solange die Runde noch nicht läuft.")
+	case "bot":
+		room.botNamenNeu()
+		if room.Boston != nil && room.Boston.Status != "finished" {
+			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Boston-Runde.")
 			return
 		}
-		seat := bostonFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
+		stufe := botStufe(input.Stufe)
+		game := &BostonGame{
+			ID: randomCode(), HostID: input.ID, Status: "invited",
+			Runden: 3, Runde: 1,
+			BotID: botID(1), Bots: []string{botID(1)}, BotStufe: stufe,
+		}
+		game.Players = append(game.Players, bostonNewPlayer(input.ID, player.Name, 0))
+		game.Players = append(game.Players, bostonNewPlayer(botID(1), room.botName(1), 1))
+		for i := range game.Players {
+			game.Players[i].Ready = true
+		}
+		game.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.Boston = game
+		if status, meldung := bostonAktion(room, input.ID, "start"); meldung != "" {
+			fehler(status, meldung)
 			return
+		}
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Auf nach Boston gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
+	default:
+		if status, meldung := bostonAktion(room, input.ID, action); meldung != "" {
+			fehler(status, meldung)
+			return
+		}
+	}
+
+	room.LastActive = time.Now()
+	sicht := bostonSicht(room.Boston)
+	mu.Unlock()
+	jsonResponse(w, map[string]any{"game": sicht})
+}
+
+// bostonAktion führt einen Spielzug aus – für Menschen und Bots dieselbe
+// Prüfung. create und join bleiben im Handler, weil sie Meldungen in den Raum
+// schreiben; alles andere steht hier.
+func bostonAktion(room *Room, id, aktion string) (int, string) {
+	game := room.Boston
+	switch aktion {
+	case "ready":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Bereit drücken geht nur, solange die Runde noch nicht läuft."
+		}
+		seat := bostonFind(game, id)
+		if seat < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		game.Players[seat].Ready = !game.Players[seat].Ready
 		if game.Players[seat].Ready {
-			game.Note = player.Name + " ist bereit."
+			game.Note = game.Players[seat].Name + " ist bereit."
 		} else {
-			game.Note = player.Name + " wartet noch."
+			game.Note = game.Players[seat].Name + " wartet noch."
 		}
 
 	case "start":
-		game := room.Boston
 		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Es wartet keine Boston-Runde auf den Start.")
-			return
+			return http.StatusConflict, "Es wartet keine Boston-Runde auf den Start."
 		}
-		if game.HostID != input.ID {
-			fehler(http.StatusForbidden, "Nur der Gastgeber kann die Runde starten.")
-			return
+		if game.HostID != id {
+			return http.StatusForbidden, "Nur der Gastgeber kann die Runde starten."
 		}
 		if len(game.Players) < 2 {
-			fehler(http.StatusConflict, "Auf nach Boston braucht mindestens zwei Spieler am Tisch.")
-			return
+			return http.StatusConflict, "Auf nach Boston braucht mindestens zwei Spieler am Tisch."
 		}
 		for _, p := range game.Players {
 			if !p.Ready {
-				fehler(http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken.")
-				return
+				return http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken."
 			}
 		}
 		for i := range game.Players {
@@ -463,24 +512,19 @@ func bostonHandler(w http.ResponseWriter, r *http.Request) {
 		bostonRundeStarten(game)
 
 	case "roll":
-		game := room.Boston
 		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Boston-Runde.")
-			return
+			return http.StatusConflict, "Es läuft gerade keine aktive Boston-Runde."
 		}
-		seat := bostonFind(game, input.ID)
+		seat := bostonFind(game, id)
 		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		if seat != game.Current {
-			fehler(http.StatusConflict, "Du bist nicht dran – "+
-				game.Players[game.Current].Name+" würfelt gerade.")
-			return
+			return http.StatusConflict, "Du bist nicht dran – " +
+				game.Players[game.Current].Name + " würfelt gerade."
 		}
 		if game.Players[seat].Done {
-			fehler(http.StatusConflict, "Dein Zug in dieser Runde ist schon fertig.")
-			return
+			return http.StatusConflict, "Dein Zug in dieser Runde ist schon fertig."
 		}
 		bostonWurf(game, seat)
 		p := &game.Players[seat]
@@ -501,26 +545,20 @@ func bostonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "weiter":
-		game := room.Boston
 		if game == nil || game.Status != "runde" {
-			fehler(http.StatusConflict, "Die nächste Runde geht erst nach der Ergebnisübersicht.")
-			return
+			return http.StatusConflict, "Die nächste Runde geht erst nach der Ergebnisübersicht."
 		}
-		if bostonFind(game, input.ID) < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
+		if bostonFind(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		bostonWeiter(game)
 
 	case "reset":
-		game := room.Boston
 		if game == nil || game.Status != "finished" {
-			fehler(http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich.")
-			return
+			return http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich."
 		}
-		if bostonFind(game, input.ID) < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
+		if bostonFind(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		fresh := &BostonGame{ID: game.ID, HostID: game.HostID, Status: "invited", Runden: game.Runden, Runde: 1}
 		for i, p := range game.Players {
@@ -530,12 +568,7 @@ func bostonHandler(w http.ResponseWriter, r *http.Request) {
 		room.Boston = fresh
 
 	default:
-		fehler(http.StatusBadRequest, "Unbekannte Boston-Aktion.")
-		return
+		return http.StatusBadRequest, "Unbekannte Boston-Aktion."
 	}
-
-	room.LastActive = time.Now()
-	sicht := bostonSicht(room.Boston)
-	mu.Unlock()
-	jsonResponse(w, map[string]any{"game": sicht})
+	return 0, ""
 }

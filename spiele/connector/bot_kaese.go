@@ -28,9 +28,30 @@ func kaeseBotFarbe(g *KaeseGame) string {
 	return kaeseColorOf(g, g.BotID)
 }
 
-func kaeseBotTreiben(g *KaeseGame, jetzt time.Time) bool {
+// kaeseBotTreiben lässt den Bot ziehen, sobald die Denkpause vorbei ist. Der
+// Aufrufer hält die Sperre des Raums, deshalb rechnet diese Funktion nichts:
+// Die Suche dauert gemessen 2,6–11,5 ms je Zug und lief früher viermal je
+// Abruf. Sie läuft in einer eigenen Goroutine auf einem Schnappschuss und legt
+// die Linie in BotZug ab; der nächste Aufruf spielt sie aus.
+func kaeseBotTreiben(room *Room, jetzt time.Time) bool {
+	g := room.Kaese
+	if g == nil || g.Status != "active" {
+		return false
+	}
 	farbe := kaeseBotFarbe(g)
-	if farbe == "" || g.Status != "active" || g.Current != farbe {
+	if farbe == "" || g.Current != farbe {
+		return false
+	}
+	if g.BotZug != nil {
+		linie := *g.BotZug
+		g.BotZug = nil
+		if !kaeseBotZiehen(g, farbe, linie) {
+			g.BotFrist = jetzt.Add(time.Second)
+			return false
+		}
+		return true
+	}
+	if g.BotRechnet == g {
 		return false
 	}
 	if g.BotFrist.IsZero() {
@@ -40,12 +61,35 @@ func kaeseBotTreiben(g *KaeseGame, jetzt time.Time) bool {
 	if jetzt.Before(g.BotFrist) {
 		return false
 	}
+
 	g.BotFrist = time.Time{}
-	linie, ok := kaeseBotWahl(g, farbe, g.BotStufe)
+	g.BotRechnet = g
+	schnappschuss := cloneKaese(g)
+	stufe := g.BotStufe
+	go func() {
+		linie, ok := kaeseBotWahl(schnappschuss, farbe, stufe)
+		mu.Lock()
+		defer mu.Unlock()
+		kaeseBotErgebnis(room, g, linie, ok)
+	}()
+	return false
+}
+
+// kaeseBotErgebnis übernimmt eine fertig gerechnete Linie. quelle ist die
+// Partie, für die gerechnet wurde: Wurde sie inzwischen ersetzt (neue Runde
+// oder neuer Bot-Start), verfällt das Ergebnis, ohne die neue Partie
+// anzufassen – insbesondere bleibt deren Rechen-Zustand stehen. Der Aufrufer
+// hält die Sperre.
+func kaeseBotErgebnis(room *Room, quelle *KaeseGame, linie kaeseBotLinie, ok bool) bool {
+	if quelle == nil || room.Kaese != quelle {
+		return false
+	}
+	quelle.BotRechnet = nil
 	if !ok {
 		return false
 	}
-	return kaeseBotZiehen(g, farbe, linie)
+	quelle.BotZug = &linie
+	return true
 }
 
 func kaeseBotLinien(g *KaeseGame) []kaeseBotLinie {

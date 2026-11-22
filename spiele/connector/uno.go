@@ -645,6 +645,7 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Uno != nil {
 			slot := room.Uno.Status
@@ -657,11 +658,11 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		g := unoNewGame(input.ID, player.Name, randomCode())
-		g.Players = append(g.Players, &UnoPlayer{ID: botID(1), Name: botName(1), Ready: true})
+		g.Players = append(g.Players, &UnoPlayer{ID: botID(1), Name: room.botName(1), Ready: true})
 		g.Players[0].Ready = true
 		g.BotID, g.BotStufe = botID(1), stufe
 		unoDeal(g)
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Uno = g
 	case "create":
 		if game != nil && game.Status != "finished" {

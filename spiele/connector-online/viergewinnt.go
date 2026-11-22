@@ -253,6 +253,7 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.VierGewinnt != nil && !room.gameSlotFree(room.VierGewinnt.Status, room.VierGewinnt.RedID, room.VierGewinnt.BlueID) {
 			mu.Unlock()
@@ -261,13 +262,13 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.VierGewinnt = &VierGewinntGame{
 			ID: randomCode(), RedID: input.ID, RedName: player.Name,
-			BlueID: botID(1), BlueName: botName(1),
+			BlueID: botID(1), BlueName: room.botName(1),
 			Grid: newVierGewinntGrid(), Current: "red", Status: "active",
 			BotID: botID(1), BotStufe: stufe,
 		}
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})

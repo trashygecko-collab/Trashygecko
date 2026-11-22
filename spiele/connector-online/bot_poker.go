@@ -165,6 +165,12 @@ func pokerBotErhoehe(g *PokerGame, sitz, zuschlag int) (string, int) {
 		}
 		return "check", 0
 	}
+	if ziel == p.Einsatz+p.Chips {
+		// Die ganzen Chips sind selten ein Vielfaches von 10 Cent. Als
+		// Erhöhung würde der Betrag abgerundet und läge dann unter dem
+		// Mindestbetrag – der Tisch stünde. All-in geht ohne Rundung.
+		return "allin", 0
+	}
 	return "raise", ziel
 }
 

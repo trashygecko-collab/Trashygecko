@@ -36,23 +36,28 @@ type chessMove struct {
 }
 
 type ChessGame struct {
-	ID         string         `json:"id"`
-	RedID      string         `json:"redId"`
-	RedName    string         `json:"redName"`
-	BlueID     string         `json:"blueId"`
-	BlueName   string         `json:"blueName"`
-	State      chessState     `json:"state"`
-	Moves      []string       `json:"moves"`
-	CapturedW  []chessPiece   `json:"capturedW"`
-	CapturedB  []chessPiece   `json:"capturedB"`
-	LastFrom   *chessPos      `json:"lastFrom"`
-	LastTo     *chessPos      `json:"lastTo"`
-	Status     string         `json:"status"` // invited, active, finished
-	Winner     string         `json:"winner,omitempty"`
-	Note       string         `json:"note,omitempty"`
-	BotID      string         `json:"botId,omitempty"`
-	BotStufe   string         `json:"-"`
-	BotFrist   time.Time      `json:"-"`
+	ID        string       `json:"id"`
+	RedID     string       `json:"redId"`
+	RedName   string       `json:"redName"`
+	BlueID    string       `json:"blueId"`
+	BlueName  string       `json:"blueName"`
+	State     chessState   `json:"state"`
+	Moves     []string     `json:"moves"`
+	CapturedW []chessPiece `json:"capturedW"`
+	CapturedB []chessPiece `json:"capturedB"`
+	LastFrom  *chessPos    `json:"lastFrom"`
+	LastTo    *chessPos    `json:"lastTo"`
+	Status    string       `json:"status"` // invited, active, finished
+	Winner    string       `json:"winner,omitempty"`
+	Note      string       `json:"note,omitempty"`
+	BotID     string       `json:"botId,omitempty"`
+	BotStufe  string       `json:"-"`
+	BotFrist  time.Time    `json:"-"`
+	// BotZug ist ein fertig gerechneter Zug. BotRechnet zeigt auf die Partie,
+	// für die die Suche außerhalb der Sperre gerade läuft – eine neue Partie
+	// ersetzt die alte, damit gehört ihre Rechnung nicht zur neuen.
+	BotZug     *chessMove     `json:"-"`
+	BotRechnet *ChessGame     `json:"-"`
 	Ruhe       int            `json:"-"`
 	Stellungen map[string]int `json:"-"`
 }
@@ -540,6 +545,7 @@ func chessClone(g *ChessGame) *ChessGame {
 		return nil
 	}
 	c := *g
+	c.BotRechnet = nil // der Schnappschuss rechnet nicht selbst
 	c.State = chessCloneState(g.State)
 	c.Moves = append([]string(nil), g.Moves...)
 	c.CapturedW = append([]chessPiece(nil), g.CapturedW...)
@@ -586,9 +592,9 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		chessBotTreiben(room.Schach, time.Now())
-		chessBotTreiben(room.Schach, time.Now())
-		chessBotTreiben(room.Schach, time.Now())
+		chessBotTreiben(room, time.Now())
+		chessBotTreiben(room, time.Now())
+		chessBotTreiben(room, time.Now())
 		game := chessClone(room.Schach)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -791,20 +797,21 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Schach != nil && !room.gameSlotFree(room.Schach.Status, room.Schach.RedID, room.Schach.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Schach-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Schach = chessNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Schach = chessNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Schach.Status = "active"
 		room.Schach.BotID = botID(1)
 		room.Schach.BotStufe = stufe
-		room.Schach.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Schach.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Schach gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Schach gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

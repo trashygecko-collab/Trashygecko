@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,7 +17,7 @@ import (
    dieselbe Prüfung wie ein Mensch – schummeln kann er also nicht.
 
    Was hier steht, gilt für alle Spiele:
-     · Namen und Avatare (botName),
+     · Namen (botName: zufällig je Partie, ohne Dopplung),
      · die drei Stufen (botStufe, botStufeText),
      · die Denkpause (botWartezeit): kurz, aber nicht hektisch,
      · die Kennung (botID).
@@ -33,17 +34,23 @@ const (
 	botSchwer = "schwer"
 )
 
-// botNamen sind die erkennbaren Namen. Der Avatar steht davor, damit ein Bot
-// auch in einer Namensliste sofort auffällt.
-var botNamen = []string{
-	"🤖 Robi",
-	"🤖 Nova",
-	"🤖 Pixel",
-	"🤖 Tessa",
-	"🤖 Kalle",
-	"🤖 Mira",
-	"🤖 Bolt",
-	"🤖 Fips",
+// botSpitznamen sind die Namen, aus denen jeder Computergegner seinen
+// bekommt. Die Liste ist die einzige Quelle – ein neues Spiel erbt die
+// Vergabe ohne Zusatzarbeit, weil jeder Bot seinen Namen über botName holt.
+var botSpitznamen = []string{
+	"Klappstuhl", "Denkpause", "Toastbrot", "BinGleichWeg", "WarIchNicht",
+	"KeinPlan", "FastWach", "Huch", "Gießkanne", "GuckNurZu",
+	"Blumentopf", "BisschenMüde", "Büroklammer", "SendHelp", "Oopsie",
+	"Kunibert", "Rüdiger", "Gottfried", "Detlef", "Waltraud",
+	"Brunhilde", "Kunigunde", "Gertrud", "Pumpernickel", "Bimmel",
+	"Schimmelpfennig", "Krawinkel", "Mumpitz", "Kevin", "Chantal",
+	"Jacqueline", "Bärbel", "Horst", "Karlheinz", "Herbert",
+	"Dieter", "Willi", "Hannelore", "Anneliese", "Ingeborg",
+	"Brigitte", "Hanspeter", "Klausdieter", "Annegret", "Lieselotte",
+	"Sepp", "Schorsch", "Vroni", "Resi", "Zensi",
+	"Traudl", "Frauke", "Poppo", "Busenwunder", "Kurvenwunder",
+	"Schürzenjäger", "Lustmolch", "Fummel-Vroni", "Nippel-Norbert", "Betthupferl",
+	"Pralle-Resi", "Sitzpinkler", "Pantoffelheld", "Schmuddelkind", "Lustknabe",
 }
 
 // botStufe prüft die gewünschte Stufe. Unbekanntes heißt „mittel“ – so spielt
@@ -69,12 +76,63 @@ func botStufeText(stufe string) string {
 	return "mittel"
 }
 
-// botName liefert den Namen für den n-ten Bot eines Tisches (ab 1).
-func botName(n int) string {
+// botName liefert den Namen des n-ten Bots einer Partie (ab 1).
+//
+// Der Name wird beim ersten Aufruf ausgelost und liegt danach am Raum: ein
+// Neuladen, eine Wiederverbindung oder ein späterer Zug ändert ihn nicht
+// mehr. Vor einer neuen Partie ruft „action=bot“ botNamenNeu – dann werden
+// alle Namen frisch ausgelost. Innerhalb einer Partie kommt kein Name doppelt
+// vor, und kein Bot bekommt den Namen eines Menschen, der im Raum sitzt.
+func (r *Room) botName(n int) string {
 	if n < 1 {
 		n = 1
 	}
-	return botNamen[(n-1)%len(botNamen)]
+	if r == nil {
+		return botSpitznamen[n-1]
+	}
+	if r.botNamen == nil {
+		r.botNamen = make(map[string]string, 4)
+	}
+	schluessel := strconv.Itoa(n)
+	if name, da := r.botNamen[schluessel]; da {
+		return name
+	}
+	name := r.botNameAuslosen()
+	r.botNamen[schluessel] = name
+	return name
+}
+
+// botNamenNeu verwirft die Namen der letzten Partie. Jede neue Partie würfelt
+// damit frisch, während eine laufende ihre Namen behält.
+func (r *Room) botNamenNeu() {
+	if r == nil {
+		return
+	}
+	r.botNamen = make(map[string]string, 4)
+}
+
+// botNameAuslosen zieht einen Namen, der in dieser Partie noch frei ist und
+// den kein Mensch im Raum trägt. Jeder freie Name hat dieselbe Chance.
+func (r *Room) botNameAuslosen() string {
+	belegt := make(map[string]bool, len(r.botNamen)+len(r.Players))
+	for _, name := range r.botNamen {
+		belegt[name] = true
+	}
+	for _, p := range r.Players {
+		belegt[p.Name] = true
+	}
+	frei := make([]string, 0, len(botSpitznamen))
+	for _, name := range botSpitznamen {
+		if !belegt[name] {
+			frei = append(frei, name)
+		}
+	}
+	if len(frei) == 0 {
+		frei = botSpitznamen
+	}
+	// rand.Intn teilt sich einen Zufall, der beim Start gesät wird – zwei
+	// Namen kurz hintereinander sind damit wirklich unabhängig.
+	return frei[rand.Intn(len(frei))]
 }
 
 // botID ist die Kennung des n-ten Bots. Sie steht fest, damit Züge und
@@ -101,7 +159,17 @@ func botWartezeit(stufe string) time.Duration {
 }
 
 // botZufall ist der Zufall eines Bot-Zuges (Streuung bei gleichen Zügen).
+// botSaat stellt den Bot-Zufall auf einen festen Wert (Tests). 0 heißt:
+// echter Zufall. Der Zähler sorgt dafür, dass jeder Aufruf eine neue Zahl
+// aus derselben festen Folge bekommt.
+var botSaat atomic.Int64
+
+var botZaehler atomic.Int64
+
 func botZufall() *rand.Rand {
+	if s := botSaat.Load(); s != 0 {
+		return rand.New(rand.NewSource(s + botZaehler.Add(1)))
+	}
 	return rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 

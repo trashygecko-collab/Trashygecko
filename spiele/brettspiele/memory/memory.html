@@ -231,6 +231,7 @@ body[data-stil="buben"] .karte .hinten{color:rgba(255,138,144,.85)}
  </details>
 </main>
 
+<script src="/spiele/token.js"></script>
 <script>
 (() => {
 const $=id=>document.getElementById(id);
@@ -426,6 +427,113 @@ function stilAnwenden(){
 }
 stilAnwenden();
 TGStil.beiWechsel(stilAnwenden);
+
+// ---------------------------------------------------------------- Online
+// Aufruf aus dem Connector: ?room=…&id=… – dann führt der Server das Brett,
+// die Seite zeigt nur an und schickt Klicks zurück. Der Bot zieht über die
+// GET-Abfrage (gleiche Adresse), deshalb wird fleißig nachgefragt.
+
+const PARAMS=new URLSearchParams(location.search);
+const RAUM=PARAMS.get("room"), ICH=PARAMS.get("id");
+
+function onlineModus(raum,ich){
+ const basis="/api/memory?room="+encodeURIComponent(raum);
+ let stand=null,laeuft=false,nachfrage=null;
+ const soloButtons=["btnKlein","btnMittel","btnGross"];
+ soloButtons.forEach(id=>{ const b=$(id); if(b)b.hidden=true; });
+ const neu=$("btnNeu"); if(neu)neu.hidden=true;
+
+ async function holen(){
+  if(laeuft)return;
+  laeuft=true;
+  try{
+   const r=await fetch(basis+"&id="+encodeURIComponent(ich));
+   if(r.ok)zeigen((await r.json()).game);
+  }catch(e){}
+  laeuft=false;
+ }
+
+ async function aktion(name,daten={}){
+  try{
+   const r=await fetch(basis+"&action="+encodeURIComponent(name),{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:ich,...daten})
+   });
+   if(r.ok){ zeigen((await r.json()).game); }
+   else{ $("hinweis").textContent=(await r.text()).trim()||"Das ging nicht."; }
+  }catch(e){ $("hinweis").textContent="Verbindung verloren."; }
+ }
+
+ function zeigen(g){
+  if(!g)return;
+  stand=g;
+  const meinSitz=g.ich===g.redId?0:1;
+  const gegner=meinSitz===0?g.blueName:g.redName;
+  const ichName=meinSitz===0?g.redName:g.blueName;
+
+  $("zuege").textContent=g.zuege[meinSitz];
+  $("paare").textContent=g.punkte[meinSitz]+" : "+g.punkte[1-meinSitz];
+  $("zeit").textContent=g.status==="finished"?"–":(g.turn==="red"&&meinSitz===0||g.turn==="blue"&&meinSitz===1?"du":"Bot");
+  $("best").textContent="–";
+
+  const brett=$("brett");
+  brett.style.gridTemplateColumns="repeat("+(g.pairs<=6?4:4)+",1fr)";
+  const karten=g.karten;
+  if(brett.children.length!==karten.length){
+   brett.innerHTML="";
+   karten.forEach((k,i)=>{
+    const el=document.createElement("button");
+    el.type="button";
+    el.className="karte";
+    el.dataset.feld=i;
+    el.innerHTML='<span class="innen"><span class="seite hinten">◆</span>'+
+     '<span class="seite vorn"></span></span>';
+    el.addEventListener("click",()=>{
+     if(!stand||stand.status!=="active")return;
+     if(stand.turn!==(stand.ich===stand.redId?"red":"blue"))return;
+     const feld=Number(el.dataset.feld);
+     const kk=stand.karten[feld];
+     if(kk.besitzer>=0||kk.offen)return;
+     aktion("flip",{feld});
+    });
+    brett.appendChild(el);
+   });
+  }
+  karten.forEach((k,i)=>{
+   const el=brett.children[i];
+   const vorn=el.querySelector(".vorn");
+   if(k.wert===undefined){ vorn.textContent=""; el.classList.remove("offen","gefunden"); el.disabled=false; return; }
+   vorn.textContent=SYMBOLE[k.wert%SYMBOLE.length];
+   vorn.style.color=FARBEN[k.wert%FARBEN.length];
+   el.classList.toggle("offen",k.offen||k.besitzer>=0);
+   el.classList.toggle("gefunden",k.besitzer>=0);
+   el.disabled=k.besitzer>=0;
+   el.style.outline=k.besitzer<0?"":"2px solid "+(k.besitzer===meinSitz?"#e8cd8e":"#5b9dff");
+   el.style.outlineOffset=k.besitzer<0?"":"-2px";
+  });
+
+  $("hinweis").textContent=g.note||(g.turn===(g.ich===g.redId?"red":"blue")?"Du bist dran.":gegner+" ist dran.");
+
+  if(g.status==="finished"){
+   $("meldungTitel").textContent=g.winner==="draw"?"Unentschieden":
+     (g.winner===(g.ich===g.redId?"red":"blue")?"Gewonnen":"Verloren");
+   $("meldungText").textContent=ichName+" "+g.punkte[meinSitz]+" : "+g.punkte[1-meinSitz]+" "+gegner;
+   $("meldungKnopf").textContent="Nochmal";
+   $("meldungKnopf").onclick=()=>{ aktion("reset"); $("meldung").hidden=true; };
+   $("meldung").hidden=false;
+  }else{
+   $("meldung").hidden=true;
+  }
+ }
+
+ nachfrage=setInterval(holen,700);
+ holen();
+}
+
+if(RAUM&&ICH){
+ onlineModus(RAUM,ICH);
+ return;
+}
 
 neuesSpiel();
 

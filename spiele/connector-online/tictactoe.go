@@ -177,6 +177,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.TicTacToe != nil && !room.gameSlotFree(room.TicTacToe.Status, room.TicTacToe.XID, room.TicTacToe.OID) {
 			mu.Unlock()
@@ -185,13 +186,13 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.TicTacToe = &TicTacToeGame{
 			ID: randomCode(), XID: input.ID, XName: player.Name,
-			OID: botID(1), OName: botName(1),
+			OID: botID(1), OName: room.botName(1),
 			Board: make([]string, 9), Current: "X", Status: "active",
 			BotID: botID(1), BotStufe: stufe,
 		}
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})

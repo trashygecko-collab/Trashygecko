@@ -243,19 +243,20 @@ func streichholzHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Streichholz != nil && !room.gameSlotFree(room.Streichholz.Status, room.Streichholz.RedID, room.Streichholz.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Streichholz-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Streichholz = streichholzNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Streichholz = streichholzNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Streichholz.Status = "active"
 		room.Streichholz.BotID = botID(1)
 		room.Streichholz.BotStufe = stufe
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})

@@ -592,17 +592,18 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.MauMau != nil && !room.gameSlotFree(room.MauMau.Status, maumauIDs(room.MauMau)...) {
 			fail("In diesem Spielraum läuft bereits eine Mau-Mau-Runde.", http.StatusConflict)
 			return
 		}
 		g := maumauNewGame(input.ID, player.Name, randomCode())
-		g.Players = append(g.Players, &MauPlayer{ID: botID(1), Name: botName(1), Ready: true})
+		g.Players = append(g.Players, &MauPlayer{ID: botID(1), Name: room.botName(1), Ready: true})
 		g.Players[0].Ready = true
 		g.BotID, g.BotStufe = botID(1), stufe
 		maumauDeal(g)
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.MauMau = g
 	case "create":
 		if game != nil && game.Status != "finished" {

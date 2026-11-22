@@ -44,24 +44,29 @@ func init() {
 }
 
 type MuehleGame struct {
-	ID             string         `json:"id"`
-	RedID          string         `json:"redId"`
-	RedName        string         `json:"redName"`
-	BlueID         string         `json:"blueId"`
-	BlueName       string         `json:"blueName"`
-	State          []string       `json:"state"` // 24 Felder: "", "red" oder "blue"
-	Current        string         `json:"current"`
-	PlacedRed      int            `json:"placedRed"`
-	PlacedBlue     int            `json:"placedBlue"`
-	Phase          string         `json:"phase"` // placing, moving
-	CapturePending bool           `json:"capturePending"`
-	Status         string         `json:"status"` // invited, active, finished
-	Winner         string         `json:"winner,omitempty"`
-	Note           string         `json:"note,omitempty"`
-	BotID          string         `json:"botId,omitempty"`
-	BotStufe       string         `json:"-"`
-	BotFrist       time.Time      `json:"-"`
-	Stellungen     map[string]int `json:"-"`
+	ID             string    `json:"id"`
+	RedID          string    `json:"redId"`
+	RedName        string    `json:"redName"`
+	BlueID         string    `json:"blueId"`
+	BlueName       string    `json:"blueName"`
+	State          []string  `json:"state"` // 24 Felder: "", "red" oder "blue"
+	Current        string    `json:"current"`
+	PlacedRed      int       `json:"placedRed"`
+	PlacedBlue     int       `json:"placedBlue"`
+	Phase          string    `json:"phase"` // placing, moving
+	CapturePending bool      `json:"capturePending"`
+	Status         string    `json:"status"` // invited, active, finished
+	Winner         string    `json:"winner,omitempty"`
+	Note           string    `json:"note,omitempty"`
+	BotID          string    `json:"botId,omitempty"`
+	BotStufe       string    `json:"-"`
+	BotFrist       time.Time `json:"-"`
+	// BotZug ist eine fertig gerechnete Aktion. BotRechnet zeigt auf die
+	// Partie, für die die Suche außerhalb der Sperre gerade läuft – eine neue
+	// Partie ersetzt die alte, damit gehört ihre Rechnung nicht zur neuen.
+	BotZug     *muehleBotAktion `json:"-"`
+	BotRechnet *MuehleGame      `json:"-"`
+	Stellungen map[string]int   `json:"-"`
 }
 
 func muehleNewGame(hostID, hostName, guestID, guestName, id string) *MuehleGame {
@@ -107,6 +112,7 @@ func cloneMuehle(g *MuehleGame) *MuehleGame {
 		return nil
 	}
 	c := *g
+	c.BotRechnet = nil // der Schnappschuss rechnet nicht selbst
 	c.State = append([]string(nil), g.State...)
 	if g.Stellungen != nil {
 		c.Stellungen = make(map[string]int, len(g.Stellungen))
@@ -259,7 +265,7 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		muehleBotTreiben(room.Muehle, time.Now())
+		muehleBotTreiben(room, time.Now())
 		game := cloneMuehle(room.Muehle)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -479,20 +485,21 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Muehle != nil && !room.gameSlotFree(room.Muehle.Status, room.Muehle.RedID, room.Muehle.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Mühle-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Muehle = muehleNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Muehle = muehleNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Muehle.Status = "active"
 		room.Muehle.BotID = botID(1)
 		room.Muehle.BotStufe = stufe
-		room.Muehle.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Muehle.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Mühle gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Mühle gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

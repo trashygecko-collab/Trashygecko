@@ -350,18 +350,19 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.Galgen != nil && !room.gameSlotFree(room.Galgen.Status, galgenIDs(room.Galgen)...) {
 			fail("In diesem Spielraum läuft bereits eine Galgenmännchen-Runde.", http.StatusConflict)
 			return
 		}
 		g := galgenNeuesSpiel(input.ID, player.Name, input.Variante, randomCode())
-		g.Spieler = append(g.Spieler, GalgenSpieler{ID: botID(1), Name: botName(1), Ready: true})
+		g.Spieler = append(g.Spieler, GalgenSpieler{ID: botID(1), Name: room.botName(1), Ready: true})
 		g.Spieler[0].Ready = true
 		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
 		g.Status = "spiel"
 		g.Runde = 1
 		g.galgenWaehlen()
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(g.BotStufe) + "). " + g.Note
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(g.BotStufe) + "). " + g.Note
 		room.Galgen = g
 	case "create":
 		if room.Galgen != nil && !room.gameSlotFree(room.Galgen.Status, galgenIDs(room.Galgen)...) {

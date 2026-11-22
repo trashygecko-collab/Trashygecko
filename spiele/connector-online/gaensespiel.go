@@ -296,6 +296,7 @@ func gaenseHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Gaense != nil {
 			slot := room.Gaense.Status
@@ -308,12 +309,12 @@ func gaenseHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		g := gaenseNeuesSpiel(input.ID, player.Name, randomCode())
-		g.Spieler = append(g.Spieler, GaenseSpieler{ID: botID(1), Name: botName(1), Farbe: 1, Ready: true})
+		g.Spieler = append(g.Spieler, GaenseSpieler{ID: botID(1), Name: room.botName(1), Farbe: 1, Ready: true})
 		g.Spieler[0].Ready = true
 		g.Runde = 1
 		g.gaenseRunde()
 		g.BotID, g.BotStufe = botID(1), stufe
-		g.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Gaense = g
 
 	case "create":

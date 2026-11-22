@@ -678,18 +678,19 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Schwimmen != nil && !room.gameSlotFree(room.Schwimmen.Status, schwimmIDs(room.Schwimmen)...) {
 			fail("In diesem Spielraum läuft bereits eine Runde 31.", http.StatusConflict)
 			return
 		}
 		g := schwimmNewGame(input.ID, player.Name, randomCode())
-		g.Players = append(g.Players, &SchwimmPlayer{ID: botID(1), Name: botName(1), Lives: schwimmLives, Ready: true})
+		g.Players = append(g.Players, &SchwimmPlayer{ID: botID(1), Name: room.botName(1), Lives: schwimmLives, Ready: true})
 		g.Players[0].Ready = true
 		g.BotID, g.BotStufe = botID(1), stufe
 		g.Current = 0
 		schwimmDeal(g)
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Schwimmen = g
 	case "create":
 		if game != nil && game.Status != "finished" {

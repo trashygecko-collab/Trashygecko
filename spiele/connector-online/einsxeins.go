@@ -47,6 +47,11 @@ type RechenGame struct {
 	StartedAt time.Time
 	Winner    string
 	Note      string
+
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"bots,omitempty"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 // --- Aufgaben erzeugen (gleiche Grenzen wie auf der Spielseite) -------------
@@ -676,6 +681,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		rechenBotTreiben(room, time.Now())
 		var view *RechenView
 		if room.Rechen != nil {
 			v := room.Rechen.viewFor(id)
@@ -697,6 +703,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		Level int    `json:"level"`
 		Index int    `json:"index"`
 		Value *int   `json:"value"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -743,6 +750,43 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 	game := room.Rechen
 
 	switch action {
+	case "bot":
+		room.botNamenNeu()
+		if game != nil && game.Status != "finished" {
+			fail("In diesem Spielraum läuft schon ein 1×1-Rennen.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		mode := "arithmetic"
+		if rechenModeGueltig(input.Mode) {
+			mode = input.Mode
+		}
+		level := rechenLevelNormal(mode, input.Level)
+		if input.Level == 0 {
+			level = rechenLevelNormal(mode, 2)
+		}
+		g := rechenNewGame(input.ID, player.Name)
+		g.Mode, g.Level = mode, level
+		g.BotID, g.Bots, g.BotStufe = botID(1), []string{botID(1)}, stufe
+		g.Players = append(g.Players, &RechenPlayer{ID: botID(1), Name: room.botName(1), Ready: true})
+		for _, p := range g.Players {
+			p.Ready = true
+		}
+		g.Note = player.Name + " spielt 1×1-Rennen gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.Rechen = g
+		if status, meldung := rechenStart(room, g, input.ID); meldung != "" {
+			fail(meldung, status)
+			return
+		}
+		g.BotFrist = time.Now().Add(rechenBotDenkzeit(stufe))
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt 1×1-Rennen gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if game != nil && game.Status != "finished" {
 			fail("In diesem Spielraum läuft schon ein 1×1-Rennen.", http.StatusConflict)
@@ -815,98 +859,27 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		game.Level = rechenLevelNormal(game.Mode, input.Level)
 
 	case "start":
-		if game == nil || game.Status != "invited" {
-			fail("Es wartet keine Runde auf den Start.", http.StatusConflict)
+		if status, meldung := rechenStart(room, game, input.ID); meldung != "" {
+			fail(meldung, status)
 			return
 		}
-		if game.HostID != input.ID {
-			fail("Nur der Gastgeber kann das Rennen starten.", http.StatusForbidden)
-			return
-		}
-		if len(game.Players) < rechenMinPlayers {
-			fail("Für ein Rennen braucht es mindestens zwei Spieler.", http.StatusConflict)
-			return
-		}
-		for _, p := range game.Players {
-			if !p.Ready {
-				fail("Erst müssen alle Spieler BEREIT drücken.", http.StatusConflict)
-				return
-			}
-		}
-		game.Round++
-		game.Tasks = rechenNewTasks(game.Mode, game.Level)
-		game.StartedAt = time.Now()
-		game.Status = "active"
-		game.Winner = ""
-		for _, p := range game.Players {
-			p.Index, p.Correct, p.Done, p.Finished = 0, 0, false, time.Time{}
-		}
-		game.Note = fmt.Sprintf("Los! Alle haben dieselben %d Aufgaben.", len(game.Tasks))
-		room.addMessage(Message{
-			Name:     player.Name,
-			Text:     "startet das 1×1-Rennen – " + rechenModeName(game.Mode) + " · " + rechenLevelName(game.Mode, game.Level) + ".",
-			Time:     time.Now().Format("15:04:05"),
-			SenderID: input.ID,
-		})
 
 	case "answer":
-		if game == nil || game.Status != "active" {
-			fail("Es läuft gerade kein Rennen.", http.StatusConflict)
-			return
-		}
-		seat := rechenSeat(game, input.ID)
-		if seat < 0 {
-			fail("Du bist bei diesem Rennen nicht dabei.", http.StatusForbidden)
-			return
-		}
-		me := game.Players[seat]
-		if me.Done {
-			fail("Du bist schon durch mit allen Aufgaben.", http.StatusConflict)
-			return
-		}
 		if input.Value == nil {
 			fail("Es fehlt eine Antwort.", http.StatusBadRequest)
 			return
 		}
-		if input.Index != me.Index {
-			fail("Diese Aufgabe ist schon beantwortet.", http.StatusConflict)
+		zug := rechenAntwort(room, game, input.ID, input.Index, *input.Value)
+		if zug.Meldung != "" {
+			fail(zug.Meldung, zug.Status)
 			return
 		}
-		task := game.Tasks[me.Index]
-		richtig := *input.Value == task.Answer
-		if richtig {
-			me.Correct++
-		}
-		me.Index++
-		if me.Index >= len(game.Tasks) {
-			me.Done = true
-			me.Finished = time.Now()
-		}
-
-		alleFertig := true
-		for _, p := range game.Players {
-			if !p.Done {
-				alleFertig = false
-				break
-			}
-		}
-		if alleFertig {
-			game.Status = "finished"
-			best := game.ranking()[0]
-			game.Winner = best.Name
-			game.Note = best.Name + " gewinnt."
-			room.addMessage(Message{
-				Text:   "1×1-Rennen beendet – " + best.Name + " gewinnt.",
-				System: true,
-			})
-		}
-
 		mu.Unlock()
 		jsonResponse(w, map[string]any{
 			"game":    game.viewFor(input.ID),
-			"correct": richtig,
-			"answer":  task.Answer,
-			"rule":    task.Rule,
+			"correct": zug.Richtig,
+			"answer":  zug.Answer,
+			"rule":    zug.Rule,
 		})
 		return
 
@@ -982,4 +955,106 @@ func rechenRemoveSeat(g *RechenGame, id, name string) (bool, bool, int) {
 		}
 	}
 	return true, false, len(g.Players)
+}
+
+/* ---------------------------------------------------------------------------
+   Gemeinsame Prüfung für Menschen und Bots
+   ------------------------------------------------------------------------- */
+
+// rechenZug ist das Ergebnis einer Antwort (auch die Rückmeldung der Route).
+type rechenZug struct {
+	Richtig bool
+	Status  int
+	Meldung string
+	Answer  int
+	Rule    string
+}
+
+// rechenStart startet ein Rennen – dieselbe Prüfung für Gastgeber und Bot.
+func rechenStart(room *Room, game *RechenGame, id string) (int, string) {
+	if game == nil || game.Status != "invited" {
+		return http.StatusConflict, "Es wartet keine Runde auf den Start."
+	}
+	if game.HostID != id {
+		return http.StatusForbidden, "Nur der Gastgeber kann das Rennen starten."
+	}
+	if len(game.Players) < rechenMinPlayers {
+		return http.StatusConflict, "Für ein Rennen braucht es mindestens zwei Spieler."
+	}
+	for _, p := range game.Players {
+		if !p.Ready {
+			return http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken."
+		}
+	}
+	game.Round++
+	game.Tasks = rechenNewTasks(game.Mode, game.Level)
+	game.StartedAt = time.Now()
+	game.Status = "active"
+	game.Winner = ""
+	for _, p := range game.Players {
+		p.Index, p.Correct, p.Done, p.Finished = 0, 0, false, time.Time{}
+	}
+	game.Note = fmt.Sprintf("Los! Alle haben dieselben %d Aufgaben.", len(game.Tasks))
+
+	name := id
+	if seat := rechenSeat(game, id); seat >= 0 {
+		name = game.Players[seat].Name
+	}
+	room.addMessage(Message{
+		Name:     name,
+		Text:     "startet das 1×1-Rennen – " + rechenModeName(game.Mode) + " · " + rechenLevelName(game.Mode, game.Level) + ".",
+		Time:     time.Now().Format("15:04:05"),
+		SenderID: id,
+	})
+	return 0, ""
+}
+
+// rechenAntwort nimmt eine Antwort an. Die Prüfung ist für Menschen und Bots
+// dieselbe: es zählt nur die aktuelle Aufgabe, und nur der Index des Spielers.
+func rechenAntwort(room *Room, game *RechenGame, id string, index, wert int) rechenZug {
+	if game == nil || game.Status != "active" {
+		return rechenZug{Status: http.StatusConflict, Meldung: "Es läuft gerade kein Rennen."}
+	}
+	seat := rechenSeat(game, id)
+	if seat < 0 {
+		return rechenZug{Status: http.StatusForbidden, Meldung: "Du bist bei diesem Rennen nicht dabei."}
+	}
+	me := game.Players[seat]
+	if me.Done {
+		return rechenZug{Status: http.StatusConflict, Meldung: "Du bist schon durch mit allen Aufgaben."}
+	}
+	if index != me.Index {
+		return rechenZug{Status: http.StatusConflict, Meldung: "Diese Aufgabe ist schon beantwortet."}
+	}
+
+	task := game.Tasks[me.Index]
+	richtig := wert == task.Answer
+	if richtig {
+		me.Correct++
+	}
+	me.Index++
+	if me.Index >= len(game.Tasks) {
+		me.Done = true
+		me.Finished = time.Now()
+	}
+
+	alleFertig := true
+	for _, p := range game.Players {
+		if !p.Done {
+			alleFertig = false
+			break
+		}
+	}
+	if alleFertig {
+		game.Status = "finished"
+		best := game.ranking()[0]
+		game.Winner = best.Name
+		game.Note = best.Name + " gewinnt."
+		room.addMessage(Message{
+			Text:   "1×1-Rennen beendet – " + best.Name + " gewinnt.",
+			System: true,
+		})
+	}
+
+	return rechenZug{Richtig: richtig, Answer: task.Answer, Rule: task.Rule}
 }

@@ -556,6 +556,10 @@ input[type="text"]{width:132px}
   var START_ARMEE = { 2: 40, 3: 35, 4: 30, 5: 25, 6: 20 };
   var SATZ_WERTE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 
+  /* FERN ist im Online-Betrieb gesetzt: Dann rechnet der Server, die Seite
+     zeigt nur den Stand und schickt Absichten. */
+  var FERN = null;
+
   var S = {
     modus: "welt",
     spieler: [],
@@ -751,6 +755,7 @@ input[type="text"]{width:132px}
   }
 
   function kartenTauschen(indizes) {
+    if (FERN) { FERN.sende("karten", { karten: indizes }); return { ok: true, wert: 0 }; }
     var sp = S.spieler[S.amZug];
     var karten = indizes.map(function (i) { return sp.hand[i]; });
     if (!istSatz(karten)) return { ok: false, text: "Kein gültiger Satz." };
@@ -833,6 +838,7 @@ input[type="text"]{width:132px}
   }
 
   function setzeArmee(id) {
+    if (FERN) { FERN.sende("setzen", { gebiet: id }); return true; }
     if (!aufstellenMoeglich(id)) return false;
     var sp = S.spieler[S.amZug];
     if (S.phase === "aufstellen") { sp.startPool--; S.pool = sp.startPool; }
@@ -842,6 +848,7 @@ input[type="text"]{width:132px}
   }
 
   function aufstellenFertig() {
+    if (FERN) { FERN.sende("aufstellenFertig"); return true; }
     var sp = S.spieler[S.amZug];
     if (sp && S.phase === "aufstellen") sp.startPool = 0;
     var naechster = -1;
@@ -881,6 +888,7 @@ input[type="text"]{width:132px}
   }
 
   function beendeVerstaerken() {
+    if (FERN) { FERN.sende("verstaerkenEnde"); return true; }
     if (S.phase !== "verstaerken") return false;
     if (S.pool > 0) log(S.spieler[S.amZug].name + " lässt " + S.pool + " Armeen ungenutzt.");
     S.pool = 0;
@@ -892,6 +900,7 @@ input[type="text"]{width:132px}
   }
 
   function angriffRunde(von, nach, aWv, dWv) {
+    if (FERN) { FERN.sende("angriff", { von: von, nach: nach }); return { ok: false }; }
     if (!angriffMoeglich(von, nach)) return { ok: false };
     if (S.nachruecken) return { ok: false, grund: "Zuerst Armeen nachrücken." };
     var ka = Math.min(3, S.gebiete[von].armeen - 1);
@@ -928,6 +937,7 @@ input[type="text"]{width:132px}
   }
 
   function nachruecken(anzahl) {
+    if (FERN) { FERN.sende("nachruecken", { armeen: anzahl }); return true; }
     if (!S.nachruecken) return false;
     var n = Math.max(1, Math.min(S.nachruecken.max, Math.floor(anzahl)));
     S.gebiete[S.nachruecken.von].armeen -= n;
@@ -951,6 +961,7 @@ input[type="text"]{width:132px}
   }
 
   function beendeAngriff() {
+    if (FERN) { FERN.sende("angriffEnde"); return true; }
     if (S.phase !== "angreifen") return false;
     if (S.nachruecken) return false;
     S.phase = "verschieben";
@@ -962,6 +973,7 @@ input[type="text"]{width:132px}
   }
 
   function verschiebe(von, nach, anzahl) {
+    if (FERN) { FERN.sende("verschieben", { von: von, nach: nach, armeen: anzahl }); return true; }
     if (S.phase !== "verschieben" || S.verschoben) return false;
     if (!armeenVerschiebenMoeglich(von, nach)) return false;
     var frei = S.gebiete[von].armeen - 1;
@@ -975,6 +987,7 @@ input[type="text"]{width:132px}
   }
 
   function beendeZug() {
+    if (FERN) { FERN.sende("zugEnde"); return true; }
     if (S.vorbei) return false;
     if (S.phase === "aufstellen") { aufstellenFertig(); return true; }
     if (pruefeUndBeende()) return true;
@@ -1465,6 +1478,8 @@ input[type="text"]{width:132px}
 
   function zeichne() {
     if (!elem || !elem[GEBIETE[0].id]) return;
+    /* Vor dem ersten Serverstand gibt es noch nichts zu zeichnen. */
+    if (!S.spieler.length) return;
     GEBIETE.forEach(function (g) {
       var e = elem[g.id], z = S.gebiete[g.id];
       var b = z.besitzer;
@@ -1540,7 +1555,7 @@ input[type="text"]{width:132px}
       var team = S.modus === "team" ? " · Team " + (sp.team === 0 ? "A" : "B") : "";
       return '<div class="' + kl + '"><span class="punkt" style="background:' + sp.farbe + '"></span>' +
         '<span' + (sp.ausgeschieden ? ' class="weg"' : '') + '>' + sp.name + team +
-        (sp.ki ? " · KI" : "") + '</span><span class="zahl">' + gebieteVon(sp.id).length + " Geb. · " +
+        ((sp.ki || sp.bot) ? " · KI" : "") + '</span><span class="zahl">' + gebieteVon(sp.id).length + " Geb. · " +
         armeenGesamt(sp.id) + " Armeen" + (sp.hand.length ? " · " + sp.hand.length + " Karten" : "") +
         "</span></div>";
     }).join("");
@@ -1639,6 +1654,8 @@ input[type="text"]{width:132px}
   function aktualisiere() {
     var spielBox = document.getElementById("spiel");
     if (!spielBox || spielBox.hidden) return;
+    /* Online kann das Feld schon offen sein, bevor der erste Stand da ist. */
+    if (!S.spieler.length) return;
     setzeTexte();
     zeichne();
     spielerListe();
@@ -1668,6 +1685,7 @@ input[type="text"]{width:132px}
      ===================================================================== */
   function klickGebiet(id) {
     if (S.vorbei || sperre) return;
+    if (FERN && !FERN.dran()) return;
     if (S.spieler[S.amZug].ki) return;
     S.auswahl = S.auswahl || null;
     if (S.phase === "aufstellen" || S.phase === "verstaerken") {
@@ -1786,6 +1804,11 @@ input[type="text"]{width:132px}
     if (S.vorbei && akt !== "neu") return;
     if (akt === "neu") { zurueckZurEinrichtung(); return; }
     if (akt === "aufstellenFertig") { aufstellenFertig(); return; }
+    if (FERN && (akt === "restHier" || akt === "alleHier")) {
+      var rest = akt === "restHier" ? (S.spieler[S.amZug].startPool || 0) : S.pool;
+      if (S.auswahl && rest > 0) FERN.sende("setzen", { gebiet: S.auswahl, armeen: rest });
+      return;
+    }
     if (akt === "restHier") {
       var sp = S.spieler[S.amZug];
       var ziel = S.auswahl;
@@ -1964,7 +1987,76 @@ input[type="text"]{width:132px}
   /* =====================================================================
      12. SCHNITTSTELLE FÜR TESTS UND SPÄTEREN ONLINE-BETRIEB
      ===================================================================== */
+  /* Übernimmt den Serverstand in die Anzeige. Der Server ist im Online-Betrieb
+     die einzige Quelle; hier wird nichts gerechnet, nur gespiegelt. */
+  function fernStand(d) {
+    if (!d) return;
+    S.modus = d.modus || "welt";
+    S.amZug = Number(d.amZug) || 0;
+    S.phase = d.phase || "aufstellen";
+    S.pool = Number(d.pool) || 0;
+    S.runde = Number(d.runde) || 1;
+    S.kartenSatz = Number(d.kartenSatz) || 0;
+    S.vorbei = d.status === "finished";
+    S.sieger = Number(d.sieger);
+    S.siegGrund = d.siegGrund || "";
+    S.hauptstaedte = (d.hauptstaedte || []).slice();
+    S.missionen = (d.missionen || []).map(function (m) {
+      return { art: m.art, spieler: m.spieler, kont: m.kont || [], anzahl: m.anzahl || 0, text: m.text };
+    });
+    S.teams = (d.teams || []).slice();
+    S.gebiete = {};
+    Object.keys(d.gebiete || {}).forEach(function (id) {
+      var f = d.gebiete[id];
+      S.gebiete[id] = { besitzer: f.besitzer, armeen: f.armeen };
+    });
+    S.spieler = (d.spieler || []).map(function (p, i) {
+      return { id: i, kennung: p.id, name: p.name, farbe: p.farbe, ki: false, bot: !!p.bot,
+               stufe: p.stufe, hand: (p.hand || []).slice(), ausgeschieden: !!p.ausgeschieden,
+               team: p.team, startPool: p.startPool || 0 };
+    });
+    S.nachruecken = d.nachruecken ? { von: d.nachruecken.von, nach: d.nachruecken.nach, max: d.nachruecken.max } : null;
+    /* Der Server protokolliert chronologisch; die Anzeige will das Neueste oben. */
+    S.log = (d.log || []).map(function (e) { return { text: e.text, runde: e.runde || S.runde }; }).reverse();
+    S.auswahl = S.auswahl && S.gebiete[S.auswahl] ? S.auswahl : null;
+    /* Ein Angriffsziel gilt nur in der Angriffsphase; sonst bliebe im
+       Verschieben ein altes Ziel stehen und der Zug ließe sich nicht beenden. */
+    S.ziel = S.phase === "angreifen" && S.ziel && S.gebiete[S.ziel] ? S.ziel : null;
+    S.kartenWahl = [];
+    if (d.letzterKampf) {
+      var k = d.letzterKampf;
+      S.letzterAngriff = { von: k.von, nach: k.nach, aW: k.aw, dW: k.dw,
+        vgl: { angriff: k.verlustA, verteidigung: k.verlustV }, erobert: !!k.erobert,
+        besitzerVorher: k.vorher };
+      wuerfelSetzen(document.getElementById("wuerfelAngriff"), k.aw || [], (k.aw || []).length, "angriff");
+      wuerfelSetzen(document.getElementById("wuerfelVerteidigung"), k.dw || [], (k.dw || []).length, "verteidigung");
+      document.getElementById("wurfText").textContent = "Angriff: " + (k.aw || []).join(", ");
+      document.getElementById("wurfTextVerteidigung").textContent = "Verteidigung: " + (k.dw || []).join(", ");
+      document.getElementById("wurfErgebnis").textContent = k.erobert
+        ? "Gebiet erobert – jetzt Armeen nachrücken."
+        : "Verluste " + k.verlustA + " : " + k.verlustV + ".";
+    }
+    aktualisiere();
+  }
+
   window.Risiko = {
+    fern: function (f) {
+      FERN = f;
+      if (FERN) {
+        document.getElementById("einrichtung").hidden = true;
+        document.getElementById("spiel").hidden = false;
+        document.getElementById("sieg").hidden = true;
+        /* Der Server führt die Partie; "Neues Spiel" gehört zur Einrichtung. */
+        document.getElementById("btnNeu").hidden = true;
+        if (!document.getElementById("weltkarte").childNodes.length) {
+          baueKarte();
+          setzeZoom(window.innerWidth < 620);
+        }
+      }
+    },
+    fernStand: fernStand,
+    fernAktiv: function () { return !!FERN; },
+    zoom: setzeZoom,
     stand: standKurz,
     karte: kartenDaten,
     kontinente: function () { return JSON.parse(JSON.stringify(KONT)); },
@@ -2046,7 +2138,6 @@ input[type="text"]{width:132px}
 </script>
 <script src="../../zurueck.js"></script>
 <script src="/spiele/token.js"></script>
-<script>window.TG_ONLINE_SPIEL = "risiko";</script>
-<script src="../online-sync.js"></script>
+<script src="risiko-fern.js"></script>
 </body>
 </html>

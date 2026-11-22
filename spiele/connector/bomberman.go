@@ -93,6 +93,11 @@ type BomberGame struct {
 	Sieger   string          `json:"sieger,omitempty"`
 	Zuletzt  time.Time       `json:"-"`
 	Rest     float64         `json:"-"`
+
+	Bots      []string   `json:"bots,omitempty"`
+	BotStufe  string     `json:"botStufe,omitempty"`
+	BotFrist  time.Time  `json:"-"`
+	BotZufall *rand.Rand `json:"-"`
 }
 
 type BomberSpielerSicht struct {
@@ -616,6 +621,7 @@ func bomberHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		bomberWeiter(room.Bomberman)
+		bomberBotTreiben(room, time.Now())
 		game := bomberAnsicht(room.Bomberman, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -628,9 +634,10 @@ func bomberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID string `json:"id"`
-		DX int    `json:"dx"`
-		DY int    `json:"dy"`
+		ID    string `json:"id"`
+		DX    int    `json:"dx"`
+		DY    int    `json:"dy"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -657,6 +664,34 @@ func bomberHandler(w http.ResponseWriter, r *http.Request) {
 	zeit := time.Now().Format("15:04:05")
 
 	switch action {
+	case "bot":
+		room.botNamenNeu()
+		if room.Bomberman != nil && room.Bomberman.Status != "ende" {
+			mu.Unlock()
+			http.Error(w, "Es läuft schon eine Partie Bomberman.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		game := bomberNeu(randomCode(), input.ID, []BomberSpieler{
+			bomberNeuerSpieler(1, input.ID, player.Name),
+			bomberNeuerSpieler(2, botID(1), room.botName(1)),
+		})
+		game.Bots, game.BotStufe = []string{botID(1)}, stufe
+		for i := range game.Spieler {
+			game.Spieler[i].Ready = true
+		}
+		bomberStarten(game)
+		game.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		game.BotFrist = time.Now().Add(botWartezeit(stufe))
+		room.Bomberman = game
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Bomberman gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if room.Bomberman != nil && room.Bomberman.Status != "ende" {
 			mu.Unlock()
@@ -734,93 +769,15 @@ func bomberHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		for i := range game.Spieler {
-			game.Spieler[i].Sieg = 0
-		}
-		game.Runde = 1
-		game.Sieger = ""
-		bomberNeueRunde(game)
-		game.Status = "spiel"
-		game.Note = "Achtung, gleich geht's los …"
+		bomberStarten(game)
 
-	case "richtung":
-		game := room.Bomberman
-		if game == nil || game.Status != "spiel" {
+	case "richtung", "bombe", "weiter", "reset":
+		status, meldung := bomberAktion(room, input.ID, action, input.DX, input.DY)
+		if meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Gerade läuft keine Runde.", http.StatusConflict)
+			http.Error(w, meldung, status)
 			return
 		}
-		sitz := bomberSitz(game, input.ID)
-		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
-			return
-		}
-		dx, dy := input.DX, input.DY
-		if dx < -1 || dx > 1 || dy < -1 || dy > 1 || (dx != 0 && dy != 0) {
-			mu.Unlock()
-			http.Error(w, "Ungültige Richtung.", http.StatusBadRequest)
-			return
-		}
-		game.Spieler[sitz].DX = dx
-		game.Spieler[sitz].DY = dy
-
-	case "bombe":
-		game := room.Bomberman
-		if game == nil || game.Status != "spiel" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft keine Runde.", http.StatusConflict)
-			return
-		}
-		sitz := bomberSitz(game, input.ID)
-		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
-			return
-		}
-		if !game.legeBombe(&game.Spieler[sitz]) {
-			mu.Unlock()
-			http.Error(w, "Jetzt geht keine Bombe.", http.StatusConflict)
-			return
-		}
-
-	case "weiter":
-		game := room.Bomberman
-		if game == nil || game.Status != "runde" {
-			mu.Unlock()
-			http.Error(w, "Die Runde läuft noch.", http.StatusConflict)
-			return
-		}
-		if bomberSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
-		}
-		if game.Gewinner != 0 {
-			game.Runde++
-		}
-		bomberNeueRunde(game)
-		game.Status = "spiel"
-		game.Note = "Achtung, gleich geht's los …"
-
-	case "reset":
-		game := room.Bomberman
-		if game == nil || game.Status != "ende" {
-			mu.Unlock()
-			http.Error(w, "Eine neue Partie geht erst nach dem Ende.", http.StatusConflict)
-			return
-		}
-		if bomberSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
-		}
-		frisch := bomberNeu(game.ID, game.HostID, []BomberSpieler{})
-		frisch.Note = "Neue Partie – erst BEREIT drücken."
-		for _, p := range game.Spieler {
-			frisch.Spieler = append(frisch.Spieler, bomberNeuerSpieler(p.Nr, p.ID, p.Name))
-		}
-		room.Bomberman = frisch
 
 	default:
 		mu.Unlock()
@@ -833,4 +790,89 @@ func bomberHandler(w http.ResponseWriter, r *http.Request) {
 	result := bomberAnsicht(room.Bomberman, input.ID)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})
+}
+
+/* ---------------------------------------------------------------------------
+   Gemeinsame Prüfung für Menschen und Bots
+   ------------------------------------------------------------------------- */
+
+// bomberStarten setzt die Partie auf Runde 1 zurück und gibt sie frei.
+func bomberStarten(g *BomberGame) {
+	for i := range g.Spieler {
+		g.Spieler[i].Sieg = 0
+	}
+	g.Runde = 1
+	g.Sieger = ""
+	bomberNeueRunde(g)
+	g.Status = "spiel"
+	g.Note = "Achtung, gleich geht's los …"
+}
+
+// bomberAktion führt einen Spielzug aus – für Menschen und Bots dieselbe
+// Prüfung. create, join, ready und start bleiben im Handler, weil sie Namen
+// und Meldungen des Raums brauchen.
+func bomberAktion(room *Room, id, aktion string, dx, dy int) (int, string) {
+	g := room.Bomberman
+
+	switch aktion {
+	case "richtung":
+		if g == nil || g.Status != "spiel" {
+			return http.StatusConflict, "Gerade läuft keine Runde."
+		}
+		sitz := bomberSitz(g, id)
+		if sitz < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
+		}
+		if dx < -1 || dx > 1 || dy < -1 || dy > 1 || (dx != 0 && dy != 0) {
+			return http.StatusBadRequest, "Ungültige Richtung."
+		}
+		g.Spieler[sitz].DX = dx
+		g.Spieler[sitz].DY = dy
+
+	case "bombe":
+		if g == nil || g.Status != "spiel" {
+			return http.StatusConflict, "Gerade läuft keine Runde."
+		}
+		sitz := bomberSitz(g, id)
+		if sitz < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
+		}
+		if !g.legeBombe(&g.Spieler[sitz]) {
+			return http.StatusConflict, "Jetzt geht keine Bombe."
+		}
+
+	case "weiter":
+		if g == nil || g.Status != "runde" {
+			return http.StatusConflict, "Die Runde läuft noch."
+		}
+		if bomberSitz(g, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+		}
+		if g.Gewinner != 0 {
+			g.Runde++
+		}
+		bomberNeueRunde(g)
+		g.Status = "spiel"
+		g.Note = "Achtung, gleich geht's los …"
+		g.BotFrist = time.Time{}
+
+	case "reset":
+		if g == nil || g.Status != "ende" {
+			return http.StatusConflict, "Eine neue Partie geht erst nach dem Ende."
+		}
+		if bomberSitz(g, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+		}
+		frisch := bomberNeu(g.ID, g.HostID, []BomberSpieler{})
+		frisch.Bots, frisch.BotStufe = g.Bots, g.BotStufe
+		frisch.Note = "Neue Partie – erst BEREIT drücken."
+		for _, p := range g.Spieler {
+			frisch.Spieler = append(frisch.Spieler, bomberNeuerSpieler(p.Nr, p.ID, p.Name))
+		}
+		room.Bomberman = frisch
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Aktion."
+	}
+	return 0, ""
 }

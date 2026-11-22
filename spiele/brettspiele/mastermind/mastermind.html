@@ -186,6 +186,7 @@ html[data-stil="buben"] .nr{color:#aab6c2}
  </details>
 </main>
 
+<script src="/spiele/token.js"></script>
 <script>
 (() => {
 const $=id=>document.getElementById(id);
@@ -427,6 +428,129 @@ $("btnLeeren").onclick=leeren;
 $("btnPruefen").onclick=pruefen;
 $("meldungKnopf").onclick=neuesSpiel;
 $("stufe").onchange=()=>{ stufe=$("stufe").value; neuesSpiel(); };
+
+// ---------------------------------------------------------------- Online
+// Aufruf aus dem Connector: ?room=…&id=… – der Server führt die Partie und
+// prüft die Versuche, die Seite zeigt an und schickt Klicks zurück.
+
+const PARAMS=new URLSearchParams(location.search);
+const RAUM=PARAMS.get("room"), ICH=PARAMS.get("id");
+
+function mastermindOnline(raum,ich){
+ const basis="/api/mastermind?room="+encodeURIComponent(raum);
+ let stand=null,auswahl=[null,null,null,null],farbe=0,laeuft=false;
+
+ const stufenWahl=$("stufe"); if(stufenWahl)stufenWahl.hidden=true;
+ const neu=$("btnNeu"); if(neu)neu.hidden=true;
+ $("meldung").hidden=true;
+ $("hinweis").textContent="Farbe wählen, dann in die vier Plätze tippen. Wer zuerst vier schwarze Stifte hat, gewinnt.";
+
+ async function holen(){
+  if(laeuft)return;
+  laeuft=true;
+  try{
+   const r=await fetch(basis+"&id="+encodeURIComponent(ich));
+   if(r.ok)zeigen((await r.json()).game);
+  }catch(e){}
+  laeuft=false;
+ }
+
+ async function aktion(name,daten={}){
+  try{
+   const r=await fetch(basis+"&action="+encodeURIComponent(name),{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:ich,...daten})
+   });
+   if(r.ok){ auswahl=[null,null,null,null]; zeigen((await r.json()).game); }
+   else{ $("hinweis").textContent=(await r.text()).trim()||"Das ging nicht."; }
+  }catch(e){ $("hinweis").textContent="Verbindung verloren."; }
+ }
+
+ function stein(feld){
+  const el=document.createElement("span");
+  el.className="stein";
+  if(feld!=null){ el.style.background=FARBEN[feld].hex; el.title=FARBEN[feld].name; }
+  return el;
+ }
+
+ function zeigen(g){
+  if(!g)return;
+  stand=g;
+  const meinSitz=g.ich===g.redId?0:1;
+  const ichDran=g.turn===(meinSitz===0?"red":"blue")&&g.status==="active";
+
+  $("versuch").textContent=(g.zuege[meinSitz]+1)+"/"+g.max;
+  $("farbenAnzahl").textContent=g.farben;
+  $("bestwert").textContent=g.zuege[meinSitz]+" : "+g.zuege[1-meinSitz];
+
+  const behaelter=$("reihen");
+  behaelter.innerHTML="";
+  g.reihen.forEach(r=>{
+   const zeile=document.createElement("div");
+   zeile.className="reihe"+(r.farbe==="red"?" rot":" blau");
+   const nr=document.createElement("span"); nr.className="nr"; nr.textContent=(r.farbe==="red"?g.redName:g.blueName).slice(0,8);
+   zeile.appendChild(nr);
+   r.rate.forEach(f=>zeile.appendChild(stein(f)));
+   const stift=document.createElement("span"); stift.className="rueckmeldung";
+   stift.textContent=Array(r.schwarz).fill("●").join("")+Array(r.weiss).fill("○").join("")||"–";
+   zeile.appendChild(stift);
+   behaelter.appendChild(zeile);
+  });
+
+  if(g.status==="active"){
+   const zeile=document.createElement("div");
+   zeile.className="reihe aktiv";
+   const nr=document.createElement("span"); nr.className="nr"; nr.textContent="du";
+   zeile.appendChild(nr);
+   auswahl.forEach((f,i)=>{
+    const el=stein(f);
+    el.style.cursor="pointer";
+    el.addEventListener("click",()=>{ auswahl[i]=auswahl[i]===null?farbe:null; zeigen(stand); });
+    zeile.appendChild(el);
+   });
+   behaelter.appendChild(zeile);
+  }
+
+  const pal=$("palette");
+  pal.innerHTML="";
+  for(let i=0;i<g.farben;i++){
+   const b=document.createElement("button");
+   b.style.background=FARBEN[i].hex;
+   b.title=FARBEN[i].name;
+   b.className=i===farbe?"gewaehlt":"";
+   b.onclick=()=>{ farbe=i; zeigen(stand); };
+   pal.appendChild(b);
+  }
+
+  $("btnPruefen").disabled=!ichDran||auswahl.some(f=>f===null);
+  $("btnLeeren").disabled=!ichDran;
+  $("hinweis").textContent=g.note||(ichDran?"Du bist dran.":"Der andere ist dran.");
+
+  if(g.status==="finished"){
+   $("meldungTitel").textContent=g.winner==="draw"?"Unentschieden":
+    (g.winner===(meinSitz===0?"red":"blue")?"Gewonnen":"Verloren");
+   $("meldungText").textContent=g.note||"";
+   $("meldungLoesung").innerHTML="";
+   if(g.geheim){(g.geheim||[]).forEach(f=>$("meldungLoesung").appendChild(stein(f)));}
+   $("meldungKnopf").textContent="Nochmal";
+   $("meldungKnopf").onclick=()=>{ aktion("reset"); };
+   $("meldung").hidden=false;
+  }else{
+   $("meldung").hidden=true;
+  }
+ }
+
+ $("btnLeeren").onclick=()=>{ auswahl=[null,null,null,null]; if(stand)zeigen(stand); };
+ $("btnPruefen").onclick=()=>{ if(stand)aktion("rate",{rate:auswahl}); };
+
+ setInterval(holen,700);
+ holen();
+}
+
+if(RAUM&&ICH){
+ mastermindOnline(RAUM,ICH);
+ return;
+}
 
 neuesSpiel();
 

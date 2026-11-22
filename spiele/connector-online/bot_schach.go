@@ -93,9 +93,31 @@ func chessBotFarbe(g *ChessGame) string {
 	return ""
 }
 
-func chessBotTreiben(g *ChessGame, jetzt time.Time) bool {
+// chessBotTreiben spielt den Bot, sobald seine Frist um ist. Der Aufrufer
+// hält die Sperre des Raums, deshalb rechnet diese Funktion nichts: Die Suche
+// dauert gemessen 68 ms in der Eröffnung und bis 157 ms im Mittelspiel und
+// würde jeden anderen Abruf blockieren. Sie läuft in einer eigenen Goroutine
+// auf einem Schnappschuss und legt den Zug in BotZug ab; der nächste Aufruf
+// spielt ihn aus.
+func chessBotTreiben(room *Room, jetzt time.Time) bool {
+	g := room.Schach
+	if g == nil || g.Status != "active" {
+		return false
+	}
 	farbe := chessBotFarbe(g)
-	if farbe == "" || g.Status != "active" || g.State.Turn != farbe {
+	if farbe == "" || g.State.Turn != farbe {
+		return false
+	}
+	if g.BotZug != nil {
+		zug := *g.BotZug
+		g.BotZug = nil
+		if !chessBotSpielen(g, zug) {
+			g.BotFrist = jetzt.Add(time.Second)
+			return false
+		}
+		return true
+	}
+	if g.BotRechnet == g {
 		return false
 	}
 	if g.BotFrist.IsZero() {
@@ -105,12 +127,34 @@ func chessBotTreiben(g *ChessGame, jetzt time.Time) bool {
 	if jetzt.Before(g.BotFrist) {
 		return false
 	}
+
 	g.BotFrist = time.Time{}
-	zug, ok := chessBotZug(g, farbe, g.BotStufe)
+	g.BotRechnet = g
+	schnappschuss := chessClone(g)
+	stufe := g.BotStufe
+	go func() {
+		zug, ok := chessBotZug(schnappschuss, farbe, stufe)
+		mu.Lock()
+		defer mu.Unlock()
+		chessBotErgebnis(room, g, zug, ok)
+	}()
+	return false
+}
+
+// chessBotErgebnis übernimmt einen fertig gerechneten Zug. quelle ist die
+// Partie, für die gerechnet wurde: Wurde sie inzwischen ersetzt (Reset oder
+// neue Bot-Partie), verfällt das Ergebnis, ohne die neue Partie anzufassen –
+// insbesondere bleibt deren Rechen-Zustand stehen. Der Aufrufer hält die Sperre.
+func chessBotErgebnis(room *Room, quelle *ChessGame, zug chessMove, ok bool) bool {
+	if quelle == nil || room.Schach != quelle {
+		return false
+	}
+	quelle.BotRechnet = nil
 	if !ok {
 		return false
 	}
-	return chessBotSpielen(g, zug)
+	quelle.BotZug = &zug
+	return true
 }
 
 func chessBotZuege(s chessState, farbe string) []chessMove {

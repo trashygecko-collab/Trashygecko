@@ -30,6 +30,10 @@ type HoldGame struct {
 	Status   string     `json:"status"`
 	Winner   string     `json:"winner,omitempty"`
 	Note     string     `json:"note,omitempty"`
+
+	Bots     []string  `json:"bots,omitempty"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 type holdPoint struct {
@@ -174,6 +178,7 @@ func holdHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		holdBotTreiben(room, time.Now())
 		game := cloneHold(room.Hold)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -186,10 +191,11 @@ func holdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID   string `json:"id"`
-		ToID string `json:"toId"`
-		A    int    `json:"a"`
-		B    int    `json:"b"`
+		ID    string `json:"id"`
+		ToID  string `json:"toId"`
+		A     int    `json:"a"`
+		B     int    `json:"b"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -215,6 +221,28 @@ func holdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		room.botNamenNeu()
+		if room.Hold != nil && !room.gameSlotFree(room.Hold.Status, room.Hold.RedID, room.Hold.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Hold-the-Line-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		game := holdNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
+		game.Bots, game.BotStufe = []string{botID(1)}, stufe
+		game.Status = "active"
+		game.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		game.BotFrist = time.Now().Add(botWartezeit(stufe))
+		room.Hold = game
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Hold the Line gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "invite":
 		target, ok := room.Players[input.ToID]
 		if !ok || input.ToID == input.ID {
@@ -260,61 +288,12 @@ func holdHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		game.Status = "declined"
 
-	case "line":
-		game := room.Hold
-		if game == nil || game.Status != "active" {
+	case "line", "reset":
+		if status, meldung := holdAktion(room, input.ID, action, input.A, input.B); meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Es läuft gerade keine aktive Partie.", http.StatusConflict)
+			http.Error(w, meldung, status)
 			return
 		}
-		color := holdColorOf(game, input.ID)
-		if color == "" {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
-		}
-		if game.Current != color {
-			mu.Unlock()
-			http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
-			return
-		}
-		if input.A < 0 || input.A >= holdSize || input.B < 0 || input.B >= holdSize {
-			mu.Unlock()
-			http.Error(w, "Dieser Punkt liegt nicht auf dem Brett.", http.StatusBadRequest)
-			return
-		}
-		if input.A == input.B {
-			mu.Unlock()
-			http.Error(w, "Eine Linie braucht zwei verschiedene Punkte.", http.StatusBadRequest)
-			return
-		}
-		if !holdCanDraw(game.Lines, input.A, input.B) {
-			mu.Unlock()
-			http.Error(w, "Diese Linie ist nicht erlaubt!", http.StatusConflict)
-			return
-		}
-
-		game.Lines = append(game.Lines, HoldLine{A: input.A, B: input.B, Color: color})
-		game.Note = player.Name + " zieht eine Linie."
-
-		if !holdHasMove(game.Lines) {
-			game.Status = "finished"
-			game.Winner = color
-			game.Note = holdName(game, holdOther(color)) + " hat keinen gültigen Zug mehr."
-			break
-		}
-		game.Current = holdOther(color)
-
-	case "reset":
-		game := room.Hold
-		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
-			mu.Unlock()
-			http.Error(w, "Eine neue Runde ist erst nach Spielende möglich.", http.StatusConflict)
-			return
-		}
-		fresh := holdNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
-		fresh.Status = "active"
-		room.Hold = fresh
 
 	default:
 		mu.Unlock()
@@ -326,4 +305,62 @@ func holdHandler(w http.ResponseWriter, r *http.Request) {
 	result := cloneHold(room.Hold)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})
+}
+
+/* ---------------------------------------------------------------------------
+   Gemeinsame Prüfung für Menschen und Bots
+   ------------------------------------------------------------------------- */
+
+// holdAktion zieht eine Linie oder startet eine neue Partie – für Menschen und
+// Bots dieselbe Prüfung.
+func holdAktion(room *Room, id, aktion string, a, b int) (int, string) {
+	game := room.Hold
+	if game == nil || (aktion != "reset" && game.Status != "active") {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	color := holdColorOf(game, id)
+	if color == "" {
+		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+	}
+
+	switch aktion {
+	case "line":
+		if game.Current != color {
+			return http.StatusConflict, "Der andere Spieler ist an der Reihe."
+		}
+		if a < 0 || a >= holdSize || b < 0 || b >= holdSize {
+			return http.StatusBadRequest, "Dieser Punkt liegt nicht auf dem Brett."
+		}
+		if a == b {
+			return http.StatusBadRequest, "Eine Linie braucht zwei verschiedene Punkte."
+		}
+		if !holdCanDraw(game.Lines, a, b) {
+			return http.StatusConflict, "Diese Linie ist nicht erlaubt!"
+		}
+
+		game.Lines = append(game.Lines, HoldLine{A: a, B: b, Color: color})
+		game.Note = holdName(game, color) + " zieht eine Linie."
+
+		if !holdHasMove(game.Lines) {
+			game.Status = "finished"
+			game.Winner = color
+			game.Note = holdName(game, holdOther(color)) + " hat keinen gültigen Zug mehr."
+			return 0, ""
+		}
+		game.Current = holdOther(color)
+
+	case "reset":
+		if game.Status != "finished" || (id != game.RedID && id != game.BlueID) {
+			return http.StatusConflict, "Eine neue Runde ist erst nach Spielende möglich."
+		}
+		fresh := holdNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
+		fresh.Bots, fresh.BotStufe = game.Bots, game.BotStufe
+		fresh.Status = "active"
+		room.Hold = fresh
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Hold-the-Line-Aktion."
+	}
+
+	return 0, ""
 }

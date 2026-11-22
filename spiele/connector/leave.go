@@ -100,8 +100,8 @@ func (r *Room) partien() []partie {
 
 	return []partie{
 		ohneSitz("Risiko",
-			func() []string { return syncIDs(r.Risiko) },
-			func() { r.Risiko = nil }),
+			func() []string { return risikoSitzIDs(r.Risiko) },
+			func() { r.Risiko = nil; risikoStandWeg(r.Code) }),
 		ohneSitz("Das verrückte Labyrinth",
 			func() []string { return syncIDs(r.Labyrinth) },
 			func() { r.Labyrinth = nil }),
@@ -201,6 +201,22 @@ func (r *Room) partien() []partie {
 				return "", ""
 			},
 			func() { r.Hold = nil }),
+		duell("Memory",
+			func() (string, string) {
+				if g := r.Memory; g != nil {
+					return g.RedID, g.BlueID
+				}
+				return "", ""
+			},
+			func() { r.Memory = nil }),
+		duell("Mastermind",
+			func() (string, string) {
+				if g := r.Mastermind; g != nil {
+					return g.RedID, g.BlueID
+				}
+				return "", ""
+			},
+			func() { r.Mastermind = nil }),
 		duell("Skyjo",
 			func() (string, string) {
 				if g := r.Skyjo; g != nil {
@@ -676,6 +692,21 @@ func (r *Room) aktivesSpiel(id string) string {
 			return s
 		}
 	}
+	if g := r.Hold; g != nil {
+		if s := zwei("hold", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Memory; g != nil {
+		if s := zwei("memory", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
+	if g := r.Mastermind; g != nil {
+		if s := zwei("mastermind", g.Status, g.RedID, g.BlueID); s != "" {
+			return s
+		}
+	}
 	if g := r.Kaese; g != nil {
 		if s := zwei("kaesekaestche", g.Status, g.RedID, g.BlueID); s != "" {
 			return s
@@ -967,6 +998,12 @@ func (r *Room) playerInGame(id string) bool {
 		return true
 	}
 	if g := r.Hold; g != nil && (g.RedID == id || g.BlueID == id) {
+		return true
+	}
+	if g := r.Memory; g != nil && (g.RedID == id || g.BlueID == id) {
+		return true
+	}
+	if g := r.Mastermind; g != nil && (g.RedID == id || g.BlueID == id) {
 		return true
 	}
 	if g := r.Skyjo; g != nil && (g.RedID == id || g.BlueID == id) {

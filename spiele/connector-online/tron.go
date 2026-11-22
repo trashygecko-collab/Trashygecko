@@ -486,6 +486,7 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.Tron != nil && !room.gameSlotFree(room.Tron.Status, tronIDs(room.Tron)...) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Partie Tron.", http.StatusConflict)
@@ -493,12 +494,12 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		g := tronNeu(randomCode(), input.ID, []TronSpieler{
 			tronNeuerSpieler(1, input.ID, player.Name),
-			tronNeuerSpieler(2, botID(1), botName(1)),
+			tronNeuerSpieler(2, botID(1), room.botName(1)),
 		})
 		g.Spieler[0].Ready, g.Spieler[1].Ready = true, true
 		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
 		tronStart(g)
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(g.BotStufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(g.BotStufe) + ")."
 		room.Tron = g
 	case "create":
 		if room.Tron != nil && room.Tron.Status != "ende" {

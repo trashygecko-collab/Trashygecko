@@ -183,7 +183,10 @@ type Room struct {
 	// EmptySince merkt sich, seit wann niemand mehr im Raum ist. Solange das
 	// nicht lange her ist, bleiben laufende Partien liegen (Handy gesperrt,
 	// Rechner zu, kurze Pause).
-	EmptySince      time.Time
+	EmptySince time.Time
+	// botNamen hält die Namen der laufenden Partie (Bot-Nummer → Name), damit
+	// ein Bot bei jedem Abruf gleich heißt. Vor jeder neuen Partie geleert.
+	botNamen        map[string]string
 	Name            string // e.g. "Spielername Raum"
 	Created         time.Time
 	LastActive      time.Time
@@ -202,6 +205,8 @@ type Room struct {
 	Muehle          *MuehleGame
 	Reversi         *ReversiGame
 	Hold            *HoldGame
+	Memory          *MemoryGame
+	Mastermind      *MastermindGame
 	Skyjo           *SkyjoGame
 	Kniffel         *KniffelGame
 	ZehnTausend     *ZehnTausendGame // 10.000 (Würfelspiel online)
@@ -237,7 +242,7 @@ type Room struct {
 	Schlangen       *SchlangenGame         // Schlangen und Leitern
 	Pig             *PigGame               // Pig
 	Gaense          *GaenseGame            // Gänsespiel
-	Risiko          *SyncGame              // Risiko (Online, Stand vom Client)
+	Risiko          *RisikoSpiel           // Risiko (servergeprüfter Stand)
 	Labyrinth       *SyncGame              // Das verrückte Labyrinth (Online)
 	Wuerfel         *wuerfelPartie         // Würfelspiele der Sammlung (18 Regelmodule, Server würfelt)
 	Angebot         *Angebot               // offene Runde für den ganzen Raum
@@ -682,6 +687,10 @@ func clonePaare(g *PaareGame) *PaareGame {
 	if g.BlueDone != nil {
 		result := *g.BlueDone
 		c.BlueDone = &result
+	}
+	if g.BotPlan != nil {
+		plan := *g.BotPlan
+		c.BotPlan = &plan
 	}
 	return &c
 }

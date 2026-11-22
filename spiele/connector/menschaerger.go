@@ -523,6 +523,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Menschaerger != nil && (room.Menschaerger.Status == "invited" || room.Menschaerger.Status == "active") {
 			mu.Unlock()
@@ -533,15 +534,15 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 			ID: randomCode(), HostID: input.ID, MaxPlayers: 2,
 			Players: []MaenPlayer{
 				{ID: input.ID, Name: player.Name, Color: "red", Ready: true, Pieces: maenNewPieces()},
-				{ID: botID(1), Name: botName(1), Color: "yellow", Ready: true, Pieces: maenNewPieces()},
+				{ID: botID(1), Name: room.botName(1), Color: "yellow", Ready: true, Pieces: maenNewPieces()},
 			},
 			Current: 0, Status: "active",
 			BotID: botID(1), BotStufe: stufe,
 		}
-		room.Menschaerger.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Menschaerger.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Mensch ärgere dich nicht gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Mensch ärgere dich nicht gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

@@ -446,6 +446,7 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.Maexchen != nil && room.Maexchen.Status != "finished" {
 			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Mäxchen-Runde.")
 			return
@@ -456,7 +457,7 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 		mensch.Ready = true
 		game.Players = append(game.Players, mensch)
 		for n := 1; n <= 2; n++ {
-			bot := mxNewPlayer(botID(n), botName(n), n)
+			bot := mxNewPlayer(botID(n), room.botName(n), n)
 			bot.Ready = true
 			game.Players = append(game.Players, bot)
 			game.Bots = append(game.Bots, botID(n))
@@ -464,7 +465,7 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		game.BotID, game.BotStufe = botID(1), stufe
 		mxNeueRunde(game, 0)
-		game.Note = player.Name + " spielt gegen " + botName(1) + " und " + botName(2) +
+		game.Note = player.Name + " spielt gegen " + room.botName(1) + " und " + room.botName(2) +
 			" (" + botStufeText(stufe) + ")."
 		room.Maexchen = game
 		room.addMessage(Message{

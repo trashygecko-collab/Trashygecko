@@ -74,6 +74,11 @@ type ShipCrewGame struct {
 	Sieger    []string   `json:"siegerNamen"`
 	SiegerIDs []string   `json:"siegerIds"`
 	Note      string     `json:"note,omitempty"`
+	// Bot: Kennung, Stufe und die Zeit, zu der der Bot wuerfelt.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"bots,omitempty"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 func scNewPlayer(id, name string, seat int) ScPlayer {
@@ -373,6 +378,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		shipcrewBotTreiben(room, time.Now())
 		sicht := scSicht(room.ShipCrew)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": sicht})
@@ -388,6 +394,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		ID     string `json:"id"`
 		Index  int    `json:"index"`
 		Runden int    `json:"runden"`
+		Stufe  string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -520,42 +527,88 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-	case "ready":
-		game := room.ShipCrew
-		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Bereit drücken geht nur, solange die Runde noch nicht läuft.")
+	case "bot":
+		room.botNamenNeu()
+		if room.ShipCrew != nil && room.ShipCrew.Status != "finished" {
+			fehler(http.StatusConflict, "In diesem Spielraum laeuft bereits eine Runde Schiffe versenken.")
 			return
 		}
-		seat := scFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
+		stufe := botStufe(input.Stufe)
+		runden := 3
+		if room.ShipCrew != nil && room.ShipCrew.Runden > 0 {
+			runden = room.ShipCrew.Runden
+		}
+		game := &ShipCrewGame{
+			ID: randomCode(), HostID: input.ID, Status: "invited",
+			Runde: 1, Runden: runden,
+			BotID: botID(1), Bots: []string{botID(1)}, BotStufe: stufe,
+		}
+		game.Players = append(game.Players, scNewPlayer(input.ID, player.Name, 0))
+		game.Players = append(game.Players, scNewPlayer(botID(1), room.botName(1), 1))
+		for i := range game.Players {
+			game.Players[i].Ready = true
+		}
+		game.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.ShipCrew = game
+		if status, meldung := shipcrewAktion(room, input.ID, "start", 0); meldung != "" {
+			fehler(status, meldung)
 			return
+		}
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Schiffe versenken gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
+	default:
+		if status, meldung := shipcrewAktion(room, input.ID, action, input.Index); meldung != "" {
+			fehler(status, meldung)
+			return
+		}
+	}
+
+	room.LastActive = time.Now()
+	sicht := scSicht(room.ShipCrew)
+	mu.Unlock()
+	jsonResponse(w, map[string]any{"game": sicht})
+}
+
+// shipcrewAktion führt einen Spielzug aus – für Menschen und Bots dieselbe
+// Prüfung. create, modus, join und rejoin bleiben im Handler, weil sie den
+// Tisch aufbauen.
+func shipcrewAktion(room *Room, id, aktion string, index int) (int, string) {
+	game := room.ShipCrew
+	switch aktion {
+	case "ready":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Bereit drücken geht nur, solange die Runde noch nicht läuft."
+		}
+		seat := scFind(game, id)
+		if seat < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		game.Players[seat].Ready = !game.Players[seat].Ready
 		if game.Players[seat].Ready {
-			game.Note = player.Name + " ist bereit."
+			game.Note = game.Players[seat].Name + " ist bereit."
 		} else {
-			game.Note = player.Name + " wartet noch."
+			game.Note = game.Players[seat].Name + " wartet noch."
 		}
 
 	case "start":
-		game := room.ShipCrew
 		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Es wartet keine Runde auf den Start.")
-			return
+			return http.StatusConflict, "Es wartet keine Runde auf den Start."
 		}
-		if game.HostID != input.ID {
-			fehler(http.StatusForbidden, "Nur der Gastgeber kann die Runde starten.")
-			return
+		if game.HostID != id {
+			return http.StatusForbidden, "Nur der Gastgeber kann die Runde starten."
 		}
 		if len(game.Players) < 2 {
-			fehler(http.StatusConflict, "Schiffe versenken braucht mindestens zwei Spieler.")
-			return
+			return http.StatusConflict, "Schiffe versenken braucht mindestens zwei Spieler."
 		}
 		for _, p := range game.Players {
 			if !p.Ready {
-				fehler(http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken.")
-				return
+				return http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken."
 			}
 		}
 		game.Runde = 1
@@ -568,78 +621,56 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		scRundeStarten(game, 0)
 
 	case "wurf":
-		game := room.ShipCrew
 		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Runde.")
-			return
+			return http.StatusConflict, "Es läuft gerade keine aktive Runde."
 		}
-		seat := scFind(game, input.ID)
+		seat := scFind(game, id)
 		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		if seat != game.Current {
-			fehler(http.StatusConflict, "Du bist nicht dran – "+game.Players[game.Current].Name+" würfelt.")
-			return
+			return http.StatusConflict, "Du bist nicht dran - " + game.Players[game.Current].Name + " würfelt."
 		}
 		p := &game.Players[seat]
 		if p.Fertig {
-			fehler(http.StatusConflict, "Dein Zug ist schon fertig.")
-			return
+			return http.StatusConflict, "Dein Zug ist schon fertig."
 		}
 		if p.Wuerfe >= scWuerfe {
-			fehler(http.StatusConflict, "Mehr als drei Würfe gibt es nicht.")
-			return
+			return http.StatusConflict, "Mehr als drei Würfe gibt es nicht."
 		}
 		scWurfMit(game, seat, nil)
 		if p.Wuerfe >= scWuerfe {
-			// Nach dem dritten Wurf ist nichts mehr zu entscheiden.
 			scZugBeenden(game, seat)
 		}
 
 	case "sichern":
-		game := room.ShipCrew
 		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Runde.")
-			return
+			return http.StatusConflict, "Es läuft gerade keine aktive Runde."
 		}
-		seat := scFind(game, input.ID)
+		seat := scFind(game, id)
 		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
-		if seat != game.Current || game.Wer != input.ID {
-			fehler(http.StatusConflict, "Erst würfeln, dann Würfel sichern.")
-			return
+		if seat != game.Current || game.Wer != id {
+			return http.StatusConflict, "Erst würfeln, dann Würfel sichern."
 		}
 		p := &game.Players[seat]
 		if p.Fertig {
-			fehler(http.StatusConflict, "Dein Zug ist schon fertig.")
-			return
+			return http.StatusConflict, "Dein Zug ist schon fertig."
 		}
-		if input.Index < 0 || input.Index >= len(p.Wuerfel) {
-			fehler(http.StatusConflict, "Diesen Würfel gibt es nicht.")
-			return
+		if index < 0 || index >= len(p.Wuerfel) {
+			return http.StatusConflict, "Diesen Würfel gibt es nicht."
 		}
 		erwartet := scErwartet(p)
 		if erwartet == 0 {
-			fehler(http.StatusConflict, "Schiff, Kapitän und Maat sind schon gesichert.")
-			return
+			return http.StatusConflict, "Schiff, Kapitän und Maat sind schon gesichert."
 		}
-		if p.Wuerfel[input.Index] != erwartet {
-			titel := "Schiff"
-			for _, s := range scSonder {
-				if s.Wert == erwartet {
-					titel = s.Titel
-				}
-			}
-			fehler(http.StatusConflict, "Als Nächstes zählt nur die "+strconv.Itoa(erwartet)+
-				" ("+titel+").")
-			return
+		if p.Wuerfel[index] != erwartet {
+			return http.StatusConflict, "Als Nächstes zählt nur die " + strconv.Itoa(erwartet) +
+				" (" + scTitel(erwartet) + ")."
 		}
-		// Der Würfel wandert zu den gesicherten und wird nicht mehr geworfen.
-		p.Halten = append(p.Halten, p.Wuerfel[input.Index])
-		p.Wuerfel = append(p.Wuerfel[:input.Index], p.Wuerfel[input.Index+1:]...)
+		p.Halten = append(p.Halten, p.Wuerfel[index])
+		p.Wuerfel = append(p.Wuerfel[:index], p.Wuerfel[index+1:]...)
 		if len(p.Halten) == len(scSonder) {
 			p.Wert = scLadung(p)
 			game.Note = p.Name + " hat Schiff, Kapitän und Maat – die beiden übrigen Würfel sind die Ladung."
@@ -648,51 +679,39 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bestaetigen":
-		game := room.ShipCrew
 		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Runde.")
-			return
+			return http.StatusConflict, "Es läuft gerade keine aktive Runde."
 		}
-		seat := scFind(game, input.ID)
+		seat := scFind(game, id)
 		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		if seat != game.Current {
-			fehler(http.StatusConflict, "Du bist nicht dran.")
-			return
+			return http.StatusConflict, "Du bist nicht dran."
 		}
 		if game.Players[seat].Fertig {
-			fehler(http.StatusConflict, "Dein Zug ist schon fertig.")
-			return
+			return http.StatusConflict, "Dein Zug ist schon fertig."
 		}
 		if game.Players[seat].Wuerfe == 0 {
-			fehler(http.StatusConflict, "Erst würfeln.")
-			return
+			return http.StatusConflict, "Erst würfeln."
 		}
 		scZugBeenden(game, seat)
 
 	case "weiter":
-		game := room.ShipCrew
 		if game == nil || game.Status != "runde" {
-			fehler(http.StatusConflict, "Die nächste Runde geht erst nach der Rundenübersicht.")
-			return
+			return http.StatusConflict, "Die nächste Runde geht erst nach der Rundenübersicht."
 		}
-		if scFind(game, input.ID) < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
+		if scFind(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		scWeiter(game)
 
 	case "reset":
-		game := room.ShipCrew
 		if game == nil || game.Status != "finished" {
-			fehler(http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich.")
-			return
+			return http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich."
 		}
-		if scFind(game, input.ID) < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
+		if scFind(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		fresh := &ShipCrewGame{ID: game.ID, HostID: game.HostID, Status: "invited", Runde: 1, Runden: game.Runden}
 		for i, p := range game.Players {
@@ -702,12 +721,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		room.ShipCrew = fresh
 
 	default:
-		fehler(http.StatusBadRequest, "Unbekannte Aktion für Schiffe versenken.")
-		return
+		return http.StatusBadRequest, "Unbekannte Aktion für Schiffe versenken."
 	}
-
-	room.LastActive = time.Now()
-	sicht := scSicht(room.ShipCrew)
-	mu.Unlock()
-	jsonResponse(w, map[string]any{"game": sicht})
+	return 0, ""
 }

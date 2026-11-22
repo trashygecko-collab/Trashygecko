@@ -424,6 +424,7 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.Pong != nil && !room.gameSlotFree(room.Pong.Status, pongIDs(room.Pong)...) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Partie Pong.", http.StatusConflict)
@@ -432,13 +433,13 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 		stufe := botStufe(input.Stufe)
 		g := pongNeu(randomCode(), input.ID, []PongSpieler{
 			pongNeuerSpieler(input.ID, player.Name),
-			pongNeuerSpieler(botID(1), botName(1)),
+			pongNeuerSpieler(botID(1), room.botName(1)),
 		})
 		g.Spieler[0].Ready = true
 		g.Spieler[1].Ready = true
 		g.BotID, g.BotStufe = botID(1), stufe
 		pongStart(g)
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Pong = g
 	case "create":
 		if room.Pong != nil && room.Pong.Status != "ende" {

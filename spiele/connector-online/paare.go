@@ -29,6 +29,11 @@ type PaareGame struct {
 	RedDone  *PaareResult `json:"redDone,omitempty"`
 	BlueDone *PaareResult `json:"blueDone,omitempty"`
 	Winner   string       `json:"winner,omitempty"` // "red", "blue", "draw"
+
+	Bots     []string     `json:"bots,omitempty"`
+	BotStufe string       `json:"botStufe,omitempty"`
+	BotFrist time.Time    `json:"-"`
+	BotPlan  *PaareResult `json:"-"`
 }
 
 var paareKinds = []string{"numbers", "letters", "symbols"}
@@ -96,6 +101,7 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		paareBotTreiben(room, time.Now())
 		game := clonePaare(room.Paare)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -114,6 +120,7 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 		Pairs    int    `json:"pairs"`
 		Time     int64  `json:"time"`
 		Mistakes int    `json:"mistakes"`
+		Stufe    string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -139,6 +146,47 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		room.botNamenNeu()
+		if room.Paare != nil && !room.gameSlotFree(room.Paare.Status, room.Paare.RedID, room.Paare.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Paare-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		pairs := input.Pairs
+		if pairs < 1 {
+			pairs = 8
+		}
+		if pairs > 12 {
+			pairs = 12
+		}
+		kind := strings.ToLower(strings.TrimSpace(input.Kind))
+		if !paareKindValid(kind) {
+			kind = paareKinds[int(time.Now().UnixNano())%len(paareKinds)]
+		}
+		stufe := botStufe(input.Stufe)
+		game := &PaareGame{
+			ID:       randomCode(),
+			RedID:    input.ID,
+			RedName:  player.Name,
+			BlueID:   botID(1),
+			BlueName: room.botName(1),
+			Kind:     kind,
+			Pairs:    pairs,
+			Status:   "active",
+			Bots:     []string{botID(1)},
+			BotStufe: stufe,
+		}
+		game.BotPlan = paareBotPlan(game, stufe)
+		game.BotFrist = time.Now().Add(time.Duration(game.BotPlan.Time) * time.Millisecond)
+		room.Paare = game
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Paare finden gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "invite":
 		target, ok := room.Players[input.ToID]
 		if !ok || input.ToID == input.ID {
@@ -205,57 +253,12 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		game.Status = "declined"
 
-	case "done":
-		game := room.Paare
-		if game == nil || (game.Status != "active" && game.Status != "finished") {
+	case "done", "reset":
+		if status, meldung := paareAktion(room, input.ID, action, input.Time, input.Mistakes); meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Es läuft gerade keine Partie.", http.StatusConflict)
+			http.Error(w, meldung, status)
 			return
 		}
-		if input.Time <= 0 {
-			input.Time = 1
-		}
-		if input.Mistakes < 0 {
-			input.Mistakes = 0
-		}
-		result := &PaareResult{Time: input.Time, Mistakes: input.Mistakes}
-		switch input.ID {
-		case game.RedID:
-			if game.RedDone != nil {
-				mu.Unlock()
-				http.Error(w, "Ergebnis wurde bereits gemeldet.", http.StatusConflict)
-				return
-			}
-			game.RedDone = result
-		case game.BlueID:
-			if game.BlueDone != nil {
-				mu.Unlock()
-				http.Error(w, "Ergebnis wurde bereits gemeldet.", http.StatusConflict)
-				return
-			}
-			game.BlueDone = result
-		default:
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
-		}
-		if game.RedDone != nil && game.BlueDone != nil {
-			game.Winner = paareWinner(game)
-			game.Status = "finished"
-		}
-
-	case "reset":
-		game := room.Paare
-		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
-			mu.Unlock()
-			http.Error(w, "Eine neue Runde ist erst nach Spielende möglich.", http.StatusConflict)
-			return
-		}
-		game.ID = randomCode() // neuer Seed, damit beide ein frisches Brett bekommen
-		game.RedDone = nil
-		game.BlueDone = nil
-		game.Winner = ""
-		game.Status = "active"
 
 	default:
 		mu.Unlock()
@@ -267,4 +270,64 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 	result := clonePaare(room.Paare)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})
+}
+
+/* ---------------------------------------------------------------------------
+   Gemeinsame Prüfung für Menschen und Bots
+   ------------------------------------------------------------------------- */
+
+// paareAktion nimmt ein Ergebnis an oder startet eine neue Runde – für
+// Menschen und Bots dieselbe Prüfung.
+func paareAktion(room *Room, id, aktion string, zeit int64, fehler int) (int, string) {
+	game := room.Paare
+	switch aktion {
+	case "done":
+		if game == nil || (game.Status != "active" && game.Status != "finished") {
+			return http.StatusConflict, "Es läuft gerade keine Partie."
+		}
+		if zeit <= 0 {
+			zeit = 1
+		}
+		if fehler < 0 {
+			fehler = 0
+		}
+		result := &PaareResult{Time: zeit, Mistakes: fehler}
+		switch id {
+		case game.RedID:
+			if game.RedDone != nil {
+				return http.StatusConflict, "Ergebnis wurde bereits gemeldet."
+			}
+			game.RedDone = result
+		case game.BlueID:
+			if game.BlueDone != nil {
+				return http.StatusConflict, "Ergebnis wurde bereits gemeldet."
+			}
+			game.BlueDone = result
+		default:
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+		}
+		if game.RedDone != nil && game.BlueDone != nil {
+			game.Winner = paareWinner(game)
+			game.Status = "finished"
+		}
+
+	case "reset":
+		if game == nil || game.Status != "finished" || (id != game.RedID && id != game.BlueID) {
+			return http.StatusConflict, "Eine neue Runde ist erst nach Spielende möglich."
+		}
+		game.ID = randomCode() // neuer Seed, damit beide ein frisches Brett bekommen
+		game.RedDone = nil
+		game.BlueDone = nil
+		game.Winner = ""
+		game.Status = "active"
+		if len(game.Bots) > 0 {
+			game.BotPlan = paareBotPlan(game, game.BotStufe)
+			game.BotFrist = time.Now().Add(time.Duration(game.BotPlan.Time) * time.Millisecond)
+		}
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Paare-Aktion."
+	}
+
+	return 0, ""
 }

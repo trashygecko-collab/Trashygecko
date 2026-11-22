@@ -427,6 +427,7 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 		})
 
 	case "bot":
+		room.botNamenNeu()
 		if room.Kniffel != nil && room.Kniffel.Status != "finished" {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Kniffel-Runde.", http.StatusConflict)
@@ -442,14 +443,14 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 			BotStufe: stufe,
 		}
 		g.Players = append(g.Players, kniffelNewPlayer(input.ID, player.Name, 0))
-		g.Players = append(g.Players, kniffelNewPlayer(g.BotID, botName(1), 1))
+		g.Players = append(g.Players, kniffelNewPlayer(g.BotID, room.botName(1), 1))
 		g.Players[0].Ready = true
 		g.Players[1].Ready = true
-		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Kniffel = g
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt Kniffel gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt Kniffel gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})

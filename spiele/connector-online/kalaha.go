@@ -339,20 +339,21 @@ func kalahaHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = kalahaPlay(game, input.Index)
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Kalaha != nil && !room.gameSlotFree(room.Kalaha.Status, room.Kalaha.RedID, room.Kalaha.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Kalaha-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Kalaha = kalahaNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Kalaha = kalahaNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Kalaha.Status = "active"
 		room.Kalaha.BotID = botID(1)
 		room.Kalaha.BotStufe = stufe
-		room.Kalaha.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Kalaha.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Kalaha gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Kalaha gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

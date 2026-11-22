@@ -216,21 +216,22 @@ func simHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		if room.Sim != nil && !room.gameSlotFree(room.Sim.Status, room.Sim.RedID, room.Sim.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Sim-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
 		stufe := botStufe(input.Stufe)
-		game := simNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		game := simNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		game.BotID, game.BotStufe = botID(1), stufe
 		game.Bots = []string{botID(1)}
 		game.Status = "active"
-		game.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		game.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.Sim = game
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt Sim gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt Sim gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})

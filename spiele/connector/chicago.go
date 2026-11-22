@@ -80,6 +80,11 @@ type ChicagoGame struct {
 	Letzte    *ChRunde   `json:"letzte,omitempty"`
 	Verlierer string     `json:"verlierer,omitempty"`
 	Note      string     `json:"note,omitempty"`
+	// Bot: Kennung, Stufe und die Zeit, zu der der Bot würfelt.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"bots,omitempty"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 func chNewPlayer(id, name string, seat int) ChPlayer {
@@ -435,6 +440,22 @@ func chWeiter(g *ChicagoGame) {
 		g.Status = "finished"
 		return
 	}
+	// Ein Chic kann in Phase 2 alle Filze vom Tisch nehmen. Dann hat niemand
+	// mehr einen – die Partie endet ohne Verlierer, statt in einer Runde zu
+	// hängen, in der keiner mehr würfeln darf.
+	if g.Phase == 2 {
+		mitFilz := 0
+		for _, p := range g.Players {
+			if p.Deckel > 0 {
+				mitFilz++
+			}
+		}
+		if mitFilz == 0 {
+			g.Status = "finished"
+			g.Note = "Alle Bierfilze sind weg – die Partie endet ohne Verlierer."
+			return
+		}
+	}
 	// Phase 1 endet, sobald alle Filze verteilt sind.
 	if g.Phase == 1 && g.Filze >= g.FilzeMax {
 		g.Phase = 2
@@ -550,6 +571,7 @@ func chicagoHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		chicagoBotTreiben(room, time.Now())
 		sicht := chSicht(room.Chicago)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": sicht})
@@ -564,6 +586,7 @@ func chicagoHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID      string `json:"id"`
 		Indizes []int  `json:"indizes"`
+		Stufe   string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -633,202 +656,43 @@ func chicagoHandler(w http.ResponseWriter, r *http.Request) {
 			SenderID: input.ID,
 		})
 
-	case "ready":
-		game := room.Chicago
-		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Bereit drücken geht nur, solange die Runde noch nicht läuft.")
+	case "bot":
+		room.botNamenNeu()
+		if room.Chicago != nil && room.Chicago.Status != "finished" {
+			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Chicago-Runde.")
 			return
 		}
-		seat := chFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
+		stufe := botStufe(input.Stufe)
+		game := &ChicagoGame{
+			ID: randomCode(), HostID: input.ID, Status: "invited",
+			Phase: 1, Runde: 1,
+			BotID: botID(1), Bots: []string{botID(1)}, BotStufe: stufe,
 		}
-		game.Players[seat].Ready = !game.Players[seat].Ready
-		if game.Players[seat].Ready {
-			game.Note = player.Name + " ist bereit."
-		} else {
-			game.Note = player.Name + " wartet noch."
-		}
-
-	case "start":
-		game := room.Chicago
-		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Es wartet keine Chicago-Runde auf den Start.")
-			return
-		}
-		if game.HostID != input.ID {
-			fehler(http.StatusForbidden, "Nur der Gastgeber kann die Runde starten.")
-			return
-		}
-		if len(game.Players) < 2 {
-			fehler(http.StatusConflict, "Chicago braucht mindestens zwei Spieler am Tisch.")
-			return
-		}
-		for _, p := range game.Players {
-			if !p.Ready {
-				fehler(http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken.")
-				return
-			}
-		}
-		game.Phase = 1
-		game.Runde = 1
-		game.Filze = 0
-		game.FilzeMax = len(game.Players) + 1
-		game.Letzte = nil
-		game.Verlierer = ""
+		game.Players = append(game.Players, chNewPlayer(input.ID, player.Name, 0))
+		game.Players = append(game.Players, chNewPlayer(botID(1), room.botName(1), 1))
 		for i := range game.Players {
-			game.Players[i].Deckel = 0
-			game.Players[i].Raus = false
+			game.Players[i].Ready = true
 		}
-		chRundeStarten(game, 0)
-
-	case "wurf":
-		game := room.Chicago
-		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Chicago-Runde.")
+		game.FilzeMax = len(game.Players) + 1
+		game.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.Chicago = game
+		if status, meldung := chicagoAktion(room, input.ID, "start", nil); meldung != "" {
+			fehler(status, meldung)
 			return
 		}
-		seat := chFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
-		}
-		if seat != game.Current {
-			fehler(http.StatusConflict, "Du bist nicht dran – "+
-				game.Players[game.Current].Name+" würfelt gerade.")
-			return
-		}
-		p := &game.Players[seat]
-		if p.Fertig || p.Raus {
-			fehler(http.StatusConflict, "Dein Zug in dieser Runde ist schon fertig.")
-			return
-		}
-		if p.Wuerfe >= chMaxWuerfe(game) {
-			fehler(http.StatusConflict, "Mehr Würfe gibt diese Runde nicht her.")
-			return
-		}
-		chWurfMit(game, seat, nil)
-		p = &game.Players[seat]
-		if p.Chic {
-			// Der Chic beendet den Zug sofort; seine Wurfzahl gilt für die Runde.
-			if game.Wurfzahl == 0 {
-				game.Wurfzahl = p.Wuerfe
-			}
-			chNaechsterOderAuswerten(game, seat)
-			break
-		}
-		// Nach dem letzten erlaubten Wurf wird automatisch angesagt.
-		if p.Wuerfe >= chMaxWuerfe(game) {
-			chWeitergeben(game, seat)
-			chNaechsterOderAuswerten(game, seat)
-		}
-
-	case "halten":
-		game := room.Chicago
-		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Chicago-Runde.")
-			return
-		}
-		seat := chFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
-		}
-		if seat != game.Current || len(game.Wuerfel) == 0 || game.Wer != input.ID {
-			fehler(http.StatusConflict, "Erst würfeln, dann Würfel liegen lassen.")
-			return
-		}
-		p := &game.Players[seat]
-		if p.Fertig {
-			fehler(http.StatusConflict, "Dein Zug ist schon fertig.")
-			return
-		}
-		gesehen := map[int]bool{}
-		for _, i := range input.Indizes {
-			if i < 0 || i >= len(game.Wuerfel) || gesehen[i] {
-				continue
-			}
-			gesehen[i] = true
-			p.Halten = append(p.Halten, game.Wuerfel[i])
-		}
-		if len(p.Halten) >= 3 {
-			// Alle drei liegen – der Zug ist damit zu Ende.
-			game.Wuerfel = []int{}
-			chWeitergeben(game, seat)
-			chNaechsterOderAuswerten(game, seat)
-			break
-		}
-		game.Wuerfel = []int{}
-		game.Note = p.Name + " lässt " + strconv.Itoa(len(p.Halten)) + " Würfel liegen."
-
-	case "drehen":
-		game := room.Chicago
-		if game == nil || game.Status != "active" || game.Wer != input.ID || len(game.Wuerfel) == 0 {
-			fehler(http.StatusConflict, "Drehen geht nur direkt nach dem eigenen Wurf.")
-			return
-		}
-		if !chDrehenSechser(game) {
-			fehler(http.StatusConflict, "Zum Drehen braucht es zwei Sechser im Wurf.")
-			return
-		}
-		game.Note = game.Players[game.Current].Name + " dreht Sechser zu Einsen."
-
-	case "weitergeben":
-		game := room.Chicago
-		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Chicago-Runde.")
-			return
-		}
-		seat := chFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du sitzt nicht an diesem Tisch.")
-			return
-		}
-		if seat != game.Current || game.Wer != input.ID || len(game.Wuerfel) == 0 {
-			fehler(http.StatusConflict, "Erst würfeln, dann weitergeben.")
-			return
-		}
-		if game.Players[seat].Fertig {
-			fehler(http.StatusConflict, "Dein Zug ist schon fertig.")
-			return
-		}
-		chWeitergeben(game, seat)
-		chNaechsterOderAuswerten(game, seat)
-
-	case "weiter":
-		game := room.Chicago
-		if game == nil || game.Status != "runde" {
-			fehler(http.StatusConflict, "Die nächste Runde geht erst nach der Rundenübersicht.")
-			return
-		}
-		if chFind(game, input.ID) < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
-		}
-		chWeiter(game)
-
-	case "reset":
-		game := room.Chicago
-		if game == nil || game.Status != "finished" {
-			fehler(http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich.")
-			return
-		}
-		if chFind(game, input.ID) < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
-		}
-		fresh := &ChicagoGame{ID: game.ID, HostID: game.HostID, Status: "invited", Phase: 1, Runde: 1}
-		for i, p := range game.Players {
-			fresh.Players = append(fresh.Players, chNewPlayer(p.ID, p.Name, i))
-		}
-		fresh.FilzeMax = len(fresh.Players) + 1
-		fresh.Note = "Neue Partie – alle drücken BEREIT, dann startet der Gastgeber."
-		room.Chicago = fresh
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Chicago gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 
 	default:
-		fehler(http.StatusBadRequest, "Unbekannte Chicago-Aktion.")
-		return
+		if status, meldung := chicagoAktion(room, input.ID, action, input.Indizes); meldung != "" {
+			fehler(status, meldung)
+			return
+		}
 	}
 
 	room.LastActive = time.Now()
@@ -857,4 +721,173 @@ func chSortiert(g *ChicagoGame) []ChErgebnis {
 	out = append(out, g.Letzte.Ergebnisse...)
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Wert > out[j].Wert })
 	return out
+}
+
+// chicagoAktion führt einen Spielzug aus – für Menschen und Bots dieselbe
+// Prüfung. create und join bleiben im Handler, weil sie Meldungen in den Raum
+// schreiben; alles andere steht hier.
+func chicagoAktion(room *Room, id, aktion string, indizes []int) (int, string) {
+	game := room.Chicago
+	switch aktion {
+	case "ready":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Bereit drücken geht nur, solange die Runde noch nicht läuft."
+		}
+		seat := chFind(game, id)
+		if seat < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
+		}
+		game.Players[seat].Ready = !game.Players[seat].Ready
+		if game.Players[seat].Ready {
+			game.Note = game.Players[seat].Name + " ist bereit."
+		} else {
+			game.Note = game.Players[seat].Name + " wartet noch."
+		}
+
+	case "start":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Es wartet keine Chicago-Runde auf den Start."
+		}
+		if game.HostID != id {
+			return http.StatusForbidden, "Nur der Gastgeber kann die Runde starten."
+		}
+		if len(game.Players) < 2 {
+			return http.StatusConflict, "Chicago braucht mindestens zwei Spieler am Tisch."
+		}
+		for _, p := range game.Players {
+			if !p.Ready {
+				return http.StatusConflict, "Erst müssen alle Spieler BEREIT drücken."
+			}
+		}
+		game.Phase = 1
+		game.Runde = 1
+		game.Filze = 0
+		game.FilzeMax = len(game.Players) + 1
+		game.Letzte = nil
+		game.Verlierer = ""
+		for i := range game.Players {
+			game.Players[i].Deckel = 0
+			game.Players[i].Raus = false
+		}
+		chRundeStarten(game, 0)
+
+	case "wurf":
+		if game == nil || game.Status != "active" {
+			return http.StatusConflict, "Es läuft gerade keine aktive Chicago-Runde."
+		}
+		seat := chFind(game, id)
+		if seat < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
+		}
+		if seat != game.Current {
+			return http.StatusConflict, "Du bist nicht dran - " +
+				game.Players[game.Current].Name + " würfelt gerade."
+		}
+		p := &game.Players[seat]
+		if p.Fertig || p.Raus {
+			return http.StatusConflict, "Dein Zug in dieser Runde ist schon fertig."
+		}
+		if p.Wuerfe >= chMaxWuerfe(game) {
+			return http.StatusConflict, "Mehr Würfe gibt diese Runde nicht her."
+		}
+		chWurfMit(game, seat, nil)
+		p = &game.Players[seat]
+		if p.Chic {
+			if game.Wurfzahl == 0 {
+				game.Wurfzahl = p.Wuerfe
+			}
+			chNaechsterOderAuswerten(game, seat)
+			break
+		}
+		if p.Wuerfe >= chMaxWuerfe(game) {
+			chWeitergeben(game, seat)
+			chNaechsterOderAuswerten(game, seat)
+		}
+
+	case "halten":
+		if game == nil || game.Status != "active" {
+			return http.StatusConflict, "Es läuft gerade keine aktive Chicago-Runde."
+		}
+		seat := chFind(game, id)
+		if seat < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
+		}
+		if seat != game.Current || len(game.Wuerfel) == 0 || game.Wer != id {
+			return http.StatusConflict, "Erst würfeln, dann Würfel liegen lassen."
+		}
+		p := &game.Players[seat]
+		if p.Fertig {
+			return http.StatusConflict, "Dein Zug ist schon fertig."
+		}
+		gesehen := map[int]bool{}
+		for _, i := range indizes {
+			if i < 0 || i >= len(game.Wuerfel) || gesehen[i] {
+				continue
+			}
+			gesehen[i] = true
+			p.Halten = append(p.Halten, game.Wuerfel[i])
+		}
+		if len(p.Halten) >= 3 {
+			game.Wuerfel = []int{}
+			chWeitergeben(game, seat)
+			chNaechsterOderAuswerten(game, seat)
+			break
+		}
+		game.Wuerfel = []int{}
+		game.Note = p.Name + " lässt " + strconv.Itoa(len(p.Halten)) + " Würfel liegen."
+
+	case "drehen":
+		if game == nil || game.Status != "active" || game.Wer != id || len(game.Wuerfel) == 0 {
+			return http.StatusConflict, "Drehen geht nur direkt nach dem eigenen Wurf."
+		}
+		if !chDrehenSechser(game) {
+			return http.StatusConflict, "Zum Drehen braucht es zwei Sechser im Wurf."
+		}
+		game.Note = game.Players[game.Current].Name + " dreht Sechser zu Einsen."
+
+	case "weitergeben":
+		if game == nil || game.Status != "active" {
+			return http.StatusConflict, "Es läuft gerade keine aktive Chicago-Runde."
+		}
+		seat := chFind(game, id)
+		if seat < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
+		}
+		if seat != game.Current || game.Wer != id || len(game.Wuerfel) == 0 {
+			return http.StatusConflict, "Erst würfeln, dann weitergeben."
+		}
+		if game.Players[seat].Fertig {
+			return http.StatusConflict, "Dein Zug ist schon fertig."
+		}
+		chWeitergeben(game, seat)
+		chNaechsterOderAuswerten(game, seat)
+
+	case "weiter":
+		if game == nil || game.Status != "runde" {
+			return http.StatusConflict, "Die nächste Runde geht erst nach der Rundenübersicht."
+		}
+		if chFind(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+		}
+		chWeiter(game)
+
+	case "reset":
+		if game == nil || game.Status != "finished" {
+			return http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich."
+		}
+		if chFind(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+		}
+		fresh := &ChicagoGame{ID: game.ID, HostID: game.HostID, Status: "invited", Phase: 1, Runde: 1}
+		for i, p := range game.Players {
+			fresh.Players = append(fresh.Players, chNewPlayer(p.ID, p.Name, i))
+		}
+		fresh.FilzeMax = len(fresh.Players) + 1
+		fresh.Note = "Neue Partie – alle drücken BEREIT, dann startet der Gastgeber."
+		room.Chicago = fresh
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Chicago-Aktion."
+	}
+	return 0, ""
 }

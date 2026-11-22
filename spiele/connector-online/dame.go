@@ -441,6 +441,7 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Dame != nil && !room.gameSlotFree(room.Dame.Status, room.Dame.RedID, room.Dame.BlueID) {
 			mu.Unlock()
@@ -449,13 +450,13 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.Dame = &DameGame{
 			ID: randomCode(), RedID: input.ID, RedName: player.Name,
-			BlueID: botID(1), BlueName: botName(1),
+			BlueID: botID(1), BlueName: room.botName(1),
 			Board: newDameBoard(), Current: "red", Status: "active",
 			BotID: botID(1), BotStufe: stufe,
 		}
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Dame gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Dame gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

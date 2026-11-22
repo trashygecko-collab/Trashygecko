@@ -347,20 +347,21 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = player.Name + " muss aussetzen."
 
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Reversi != nil && !room.gameSlotFree(room.Reversi.Status, room.Reversi.RedID, room.Reversi.BlueID) {
 			mu.Unlock()
 			http.Error(w, "In diesem Spielraum läuft bereits eine Reversi-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		room.Reversi = reversiNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Reversi = reversiNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
 		room.Reversi.Status = "active"
 		room.Reversi.BotID = botID(1)
 		room.Reversi.BotStufe = stufe
-		room.Reversi.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Reversi.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
 			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
-			Text: "spielt Reversi gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Text: "spielt Reversi gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 
 	case "reset":

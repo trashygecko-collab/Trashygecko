@@ -673,6 +673,7 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		room.botNamenNeu()
 		stufe := botStufe(input.Stufe)
 		if room.Arschloch != nil && !room.gameSlotFree(room.Arschloch.Status, arschIDs(room.Arschloch)...) {
 			fail("In diesem Spielraum läuft bereits eine Arschloch-Runde.", http.StatusConflict)
@@ -681,13 +682,13 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 		g := arschNewGame(input.ID, player.Name, randomCode())
 		g.Players[0].Ready = true
 		for n := 1; n <= 2; n++ {
-			g.Players = append(g.Players, &ArschPlayer{ID: botID(n), Name: botName(n), Active: true, Ready: true})
+			g.Players = append(g.Players, &ArschPlayer{ID: botID(n), Name: room.botName(n), Active: true, Ready: true})
 			g.Bots = append(g.Bots, botID(n))
 		}
 		g.BotID, g.BotStufe = botID(1), stufe
 		g.Round = 1
 		g.arschDeal()
-		g.Note = player.Name + " spielt gegen " + botName(1) + " und " + botName(2) + " (" + botStufeText(stufe) + ")."
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " und " + room.botName(2) + " (" + botStufeText(stufe) + ")."
 		room.Arschloch = g
 		room.addMessage(Message{
 			Name:     player.Name,

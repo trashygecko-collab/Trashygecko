@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -38,6 +39,11 @@ type GoGame struct {
 	WhiteBase  int         `json:"whiteBase"`
 	Neutral    int         `json:"neutral"`
 	Note       string      `json:"note,omitempty"`
+
+	Bots      []string   `json:"bots,omitempty"`
+	BotZufall *rand.Rand `json:"-"`
+	BotStufe  string     `json:"botStufe,omitempty"`
+	BotFrist  time.Time  `json:"-"`
 }
 
 func goEmptyBoard() [][]*string {
@@ -297,6 +303,7 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		goBotTreiben(room, time.Now())
 		game := cloneGo(room.Go)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -309,10 +316,11 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID   string `json:"id"`
-		ToID string `json:"toId"`
-		R    int    `json:"r"`
-		C    int    `json:"c"`
+		ID    string `json:"id"`
+		ToID  string `json:"toId"`
+		R     int    `json:"r"`
+		C     int    `json:"c"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -338,6 +346,28 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		room.botNamenNeu()
+		if room.Go != nil && !room.gameSlotFree(room.Go.Status, room.Go.RedID, room.Go.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Go-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		spiel := goNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
+		spiel.Bots, spiel.BotStufe = []string{botID(1)}, stufe
+		spiel.Status = "active"
+		spiel.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		spiel.BotFrist = time.Now().Add(botWartezeit(stufe))
+		room.Go = spiel
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Go gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "invite":
 		target, ok := room.Players[input.ToID]
 		if !ok || input.ToID == input.ID {
@@ -384,101 +414,10 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 		game.Status = "declined"
 
 	case "play", "pass", "reset":
-		game := room.Go
-		if game == nil || (action != "reset" && game.Status != "active") {
+		if status, meldung := goAktion(room, input.ID, action, input.R, input.C); meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Es läuft gerade keine aktive Partie.", http.StatusConflict)
+			http.Error(w, meldung, status)
 			return
-		}
-		color := goColorOf(game, input.ID)
-		if color == "" {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
-		}
-
-		switch action {
-		case "play":
-			if game.Turn != color {
-				mu.Unlock()
-				http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
-				return
-			}
-			if !goInside(input.R, input.C) {
-				mu.Unlock()
-				http.Error(w, "Diese Kreuzung liegt nicht auf dem Brett.", http.StatusBadRequest)
-				return
-			}
-			if game.Board[input.R][input.C] != nil {
-				mu.Unlock()
-				http.Error(w, "Auf dieser Kreuzung liegt schon ein Stein.", http.StatusConflict)
-				return
-			}
-
-			next, taken, legal := goTry(game.Board, game.Positions, input.R, input.C, color)
-			if !legal {
-				mu.Unlock()
-				http.Error(w, "Dieser Zug ist nicht erlaubt!", http.StatusConflict)
-				return
-			}
-
-			game.Board = next
-			game.Positions = append(game.Positions, goKey(next))
-			if color == "B" {
-				game.CapturedB += taken
-			} else {
-				game.CapturedW += taken
-			}
-			game.Passes = 0
-			game.LastMove = &goPos{R: input.R, C: input.C}
-			game.Turn = goOther(color)
-
-			if taken > 0 {
-				game.Note = goWord(color) + " fängt " + goCount(taken) + " gegnerische Steine!"
-			} else {
-				game.Note = goWord(game.Turn) + " ist am Zug."
-			}
-
-		case "pass":
-			if game.Turn != color {
-				mu.Unlock()
-				http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
-				return
-			}
-			game.Passes++
-			game.LastMove = nil
-			game.Turn = goOther(color)
-
-			if game.Passes >= 2 {
-				black, white, neutral := goCalculateScore(game.Board)
-				whiteTotal := float64(white) + 6.5
-				game.Status = "finished"
-				game.ScoreBlack = black
-				game.WhiteBase = white
-				game.ScoreWhite = whiteTotal
-				game.Neutral = neutral
-				if float64(black) > whiteTotal {
-					game.Winner = "B"
-				} else {
-					game.Winner = "W"
-				}
-				game.Note = "Partie beendet – " + goWord(game.Winner) + " gewinnt mit " +
-					goScoreText(black, whiteTotal) + "."
-				break
-			}
-
-			game.Note = goWord(color) + " passt. Ein weiterer Pass beendet die Partie."
-
-		case "reset":
-			if game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
-				mu.Unlock()
-				http.Error(w, "Eine neue Partie ist erst nach Spielende möglich.", http.StatusConflict)
-				return
-			}
-			fresh := goNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
-			fresh.Status = "active"
-			fresh.Note = "Schwarz beginnt!"
-			room.Go = fresh
 		}
 
 	default:
@@ -507,4 +446,99 @@ func goScoreText(black int, white float64) string {
 		half = ".0"
 	}
 	return goCount(black) + " : " + goCount(int(white)) + half
+}
+
+/* ---------------------------------------------------------------------------
+   Gemeinsame Prüfung für Menschen und Bots
+   ------------------------------------------------------------------------- */
+
+// goAktion führt Zug, Pass und neue Partie aus – für Menschen und Bots
+// dieselbe Prüfung.
+func goAktion(room *Room, id, aktion string, r, c int) (int, string) {
+	game := room.Go
+	if game == nil || (aktion != "reset" && game.Status != "active") {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	color := goColorOf(game, id)
+	if color == "" {
+		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+	}
+
+	switch aktion {
+	case "play":
+		if game.Turn != color {
+			return http.StatusConflict, "Der andere Spieler ist an der Reihe."
+		}
+		if !goInside(r, c) {
+			return http.StatusBadRequest, "Diese Kreuzung liegt nicht auf dem Brett."
+		}
+		if game.Board[r][c] != nil {
+			return http.StatusConflict, "Auf dieser Kreuzung liegt schon ein Stein."
+		}
+
+		next, taken, legal := goTry(game.Board, game.Positions, r, c, color)
+		if !legal {
+			return http.StatusConflict, "Dieser Zug ist nicht erlaubt!"
+		}
+
+		game.Board = next
+		game.Positions = append(game.Positions, goKey(next))
+		if color == "B" {
+			game.CapturedB += taken
+		} else {
+			game.CapturedW += taken
+		}
+		game.Passes = 0
+		game.LastMove = &goPos{R: r, C: c}
+		game.Turn = goOther(color)
+
+		if taken > 0 {
+			game.Note = goWord(color) + " fängt " + goCount(taken) + " gegnerische Steine!"
+		} else {
+			game.Note = goWord(game.Turn) + " ist am Zug."
+		}
+
+	case "pass":
+		if game.Turn != color {
+			return http.StatusConflict, "Der andere Spieler ist an der Reihe."
+		}
+		game.Passes++
+		game.LastMove = nil
+		game.Turn = goOther(color)
+
+		if game.Passes >= 2 {
+			black, white, neutral := goCalculateScore(game.Board)
+			whiteTotal := float64(white) + 6.5
+			game.Status = "finished"
+			game.ScoreBlack = black
+			game.WhiteBase = white
+			game.ScoreWhite = whiteTotal
+			game.Neutral = neutral
+			if float64(black) > whiteTotal {
+				game.Winner = "B"
+			} else {
+				game.Winner = "W"
+			}
+			game.Note = "Partie beendet – " + goWord(game.Winner) + " gewinnt mit " +
+				goScoreText(black, whiteTotal) + "."
+			return 0, ""
+		}
+
+		game.Note = goWord(color) + " passt. Ein weiterer Pass beendet die Partie."
+
+	case "reset":
+		if game.Status != "finished" || (id != game.RedID && id != game.BlueID) {
+			return http.StatusConflict, "Eine neue Partie ist erst nach Spielende möglich."
+		}
+		fresh := goNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
+		fresh.Bots, fresh.BotStufe = game.Bots, game.BotStufe
+		fresh.Status = "active"
+		fresh.Note = "Schwarz beginnt!"
+		room.Go = fresh
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Go-Aktion."
+	}
+
+	return 0, ""
 }
