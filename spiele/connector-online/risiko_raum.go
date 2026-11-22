@@ -357,6 +357,11 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 		g.Pool = 0
 		g.Nachruecken = nil
 		g.LetzterKampf = nil
+		// Der Gastgeber hat in der Leiste keinen Bereit-Knopf; ohne das hier
+		// bliebe die Revanche für immer in der Lobby hängen.
+		if k := risikoSitzVon(g, g.HostID); k >= 0 {
+			g.Spieler[k].Bereit = true
+		}
 		g.Version++
 
 	default:

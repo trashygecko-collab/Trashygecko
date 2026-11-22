@@ -51,6 +51,7 @@
   var gestartet = false;     // Spielfeld schon aufgebaut
   var letzterFehler = "";
   var takt = 0;
+  var abrufLaeuft = false;
   var laeuftSeit = 0;
   var aufgebenBereit = false;
   var letzteZeichnung = "";
@@ -121,22 +122,29 @@
     });
   }
 
+  // Aktionen werden nie verworfen: sie warten in einer Schlange, bis der
+  // laufende Ruf fertig ist. Der Abgleich hat dafür einen eigenen Haken.
+  var warteschlange = [];
+  var sendetGerade = false;
+
   function sende(aktion, daten) {
-    if (laeuft) return;
-    laeuft = true;
-    laeuftSeit = Date.now();
-    ruf(aktion, daten).then(function (d) {
+    warteschlange.push([aktion, daten || {}]);
+    sendeNaechste();
+  }
+
+  function sendeNaechste() {
+    if (sendetGerade || !warteschlange.length) return;
+    sendetGerade = true;
+    var auftrag = warteschlange.shift();
+    ruf(auftrag[0], auftrag[1]).then(function (d) {
       letzterFehler = "";
       if (d && d.game) uebernehmen(d.game);
     }).catch(function (e) {
       letzterFehler = e.message;
     }).then(function () {
-      laeuft = false;
+      sendetGerade = false;
       zeichneLeiste();
-    }, function (e) {
-      laeuft = false;
-      letzterFehler = (e && e.message) || "Verbindung fehlgeschlagen";
-      zeichneLeiste();
+      sendeNaechste();
     });
   }
 
@@ -323,19 +331,19 @@
   /* --------------------------------------------------------------- Abgleich */
   function abholen() {
     // Ein hängender Ruf darf den Takt nicht für immer blockieren.
-    if (laeuft) {
+    if (abrufLaeuft) {
       if (Date.now() - laeuftSeit < 6000) return;
-      laeuft = false;
+      abrufLaeuft = false;
     }
-    laeuft = true;
+    abrufLaeuft = true;
     laeuftSeit = Date.now();
     ruf().then(function (d) {
       if (d && d.game) uebernehmen(d.game);
     }).catch(function (e) {
       letzterFehler = e.message;
       zeichneLeiste();
-    }).then(function () { laeuft = false; },
-      function () { laeuft = false; });
+    }).then(function () { abrufLaeuft = false; },
+      function () { abrufLaeuft = false; });
   }
 
   /* ------------------------------------------------------------------- Start */
@@ -379,7 +387,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room: RAUM, id: ICH, name: MEIN_NAME, active: true })
       }).catch(function () {});
-      laeuft = false;
+      abrufLaeuft = false;
       abholen();
     });
   });
