@@ -154,6 +154,14 @@
             '[data-stil="maenner"] .tg-zurueck:hover,[data-stil="maenner"] .tg-zurueck:focus-visible{',
             "  background:#23262c;color:#ffffff;border-color:#ff5560;",
             "}",
+            // Mädchen-Ansicht: das helle Bonbonrosa der Spielseiten, nicht das
+            // dunkle Grün des Klassikers (fehlte bisher ganz).
+            '[data-stil="maedchen"] .tg-zurueck{',
+            "  color:#5b0f2e;background:#fff6fa;border-color:#ef7aa8;opacity:.95;",
+            "}",
+            '[data-stil="maedchen"] .tg-zurueck:hover,[data-stil="maedchen"] .tg-zurueck:focus-visible{',
+            "  background:#ffe3ef;color:#3a0f24;border-color:#b06bff;",
+            "}",
             ".tg-zurueck--rechts{margin-left:auto}",
             // Eigene Zeile in einer Karte (1×1-Rennen, Paare).
             ".tg-zurueck--karte{display:block;margin:0 0 10px auto}",

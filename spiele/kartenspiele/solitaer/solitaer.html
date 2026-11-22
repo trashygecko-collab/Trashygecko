@@ -37,15 +37,33 @@ a{color:var(--warm)}
 .seite{max-width:1120px;margin:0 auto}
 
 /* ------------------------------------------------------------------ Kopf */
-/* Kopf als pinke Leiste im Connector-Design (Titel, Zurück). */
+/* Kopfleiste als eigene Leiste (Titel, Zurück). Die Form bleibt gleich, die
+   Farben kommen aus der zentralen Stilwahl: Klassisch Panel/Gold, Mädchen
+   helles Pink, Buben Anthrazit/Rot. Damit wechselt auch dieser zuvor
+   übersehene Bereich bei jedem Stilwechsel mit. */
+:root{
+  --kopf-1:#111b25; --kopf-2:#0b131b; --kopf-rand:rgba(255,255,255,.16); --kopf-text:#f6ead6;
+  --kopf-zurueck-text:#f6ead6; --kopf-zurueck-bg:rgba(255,255,255,.06); --kopf-zurueck-rand:rgba(255,255,255,.22);
+  --kopf-zurueck-hover-bg:rgba(255,255,255,.12); --kopf-zurueck-hover-text:#fff8ec;
+}
+html[data-stil="maedchen"]{
+  --kopf-1:#fff6fa; --kopf-2:#ffeaf3; --kopf-rand:#ef7aa8; --kopf-text:#5c0f38;
+  --kopf-zurueck-text:#5b0f2e; --kopf-zurueck-bg:#ffffffb0; --kopf-zurueck-rand:#ef7aa8;
+  --kopf-zurueck-hover-bg:#ffffff; --kopf-zurueck-hover-text:#3a0f24;
+}
+html[data-stil="buben"]{
+  --kopf-1:#1b1e23; --kopf-2:#0b0e11; --kopf-rand:#2b3540; --kopf-text:#e6e9ec;
+  --kopf-zurueck-text:#ff8a90; --kopf-zurueck-bg:#ffffff14; --kopf-zurueck-rand:#2b3540;
+  --kopf-zurueck-hover-bg:#ffffff24; --kopf-zurueck-hover-text:#ffd0d3;
+}
 .kopf{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin:0 2px 10px;min-height:32px;
-  padding:10px 14px;border-radius:12px;border:1px solid #ffd0e4;color:#fff;
-  background:linear-gradient(180deg,#e0559f,#b02c72)}
+  padding:10px 14px;border-radius:12px;border:1px solid var(--kopf-rand);color:var(--kopf-text);
+  background:linear-gradient(180deg,var(--kopf-1),var(--kopf-2))}
 .kopf h1{margin:0;font-size:clamp(19px,2.6vw,26px);font-weight:600;letter-spacing:.02em;line-height:1.12;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
-.kopf .zurueck{margin-left:auto;flex:0 0 auto;font-size:13px;text-decoration:none;color:#fff;
-  border:1px solid #ffd0e4;border-radius:999px;padding:5px 12px;background:#ffffff26}
-.kopf .zurueck:hover{color:#fff;background:#ffffff40}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--kopf-text)}
+.kopf .zurueck{margin-left:auto;flex:0 0 auto;font-size:13px;text-decoration:none;color:var(--kopf-zurueck-text);
+  border:1px solid var(--kopf-zurueck-rand);border-radius:999px;padding:5px 12px;background:var(--kopf-zurueck-bg)}
+.kopf .zurueck:hover{color:var(--kopf-zurueck-hover-text);background:var(--kopf-zurueck-hover-bg)}
 
 /* ---------------------------------------------------------- Knöpfe */
 .knopf{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:10px;cursor:pointer;
@@ -55,7 +73,13 @@ a{color:var(--warm)}
 .knopf:active{transform:translateY(1px)}
 .knopf:disabled{opacity:.36;cursor:default;transform:none}
 .knopf.zweit{background:rgba(255,255,255,.03)}
-#btnNeu{background:linear-gradient(180deg,#f6d3a3,#dfa060);color:#2b1a0c;border-color:#f9dcb0;font-weight:600}
+/* „Neues Spiel“ trug fest das klassische Gold – jetzt drei Paletten, gesteuert
+   über dieselbe zentrale Wahl wie die Kopfleiste. */
+:root{--neu-1:#f6d3a3;--neu-2:#dfa060;--neu-text:#2b1a0c;--neu-rand:#f9dcb0;--neu-1-h:#ffd9b0;--neu-2-h:#e8ad70}
+html[data-stil="maedchen"]{--neu-1:#ff9ecb;--neu-2:#f0509f;--neu-text:#3a0f24;--neu-rand:#f0509f;--neu-1-h:#ffb0d5;--neu-2-h:#f260a9}
+html[data-stil="buben"]{--neu-1:#e0242f;--neu-2:#c41724;--neu-text:#150a0c;--neu-rand:#e0242f;--neu-1-h:#ff6a73;--neu-2-h:#d81c2a}
+#btnNeu{background:linear-gradient(180deg,var(--neu-1),var(--neu-2));color:var(--neu-text);border-color:var(--neu-rand);font-weight:600}
+#btnNeu:hover{background:linear-gradient(180deg,var(--neu-1-h),var(--neu-2-h))}
 
 /* ------------------------------------------------------- Modusauswahl */
 .auswahl{margin-top:6px}
@@ -310,32 +334,19 @@ html[data-stil="maedchen"] .anzeige b{color:#3a0f24}
 html[data-stil="maedchen"] .leerzeichen{color:#5b2340}
 html[data-stil="maedchen"] .leerzeichen.farbe{opacity:1;color:#5b2340}
 html[data-stil="maedchen"] .leerzeichen.farbe.rot{color:#a01b52}
-html[data-stil="klassisch"] .kopf .zurueck{color:#c3d2de}
-html[data-stil="maedchen"] .kopf .zurueck{color:#5b0f2e}
 
 /* ---- Anordnung: eine Überschrift, Platz fürs Brett (22.11.2026) ---- */
 /* Der Rahmen nimmt genau die Fensterhöhe; die Ränder stehen als Variablen,
    damit die Rechnung zum body-Polster passt (sonst 12 px Überhang). */
 .seite{display:flex;flex-direction:column;min-height:calc(100dvh - var(--rand-oben) - var(--rand-unten))}
 body.spielt .seite{height:calc(100dvh - var(--rand-oben) - var(--rand-unten))}
-html[data-stil="klassisch"] .kopf h1{color:#f6ead6}
-html[data-stil="maedchen"] .kopf h1{color:#5c0f38}
-html[data-stil="buben"] .kopf h1{color:#e6e9ec}
 #spielbereich{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 #spielbereich .bahn{flex:1 1 auto;min-height:0;max-height:none}
 @media(min-width:761px){.leiste-optionen{margin-left:auto}}
 @media(max-width:760px){.kopf{margin-bottom:8px}}
 
-/* Kopfleiste in Mädchen und Buben: hell bzw. dunkel, damit der Titel
-   lesbar bleibt (gemessen 22.11.2026: vorher 2,9 : 1 auf dem Pink). */
-html[data-stil="maedchen"] .kopf{background:linear-gradient(180deg,#fff6fa,#ffeaf3);border-color:#ef7aa8;color:#3a0f24}
-html[data-stil="maedchen"] .kopf h1{color:#5c0f38}
-html[data-stil="maedchen"] .kopf .zurueck{color:#5b0f2e;background:#ffffffb0;border-color:#ef7aa8}
-html[data-stil="maedchen"] .kopf .zurueck:hover{color:#3a0f24;background:#ffffff}
-html[data-stil="buben"] .kopf{background:linear-gradient(180deg,#1b1e23,#0b0e11);border-color:#2b3540;color:#e6e9ec}
-html[data-stil="buben"] .kopf h1{color:#e6e9ec}
-html[data-stil="buben"] .kopf .zurueck{color:#ff8a90;background:#ffffff14;border-color:#2b3540}
-html[data-stil="buben"] .kopf .zurueck:hover{color:#ffd0d3;background:#ffffff24}
+/* Die Kopfleiste holt ihre Farben vollständig aus --kopf-* (siehe oben):
+   eine Stelle für alle drei Stile, kein Sonderfall mehr pro Stil. */
 </style>
 </head>
 <body>
