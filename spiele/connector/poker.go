@@ -51,6 +51,13 @@ type PokerGame struct {
 	Gewinner  string         `json:"gewinner,omitempty"`
 	Blinds    []int          `json:"blinds"`
 	Deck      []string       `json:"-"`
+
+	// Bots am Tisch (action=bot). Sie setzen über pokerAktion – dieselbe
+	// Prüfung wie ein menschlicher Klick.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"-"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 // ---------------------------------------------------------------- Karten
@@ -313,7 +320,18 @@ func pokerNeueHand(room *Room, g *PokerGame) {
 	pokerLege(g, klein, pokerKleinerBB)
 	pokerLege(g, gross, pokerGrosserBB)
 
+	// Wer nach dem großen Blind dran wäre, kann schon all-in sein (kleiner
+	// Blind mit letztem Geld). Dann rückt der Zug weiter; kann niemand mehr
+	// setzen, laufen die Straßen bis zum Showdown durch.
 	g.AmZug = pokerNaechster(g, gross)
+	if g.Spieler[g.AmZug].Raus || g.Spieler[g.AmZug].AllIn {
+		naechster := pokerNaechsterZumSetzen(g, gross)
+		if naechster < 0 {
+			pokerWeiter(g)
+			return
+		}
+		g.AmZug = naechster
+	}
 	g.Note = "Neue Hand – " + g.Spieler[klein].Name + " setzt 10 ct, " +
 		g.Spieler[gross].Name + " 20 ct. " + g.Spieler[g.AmZug].Name + " ist dran."
 }
@@ -535,6 +553,7 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		pokerBotTreiben(room, time.Now())
 		game := pokerAnsicht(room.Poker, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -549,6 +568,7 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID     string `json:"id"`
 		Betrag int    `json:"betrag"`
+		Stufe  string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -621,120 +641,149 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 			SenderID: input.ID,
 		})
 
-	case "ready":
-		game := room.Poker
-		if game == nil || game.Status != "invited" {
+	case "bot":
+		if room.Poker != nil && room.Poker.Status != "ende" {
 			mu.Unlock()
-			http.Error(w, "Bereit drücken geht nur vor dem Start.", http.StatusConflict)
+			http.Error(w, "An diesem Tisch läuft schon eine Partie.", http.StatusConflict)
 			return
 		}
-		sitz := pokerSitz(game, input.ID)
-		if sitz < 0 {
+		stufe := botStufe(input.Stufe)
+		spiel := &PokerGame{
+			ID:       randomCode(),
+			HostID:   input.ID,
+			Status:   "invited",
+			Blinds:   []int{pokerKleinerBB, pokerGrosserBB},
+			BotID:    botID(1),
+			Bots:     []string{botID(1), botID(2)},
+			BotStufe: stufe,
+			Note:     "Tisch eröffnet – " + player.Name + " und zwei Bots (" + botStufeText(stufe) + ").",
+		}
+		spiel.Spieler = append(spiel.Spieler, pokerNeuerSpieler(input.ID, player.Name))
+		for n := 1; n <= 2; n++ {
+			spiel.Spieler = append(spiel.Spieler, pokerNeuerSpieler(botID(n), botName(n)))
+		}
+		for i := range spiel.Spieler {
+			spiel.Spieler[i].Ready = true
+		}
+		room.Poker = spiel
+		if status, meldung := pokerAktion(room, input.ID, "start", 0); meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
+			http.Error(w, meldung, status)
 			return
+		}
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Poker gegen " + botName(1) + " und " + botName(2) + " (" + botStufeText(stufe) + ").",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
+	default:
+		if status, meldung := pokerAktion(room, input.ID, action, input.Betrag); meldung != "" {
+			mu.Unlock()
+			http.Error(w, meldung, status)
+			return
+		}
+	}
+
+	room.LastActive = time.Now()
+	result := pokerAnsicht(room.Poker, input.ID)
+	mu.Unlock()
+	jsonResponse(w, map[string]any{"game": result})
+}
+
+// ---------------------------------------------------------------- Aktionen
+
+// pokerAktion führt eine Aktion am Tisch aus. Mensch und Bot gehen durch
+// dieselbe Prüfung; die Rückgabe ist HTTP-Status und Meldung ("" heißt
+// erledigt).
+func pokerAktion(room *Room, id, aktion string, betrag int) (int, string) {
+	game := room.Poker
+
+	switch aktion {
+	case "ready":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Bereit drücken geht nur vor dem Start."
+		}
+		sitz := pokerSitz(game, id)
+		if sitz < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		game.Spieler[sitz].Ready = !game.Spieler[sitz].Ready
 		if game.Spieler[sitz].Ready {
-			game.Note = player.Name + " ist bereit."
+			game.Note = game.Spieler[sitz].Name + " ist bereit."
 		} else {
-			game.Note = player.Name + " wartet noch."
+			game.Note = game.Spieler[sitz].Name + " wartet noch."
 		}
 
 	case "start":
-		game := room.Poker
 		if game == nil || game.Status != "invited" {
-			mu.Unlock()
-			http.Error(w, "Es wartet keine Partie auf den Start.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Es wartet keine Partie auf den Start."
 		}
-		if game.HostID != input.ID {
-			mu.Unlock()
-			http.Error(w, "Nur der Gastgeber kann geben.", http.StatusForbidden)
-			return
+		if game.HostID != id {
+			return http.StatusForbidden, "Nur der Gastgeber kann geben."
 		}
 		if len(game.Spieler) < 2 {
-			mu.Unlock()
-			http.Error(w, "Poker braucht mindestens zwei Spieler.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Poker braucht mindestens zwei Spieler."
 		}
 		for _, p := range game.Spieler {
 			if !p.Ready {
-				mu.Unlock()
-				http.Error(w, "Erst müssen alle BEREIT drücken.", http.StatusConflict)
-				return
+				return http.StatusConflict, "Erst müssen alle BEREIT drücken."
 			}
 		}
 		game.Status = "active"
 		game.Dealer = len(game.Spieler) - 1
 		game.Hand = 0
 		pokerNeueHand(room, game)
-		room.addMessage(Message{
-			Name:     player.Name,
-			Text:     "gibt die Karten – Poker beginnt, jeder hat 10 € vor sich.",
-			Time:     zeit,
-			SenderID: input.ID,
-		})
 
 	case "fold", "check", "call", "raise", "allin":
-		game := room.Poker
 		if game == nil || game.Status != "active" || game.Runde == "showdown" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft keine Setzrunde.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade läuft keine Setzrunde."
 		}
-		sitz := pokerSitz(game, input.ID)
+		sitz := pokerSitz(game, id)
 		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		if game.AmZug != sitz {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Du bist nicht an der Reihe."
 		}
 		p := &game.Spieler[sitz]
 
-		switch action {
+		switch aktion {
 		case "fold":
 			p.Raus = true
 			p.Gehandelt = true
-			game.Note = player.Name + " passt."
+			game.Note = p.Name + " passt."
 
 		case "check":
 			if p.Einsatz < game.Hoechster {
-				mu.Unlock()
-				http.Error(w, "Zum Mitgehen fehlen dir "+pokerEuro(game.Hoechster-p.Einsatz)+".", http.StatusConflict)
-				return
+				return http.StatusConflict, "Zum Mitgehen fehlen dir " + pokerEuro(game.Hoechster-p.Einsatz) + "."
 			}
 			p.Gehandelt = true
-			game.Note = player.Name + " schiebt."
+			game.Note = p.Name + " schiebt."
 
 		case "call":
 			fehlt := game.Hoechster - p.Einsatz
 			if fehlt <= 0 {
 				p.Gehandelt = true
-				game.Note = player.Name + " schiebt."
+				game.Note = p.Name + " schiebt."
 				break
 			}
 			gezahlt := pokerLege(game, sitz, fehlt)
 			p.Gehandelt = true
 			if p.AllIn {
-				game.Note = player.Name + " geht mit " + pokerEuro(gezahlt) + " all-in."
+				game.Note = p.Name + " geht mit " + pokerEuro(gezahlt) + " all-in."
 			} else {
-				game.Note = player.Name + " geht mit (" + pokerEuro(gezahlt) + ")."
+				game.Note = p.Name + " geht mit (" + pokerEuro(gezahlt) + ")."
 			}
 
 		case "raise", "allin":
-			ziel := input.Betrag
-			if action == "allin" {
+			ziel := betrag
+			if aktion == "allin" {
 				ziel = p.Einsatz + p.Chips
 			}
 			if ziel <= p.Einsatz {
-				mu.Unlock()
-				http.Error(w, "Der Einsatz muss höher sein.", http.StatusBadRequest)
-				return
+				return http.StatusBadRequest, "Der Einsatz muss höher sein."
 			}
 			ziel = (ziel / pokerSchritt) * pokerSchritt
 			if ziel > p.Einsatz+p.Chips {
@@ -742,9 +791,7 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			minimum := game.Hoechster + pokerSchritt
 			if ziel < minimum && ziel < p.Einsatz+p.Chips {
-				mu.Unlock()
-				http.Error(w, "Mindestens "+pokerEuro(minimum)+" – in 10-Cent-Schritten.", http.StatusConflict)
-				return
+				return http.StatusConflict, "Mindestens " + pokerEuro(minimum) + " – in 10-Cent-Schritten."
 			}
 			gezahlt := pokerLege(game, sitz, ziel-p.Einsatz)
 			p.Gehandelt = true
@@ -755,9 +802,9 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if p.AllIn {
-				game.Note = player.Name + " geht all-in (" + pokerEuro(p.Einsatz) + ")."
+				game.Note = p.Name + " geht all-in (" + pokerEuro(p.Einsatz) + ")."
 			} else {
-				game.Note = player.Name + " erhöht auf " + pokerEuro(p.Einsatz) + " (+" + pokerEuro(gezahlt) + ")."
+				game.Note = p.Name + " erhöht auf " + pokerEuro(p.Einsatz) + " (+" + pokerEuro(gezahlt) + ")."
 			}
 		}
 
@@ -771,16 +818,11 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "naechste":
-		game := room.Poker
 		if game == nil || game.Status != "active" || game.Runde != "showdown" {
-			mu.Unlock()
-			http.Error(w, "Die laufende Hand ist noch nicht zu Ende.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Die laufende Hand ist noch nicht zu Ende."
 		}
-		if pokerSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
+		if pokerSitz(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		if pokerMitChips(game) < 2 {
 			game.Status = "ende"
@@ -791,16 +833,11 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 		pokerNeueHand(room, game)
 
 	case "reset":
-		game := room.Poker
 		if game == nil || game.Status != "ende" {
-			mu.Unlock()
-			http.Error(w, "Eine neue Partie geht erst nach dem Ende.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Eine neue Partie geht erst nach dem Ende."
 		}
-		if pokerSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
+		if pokerSitz(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 		}
 		frisch := &PokerGame{
 			ID:      game.ID,
@@ -814,15 +851,13 @@ func pokerHandler(w http.ResponseWriter, r *http.Request) {
 			frisch.Spieler = append(frisch.Spieler, pokerNeuerSpieler(p.ID, p.Name))
 		}
 		room.Poker = frisch
+		room.LastActive = time.Now()
+		return 0, ""
 
 	default:
-		mu.Unlock()
-		http.Error(w, "Unbekannte Poker-Aktion.", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, "Unbekannte Poker-Aktion."
 	}
 
 	room.LastActive = time.Now()
-	result := pokerAnsicht(room.Poker, input.ID)
-	mu.Unlock()
-	jsonResponse(w, map[string]any{"game": result})
+	return 0, ""
 }
