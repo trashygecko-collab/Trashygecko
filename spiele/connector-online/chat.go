@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -10,7 +12,20 @@ import (
 
 // adminPasswort gehört zum Chat-Befehl "/Admin <Passwort>". Damit wird man
 // auch dann Admin, wenn der Platz schon vergeben ist (online die Regel).
-const adminPasswort = "Admin"
+//
+// Es steht bewusst nicht mehr fest im Quelltext: Der Connector liegt samt
+// Quellen öffentlich, "Admin" war damit für jeden lesbar und jeder Besucher
+// konnte sich zum Besitzer machen. Jetzt gilt TG_ADMIN_PASSWORT, sonst ein
+// Zufallswert je Start, den der Betreiber beim Start im Protokoll sieht.
+var adminPasswort = zufallsToken()
+
+func init() {
+	if eigen := strings.TrimSpace(os.Getenv("TG_ADMIN_PASSWORT")); eigen != "" {
+		adminPasswort = eigen
+		return
+	}
+	log.Printf("Admin-Passwort für /Admin (nur dieser Start): %s", adminPasswort)
+}
 
 // messages handles GET (fetch) and POST (send) chat messages.
 func messages(w http.ResponseWriter, r *http.Request) {

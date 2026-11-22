@@ -53,6 +53,11 @@ func withIdentity(next http.Handler) http.Handler {
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
 		geraet := strings.TrimSpace(r.URL.Query().Get("geraet"))
 
+		// Kennung und Raum aus dem Rumpf: Sie füllen nur Lücken in der Adresse.
+		// Weichen sie von einer geprüften Adresse ab, wird der Ruf abgewiesen –
+		// sonst könnte ein Token für die eigene Kennung eine fremde Aktion
+		// auslösen (die Handler lesen die Kennung aus dem Rumpf).
+		rumpfID, rumpfRoom := "", ""
 		if r.Method == http.MethodPost {
 			body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 			if err == nil {
@@ -64,11 +69,13 @@ func withIdentity(next http.Handler) http.Handler {
 					Geraet string `json:"geraet"`
 				}
 				if json.Unmarshal(body, &probe) == nil {
+					rumpfID = strings.TrimSpace(probe.ID)
+					rumpfRoom = strings.ToUpper(strings.TrimSpace(probe.Room))
 					if code == "" {
-						code = strings.ToUpper(strings.TrimSpace(probe.Room))
+						code = rumpfRoom
 					}
 					if id == "" {
-						id = strings.TrimSpace(probe.ID)
+						id = rumpfID
 					}
 					if token == "" {
 						token = strings.TrimSpace(probe.Token)
@@ -80,6 +87,16 @@ func withIdentity(next http.Handler) http.Handler {
 						noteActivity(code, id)
 					}
 				}
+			}
+		}
+		if r.Method == http.MethodPost {
+			if rumpfID != "" && id != "" && rumpfID != id {
+				http.Error(w, "Die Kennung im Rumpf passt nicht zur Sitzung.", http.StatusForbidden)
+				return
+			}
+			if rumpfRoom != "" && code != "" && rumpfRoom != code {
+				http.Error(w, "Der Raum im Rumpf passt nicht zur Adresse.", http.StatusForbidden)
+				return
 			}
 		}
 
