@@ -61,6 +61,9 @@ type UnoGame struct {
 	UnoUntil     time.Time     `json:"-"`
 	Challenge    *UnoChallenge `json:"challenge"`
 	Winner       string        `json:"winner,omitempty"`
+	BotID        string        `json:"botId,omitempty"`
+	BotStufe     string        `json:"-"`
+	BotFrist     time.Time     `json:"-"`
 	Note         string        `json:"note,omitempty"`
 	LastPlayed   string        `json:"lastPlayed,omitempty"`
 	DeckCount    int           `json:"deckCount"`
@@ -157,6 +160,16 @@ func unoSeat(g *UnoGame, id string) int {
 		}
 	}
 	return -1
+}
+
+// unoIDs listet die Plätze einer Runde – damit lässt sich prüfen, ob ein neues
+// Spiel den Tisch übernehmen darf (gameSlotFree).
+func unoIDs(g *UnoGame) []string {
+	ids := make([]string, 0, len(g.Players))
+	for _, p := range g.Players {
+		ids = append(ids, p.ID)
+	}
+	return ids
 }
 
 func unoNext(g *UnoGame, seat int) int {
@@ -372,6 +385,180 @@ func cloneUno(g *UnoGame) *UnoGame {
 	return &c
 }
 
+// unoAktion führt eine Spielaktion aus. Mensch (HTTP) und Bot (unoBotSchritt)
+// gehen durch dieselbe Prüfung: Karte passt, Spieler ist dran, Fristen und
+// Folgezustand entstehen hier und nicht im Handler. Rückgabe 0 heißt
+// „ausgeführt“; sonst HTTP-Status und Meldung für den Aufrufer.
+func (g *UnoGame) unoAktion(seat int, akt string, index int, color, name string) (int, string) {
+	if g == nil || g.Status != "active" {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	if seat < 0 || seat >= len(g.Players) {
+		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+	}
+	if strings.TrimSpace(name) == "" {
+		name = g.Players[seat].Name
+	}
+	switch akt {
+	case "draw":
+		if g.Current != seat || g.Phase != "playing" {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if g.Drawn != nil {
+			return http.StatusConflict, "Du hast schon eine Karte gezogen."
+		}
+		card, available := unoDrawCard(g)
+		if !available {
+			return http.StatusConflict, "Es sind keine Karten mehr zum Ziehen da."
+		}
+		g.Players[seat].Hand = append(g.Players[seat].Hand, card)
+		g.Drawn = &card
+		g.Note = "Karte gezogen – legen oder passen."
+
+	case "pass":
+		if g.Current != seat || g.Phase != "playing" || g.Drawn == nil {
+			return http.StatusConflict, "Du hast keine gezogene Karte zum Passen."
+		}
+		g.Drawn = nil
+		g.unoAdvance(1)
+		g.Note = name + " passt – " + g.Players[g.Current].Name + " ist am Zug."
+
+	case "play":
+		if g.Current != seat || g.Phase != "playing" {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		hand := g.Players[seat].Hand
+		if index < 0 || index >= len(hand) {
+			return http.StatusBadRequest, "Diese Karte hast du nicht."
+		}
+		if g.Drawn != nil && index != len(hand)-1 {
+			return http.StatusConflict, "Nach dem Ziehen kannst du nur die gezogene Karte spielen."
+		}
+		card := hand[index]
+		if !unoPlayable(g, card) {
+			return http.StatusConflict, "Diese Karte passt nicht."
+		}
+		g.Players[seat].Hand = append(hand[:index], hand[index+1:]...)
+		g.Discard = append(g.Discard, card)
+		g.Drawn = nil
+		g.LastPlayed = name
+		g.refreshCounts()
+
+		if len(g.Players[seat].Hand) == 0 {
+			g.Status = "finished"
+			g.Phase = "finished"
+			g.Winner = name
+			g.PendingUno = -1
+			g.Challenge = nil
+			g.Note = name + " legt die letzte Karte und gewinnt!"
+			break
+		}
+
+		if len(g.Players[seat].Hand) == 1 {
+			g.PendingUno = seat
+			g.UnoUntil = time.Now().Add(unoWindow)
+			g.Note = name + " hat nur noch eine Karte – UNO rufen!"
+		}
+
+		if card.Color == "wild" {
+			g.Phase = "chooseColor"
+			g.Note = "Wunschfarbe wählen!"
+			break
+		}
+
+		g.ActiveColor = card.Color
+		g.unoEffect(card)
+		if g.PendingUno == seat {
+			g.Note += " UNO nicht vergessen!"
+		}
+
+	case "color":
+		if g.Current != seat || g.Phase != "chooseColor" {
+			return http.StatusConflict, "Du darfst gerade keine Farbe wählen."
+		}
+		farbe := strings.ToLower(strings.TrimSpace(color))
+		valid := false
+		for _, c := range unoColors {
+			if c == farbe {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return http.StatusBadRequest, "Unbekannte Farbe."
+		}
+		// Die Farbe vor dem Buben steht noch in ActiveColor, weil wilde
+		// Karten sie nicht ändern – daraus wird die +4 geprüft.
+		prevColor := g.ActiveColor
+		g.ActiveColor = farbe
+		g.Phase = "playing"
+
+		if g.Top != nil && g.Top.Value == "wild4" {
+			challenger := unoNext(g, seat)
+			g.Challenge = &UnoChallenge{
+				Offender:   seat,
+				Challenger: challenger,
+				PrevColor:  prevColor,
+				Until:      time.Now().Add(unoChallengeWindow),
+			}
+			g.Phase = "challenge"
+			g.Current = challenger
+			g.Note = g.Players[challenger].Name + ": +4 annehmen oder anzweifeln?"
+			break
+		}
+		g.unoAdvance(1)
+		g.Note = "Farbe " + farbe + " – " + g.Players[g.Current].Name + " ist am Zug."
+
+	case "uno":
+		if g.PendingUno != seat {
+			return http.StatusConflict, "Du musst gerade kein UNO melden."
+		}
+		g.PendingUno = -1
+		g.Note = name + " ruft UNO!"
+
+	case "accept4":
+		ch := g.Challenge
+		if ch == nil || ch.Challenger != seat {
+			return http.StatusConflict, "Es liegt keine +4 für dich bereit."
+		}
+		given := unoGive(g, seat, 4)
+		g.Challenge = nil
+		g.Phase = "playing"
+		g.Current = seat
+		g.unoAdvance(1)
+		g.Note = name + " nimmt die +4 und zieht " + unoCountText(given) + "."
+
+	case "challenge4":
+		ch := g.Challenge
+		if ch == nil || ch.Challenger != seat {
+			return http.StatusConflict, "Es liegt keine +4 zum Anzweifeln für dich bereit."
+		}
+		offender := ch.Offender
+		hadColor := false
+		for _, card := range g.Players[offender].Hand {
+			if card.Color == ch.PrevColor {
+				hadColor = true
+				break
+			}
+		}
+		g.Challenge = nil
+		g.Phase = "playing"
+		if hadColor {
+			given := unoGive(g, offender, 4)
+			g.Current = seat
+			g.Note = "Anzweifeln erfolgreich! " + g.Players[offender].Name +
+				" zieht " + unoCountText(given) + "."
+		} else {
+			given := unoGive(g, seat, 6)
+			g.Current = seat
+			g.unoAdvance(1)
+			g.Note = "Anzweifeln fehlgeschlagen – " + name +
+				" zieht " + unoCountText(given) + "."
+		}
+	}
+	return 0, ""
+}
+
 func unoHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -392,6 +579,12 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 			mu.Unlock()
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
+		}
+		if room.Uno != nil {
+			// Fristen (UNO-Ruf, +4) gelten im Raum, nicht nur in der Kopie –
+			// sonst zeigt der Stand eine Strafe, die nie gebucht wurde.
+			room.Uno.unoExpire(time.Now())
+			unoBotTreiben(room.Uno, time.Now())
 		}
 		game := cloneUno(room.Uno)
 		if game != nil {
@@ -416,6 +609,7 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"id"`
 		Index int    `json:"index"`
 		Color string `json:"color"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -450,6 +644,25 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Uno != nil {
+			slot := room.Uno.Status
+			if slot == "spiel" {
+				slot = "active"
+			}
+			if !room.gameSlotFree(slot, unoIDs(room.Uno)...) {
+				fail("In diesem Spielraum läuft bereits eine UNO-Runde.", http.StatusConflict)
+				return
+			}
+		}
+		g := unoNewGame(input.ID, player.Name, randomCode())
+		g.Players = append(g.Players, &UnoPlayer{ID: botID(1), Name: botName(1), Ready: true})
+		g.Players[0].Ready = true
+		g.BotID, g.BotStufe = botID(1), stufe
+		unoDeal(g)
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Uno = g
 	case "create":
 		if game != nil && game.Status != "finished" {
 			fail("An diesem Tisch läuft schon eine UNO-Runde.", http.StatusConflict)
@@ -556,177 +769,10 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch action {
-		case "draw":
-			if game.Current != seat || game.Phase != "playing" {
-				fail("Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			if game.Drawn != nil {
-				fail("Du hast schon eine Karte gezogen.", http.StatusConflict)
-				return
-			}
-			card, available := unoDrawCard(game)
-			if !available {
-				fail("Es sind keine Karten mehr zum Ziehen da.", http.StatusConflict)
-				return
-			}
-			game.Players[seat].Hand = append(game.Players[seat].Hand, card)
-			game.Drawn = &card
-			game.Note = "Karte gezogen – legen oder passen."
-
-		case "pass":
-			if game.Current != seat || game.Phase != "playing" || game.Drawn == nil {
-				fail("Du hast keine gezogene Karte zum Passen.", http.StatusConflict)
-				return
-			}
-			game.Drawn = nil
-			game.unoAdvance(1)
-			game.Note = player.Name + " passt – " + game.Players[game.Current].Name + " ist am Zug."
-
-		case "play":
-			if game.Current != seat || game.Phase != "playing" {
-				fail("Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			hand := game.Players[seat].Hand
-			if input.Index < 0 || input.Index >= len(hand) {
-				fail("Diese Karte hast du nicht.", http.StatusBadRequest)
-				return
-			}
-			if game.Drawn != nil && input.Index != len(hand)-1 {
-				fail("Nach dem Ziehen kannst du nur die gezogene Karte spielen.", http.StatusConflict)
-				return
-			}
-			card := hand[input.Index]
-			if !unoPlayable(game, card) {
-				fail("Diese Karte passt nicht.", http.StatusConflict)
-				return
-			}
-			game.Players[seat].Hand = append(hand[:input.Index], hand[input.Index+1:]...)
-			game.Discard = append(game.Discard, card)
-			game.Drawn = nil
-			game.LastPlayed = player.Name
-			game.refreshCounts()
-
-			if len(game.Players[seat].Hand) == 0 {
-				game.Status = "finished"
-				game.Phase = "finished"
-				game.Winner = player.Name
-				game.PendingUno = -1
-				game.Challenge = nil
-				game.Note = player.Name + " legt die letzte Karte und gewinnt!"
-				break
-			}
-
-			if len(game.Players[seat].Hand) == 1 {
-				game.PendingUno = seat
-				game.UnoUntil = time.Now().Add(unoWindow)
-				game.Note = player.Name + " hat nur noch eine Karte – UNO rufen!"
-			}
-
-			if card.Color == "wild" {
-				game.Phase = "chooseColor"
-				game.Note = "Wunschfarbe wählen!"
-				break
-			}
-
-			game.ActiveColor = card.Color
-			game.unoEffect(card)
-			if game.PendingUno == seat {
-				game.Note += " UNO nicht vergessen!"
-			}
-
-		case "color":
-			if game.Current != seat || game.Phase != "chooseColor" {
-				fail("Du darfst gerade keine Farbe wählen.", http.StatusConflict)
-				return
-			}
-			color := strings.ToLower(strings.TrimSpace(input.Color))
-			valid := false
-			for _, c := range unoColors {
-				if c == color {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				fail("Unbekannte Farbe.", http.StatusBadRequest)
-				return
-			}
-			// Die Farbe vor dem Buben steht noch in ActiveColor, weil wilde
-			// Karten sie nicht ändern – daraus wird die +4 geprüft.
-			prevColor := game.ActiveColor
-			game.ActiveColor = color
-			game.Phase = "playing"
-
-			if game.Top != nil && game.Top.Value == "wild4" {
-				challenger := unoNext(game, seat)
-				game.Challenge = &UnoChallenge{
-					Offender:   seat,
-					Challenger: challenger,
-					PrevColor:  prevColor,
-					Until:      time.Now().Add(unoChallengeWindow),
-				}
-				game.Phase = "challenge"
-				game.Current = challenger
-				game.Note = game.Players[challenger].Name + ": +4 annehmen oder anzweifeln?"
-				break
-			}
-			game.unoAdvance(1)
-			game.Note = "Farbe " + color + " – " + game.Players[game.Current].Name + " ist am Zug."
-
-		case "uno":
-			if game.PendingUno != seat {
-				fail("Du musst gerade kein UNO melden.", http.StatusConflict)
-				return
-			}
-			game.PendingUno = -1
-			game.Note = player.Name + " ruft UNO!"
-
-		case "accept4":
-			ch := game.Challenge
-			if ch == nil || ch.Challenger != seat {
-				fail("Es liegt keine +4 für dich bereit.", http.StatusConflict)
-				return
-			}
-			given := unoGive(game, seat, 4)
-			game.Challenge = nil
-			game.Phase = "playing"
-			game.Current = seat
-			game.unoAdvance(1)
-			game.Note = player.Name + " nimmt die +4 und zieht " + unoCountText(given) + "."
-
-		case "challenge4":
-			ch := game.Challenge
-			if ch == nil || ch.Challenger != seat {
-				fail("Es liegt keine +4 zum Anzweifeln für dich bereit.", http.StatusConflict)
-				return
-			}
-			offender := ch.Offender
-			hadColor := false
-			for _, card := range game.Players[offender].Hand {
-				if card.Color == ch.PrevColor {
-					hadColor = true
-					break
-				}
-			}
-			game.Challenge = nil
-			game.Phase = "playing"
-			if hadColor {
-				given := unoGive(game, offender, 4)
-				game.Current = seat
-				game.Note = "Anzweifeln erfolgreich! " + game.Players[offender].Name +
-					" zieht " + unoCountText(given) + "."
-			} else {
-				given := unoGive(game, seat, 6)
-				game.Current = seat
-				game.unoAdvance(1)
-				game.Note = "Anzweifeln fehlgeschlagen – " + player.Name +
-					" zieht " + unoCountText(given) + "."
-			}
+		if status, meldung := game.unoAktion(seat, action, input.Index, input.Color, player.Name); status != 0 {
+			fail(meldung, status)
+			return
 		}
-
 	default:
 		fail("Unbekannte UNO-Aktion.", http.StatusBadRequest)
 		return

@@ -225,6 +225,14 @@ func muehleAdvance(g *MuehleGame, color string) {
 	if g.Phase == "placing" && g.PlacedRed == 9 && g.PlacedBlue == 9 {
 		g.Phase = "moving"
 		g.Current = muehleOther(color)
+		// Der erste Zug der Zugphase kann bereits blockiert sein (acht eigene
+		// Steine, alle Nachbarpunkte besetzt). Dann ist die Partie entschieden;
+		// ohne diese Prüfung stünde der Spieler ohne erlaubten Zug da.
+		if !muehleHasMove(g, g.Current) {
+			muehleFinish(g, color)
+			return
+		}
+		muehleStellungMerken(g)
 		return
 	}
 	muehleEndTurn(g, color)
