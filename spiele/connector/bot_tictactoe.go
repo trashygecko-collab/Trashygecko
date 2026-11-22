@@ -3,7 +3,7 @@ package main
 import "time"
 
 /* ===========================================================================
-   BOT FÜR NEON TIC TAC TOE
+   BOT FÜR TIC TAC TOE
 
    Der Bot spielt „O“, der Mensch „X“ (oder umgekehrt, wenn der Mensch als
    Zweiter beitritt – die Kennung entscheidet). Er sieht nur das Brett, also

@@ -293,8 +293,8 @@ button{font-family:inherit;cursor:pointer;touch-action:manipulation}
 /* ---- Knöpfe ---- */
 .knoepfe{
   display:grid;
-  grid-template-columns:1.1fr 1fr 1fr;
-  gap:clamp(6px,.9vw,10px);
+  grid-template-columns:1fr;
+  gap:clamp(8px,1.1vw,12px);
 }
 .knoepfe button{
   min-height:clamp(46px,6vh,58px);
@@ -314,6 +314,18 @@ button{font-family:inherit;cursor:pointer;touch-action:manipulation}
   border:var(--haupt-rand,1px solid transparent);
   box-shadow:var(--haupt-schatten,none);
 }
+/* Punkte sichern: der zweite, größere Hauptknopf – die wichtigste Aktion
+   nach dem Würfeln, am Handy gut mit dem Daumen zu treffen. */
+.knoepfe button.sichern{
+  min-height:clamp(60px,8.5vh,78px);
+  font-size:clamp(15px,1.9vw,19px);
+  letter-spacing:.06em;
+  background:var(--sichern-bg,var(--gut));
+  color:var(--sichern-text,#08150f);
+  border:1px solid var(--sichern-rand,transparent);
+  box-shadow:var(--sichern-schatten,0 8px 18px #00000040);
+}
+.knoepfe button.sichern:disabled{box-shadow:none}
 .knoepfe button:not(:disabled):active{transform:translateY(1px)}
 .knoepfe button:not(:disabled):hover{filter:brightness(1.07)}
 .knoepfe button:disabled{opacity:.4;cursor:not-allowed}
@@ -564,6 +576,10 @@ body[data-stil="normal"]{
   --haupt-text:#0b241d;
   --haupt-rand:1px solid #d9bc7c;
   --haupt-schatten:0 6px 14px #00000033;
+  --sichern-bg:linear-gradient(180deg,#a9e6ba,#7cc79a);
+  --sichern-text:#0b241d;
+  --sichern-rand:1px solid #6fb389;
+  --sichern-schatten:0 8px 18px #0000004d,inset 0 1px 0 #ffffff59;
   --hinweis-text:#c8d9cf;
   --spieler-farbe:#e8cd8e;
   --spieler-farbe-schein:#e8cd8e33;
@@ -671,6 +687,10 @@ body[data-stil="maedchen"]{
   --haupt-text:#2b0d16;
   --haupt-rand:1px solid #a96d78;
   --haupt-schatten:0 10px 22px #00000073,inset 0 -2px 0 #8f5d68;
+  --sichern-bg:linear-gradient(180deg,#c3ded0,#94c3b1);
+  --sichern-text:#12251d;
+  --sichern-rand:1px solid #7ba897;
+  --sichern-schatten:0 10px 22px #00000073,inset 0 1px 0 #ffffff59;
   --hinweis-text:#c9b0c0;
   --spieler-farbe:#c68b8f;
   --spieler-farbe-schein:#c68b8f2e;
@@ -809,6 +829,10 @@ body[data-stil="buben"]{
   --haupt-text:#ffffff;
   --haupt-rand:1px solid #ff8a90;
   --haupt-schatten:0 10px 22px #0505068c,inset 0 -2px 0 #4a070c;
+  --sichern-bg:linear-gradient(180deg,#d9dbde,#adb0b5);
+  --sichern-text:#141517;
+  --sichern-rand:1px solid #9a9da3;
+  --sichern-schatten:0 10px 22px #0505068c,inset 0 1px 0 #ffffff59;
   --hinweis-text:#b5b7bc;
   --spieler-farbe:#e0242f;
   --spieler-farbe-schein:#e0242f29;
@@ -918,10 +942,11 @@ body[data-stil="buben"] .wuerfelFeld::before{
   .werte{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
   .wert strong{font-size:clamp(14px,4vw,18px)}
   .wert .etikett{font-size:9px;letter-spacing:.08em}
-  .knoepfe{grid-template-columns:1fr 1fr;position:sticky;bottom:0;z-index:5;
+  .knoepfe{position:sticky;bottom:0;z-index:5;
     padding:8px 0 calc(8px + env(safe-area-inset-bottom));
     background:linear-gradient(180deg,#0000,var(--leiste-bg,#0a211b) 45%)}
-  .knoepfe button.haupt{grid-column:1 / -1}
+  .knoepfe button{min-height:clamp(44px,6vh,52px)}
+  .knoepfe button.sichern{min-height:clamp(56px,7.5vh,64px)}
   .kopf{padding:8px 10px 18px}
   .kopf h1{font-size:20px}
   .kopf .rechts{margin-left:0;width:100%;justify-content:space-between}
@@ -981,7 +1006,6 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
 
   <header class="kopf">
     <div>
-      <h1>10.000</h1>
       <div class="unterzeile">Sechs Würfel, drei Ansichten, ein Ziel</div>
     </div>
     <div class="rechts">
@@ -1014,8 +1038,7 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
 
       <div class="knoepfe">
         <button type="button" class="haupt" id="wuerfelnKnopf">Würfeln</button>
-        <button type="button" id="weiterKnopf">Weiterwürfeln</button>
-        <button type="button" id="sichernKnopf">Punkte sichern</button>
+        <button type="button" class="sichern" id="sichernKnopf">Punkte sichern</button>
       </div>
 
       <p class="hinweis" id="hinweis" role="status" aria-live="polite"></p>
@@ -1038,7 +1061,7 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
           <li><b>Dreierpasch:</b> drei 1er = 1.000, drei 2er = 200, drei 3er = 300, drei 4er = 400, drei 5er = 500, drei 6er = 600. Jeder weitere gleiche Würfel zählt den Satz noch einmal (vier 2er = 400).</li>
           <li>Andere Augenzahlen zählen nur als Dreierpasch – eine einzelne 2 bringt nichts.</li>
           <li>Gewürfelte Würfel antippen – eine 1, eine 5 oder ein vollständiger Pasch wird sofort fest gesichert und bleibt liegen.</li>
-          <li><b>Weiterwürfeln</b> würfelt nur mit den übrigen, nicht gesicherten Würfeln.</li>
+          <li>Ein erneutes <b>Würfeln</b> nach dem Beiseitelegen würfelt nur mit den übrigen, nicht gesicherten Würfeln.</li>
           <li>Wer <b>keinen gültigen Wurf</b> hat, verliert alle Punkte dieses Zugs.</li>
           <li>Sind <b>alle sechs Würfel</b> verbraucht, kommen alle sechs zurück.</li>
           <li>Gespeichert wird erst ab <b>350 Punkten</b> im Zug – darunter bleibt der Knopf gesperrt.</li>
@@ -1332,10 +1355,10 @@ function zeichne() {
 
   const zug = meinZug();
   // Online würfelt der Server: nach dem ersten Wurf geht es nur über WEITERWÜRFELN.
-  $("wuerfelnKnopf").disabled = !darfWuerfeln() || !zug || (ONLINE && S.wuerfe > 0);
-  $("weiterKnopf").disabled = !darfWeiter() || !zug;
+  // Ein Knopf für beides: vor dem ersten Wurf würfeln, danach mit den
+  // übrigen Würfeln weiterwürfeln.
+  $("wuerfelnKnopf").disabled = !zug || !wuerfelnMoeglich();
   $("sichernKnopf").disabled = !darfSichern() || !zug;
-  $("wuerfelnKnopf").textContent = S.wuerfe === 0 ? "Würfeln" : "Nochmal würfeln";
 
   zeichneSpieler();
   setzeHinweis(S.hinweis, S.hinweisArt);
@@ -1555,6 +1578,19 @@ function sichereAuswahl() {
   return dazu;
 }
 
+// Welche der beiden Aktionen löst der eine Würfeln-Knopf aus?
+function wuerfelnMoeglich() {
+  if (ONLINE) return S.wuerfe === 0 ? darfWuerfeln() : darfWeiter();
+  return darfWeiter() || darfWuerfeln();
+}
+
+// Der eine Würfeln-Knopf: nach dem ersten Wurf würfelt er mit den übrigen
+// Würfeln weiter, vorher würfelt er alle sechs.
+function wuerfelnOderWeiter() {
+  if (darfWeiter()) weiterwuerfeln();
+  else wuerfeln();
+}
+
 async function weiterwuerfeln() {
   if (ONLINE) {
     if (meinZug()) onlineAktion("weiter");
@@ -1577,6 +1613,7 @@ async function weiterwuerfeln() {
     );
     zeichne();
     speichern();
+    await wuerfeln();
     return;
   }
 
@@ -1789,21 +1826,17 @@ $("nochmalKnopf").addEventListener("click", () => {
   $("endeSchleier").hidden = true;
   zeigeStart();
 });
-$("wuerfelnKnopf").addEventListener("click", wuerfeln);
-$("weiterKnopf").addEventListener("click", weiterwuerfeln);
+$("wuerfelnKnopf").addEventListener("click", wuerfelnOderWeiter);
 $("sichernKnopf").addEventListener("click", sichern);
 
 
-/* Tastatur: Leertaste würfelt, W weiter, S sichern. */
+/* Tastatur: Leertaste und W würfeln (weiter), S sichert. */
 document.addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLElement &&
       (e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) return;
-  if (e.key === " " && !$("wuerfelnKnopf").disabled) {
+  if ((e.key === " " || e.key.toLowerCase() === "w") && !$("wuerfelnKnopf").disabled) {
     e.preventDefault();
-    wuerfeln();
-  } else if (e.key.toLowerCase() === "w" && !$("weiterKnopf").disabled) {
-    e.preventDefault();
-    weiterwuerfeln();
+    wuerfelnOderWeiter();
   } else if (e.key.toLowerCase() === "s" && !$("sichernKnopf").disabled) {
     e.preventDefault();
     sichern();

@@ -125,7 +125,7 @@ window.TGMultiplayer = {
     { "id": "sechsundsechzig", "name": "Sechsundsechzig", "kat": "karten", "pfad": "/spiele/kartenspiele/sechsundsechzig/sechsundsechzig.html", "api": "sechsundsechzig", "min": 2, "max": 2, "art": "tisch",
       "text": "Sechsundsechzig: 24 Karten, Stiche und 66 Punkte." },
 
-    { "id": "tictactoe", "name": "Neon Tic Tac Toe", "kat": "brett", "pfad": "/spiele/brettspiele/tictac/tictactoe.html", "api": "tictactoe", "min": 2, "max": 2, "art": "einladung",
+    { "id": "tictactoe", "name": "Tic Tac Toe", "kat": "brett", "pfad": "/spiele/brettspiele/tictac/tictactoe.html", "api": "tictactoe", "min": 2, "max": 2, "art": "einladung",
       "text": "Drei gewinnt auf dem Neon-Brett." },
     { "id": "viergewinnt", "name": "Vier gewinnt", "kat": "brett", "pfad": "/spiele/brettspiele/viergewinnt/viergewinnt.html", "api": "viergewinnt", "min": 2, "max": 2, "art": "einladung",
       "text": "Vier gewinnt: Steine fallen lassen und vier in eine Reihe bringen." },

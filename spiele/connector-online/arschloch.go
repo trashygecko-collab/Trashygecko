@@ -60,6 +60,13 @@ type ArschlochGame struct {
 	Winner    string         `json:"winner,omitempty"`
 	Note      string         `json:"note,omitempty"`
 	Result    []string       `json:"result,omitempty"`
+
+	// Bots am Tisch (action=bot). Sie sitzen wie Menschen, ziehen aber durch
+	// arschAktion und werden beim Abholen des Stands angetrieben.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"-"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 type ArschSeatView struct {
@@ -95,6 +102,8 @@ type ArschlochView struct {
 	Deck       int             `json:"deck,omitempty"`
 	RoundOver  bool            `json:"roundOver"`
 	IsHost     bool            `json:"isHost"`
+	BotID      string          `json:"botId,omitempty"`
+	BotStufe   string          `json:"botStufe,omitempty"`
 	MinPlayers int             `json:"minPlayers"`
 	MaxPlayers int             `json:"maxPlayers"`
 }
@@ -412,6 +421,103 @@ func (g *ArschlochGame) arschEndRound() {
 	g.Note = last.Name + " ist Arschloch und gibt nächste Runde die besten Karten ab."
 }
 
+// arschWeiter gibt den Zug an den Nächsten, der noch mitspielt. Ist keiner
+// mehr da, endet der Stich.
+func (g *ArschlochGame) arschWeiter(seat int) {
+	next := arschNext(g, seat)
+	if next < 0 {
+		g.arschFinishTrick()
+		return
+	}
+	g.Current = next
+	g.arschCheckTrickEnd()
+}
+
+// arschAktion ist die eine Prüfung für Mensch und Bot: Karten legen (indices)
+// oder passen (pass). Rückgabe ist die Meldung ("" heißt ok) und der
+// HTTP-Status für den Menschen.
+func (g *ArschlochGame) arschAktion(seat int, indices []int, pass bool, name string) (string, int) {
+	if g == nil {
+		return "Es läuft gerade keine Partie.", http.StatusConflict
+	}
+	if seat < 0 || seat >= len(g.Players) {
+		return "Du gehörst nicht zu dieser Partie.", http.StatusForbidden
+	}
+	if g.Phase != "playing" {
+		return "Es läuft gerade keine Runde.", http.StatusConflict
+	}
+	if g.Current != seat {
+		return "Du bist nicht am Zug.", http.StatusConflict
+	}
+	me := g.Players[seat]
+
+	if pass {
+		if len(g.Trick) == 0 {
+			return "Beim Eröffnen kannst du nicht passen.", http.StatusConflict
+		}
+		me.Passed = true
+		g.Note = name + " passt."
+		g.arschWeiter(seat)
+		return "", 0
+	}
+
+	if len(indices) == 0 {
+		return "Wähle zuerst Karten aus.", http.StatusBadRequest
+	}
+	if len(indices) > arschMaxTrick {
+		return "Mehr als vier gleiche Karten gehen nicht.", http.StatusBadRequest
+	}
+	seen := map[int]bool{}
+	cards := []ArschCard{}
+	for _, index := range indices {
+		if index < 0 || index >= len(me.Hand) || seen[index] {
+			return "Diese Karten hast du nicht auf der Hand.", http.StatusBadRequest
+		}
+		seen[index] = true
+		cards = append(cards, me.Hand[index])
+	}
+	rank := cards[0].Rank
+	for _, card := range cards {
+		if card.Rank != rank {
+			return "Es müssen Karten mit gleichem Wert sein.", http.StatusBadRequest
+		}
+	}
+	if len(g.Trick) > 0 {
+		if len(cards) != len(g.Trick) {
+			return "Du musst genau " + strconv.Itoa(len(g.Trick)) + " Karte(n) legen.", http.StatusBadRequest
+		}
+		if rank <= g.TrickRank {
+			return "Der Wert muss höher sein als " + g.Trick[0].Value + ".", http.StatusBadRequest
+		}
+	}
+
+	// Karten von der Hand nehmen – von hinten, damit die Indizes stimmen.
+	sort.Sort(sort.Reverse(sort.IntSlice(indices)))
+	for _, index := range indices {
+		me.Hand = append(me.Hand[:index], me.Hand[index+1:]...)
+	}
+	sort.SliceStable(cards, func(i, j int) bool { return cards[i].Rank < cards[j].Rank })
+
+	g.Trick = cards
+	g.TrickRank = rank
+	g.TrickSeat = seat
+	me.Passed = true
+	g.Note = name + " legt " + cards[0].Value + "."
+
+	if len(me.Hand) == 0 {
+		me.Active = false
+		me.Rank = arschRanked(g) + 1
+		g.Note = name + " ist fertig und wird " + arschRankName(me.Rank, len(g.Players)) + "."
+	}
+
+	if arschActiveCount(g) == 1 {
+		g.arschEndRound()
+		return "", 0
+	}
+	g.arschWeiter(seat)
+	return "", 0
+}
+
 func (g *ArschlochGame) viewFor(id string) ArschlochView {
 	view := ArschlochView{
 		ID:         g.ID,
@@ -435,6 +541,8 @@ func (g *ArschlochGame) viewFor(id string) ArschlochView {
 		MaxPlayers: arschMaxPlayers,
 	}
 	view.IsHost = g.HostID == id
+	view.BotID = g.BotID
+	view.BotStufe = g.BotStufe
 
 	for _, p := range g.Players {
 		seat := ArschSeatView{
@@ -479,6 +587,7 @@ func cloneArschloch(g *ArschlochGame) *ArschlochGame {
 	c.Deck = append([]ArschCard(nil), g.Deck...)
 	c.Trick = append([]ArschCard(nil), g.Trick...)
 	c.Result = append([]string(nil), g.Result...)
+	c.Bots = append([]string(nil), g.Bots...)
 	c.Players = make([]*ArschPlayer, len(g.Players))
 	for i, p := range g.Players {
 		copied := *p
@@ -509,6 +618,9 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if room.Arschloch != nil {
+			arschBotTreiben(room.Arschloch, time.Now())
+		}
 		game := cloneArschloch(room.Arschloch)
 		var view *ArschlochView
 		if game != nil {
@@ -528,6 +640,7 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID    string `json:"id"`
 		Cards []int  `json:"cards"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -559,6 +672,29 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 	game := room.Arschloch
 
 	switch action {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Arschloch != nil && !room.gameSlotFree(room.Arschloch.Status, arschIDs(room.Arschloch)...) {
+			fail("In diesem Spielraum läuft bereits eine Arschloch-Runde.", http.StatusConflict)
+			return
+		}
+		g := arschNewGame(input.ID, player.Name, randomCode())
+		g.Players[0].Ready = true
+		for n := 1; n <= 2; n++ {
+			g.Players = append(g.Players, &ArschPlayer{ID: botID(n), Name: botName(n), Active: true, Ready: true})
+			g.Bots = append(g.Bots, botID(n))
+		}
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Round = 1
+		g.arschDeal()
+		g.Note = player.Name + " spielt gegen " + botName(1) + " und " + botName(2) + " (" + botStufeText(stufe) + ")."
+		room.Arschloch = g
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Arschloch gegen zwei Bots (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 	case "create":
 		if game != nil {
 			fail("An diesem Tisch läuft schon eine Arschloch-Runde.", http.StatusConflict)
@@ -653,9 +789,10 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		game.Round++
+		game.BotFrist = time.Time{}
 		game.arschDeal()
 
-	case "play":
+	case "play", "pass":
 		if game == nil {
 			fail("Es läuft gerade keine Partie.", http.StatusConflict)
 			return
@@ -665,114 +802,11 @@ func arschlochHandler(w http.ResponseWriter, r *http.Request) {
 			fail("Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
 			return
 		}
-		if game.Phase != "playing" {
-			fail("Es läuft gerade keine Runde.", http.StatusConflict)
+		msg, status := game.arschAktion(seat, input.Cards, action == "pass", player.Name)
+		if status != 0 {
+			fail(msg, status)
 			return
 		}
-		if game.Current != seat {
-			fail("Du bist nicht am Zug.", http.StatusConflict)
-			return
-		}
-		me := game.Players[seat]
-		if len(input.Cards) == 0 {
-			fail("Wähle zuerst Karten aus.", http.StatusBadRequest)
-			return
-		}
-		if len(input.Cards) > arschMaxTrick {
-			fail("Mehr als vier gleiche Karten gehen nicht.", http.StatusBadRequest)
-			return
-		}
-		seen := map[int]bool{}
-		cards := []ArschCard{}
-		for _, index := range input.Cards {
-			if index < 0 || index >= len(me.Hand) || seen[index] {
-				fail("Diese Karten hast du nicht auf der Hand.", http.StatusBadRequest)
-				return
-			}
-			seen[index] = true
-			cards = append(cards, me.Hand[index])
-		}
-		rank := cards[0].Rank
-		for _, card := range cards {
-			if card.Rank != rank {
-				fail("Es müssen Karten mit gleichem Wert sein.", http.StatusBadRequest)
-				return
-			}
-		}
-		if len(game.Trick) > 0 {
-			if len(cards) != len(game.Trick) {
-				fail("Du musst genau "+strconv.Itoa(len(game.Trick))+" Karte(n) legen.", http.StatusBadRequest)
-				return
-			}
-			if rank <= game.TrickRank {
-				fail("Der Wert muss höher sein als "+game.Trick[0].Value+".", http.StatusBadRequest)
-				return
-			}
-		}
-
-		// Karten von der Hand nehmen – von hinten, damit die Indizes stimmen.
-		sort.Sort(sort.Reverse(sort.IntSlice(input.Cards)))
-		for _, index := range input.Cards {
-			me.Hand = append(me.Hand[:index], me.Hand[index+1:]...)
-		}
-		sort.SliceStable(cards, func(i, j int) bool { return cards[i].Rank < cards[j].Rank })
-
-		game.Trick = cards
-		game.TrickRank = rank
-		game.TrickSeat = seat
-		me.Passed = true
-		game.Note = player.Name + " legt " + cards[0].Value + "."
-
-		if len(me.Hand) == 0 {
-			me.Active = false
-			me.Rank = arschRanked(game) + 1
-			game.Note = player.Name + " ist fertig und wird " + arschRankName(me.Rank, len(game.Players)) + "."
-		}
-
-		if arschActiveCount(game) == 1 {
-			game.arschEndRound()
-			break
-		}
-
-		next := arschNext(game, seat)
-		if next < 0 {
-			game.arschFinishTrick()
-			break
-		}
-		game.Current = next
-		game.arschCheckTrickEnd()
-
-	case "pass":
-		if game == nil {
-			fail("Es läuft gerade keine Partie.", http.StatusConflict)
-			return
-		}
-		seat := arschSeat(game, input.ID)
-		if seat < 0 {
-			fail("Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
-			return
-		}
-		if game.Phase != "playing" {
-			fail("Es läuft gerade keine Runde.", http.StatusConflict)
-			return
-		}
-		if game.Current != seat {
-			fail("Du bist nicht am Zug.", http.StatusConflict)
-			return
-		}
-		if len(game.Trick) == 0 {
-			fail("Beim Eröffnen kannst du nicht passen.", http.StatusConflict)
-			return
-		}
-		game.Players[seat].Passed = true
-		game.Note = player.Name + " passt."
-		next := arschNext(game, seat)
-		if next < 0 {
-			game.arschFinishTrick()
-			break
-		}
-		game.Current = next
-		game.arschCheckTrickEnd()
 
 	default:
 		fail("Unbekannte Aktion.", http.StatusBadRequest)

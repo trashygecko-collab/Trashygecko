@@ -69,6 +69,13 @@ type SechsundsechzigGame struct {
 	Note                    string                   `json:"note"`
 	Sieger                  string                   `json:"sieger,omitempty"`
 	Ergebnis                *SechsundsechzigErgebnis `json:"ergebnis,omitempty"`
+
+	// Bots am Tisch (action=bot). Sie spielen über sechsundsechzigAktion –
+	// dieselbe Prüfung wie ein menschlicher Klick.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"-"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 type SechsundsechzigSpielerSicht struct {
@@ -103,6 +110,7 @@ type SechsundsechzigAnsicht struct {
 	Note          string                        `json:"note"`
 	Sieger        string                        `json:"sieger,omitempty"`
 	Ergebnis      *SechsundsechzigErgebnis      `json:"ergebnis,omitempty"`
+	BotStufe      string                        `json:"botStufe,omitempty"`
 }
 
 // ---------------------------------------------------------------- Karten
@@ -372,6 +380,7 @@ func sechsundsechzigAnsicht(g *SechsundsechzigGame, wer string) *Sechsundsechzig
 		Ergebnis:      g.Ergebnis,
 		Tisch:         append([]SechsundsechzigZug{}, g.Tisch...),
 		AnsagePflicht: g.AnsagePflicht,
+		BotStufe:      g.BotStufe,
 	}
 	if g.Status == "invited" {
 		a.TrumpfKarte = 0
@@ -445,6 +454,7 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		sechsundsechzigBotTreiben(room, time.Now())
 		game := sechsundsechzigAnsicht(room.Sechsundsechzig, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -460,6 +470,7 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"id"`
 		Karte int    `json:"karte"`
 		Farbe int    `json:"farbe"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -525,48 +536,113 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		game.Spieler = append(game.Spieler, sechsundsechzigNeuerSpieler(input.ID, player.Name))
 		game.Note = player.Name + " sitzt jetzt mit am Tisch."
 
-	case "ready":
-		game := room.Sechsundsechzig
-		if game == nil || game.Status != "invited" {
+	case "bot":
+		if room.Sechsundsechzig != nil && room.Sechsundsechzig.Status != "ende" {
 			mu.Unlock()
-			http.Error(w, "Bereit drücken geht nur vor dem Start.", http.StatusConflict)
+			http.Error(w, "Es läuft schon eine Runde Sechsundsechzig.", http.StatusConflict)
 			return
 		}
-		sitz := sechsundsechzigSitz(game, input.ID)
-		if sitz < 0 {
+		stufe := botStufe(input.Stufe)
+		spiel := &SechsundsechzigGame{
+			ID:       randomCode(),
+			HostID:   input.ID,
+			Status:   "invited",
+			Zug:      -1,
+			Sperrer:  -1,
+			BotID:    botID(1),
+			Bots:     []string{botID(1)},
+			BotStufe: stufe,
+			Note:     botName(1) + " sitzt bereit am Tisch (" + botStufeText(stufe) + ").",
+		}
+		spiel.Spieler = append(spiel.Spieler, sechsundsechzigNeuerSpieler(input.ID, player.Name))
+		spiel.Spieler = append(spiel.Spieler, sechsundsechzigNeuerSpieler(botID(1), botName(1)))
+		for i := range spiel.Spieler {
+			spiel.Spieler[i].Ready = true
+		}
+		room.Sechsundsechzig = spiel
+		if status, meldung := sechsundsechzigAktion(room, input.ID, "start", 0, 0); meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
+			http.Error(w, meldung, status)
 			return
+		}
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Sechsundsechzig gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
+	default:
+		if status, meldung := sechsundsechzigAktion(room, input.ID, action, input.Karte, input.Farbe); meldung != "" {
+			mu.Unlock()
+			http.Error(w, meldung, status)
+			return
+		}
+	}
+
+	room.LastActive = time.Now()
+	result := sechsundsechzigAnsicht(room.Sechsundsechzig, input.ID)
+	mu.Unlock()
+	jsonResponse(w, map[string]any{"game": result})
+}
+
+// sechsundsechzigHeben legt die obersten Talonkarten nach: erst der
+// Stichgewinner, dann der andere Spieler.
+func sechsundsechzigNeueRunde(g *SechsundsechzigGame) {
+	g.Runde++
+	g.Status = "spiel"
+	sechsundsechzigGeben(g)
+}
+
+func sechsundsechzigHeben(g *SechsundsechzigGame, gewinner int) {
+	verlierer := 1 - gewinner
+	if len(g.Talon) > 0 {
+		g.Spieler[gewinner].Hand = append(g.Spieler[gewinner].Hand, g.Talon[0])
+		g.Talon = g.Talon[1:]
+	}
+	if len(g.Talon) > 0 {
+		g.Spieler[verlierer].Hand = append(g.Spieler[verlierer].Hand, g.Talon[0])
+		g.Talon = g.Talon[1:]
+	}
+}
+
+// ---------------------------------------------------------------- Aktionen
+
+// sechsundsechzigAktion führt eine Aktion am Tisch aus. Mensch und Bot gehen
+// durch dieselbe Prüfung; die Rückgabe ist HTTP-Status und Meldung ("" heißt
+// erledigt).
+func sechsundsechzigAktion(room *Room, id, aktion string, karte, farbe int) (int, string) {
+	game := room.Sechsundsechzig
+
+	switch aktion {
+	case "ready":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Bereit drücken geht nur vor dem Start."
+		}
+		sitz := sechsundsechzigSitz(game, id)
+		if sitz < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		game.Spieler[sitz].Ready = !game.Spieler[sitz].Ready
 		if game.Spieler[sitz].Ready {
-			game.Note = player.Name + " ist bereit."
+			game.Note = game.Spieler[sitz].Name + " ist bereit."
 		} else {
-			game.Note = player.Name + " wartet noch."
+			game.Note = game.Spieler[sitz].Name + " wartet noch."
 		}
 
 	case "start":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "invited" {
-			mu.Unlock()
-			http.Error(w, "Es wartet keine Runde auf den Start.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Es wartet keine Runde auf den Start."
 		}
-		if game.HostID != input.ID {
-			mu.Unlock()
-			http.Error(w, "Nur der Gastgeber gibt die Karten.", http.StatusForbidden)
-			return
+		if game.HostID != id {
+			return http.StatusForbidden, "Nur der Gastgeber gibt die Karten."
 		}
 		if len(game.Spieler) < 2 {
-			mu.Unlock()
-			http.Error(w, "Sechsundsechzig braucht zwei Spieler.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Sechsundsechzig braucht zwei Spieler."
 		}
 		for _, p := range game.Spieler {
 			if !p.Ready {
-				mu.Unlock()
-				http.Error(w, "Erst müssen beide BEREIT drücken.", http.StatusConflict)
-				return
+				return http.StatusConflict, "Erst müssen beide BEREIT drücken."
 			}
 		}
 		game.Runde = 0
@@ -574,49 +650,38 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		sechsundsechzigNeueRunde(game)
 
 	case "spielen":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "spiel" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Spiel.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade läuft kein Spiel."
 		}
-		sitz := sechsundsechzigSitz(game, input.ID)
+		sitz := sechsundsechzigSitz(game, id)
 		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		if game.Zug != sitz {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Du bist nicht an der Reihe."
 		}
 		gefunden := -1
 		for i, k := range game.Spieler[sitz].Hand {
-			if k == input.Karte {
+			if k == karte {
 				gefunden = i
 				break
 			}
 		}
 		if gefunden < 0 {
-			mu.Unlock()
-			http.Error(w, "Diese Karte hast du nicht auf der Hand.", http.StatusBadRequest)
-			return
+			return http.StatusBadRequest, "Diese Karte hast du nicht auf der Hand."
 		}
-		if !sechsundsechzigErlaubt(game, sitz, input.Karte) {
-			mu.Unlock()
-			http.Error(w, "Diese Karte ist nicht erlaubt – Farb- und Stichzwang.", http.StatusConflict)
-			return
+		if !sechsundsechzigErlaubt(game, sitz, karte) {
+			return http.StatusConflict, "Diese Karte ist nicht erlaubt – Farb- und Stichzwang."
 		}
 		game.Spieler[sitz].Hand = append(game.Spieler[sitz].Hand[:gefunden], game.Spieler[sitz].Hand[gefunden+1:]...)
-		game.Tisch = append(game.Tisch, SechsundsechzigZug{Karte: input.Karte, Von: sitz})
+		game.Tisch = append(game.Tisch, SechsundsechzigZug{Karte: karte, Von: sitz})
 		if game.AnsagePflicht >= 0 && len(game.Tisch) == 1 {
 			game.AnsagePflicht = -1
 		}
 
 		if len(game.Tisch) < 2 {
 			game.Zug = 1 - sitz
-			game.Note = game.Spieler[sitz].Name + " spielt " + sechsundsechzigKartenname(input.Karte) + "."
+			game.Note = game.Spieler[sitz].Name + " spielt " + sechsundsechzigKartenname(karte) + "."
 			break
 		}
 
@@ -654,36 +719,25 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "heiraten":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "spiel" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Spiel.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade läuft kein Spiel."
 		}
-		sitz := sechsundsechzigSitz(game, input.ID)
+		sitz := sechsundsechzigSitz(game, id)
 		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		if game.Zug != sitz || len(game.Tisch) != 0 {
-			mu.Unlock()
-			http.Error(w, "Ansagen geht nur, wenn du selbst ausspielst.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Ansagen geht nur, wenn du selbst ausspielst."
 		}
-		if input.Farbe < 0 || input.Farbe > 3 {
-			mu.Unlock()
-			http.Error(w, "Unbekannte Farbe.", http.StatusBadRequest)
-			return
+		if farbe < 0 || farbe > 3 {
+			return http.StatusBadRequest, "Unbekannte Farbe."
 		}
-		if game.Spieler[sitz].Angesagt[input.Farbe] {
-			mu.Unlock()
-			http.Error(w, "Diese Ansage hast du schon gemacht.", http.StatusConflict)
-			return
+		if game.Spieler[sitz].Angesagt[farbe] {
+			return http.StatusConflict, "Diese Ansage hast du schon gemacht."
 		}
 		hatKoenig, hatDame := false, false
 		for _, k := range game.Spieler[sitz].Hand {
-			if sechsundsechzigFarbe(k) != input.Farbe {
+			if sechsundsechzigFarbe(k) != farbe {
 				continue
 			}
 			if sechsundsechzigWert(k) == 13 {
@@ -694,47 +748,34 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !hatKoenig || !hatDame {
-			mu.Unlock()
-			http.Error(w, "Für eine Ansage brauchst du König und Dame einer Farbe.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Für eine Ansage brauchst du König und Dame einer Farbe."
 		}
-		game.Spieler[sitz].Angesagt[input.Farbe] = true
+		game.Spieler[sitz].Angesagt[farbe] = true
 		wert := 20
-		if input.Farbe == game.Trumpf {
+		if farbe == game.Trumpf {
 			wert = 40
 		}
 		game.Spieler[sitz].Ansage += wert
-		game.AnsagePflicht = input.Farbe
-		game.Note = game.Spieler[sitz].Name + " sagt " + sechsundsechzigFarbname(input.Farbe) +
+		game.AnsagePflicht = farbe
+		game.Note = game.Spieler[sitz].Name + " sagt " + sechsundsechzigFarbname(farbe) +
 			" an: +" + strconv.Itoa(wert) + " Augen. Jetzt muss König oder Dame folgen."
 
 	case "sperren":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "spiel" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Spiel.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade läuft kein Spiel."
 		}
-		sitz := sechsundsechzigSitz(game, input.ID)
+		sitz := sechsundsechzigSitz(game, id)
 		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		if game.Zug != sitz || len(game.Tisch) != 0 {
-			mu.Unlock()
-			http.Error(w, "Zudrehen geht nur, wenn du selbst ausspielst.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Zudrehen geht nur, wenn du selbst ausspielst."
 		}
 		if game.Gesperrt {
-			mu.Unlock()
-			http.Error(w, "Der Talon ist schon zu.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Der Talon ist schon zu."
 		}
 		if len(game.Talon) <= 1 {
-			mu.Unlock()
-			http.Error(w, "Zu wenig im Talon – jetzt wird nur noch gespielt.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Zu wenig im Talon – jetzt wird nur noch gespielt."
 		}
 		game.Gesperrt = true
 		game.Sperrer = sitz
@@ -743,17 +784,12 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 			"der letzte Stich bringt keine zehn Augen."
 
 	case "melden":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "spiel" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Spiel.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade läuft kein Spiel."
 		}
-		sitz := sechsundsechzigSitz(game, input.ID)
+		sitz := sechsundsechzigSitz(game, id)
 		if sitz < 0 {
-			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
-			return
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		augen := game.Spieler[sitz].Augen + game.Spieler[sitz].Ansage
 		if augen < 66 {
@@ -769,31 +805,21 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = game.Spieler[sitz].Name + " meldet 66 mit " + strconv.Itoa(augen) + " Augen und gewinnt die Runde."
 
 	case "naechste":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "runde" {
-			mu.Unlock()
-			http.Error(w, "Die Runde ist noch nicht abgerechnet.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Die Runde ist noch nicht abgerechnet."
 		}
-		if sechsundsechzigSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
+		if sechsundsechzigSitz(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Runde."
 		}
 		game.Geber = 1 - game.Geber
 		sechsundsechzigNeueRunde(game)
 
 	case "reset":
-		game := room.Sechsundsechzig
 		if game == nil || game.Status != "ende" {
-			mu.Unlock()
-			http.Error(w, "Eine neue Partie geht erst nach dem Ende.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Eine neue Partie geht erst nach dem Ende."
 		}
-		if sechsundsechzigSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
+		if sechsundsechzigSitz(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Runde."
 		}
 		frisch := &SechsundsechzigGame{
 			ID:      game.ID,
@@ -807,35 +833,13 @@ func sechsundsechzigHandler(w http.ResponseWriter, r *http.Request) {
 			frisch.Spieler = append(frisch.Spieler, sechsundsechzigNeuerSpieler(p.ID, p.Name))
 		}
 		room.Sechsundsechzig = frisch
+		room.LastActive = time.Now()
+		return 0, ""
 
 	default:
-		mu.Unlock()
-		http.Error(w, "Unbekannte Aktion.", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, "Unbekannte Aktion."
 	}
 
 	room.LastActive = time.Now()
-	result := sechsundsechzigAnsicht(room.Sechsundsechzig, input.ID)
-	mu.Unlock()
-	jsonResponse(w, map[string]any{"game": result})
-}
-
-// sechsundsechzigHeben legt die obersten Talonkarten nach: erst der
-// Stichgewinner, dann der andere Spieler.
-func sechsundsechzigNeueRunde(g *SechsundsechzigGame) {
-	g.Runde++
-	g.Status = "spiel"
-	sechsundsechzigGeben(g)
-}
-
-func sechsundsechzigHeben(g *SechsundsechzigGame, gewinner int) {
-	verlierer := 1 - gewinner
-	if len(g.Talon) > 0 {
-		g.Spieler[gewinner].Hand = append(g.Spieler[gewinner].Hand, g.Talon[0])
-		g.Talon = g.Talon[1:]
-	}
-	if len(g.Talon) > 0 {
-		g.Spieler[verlierer].Hand = append(g.Spieler[verlierer].Hand, g.Talon[0])
-		g.Talon = g.Talon[1:]
-	}
+	return 0, ""
 }

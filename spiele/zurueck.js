@@ -233,6 +233,20 @@
             return;
         }
 
+        // 2b. Keine Fensterleiste mehr (Titelzeile entfernt): die oberste
+        // Bedienzeile des Spiels nehmen, damit der Knopf nicht über dem Feld
+        // schwebt. Rechtsbündig, wenn die Zeile eine Reihe ist.
+        const reihe = document.querySelector(".menueleiste") || document.querySelector(".kopf");
+
+        if (reihe) {
+            reihe.classList.add("tg-mit-zurueck");
+            reihe.appendChild(knopf);
+
+            if (istReihe(reihe)) knopf.classList.add("tg-zurueck--rechts");
+
+            return;
+        }
+
         // 3. Notnagel: Ecke oben rechts.
         knopf.classList.add("tg-zurueck--ecke");
         document.body.appendChild(knopf);

@@ -3751,7 +3751,7 @@ const BOTS_SPIELE={
  tictactoe:"tictactoe",viergewinnt:"viergewinnt",streichholzspiel:"streichholz",
  muehle:"muehle",reversi:"reversi",dame:"dame",kalaha:"kalaha",
  kaesekaestche:"kaesekaestche",menschaerger:"menschaerger",schach:"schach",backgammon:"backgammon",
- pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",uno:"uno",maumau:"maumau",skyjo:"skyjo",schwimmen:"schwimmen",pong:"pong",tron:"tron",galgen:"galgen",
+ pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",uno:"uno",maumau:"maumau",skyjo:"skyjo",schwimmen:"schwimmen",pong:"pong",tron:"tron",galgen:"galgen",arschloch:"arschloch",maexchen:"maexchen",sim:"sim",siebzehn:"siebzehn",sechsundsechzig:"sechsundsechzig",baccara:"baccara",
  // Die 18 Würfelspiele laufen alle über dieselbe Regelmaschine (/api/wuerfel).
  beelzebub:"wuerfel","boese-drei":"wuerfel","boese-eins":"wuerfel","der-turm":"wuerfel",
  "dufte-hundert":"wuerfel","eins-bis-sechzehn":"wuerfel",fenster:"wuerfel",
@@ -4197,6 +4197,20 @@ let ausgang=[];
 let letzteChatZeile="";
 let chatSprungBereit=false;
 
+// Ein echter Chatbeitrag kommt von einem anderen Spieler und ist kein
+// automatischer Status. Betreten, Verlassen, „ist da!“ und Spielangebote
+// tragen zwar eine Spielerkennung, sind aber keine Nachrichten.
+function istChatbeitrag(m){
+ if(!m||!m.senderId||m.senderId===sessionID)return false;
+ if(m.system||m.gone||m.gameInvite)return false;
+ if(m.toId&&m.toId!==sessionID)return false;   // Flüstern an jemand anderen
+ const t=String(m.text||"").trim().toLowerCase();
+ return t!=="betritt den raum."&&t!=="verlässt den raum."&&t!=="ist da!";
+}
+function chatKennung(m){
+ return [m.senderId||"",m.time||"",m.text||"",m.toId||""].join("|");
+}
+
 async function refresh(){
  if(!activeRoom||chatBusy)return;
  chatBusy=true;
@@ -4223,10 +4237,6 @@ async function refresh(){
    +"#"+(currentTTTGame?currentTTTGame.status:"")+(currentVGGame?currentVGGame.status:"")+(currentDameGame?currentDameGame.status:"");
   if(signature===lastChatSignature)return;
   lastChatSignature=signature;
-  // Kennung der letzten Nachricht – daran hängt der Sprung zum Chat.
-  const letzteNachricht=msgs.length?msgs[msgs.length-1]:null;
-  const zeile=letzteNachricht?[letzteNachricht.senderId||"",letzteNachricht.time||"",
-   letzteNachricht.text||"",letzteNachricht.gameId||"",letzteNachricht.toId||""].join("|"):"";
   const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<40;
   box.innerHTML="";
   msgs.forEach(m=>{
@@ -4491,7 +4501,13 @@ async function refresh(){
   // Neue Nachricht: am Handy steht der Chat unter der Spielauswahl – die Seite
   // holt ihn ins Bild, sobald er nicht ohnehin zu sehen ist. Beim ersten
   // Zeichnen nach dem Beitritt bleibt die Ansicht, wo sie ist.
-  if(chatSprungBereit&&zeile&&zeile!==letzteChatZeile){
+  // Benachrichtigung und Sprung nur bei echten Beiträgen anderer Spieler:
+  // Systemzeilen („X betritt den Raum“, „X verliert die Verbindung“) und die
+  // eigenen Zeilen lösen nichts aus.
+  const beitraege=msgs.filter(istChatbeitrag);
+  const neuester=beitraege.length?beitraege[beitraege.length-1]:null;
+  const neuesteZeile=neuester?chatKennung(neuester):"";
+  if(chatSprungBereit&&neuesteZeile&&neuesteZeile!==letzteChatZeile){
    const chatbox=document.getElementById("chatbox");
    if(chatbox&&!chatbox.hidden){
     const rect=chatbox.getBoundingClientRect();
@@ -4499,12 +4515,16 @@ async function refresh(){
     if(!imBild){
      // Läuft am Handy eine Partie, reißt die Seite nicht mehr zum Chat:
      // die zentrale Bedienung zählt mit, der Knopf führt hin.
-     if(window.TGMobil&&TGMobil.spielOffen())TGMobil.ungesehen();
-     else chatbox.scrollIntoView({behavior:"smooth",block:"start"});
+     if(window.TGMobil&&TGMobil.spielOffen()){
+      // Alle seit dem letzten Stand eingetroffenen echten Nachrichten zählen.
+      const ab=letzteChatZeile?beitraege.findIndex(m=>chatKennung(m)===letzteChatZeile):-1;
+      const anzahl=beitraege.length-(ab+1);
+      if(anzahl>0)TGMobil.ungesehen(anzahl);
+     }else chatbox.scrollIntoView({behavior:"smooth",block:"start"});
     }
    }
   }
-  letzteChatZeile=zeile;
+  letzteChatZeile=neuesteZeile||letzteChatZeile;
   chatSprungBereit=true;
  }catch(e){
   // Zeitgrenze oder Netzfehler: ohne diesen Hinweis stünde oben weiter

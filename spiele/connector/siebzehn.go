@@ -55,6 +55,13 @@ type SiebzehnGame struct {
 	Sieger     string             `json:"sieger,omitempty"`
 	Ergebnisse []SiebzehnErgebnis `json:"ergebnisse"`
 	FeuerSitz  int                `json:"feuerSitz"`
+
+	// Bots am Tisch (action=bot). Sie handeln über siebzehnAktion – dieselbe
+	// Prüfung wie der Mensch.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"-"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 type SiebzehnSpielerSicht struct {
@@ -85,6 +92,7 @@ type SiebzehnAnsicht struct {
 	Sieger     string                 `json:"sieger,omitempty"`
 	Ergebnisse []SiebzehnErgebnis     `json:"ergebnisse"`
 	FeuerSitz  int                    `json:"feuerSitz"`
+	BotStufe   string                 `json:"botStufe,omitempty"`
 }
 
 // ---------------------------------------------------------------- Karten
@@ -437,6 +445,7 @@ func siebzehnAnsicht(g *SiebzehnGame) *SiebzehnAnsicht {
 		Sieger:     g.Sieger,
 		Ergebnisse: append([]SiebzehnErgebnis{}, g.Ergebnisse...),
 		FeuerSitz:  g.FeuerSitz,
+		BotStufe:   g.BotStufe,
 	}
 	// Die zweite Bankkarte bleibt verdeckt, bis die Bank zieht.
 	bankKarten := append([]int{}, g.BankKarten...)
@@ -466,6 +475,198 @@ func siebzehnAnsicht(g *SiebzehnGame) *SiebzehnAnsicht {
 	return a
 }
 
+// ---------------------------------------------------------------- Aktionen
+
+// siebzehnAktion prüft und führt eine Aktion aus. Mensch und Bot laufen durch
+// dieselbe Funktion; sie liefert einen HTTP-Status und einen Fehlertext
+// (leer = ausgeführt). So kann der Bot nichts, was der Mensch nicht darf.
+func siebzehnAktion(g *SiebzehnGame, id, aktion string, betrag int) (int, string) {
+	if g == nil {
+		return http.StatusConflict, "Es läuft keine Runde 17 und 4."
+	}
+	sitz := siebzehnSitz(g, id)
+	name := ""
+	if sitz >= 0 {
+		name = g.Spieler[sitz].Name
+	}
+
+	switch aktion {
+	case "bank":
+		if g.Status != "bank" {
+			return http.StatusConflict, "Gerade legt niemand eine Bank."
+		}
+		if sitz != g.BankSitz {
+			return http.StatusForbidden, "Nur der Bankhalter legt die Bank."
+		}
+		halter := &g.Spieler[g.BankSitz]
+		if betrag < siebzehnBankMin {
+			return http.StatusBadRequest, "Die Bank muss mindestens " + siebzehnEuro(siebzehnBankMin) + " haben."
+		}
+		betrag = (betrag / siebzehnSchritt) * siebzehnSchritt
+		if betrag > halter.Kasse {
+			return http.StatusConflict, "So viel Geld hast du nicht in der Kasse."
+		}
+		halter.Kasse -= betrag
+		g.Bank = betrag
+		siebzehnNeueRunde(g)
+		g.Note = "Bank gelegt: " + siebzehnEuro(g.Bank) + " – jetzt setzen."
+
+	case "setzen", "banco":
+		if g.Status != "setzen" {
+			return http.StatusConflict, "Gerade wird nicht gesetzt."
+		}
+		if sitz < 0 || sitz == g.BankSitz {
+			return http.StatusForbidden, "Die Bank setzt nicht gegen sich selbst."
+		}
+		p := &g.Spieler[sitz]
+		if p.Status == "pleite" {
+			return http.StatusConflict, "Deine Kasse ist leer."
+		}
+		if p.Einsatz > 0 {
+			return http.StatusConflict, "Du hast für diese Runde schon gesetzt."
+		}
+		frei := g.Bank - siebzehnBelegt(g)
+		if frei <= 0 {
+			return http.StatusConflict, "Die Bank ist schon voll abgedeckt – diese Runde setzt niemand mehr."
+		}
+		betrag = (betrag / siebzehnSchritt) * siebzehnSchritt
+		if aktion == "banco" {
+			betrag = frei
+			if betrag > p.Kasse {
+				betrag = (p.Kasse / siebzehnSchritt) * siebzehnSchritt
+			}
+			if betrag <= 0 {
+				return http.StatusConflict, "Für Banco fehlt dir Geld."
+			}
+		}
+		if betrag < siebzehnSchritt {
+			return http.StatusBadRequest, "Mindestens " + siebzehnEuro(siebzehnSchritt) + "."
+		}
+		if betrag > p.Kasse {
+			return http.StatusConflict, "So viel Geld hast du nicht."
+		}
+		if betrag > frei {
+			return http.StatusConflict, "Die Bank ist nur noch mit " + siebzehnEuro(frei) + " gedeckt."
+		}
+		p.Einsatz = betrag
+		p.Status = "setzt"
+		if aktion == "banco" {
+			g.Note = name + " ruft BANCO – " + siebzehnEuro(betrag) + " auf die ganze Bank."
+		} else {
+			g.Note = name + " setzt " + siebzehnEuro(betrag) + "."
+		}
+
+	case "geben":
+		if g.Status != "setzen" {
+			return http.StatusConflict, "Gerade wird nicht gegeben."
+		}
+		if sitz != g.BankSitz {
+			return http.StatusForbidden, "Nur der Bankhalter gibt die Karten."
+		}
+		if siebzehnBelegt(g) <= 0 {
+			return http.StatusConflict, "Es hat noch niemand gesetzt."
+		}
+		siebzehnGeben(g)
+
+	case "ziehen", "halten":
+		if g.Status != "spiel" {
+			return http.StatusConflict, "Gerade läuft kein Zug."
+		}
+		if sitz < 0 || sitz == g.BankSitz {
+			return http.StatusForbidden, "Die Bank zieht nach allen anderen."
+		}
+		if g.Zug != sitz || g.Spieler[sitz].Status != "spielt" {
+			return http.StatusConflict, "Du bist nicht an der Reihe."
+		}
+		p := &g.Spieler[sitz]
+		if aktion == "halten" {
+			p.Status = "haelt"
+			g.Note = name + " hält bei " + strconv.Itoa(siebzehnSumme(p.Karten)) + "."
+			siebzehnZugWeiter(g)
+			return http.StatusOK, ""
+		}
+		p.Karten = append(p.Karten, g.Stapel[0])
+		g.Stapel = g.Stapel[1:]
+		summe := siebzehnSumme(p.Karten)
+		if summe > 21 {
+			p.Status = "ueberkauft"
+			g.Note = name + " überkauft sich mit " + strconv.Itoa(summe) + "."
+			siebzehnZugWeiter(g)
+			return http.StatusOK, ""
+		}
+		if summe == 21 {
+			p.Status = "haelt"
+			g.Note = name + " hat 21."
+			siebzehnZugWeiter(g)
+			return http.StatusOK, ""
+		}
+		g.Note = name + " zieht auf " + strconv.Itoa(summe) + "."
+
+	case "naechste":
+		if g.Status != "runde" {
+			return http.StatusConflict, "Die Runde ist noch nicht abgerechnet."
+		}
+		if sitz < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Runde."
+		}
+		if g.Bank <= 0 {
+			siebzehnBankWeiter(g)
+			return http.StatusOK, ""
+		}
+		if g.FeuerSitz >= 0 {
+			// Feuer: dieser Spieler übernimmt die Bank, der Rest wird
+			// ausgezahlt. Hat er nicht einmal die kleinste Bank, geht sie an
+			// den Nächsten, der sie legen kann – sonst käme der Tisch nicht
+			// mehr weiter.
+			alterHalter := g.BankSitz
+			ziel := g.FeuerSitz
+			feuerName := g.Spieler[ziel].Name
+			g.FeuerSitz = -1
+			if g.Spieler[ziel].Status == "pleite" || g.Spieler[ziel].Kasse < siebzehnBankMin {
+				ziel = siebzehnNach(g, alterHalter)
+			}
+			if ziel < 0 {
+				g.Status = "ende"
+				g.Note = feuerName + " hatte Feuer, kann die Bank aber nicht legen – die Partie ist vorbei."
+				return http.StatusOK, ""
+			}
+			if g.Bank > 0 {
+				g.Spieler[alterHalter].Kasse += g.Bank
+			}
+			g.Bank = 0
+			g.BankSitz = ziel
+			g.Status = "bank"
+			g.Ergebnisse = nil
+			for i := range g.Spieler {
+				g.Spieler[i].Einsatz = 0
+				g.Spieler[i].Karten = []int{}
+				g.Spieler[i].Feuer = false
+			}
+			if g.Spieler[g.BankSitz].Name == feuerName {
+				g.Note = feuerName + " hatte Feuer und übernimmt die Bank."
+			} else {
+				g.Note = feuerName + " hatte Feuer, kann die Bank aber nicht legen – " +
+					g.Spieler[g.BankSitz].Name + " übernimmt."
+			}
+			return http.StatusOK, ""
+		}
+		siebzehnNeueRunde(g)
+
+	case "abgeben":
+		if g.Status != "runde" {
+			return http.StatusConflict, "Die Bank lässt sich erst nach einer Runde abgeben."
+		}
+		if sitz != g.BankSitz {
+			return http.StatusForbidden, "Nur der Bankhalter kann abgeben."
+		}
+		siebzehnBankWeiter(g)
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Aktion."
+	}
+	return http.StatusOK, ""
+}
+
 // ---------------------------------------------------------------- Endpunkt
 
 func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
@@ -489,6 +690,7 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		siebzehnBotTreiben(room.Siebzehn, time.Now())
 		game := siebzehnAnsicht(room.Siebzehn)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -503,6 +705,7 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID     string `json:"id"`
 		Betrag int    `json:"betrag"`
+		Stufe  string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -547,6 +750,37 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "eröffnet eine Runde 17 und 4 – mitspielen über die Spielkarte.",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
+	case "bot":
+		if room.Siebzehn != nil && room.Siebzehn.Status != "ende" {
+			mu.Unlock()
+			http.Error(w, "Es läuft schon eine Runde 17 und 4.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		spiel := &SiebzehnGame{
+			ID:        randomCode(),
+			HostID:    input.ID,
+			Status:    "bank",
+			BankSitz:  1,
+			Spieler:   []SiebzehnSpieler{},
+			FeuerSitz: -1,
+			BotID:     botID(1),
+			Bots:      []string{botID(1), botID(2)},
+			BotStufe:  stufe,
+		}
+		spiel.Spieler = append(spiel.Spieler, siebzehnNeuerSpieler(input.ID, player.Name))
+		for n := 1; n <= 2; n++ {
+			spiel.Spieler = append(spiel.Spieler, siebzehnNeuerSpieler(botID(n), botName(n)))
+		}
+		spiel.Note = botName(1) + " hat die Bank – wie viel Geld legt er auf den Tisch?"
+		room.Siebzehn = spiel
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt 17 und 4 gegen " + botName(1) + " und " + botName(2) + " (" + botStufeText(stufe) + ").",
 			Time:     zeit,
 			SenderID: input.ID,
 		})
@@ -619,232 +853,6 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 		game.Status = "bank"
 		game.Note = game.Spieler[0].Name + " hat die Bank – wie viel Geld legt er auf den Tisch?"
 
-	case "bank":
-		game := room.Siebzehn
-		if game == nil || game.Status != "bank" {
-			mu.Unlock()
-			http.Error(w, "Gerade legt niemand eine Bank.", http.StatusConflict)
-			return
-		}
-		if siebzehnSitz(game, input.ID) != game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Nur der Bankhalter legt die Bank.", http.StatusForbidden)
-			return
-		}
-		halter := &game.Spieler[game.BankSitz]
-		if input.Betrag < siebzehnBankMin {
-			mu.Unlock()
-			http.Error(w, "Die Bank muss mindestens "+siebzehnEuro(siebzehnBankMin)+" haben.", http.StatusBadRequest)
-			return
-		}
-		input.Betrag = (input.Betrag / siebzehnSchritt) * siebzehnSchritt
-		if input.Betrag > halter.Kasse {
-			mu.Unlock()
-			http.Error(w, "So viel Geld hast du nicht in der Kasse.", http.StatusConflict)
-			return
-		}
-		halter.Kasse -= input.Betrag
-		game.Bank = input.Betrag
-		siebzehnNeueRunde(game)
-		game.Note = "Bank gelegt: " + siebzehnEuro(game.Bank) + " – jetzt setzen."
-
-	case "setzen", "banco":
-		game := room.Siebzehn
-		if game == nil || game.Status != "setzen" {
-			mu.Unlock()
-			http.Error(w, "Gerade wird nicht gesetzt.", http.StatusConflict)
-			return
-		}
-		sitz := siebzehnSitz(game, input.ID)
-		if sitz < 0 || sitz == game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Die Bank setzt nicht gegen sich selbst.", http.StatusForbidden)
-			return
-		}
-		p := &game.Spieler[sitz]
-		if p.Status == "pleite" {
-			mu.Unlock()
-			http.Error(w, "Deine Kasse ist leer.", http.StatusConflict)
-			return
-		}
-		if p.Einsatz > 0 {
-			mu.Unlock()
-			http.Error(w, "Du hast für diese Runde schon gesetzt.", http.StatusConflict)
-			return
-		}
-		frei := game.Bank - siebzehnBelegt(game)
-		if frei <= 0 {
-			mu.Unlock()
-			http.Error(w, "Die Bank ist schon voll abgedeckt – diese Runde setzt niemand mehr.", http.StatusConflict)
-			return
-		}
-		betrag := (input.Betrag / siebzehnSchritt) * siebzehnSchritt
-		if action == "banco" {
-			betrag = frei
-			if betrag > p.Kasse {
-				betrag = (p.Kasse / siebzehnSchritt) * siebzehnSchritt
-			}
-			if betrag <= 0 {
-				mu.Unlock()
-				http.Error(w, "Für Banco fehlt dir Geld.", http.StatusConflict)
-				return
-			}
-		}
-		if betrag < siebzehnSchritt {
-			mu.Unlock()
-			http.Error(w, "Mindestens "+siebzehnEuro(siebzehnSchritt)+".", http.StatusBadRequest)
-			return
-		}
-		if betrag > p.Kasse {
-			mu.Unlock()
-			http.Error(w, "So viel Geld hast du nicht.", http.StatusConflict)
-			return
-		}
-		if betrag > frei {
-			mu.Unlock()
-			http.Error(w, "Die Bank ist nur noch mit "+siebzehnEuro(frei)+" gedeckt.", http.StatusConflict)
-			return
-		}
-		p.Einsatz = betrag
-		p.Status = "setzt"
-		if action == "banco" {
-			game.Note = player.Name + " ruft BANCO – " + siebzehnEuro(betrag) + " auf die ganze Bank."
-		} else {
-			game.Note = player.Name + " setzt " + siebzehnEuro(betrag) + "."
-		}
-
-	case "geben":
-		game := room.Siebzehn
-		if game == nil || game.Status != "setzen" {
-			mu.Unlock()
-			http.Error(w, "Gerade wird nicht gegeben.", http.StatusConflict)
-			return
-		}
-		if siebzehnSitz(game, input.ID) != game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Nur der Bankhalter gibt die Karten.", http.StatusForbidden)
-			return
-		}
-		if siebzehnBelegt(game) <= 0 {
-			mu.Unlock()
-			http.Error(w, "Es hat noch niemand gesetzt.", http.StatusConflict)
-			return
-		}
-		siebzehnGeben(game)
-
-	case "ziehen", "halten":
-		game := room.Siebzehn
-		if game == nil || game.Status != "spiel" {
-			mu.Unlock()
-			http.Error(w, "Gerade läuft kein Zug.", http.StatusConflict)
-			return
-		}
-		sitz := siebzehnSitz(game, input.ID)
-		if sitz < 0 || sitz == game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Die Bank zieht nach allen anderen.", http.StatusForbidden)
-			return
-		}
-		if game.Zug != sitz || game.Spieler[sitz].Status != "spielt" {
-			mu.Unlock()
-			http.Error(w, "Du bist nicht an der Reihe.", http.StatusConflict)
-			return
-		}
-		p := &game.Spieler[sitz]
-
-		if action == "halten" {
-			p.Status = "haelt"
-			game.Note = player.Name + " hält bei " + strconv.Itoa(siebzehnSumme(p.Karten)) + "."
-			siebzehnZugWeiter(game)
-			break
-		}
-
-		p.Karten = append(p.Karten, game.Stapel[0])
-		game.Stapel = game.Stapel[1:]
-		summe := siebzehnSumme(p.Karten)
-		if summe > 21 {
-			p.Status = "ueberkauft"
-			game.Note = player.Name + " überkauft sich mit " + strconv.Itoa(summe) + "."
-			siebzehnZugWeiter(game)
-			break
-		}
-		if summe == 21 {
-			p.Status = "haelt"
-			game.Note = player.Name + " hat 21."
-			siebzehnZugWeiter(game)
-			break
-		}
-		game.Note = player.Name + " zieht auf " + strconv.Itoa(summe) + "."
-
-	case "naechste":
-		game := room.Siebzehn
-		if game == nil || game.Status != "runde" {
-			mu.Unlock()
-			http.Error(w, "Die Runde ist noch nicht abgerechnet.", http.StatusConflict)
-			return
-		}
-		if siebzehnSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
-		}
-		if game.Bank <= 0 {
-			siebzehnBankWeiter(game)
-			break
-		}
-		if game.FeuerSitz >= 0 {
-			// Feuer: dieser Spieler übernimmt die Bank, der Rest wird
-			// ausgezahlt. Hat er nicht einmal die kleinste Bank, geht sie an
-			// den Nächsten, der sie legen kann – sonst käme der Tisch nicht
-			// mehr weiter.
-			alterHalter := game.BankSitz
-			ziel := game.FeuerSitz
-			feuerName := game.Spieler[ziel].Name
-			game.FeuerSitz = -1
-			if game.Spieler[ziel].Status == "pleite" || game.Spieler[ziel].Kasse < siebzehnBankMin {
-				ziel = siebzehnNach(game, alterHalter)
-			}
-			if ziel < 0 {
-				game.Status = "ende"
-				game.Note = feuerName + " hatte Feuer, kann die Bank aber nicht legen – die Partie ist vorbei."
-				break
-			}
-			if game.Bank > 0 {
-				game.Spieler[alterHalter].Kasse += game.Bank
-			}
-			game.Bank = 0
-			game.BankSitz = ziel
-			game.Status = "bank"
-			game.Ergebnisse = nil
-			for i := range game.Spieler {
-				game.Spieler[i].Einsatz = 0
-				game.Spieler[i].Karten = []int{}
-				game.Spieler[i].Feuer = false
-			}
-			if game.Spieler[game.BankSitz].Name == feuerName {
-				game.Note = feuerName + " hatte Feuer und übernimmt die Bank."
-			} else {
-				game.Note = feuerName + " hatte Feuer, kann die Bank aber nicht legen – " +
-					game.Spieler[game.BankSitz].Name + " übernimmt."
-			}
-			break
-		}
-		siebzehnNeueRunde(game)
-
-	case "abgeben":
-		game := room.Siebzehn
-		if game == nil || game.Status != "runde" {
-			mu.Unlock()
-			http.Error(w, "Die Bank lässt sich erst nach einer Runde abgeben.", http.StatusConflict)
-			return
-		}
-		if siebzehnSitz(game, input.ID) != game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Nur der Bankhalter kann abgeben.", http.StatusForbidden)
-			return
-		}
-		siebzehnBankWeiter(game)
-
 	case "reset":
 		game := room.Siebzehn
 		if game == nil || game.Status != "ende" {
@@ -870,6 +878,13 @@ func siebzehnHandler(w http.ResponseWriter, r *http.Request) {
 			frisch.Spieler = append(frisch.Spieler, siebzehnNeuerSpieler(p.ID, p.Name))
 		}
 		room.Siebzehn = frisch
+
+	case "bank", "setzen", "banco", "geben", "ziehen", "halten", "naechste", "abgeben":
+		if status, meldung := siebzehnAktion(room.Siebzehn, input.ID, action, input.Betrag); meldung != "" {
+			mu.Unlock()
+			http.Error(w, meldung, status)
+			return
+		}
 
 	default:
 		mu.Unlock()

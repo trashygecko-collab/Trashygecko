@@ -95,8 +95,13 @@
   }
 
   function umschalten() {
-    springe(chatSichtbar() ? holeSpiel && holeSpiel() : holeChat && holeChat());
-    aktualisiere();   // räumt beim Chat den Zähler ab
+    var zumChat = !chatSichtbar();
+    springe(zumChat ? holeChat && holeChat() : holeSpiel && holeSpiel());
+    // Wer zum Chat springt, liest ihn: der Zähler fällt sofort auf 0 – auch
+    // dann, wenn der Chat höher ist als das Fenster (dann wäre er nie
+    // "ganz im Bild" und der Zähler bliebe sonst stehen).
+    if (zumChat) setzeUngelesen(0);
+    aktualisiere();
   }
 
   function baue() {
@@ -197,6 +202,7 @@
     },
     spielOffen: function () { return !!spiel; },
     // Eine neue Nachricht kam an, während der Chat nicht zu sehen war.
-    ungesehen: function () { setzeUngelesen(ungelesen + 1); }
+    // Anzahl neu eingetroffener Nachrichten; ohne Angabe eine.
+  ungesehen: function (n) { setzeUngelesen(ungelesen + (n > 0 ? n : 1)); }
   };
 })();

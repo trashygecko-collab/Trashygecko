@@ -54,6 +54,13 @@ type BaccaraGame struct {
 	Sieger      string            `json:"sieger,omitempty"`
 	Ergebnisse  []BaccaraErgebnis `json:"ergebnisse"`
 	BankWechsel bool              `json:"-"`
+
+	// Bots am Tisch (action=bot). Sie handeln über baccaraAktion – dieselbe
+	// Prüfung wie ein menschlicher Klick.
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"-"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 type BaccaraAnsicht struct {
@@ -76,6 +83,7 @@ type BaccaraAnsicht struct {
 	Sieger      string            `json:"sieger,omitempty"`
 	Ergebnisse  []BaccaraErgebnis `json:"ergebnisse"`
 	BankWechsel bool              `json:"bankWechsel"`
+	BotStufe    string            `json:"botStufe,omitempty"`
 }
 
 // ---------------------------------------------------------------- Karten
@@ -451,6 +459,7 @@ func baccaraAnsicht(g *BaccaraGame) *BaccaraAnsicht {
 		Sieger:      g.Sieger,
 		Ergebnisse:  append([]BaccaraErgebnis{}, g.Ergebnisse...),
 		BankWechsel: g.BankWechsel,
+		BotStufe:    g.BotStufe,
 	}
 	if g.PonteSitz >= 0 && g.PonteSitz < len(g.Spieler) {
 		a.PonteName = g.Spieler[g.PonteSitz].Name
@@ -481,6 +490,7 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		baccaraBotTreiben(room, time.Now())
 		game := baccaraAnsicht(room.Baccara)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -495,6 +505,7 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID     string `json:"id"`
 		Betrag int    `json:"betrag"`
+		Stufe  string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -562,48 +573,99 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 		game.Spieler = append(game.Spieler, baccaraNeuerSpieler(input.ID, player.Name))
 		game.Note = player.Name + " setzt sich dazu."
 
-	case "ready":
-		game := room.Baccara
-		if game == nil || game.Status != "invited" {
+	case "bot":
+		if room.Baccara != nil && room.Baccara.Status != "ende" {
 			mu.Unlock()
-			http.Error(w, "Bereit drücken geht nur vor dem Start.", http.StatusConflict)
+			http.Error(w, "Es läuft schon eine Runde Baccara.", http.StatusConflict)
 			return
 		}
-		sitz := baccaraSitz(game, input.ID)
-		if sitz < 0 {
+		stufe := botStufe(input.Stufe)
+		spiel := &BaccaraGame{
+			ID:        randomCode(),
+			HostID:    input.ID,
+			Status:    "invited",
+			BankSitz:  0,
+			PonteSitz: -1,
+			Zug:       -1,
+			BotID:     botID(1),
+			Bots:      []string{botID(1)},
+			BotStufe:  stufe,
+			Note:      botName(1) + " sitzt bereit am Tisch (" + botStufeText(stufe) + ").",
+		}
+		spiel.Spieler = append(spiel.Spieler, baccaraNeuerSpieler(input.ID, player.Name))
+		spiel.Spieler = append(spiel.Spieler, baccaraNeuerSpieler(botID(1), botName(1)))
+		for i := range spiel.Spieler {
+			spiel.Spieler[i].Ready = true
+		}
+		room.Baccara = spiel
+		if status, meldung := baccaraAktion(room, input.ID, "start", 0); meldung != "" {
 			mu.Unlock()
-			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
+			http.Error(w, meldung, status)
 			return
+		}
+		// Der Bot legt zuerst die Bank, damit der Mensch als Ponte setzt.
+		room.Baccara.BankSitz = 1
+		room.Baccara.Bank = 0
+		room.Baccara.Status = "bank"
+		room.Baccara.Note = botName(1) + " hat die Bank – wie viel legt er auf den Tisch?"
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Baccara gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
+	default:
+		if status, meldung := baccaraAktion(room, input.ID, action, input.Betrag); meldung != "" {
+			mu.Unlock()
+			http.Error(w, meldung, status)
+			return
+		}
+	}
+
+	room.LastActive = time.Now()
+	result := baccaraAnsicht(room.Baccara)
+	mu.Unlock()
+	jsonResponse(w, map[string]any{"game": result})
+}
+
+// ---------------------------------------------------------------- Aktionen
+
+// baccaraAktion führt eine Aktion am Tisch aus. Mensch und Bot gehen durch
+// dieselbe Prüfung; die Rückgabe ist HTTP-Status und Meldung ("" heißt
+// erledigt).
+func baccaraAktion(room *Room, id, aktion string, betrag int) (int, string) {
+	game := room.Baccara
+
+	switch aktion {
+	case "ready":
+		if game == nil || game.Status != "invited" {
+			return http.StatusConflict, "Bereit drücken geht nur vor dem Start."
+		}
+		sitz := baccaraSitz(game, id)
+		if sitz < 0 {
+			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
 		game.Spieler[sitz].Ready = !game.Spieler[sitz].Ready
 		if game.Spieler[sitz].Ready {
-			game.Note = player.Name + " ist bereit."
+			game.Note = game.Spieler[sitz].Name + " ist bereit."
 		} else {
-			game.Note = player.Name + " wartet noch."
+			game.Note = game.Spieler[sitz].Name + " wartet noch."
 		}
 
 	case "start":
-		game := room.Baccara
 		if game == nil || game.Status != "invited" {
-			mu.Unlock()
-			http.Error(w, "Es wartet keine Runde auf den Start.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Es wartet keine Runde auf den Start."
 		}
-		if game.HostID != input.ID {
-			mu.Unlock()
-			http.Error(w, "Nur der Gastgeber kann die Bank übernehmen.", http.StatusForbidden)
-			return
+		if game.HostID != id {
+			return http.StatusForbidden, "Nur der Gastgeber kann die Bank übernehmen."
 		}
 		if len(game.Spieler) < 2 {
-			mu.Unlock()
-			http.Error(w, "Baccara braucht mindestens zwei Spieler.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Baccara braucht mindestens zwei Spieler."
 		}
 		for _, p := range game.Spieler {
 			if !p.Ready {
-				mu.Unlock()
-				http.Error(w, "Erst müssen alle BEREIT drücken.", http.StatusConflict)
-				return
+				return http.StatusConflict, "Erst müssen alle BEREIT drücken."
 			}
 		}
 		game.BankSitz = 0
@@ -613,152 +675,107 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = game.Spieler[0].Name + " hat die Bank – wie viel legt er auf den Tisch?"
 
 	case "bank":
-		game := room.Baccara
 		if game == nil || game.Status != "bank" {
-			mu.Unlock()
-			http.Error(w, "Gerade legt niemand eine Bank.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade legt niemand eine Bank."
 		}
-		if baccaraSitz(game, input.ID) != game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Nur der Bankhalter legt die Bank.", http.StatusForbidden)
-			return
+		if baccaraSitz(game, id) != game.BankSitz {
+			return http.StatusForbidden, "Nur der Bankhalter legt die Bank."
 		}
 		halter := &game.Spieler[game.BankSitz]
-		if input.Betrag < baccaraBankMin {
-			mu.Unlock()
-			http.Error(w, "Die Bank muss mindestens "+baccaraEuro(baccaraBankMin)+" haben.", http.StatusBadRequest)
-			return
+		if betrag < baccaraBankMin {
+			return http.StatusBadRequest, "Die Bank muss mindestens " + baccaraEuro(baccaraBankMin) + " haben."
 		}
-		input.Betrag = (input.Betrag / baccaraSchritt) * baccaraSchritt
-		if input.Betrag > halter.Kasse {
-			mu.Unlock()
-			http.Error(w, "So viel Geld hast du nicht in der Kasse.", http.StatusConflict)
-			return
+		betrag = (betrag / baccaraSchritt) * baccaraSchritt
+		if betrag > halter.Kasse {
+			return http.StatusConflict, "So viel Geld hast du nicht in der Kasse."
 		}
-		halter.Kasse -= input.Betrag
-		game.Bank = input.Betrag
+		halter.Kasse -= betrag
+		game.Bank = betrag
 		baccaraNeueRunde(game)
 		game.Note = "Bank gelegt: " + baccaraEuro(game.Bank) + " – jetzt setzen."
 
 	case "setzen", "banco":
-		game := room.Baccara
 		if game == nil || game.Status != "setzen" {
-			mu.Unlock()
-			http.Error(w, "Gerade wird nicht gesetzt.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade wird nicht gesetzt."
 		}
-		sitz := baccaraSitz(game, input.ID)
+		sitz := baccaraSitz(game, id)
 		if sitz < 0 || sitz == game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Die Bank setzt nicht gegen sich selbst.", http.StatusForbidden)
-			return
+			return http.StatusForbidden, "Die Bank setzt nicht gegen sich selbst."
 		}
 		p := &game.Spieler[sitz]
 		if p.Status == "pleite" {
-			mu.Unlock()
-			http.Error(w, "Deine Kasse ist leer.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Deine Kasse ist leer."
 		}
 		if p.Einsatz > 0 {
-			mu.Unlock()
-			http.Error(w, "Du hast für diese Runde schon gesetzt.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Du hast für diese Runde schon gesetzt."
 		}
 		frei := game.Bank - baccaraBelegt(game)
 		if frei <= 0 {
-			mu.Unlock()
-			http.Error(w, "Die Bank ist schon voll abgedeckt – diese Runde setzt niemand mehr.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Die Bank ist schon voll abgedeckt – diese Runde setzt niemand mehr."
 		}
-		betrag := (input.Betrag / baccaraSchritt) * baccaraSchritt
-		if action == "banco" {
-			betrag = frei
-			if betrag > p.Kasse {
-				betrag = (p.Kasse / baccaraSchritt) * baccaraSchritt
+		einsatz := (betrag / baccaraSchritt) * baccaraSchritt
+		if aktion == "banco" {
+			einsatz = frei
+			if einsatz > p.Kasse {
+				einsatz = (p.Kasse / baccaraSchritt) * baccaraSchritt
 			}
-			if betrag <= 0 {
-				mu.Unlock()
-				http.Error(w, "Für Banco fehlt dir Geld.", http.StatusConflict)
-				return
+			if einsatz <= 0 {
+				return http.StatusConflict, "Für Banco fehlt dir Geld."
 			}
 		}
-		if betrag < baccaraSchritt {
-			mu.Unlock()
-			http.Error(w, "Mindestens "+baccaraEuro(baccaraSchritt)+".", http.StatusBadRequest)
-			return
+		if einsatz < baccaraSchritt {
+			return http.StatusBadRequest, "Mindestens " + baccaraEuro(baccaraSchritt) + "."
 		}
-		if betrag > p.Kasse {
-			mu.Unlock()
-			http.Error(w, "So viel Geld hast du nicht.", http.StatusConflict)
-			return
+		if einsatz > p.Kasse {
+			return http.StatusConflict, "So viel Geld hast du nicht."
 		}
-		if betrag > frei {
-			mu.Unlock()
-			http.Error(w, "Die Bank ist nur noch mit "+baccaraEuro(frei)+" gedeckt.", http.StatusConflict)
-			return
+		if einsatz > frei {
+			return http.StatusConflict, "Die Bank ist nur noch mit " + baccaraEuro(frei) + " gedeckt."
 		}
-		p.Kasse -= betrag
-		p.Einsatz = betrag
+		p.Kasse -= einsatz
+		p.Einsatz = einsatz
 		p.Status = "setzt"
-		if action == "banco" {
-			game.Note = player.Name + " ruft BANCO – " + baccaraEuro(betrag) + " auf die ganze Bank."
+		if aktion == "banco" {
+			game.Note = p.Name + " ruft BANCO – " + baccaraEuro(einsatz) + " auf die ganze Bank."
 		} else {
-			game.Note = player.Name + " setzt " + baccaraEuro(betrag) + "."
+			game.Note = p.Name + " setzt " + baccaraEuro(einsatz) + "."
 		}
 
 	case "geben":
-		game := room.Baccara
 		if game == nil || game.Status != "setzen" {
-			mu.Unlock()
-			http.Error(w, "Gerade wird nicht gegeben.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade wird nicht gegeben."
 		}
-		if baccaraSitz(game, input.ID) != game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Nur der Bankhalter gibt die Karten.", http.StatusForbidden)
-			return
+		if baccaraSitz(game, id) != game.BankSitz {
+			return http.StatusForbidden, "Nur der Bankhalter gibt die Karten."
 		}
 		if baccaraBelegt(game) <= 0 {
-			mu.Unlock()
-			http.Error(w, "Es hat noch niemand gesetzt.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Es hat noch niemand gesetzt."
 		}
 		baccaraGeben(game)
 
 	case "karte", "stehen":
-		game := room.Baccara
 		if game == nil || game.Status != "zug" {
-			mu.Unlock()
-			http.Error(w, "Gerade entscheidet niemand.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Gerade entscheidet niemand."
 		}
-		if baccaraSitz(game, input.ID) != game.Zug {
-			mu.Unlock()
-			http.Error(w, "Nur der Ponte mit fünf Punkten entscheidet.", http.StatusForbidden)
-			return
+		if baccaraSitz(game, id) != game.Zug {
+			return http.StatusForbidden, "Nur der Ponte mit fünf Punkten entscheidet."
 		}
-		if action == "karte" {
+		if aktion == "karte" {
 			game.PonteKarten = append(game.PonteKarten, baccaraZiehen(game))
-			game.Note = player.Name + " nimmt eine Karte: " + strconv.Itoa(baccaraPunkte(game.PonteKarten)) + " Punkte."
+			game.Note = game.Spieler[game.Zug].Name + " nimmt eine Karte: " + strconv.Itoa(baccaraPunkte(game.PonteKarten)) + " Punkte."
 		} else {
-			game.Note = player.Name + " bleibt bei fünf stehen."
+			game.Note = game.Spieler[game.Zug].Name + " bleibt bei fünf stehen."
 		}
 		game.Zug = -1
 		game.Status = "spiel"
 		baccaraBankZug(game)
 
 	case "naechste":
-		game := room.Baccara
 		if game == nil || game.Status != "runde" {
-			mu.Unlock()
-			http.Error(w, "Die Runde ist noch nicht abgerechnet.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Die Runde ist noch nicht abgerechnet."
 		}
-		if baccaraSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
+		if baccaraSitz(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Runde."
 		}
 		if game.BankWechsel || game.Bank <= 0 {
 			baccaraBankWeiter(game)
@@ -767,30 +784,20 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 		baccaraNeueRunde(game)
 
 	case "abgeben":
-		game := room.Baccara
 		if game == nil || game.Status != "runde" {
-			mu.Unlock()
-			http.Error(w, "Die Bank lässt sich erst nach einer Runde abgeben.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Die Bank lässt sich erst nach einer Runde abgeben."
 		}
-		if baccaraSitz(game, input.ID) != game.BankSitz {
-			mu.Unlock()
-			http.Error(w, "Nur der Bankhalter kann abgeben.", http.StatusForbidden)
-			return
+		if baccaraSitz(game, id) != game.BankSitz {
+			return http.StatusForbidden, "Nur der Bankhalter kann abgeben."
 		}
 		baccaraBankWeiter(game)
 
 	case "reset":
-		game := room.Baccara
 		if game == nil || game.Status != "ende" {
-			mu.Unlock()
-			http.Error(w, "Eine neue Partie geht erst nach dem Ende.", http.StatusConflict)
-			return
+			return http.StatusConflict, "Eine neue Partie geht erst nach dem Ende."
 		}
-		if baccaraSitz(game, input.ID) < 0 {
-			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Runde.", http.StatusForbidden)
-			return
+		if baccaraSitz(game, id) < 0 {
+			return http.StatusForbidden, "Du gehörst nicht zu dieser Runde."
 		}
 		frisch := &BaccaraGame{
 			ID:        game.ID,
@@ -806,15 +813,13 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 			frisch.Spieler = append(frisch.Spieler, baccaraNeuerSpieler(p.ID, p.Name))
 		}
 		room.Baccara = frisch
+		room.LastActive = time.Now()
+		return 0, ""
 
 	default:
-		mu.Unlock()
-		http.Error(w, "Unbekannte Aktion.", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, "Unbekannte Aktion."
 	}
 
 	room.LastActive = time.Now()
-	result := baccaraAnsicht(room.Baccara)
-	mu.Unlock()
-	jsonResponse(w, map[string]any{"game": result})
+	return 0, ""
 }

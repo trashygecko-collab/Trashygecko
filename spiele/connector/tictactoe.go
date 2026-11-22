@@ -136,7 +136,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		room.TicTacToe = &TicTacToeGame{ID: randomCode(), XID: input.ID, XName: player.Name, OID: input.ToID, OName: target.Name, Board: make([]string, 9), Current: "X", Status: "invited"}
-		room.addMessage(Message{Name: player.Name, Text: "lädt dich zu Neon Tic Tac Toe ein.", Time: time.Now().Format("15:04:05"), SenderID: input.ID, ToID: input.ToID, ToName: target.Name, Whisper: true, GameInvite: true, Game: "tictactoe", GameID: room.TicTacToe.ID})
+		room.addMessage(Message{Name: player.Name, Text: "lädt dich zu Tic Tac Toe ein.", Time: time.Now().Format("15:04:05"), SenderID: input.ID, ToID: input.ToID, ToName: target.Name, Whisper: true, GameInvite: true, Game: "tictactoe", GameID: room.TicTacToe.ID})
 	case "accept":
 		game := room.TicTacToe
 		if game == nil || game.Status != "invited" || game.OID != input.ID {

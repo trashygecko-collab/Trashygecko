@@ -24,6 +24,13 @@ type SimGame struct {
 	Loser    string   `json:"loser,omitempty"`
 	Triangle []int    `json:"triangle,omitempty"`
 	Note     string   `json:"note,omitempty"`
+
+	// Bots am Tisch (action=bot). Sie ziehen durch dieselbe Prüfung wie der
+	// Mensch (simLinie).
+	BotID    string    `json:"botId,omitempty"`
+	Bots     []string  `json:"-"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time `json:"-"`
 }
 
 func simNewGame(hostID, hostName, guestID, guestName, id string) *SimGame {
@@ -93,10 +100,56 @@ func cloneSim(g *SimGame) *SimGame {
 	}
 	c := *g
 	c.Edges = append([]string(nil), g.Edges...)
+	c.Bots = append([]string(nil), g.Bots...)
 	if g.Triangle != nil {
 		c.Triangle = append([]int(nil), g.Triangle...)
 	}
 	return &c
+}
+
+// simLinie ist die eine Prüfung für einen Zug – Mensch und Bot gehen durch.
+func simLinie(g *SimGame, id string, index int) (string, int) {
+	if g == nil || g.Status != "active" {
+		return "Es läuft gerade keine aktive Partie.", http.StatusConflict
+	}
+	color := simColorOf(g, id)
+	if color == "" {
+		return "Du gehörst nicht zu dieser Partie.", http.StatusForbidden
+	}
+	if g.Current != color {
+		return "Der andere Spieler ist an der Reihe.", http.StatusConflict
+	}
+	if index < 0 || index >= simEdgeCount {
+		return "Diese Linie gibt es nicht.", http.StatusBadRequest
+	}
+	if g.Edges[index] != "" {
+		return "Diese Linie ist schon gesetzt.", http.StatusConflict
+	}
+	wer := g.RedName
+	if color == "blue" {
+		wer = g.BlueName
+	}
+	g.Edges[index] = color
+	if triangle := simTriangle(g.Edges, color); triangle != nil {
+		// Eigenes Dreieck gebaut – der andere gewinnt.
+		g.Triangle = triangle
+		g.Status = "finished"
+		g.Loser = color
+		if color == "red" {
+			g.Winner = "blue"
+		} else {
+			g.Winner = "red"
+		}
+		g.Note = wer + " baut ein Dreieck und verliert!"
+	} else {
+		if color == "red" {
+			g.Current = "blue"
+		} else {
+			g.Current = "red"
+		}
+		g.Note = ""
+	}
+	return "", 0
 }
 
 func simHandler(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +173,7 @@ func simHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		simBotTreiben(room.Sim, time.Now())
 		game := cloneSim(room.Sim)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -133,6 +187,7 @@ func simHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		ID    string `json:"id"`
+		Stufe string `json:"stufe"`
 		ToID  string `json:"toId"`
 		Index int    `json:"index"`
 	}
@@ -160,6 +215,26 @@ func simHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		if room.Sim != nil && !room.gameSlotFree(room.Sim.Status, room.Sim.RedID, room.Sim.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Sim-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		game := simNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		game.BotID, game.BotStufe = botID(1), stufe
+		game.Bots = []string{botID(1)}
+		game.Status = "active"
+		game.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Sim = game
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Sim gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "invite":
 		target, ok := room.Players[input.ToID]
 		if !ok || input.ToID == input.ID {
@@ -212,47 +287,11 @@ func simHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Es läuft gerade keine aktive Partie.", http.StatusConflict)
 			return
 		}
-		color := simColorOf(game, input.ID)
-		if color == "" {
+		msg, status := simLinie(game, input.ID, input.Index)
+		if msg != "" {
 			mu.Unlock()
-			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
+			http.Error(w, msg, status)
 			return
-		}
-		if game.Current != color {
-			mu.Unlock()
-			http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
-			return
-		}
-		if input.Index < 0 || input.Index >= simEdgeCount {
-			mu.Unlock()
-			http.Error(w, "Diese Linie gibt es nicht.", http.StatusBadRequest)
-			return
-		}
-		if game.Edges[input.Index] != "" {
-			mu.Unlock()
-			http.Error(w, "Diese Linie ist schon gesetzt.", http.StatusConflict)
-			return
-		}
-
-		game.Edges[input.Index] = color
-		if triangle := simTriangle(game.Edges, color); triangle != nil {
-			// Eigenes Dreieck gebaut – der andere gewinnt.
-			game.Triangle = triangle
-			game.Status = "finished"
-			game.Loser = color
-			if color == "red" {
-				game.Winner = "blue"
-			} else {
-				game.Winner = "red"
-			}
-			game.Note = player.Name + " baut ein Dreieck und verliert!"
-		} else {
-			if color == "red" {
-				game.Current = "blue"
-			} else {
-				game.Current = "red"
-			}
-			game.Note = ""
 		}
 
 	case "reset":

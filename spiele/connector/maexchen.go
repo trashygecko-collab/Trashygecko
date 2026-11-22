@@ -25,6 +25,10 @@ type MXPlayer struct {
 	Euro  int    `json:"euro"`
 	Ready bool   `json:"ready"`
 	Out   bool   `json:"out"`
+
+	// Bluffs zählt, wie oft dieser Spieler beim Aufdecken als Lügner dastand.
+	// Nur für die Bots, nie im JSON.
+	Bluffs int `json:"-"`
 }
 
 // MXCombo ist eine Ansage: Hoch ist die größere, Tief die kleinere Augenzahl.
@@ -71,6 +75,14 @@ type MaexchenGame struct {
 	LastLiar      string     `json:"lastLiar,omitempty"`
 	Winner        string     `json:"winner,omitempty"`
 	Note          string     `json:"note,omitempty"`
+
+	// Bots am Tisch (action=bot). Sie ziehen durch dieselben Prüfungen wie
+	// Menschen – würfeln, ansagen, aufdecken.
+	BotID     string    `json:"botId,omitempty"`
+	Bots      []string  `json:"-"`
+	BotStufen []string  `json:"-"`
+	BotStufe  string    `json:"botStufe,omitempty"`
+	BotFrist  time.Time `json:"-"`
 
 	// Wurf zur stehenden Ansage – für die Prüfung beim Aufdecken, nie im JSON
 	// an andere Spieler.
@@ -178,6 +190,8 @@ func (g *MaexchenGame) clone() *MaexchenGame {
 	c := *g
 	c.Players = append([]MXPlayer(nil), g.Players...)
 	c.Dice = append([]int(nil), g.Dice...)
+	c.Bots = append([]string(nil), g.Bots...)
+	c.BotStufen = append([]string(nil), g.BotStufen...)
 	c.wurf = append([]int(nil), g.wurf...)
 	if g.Ansage != nil {
 		a := *g.Ansage
@@ -221,6 +235,150 @@ func mxRaus(g *MaexchenGame, id, name string) (bool, bool, int) {
 	return true, false, len(g.Players)
 }
 
+// mxWurf ist die eine Prüfung fürs Würfeln – Mensch und Bot gehen durch.
+func mxWurf(g *MaexchenGame, seat int, name string) (string, int) {
+	if g == nil || g.Status != "active" {
+		return "Es läuft gerade keine aktive Partie.", http.StatusConflict
+	}
+	if seat < 0 {
+		return "Du gehörst nicht zu dieser Partie.", http.StatusForbidden
+	}
+	if g.Current != seat {
+		return "Der andere Spieler ist an der Reihe.", http.StatusConflict
+	}
+	if g.Phase != "wurf" {
+		return "Du hast schon gewürfelt – jetzt Ansage weitergeben.", http.StatusConflict
+	}
+	if g.Ansage != nil && mxRang(*g.Ansage) >= mxRang(MXCombo{Hoch: 2, Tief: 1}) {
+		return "Die Ansage 2-1 ist nicht zu überbieten – da hilft nur Aufdecken.", http.StatusConflict
+	}
+	mxWuerfle(g)
+	g.Phase = "ansage"
+	g.DiceOwner = g.Players[seat].ID
+	g.Note = name + " würfelt und überlegt sich eine Ansage."
+	g.Note += " Bisher angesagt: " + mxAnsageText(g) + "."
+	return "", 0
+}
+
+// mxSage prüft und setzt eine Ansage.
+func mxSage(g *MaexchenGame, seat int, name string, ansage MXCombo) (string, int) {
+	if g == nil || g.Status != "active" {
+		return "Es läuft gerade keine aktive Partie.", http.StatusConflict
+	}
+	if seat < 0 {
+		return "Du gehörst nicht zu dieser Partie.", http.StatusForbidden
+	}
+	if g.Current != seat || g.Phase != "ansage" || g.DiceOwner != g.Players[seat].ID {
+		return "Gerade ist keine Ansage von dir offen.", http.StatusConflict
+	}
+	neu := mxCombo(ansage.Hoch, ansage.Tief)
+	if !mxGueltig(neu) {
+		return "Die Ansage muss aus zwei Würfeln von 1 bis 6 bestehen.", http.StatusBadRequest
+	}
+	if g.Ansage != nil && mxRang(neu) <= mxRang(*g.Ansage) {
+		return "Die Ansage muss höher sein als " + g.Ansage.String() + ".", http.StatusConflict
+	}
+	g.Ansage = &neu
+	g.AnsageVon = g.Players[seat].ID
+	g.AnsageVonName = name
+	g.Dice = nil
+	g.DiceOwner = ""
+	g.Phase = "wurf"
+	g.Current = mxNaechsterAktiv(g, seat)
+	g.Note = name + " sagt " + neu.String() + " an. Jetzt ist " +
+		g.Players[g.Current].Name + " dran – glauben oder aufdecken."
+	return "", 0
+}
+
+// mxAufdecken prüft und deckt die stehende Ansage auf.
+func mxAufdecken(g *MaexchenGame, seat int, name string) (string, int) {
+	if g == nil || g.Status != "active" {
+		return "Es läuft gerade keine aktive Partie.", http.StatusConflict
+	}
+	if seat < 0 {
+		return "Du gehörst nicht zu dieser Partie.", http.StatusForbidden
+	}
+	if g.Current != seat {
+		return "Aufdecken kann nur, wer gerade dran ist.", http.StatusConflict
+	}
+	if g.Phase != "wurf" {
+		return "Du hast schon gewürfelt – jetzt Ansage weitergeben.", http.StatusConflict
+	}
+	if g.Ansage == nil || g.AnsageVon == "" {
+		return "Es steht keine Ansage zum Aufdecken im Raum.", http.StatusConflict
+	}
+	if g.AnsageVon == g.Players[seat].ID {
+		return "Die eigene Ansage kann man nicht aufdecken.", http.StatusConflict
+	}
+	if len(g.wurf) != 2 {
+		return "Zu dieser Ansage liegt kein Wurf vor.", http.StatusConflict
+	}
+	echt := mxCombo(g.wurf[0], g.wurf[1])
+	gelogen := echt != *g.Ansage
+	verlierer := g.AnsageVon
+	if !gelogen {
+		verlierer = g.Players[seat].ID
+	}
+	vIdx := mxFind(g, verlierer)
+	if vIdx < 0 {
+		return "Der Spieler ist nicht mehr am Tisch.", http.StatusConflict
+	}
+	g.Players[vIdx].Euro--
+	if g.Players[vIdx].Euro <= 0 {
+		g.Players[vIdx].Euro = 0
+		g.Players[vIdx].Out = true
+	}
+	g.revealNr++
+	g.Reveal = &MXReveal{
+		Nr:          g.revealNr,
+		VonID:       g.AnsageVon,
+		VonName:     g.AnsageVonName,
+		Angesagt:    *g.Ansage,
+		Gewuerfelt:  echt,
+		Gelogen:     gelogen,
+		Aufdecker:   name,
+		AufdeckerID: g.Players[seat].ID,
+		Verlierer:   g.Players[vIdx].Name,
+		VerliererID: verlierer,
+		Aus:         g.Players[vIdx].Out,
+		Euro:        g.Players[vIdx].Euro,
+	}
+	if gelogen {
+		g.Players[vIdx].Bluffs++
+		g.LastLiar = g.AnsageVonName
+		g.Note = g.AnsageVonName + " hat gelogen: " + g.Ansage.String() +
+			" angesagt, " + echt.String() + " gewürfelt. " + g.Players[vIdx].Name + " zahlt 1 €."
+	} else {
+		g.Note = g.AnsageVonName + " war ehrlich: " + echt.String() +
+			" gewürfelt. " + g.Players[vIdx].Name + " zahlt 1 € fürs falsche Aufdecken."
+	}
+	if g.Players[vIdx].Out {
+		g.Note += " Damit ist " + g.Players[vIdx].Name + " pleite und raus."
+	}
+	if mxAktiv(g) <= 1 {
+		for _, p := range g.Players {
+			if !p.Out {
+				g.Winner = p.Name
+			}
+		}
+		g.Status = "finished"
+		g.Phase = "ende"
+		g.Dice = nil
+		g.DiceOwner = ""
+		g.wurf = nil
+		g.Note = g.Winner + " gewinnt die Partie!"
+		return "", 0
+	}
+	start := vIdx
+	if g.Players[start].Out {
+		start = mxNaechsterAktiv(g, start)
+	}
+	mxNeueRunde(g, start)
+	g.Reveal.Start = g.Players[g.Current].Name
+	g.Note += " Neue Runde: " + g.Players[g.Current].Name + " würfelt."
+	return "", 0
+}
+
 func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -242,6 +400,7 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		mxBotTreiben(room.Maexchen, time.Now())
 		game := mxView(room.Maexchen, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -255,6 +414,7 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		ID     string   `json:"id"`
+		Stufe  string   `json:"stufe"`
 		Ansage *MXCombo `json:"ansage"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -285,6 +445,35 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		if room.Maexchen != nil && room.Maexchen.Status != "finished" {
+			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Mäxchen-Runde.")
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		game := &MaexchenGame{ID: randomCode(), HostID: input.ID, Status: "active", Phase: "wurf"}
+		mensch := mxNewPlayer(input.ID, player.Name, 0)
+		mensch.Ready = true
+		game.Players = append(game.Players, mensch)
+		for n := 1; n <= 2; n++ {
+			bot := mxNewPlayer(botID(n), botName(n), n)
+			bot.Ready = true
+			game.Players = append(game.Players, bot)
+			game.Bots = append(game.Bots, botID(n))
+			game.BotStufen = append(game.BotStufen, stufe)
+		}
+		game.BotID, game.BotStufe = botID(1), stufe
+		mxNeueRunde(game, 0)
+		game.Note = player.Name + " spielt gegen " + botName(1) + " und " + botName(2) +
+			" (" + botStufeText(stufe) + ")."
+		room.Maexchen = game
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Lügen Mäxchen gegen zwei Bots (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if room.Maexchen != nil && room.Maexchen.Status != "finished" {
 			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Mäxchen-Runde.")
@@ -366,7 +555,7 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 		mxNeueRunde(game, 0)
 		game.Note = "Los geht's: " + game.Players[0].Name + " würfelt zuerst."
 
-	case "roll":
+	case "roll", "ansage", "aufdecken":
 		game := room.Maexchen
 		if game == nil || game.Status != "active" {
 			fehler(http.StatusConflict, "Es läuft gerade keine aktive Partie.")
@@ -377,156 +566,24 @@ func maexchenHandler(w http.ResponseWriter, r *http.Request) {
 			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
 			return
 		}
-		if game.Current != seat {
-			fehler(http.StatusConflict, "Der andere Spieler ist an der Reihe.")
-			return
-		}
-		if game.Phase != "wurf" {
-			fehler(http.StatusConflict, "Du hast schon gewürfelt – jetzt Ansage weitergeben.")
-			return
-		}
-		if game.Ansage != nil && mxRang(*game.Ansage) >= mxRang(MXCombo{Hoch: 2, Tief: 1}) {
-			fehler(http.StatusConflict, "Die Ansage 2-1 ist nicht zu überbieten – da hilft nur Aufdecken.")
-			return
-		}
-		mxWuerfle(game)
-		game.Phase = "ansage"
-		game.DiceOwner = input.ID
-		game.Note = player.Name + " würfelt und überlegt sich eine Ansage."
-		game.Note += " Bisher angesagt: " + mxAnsageText(game) + "."
-
-	case "ansage":
-		game := room.Maexchen
-		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Partie.")
-			return
-		}
-		seat := mxFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
-		}
-		if game.Current != seat || game.Phase != "ansage" || game.DiceOwner != input.ID {
-			fehler(http.StatusConflict, "Gerade ist keine Ansage von dir offen.")
-			return
-		}
-		if input.Ansage == nil {
-			fehler(http.StatusBadRequest, "Es fehlt die Ansage.")
-			return
-		}
-		neu := mxCombo(input.Ansage.Hoch, input.Ansage.Tief)
-		if !mxGueltig(neu) {
-			fehler(http.StatusBadRequest, "Die Ansage muss aus zwei Würfeln von 1 bis 6 bestehen.")
-			return
-		}
-		if game.Ansage != nil && mxRang(neu) <= mxRang(*game.Ansage) {
-			fehler(http.StatusConflict, "Die Ansage muss höher sein als "+game.Ansage.String()+".")
-			return
-		}
-		game.Ansage = &neu
-		game.AnsageVon = input.ID
-		game.AnsageVonName = player.Name
-		game.Dice = nil
-		game.DiceOwner = ""
-		game.Phase = "wurf"
-		game.Current = mxNaechsterAktiv(game, seat)
-		game.Note = player.Name + " sagt " + neu.String() + " an. Jetzt ist " +
-			game.Players[game.Current].Name + " dran – glauben oder aufdecken."
-
-	case "aufdecken":
-		game := room.Maexchen
-		if game == nil || game.Status != "active" {
-			fehler(http.StatusConflict, "Es läuft gerade keine aktive Partie.")
-			return
-		}
-		seat := mxFind(game, input.ID)
-		if seat < 0 {
-			fehler(http.StatusForbidden, "Du gehörst nicht zu dieser Partie.")
-			return
-		}
-		if game.Current != seat {
-			fehler(http.StatusConflict, "Aufdecken kann nur, wer gerade dran ist.")
-			return
-		}
-		if game.Phase != "wurf" {
-			fehler(http.StatusConflict, "Du hast schon gewürfelt – jetzt Ansage weitergeben.")
-			return
-		}
-		if game.Ansage == nil || game.AnsageVon == "" {
-			fehler(http.StatusConflict, "Es steht keine Ansage zum Aufdecken im Raum.")
-			return
-		}
-		if game.AnsageVon == input.ID {
-			fehler(http.StatusConflict, "Die eigene Ansage kann man nicht aufdecken.")
-			return
-		}
-		if len(game.wurf) != 2 {
-			fehler(http.StatusConflict, "Zu dieser Ansage liegt kein Wurf vor.")
-			return
-		}
-		echt := mxCombo(game.wurf[0], game.wurf[1])
-		gelogen := echt != *game.Ansage
-		verlierer := game.AnsageVon
-		if !gelogen {
-			verlierer = input.ID
-		}
-		vIdx := mxFind(game, verlierer)
-		if vIdx < 0 {
-			fehler(http.StatusConflict, "Der Spieler ist nicht mehr am Tisch.")
-			return
-		}
-		game.Players[vIdx].Euro--
-		if game.Players[vIdx].Euro <= 0 {
-			game.Players[vIdx].Euro = 0
-			game.Players[vIdx].Out = true
-		}
-		game.revealNr++
-		game.Reveal = &MXReveal{
-			Nr:          game.revealNr,
-			VonID:       game.AnsageVon,
-			VonName:     game.AnsageVonName,
-			Angesagt:    *game.Ansage,
-			Gewuerfelt:  echt,
-			Gelogen:     gelogen,
-			Aufdecker:   player.Name,
-			AufdeckerID: input.ID,
-			Verlierer:   game.Players[vIdx].Name,
-			VerliererID: verlierer,
-			Aus:         game.Players[vIdx].Out,
-			Euro:        game.Players[vIdx].Euro,
-		}
-		if gelogen {
-			game.LastLiar = game.AnsageVonName
-			game.Note = game.AnsageVonName + " hat gelogen: " + game.Ansage.String() +
-				" angesagt, " + echt.String() + " gewürfelt. " + game.Players[vIdx].Name + " zahlt 1 €."
-		} else {
-			game.Note = game.AnsageVonName + " war ehrlich: " + echt.String() +
-				" gewürfelt. " + game.Players[vIdx].Name + " zahlt 1 € fürs falsche Aufdecken."
-		}
-		if game.Players[vIdx].Out {
-			game.Note += " Damit ist " + game.Players[vIdx].Name + " pleite und raus."
-		}
-		if mxAktiv(game) <= 1 {
-			for _, p := range game.Players {
-				if !p.Out {
-					game.Winner = p.Name
-				}
+		var meldung string
+		var status int
+		switch action {
+		case "roll":
+			meldung, status = mxWurf(game, seat, player.Name)
+		case "ansage":
+			if input.Ansage == nil {
+				fehler(http.StatusBadRequest, "Es fehlt die Ansage.")
+				return
 			}
-			game.Status = "finished"
-			game.Phase = "ende"
-			game.Dice = nil
-			game.DiceOwner = ""
-			game.wurf = nil
-			game.Note = game.Winner + " gewinnt die Partie!"
-			break
+			meldung, status = mxSage(game, seat, player.Name, *input.Ansage)
+		default:
+			meldung, status = mxAufdecken(game, seat, player.Name)
 		}
-		start := vIdx
-		if game.Players[start].Out {
-			start = mxNaechsterAktiv(game, start)
+		if meldung != "" {
+			fehler(status, meldung)
+			return
 		}
-		mxNeueRunde(game, start)
-		game.Reveal.Start = game.Players[game.Current].Name
-		game.Note += " Neue Runde: " + game.Players[game.Current].Name + " würfelt."
 
 	case "reset":
 		game := room.Maexchen

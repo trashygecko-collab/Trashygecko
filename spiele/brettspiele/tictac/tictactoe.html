@@ -416,6 +416,11 @@ const onlineRoom = (onlineParams.get('room') || '').trim().toUpperCase();
 let onlineID = '';
 let onlineMark = '';
 let onlineGame = null;
+// Spielende-Sperre: Die Meldung zu Sieg oder Gleichstand gehört genau einmal
+// zu einer Partie. Der Browser fragt den Stand unten alle 700 ms ab – ohne
+// diese Marke würde bei jedem Abruf neu gemeldet (und lobText() zieht dabei
+// jedes Mal einen anderen Satz, also sah es nach lauter neuen Meldungen aus).
+let ergebnisGezeigt = '';
 let onlineOpponent = 'Gegner';
 let onlineName = (onlineParams.get('name') || 'Spieler').trim().slice(0,24);
 if(onlineRoom){
@@ -689,25 +694,33 @@ function renderMultiplayer(game){
   });
 
   if(game.status==='finished'){
-    if(game.winner==='draw'){
-      line.classList.remove('show');
-      status.className='status neutral';
-      status.textContent='Gleichstand!';
-      message.textContent=GLEICHSTAND;
-    }else{
-      const wonByX=game.winner==='X';
-      const winnerName=wonByX?game.xName:game.oName;
-      status.className=`status ${wonByX?'pink':'blue'}`;
-      status.innerHTML=`<span>${winnerName} hat gewonnen!</span>`;
-      message.textContent=game.winner===onlineMark
-        ? `🎉 ${lobText()} 🎉`
-        : `😅 ${pechText()}`;
-      if(winningCombo) drawWinLine(winningCombo);
+    const marke=(game.id||'partie')+'|'+game.winner;
+    if(ergebnisGezeigt!==marke){
+      ergebnisGezeigt=marke;
+      if(game.winner==='draw'){
+        line.classList.remove('show');
+        status.className='status neutral';
+        status.textContent='Gleichstand!';
+        message.textContent=GLEICHSTAND;
+      }else{
+        const wonByX=game.winner==='X';
+        const winnerName=wonByX?game.xName:game.oName;
+        status.className=`status ${wonByX?'pink':'blue'}`;
+        status.innerHTML=`<span>${winnerName} hat gewonnen!</span>`;
+        message.textContent=game.winner===onlineMark
+          ? `🎉 ${lobText()} 🎉`
+          : `😅 ${pechText()}`;
+        if(winningCombo) drawWinLine(winningCombo);
+      }
     }
     reset.disabled=false;
     reset.textContent='↻ NOCHMAL SPIELEN';
     return;
   }
+
+  // Laufende oder neue Partie: das nächste Ergebnis darf wieder einmal gemeldet
+  // werden (nach „Nochmal spielen“ bleibt die Kennung, der Status wechselt).
+  ergebnisGezeigt='';
 
   line.classList.remove('show');
   reset.disabled=true;

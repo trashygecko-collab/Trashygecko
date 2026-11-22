@@ -571,9 +571,8 @@
   function baueSeite() {
     var kopf = document.createElement("header");
     kopf.className = "kopf";
-    kopf.innerHTML = '<div><marke>TrashyGecko Würfelspiele</marke><h1></h1><p></p></div>' +
+    kopf.innerHTML = '<div><marke>TrashyGecko Würfelspiele</marke><p></p></div>' +
       '<div class="zurueck"><a href="../spiele.html">← alle Spiele</a></div>';
-    kopf.querySelector("h1").textContent = spiel.titel;
     kopf.querySelector("p").textContent = spiel.unter || "";
 
     /* Grafikstil: keine eigene Auswahl im Spiel. Die Wahl trifft allein der

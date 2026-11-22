@@ -98,7 +98,7 @@ var spielApi = map[string]string{
 
 // spielAnzeige sind die Namen, wie sie im Chat stehen.
 var spielAnzeige = map[string]string{
-	"tictactoe":          "Neon Tic Tac Toe",
+	"tictactoe":          "Tic Tac Toe",
 	"viergewinnt":        "Vier gewinnt",
 	"dame":               "Dame",
 	"paare":              "Paare finden",
