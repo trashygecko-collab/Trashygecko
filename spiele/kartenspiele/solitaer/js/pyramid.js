@@ -17,16 +17,16 @@
     kurz: "28 Karten in sieben Reihen. Immer zwei freie Karten mit der Summe 13 " +
       "abräumen – ein König zählt 13 und geht allein.",
     vorschau: '<svg viewBox="0 0 120 84" aria-hidden="true">' +
-      '<g fill="#2a3138" stroke="#4b5661" stroke-width="1.2">' +
+      '<g style="fill:var(--vv-karte);stroke:var(--vv-rand)" stroke-width="1.2">' +
       '<rect x="52" y="4" width="18" height="14" rx="2"/><rect x="43" y="20" width="18" height="14" rx="2"/>' +
       '<rect x="61" y="20" width="18" height="14" rx="2"/><rect x="34" y="36" width="18" height="14" rx="2"/>' +
       '<rect x="52" y="36" width="18" height="14" rx="2"/><rect x="70" y="36" width="18" height="14" rx="2"/>' +
       '<rect x="25" y="52" width="18" height="14" rx="2"/><rect x="43" y="52" width="18" height="14" rx="2"/>' +
       '<rect x="61" y="52" width="18" height="14" rx="2"/><rect x="79" y="52" width="18" height="14" rx="2"/>' +
       '<rect x="4" y="70" width="16" height="12" rx="2"/><rect x="100" y="70" width="16" height="12" rx="2"/></g>' +
-      '<text x="57" y="15" fill="#c9705f" font-size="9" font-family="Georgia,serif">K</text>' +
-      '<text x="48" y="31" fill="#d9d3c6" font-size="9" font-family="Georgia,serif">A</text>' +
-      '<text x="66" y="31" fill="#d9d3c6" font-size="9" font-family="Georgia,serif">D</text>' +
+      '<text x="57" y="15" style="fill:var(--vv-rot)" font-size="9" font-family="Georgia,serif">K</text>' +
+      '<text x="48" y="31" style="fill:var(--vv-hell)" font-size="9" font-family="Georgia,serif">A</text>' +
+      '<text x="66" y="31" style="fill:var(--vv-hell)" font-size="9" font-family="Georgia,serif">D</text>' +
       "</svg>",
     optionen: [],
     standard: {},
@@ -82,6 +82,13 @@
       var wrap = document.createElement("div");
       wrap.className = "pyramid";
 
+      var zielKarten = {}, zielWaste = false;
+      if (auswahl) {
+        MOD.zieleFuer({ art: auswahl.typ === "waste" ? "waste" : "pyr", i: auswahl.i }).forEach(function (zn) {
+          if (zn.indexOf("karte:") === 0) zielKarten[Number(zn.slice(6))] = true;
+          if (zn === "waste") zielWaste = true;
+        });
+      }
       var feld = document.createElement("div");
       feld.className = "pyramide";
       var w = feld.clientWidth || brett.clientWidth || 560;
@@ -123,7 +130,8 @@
             art: "pyr", i: idx, index: idx,
             klasse: (frei ? "frei" : "verdeckt") +
               (auswahl && auswahl.typ === "pyr" && auswahl.i === idx ? " gewaehlt" : "") +
-              (frei ? " zielbar" : "")
+              (frei ? " zielbar" : "") +
+              (zielKarten[idx] ? " moeglich" : "")
           });
           c.style.cssText = "left:" + x + "px;top:" + y + "px;width:" + kartenBreite + "px;height:" + kartenHoehe + "px";
           if (frei) c.dataset.zone = "karte:" + idx;
@@ -149,7 +157,7 @@
       }
 
       var waste = document.createElement("div");
-      waste.className = "stapelfeld" + (z.waste.length ? "" : " leer");
+      waste.className = "stapelfeld" + (z.waste.length ? "" : " leer") + (zielWaste ? " moeglich" : "");
       waste.dataset.zone = "waste";
       waste.setAttribute("aria-label", "Ablagekarte");
       if (z.waste.length) {
@@ -214,21 +222,52 @@
       MOD.zeichne();
     },
 
+    /* Dieselbe Prüfung wie ablegen: freie, offene Karten, deren Wert mit der
+       Auswahl 13 ergibt; aus dem Berg zusätzlich die Ablagekarte. */
+    zieleFuer: function (was) {
+      if (!z || !was) return [];
+      var k = was.art === "waste" ? z.waste[z.waste.length - 1] :
+        (was.art === "pyr" ? z.pyr[was.i] : null);
+      if (!k || !k.offen) return [];
+      if (was.art === "pyr" && !istFrei(was.i)) return [];
+      var out = [];
+      for (var i = 0; i < 28; i++) {
+        if (was.art === "pyr" && i === was.i) continue;
+        if (!z.pyr[i] || !z.pyr[i].offen || !istFrei(i)) continue;
+        if (k.r + z.pyr[i].r === 13) out.push("karte:" + i);
+      }
+      if (was.art === "pyr" && z.waste.length) {
+        var w = z.waste[z.waste.length - 1];
+        if (w && w.offen && k.r + w.r === 13) out.push("waste");
+      }
+      return out;
+    },
+
     ablegen: function (was, zone) {
       if (!z || !was) return false;
       if (zone.indexOf("karte:") === 0) {
         var zi = Number(zone.slice(6));
-        if (was.art === "waste") { MOD.waehlen({ art: "waste" }); MOD.waehlen({ art: "pyr", i: zi, index: zi }); return true; }
-        if (was.art === "pyr" && was.i === zi) return false;
-        MOD.waehlen({ art: "pyr", i: zi, index: zi });
-        if (was.art === "pyr" && z.pyr[was.i]) MOD.waehlen({ art: "pyr", i: was.i, index: was.i });
-        return true;
-      }
-      if (zone === "waste") {
-        if (auswahl && auswahl.typ === "pyr") {
-          MOD.waehlen({ art: "waste" });
+        if (!z.pyr[zi] || !istFrei(zi) || !z.pyr[zi].offen) return false;
+        if (was.art === "waste") {
+          var wk = z.waste[z.waste.length - 1];
+          if (!wk) return false;
+          if (wk.r + z.pyr[zi].r !== 13) return false;
+          raeumen(zi, { waste: true });
           return true;
         }
+        if (was.art !== "pyr" || was.i === zi) return false;
+        var a = z.pyr[was.i];
+        if (!a || !istFrei(was.i) || !a.offen) return false;
+        if (a.r + z.pyr[zi].r !== 13) return false;
+        raeumen(zi, { pyr: was.i });
+        return true;
+      }
+      if (zone === "waste" && was.art === "pyr") {
+        var b = z.pyr[was.i];
+        var w = z.waste[z.waste.length - 1];
+        if (!b || !w || !istFrei(was.i) || !b.offen || b.r + w.r !== 13) return false;
+        raeumen(was.i, { waste: true });
+        return true;
       }
       return false;
     },

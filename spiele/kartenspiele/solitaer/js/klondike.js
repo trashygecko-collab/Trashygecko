@@ -17,16 +17,16 @@
     kurz: "Das klassische Solitär: sieben Spalten, rot und schwarz absteigend, " +
       "vier Ablagen von Ass bis König. Nachziehen mit einer oder drei Karten.",
     vorschau: '<svg viewBox="0 0 120 84" aria-hidden="true">' +
-      '<g fill="#2a3138" stroke="#4b5661" stroke-width="1.2">' +
+      '<g style="fill:var(--vv-karte);stroke:var(--vv-rand)" stroke-width="1.2">' +
       '<rect x="4" y="4" width="30" height="42" rx="4"/><rect x="40" y="4" width="30" height="42" rx="4"/>' +
       '<rect x="76" y="4" width="30" height="42" rx="4"/>' +
       '<rect x="4" y="54" width="20" height="26" rx="3"/><rect x="28" y="54" width="20" height="26" rx="3"/>' +
       '<rect x="52" y="54" width="20" height="26" rx="3"/><rect x="76" y="54" width="20" height="26" rx="3"/>' +
       '<rect x="100" y="54" width="16" height="22" rx="3"/></g>' +
-      '<text x="12" y="24" fill="#d9d3c6" font-size="12" font-family="Georgia,serif">A</text>' +
-      '<text x="84" y="24" fill="#c9705f" font-size="12" font-family="Georgia,serif">K</text>' +
-      '<text x="10" y="70" fill="#d9d3c6" font-size="10" font-family="Georgia,serif">♠</text>' +
-      '<text x="34" y="70" fill="#c9705f" font-size="10" font-family="Georgia,serif">♥</text>' +
+      '<text x="12" y="24" style="fill:var(--vv-hell)" font-size="12" font-family="Georgia,serif">A</text>' +
+      '<text x="84" y="24" style="fill:var(--vv-rot)" font-size="12" font-family="Georgia,serif">K</text>' +
+      '<text x="10" y="70" style="fill:var(--vv-hell)" font-size="10" font-family="Georgia,serif">♠</text>' +
+      '<text x="34" y="70" style="fill:var(--vv-rot)" font-size="10" font-family="Georgia,serif">♥</text>' +
       "</svg>",
     optionen: [{ key: "ziehen", label: "Nachziehen", werte: [
       { wert: 1, text: "eine Karte" }, { wert: 3, text: "drei Karten" }
@@ -220,6 +220,9 @@
         wegnehmen(was, karten.length);
         z.f[fi].push(karten[0]);
         z.punkte += 10;
+        /* Auch beim Weg auf die Ablage muss die Spalte aufdecken – sonst
+           bleibt die nächste Karte verdeckt liegen (und die 5 Punkte fehlen). */
+        aufdecken(was);
       } else if (zone.indexOf("t:") === 0) {
         var ti = Number(zone.slice(2));
         if (!tableauPasst(karten, ti)) {

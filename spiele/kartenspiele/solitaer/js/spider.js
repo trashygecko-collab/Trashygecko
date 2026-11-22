@@ -16,17 +16,17 @@
     kurz: "Zwei Blätter, zehn Spalten. Absteigend anlegen, vollständige Folgen " +
       "König bis Ass in einer Farbe verschwinden. Mit fünf Nachlege-Runden.",
     vorschau: '<svg viewBox="0 0 120 84" aria-hidden="true">' +
-      '<g fill="#2a3138" stroke="#4b5661" stroke-width="1.2">' +
+      '<g style="fill:var(--vv-karte);stroke:var(--vv-rand)" stroke-width="1.2">' +
       '<rect x="4" y="6" width="22" height="31" rx="3"/><rect x="29" y="6" width="22" height="31" rx="3"/>' +
       '<rect x="54" y="6" width="22" height="31" rx="3"/><rect x="79" y="6" width="22" height="31" rx="3"/>' +
       '<rect x="4" y="44" width="22" height="31" rx="3"/><rect x="29" y="44" width="22" height="31" rx="3"/>' +
       '<rect x="54" y="44" width="22" height="31" rx="3"/><rect x="79" y="44" width="22" height="31" rx="3"/>' +
       '<rect x="100" y="44" width="16" height="22" rx="3"/></g>' +
-      '<text x="8" y="20" fill="#d9d3c6" font-size="11" font-family="Georgia,serif">K</text>' +
-      '<text x="33" y="20" fill="#c9705f" font-size="11" font-family="Georgia,serif">D</text>' +
-      '<text x="58" y="20" fill="#d9d3c6" font-size="11" font-family="Georgia,serif">B</text>' +
-      '<text x="8" y="58" fill="#d9d3c6" font-size="11" font-family="Georgia,serif">A</text>' +
-      '<text x="103" y="58" fill="#8fa0b0" font-size="10" font-family="Georgia,serif">8</text>' +
+      '<text x="8" y="20" style="fill:var(--vv-hell)" font-size="11" font-family="Georgia,serif">K</text>' +
+      '<text x="33" y="20" style="fill:var(--vv-rot)" font-size="11" font-family="Georgia,serif">D</text>' +
+      '<text x="58" y="20" style="fill:var(--vv-hell)" font-size="11" font-family="Georgia,serif">B</text>' +
+      '<text x="8" y="58" style="fill:var(--vv-hell)" font-size="11" font-family="Georgia,serif">A</text>' +
+      '<text x="103" y="58" style="fill:var(--vv-leise)" font-size="10" font-family="Georgia,serif">8</text>' +
       "</svg>",
     optionen: [{ key: "farben", label: "Farben", werte: [
       { wert: 1, text: "eine (leicht)" }, { wert: 2, text: "zwei" }, { wert: 4, text: "vier (schwer)" }

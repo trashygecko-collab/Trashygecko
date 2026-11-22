@@ -117,6 +117,7 @@
   Shell.starten = function (id, opt) {
     var m = TG.MODI[id];
     if (!m) return;
+    dialogZu();
     Shell.modus = id;
     Shell.optionen = opt || Shell.optionen || {};
     Shell.verlauf = [];
@@ -342,6 +343,7 @@
   /* ---------------------------------------------------------- Menüwechsel */
   Shell.menue = function () {
     uhrAnhalten();
+    dialogZu();
     $("spielbereich").hidden = true;
     $("modusAuswahl").hidden = false;
     $("kopfTitel").textContent = "Solitär";
@@ -365,11 +367,36 @@
     return z ? z.dataset.zone : null;
   }
 
+  /* Ein Ablegeversuch für Klick und Ziehen: Der Modus prüft, der Rahmen
+     aktualisiert Anzeige und räumt den alten Hinweis nach einem Erfolg weg. */
+  function ablegenSauber(was, zone) {
+    var ok = Shell.spiel.ablegen(was, zone);
+    if (ok) Shell.hinweis("");
+    Shell.stand(Shell.spiel.info());
+    return ok;
+  }
+
   function brettKlick(ev) {
     if (!Shell.spiel) return;
     if (Shell.gezogen) { Shell.gezogen = false; return; }
     var karte = ev.target.closest("[data-art]");
     if (karte) {
+      var zielZone = zoneVon(karte);
+      var aus = Shell.auswahl;
+      var gleiche = aus && karte.dataset.id && Number(karte.dataset.id) === aus.id;
+      /* Liegt schon eine Auswahl und ist die angeklickte Karte Teil eines
+         gültigen Ziels, wird abgelegt – auch auf belegte Ablagen und Spalten.
+         Sonst würde ein Klick dort nur die obere Karte neu auswählen. */
+      if (aus && gleiche) {
+        Shell.auswahl = null;
+        if (Shell.spiel.zoneKlick) Shell.spiel.zoneKlick("");
+        Shell.stand(Shell.spiel.info());
+        return;
+      }
+      if (aus && zielZone && Shell.spiel.zieleFuer &&
+          Shell.spiel.zieleFuer(aus).indexOf(zielZone) >= 0) {
+        if (ablegenSauber(aus, zielZone)) return;
+      }
       Shell.auswahl = wasVon(karte);
       Shell.spiel.waehlen(Shell.auswahl);
       Shell.stand(Shell.spiel.info());
@@ -377,8 +404,8 @@
     }
     var zone = zoneVon(ev.target);
     if (zone) {
-      if (Shell.auswahl) Shell.spiel.ablegen(Shell.auswahl, zone);
-      else Shell.spiel.zoneKlick(zone);
+      if (Shell.auswahl) { ablegenSauber(Shell.auswahl, zone); return; }
+      Shell.spiel.zoneKlick(zone);
       Shell.stand(Shell.spiel.info());
       return;
     }
@@ -392,6 +419,16 @@
     if (!Shell.spiel || (ev.button !== undefined && ev.button > 0)) return;
     var karte = ev.target.closest("[data-art]");
     if (!karte) return;
+    /* Liegt eine Auswahl auf einer anderen Karte und ist die berührte Karte
+       ein gültiges Ziel dafür, gehört der Tipp der Auswahl. Sonst würde beim
+       Tippen auf das Ass die Ass-Karte selbst gegriffen: Fingerzittern startet
+       einen Zug, der Ablegeversuch scheitert und der Klick wird geschluckt. */
+    var aus = Shell.auswahl;
+    var zielZone = zoneVon(karte);
+    if (aus && zielZone && Number(karte.dataset.id) !== aus.id &&
+        Shell.spiel.zieleFuer && Shell.spiel.zieleFuer(aus).indexOf(zielZone) >= 0) {
+      return;
+    }
     zug = {
       startX: ev.clientX, startY: ev.clientY, karte: karte, was: wasVon(karte),
       aktiv: false, geist: null, letzte: null
@@ -434,8 +471,20 @@
     setTimeout(function () { Shell.gezogen = false; }, 60);
     var ziel = document.elementFromPoint(ev.clientX, ev.clientY);
     var zone = zoneVon(ziel);
-    if (zone) Shell.spiel.ablegen(z.was, zone);
-    Shell.stand(Shell.spiel.info());
+    if (zone) {
+      /* Dieselbe Regel wie beim Klick: Ist die Zone ein gültiges Ziel der
+         vorhandenen Auswahl, wird diese abgelegt – nicht die gerade
+         berührte Zielkarte. Anzeige und Ablegen prüfen damit gleich. */
+      var was = z.was;
+      var aus = Shell.auswahl;
+      if (aus && z.was.id !== aus.id && Shell.spiel.zieleFuer &&
+          Shell.spiel.zieleFuer(aus).indexOf(zone) >= 0) {
+        was = aus;
+      }
+      ablegenSauber(was, zone);
+    } else {
+      Shell.stand(Shell.spiel.info());
+    }
   }
 
   /* -------------------------------------------------------------- Aufbau */

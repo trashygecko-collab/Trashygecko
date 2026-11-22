@@ -17,18 +17,18 @@
     kurz: "Alle 52 Karten offen, vier freie Zellen als Zwischenlager. " +
       "Jede Karte lässt sich genau überlegen – fast jedes Blatt ist lösbar.",
     vorschau: '<svg viewBox="0 0 120 84" aria-hidden="true">' +
-      '<g fill="none" stroke="#4b5661" stroke-width="1.2">' +
+      '<g style="fill:none;stroke:var(--vv-rand)" stroke-width="1.2">' +
       '<rect x="4" y="4" width="14" height="20" rx="3"/><rect x="20" y="4" width="14" height="20" rx="3"/>' +
       '<rect x="36" y="4" width="14" height="20" rx="3"/><rect x="52" y="4" width="14" height="20" rx="3"/>' +
       '<rect x="74" y="4" width="20" height="28" rx="3"/><rect x="96" y="4" width="20" height="28" rx="3"/></g>' +
-      '<g fill="#2a3138" stroke="#4b5661" stroke-width="1.2">' +
+      '<g style="fill:var(--vv-karte);stroke:var(--vv-rand)" stroke-width="1.2">' +
       '<rect x="4" y="40" width="20" height="28" rx="3"/><rect x="28" y="40" width="20" height="28" rx="3"/>' +
       '<rect x="52" y="40" width="20" height="28" rx="3"/><rect x="76" y="40" width="20" height="28" rx="3"/>' +
       '<rect x="100" y="40" width="16" height="24" rx="3"/></g>' +
-      '<text x="8" y="56" fill="#d9d3c6" font-size="10" font-family="Georgia,serif">7</text>' +
-      '<text x="32" y="56" fill="#c9705f" font-size="10" font-family="Georgia,serif">6</text>' +
-      '<text x="56" y="56" fill="#d9d3c6" font-size="10" font-family="Georgia,serif">5</text>' +
-      '<text x="78" y="18" fill="#c9705f" font-size="10" font-family="Georgia,serif">A</text>' +
+      '<text x="8" y="56" style="fill:var(--vv-hell)" font-size="10" font-family="Georgia,serif">7</text>' +
+      '<text x="32" y="56" style="fill:var(--vv-rot)" font-size="10" font-family="Georgia,serif">6</text>' +
+      '<text x="56" y="56" style="fill:var(--vv-hell)" font-size="10" font-family="Georgia,serif">5</text>' +
+      '<text x="78" y="18" style="fill:var(--vv-rot)" font-size="10" font-family="Georgia,serif">A</text>' +
       "</svg>",
     optionen: [],
     standard: {},

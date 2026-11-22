@@ -40,7 +40,7 @@
     kurz: "Drei Berge, 28 Karten. Freie Karten mit einem Wert höher oder tiefer " +
       "auf die Ablage legen – die Farbe zählt nicht.",
     vorschau: '<svg viewBox="0 0 120 84" aria-hidden="true">' +
-      '<g fill="#2a3138" stroke="#4b5661" stroke-width="1.2">' +
+      '<g style="fill:var(--vv-karte);stroke:var(--vv-rand)" stroke-width="1.2">' +
       '<rect x="18" y="4" width="18" height="14" rx="2"/><rect x="51" y="4" width="18" height="14" rx="2"/>' +
       '<rect x="84" y="4" width="18" height="14" rx="2"/>' +
       '<rect x="12" y="20" width="18" height="14" rx="2"/><rect x="24" y="20" width="18" height="14" rx="2"/>' +
@@ -53,10 +53,10 @@
       '<rect x="8" y="54" width="18" height="14" rx="2"/><rect x="30" y="54" width="18" height="14" rx="2"/>' +
       '<rect x="52" y="54" width="18" height="14" rx="2"/><rect x="74" y="54" width="18" height="14" rx="2"/>' +
       '<rect x="96" y="54" width="18" height="14" rx="2"/></g>' +
-      '<rect x="6" y="72" width="20" height="10" rx="2" fill="#c9705f" opacity=".55"/>' +
-      '<text x="20" y="15" fill="#d9d3c6" font-size="9" font-family="Georgia,serif">A</text>' +
-      '<text x="53" y="15" fill="#c9705f" font-size="9" font-family="Georgia,serif">7</text>' +
-      '<text x="86" y="15" fill="#d9d3c6" font-size="9" font-family="Georgia,serif">D</text>' +
+      '<rect x="6" y="72" width="20" height="10" rx="2" style="fill:var(--vv-rot)" opacity=".55"/>' +
+      '<text x="20" y="15" style="fill:var(--vv-hell)" font-size="9" font-family="Georgia,serif">A</text>' +
+      '<text x="53" y="15" style="fill:var(--vv-rot)" font-size="9" font-family="Georgia,serif">7</text>' +
+      '<text x="86" y="15" style="fill:var(--vv-hell)" font-size="9" font-family="Georgia,serif">D</text>' +
       "</svg>",
     optionen: [],
     standard: {},
@@ -204,7 +204,13 @@
 
     ablegen: function (was, zone) {
       if (!z || !was) return false;
-      if (was.art === "tp") { MOD.waehlen(was); return true; }
+      if (was.art === "tp") {
+        /* Nur auf die Ablage ziehen – ein Loslassen auf einem anderen Berg
+           soll keine Karte spielen. */
+        if (zone !== "waste" && zone !== "karte:" + was.i) return false;
+        MOD.waehlen(was);
+        return true;
+      }
       if (zone === "stock") { MOD.nachziehen(); return true; }
       return false;
     },
