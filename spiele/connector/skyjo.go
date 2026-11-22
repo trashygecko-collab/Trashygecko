@@ -42,14 +42,17 @@ type SkyjoGame struct {
 	LastTurn    int       `json:"lastTurn"`
 	// StartNext ist der Spieler, der die nächste Runde beginnt – laut Regel
 	// der, der die letzte Runde beendet hat (-1 = keine Vorgabe).
-	StartNext   int    `json:"startNext"`
-	Round       int    `json:"round"`
-	RoundScores [2]int `json:"roundScores"`
-	Totals      [2]int `json:"totals"`
-	Status      string `json:"status"` // invited, active, finished
-	Winner      string `json:"winner,omitempty"`
-	Note        string `json:"note,omitempty"`
-	RoundWinner string `json:"roundWinner,omitempty"`
+	StartNext   int       `json:"startNext"`
+	Round       int       `json:"round"`
+	RoundScores [2]int    `json:"roundScores"`
+	Totals      [2]int    `json:"totals"`
+	Status      string    `json:"status"` // invited, active, finished
+	Winner      string    `json:"winner,omitempty"`
+	Note        string    `json:"note,omitempty"`
+	RoundWinner string    `json:"roundWinner,omitempty"`
+	BotID       string    `json:"botId,omitempty"`
+	BotStufe    string    `json:"-"`
+	BotFrist    time.Time `json:"-"`
 }
 
 func skyjoMakeDeck() []int {
@@ -329,6 +332,165 @@ func skyjoRoundText(g *SkyjoGame) string {
 	return skyjoName(g, skyjoIndex(g, g.RoundWinner)) + " gewinnt die Runde"
 }
 
+// skyjoAktion führt eine Spielaktion aus. Mensch (HTTP) und Bot
+// (skyjoBotSchritt) gehen durch dieselbe Prüfung: Phase, Zug, offene Karten,
+// Spaltenregel, Rundenende und Punktestand entstehen hier.
+// Rückgabe 0 heißt „ausgeführt“; sonst HTTP-Status und Meldung.
+func (g *SkyjoGame) skyjoAktion(me int, akt string, index int, source string) (int, string) {
+	if g == nil || g.Status != "active" {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	if me < 0 || me > 1 {
+		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+	}
+	switch akt {
+	case "reveal":
+		if g.Phase != "setup" {
+			return http.StatusConflict, "Das Aufdecken ist schon vorbei."
+		}
+		if g.SetupPlayer != me {
+			return http.StatusConflict, "Der andere Spieler deckt gerade auf."
+		}
+		if index < 0 || index >= skyjoCards {
+			return http.StatusBadRequest, "Diese Karte gibt es nicht."
+		}
+		if g.Open[me][index] || g.Removed[me][index] {
+			return http.StatusConflict, "Diese Karte ist schon offen."
+		}
+		g.Open[me][index] = true
+		opened := 0
+		for _, v := range g.Open[me] {
+			if v {
+				opened++
+			}
+		}
+		if opened >= 2 {
+			if g.SetupPlayer == 0 {
+				g.SetupPlayer = 1
+				g.Note = skyjoName(g, 1) + ": Jetzt zwei Karten aufdecken."
+			} else {
+				skyjoStartPlaying(g)
+			}
+		} else {
+			g.Note = "Noch eine Karte aufdecken."
+		}
+
+	case "draw":
+		if g.Phase != "play" || g.Current != me {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if g.Drawn != nil {
+			return http.StatusConflict, "Du hast schon eine Karte gezogen."
+		}
+		quelle := strings.ToLower(strings.TrimSpace(source))
+		if quelle == "discard" {
+			if len(g.Discard) == 0 {
+				return http.StatusConflict, "Der Ablagestapel ist leer."
+			}
+			value := g.Discard[len(g.Discard)-1]
+			g.Discard = g.Discard[:len(g.Discard)-1]
+			g.Drawn = &value
+			g.DrawnSource = "discard"
+			g.Note = "Ablagekarte genommen."
+			break
+		}
+
+		if len(g.Deck) == 0 {
+			if len(g.Discard) <= 1 {
+				return http.StatusConflict, "Keine Karten mehr im Nachziehstapel!"
+			}
+			top := g.Discard[len(g.Discard)-1]
+			rest := append([]int(nil), g.Discard[:len(g.Discard)-1]...)
+			for i := len(rest) - 1; i > 0; i-- {
+				j := rand.Intn(i + 1)
+				rest[i], rest[j] = rest[j], rest[i]
+			}
+			g.Deck = rest
+			g.Discard = []int{top}
+		}
+
+		value := g.Deck[len(g.Deck)-1]
+		g.Deck = g.Deck[:len(g.Deck)-1]
+		g.DeckCount = len(g.Deck)
+		g.Drawn = &value
+		g.DrawnSource = "deck"
+		g.Note = "Karte gezogen."
+
+	case "swap":
+		if g.Phase != "play" || g.Current != me {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if g.Drawn == nil {
+			return http.StatusConflict, "Du hast noch keine Karte gezogen."
+		}
+		if index < 0 || index >= skyjoCards {
+			return http.StatusBadRequest, "Diese Karte gibt es nicht."
+		}
+		if g.Removed[me][index] {
+			return http.StatusConflict, "Diese Karte ist schon weg."
+		}
+		old := g.Cards[me][index]
+		g.Cards[me][index] = *g.Drawn
+		g.Open[me][index] = true
+		g.Discard = append(g.Discard, old)
+		g.Drawn = nil
+		g.DrawnSource = ""
+		skyjoCheckColumns(g, me)
+		skyjoFinishTurn(g)
+
+	case "discard":
+		if g.Phase != "play" || g.Current != me {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if g.Drawn == nil || g.DrawnSource != "deck" {
+			return http.StatusConflict, "Es liegt keine gezogene Karte zum Abwerfen bereit."
+		}
+		g.Discard = append(g.Discard, *g.Drawn)
+		g.Drawn = nil
+		g.DrawnSource = ""
+		hidden := 0
+		for i := 0; i < skyjoCards; i++ {
+			if !g.Open[me][i] && !g.Removed[me][i] {
+				hidden++
+			}
+		}
+		if hidden == 0 {
+			skyjoFinishTurn(g)
+			break
+		}
+		g.Phase = "reveal"
+		g.Note = "Decke eine deiner verdeckten Karten auf."
+
+	case "opencard":
+		if g.Phase != "reveal" || g.Current != me {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if index < 0 || index >= skyjoCards {
+			return http.StatusBadRequest, "Diese Karte gibt es nicht."
+		}
+		if g.Open[me][index] || g.Removed[me][index] {
+			return http.StatusConflict, "Diese Karte ist schon offen."
+		}
+		g.Open[me][index] = true
+		skyjoCheckColumns(g, me)
+		g.Phase = "play"
+		skyjoFinishTurn(g)
+
+	case "nextround":
+		if g.Phase != "between" || g.Status != "active" {
+			return http.StatusConflict, "Eine neue Runde ist gerade nicht möglich."
+		}
+		g.Round++
+		skyjoResetRound(g)
+
+	case "start":
+		// Kurzer Anstoß, damit die Anzeige nach dem Beitritt stimmt.
+	default:
+		return http.StatusBadRequest, "Unbekannte Skyjo-Aktion."
+	}
+	return 0, ""
+}
+
 func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -350,6 +512,9 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if room.Skyjo != nil {
+			skyjoBotTreiben(room.Skyjo, time.Now())
+		}
 		game := cloneSkyjo(room.Skyjo)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -366,6 +531,7 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 		ToID   string `json:"toId"`
 		Index  int    `json:"index"`
 		Source string `json:"source"`
+		Stufe  string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -391,6 +557,17 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		if room.Skyjo != nil && !room.gameSlotFree(room.Skyjo.Status, room.Skyjo.RedID, room.Skyjo.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Skyjo-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		g := skyjoNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
+		g.Status = "active"
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(g.BotStufe) + "). Decke zwei Karten auf."
+		room.Skyjo = g
 	case "invite":
 		target, ok := room.Players[input.ToID]
 		if !ok || input.ToID == input.ID {
@@ -451,193 +628,7 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		me := skyjoIndex(game, color)
 
-		switch action {
-		case "reveal":
-			if game.Phase != "setup" {
-				mu.Unlock()
-				http.Error(w, "Das Aufdecken ist schon vorbei.", http.StatusConflict)
-				return
-			}
-			if game.SetupPlayer != me {
-				mu.Unlock()
-				http.Error(w, "Der andere Spieler deckt gerade auf.", http.StatusConflict)
-				return
-			}
-			if input.Index < 0 || input.Index >= skyjoCards {
-				mu.Unlock()
-				http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-				return
-			}
-			if game.Open[me][input.Index] || game.Removed[me][input.Index] {
-				mu.Unlock()
-				http.Error(w, "Diese Karte ist schon offen.", http.StatusConflict)
-				return
-			}
-
-			game.Open[me][input.Index] = true
-			opened := 0
-			for _, v := range game.Open[me] {
-				if v {
-					opened++
-				}
-			}
-
-			if opened >= 2 {
-				if game.SetupPlayer == 0 {
-					game.SetupPlayer = 1
-					game.Note = skyjoName(game, 1) + ": Jetzt zwei Karten aufdecken."
-				} else {
-					skyjoStartPlaying(game)
-				}
-			} else {
-				game.Note = "Noch eine Karte aufdecken."
-			}
-
-		case "draw":
-			if game.Phase != "play" || game.Current != me {
-				mu.Unlock()
-				http.Error(w, "Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			if game.Drawn != nil {
-				mu.Unlock()
-				http.Error(w, "Du hast schon eine Karte gezogen.", http.StatusConflict)
-				return
-			}
-
-			source := strings.ToLower(strings.TrimSpace(input.Source))
-			if source == "discard" {
-				if len(game.Discard) == 0 {
-					mu.Unlock()
-					http.Error(w, "Der Ablagestapel ist leer.", http.StatusConflict)
-					return
-				}
-				value := game.Discard[len(game.Discard)-1]
-				game.Discard = game.Discard[:len(game.Discard)-1]
-				game.Drawn = &value
-				game.DrawnSource = "discard"
-				game.Note = "Ablagekarte genommen."
-				break
-			}
-
-			if len(game.Deck) == 0 {
-				if len(game.Discard) <= 1 {
-					mu.Unlock()
-					http.Error(w, "Keine Karten mehr im Nachziehstapel!", http.StatusConflict)
-					return
-				}
-				top := game.Discard[len(game.Discard)-1]
-				rest := append([]int(nil), game.Discard[:len(game.Discard)-1]...)
-				for i := len(rest) - 1; i > 0; i-- {
-					j := rand.Intn(i + 1)
-					rest[i], rest[j] = rest[j], rest[i]
-				}
-				game.Deck = rest
-				game.Discard = []int{top}
-			}
-
-			value := game.Deck[len(game.Deck)-1]
-			game.Deck = game.Deck[:len(game.Deck)-1]
-			game.DeckCount = len(game.Deck)
-			game.Drawn = &value
-			game.DrawnSource = "deck"
-			game.Note = "Karte gezogen."
-
-		case "swap":
-			if game.Phase != "play" || game.Current != me {
-				mu.Unlock()
-				http.Error(w, "Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			if game.Drawn == nil {
-				mu.Unlock()
-				http.Error(w, "Du hast noch keine Karte gezogen.", http.StatusConflict)
-				return
-			}
-			if input.Index < 0 || input.Index >= skyjoCards {
-				mu.Unlock()
-				http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-				return
-			}
-			if game.Removed[me][input.Index] {
-				mu.Unlock()
-				http.Error(w, "Diese Karte ist schon weg.", http.StatusConflict)
-				return
-			}
-
-			old := game.Cards[me][input.Index]
-			game.Cards[me][input.Index] = *game.Drawn
-			game.Open[me][input.Index] = true
-			game.Discard = append(game.Discard, old)
-			game.Drawn = nil
-			game.DrawnSource = ""
-
-			skyjoCheckColumns(game, me)
-			skyjoFinishTurn(game)
-
-		case "discard":
-			if game.Phase != "play" || game.Current != me {
-				mu.Unlock()
-				http.Error(w, "Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			if game.Drawn == nil || game.DrawnSource != "deck" {
-				mu.Unlock()
-				http.Error(w, "Es liegt keine gezogene Karte zum Abwerfen bereit.", http.StatusConflict)
-				return
-			}
-
-			game.Discard = append(game.Discard, *game.Drawn)
-			game.Drawn = nil
-			game.DrawnSource = ""
-
-			hidden := 0
-			for i := 0; i < skyjoCards; i++ {
-				if !game.Open[me][i] && !game.Removed[me][i] {
-					hidden++
-				}
-			}
-
-			if hidden == 0 {
-				skyjoFinishTurn(game)
-				break
-			}
-
-			game.Phase = "reveal"
-			game.Note = "Decke eine deiner verdeckten Karten auf."
-
-		case "opencard":
-			if game.Phase != "reveal" || game.Current != me {
-				mu.Unlock()
-				http.Error(w, "Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			if input.Index < 0 || input.Index >= skyjoCards {
-				mu.Unlock()
-				http.Error(w, "Diese Karte gibt es nicht.", http.StatusBadRequest)
-				return
-			}
-			if game.Open[me][input.Index] || game.Removed[me][input.Index] {
-				mu.Unlock()
-				http.Error(w, "Diese Karte ist schon offen.", http.StatusConflict)
-				return
-			}
-
-			game.Open[me][input.Index] = true
-			skyjoCheckColumns(game, me)
-			game.Phase = "play"
-			skyjoFinishTurn(game)
-
-		case "nextround":
-			if game.Phase != "between" || game.Status != "active" {
-				mu.Unlock()
-				http.Error(w, "Eine neue Runde ist gerade nicht möglich.", http.StatusConflict)
-				return
-			}
-			game.Round++
-			skyjoResetRound(game)
-
-		case "reset":
+		if action == "reset" {
 			if game.Status != "finished" {
 				mu.Unlock()
 				http.Error(w, "Ein neues Spiel ist erst nach Spielende möglich.", http.StatusConflict)
@@ -645,12 +636,15 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			fresh := skyjoNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 			fresh.Status = "active"
+			fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 			room.Skyjo = fresh
-
-		case "start":
-			// Kurzer Anstoß, damit die Anzeige nach dem Beitritt stimmt.
+			break
 		}
-
+		if status, meldung := game.skyjoAktion(me, action, input.Index, input.Source); status != 0 {
+			mu.Unlock()
+			http.Error(w, meldung, status)
+			return
+		}
 	default:
 		mu.Unlock()
 		http.Error(w, "Unbekannte Skyjo-Aktion.", http.StatusBadRequest)

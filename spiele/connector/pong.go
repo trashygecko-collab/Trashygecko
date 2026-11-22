@@ -43,21 +43,27 @@ type PongSpieler struct {
 }
 
 type PongGame struct {
-	ID      string        `json:"id"`
-	HostID  string        `json:"hostId"`
-	Status  string        `json:"status"` // invited, spiel, ende
-	Spieler []PongSpieler `json:"spieler"`
-	BallX   float64       `json:"-"`
-	BallY   float64       `json:"-"`
-	BallVX  float64       `json:"-"`
-	BallVY  float64       `json:"-"`
-	Punkte  [2]int        `json:"-"`
-	Rallye  int           `json:"-"`
-	Pause   float64       `json:"-"`
-	Sieger  string        `json:"sieger,omitempty"`
-	Meldung string        `json:"meldung"`
-	Note    string        `json:"note"`
-	Zuletzt time.Time     `json:"-"`
+	ID       string        `json:"id"`
+	HostID   string        `json:"hostId"`
+	Status   string        `json:"status"` // invited, spiel, ende
+	Spieler  []PongSpieler `json:"spieler"`
+	BallX    float64       `json:"-"`
+	BallY    float64       `json:"-"`
+	BallVX   float64       `json:"-"`
+	BallVY   float64       `json:"-"`
+	Punkte   [2]int        `json:"-"`
+	Rallye   int           `json:"-"`
+	Pause    float64       `json:"-"`
+	Sieger   string        `json:"sieger,omitempty"`
+	Meldung  string        `json:"meldung"`
+	Note     string        `json:"note"`
+	Zuletzt  time.Time     `json:"-"`
+	BotID    string        `json:"botId,omitempty"`
+	BotStufe string        `json:"-"`
+	// BotFehler und BotRallye halten den Zielfehler je Ballwechsel fest,
+	// damit der Schläger nicht bei jedem Bild neu zittert.
+	BotFehler float64 `json:"-"`
+	BotRallye int     `json:"-"`
 }
 
 type PongSpielerSicht struct {
@@ -271,6 +277,30 @@ func pongPhysik(g *PongGame, dt float64) {
 	}
 }
 
+// pongStart setzt eine Partie auf Anfang: Schläger mittig, kein Punkt, Aufschlag.
+func pongStart(g *PongGame) {
+	for i := range g.Spieler {
+		g.Spieler[i].X = pongBreite / 2
+	}
+	g.Punkte = [2]int{}
+	g.Sieger = ""
+	g.Meldung = ""
+	g.Status = "spiel"
+	g.Note = "Los! Finger in der eigenen Hälfte ziehen, der Schläger folgt."
+	g.Zuletzt = time.Now()
+	g.BotRallye = -1
+	pongAufschlag(g, -1)
+}
+
+// pongIDs listet die Plätze einer Partie – für die Platzprüfung.
+func pongIDs(g *PongGame) []string {
+	ids := make([]string, 0, len(g.Spieler))
+	for _, p := range g.Spieler {
+		ids = append(ids, p.ID)
+	}
+	return ids
+}
+
 // pongWeiter lässt die Partie bis jetzt laufen. Ohne Abfrage steht sie still –
 // das ist gewollt: niemand schaut zu, also muss auch nichts rechnen.
 func pongWeiter(g *PongGame) {
@@ -286,6 +316,7 @@ func pongWeiter(g *PongGame) {
 		dt = pongMaxVorsprung
 	}
 	g.Zuletzt = jetzt
+	pongBotBewegen(g, dt)
 	schritte := int(dt / pongTakt)
 	if schritte > 600 {
 		schritte = 600
@@ -363,8 +394,9 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID string  `json:"id"`
-		X  float64 `json:"x"`
+		ID    string  `json:"id"`
+		X     float64 `json:"x"`
+		Stufe string  `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -391,6 +423,23 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 	zeit := time.Now().Format("15:04:05")
 
 	switch action {
+	case "bot":
+		if room.Pong != nil && !room.gameSlotFree(room.Pong.Status, pongIDs(room.Pong)...) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Partie Pong.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		g := pongNeu(randomCode(), input.ID, []PongSpieler{
+			pongNeuerSpieler(input.ID, player.Name),
+			pongNeuerSpieler(botID(1), botName(1)),
+		})
+		g.Spieler[0].Ready = true
+		g.Spieler[1].Ready = true
+		g.BotID, g.BotStufe = botID(1), stufe
+		pongStart(g)
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Pong = g
 	case "create":
 		if room.Pong != nil && room.Pong.Status != "ende" {
 			mu.Unlock()
@@ -467,16 +516,7 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		for i := range game.Spieler {
-			game.Spieler[i].X = pongBreite / 2
-		}
-		game.Punkte = [2]int{}
-		game.Sieger = ""
-		game.Meldung = ""
-		game.Status = "spiel"
-		game.Note = "Los! Finger in der eigenen Hälfte ziehen, der Schläger folgt."
-		game.Zuletzt = time.Now()
-		pongAufschlag(game, -1)
+		pongStart(game)
 
 	case "schlaeger":
 		game := room.Pong
@@ -518,6 +558,7 @@ func pongHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		frisch := pongNeu(game.ID, game.HostID, []PongSpieler{})
+		frisch.BotID, frisch.BotStufe = game.BotID, game.BotStufe
 		frisch.Note = "Neue Partie – erst BEREIT drücken."
 		for _, p := range game.Spieler {
 			frisch.Spieler = append(frisch.Spieler, pongNeuerSpieler(p.ID, p.Name))

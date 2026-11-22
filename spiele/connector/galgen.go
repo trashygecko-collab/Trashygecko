@@ -100,6 +100,9 @@ type GalgenGame struct {
 	Sieger        string          `json:"sieger,omitempty"`
 	Note          string          `json:"note,omitempty"`
 	Letzte        []string        `json:"letzte"` // Protokoll der letzten Züge
+	BotID         string          `json:"botId,omitempty"`
+	BotStufe      string          `json:"-"`
+	BotFrist      time.Time       `json:"-"`
 }
 
 func galgenNeuesSpiel(hostID, hostName, variante, id string) *GalgenGame {
@@ -218,6 +221,70 @@ func cloneGalgen(g *GalgenGame) *GalgenGame {
 	return &c
 }
 
+// galgenAktion prüft einen Ratezug. Mensch (HTTP) und Bot (galgenBotSchritt)
+// gehen durch dieselbe Prüfung: Reihe, ein Buchstabe, keine Doppelung, Treffer,
+// Punkte, Rundenende.
+func (g *GalgenGame) galgenAktion(sitz int, buchstabe string) (int, string) {
+	if g == nil || g.Status != "spiel" {
+		return http.StatusConflict, "Gerade läuft keine Runde."
+	}
+	if sitz < 0 || sitz >= len(g.Spieler) {
+		return http.StatusForbidden, "Du spielst nicht mit."
+	}
+	if sitz != g.Zug {
+		return http.StatusConflict, "Du bist nicht an der Reihe."
+	}
+	anzahl, problem := g.galgenRaten(buchstabe)
+	if problem != "" {
+		return http.StatusConflict, problem
+	}
+	b := strings.ToLower(strings.TrimSpace(buchstabe))
+	name := g.Spieler[sitz].Name
+	if anzahl > 0 {
+		g.Spieler[sitz].Punkte += anzahl
+		g.Spieler[sitz].Treffer++
+		g.Note = name + " trifft „" + strings.ToUpper(b) + "“ – " + strconv.Itoa(anzahl) + " Buchstabe(n)."
+		g.Letzte = append(g.Letzte, "✔ "+name+": "+strings.ToUpper(b))
+		if g.galgenFertig() {
+			g.Geloest = true
+			g.galgenBeenden(true, g.Spieler[sitz].ID)
+			g.Note = "Wort gelöst: " + strings.ToUpper(g.Wort) + ". " +
+				name + " hat das letzte Feld gefüllt und gewinnt."
+		} else {
+			g.galgenWeiter()
+		}
+	} else {
+		g.Fehler++
+		g.Note = name + " rät „" + strings.ToUpper(b) + "“ – daneben (" +
+			strconv.Itoa(g.Fehler) + "/" + strconv.Itoa(g.MaxFehler) + ")."
+		g.Letzte = append(g.Letzte, "✖ "+name+": "+strings.ToUpper(b))
+		if g.Fehler >= g.MaxFehler {
+			g.galgenBeenden(false, "")
+			g.Note = "Verloren! Das Wort war „" + strings.ToUpper(g.Wort) + "“ – diesmal hat es keiner erraten."
+		} else {
+			g.galgenWeiter()
+		}
+	}
+	if len(g.Letzte) > 8 {
+		g.Letzte = g.Letzte[len(g.Letzte)-8:]
+	}
+	return 0, ""
+}
+
+// galgenNaechste startet die nächste Runde.
+func (g *GalgenGame) galgenNaechste(sitz int) (int, string) {
+	if g == nil || g.Status != "ende" {
+		return http.StatusConflict, "Es läuft keine beendete Runde."
+	}
+	if sitz < 0 || sitz >= len(g.Spieler) {
+		return http.StatusForbidden, "Du spielst nicht mit."
+	}
+	g.Status = "spiel"
+	g.Runde++
+	g.galgenWaehlen()
+	return 0, ""
+}
+
 func galgenHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -238,6 +305,7 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		galgenBotTreiben(room.Galgen, time.Now())
 		game := cloneGalgen(room.Galgen)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -252,6 +320,7 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 		ID        string `json:"id"`
 		Variante  string `json:"variante"`
 		Buchstabe string `json:"buchstabe"`
+		Stufe     string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -280,6 +349,20 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		if room.Galgen != nil && !room.gameSlotFree(room.Galgen.Status, galgenIDs(room.Galgen)...) {
+			fail("In diesem Spielraum läuft bereits eine Galgenmännchen-Runde.", http.StatusConflict)
+			return
+		}
+		g := galgenNeuesSpiel(input.ID, player.Name, input.Variante, randomCode())
+		g.Spieler = append(g.Spieler, GalgenSpieler{ID: botID(1), Name: botName(1), Ready: true})
+		g.Spieler[0].Ready = true
+		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
+		g.Status = "spiel"
+		g.Runde = 1
+		g.galgenWaehlen()
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(g.BotStufe) + "). " + g.Note
+		room.Galgen = g
 	case "create":
 		if room.Galgen != nil && !room.gameSlotFree(room.Galgen.Status, galgenIDs(room.Galgen)...) {
 			fail("In diesem Spielraum läuft bereits eine Galgenmännchen-Runde.", http.StatusConflict)
@@ -335,7 +418,7 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 		g.galgenWaehlen()
 	case "raten":
 		g := room.Galgen
-		if g == nil || g.Status != "spiel" {
+		if g == nil {
 			fail("Gerade läuft keine Runde.", http.StatusConflict)
 			return
 		}
@@ -344,56 +427,25 @@ func galgenHandler(w http.ResponseWriter, r *http.Request) {
 			fail("Du spielst nicht mit.", http.StatusForbidden)
 			return
 		}
-		if sitz != g.Zug {
-			fail("Du bist nicht an der Reihe.", http.StatusConflict)
+		if status, meldung := g.galgenAktion(sitz, input.Buchstabe); status != 0 {
+			fail(meldung, status)
 			return
-		}
-		anzahl, problem := g.galgenRaten(input.Buchstabe)
-		if problem != "" {
-			fail(problem, http.StatusConflict)
-			return
-		}
-		b := strings.ToLower(strings.TrimSpace(input.Buchstabe))
-		if anzahl > 0 {
-			g.Spieler[sitz].Punkte += anzahl
-			g.Spieler[sitz].Treffer++
-			g.Note = g.Spieler[sitz].Name + " trifft „" + strings.ToUpper(b) + "“ – " + strconv.Itoa(anzahl) + " Buchstabe(n)."
-			g.Letzte = append(g.Letzte, "✔ "+g.Spieler[sitz].Name+": "+strings.ToUpper(b))
-			if g.galgenFertig() {
-				g.Geloest = true
-				g.galgenBeenden(true, g.Spieler[sitz].ID)
-				g.Note = "Wort gelöst: " + strings.ToUpper(g.Wort) + ". " +
-					g.Spieler[sitz].Name + " hat das letzte Feld gefüllt und gewinnt."
-			} else {
-				g.galgenWeiter()
-			}
-		} else {
-			g.Fehler++
-			g.Note = g.Spieler[sitz].Name + " rät „" + strings.ToUpper(b) + "“ – daneben (" + strconv.Itoa(g.Fehler) + "/" + strconv.Itoa(g.MaxFehler) + ")."
-			g.Letzte = append(g.Letzte, "✖ "+g.Spieler[sitz].Name+": "+strings.ToUpper(b))
-			if g.Fehler >= g.MaxFehler {
-				g.galgenBeenden(false, "")
-				g.Note = "Verloren! Das Wort war „" + strings.ToUpper(g.Wort) + "“ – diesmal hat es keiner erraten."
-			} else {
-				g.galgenWeiter()
-			}
-		}
-		if len(g.Letzte) > 8 {
-			g.Letzte = g.Letzte[len(g.Letzte)-8:]
 		}
 	case "naechste":
 		g := room.Galgen
-		if g == nil || g.Status != "ende" {
+		if g == nil {
 			fail("Es läuft keine beendete Runde.", http.StatusConflict)
 			return
 		}
-		if g.galgenSitz(input.ID) < 0 {
+		sitz := g.galgenSitz(input.ID)
+		if sitz < 0 {
 			fail("Du spielst nicht mit.", http.StatusForbidden)
 			return
 		}
-		g.Status = "spiel"
-		g.Runde++
-		g.galgenWaehlen()
+		if status, meldung := g.galgenNaechste(sitz); status != 0 {
+			fail(meldung, status)
+			return
+		}
 	case "reset":
 		if room.Galgen != nil && room.Galgen.HostID != input.ID {
 			fail("Nur der Gastgeber kann die Runde schließen.", http.StatusForbidden)

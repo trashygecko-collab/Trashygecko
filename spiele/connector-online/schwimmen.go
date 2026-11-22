@@ -53,6 +53,9 @@ type SchwimmenGame struct {
 	Result     []string         `json:"result,omitempty"`
 	Log        []string         `json:"log,omitempty"`
 	DeckCount  int              `json:"deckCount"`
+	BotID      string           `json:"botId,omitempty"`
+	BotStufe   string           `json:"-"`
+	BotFrist   time.Time        `json:"-"`
 }
 
 // schwimmLog merkt die letzten Züge, damit jeder sieht, was die anderen am
@@ -102,6 +105,7 @@ type SchwimmenView struct {
 	Result     []string          `json:"result,omitempty"`
 	Log        []string          `json:"log,omitempty"`
 	You        int               `json:"you"`
+	BotID      string            `json:"botId,omitempty"`
 	Hand       []SchwimmCard     `json:"hand"`
 	Score      float64           `json:"score"`
 	MyTurn     bool              `json:"myTurn"`
@@ -264,6 +268,16 @@ func schwimmSeat(g *SchwimmenGame, id string) int {
 	return -1
 }
 
+// schwimmIDs listet die Plätze einer Runde – damit lässt sich prüfen, ob ein
+// neues Spiel den Tisch übernehmen darf (gameSlotFree).
+func schwimmIDs(g *SchwimmenGame) []string {
+	ids := make([]string, 0, len(g.Players))
+	for _, p := range g.Players {
+		ids = append(ids, p.ID)
+	}
+	return ids
+}
+
 func schwimmActive(g *SchwimmenGame) int {
 	count := 0
 	for _, p := range g.Players {
@@ -414,6 +428,7 @@ func (g *SchwimmenGame) viewFor(id string) SchwimmenView {
 		Result:     append([]string(nil), g.Result...),
 		Log:        append([]string(nil), g.Log...),
 		You:        schwimmSeat(g, id),
+		BotID:      g.BotID,
 		Hand:       []SchwimmCard{},
 	}
 	for _, p := range g.Players {
@@ -474,6 +489,118 @@ func cloneSchwimmen(g *SchwimmenGame) *SchwimmenGame {
 	return &c
 }
 
+// schwimmAktion führt eine Spielaktion aus. Mensch (HTTP) und Bot
+// (schwimmBotSchritt) gehen durch dieselbe Prüfung: Zug, Klopfrunde,
+// Tausch, Schieben, Feuer und Rundenende entstehen hier.
+// Rückgabe 0 heißt „ausgeführt“; sonst HTTP-Status und Meldung.
+func (g *SchwimmenGame) schwimmAktion(seat int, akt string, handIndex, tableIndex int) (int, string) {
+	if g == nil {
+		return http.StatusConflict, "Es läuft gerade keine Partie."
+	}
+	if seat < 0 || seat >= len(g.Players) {
+		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+	}
+	if akt == "next" {
+		if g.Phase != "between" {
+			return http.StatusConflict, "Die nächste Runde ist gerade nicht möglich."
+		}
+		g.Current = schwimmNext(g, g.Current)
+		g.Round++
+		schwimmDeal(g)
+		return 0, ""
+	}
+	if g.Status != "active" || g.Phase != "playing" {
+		return http.StatusConflict, "Es läuft gerade keine Runde."
+	}
+	if g.Current != seat {
+		return http.StatusConflict, "Du bist nicht am Zug."
+	}
+	me := g.Players[seat]
+	name := me.Name
+
+	// Drei Asse zählen sofort, egal welche Aktion gerade gewählt wurde.
+	if schwimmIsFeuer(me.Hand) {
+		g.schwimmFeuer(seat)
+		return 0, ""
+	}
+
+	switch akt {
+	case "swap":
+		if handIndex < 0 || handIndex >= len(me.Hand) ||
+			tableIndex < 0 || tableIndex >= len(g.Table) {
+			return http.StatusBadRequest, "Wähle eine deiner Karten und eine Tischkarte."
+		}
+		me.Hand[handIndex], g.Table[tableIndex] = g.Table[tableIndex], me.Hand[handIndex]
+		g.Passes = 0
+		g.Note = name + " tauscht eine Karte."
+		g.schwimmLog(g.Note)
+		if schwimmIsFeuer(me.Hand) {
+			g.schwimmFeuer(seat)
+			return 0, ""
+		}
+		if schwimmPoints(me.Hand) == 31 {
+			g.schwimmFinishRound(name + " hat 31 Punkte erreicht!")
+			return 0, ""
+		}
+		g.schwimmAdvance()
+
+	case "swapall":
+		me.Hand, g.Table = g.Table, me.Hand
+		g.Passes = 0
+		g.Note = name + " tauscht alle drei Karten."
+		g.schwimmLog(g.Note)
+		if schwimmIsFeuer(me.Hand) {
+			g.schwimmFeuer(seat)
+			return 0, ""
+		}
+		if schwimmPoints(me.Hand) == 31 {
+			g.schwimmFinishRound(name + " hat 31 Punkte erreicht!")
+			return 0, ""
+		}
+		g.schwimmAdvance()
+
+	case "pass":
+		g.Passes++
+		g.Note = name + " schiebt."
+		g.schwimmLog(g.Note)
+		if g.Passes >= schwimmActive(g) {
+			schwimmReshuffle(g)
+			neu := []SchwimmCard{}
+			for i := 0; i < schwimmHandSize; i++ {
+				if card, ok := schwimmDraw(g); ok {
+					neu = append(neu, card)
+				}
+			}
+			if len(neu) > 0 {
+				g.Table = neu
+				g.Note = "Alle schieben – neue Tischkarten."
+			} else {
+				g.Note = "Alle schieben – der Stapel ist leer."
+			}
+			g.schwimmLog(g.Note)
+			g.Passes = 0
+		}
+		g.schwimmAdvance()
+
+	case "knock":
+		if g.FinalTurns != -1 {
+			return http.StatusConflict, "Es wird schon geklopft."
+		}
+		g.FinalTurns = schwimmActive(g) - 1
+		g.Note = name + " klopft – letzter Durchgang!"
+		g.schwimmLog(g.Note)
+		if g.FinalTurns == 0 {
+			g.schwimmFinishRound("Die Klopfrunde ist beendet.")
+			return 0, ""
+		}
+		g.Current = schwimmNext(g, g.Current)
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Aktion."
+	}
+	return 0, ""
+}
+
 func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -495,6 +622,9 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if room.Schwimmen != nil {
+			schwimmBotTreiben(room.Schwimmen, time.Now())
+		}
 		game := cloneSchwimmen(room.Schwimmen)
 		var view *SchwimmenView
 		if game != nil {
@@ -515,6 +645,7 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 		ID         string `json:"id"`
 		HandIndex  int    `json:"handIndex"`
 		TableIndex int    `json:"tableIndex"`
+		Stufe      string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -546,6 +677,20 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 	game := room.Schwimmen
 
 	switch action {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Schwimmen != nil && !room.gameSlotFree(room.Schwimmen.Status, schwimmIDs(room.Schwimmen)...) {
+			fail("In diesem Spielraum läuft bereits eine Runde 31.", http.StatusConflict)
+			return
+		}
+		g := schwimmNewGame(input.ID, player.Name, randomCode())
+		g.Players = append(g.Players, &SchwimmPlayer{ID: botID(1), Name: botName(1), Lives: schwimmLives, Ready: true})
+		g.Players[0].Ready = true
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Current = 0
+		schwimmDeal(g)
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Schwimmen = g
 	case "create":
 		if game != nil && game.Status != "finished" {
 			fail("An diesem Tisch läuft schon eine Runde 31.", http.StatusConflict)
@@ -637,8 +782,10 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fresh := &SchwimmenGame{ID: game.ID, HostID: game.HostID, Status: "invited", Phase: "lobby", Direction: 1, FinalTurns: -1, Round: 1}
+		fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 		for _, p := range game.Players {
-			fresh.Players = append(fresh.Players, &SchwimmPlayer{ID: p.ID, Name: p.Name, Lives: schwimmLives})
+			bereit := p.ID == fresh.BotID
+			fresh.Players = append(fresh.Players, &SchwimmPlayer{ID: p.ID, Name: p.Name, Lives: schwimmLives, Ready: bereit})
 		}
 		fresh.Note = "Neue Runde – alle drücken BEREIT, dann startet der Gastgeber."
 		room.Schwimmen = fresh
@@ -654,108 +801,10 @@ func schwimmenHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if action == "next" {
-			if game.Phase != "between" {
-				fail("Die nächste Runde ist gerade nicht möglich.", http.StatusConflict)
-				return
-			}
-			game.Current = schwimmNext(game, game.Current)
-			game.Round++
-			schwimmDeal(game)
-			break
-		}
-
-		if game.Status != "active" || game.Phase != "playing" {
-			fail("Es läuft gerade keine Runde.", http.StatusConflict)
+		if status, meldung := game.schwimmAktion(seat, action, input.HandIndex, input.TableIndex); status != 0 {
+			fail(meldung, status)
 			return
 		}
-		if game.Current != seat {
-			fail("Du bist nicht am Zug.", http.StatusConflict)
-			return
-		}
-		me := game.Players[seat]
-
-		// Drei Asse zählen sofort, egal welche Aktion gerade gewählt wurde.
-		if schwimmIsFeuer(me.Hand) {
-			game.schwimmFeuer(seat)
-			break
-		}
-
-		switch action {
-		case "swap":
-			if input.HandIndex < 0 || input.HandIndex >= len(me.Hand) ||
-				input.TableIndex < 0 || input.TableIndex >= len(game.Table) {
-				fail("Wähle eine deiner Karten und eine Tischkarte.", http.StatusBadRequest)
-				return
-			}
-			me.Hand[input.HandIndex], game.Table[input.TableIndex] =
-				game.Table[input.TableIndex], me.Hand[input.HandIndex]
-			game.Passes = 0
-			game.Note = player.Name + " tauscht eine Karte."
-			game.schwimmLog(game.Note)
-			if schwimmIsFeuer(me.Hand) {
-				game.schwimmFeuer(seat)
-				break
-			}
-			if schwimmPoints(me.Hand) == 31 {
-				game.schwimmFinishRound(player.Name + " hat 31 Punkte erreicht!")
-				break
-			}
-			game.schwimmAdvance()
-
-		case "swapall":
-			me.Hand, game.Table = game.Table, me.Hand
-			game.Passes = 0
-			game.Note = player.Name + " tauscht alle drei Karten."
-			game.schwimmLog(game.Note)
-			if schwimmIsFeuer(me.Hand) {
-				game.schwimmFeuer(seat)
-				break
-			}
-			if schwimmPoints(me.Hand) == 31 {
-				game.schwimmFinishRound(player.Name + " hat 31 Punkte erreicht!")
-				break
-			}
-			game.schwimmAdvance()
-
-		case "pass":
-			game.Passes++
-			game.Note = player.Name + " schiebt."
-			game.schwimmLog(game.Note)
-			if game.Passes >= schwimmActive(game) {
-				schwimmReshuffle(game)
-				neu := []SchwimmCard{}
-				for i := 0; i < schwimmHandSize; i++ {
-					if card, ok := schwimmDraw(game); ok {
-						neu = append(neu, card)
-					}
-				}
-				if len(neu) > 0 {
-					game.Table = neu
-					game.Note = "Alle schieben – neue Tischkarten."
-				} else {
-					game.Note = "Alle schieben – der Stapel ist leer."
-				}
-				game.schwimmLog(game.Note)
-				game.Passes = 0
-			}
-			game.schwimmAdvance()
-
-		case "knock":
-			if game.FinalTurns != -1 {
-				fail("Es wird schon geklopft.", http.StatusConflict)
-				return
-			}
-			game.FinalTurns = schwimmActive(game) - 1
-			game.Note = player.Name + " klopft – letzter Durchgang!"
-			game.schwimmLog(game.Note)
-			if game.FinalTurns == 0 {
-				game.schwimmFinishRound("Die Klopfrunde ist beendet.")
-				break
-			}
-			game.Current = schwimmNext(game, game.Current)
-		}
-
 	default:
 		fail("Unbekannte Aktion.", http.StatusBadRequest)
 		return

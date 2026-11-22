@@ -57,6 +57,9 @@ type TronGame struct {
 	Sieger   string        `json:"sieger,omitempty"`
 	Zuletzt  time.Time     `json:"-"`
 	Rest     float64       `json:"-"`
+	BotID    string        `json:"botId,omitempty"`
+	BotStufe string        `json:"-"`
+	BotFrist time.Time     `json:"-"`
 }
 
 type TronSpielerSicht struct {
@@ -120,6 +123,40 @@ func tronSitz(g *TronGame, id string) int {
 		}
 	}
 	return -1
+}
+
+// tronIDs listet die Plätze einer Partie – für die Platzprüfung.
+func tronIDs(g *TronGame) []string {
+	ids := make([]string, 0, len(g.Spieler))
+	for _, p := range g.Spieler {
+		ids = append(ids, p.ID)
+	}
+	return ids
+}
+
+// tronStart setzt das Match auf Anfang (Startknopf und Bot).
+func tronStart(g *TronGame) {
+	for i := range g.Spieler {
+		g.Spieler[i].Sieg = 0
+	}
+	g.Runde = 1
+	g.Sieger = ""
+	g.Meldung = ""
+	tronNeueRunde(g)
+	g.Status = "spiel"
+	g.Note = "Los! Nur rechtswinklige Kurven – umdrehen geht nicht."
+}
+
+// tronNaechsteRunde startet die nächste Runde; nach einem Unentschieden bleibt
+// die Rundenzahl stehen.
+func tronNaechsteRunde(g *TronGame) {
+	if g.Gewinner != 0 {
+		g.Runde++
+	}
+	tronNeueRunde(g)
+	g.Status = "spiel"
+	g.Meldung = ""
+	g.Note = "Runde " + strconv.Itoa(g.Runde) + " läuft."
 }
 
 func tronNeueRunde(g *TronGame) {
@@ -316,6 +353,7 @@ func tronWeiter(g *TronGame) {
 	for g.Rest >= tronTakt && g.Status == "spiel" && schritte < tronMaxSchritte {
 		g.Rest -= tronTakt
 		schritte++
+		tronBotDenken(g)
 		tronSchritt(g)
 	}
 	if schritte >= tronMaxSchritte {
@@ -404,6 +442,7 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		tronBotTreiben(room.Tron, time.Now())
 		tronWeiter(room.Tron)
 		game := tronAnsicht(room.Tron, id)
 		mu.Unlock()
@@ -417,8 +456,9 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID  string `json:"id"`
-		Dir string `json:"dir"`
+		ID    string `json:"id"`
+		Dir   string `json:"dir"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -445,6 +485,21 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 	zeit := time.Now().Format("15:04:05")
 
 	switch action {
+	case "bot":
+		if room.Tron != nil && !room.gameSlotFree(room.Tron.Status, tronIDs(room.Tron)...) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Partie Tron.", http.StatusConflict)
+			return
+		}
+		g := tronNeu(randomCode(), input.ID, []TronSpieler{
+			tronNeuerSpieler(1, input.ID, player.Name),
+			tronNeuerSpieler(2, botID(1), botName(1)),
+		})
+		g.Spieler[0].Ready, g.Spieler[1].Ready = true, true
+		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
+		tronStart(g)
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(g.BotStufe) + ")."
+		room.Tron = g
 	case "create":
 		if room.Tron != nil && room.Tron.Status != "ende" {
 			mu.Unlock()
@@ -522,15 +577,7 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		for i := range game.Spieler {
-			game.Spieler[i].Sieg = 0
-		}
-		game.Runde = 1
-		game.Sieger = ""
-		game.Meldung = ""
-		tronNeueRunde(game)
-		game.Status = "spiel"
-		game.Note = "Los! Nur rechtswinklige Kurven – umdrehen geht nicht."
+		tronStart(game)
 
 	case "richtung":
 		game := room.Tron
@@ -569,13 +616,7 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
 			return
 		}
-		if game.Gewinner != 0 {
-			game.Runde++
-		}
-		tronNeueRunde(game)
-		game.Status = "spiel"
-		game.Meldung = ""
-		game.Note = "Runde " + strconv.Itoa(game.Runde) + " läuft."
+		tronNaechsteRunde(game)
 
 	case "reset":
 		game := room.Tron
@@ -590,6 +631,7 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		frisch := tronNeu(game.ID, game.HostID, []TronSpieler{})
+		frisch.BotID, frisch.BotStufe = game.BotID, game.BotStufe
 		frisch.Note = "Neue Partie – erst BEREIT drücken."
 		for _, p := range game.Spieler {
 			nr := 1

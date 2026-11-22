@@ -55,6 +55,12 @@ type MauMauGame struct {
 	LastPlayed   string       `json:"lastPlayed,omitempty"`
 	DeckCount    int          `json:"deckCount"`
 	DiscardCount int          `json:"discardCount"`
+	BotID        string       `json:"botId,omitempty"`
+	BotStufe     string       `json:"-"`
+	BotFrist     time.Time    `json:"-"`
+	// BotCatchUm merkt sich die MAU-Frist, für die der Bot schon entschieden
+	// hat, ob er einschreitet – sonst würde er bei jedem Abruf neu würfeln.
+	BotCatchUm time.Time `json:"-"`
 }
 
 // MauSeatView zeigt einen Mitspieler, ohne dessen Karten zu verraten.
@@ -81,6 +87,7 @@ type MauMauView struct {
 	Drawn          *MauCard      `json:"drawn,omitempty"`
 	DrawnSource    string        `json:"drawnSource,omitempty"`
 	PendingMau     int           `json:"pendingMau"`
+	BotID          string        `json:"botId,omitempty"`
 	Winner         string        `json:"winner,omitempty"`
 	Note           string        `json:"note,omitempty"`
 	LastPlayed     string        `json:"lastPlayed,omitempty"`
@@ -144,6 +151,16 @@ func maumauSeat(g *MauMauGame, id string) int {
 		}
 	}
 	return -1
+}
+
+// maumauIDs listet die Plätze einer Runde – damit lässt sich prüfen, ob ein
+// neues Spiel den Tisch übernehmen darf (gameSlotFree).
+func maumauIDs(g *MauMauGame) []string {
+	ids := make([]string, 0, len(g.Players))
+	for _, p := range g.Players {
+		ids = append(ids, p.ID)
+	}
+	return ids
 }
 
 func maumauNext(g *MauMauGame, seat int) int {
@@ -286,6 +303,7 @@ func (g *MauMauGame) viewFor(id string) MauMauView {
 		Wished:         g.Wished,
 		DrawnSource:    g.DrawnSource,
 		PendingMau:     g.PendingMau,
+		BotID:          g.BotID,
 		Winner:         g.Winner,
 		Note:           g.Note,
 		LastPlayed:     g.LastPlayed,
@@ -349,6 +367,145 @@ func cloneMauMau(g *MauMauGame) *MauMauGame {
 	return &c
 }
 
+// maumauAktion führt eine Spielaktion aus. Mensch (HTTP) und Bot
+// (maumauBotSchritt) gehen durch dieselbe Prüfung: Karte passt, Spieler ist
+// dran, 7/8/Bube, MAU-Frist und Spielende entstehen hier und nicht im Handler.
+// Rückgabe 0 heißt „ausgeführt“; sonst HTTP-Status und Meldung.
+func (g *MauMauGame) maumauAktion(seat int, akt string, index int, suit, name string) (int, string) {
+	if g == nil || g.Status != "active" {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	if seat < 0 || seat >= len(g.Players) {
+		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
+	}
+	if strings.TrimSpace(name) == "" {
+		name = g.Players[seat].Name
+	}
+	switch akt {
+	case "draw":
+		if g.Current != seat || g.Phase != "playing" {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if g.Drawn != nil {
+			return http.StatusConflict, "Du hast schon eine Karte gezogen."
+		}
+		card, available := maumauDrawCard(g)
+		if !available {
+			// Auch die Ablage ist leer: Dann geht der Zug weiter, statt die
+			// Runde für immer zu blockieren.
+			maumauFinishTurn(g, seat, MauCard{Value: "?"})
+			g.Note = "Keine Karte mehr zum Ziehen – " + g.Players[g.Current].Name + " ist am Zug."
+			return 0, ""
+		}
+		g.Players[seat].Hand = append(g.Players[seat].Hand, card)
+		if maumauPlayable(g, card) {
+			g.Drawn = &card
+			g.DrawnSource = "deck"
+			g.Note = "Karte gezogen – du kannst sie legen oder behalten."
+		} else {
+			g.Note = name + " zieht eine Karte und kann sie nicht legen."
+			maumauFinishTurn(g, seat, MauCard{Value: "?"})
+		}
+
+	case "play":
+		if g.Current != seat || g.Phase != "playing" {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		hand := g.Players[seat].Hand
+		if index < 0 || index >= len(hand) {
+			return http.StatusBadRequest, "Diese Karte hast du nicht."
+		}
+		// Nach dem Ziehen darf nur die gezogene Karte gelegt werden.
+		if g.Drawn != nil && index != len(hand)-1 {
+			return http.StatusConflict, "Nach dem Ziehen kannst du nur die gezogene Karte spielen."
+		}
+		card := hand[index]
+		if !maumauPlayable(g, card) {
+			return http.StatusConflict, "Diese Karte passt nicht."
+		}
+		g.Players[seat].Hand = append(hand[:index], hand[index+1:]...)
+		g.Discard = append(g.Discard, card)
+		g.Drawn = nil
+		g.DrawnSource = ""
+		g.LastPlayed = name
+		g.refreshCounts()
+
+		if len(g.Players[seat].Hand) == 0 {
+			g.Status = "finished"
+			g.Phase = "finished"
+			g.Winner = name
+			g.PendingMau = -1
+			g.Note = name + " legt die letzte Karte und gewinnt!"
+			break
+		}
+		if len(g.Players[seat].Hand) == 1 {
+			g.PendingMau = seat
+			g.MauUntil = time.Now().Add(maumauMauWindow)
+			g.Note = name + " hat nur noch eine Karte – MAU sagen!"
+		}
+		if card.Value == "B" {
+			g.Phase = "chooseSuit"
+			if g.PendingMau < 0 {
+				g.Note = "Wunschfarbe wählen!"
+			}
+			break
+		}
+		maumauFinishTurn(g, seat, card)
+		if g.PendingMau == seat {
+			g.Note += " MAU nicht vergessen!"
+		}
+
+	case "keep":
+		if g.Current != seat || g.Drawn == nil {
+			return http.StatusConflict, "Du hast keine gezogene Karte zum Behalten."
+		}
+		maumauFinishTurn(g, seat, MauCard{Value: "?"})
+
+	case "suit":
+		if g.Current != seat || g.Phase != "chooseSuit" {
+			return http.StatusConflict, "Du darfst gerade keine Farbe wünschen."
+		}
+		wish := strings.TrimSpace(suit)
+		valid := false
+		for _, farbe := range maumauSuits {
+			if farbe == wish {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return http.StatusBadRequest, "Unbekannte Farbe."
+		}
+		g.Wished = wish
+		g.Phase = "playing"
+		maumauFinishTurn(g, seat, MauCard{Value: "B"})
+		g.Note = "Wunschfarbe " + wish + " – " + g.Note
+
+	case "mau":
+		if g.PendingMau != seat {
+			return http.StatusConflict, "Du musst gerade kein MAU melden."
+		}
+		g.PendingMau = -1
+		g.Note = name + " ruft MAU!"
+
+	case "catch":
+		if g.PendingMau < 0 {
+			return http.StatusConflict, "Es gibt gerade nichts zu erwischen."
+		}
+		if g.PendingMau == seat {
+			return http.StatusConflict, "Du kannst dich nicht selbst erwischen."
+		}
+		offender := g.Players[g.PendingMau]
+		drawn := maumauGiveCards(g, g.PendingMau, 2)
+		g.PendingMau = -1
+		g.Note = name + " erwischt " + offender.Name + " – " + maumauCountText(drawn) + " Strafkarten."
+
+	default:
+		return http.StatusBadRequest, "Unbekannte Mau-Mau-Aktion."
+	}
+	return 0, ""
+}
+
 func maumauHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -369,6 +526,12 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 			mu.Unlock()
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
+		}
+		if room.MauMau != nil {
+			// MAU-Frist und Bot gelten im Raum, nicht nur in der Kopie – sonst
+			// zeigt der Stand eine Strafe, die nie gebucht wurde.
+			room.MauMau.maumauClearExpiredMau(time.Now())
+			maumauBotTreiben(room.MauMau, time.Now())
 		}
 		game := cloneMauMau(room.MauMau)
 		if game != nil {
@@ -393,6 +556,7 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"id"`
 		Index int    `json:"index"`
 		Suit  string `json:"suit"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -427,6 +591,19 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.MauMau != nil && !room.gameSlotFree(room.MauMau.Status, maumauIDs(room.MauMau)...) {
+			fail("In diesem Spielraum läuft bereits eine Mau-Mau-Runde.", http.StatusConflict)
+			return
+		}
+		g := maumauNewGame(input.ID, player.Name, randomCode())
+		g.Players = append(g.Players, &MauPlayer{ID: botID(1), Name: botName(1), Ready: true})
+		g.Players[0].Ready = true
+		g.BotID, g.BotStufe = botID(1), stufe
+		maumauDeal(g)
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.MauMau = g
 	case "create":
 		if game != nil && game.Status != "finished" {
 			fail("An diesem Tisch läuft schon eine Mau-Mau-Runde.", http.StatusConflict)
@@ -516,8 +693,15 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fresh := &MauMauGame{ID: game.ID, HostID: game.HostID, Status: "invited", Phase: "lobby", PendingMau: -1}
+		fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 		for _, p := range game.Players {
 			fresh.Players = append(fresh.Players, &MauPlayer{ID: p.ID, Name: p.Name})
+		}
+		// Der Bot ist immer bereit, sonst käme eine neue Runde nie zustande.
+		for _, p := range fresh.Players {
+			if p.ID == fresh.BotID {
+				p.Ready = true
+			}
 		}
 		fresh.Note = "Neue Runde – alle drücken BEREIT, dann startet der Gastgeber."
 		room.MauMau = fresh
@@ -532,136 +716,10 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 			fail("Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
 			return
 		}
-
-		switch action {
-		case "draw":
-			if game.Current != seat || game.Phase != "playing" {
-				fail("Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			if game.Drawn != nil {
-				fail("Du hast schon eine Karte gezogen.", http.StatusConflict)
-				return
-			}
-			card, available := maumauDrawCard(game)
-			if !available {
-				fail("Es sind keine Karten mehr zum Ziehen da.", http.StatusConflict)
-				return
-			}
-			game.Players[seat].Hand = append(game.Players[seat].Hand, card)
-			if maumauPlayable(game, card) {
-				game.Drawn = &card
-				game.DrawnSource = "deck"
-				game.Note = "Karte gezogen – du kannst sie legen oder behalten."
-			} else {
-				game.Note = player.Name + " zieht eine Karte und kann sie nicht legen."
-				maumauFinishTurn(game, seat, MauCard{Value: "?"})
-			}
-
-		case "play":
-			if game.Current != seat || game.Phase != "playing" {
-				fail("Du bist nicht am Zug.", http.StatusConflict)
-				return
-			}
-			hand := game.Players[seat].Hand
-			if input.Index < 0 || input.Index >= len(hand) {
-				fail("Diese Karte hast du nicht.", http.StatusBadRequest)
-				return
-			}
-			// Nach dem Ziehen darf nur die gezogene Karte gelegt werden.
-			if game.Drawn != nil && input.Index != len(hand)-1 {
-				fail("Nach dem Ziehen kannst du nur die gezogene Karte spielen.", http.StatusConflict)
-				return
-			}
-			card := hand[input.Index]
-			if !maumauPlayable(game, card) {
-				fail("Diese Karte passt nicht.", http.StatusConflict)
-				return
-			}
-			game.Players[seat].Hand = append(hand[:input.Index], hand[input.Index+1:]...)
-			game.Discard = append(game.Discard, card)
-			game.Drawn = nil
-			game.DrawnSource = ""
-			game.LastPlayed = player.Name
-			game.refreshCounts()
-
-			if len(game.Players[seat].Hand) == 0 {
-				game.Status = "finished"
-				game.Phase = "finished"
-				game.Winner = player.Name
-				game.PendingMau = -1
-				game.Note = player.Name + " legt die letzte Karte und gewinnt!"
-				break
-			}
-			if len(game.Players[seat].Hand) == 1 {
-				game.PendingMau = seat
-				game.MauUntil = time.Now().Add(maumauMauWindow)
-				game.Note = player.Name + " hat nur noch eine Karte – MAU sagen!"
-			}
-			if card.Value == "B" {
-				game.Phase = "chooseSuit"
-				if game.PendingMau < 0 {
-					game.Note = "Wunschfarbe wählen!"
-				}
-				break
-			}
-			maumauFinishTurn(game, seat, card)
-			if game.PendingMau == seat {
-				game.Note += " MAU nicht vergessen!"
-			}
-
-		case "keep":
-			if game.Current != seat || game.Drawn == nil {
-				fail("Du hast keine gezogene Karte zum Behalten.", http.StatusConflict)
-				return
-			}
-			maumauFinishTurn(game, seat, MauCard{Value: "?"})
-
-		case "suit":
-			if game.Current != seat || game.Phase != "chooseSuit" {
-				fail("Du darfst gerade keine Farbe wünschen.", http.StatusConflict)
-				return
-			}
-			wish := strings.TrimSpace(input.Suit)
-			valid := false
-			for _, suit := range maumauSuits {
-				if suit == wish {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				fail("Unbekannte Farbe.", http.StatusBadRequest)
-				return
-			}
-			game.Wished = wish
-			game.Phase = "playing"
-			maumauFinishTurn(game, seat, MauCard{Value: "B"})
-			game.Note = "Wunschfarbe " + wish + " – " + game.Note
-
-		case "mau":
-			if game.PendingMau != seat {
-				fail("Du musst gerade kein MAU melden.", http.StatusConflict)
-				return
-			}
-			game.PendingMau = -1
-			game.Note = player.Name + " ruft MAU!"
-
-		case "catch":
-			if game.PendingMau < 0 {
-				fail("Es gibt gerade nichts zu erwischen.", http.StatusConflict)
-				return
-			}
-			if game.PendingMau == seat {
-				fail("Du kannst dich nicht selbst erwischen.", http.StatusConflict)
-				return
-			}
-			offender := game.Players[game.PendingMau]
-			drawn := maumauGiveCards(game, game.PendingMau, 2)
-			game.PendingMau = -1
-			game.Note = player.Name + " erwischt " + offender.Name + " – " + maumauCountText(drawn) + " Strafkarten."
+		if status, meldung := game.maumauAktion(seat, action, input.Index, input.Suit, player.Name); status != 0 {
+			fail(meldung, status)
+			return
 		}
-
 	default:
 		fail("Unbekannte Mau-Mau-Aktion.", http.StatusBadRequest)
 		return
