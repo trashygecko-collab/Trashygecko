@@ -153,7 +153,7 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	input.ID = strings.TrimSpace(input.ID)
+	input.ID = kennung(r)
 	// Die Aktionsnamen sind gemischt geschrieben (aufstellenFertig);
 	// ein ToLower würde sie unkenntlich machen.
 	action := strings.TrimSpace(r.URL.Query().Get("action"))

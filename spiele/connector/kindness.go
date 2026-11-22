@@ -353,6 +353,7 @@ func toneHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
+	input.ID = kennung(r)
 
 	kind := strings.ToLower(strings.TrimSpace(input.Kind))
 	sentences := toneSentences(kind)

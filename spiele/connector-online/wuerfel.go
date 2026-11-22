@@ -642,7 +642,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		input.ID = strings.TrimSpace(r.URL.Query().Get("id"))
+		input.ID = kennung(r)
 		input.Spiel = strings.ToLower(strings.TrimSpace(r.URL.Query().Get("spiel")))
 	}
 

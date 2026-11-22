@@ -374,7 +374,34 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ room: RAUM, id: ICH, name: MEIN_NAME, active: true })
     }).catch(function () {});
+    if (document.visibilityState === "hidden") verstecktMelden();
   }, 45000);
+
+  /* Ein Hintergrund-Tab meldet sich als versteckt: Der Server hält Sitz und
+     Partie dann bis zu fünf Minuten stehen, statt sie nach 90 s zu beenden.
+     Das Signal muss vor dem Einfrieren raus – ein eingefrorener Tab sendet
+     später nichts mehr. Beim Zurückkommen wird die Marke gelöscht. */
+  function verstecktMelden() {
+    fetch("/api/imspiel?room=" + encodeURIComponent(RAUM) + "&id=" + encodeURIComponent(ICH) +
+      "&seite=versteckt", { keepalive: true }).catch(function () {});
+  }
+  function wiederSichtbar() {
+    if (document.visibilityState === "hidden") return;
+    fetch("/api/imspiel?room=" + encodeURIComponent(RAUM) + "&id=" + encodeURIComponent(ICH))
+      .catch(function () {});
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") {
+      verstecktMelden();
+    } else {
+      wiederSichtbar();
+    }
+  });
+  if (document.visibilityState === "hidden") {
+    verstecktMelden();
+  } else {
+    wiederSichtbar();
+  }
 
   takt = window.setInterval(abholen, 600);
   // Ein Hintergrund-Tab darf seinen Takt drosseln: beim Zurückkommen sofort

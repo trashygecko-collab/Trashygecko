@@ -20,7 +20,9 @@ func leaveGameHandler(w http.ResponseWriter, r *http.Request) {
 		ID string `json:"id"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&input)
-	id := strings.TrimSpace(input.ID)
+	// Die Kennung kommt aus der geprüften Sitzung (withIdentity), nicht
+	// aus dem Rumpf.
+	id := kennung(r)
 	if code == "" || id == "" {
 		http.Error(w, "Spielraum oder Spieler fehlt", http.StatusBadRequest)
 		return

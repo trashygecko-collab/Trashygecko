@@ -23,8 +23,8 @@ func moderationHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 			return
 		}
-		input.Room = strings.ToUpper(strings.TrimSpace(input.Room))
-		input.OwnerID = strings.TrimSpace(input.OwnerID)
+		input.Room = raumAusKontext(r)
+		input.OwnerID = kennung(r)
 		input.TargetID = strings.TrimSpace(input.TargetID)
 		if input.Room == "" || input.OwnerID == "" || input.TargetID == "" {
 			http.Error(w, "Parameter fehlen", http.StatusBadRequest)

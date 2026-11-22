@@ -139,12 +139,20 @@ func (p Player) verstecktAktiv(now time.Time) bool {
 }
 
 // anwesend sagt, ob dieser Spieler gerade wirklich da ist. Wer länger als
-// gameTimeout nichts geschickt hat oder dessen Tab im Hintergrund liegt,
-// zählt nicht mit – auch wenn sein Platz noch bis presenceTimeout
-// freigehalten wird. Für Regeln wie „nur zu zweit“ zählt, wer da ist,
-// nicht wer nur noch im Raum steht.
+// gameTimeout nichts geschickt hat, zählt nicht mit – auch wenn sein Platz
+// noch bis presenceTimeout freigehalten wird. Für Regeln wie „nur zu zweit“
+// zählt, wer da ist, nicht wer nur noch im Raum steht.
+//
+// Ein eingefrorener Hintergrund-Tab zählt als da: Solange die Versteckt-Frist
+// läuft (seite=versteckt, fünf Minuten), ist er von einem geschlossenen Tab
+// nicht zu unterscheiden, und seine Partie darf nicht auseinanderfallen.
+// Ohne diese Ausnahme wurde eine Zwei-Fenster-Partie auf einem PC nach 90 s
+// als „Spieler weg“ aufgelöst.
 func (p Player) anwesend(now time.Time) bool {
-	return now.Sub(p.Last) <= gameTimeout && !p.verstecktAktiv(now)
+	if p.verstecktAktiv(now) {
+		return true
+	}
+	return now.Sub(p.Last) <= gameTimeout
 }
 
 // anwesend zählt die wirklich anwesenden Spieler des Raums.

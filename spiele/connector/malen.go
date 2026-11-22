@@ -166,7 +166,9 @@ func malenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	id := strings.TrimSpace(input.ID)
+	// Die Kennung kommt aus der geprüften Sitzung (withIdentity), nicht
+	// aus dem Rumpf.
+	id := kennung(r)
 	if id == "" {
 		http.Error(w, "Spieler fehlt", http.StatusBadRequest)
 		return

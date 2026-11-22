@@ -709,7 +709,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	input.ID = strings.TrimSpace(input.ID)
+	input.ID = kennung(r)
 	input.Mode = strings.ToLower(strings.TrimSpace(input.Mode))
 	action := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("action")))
 

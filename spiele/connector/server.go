@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -33,6 +34,28 @@ func zufallsToken() string {
 	return hex.EncodeToString(b)
 }
 
+// kontextSchluessel benennt die Werte, die withIdentity an die Handler gibt.
+type kontextSchluessel int
+
+const (
+	kontextKennung kontextSchluessel = iota
+	kontextRaum
+)
+
+// kennung liefert die von withIdentity geprüfte Spielerkennung. Die Handler
+// lesen sie nur noch hier – der JSON-Rumpf kann eine Aktion damit nicht mehr
+// auf einen fremden Platz umlenken.
+func kennung(r *http.Request) string {
+	wert, _ := r.Context().Value(kontextKennung).(string)
+	return wert
+}
+
+// raumAusKontext liefert den geprüften Raumcode (Großbuchstaben).
+func raumAusKontext(r *http.Request) string {
+	wert, _ := r.Context().Value(kontextRaum).(string)
+	return wert
+}
+
 // withIdentity prüft bei jedem API-Aufruf mit Spielerkennung, ob das
 // mitgeschickte Token zu diesem Spieler gehört. Damit kann niemand mit einer
 // fremden (etwa aus /api/players ausgelesenen) Kennung einen anderen
@@ -53,10 +76,10 @@ func withIdentity(next http.Handler) http.Handler {
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
 		geraet := strings.TrimSpace(r.URL.Query().Get("geraet"))
 
-		// Kennung und Raum aus dem Rumpf: Sie füllen nur Lücken in der Adresse.
-		// Weichen sie von einer geprüften Adresse ab, wird der Ruf abgewiesen –
-		// sonst könnte ein Token für die eigene Kennung eine fremde Aktion
-		// auslösen (die Handler lesen die Kennung aus dem Rumpf).
+		// Kennung und Raum aus dem Rumpf füllen nur Lücken in der Adresse.
+		// Verbindlich ist, was hier geprüft wird: Die Handler holen die
+		// Kennung danach aus dem Kontext (kennung(r)) und nicht mehr aus dem
+		// Rumpf – ein Rumpf kann also keine fremde Aktion mehr auslösen.
 		rumpfID, rumpfRoom := "", ""
 		if r.Method == http.MethodPost {
 			body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
@@ -89,17 +112,6 @@ func withIdentity(next http.Handler) http.Handler {
 				}
 			}
 		}
-		if r.Method == http.MethodPost {
-			if rumpfID != "" && id != "" && rumpfID != id {
-				http.Error(w, "Die Kennung im Rumpf passt nicht zur Sitzung.", http.StatusForbidden)
-				return
-			}
-			if rumpfRoom != "" && code != "" && rumpfRoom != code {
-				http.Error(w, "Der Raum im Rumpf passt nicht zur Adresse.", http.StatusForbidden)
-				return
-			}
-		}
-
 		if id != "" && code != "" {
 			mu.Lock()
 			gespeichert := ""
@@ -126,6 +138,14 @@ func withIdentity(next http.Handler) http.Handler {
 					return
 				}
 			}
+		}
+		// Geprüfte Identität an die Handler: Sie lesen Kennung und Raum nur
+		// noch von hier, nie aus dem Rumpf.
+		if id != "" {
+			r = r.WithContext(context.WithValue(r.Context(), kontextKennung, id))
+		}
+		if code != "" {
+			r = r.WithContext(context.WithValue(r.Context(), kontextRaum, code))
 		}
 		next.ServeHTTP(w, r)
 	})

@@ -464,7 +464,7 @@ func tronHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	input.ID = strings.TrimSpace(input.ID)
+	input.ID = kennung(r)
 	action := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("action")))
 
 	mu.Lock()

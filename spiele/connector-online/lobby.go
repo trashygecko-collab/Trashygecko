@@ -173,7 +173,7 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 			Name string `json:"name"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&input)
-		input.ID = strings.TrimSpace(input.ID)
+		input.ID = kennung(r)
 		pName := strings.TrimSpace(input.Name)
 		if pName == "" {
 			pName = "Namenloser"
@@ -234,8 +234,8 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	input.Room = strings.ToUpper(strings.TrimSpace(input.Room))
-	input.ID = strings.TrimSpace(input.ID)
+	input.Room = raumAusKontext(r)
+	input.ID = kennung(r)
 	input.Name = strings.TrimSpace(input.Name)
 	// Das Gerät hängt sein Token an die Adresse (spiele/token.js), nicht in
 	// den Rumpf. Ohne diese Zeile galt jeder bekannte Platz als fremdes Gerät

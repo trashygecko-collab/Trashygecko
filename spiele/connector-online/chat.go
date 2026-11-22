@@ -73,7 +73,7 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Ungültige Nachricht", http.StatusBadRequest)
 			return
 		}
-		input.ID = strings.TrimSpace(input.ID)
+		input.ID = kennung(r)
 		input.ToID = strings.TrimSpace(input.ToID)
 		input.Text = strings.TrimSpace(input.Text)
 		input.MsgID = strings.TrimSpace(input.MsgID)

@@ -31,8 +31,8 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	input.Room = strings.ToUpper(strings.TrimSpace(input.Room))
-	input.ID = strings.TrimSpace(input.ID)
+	input.Room = raumAusKontext(r)
+	input.ID = kennung(r)
 	input.TargetID = strings.TrimSpace(input.TargetID)
 	input.Name = limitName(strings.TrimSpace(input.Name))
 	input.Vorher = strings.TrimSpace(input.Vorher)

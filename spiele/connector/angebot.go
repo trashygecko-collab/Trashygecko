@@ -307,7 +307,7 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	input.ID = strings.TrimSpace(input.ID)
+	input.ID = kennung(r)
 	aktion := strings.ToLower(strings.TrimSpace(input.Action))
 
 	switch aktion {

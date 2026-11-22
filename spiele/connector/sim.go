@@ -195,7 +195,7 @@ func simHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
-	input.ID = strings.TrimSpace(input.ID)
+	input.ID = kennung(r)
 	input.ToID = strings.TrimSpace(input.ToID)
 	action := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("action")))
 
