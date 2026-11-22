@@ -576,16 +576,11 @@
     kopf.querySelector("h1").textContent = spiel.titel;
     kopf.querySelector("p").textContent = spiel.unter || "";
 
-    /* Zentraler Grafikstil aus /spiele/stil.js – dieselbe Wahl wie in allen
-       anderen Spielen, gespeichert beim Spieler (localStorage "tg-stil").
-       Hier wird nur das fertige Bedienfeld des zentralen Skripts eingesetzt,
-       es gibt keine eigene Einstellung. Die Ansicht selbst hängt allein an
-       html[data-stil] in stil.css und rührt keinen Spielstand an. */
+    /* Grafikstil: keine eigene Auswahl im Spiel. Die Wahl trifft allein der
+       Connector; hier wird nur die Farbe der Browserleiste mitgeführt. Die
+       Ansicht selbst hängt an html[data-stil] in stil.css und rührt keinen
+       Spielstand an. */
     if (window.TGStil) {
-      var stilStelle = document.createElement("div");
-      stilStelle.className = "stil-stelle";
-      kopf.insertBefore(stilStelle, kopf.querySelector(".zurueck"));
-      TGStil.steuerung(stilStelle);
       var stilFarbe = function () {
         var meta = document.querySelector('meta[name="theme-color"]');
         if (!meta) return;

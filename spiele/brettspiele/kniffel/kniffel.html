@@ -4,6 +4,23 @@
 <head>
 <script src="/spiele/token.js"></script>
 <script src="/spiele/stil.js"></script>
+<script>
+/* Browserleiste im Ton der zentralen Wahl – keine eigene Einstellung.
+   Wie in rahmen.js: die Ansicht selbst kommt aus html[data-stil]. */
+(function () {
+  if (!window.TGStil) return;
+  var farben = { klassisch: "#184536", maedchen: "#eb7bc0", buben: "#04070b" };
+  function setze() {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", farben[TGStil.hole()] || "#184536");
+  }
+  TGStil.beiWechsel(setze);
+  setze();
+  /* theme-color kann noch hinter diesem Block stehen (Kniffel) */
+  document.addEventListener("DOMContentLoaded", setze);
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#184536">
@@ -31,9 +48,6 @@ body {
 }
 .app { max-width:1200px; margin:auto; }
 /* Zentrale Stilwahl (spiele/stil.js) im Kopf – gleiche Auswahl wie überall. */
-.stilzeile{display:flex;justify-content:flex-end;align-items:center;padding:0 2px 8px}
-.stilzeile .tg-stil{justify-content:flex-end}
-@media(max-width:640px){.stilzeile .tg-stil{justify-content:flex-start}}
 .panel {
   min-width:0;
   padding:17px;
@@ -374,10 +388,6 @@ html[data-stil="maedchen"] #setup label{color:#7a2fbf}
 
 <body>
 <div class="app">
-  <header class="stilzeile">
-      <div class="stil-stelle" id="stilStelle" data-tg-stil></div>
-  </header>
-
 <section class="panel setup" id="setup">
   <h2 id="setupTitle">NEUES SPIEL</h2>
   <div id="kniffelLobby" class="hidden"></div>

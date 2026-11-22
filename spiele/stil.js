@@ -19,10 +19,10 @@
 
    Ein Spiel ohne Alternativen braucht nichts zu tun und bleibt klassisch.
 
-   Die zentrale Auswahl selbst erscheint überall dort, wo im HTML
+   Die zentrale Auswahl steht nur auf der Connector-Seite. Dort füllt dieses
+   Skript jede Stelle
        <div data-tg-stil></div>
-   steht (Connector, Spieleübersicht). Das Skript füllt die Stelle mit den
-   drei Knöpfen und hält sie mit der gespeicherten Wahl synchron.
+   mit den drei Knöpfen und hält sie mit der gespeicherten Wahl synchron.
    =========================================================================== */
 (function () {
   "use strict";
