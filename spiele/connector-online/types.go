@@ -169,6 +169,11 @@ type TicTacToeGame struct {
 	Current string   `json:"current"`
 	Status  string   `json:"status"`
 	Winner  string   `json:"winner,omitempty"`
+	// Bot: Kennung („bot-1“), Stufe und die Zeit, zu der der Bot zieht.
+	// Nur die Kennung geht an den Browser – Zeit und Stufe bleiben am Server.
+	BotID    string    `json:"botId,omitempty"`
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
 }
 
 type Room struct {

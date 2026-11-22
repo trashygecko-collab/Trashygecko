@@ -19,6 +19,46 @@ func ticTacToeWinner(board []string) string {
 	return ""
 }
 
+// ticTacToeSetzen prüft einen Zug und setzt ihn. Mensch und Bot gehen durch
+// dieselbe Prüfung – der Bot kann also nichts tun, was ein Mensch nicht darf.
+// Rückgabe: HTTP-Nummer und Text für den Fehlerfall (0 = Zug gesetzt).
+func ticTacToeSetzen(g *TicTacToeGame, mark string, index int) (int, string) {
+	if g == nil || g.Status != "active" {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	if g.Current != mark {
+		return http.StatusConflict, "Der andere Spieler ist an der Reihe."
+	}
+	if index < 0 || index > 8 || g.Board[index] != "" {
+		return http.StatusBadRequest, "Dieses Feld ist nicht verfügbar."
+	}
+	g.Board[index] = mark
+	if winner := ticTacToeWinner(g.Board); winner != "" {
+		g.Winner = winner
+		g.Status = "finished"
+		return 0, ""
+	}
+	full := true
+	for _, f := range g.Board {
+		if f == "" {
+			full = false
+			break
+		}
+	}
+	if full {
+		g.Winner = "draw"
+		g.Status = "finished"
+		return 0, ""
+	}
+	if mark == "X" {
+		g.Current = "O"
+	} else {
+		g.Current = "X"
+	}
+	g.BotFrist = time.Time{}
+	return 0, ""
+}
+
 // ticTacToeHandler handles game state requests and actions.
 func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
@@ -41,6 +81,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		ticTacToeBotTreiben(room.TicTacToe, time.Now())
 		game := cloneTicTacToe(room.TicTacToe)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -56,6 +97,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"id"`
 		ToID  string `json:"toId"`
 		Index int    `json:"index"`
+		Stufe string `json:"stufe"` // nur bei action=bot
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -129,38 +171,30 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
 			return
 		}
-		if input.Index < 0 || input.Index > 8 || game.Board[input.Index] != "" {
+		if nr, text := ticTacToeSetzen(game, mark, input.Index); nr != 0 {
 			mu.Unlock()
-			http.Error(w, "Dieses Feld ist nicht verfügbar.", http.StatusBadRequest)
+			http.Error(w, text, nr)
 			return
 		}
-		if game.Current != mark {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.TicTacToe != nil && !room.gameSlotFree(room.TicTacToe.Status, room.TicTacToe.XID, room.TicTacToe.OID) {
 			mu.Unlock()
-			http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
+			http.Error(w, "In diesem Spielraum läuft bereits eine Tic-Tac-Toe-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-		game.Board[input.Index] = mark
-		if winner := ticTacToeWinner(game.Board); winner != "" {
-			game.Winner = winner
-			game.Status = "finished"
-		} else {
-			// check draw
-			full := true
-			for _, f := range game.Board {
-				if f == "" {
-					full = false
-					break
-				}
-			}
-			if full {
-				game.Winner = "draw"
-				game.Status = "finished"
-			} else if mark == "X" {
-				game.Current = "O"
-			} else {
-				game.Current = "X"
-			}
+		room.TicTacToe = &TicTacToeGame{
+			ID: randomCode(), XID: input.ID, XName: player.Name,
+			OID: botID(1), OName: botName(1),
+			Board: make([]string, 9), Current: "X", Status: "active",
+			BotID: botID(1), BotStufe: stufe,
 		}
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 	case "reset":
 		game := room.TicTacToe
 		if game == nil || game.Status != "finished" || (input.ID != game.XID && input.ID != game.OID) {
@@ -172,6 +206,7 @@ func ticTacToeHandler(w http.ResponseWriter, r *http.Request) {
 		game.Current = "X"
 		game.Winner = ""
 		game.Status = "active"
+		game.BotFrist = time.Time{}
 	default:
 		mu.Unlock()
 		http.Error(w, "Unbekannte Tic-Tac-Toe-Aktion.", http.StatusBadRequest)

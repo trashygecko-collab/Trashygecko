@@ -44,6 +44,9 @@ type SchlangenGame struct {
 	Verlauf   []string           `json:"verlauf"`
 	Sieger    string             `json:"sieger,omitempty"`
 	Note      string             `json:"note,omitempty"`
+	BotID     string             `json:"botId,omitempty"`
+	BotStufe  string             `json:"-"`
+	BotFrist  time.Time          `json:"-"`
 }
 
 func schlangenNeuesSpiel(hostID, hostName, id string) *SchlangenGame {
@@ -214,6 +217,7 @@ func schlangenHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		schlangenBotTreiben(room.Schlangen, time.Now())
 		game := schlangenAnzeige(room.Schlangen)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -225,7 +229,8 @@ func schlangenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID string `json:"id"`
+		ID    string `json:"id"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -265,6 +270,27 @@ func schlangenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Schlangen != nil {
+			slot := room.Schlangen.Status
+			if slot == "spiel" {
+				slot = "active"
+			}
+			if !room.gameSlotFree(slot, schlangenIDs(room.Schlangen)...) {
+				fail("In diesem Spielraum läuft bereits eine Runde Schlangen.", http.StatusConflict)
+				return
+			}
+		}
+		g := schlangenNeuesSpiel(input.ID, player.Name, randomCode())
+		g.Spieler = append(g.Spieler, SchlangenSpieler{ID: botID(1), Name: botName(1), Farbe: 1, Ready: true})
+		g.Spieler[0].Ready = true
+		g.Runde = 1
+		g.schlangenRunde()
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Schlangen = g
+
 	case "create":
 		if room.Schlangen != nil {
 			slot := room.Schlangen.Status
@@ -345,6 +371,9 @@ func schlangenHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		fail("Unbekannte Aktion.", http.StatusBadRequest)
 		return
+	}
+	if room.Schlangen != nil && room.Schlangen.BotID != "" && input.ID != room.Schlangen.BotID {
+		room.Schlangen.BotFrist = time.Time{}
 	}
 	room.LastActive = time.Now()
 	game := schlangenAnzeige(room.Schlangen)

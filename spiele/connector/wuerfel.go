@@ -267,6 +267,12 @@ type wuerfelPartie struct {
 	// angekreuzt hat. Sie gehören zur Runde (nicht zum Spielstand), damit sie
 	// beim Neuaufbau des Tisches – Join, Start, Neue Runde – erhalten bleiben.
 	Varianten map[string]bool
+	// Bot: Kennung („bot-1“), Stufe und die Zeit, zu der er zieht. Die
+	// Kennung steht als Mitspieler im Spielstand, Zeit und Stufe bleiben am
+	// Server.
+	BotID    string
+	BotStufe string
+	BotFrist time.Time
 }
 
 // setzeVarianten übernimmt nur Regeln, die dieses Spiel wirklich anbietet.
@@ -357,6 +363,16 @@ func (p *wuerfelPartie) hostNachruecken() {
 		return
 	}
 	p.Host = p.Sitze[0].ID
+}
+
+// anwesendeSitze lässt den Bot am Tisch: Er steht nicht in room.Players und
+// würde beim Filtern sonst als abwesend herausfallen. nil heißt „nicht
+// filtern“ – so bleibt der Bot beim Start und bei „Neue Runde“ sitzen.
+func (p *wuerfelPartie) anwesendeSitze(anwesend map[string]bool) map[string]bool {
+	if p.BotID != "" {
+		return nil
+	}
+	return anwesend
 }
 
 func (p *wuerfelPartie) starten(anwesend map[string]bool) error {
@@ -524,6 +540,13 @@ func wuerfelSitzWeg(g *wuerfelPartie, id, name string) (bool, bool, int) {
 		return false, false, len(g.Sitze)
 	}
 	g.Sitze = append(g.Sitze[:idx], g.Sitze[idx+1:]...)
+	// Bleibt nur der Bot übrig, räumt der Tisch sich selbst: Ohne den
+	// Menschen, der ihn hergeholt hat, kann keine Runde mehr laufen.
+	if wuerfelNurBots(g.Sitze) {
+		g.Sitze = nil
+		g.Status = "finished"
+		return true, true, 0
+	}
 	g.hostNachruecken()
 	if g.Status == "active" {
 		g.Status = "finished"
@@ -535,6 +558,16 @@ func wuerfelSitzWeg(g *wuerfelPartie, id, name string) (bool, bool, int) {
 		return true, true, anzahl
 	}
 	return true, g.Status == "finished", anzahl
+}
+
+// wuerfelNurBots sagt, ob am Tisch außer Bots niemand mehr sitzt.
+func wuerfelNurBots(sitze []wuerfelSitz) bool {
+	for _, s := range sitze {
+		if !botIstFerngesteuert(s.ID) {
+			return false
+		}
+	}
+	return true
 }
 
 // wuerfelSpielerUmbenennen übernimmt einen neuen Anzeigenamen in Sitz und
@@ -601,6 +634,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 		Art       string          `json:"art"`
 		Daten     json.RawMessage `json:"daten"`
 		Varianten map[string]bool `json:"varianten"`
+		Stufe     string          `json:"stufe"`
 	}
 	if r.Method == http.MethodPost {
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -625,6 +659,9 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 			antwort(nil)
 			return
 		}
+		// Der Bot zieht beim nächsten Abruf: Die Spielseite holt den Stand
+		// alle 900 ms, eine eigene Schleife braucht es dafür nicht.
+		wuerfelBotTreiben(room.Wuerfel, time.Now())
 		s := room.Wuerfel.sicht(input.ID)
 		antwort(&s)
 	}
@@ -718,6 +755,45 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if aktion == "bot" {
+		// Gegen den Computer: Der Mensch sitzt, der Bot nimmt den zweiten
+		// Platz, dann läuft die Runde sofort los. Der Bot muss nicht
+		// beitreten – er sitzt schon.
+		spiel := strings.ToLower(strings.TrimSpace(input.Spiel))
+		if !wuerfelBekannt(spiel) {
+			fehler("Dieses Würfelspiel gibt es nicht.", http.StatusBadRequest)
+			return
+		}
+		if tisch != nil && tisch.Status != "finished" {
+			fehler("Es läuft schon eine Würfelrunde.", http.StatusConflict)
+			return
+		}
+		reg, err := wuerfelRegelnHolen(spiel)
+		if err != nil {
+			fehler("Dieses Würfelspiel lässt sich nicht öffnen: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		p := &wuerfelPartie{
+			ID:    randomCode(),
+			Spiel: spiel,
+			Host:  sitz.ID,
+			Sitze: []wuerfelSitz{sitz, wuerfelSitz{ID: botID(1), Name: botName(1)}},
+			// Der Status wird von starten() auf „active“ gesetzt.
+			Status:   "invited",
+			reg:      reg,
+			BotID:    botID(1),
+			BotStufe: botStufe(input.Stufe),
+		}
+		p.setzeVarianten(input.Varianten)
+		if err := p.starten(nil); err != nil {
+			fehler("Das Spiel lässt sich gerade nicht starten.", http.StatusInternalServerError)
+			return
+		}
+		room.Wuerfel = p
+		sende()
+		return
+	}
+
 	if tisch == nil {
 		fehler("Es läuft keine Würfelrunde. Biete im Connector eine Runde an.", http.StatusNotFound)
 		return
@@ -739,7 +815,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		tisch.Sitze = append(tisch.Sitze, sitz)
 		if len(tisch.Sitze) >= tisch.reg.max {
-			if err := tisch.starten(anwesend); err != nil {
+			if err := tisch.starten(tisch.anwesendeSitze(anwesend)); err != nil {
 				fehler("Das Spiel lässt sich gerade nicht starten.", http.StatusInternalServerError)
 				return
 			}
@@ -764,7 +840,7 @@ func wuerfelHandler(w http.ResponseWriter, r *http.Request) {
 			fehler("Es fehlen noch Mitspieler.", http.StatusConflict)
 			return
 		}
-		if err := tisch.starten(anwesend); err != nil {
+		if err := tisch.starten(tisch.anwesendeSitze(anwesend)); err != nil {
 			fehler("Das Spiel lässt sich gerade nicht starten.", http.StatusInternalServerError)
 			return
 		}

@@ -41,15 +41,18 @@ type SchiffeSpieler struct {
 }
 
 type SchiffeGame struct {
-	ID      string           `json:"id"`
-	HostID  string           `json:"hostId"`
-	Status  string           `json:"status"` // invited, setzen, spiel, ende
-	Spieler []SchiffeSpieler `json:"spieler"`
-	Zug     int              `json:"zug"`
-	Meldung string           `json:"meldung"`
-	Art     string           `json:"art"` // treffer, versenkt, wasser, info
-	Note    string           `json:"note"`
-	Sieger  string           `json:"sieger,omitempty"`
+	ID       string           `json:"id"`
+	HostID   string           `json:"hostId"`
+	Status   string           `json:"status"` // invited, setzen, spiel, ende
+	Spieler  []SchiffeSpieler `json:"spieler"`
+	Zug      int              `json:"zug"`
+	Meldung  string           `json:"meldung"`
+	Art      string           `json:"art"` // treffer, versenkt, wasser, info
+	Note     string           `json:"note"`
+	Sieger   string           `json:"sieger,omitempty"`
+	BotID    string           `json:"botId,omitempty"`
+	BotStufe string           `json:"-"`
+	BotFrist time.Time        `json:"-"`
 }
 
 type SchiffeSpielerSicht struct {
@@ -343,6 +346,7 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		schiffeBotTreiben(room.Schiffe, time.Now())
 		game := schiffeAnsicht(room.Schiffe, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -359,6 +363,7 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 		X       int             `json:"x"`
 		Y       int             `json:"y"`
 		Schiffe []SchiffeSchiff `json:"schiffe"`
+		Stufe   string          `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -548,6 +553,35 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 			game.Zug = 1 - sitz
 		}
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Schiffe != nil && room.Schiffe.Status != "ende" {
+			mu.Unlock()
+			http.Error(w, "Es läuft schon eine Partie Schiffe versenken.", http.StatusConflict)
+			return
+		}
+		game := &SchiffeGame{
+			ID: randomCode(), HostID: input.ID, Status: "setzen", Zug: -1,
+			Spieler: []SchiffeSpieler{
+				schiffeNeuerSpieler(input.ID, player.Name),
+				schiffeNeuerSpieler(botID(1), botName(1)),
+			},
+			BotID: botID(1), BotStufe: stufe,
+		}
+		game.Spieler[0].Ready = true
+		game.Spieler[1].Ready = true
+		if fehler := schiffeSetzen(game, 1, schiffeBotFlotte()); fehler != "" {
+			mu.Unlock()
+			http.Error(w, fehler, http.StatusInternalServerError)
+			return
+		}
+		game.Note = player.Name + " setzt gegen " + botName(1) + " (" + botStufeText(stufe) + ") die eigene Flotte."
+		room.Schiffe = game
+		room.addMessage(Message{
+			Name: player.Name, Time: zeit, SenderID: input.ID,
+			Text: "spielt Schiffe versenken gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Schiffe
 		if game == nil || game.Status != "ende" {
@@ -579,6 +613,9 @@ func schiffeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Schiffe != nil && room.Schiffe.BotID != "" && input.ID != room.Schiffe.BotID {
+		room.Schiffe.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := schiffeAnsicht(room.Schiffe, input.ID)
 	mu.Unlock()

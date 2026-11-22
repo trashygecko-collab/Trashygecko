@@ -13,16 +13,19 @@ import (
 const kalahaSlots = 14
 
 type KalahaGame struct {
-	ID       string `json:"id"`
-	RedID    string `json:"redId"`
-	RedName  string `json:"redName"`
-	BlueID   string `json:"blueId"`
-	BlueName string `json:"blueName"`
-	Pits     []int  `json:"pits"`
-	Current  string `json:"current"`
-	Status   string `json:"status"` // invited, active, finished
-	Winner   string `json:"winner,omitempty"`
-	Note     string `json:"note,omitempty"`
+	ID       string    `json:"id"`
+	RedID    string    `json:"redId"`
+	RedName  string    `json:"redName"`
+	BlueID   string    `json:"blueId"`
+	BlueName string    `json:"blueName"`
+	Pits     []int     `json:"pits"`
+	Current  string    `json:"current"`
+	Status   string    `json:"status"` // invited, active, finished
+	Winner   string    `json:"winner,omitempty"`
+	Note     string    `json:"note,omitempty"`
+	BotID    string    `json:"botId,omitempty"`
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
 }
 
 func kalahaNewGame(hostID, hostName, guestID, guestName, id string) *KalahaGame {
@@ -213,6 +216,7 @@ func kalahaHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		kalahaBotTreiben(room.Kalaha, time.Now())
 		game := cloneKalaha(room.Kalaha)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -228,6 +232,7 @@ func kalahaHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"id"`
 		ToID  string `json:"toId"`
 		Index int    `json:"index"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -333,6 +338,23 @@ func kalahaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		game.Note = kalahaPlay(game, input.Index)
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Kalaha != nil && !room.gameSlotFree(room.Kalaha.Status, room.Kalaha.RedID, room.Kalaha.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Kalaha-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Kalaha = kalahaNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Kalaha.Status = "active"
+		room.Kalaha.BotID = botID(1)
+		room.Kalaha.BotStufe = stufe
+		room.Kalaha.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Kalaha gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Kalaha
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -342,6 +364,7 @@ func kalahaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fresh := kalahaNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 		fresh.Status = "active"
+		fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 		room.Kalaha = fresh
 
 	default:
@@ -350,6 +373,9 @@ func kalahaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Kalaha != nil && room.Kalaha.BotID != "" && input.ID != room.Kalaha.BotID {
+		room.Kalaha.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := cloneKalaha(room.Kalaha)
 	mu.Unlock()

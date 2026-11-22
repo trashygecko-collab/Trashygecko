@@ -15,19 +15,22 @@ var reversiDirs = [][2]int{
 }
 
 type ReversiGame struct {
-	ID       string  `json:"id"`
-	RedID    string  `json:"redId"`
-	RedName  string  `json:"redName"`
-	BlueID   string  `json:"blueId"`
-	BlueName string  `json:"blueName"`
-	Board    [][]int `json:"board"`
-	Turn     int     `json:"turn"` // 1 = schwarz, -1 = weiß
-	LastR    int     `json:"lastR"`
-	LastC    int     `json:"lastC"`
-	HasLast  bool    `json:"hasLast"`
-	Status   string  `json:"status"`           // invited, active, finished
-	Winner   string  `json:"winner,omitempty"` // black, white, draw
-	Note     string  `json:"note,omitempty"`
+	ID       string    `json:"id"`
+	RedID    string    `json:"redId"`
+	RedName  string    `json:"redName"`
+	BlueID   string    `json:"blueId"`
+	BlueName string    `json:"blueName"`
+	Board    [][]int   `json:"board"`
+	Turn     int       `json:"turn"` // 1 = schwarz, -1 = weiß
+	LastR    int       `json:"lastR"`
+	LastC    int       `json:"lastC"`
+	HasLast  bool      `json:"hasLast"`
+	Status   string    `json:"status"`           // invited, active, finished
+	Winner   string    `json:"winner,omitempty"` // black, white, draw
+	Note     string    `json:"note,omitempty"`
+	BotID    string    `json:"botId,omitempty"`
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
 }
 
 func reversiNewGame(hostID, hostName, guestID, guestName, id string) *ReversiGame {
@@ -176,6 +179,7 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		reversiBotTreiben(room.Reversi, time.Now())
 		game := reversiClone(room.Reversi)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -188,10 +192,11 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID   string `json:"id"`
-		ToID string `json:"toId"`
-		R    int    `json:"r"`
-		C    int    `json:"c"`
+		ID    string `json:"id"`
+		ToID  string `json:"toId"`
+		R     int    `json:"r"`
+		C     int    `json:"c"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -341,6 +346,23 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 		game.Turn = -game.Turn
 		game.Note = player.Name + " muss aussetzen."
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Reversi != nil && !room.gameSlotFree(room.Reversi.Status, room.Reversi.RedID, room.Reversi.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Reversi-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Reversi = reversiNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Reversi.Status = "active"
+		room.Reversi.BotID = botID(1)
+		room.Reversi.BotStufe = stufe
+		room.Reversi.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Reversi gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Reversi
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -350,6 +372,7 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fresh := reversiNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 		fresh.Status = "active"
+		fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 		room.Reversi = fresh
 
 	default:
@@ -358,6 +381,9 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Reversi != nil && room.Reversi.BotID != "" && input.ID != room.Reversi.BotID {
+		room.Reversi.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := reversiClone(room.Reversi)
 	mu.Unlock()

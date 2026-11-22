@@ -40,6 +40,9 @@ type ZTFehlwurf struct {
 type ZehnTausendGame struct {
 	ID            string      `json:"id"`
 	HostID        string      `json:"hostId"`
+	BotID         string      `json:"botId,omitempty"`
+	BotStufe      string      `json:"-"`
+	BotFrist      time.Time   `json:"-"`
 	Players       []ZTPlayer  `json:"players"`
 	Current       int         `json:"current"`
 	Wuerfel       []int       `json:"wuerfel"`
@@ -300,6 +303,28 @@ func zehnTausendRemoveSeat(g *ZehnTausendGame, id, name string) (bool, bool, int
 	return true, false, len(g.Players)
 }
 
+// ztBank schreibt die Zugpunkte gut und wechselt den Spieler. false heißt:
+// Die 350 Punkte fürs Speichern sind noch nicht erreicht. Bei 10.000 endet
+// die Partie; der Aufrufer setzt keine weitere Meldung mehr.
+func ztBank(g *ZehnTausendGame, seat int) bool {
+	if seat < 0 || seat >= len(g.Players) || g.ZugPunkte < ztEinstieg {
+		return false
+	}
+	summe := g.ZugPunkte
+	g.Players[seat].Punkte += summe
+	g.Note = g.Players[seat].Name + " sichert " + strconv.Itoa(summe) + " Punkte. Konto: " +
+		strconv.Itoa(g.Players[seat].Punkte) + " von " + strconv.Itoa(ztZiel) + "."
+	if g.Players[seat].Punkte >= ztZiel {
+		g.Status = "finished"
+		g.Winner = g.Players[seat].Name
+		g.Note = g.Players[seat].Name + " gewinnt mit " + strconv.Itoa(g.Players[seat].Punkte) + " Punkten!"
+		return true
+	}
+	ztNaechster(g)
+	g.Note += " Jetzt ist " + g.Players[g.Current].Name + " dran."
+	return true
+}
+
 func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -321,6 +346,9 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if room.ZehnTausend != nil {
+			ztBotTreiben(room.ZehnTausend, time.Now())
+		}
 		game := cloneZehnTausend(room.ZehnTausend)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -334,6 +362,7 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		ID      string `json:"id"`
+		Stufe   string `json:"stufe"`
 		Auswahl []bool `json:"auswahl"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -365,6 +394,34 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		if room.ZehnTausend != nil && room.ZehnTausend.Status != "finished" {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine 10.000-Runde.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		g := &ZehnTausendGame{
+			ID:       randomCode(),
+			HostID:   input.ID,
+			Status:   "active",
+			BotID:    botID(1),
+			BotStufe: stufe,
+		}
+		ztNeuerZug(g)
+		g.Players = append(g.Players, ztNewPlayer(input.ID, player.Name, 0))
+		g.Players = append(g.Players, ztNewPlayer(g.BotID, botName(1), 1))
+		g.Players[0].Ready = true
+		g.Players[1].Ready = true
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.ZehnTausend = g
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt 10.000 gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if room.ZehnTausend != nil && room.ZehnTausend.Status != "finished" {
 			mu.Unlock()
@@ -590,24 +647,12 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ztSichere(game, input.Auswahl)
-		if game.ZugPunkte < ztEinstieg {
+		if !ztBank(game, seat) {
 			mu.Unlock()
 			http.Error(w, "Erst ab "+strconv.Itoa(ztEinstieg)+" Punkten speichern – es fehlen noch "+
 				strconv.Itoa(ztEinstieg-game.ZugPunkte)+".", http.StatusConflict)
 			return
 		}
-		summe := game.ZugPunkte
-		game.Players[seat].Punkte += summe
-		game.Note = player.Name + " sichert " + strconv.Itoa(summe) + " Punkte. Konto: " +
-			strconv.Itoa(game.Players[seat].Punkte) + " von " + strconv.Itoa(ztZiel) + "."
-		if game.Players[seat].Punkte >= ztZiel {
-			game.Status = "finished"
-			game.Winner = player.Name
-			game.Note = player.Name + " gewinnt mit " + strconv.Itoa(game.Players[seat].Punkte) + " Punkten!"
-			break
-		}
-		ztNaechster(game)
-		game.Note += " Jetzt ist " + game.Players[game.Current].Name + " dran."
 
 	case "reset":
 		game := room.ZehnTausend
@@ -622,13 +667,20 @@ func zehnTausendHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fresh := &ZehnTausendGame{
-			ID:     game.ID,
-			HostID: game.HostID,
-			Status: "invited",
+			ID:       game.ID,
+			HostID:   game.HostID,
+			Status:   "invited",
+			BotID:    game.BotID,
+			BotStufe: game.BotStufe,
 		}
 		ztNeuerZug(fresh)
 		for i, p := range game.Players {
 			fresh.Players = append(fresh.Players, ztNewPlayer(p.ID, p.Name, i))
+		}
+		for i := range fresh.Players {
+			if fresh.Players[i].ID == fresh.BotID {
+				fresh.Players[i].Ready = true
+			}
 		}
 		fresh.Note = "Neue Runde – alle drücken BEREIT, dann startet der Gastgeber."
 		room.ZehnTausend = fresh

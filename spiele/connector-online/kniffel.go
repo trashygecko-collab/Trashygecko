@@ -29,15 +29,18 @@ type KniffelPlayer struct {
 }
 
 type KniffelGame struct {
-	ID      string          `json:"id"`
-	HostID  string          `json:"hostId"`
-	Players []KniffelPlayer `json:"players"`
-	Current int             `json:"current"`
-	Dice    []int           `json:"dice"`
-	Rolls   int             `json:"rolls"`
-	Status  string          `json:"status"` // invited, active, finished
-	Winner  string          `json:"winner,omitempty"`
-	Note    string          `json:"note,omitempty"`
+	ID       string          `json:"id"`
+	HostID   string          `json:"hostId"`
+	BotID    string          `json:"botId,omitempty"`
+	BotStufe string          `json:"-"`
+	BotFrist time.Time       `json:"-"`
+	Players  []KniffelPlayer `json:"players"`
+	Current  int             `json:"current"`
+	Dice     []int           `json:"dice"`
+	Rolls    int             `json:"rolls"`
+	Status   string          `json:"status"` // invited, active, finished
+	Winner   string          `json:"winner,omitempty"`
+	Note     string          `json:"note,omitempty"`
 }
 
 func kniffelSum(dice []int) int {
@@ -220,6 +223,65 @@ func kniffelRemaining(p KniffelPlayer) int {
 	return count
 }
 
+// kniffelWurf würfelt alle nicht gehaltenen Würfel neu. Die Prüfungen
+// (Reihenfolge, Anzahl) bleiben im Handler; der Bot nutzt dieselbe Mechanik.
+func kniffelWurf(g *KniffelGame, kept []bool) {
+	if g.Rolls == 0 {
+		g.Dice = make([]int, 5)
+	}
+	for i := 0; i < 5 && i < len(kept); i++ {
+		if !kept[i] {
+			g.Dice[i] = rand.Intn(6) + 1
+		}
+	}
+	g.Rolls++
+}
+
+// kniffelEintrag trägt eine Kategorie ein, vergibt den Kniffel-Zusatzbonus und
+// wechselt zum nächsten Spieler bzw. beendet die Partie. wert erzwingt beim
+// Streichen eine 0.
+func kniffelEintrag(g *KniffelGame, seat int, category string, wert *int) int {
+	points := kniffelScoreFor(category, g.Dice)
+	if wert != nil {
+		points = *wert
+	}
+	g.Players[seat].Scores[category] = &points
+	if category != "kniffel" && g.Players[seat].Scores["kniffel"] != nil &&
+		*g.Players[seat].Scores["kniffel"] == 50 && kniffelSameAtLeast(g.Dice, 5) {
+		g.Players[seat].KniffelBonus += 100
+	}
+	g.Dice = make([]int, 5)
+	g.Rolls = 0
+
+	allDone := true
+	for _, p := range g.Players {
+		if kniffelRemaining(p) > 0 {
+			allDone = false
+			break
+		}
+	}
+	if allDone {
+		g.Status = "finished"
+		best := -1
+		for _, p := range g.Players {
+			if total := kniffelTotal(p); total > best {
+				best = total
+				g.Winner = p.Name
+			}
+		}
+		g.Note = "Spiel beendet – " + g.Winner + " gewinnt."
+		return points
+	}
+	for step := 1; step <= len(g.Players); step++ {
+		next := (seat + step) % len(g.Players)
+		if kniffelRemaining(g.Players[next]) > 0 {
+			g.Current = next
+			break
+		}
+	}
+	return points
+}
+
 func kniffelFindPlayer(g *KniffelGame, id string) int {
 	for i, p := range g.Players {
 		if p.ID == id {
@@ -273,6 +335,9 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if room.Kniffel != nil {
+			kniffelBotTreiben(room.Kniffel, time.Now())
+		}
 		game := cloneKniffel(room.Kniffel)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -286,6 +351,7 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		ID       string `json:"id"`
+		Stufe    string `json:"stufe"`
 		Category string `json:"category"`
 		// Value erzwingt einen festen Wert – beim Streichen 0.
 		Value *int   `json:"value"`
@@ -356,6 +422,34 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "setzt sich zur Kniffel-Runde.",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
+	case "bot":
+		if room.Kniffel != nil && room.Kniffel.Status != "finished" {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Kniffel-Runde.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		g := &KniffelGame{
+			ID:       randomCode(),
+			HostID:   input.ID,
+			Status:   "active",
+			Dice:     make([]int, 5),
+			BotID:    botID(1),
+			BotStufe: stufe,
+		}
+		g.Players = append(g.Players, kniffelNewPlayer(input.ID, player.Name, 0))
+		g.Players = append(g.Players, kniffelNewPlayer(g.BotID, botName(1), 1))
+		g.Players[0].Ready = true
+		g.Players[1].Ready = true
+		g.Note = player.Name + " spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Kniffel = g
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Kniffel gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})
@@ -439,15 +533,7 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if game.Rolls == 0 {
-			game.Dice = []int{0, 0, 0, 0, 0}
-		}
-		for i := 0; i < 5; i++ {
-			if !input.Kept[i] {
-				game.Dice[i] = rand.Intn(6) + 1
-			}
-		}
-		game.Rolls++
+		kniffelWurf(game, input.Kept)
 		game.Note = player.Name + " würfelt (Wurf " + strconv.Itoa(game.Rolls) + " von 3)."
 
 	case "score":
@@ -505,49 +591,9 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		points := kniffelScoreFor(category, game.Dice)
-		if input.Value != nil {
-			points = *input.Value
-		}
-		game.Players[seat].Scores[category] = &points
-
-		// Zusatzbonus für weitere Kniffel nach einem gewerteten Kniffel.
-		if category != "kniffel" && game.Players[seat].Scores["kniffel"] != nil &&
-			*game.Players[seat].Scores["kniffel"] == 50 && kniffelSameAtLeast(game.Dice, 5) {
-			game.Players[seat].KniffelBonus += 100
-		}
-
-		game.Dice = make([]int, 5)
-		game.Rolls = 0
-		game.Note = player.Name + " trägt " + strconv.Itoa(points) + " Punkte ein."
-
-		allDone := true
-		for _, p := range game.Players {
-			if kniffelRemaining(p) > 0 {
-				allDone = false
-				break
-			}
-		}
-
-		if allDone {
-			game.Status = "finished"
-			best := -1
-			for _, p := range game.Players {
-				if total := kniffelTotal(p); total > best {
-					best = total
-					game.Winner = p.Name
-				}
-			}
-			game.Note = "Spiel beendet – " + game.Winner + " gewinnt."
-			break
-		}
-
-		for step := 1; step <= len(game.Players); step++ {
-			next := (seat + step) % len(game.Players)
-			if kniffelRemaining(game.Players[next]) > 0 {
-				game.Current = next
-				break
-			}
+		points := kniffelEintrag(game, seat, category, input.Value)
+		if game.Status == "active" {
+			game.Note = player.Name + " trägt " + strconv.Itoa(points) + " Punkte ein."
 		}
 
 	case "reset":
@@ -564,13 +610,20 @@ func kniffelHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// Eine neue Runde beginnt wieder am Tisch: alle drücken erst BEREIT.
 		fresh := &KniffelGame{
-			ID:     game.ID,
-			HostID: game.HostID,
-			Status: "invited",
-			Dice:   make([]int, 5),
+			ID:       game.ID,
+			HostID:   game.HostID,
+			Status:   "invited",
+			Dice:     make([]int, 5),
+			BotID:    game.BotID,
+			BotStufe: game.BotStufe,
 		}
 		for i, p := range game.Players {
 			fresh.Players = append(fresh.Players, kniffelNewPlayer(p.ID, p.Name, i))
+		}
+		for i := range fresh.Players {
+			if fresh.Players[i].ID == fresh.BotID {
+				fresh.Players[i].Ready = true
+			}
 		}
 		fresh.Note = "Neue Runde – alle drücken BEREIT, dann startet der Gastgeber."
 		room.Kniffel = fresh

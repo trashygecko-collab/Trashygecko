@@ -368,6 +368,14 @@ html:fullscreen body{padding:18px 1px}
 .runde-angebot{margin-top:12px;padding:12px;border:1px solid var(--c-rahmen-2);border-radius:10px;background:var(--c-flaeche-3)}
 .runde-angebot strong{display:block;color:var(--c-akzent);margin-bottom:4px}
 .runde-angebot small{display:block;font-size:12px;color:var(--c-sanft)}
+/* Gegen Bots: Stufenwahl und Start. Alle Farben kommen aus der Palette,
+   damit Mädchen-, Buben- und Klassisch-Stil ohne Zutun passen. */
+.runde-bots{margin-top:12px;padding:12px;border:1px solid var(--c-rahmen-2);border-radius:10px;background:var(--c-flaeche-3)}
+.runde-bots strong{display:block;color:var(--c-akzent);margin-bottom:4px}
+.runde-bots small{display:block;font-size:12px;color:var(--c-sanft);margin-bottom:8px}
+.bot-stufen{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.bot-stufe{padding:6px 10px;border:1px solid var(--c-knopf-rand);border-radius:8px;background:var(--c-knopf);color:var(--c-text);font:inherit;font-size:13px;cursor:pointer}
+.bot-stufe[aria-pressed="true"]{background:var(--c-akzent);border-color:var(--c-akzent);color:#1b0d14;font-weight:600}
 .runde-knoepfe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .runde-knoepfe .los{flex:1 1 120px}
 .runde-knoepfe .sekundaer{flex:0 0 auto;background:none;border:1px solid var(--c-rahmen);color:var(--c-sanft);font-weight:normal}
@@ -577,7 +585,8 @@ html:fullscreen body{padding:18px 1px}
 .spiel-wahl .sw-info{display:flex;flex-direction:column;gap:2px;margin:2px 0 0}
 .spiel-wahl .sw-info strong{font-size:15px;color:var(--c-akzent-2)}
 .spiel-wahl .sw-info small{font-size:11px;color:var(--c-leise)}
-.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:var(--c-text)}
+.spiel-wahl .sw-text{font-size:13px;line-height:1.45;color:var(--c-text)}
+
 .spiel-wahl .sw-liste{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;max-height:min(38vh,320px);overflow:auto;padding:2px 2px 4px;margin:0;overscroll-behavior:contain}
 .spiel-wahl .sw-liste h4{flex:1 1 100%;margin:4px 0 0;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--c-leise);font-weight:600}
 .spiel-wahl .sw-chip{font:inherit;font-size:13px;line-height:1.2;padding:7px 10px;border-radius:9px;border:1px solid var(--c-rahmen-2);background:var(--c-flaeche-2);color:var(--c-text);cursor:pointer}
@@ -744,8 +753,6 @@ html:fullscreen body{padding:18px 1px}
  <div class="spiel-kopf">
   <span class="name" id="spielName">Spiel</span>
   <span class="spiel-knoepfe">
-   <a id="spielTab" class="spiel-knopf" href="#" target="_blank" rel="noopener"
-      title="In neuem Tab öffnen" aria-label="In neuem Tab öffnen">↗</a>
    <button type="button" id="spielVoll" class="spiel-knopf"
            title="Vollbild" aria-label="Vollbild">⛶</button>
    <button type="button" id="spielZu" class="spiel-knopf"
@@ -3738,6 +3745,28 @@ function renderGamePicker(players){
  }
 }
 
+// Spiele, deren Server Bots kennt: Kennung aus der Spieleliste → API-Pfad.
+// Namen, Avatare und Stufe vergibt der Server; hier steht nur die Auswahl.
+const BOTS_SPIELE={
+ tictactoe:"tictactoe",viergewinnt:"viergewinnt",streichholzspiel:"streichholz",
+ muehle:"muehle",reversi:"reversi",dame:"dame",kalaha:"kalaha",
+ kaesekaestche:"kaesekaestche",menschaerger:"menschaerger",schach:"schach",backgammon:"backgammon",
+ pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",
+ // Die 18 Würfelspiele laufen alle über dieselbe Regelmaschine (/api/wuerfel).
+ beelzebub:"wuerfel","boese-drei":"wuerfel","boese-eins":"wuerfel","der-turm":"wuerfel",
+ "dufte-hundert":"wuerfel","eins-bis-sechzehn":"wuerfel",fenster:"wuerfel",
+ "gestrichene-zwoelf":"wuerfel","hin-und-her":"wuerfel","hohe-hausnummer":"wuerfel",
+ jule:"wuerfel",paerchen:"wuerfel","plus-minus":"wuerfel",rentmeister:"wuerfel",
+ streichhoelzer:"wuerfel","teure-sieben":"wuerfel","unter-oder-ueber":"wuerfel",
+ wuerfelpoker:"wuerfel"};
+
+// Gewählte Stufe gehört dem Spieler, nicht dem Raum.
+function botStufeWahl(){
+ let s="mittel";
+ try{s=localStorage.getItem("tg-bot-stufe")||"mittel"}catch(e){}
+ return ["leicht","mittel","schwer"].includes(s)?s:"mittel";
+}
+
 // Inhalt unter der Spieleauswahl: wer im Raum ist, das offene Angebot und der
 // Knopf, mit dem man selbst eine Runde anbietet.
 function rundeInhalt(box,players){
@@ -3832,6 +3861,37 @@ function rundeInhalt(box,players){
  };
  box.appendChild(los);
 
+ // Bots: nur bei Spielen, deren Server sie wirklich spielen kann.
+ if(BOTS_SPIELE[selectedGame]){
+  const karte=document.createElement("div");
+  karte.className="runde-bots";
+  const kopf=document.createElement("strong");
+  kopf.textContent="Gegen Bots";
+  const hinweis=document.createElement("small");
+  hinweis.textContent="Der Bot sitzt am Server, spielt nach denselben Regeln und denkt kurz nach.";
+  const stufen=document.createElement("div");
+  stufen.className="bot-stufen";
+  ["leicht","mittel","schwer"].forEach(st=>{
+   const b=document.createElement("button");
+   b.type="button";
+   b.className="bot-stufe";
+   b.textContent=st.charAt(0).toUpperCase()+st.slice(1);
+   b.setAttribute("aria-pressed",String(st===botStufeWahl()));
+   b.onclick=()=>{
+    try{localStorage.setItem("tg-bot-stufe",st)}catch(e){}
+    stufen.querySelectorAll(".bot-stufe").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+   };
+   stufen.appendChild(b);
+  });
+  const start=document.createElement("button");
+  start.type="button";
+  start.className="los";
+  start.textContent="Gegen Bot spielen";
+  start.onclick=()=>botStarten(selectedGame,botStufeWahl());
+  karte.append(kopf,hinweis,stufen,start);
+  box.appendChild(karte);
+ }
+
  // Malen lässt sich zusätzlich ohne Angebot öffnen (gemeinsame Fläche).
  if(selectedGame==="malen"){
   const flaeche=document.createElement("button");
@@ -3841,6 +3901,23 @@ function rundeInhalt(box,players){
   flaeche.onclick=()=>openMalen();
   box.appendChild(flaeche);
  }
+}
+
+// Eine Partie gegen den Server-Bot eröffnen. Der Bot sitzt danach als
+// eigener Spieler am Tisch („🤖 Robi“) und zieht nach kurzer Denkpause.
+async function botStarten(spiel,stufe){
+ const api=BOTS_SPIELE[spiel];
+ if(!api||!activeRoom||!sessionID)return;
+ try{
+  const r=await fetch("/api/"+api+"?room="+encodeURIComponent(activeRoom)+"&action=bot",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,stufe,spiel})
+  });
+  if(!r.ok){tttStatus((await r.text()).trim()||"Der Bot konnte nicht Platz nehmen.");return;}
+  const def=SUPPORTED_GAMES.find(g=>g.id===spiel);
+  if(def)openGame(def.path);
+  await refresh();renderGamePicker(currentPlayersList);
+ }catch(e){tttStatus("Verbindung verloren.");}
 }
 
 // Offenes Angebot abfragen.
@@ -4838,7 +4915,6 @@ let framePartie=null;
 function spielOeffnen(name,url,info){
  const rahmen=document.getElementById("spielRahmen");
  document.getElementById("spielName").textContent=name;
- document.getElementById("spielTab").href=url;
  framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||""}:null;
  if(rahmen.getAttribute("src")!==url)rahmen.src=url;
  document.body.classList.add("spiel-offen");

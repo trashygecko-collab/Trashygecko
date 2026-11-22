@@ -44,20 +44,24 @@ func init() {
 }
 
 type MuehleGame struct {
-	ID             string   `json:"id"`
-	RedID          string   `json:"redId"`
-	RedName        string   `json:"redName"`
-	BlueID         string   `json:"blueId"`
-	BlueName       string   `json:"blueName"`
-	State          []string `json:"state"` // 24 Felder: "", "red" oder "blue"
-	Current        string   `json:"current"`
-	PlacedRed      int      `json:"placedRed"`
-	PlacedBlue     int      `json:"placedBlue"`
-	Phase          string   `json:"phase"` // placing, moving
-	CapturePending bool     `json:"capturePending"`
-	Status         string   `json:"status"` // invited, active, finished
-	Winner         string   `json:"winner,omitempty"`
-	Note           string   `json:"note,omitempty"`
+	ID             string         `json:"id"`
+	RedID          string         `json:"redId"`
+	RedName        string         `json:"redName"`
+	BlueID         string         `json:"blueId"`
+	BlueName       string         `json:"blueName"`
+	State          []string       `json:"state"` // 24 Felder: "", "red" oder "blue"
+	Current        string         `json:"current"`
+	PlacedRed      int            `json:"placedRed"`
+	PlacedBlue     int            `json:"placedBlue"`
+	Phase          string         `json:"phase"` // placing, moving
+	CapturePending bool           `json:"capturePending"`
+	Status         string         `json:"status"` // invited, active, finished
+	Winner         string         `json:"winner,omitempty"`
+	Note           string         `json:"note,omitempty"`
+	BotID          string         `json:"botId,omitempty"`
+	BotStufe       string         `json:"-"`
+	BotFrist       time.Time      `json:"-"`
+	Stellungen     map[string]int `json:"-"`
 }
 
 func muehleNewGame(hostID, hostName, guestID, guestName, id string) *MuehleGame {
@@ -104,6 +108,12 @@ func cloneMuehle(g *MuehleGame) *MuehleGame {
 	}
 	c := *g
 	c.State = append([]string(nil), g.State...)
+	if g.Stellungen != nil {
+		c.Stellungen = make(map[string]int, len(g.Stellungen))
+		for k, v := range g.Stellungen {
+			c.Stellungen[k] = v
+		}
+	}
 	return &c
 }
 
@@ -185,6 +195,27 @@ func muehleEndTurn(g *MuehleGame, color string) {
 		return
 	}
 	g.Current = next
+	muehleStellungMerken(g)
+}
+
+// muehleStellungMerken beendet eine Partie, in der dieselbe Stellung zum
+// dritten Mal auftritt, als Remis. Ohne diese Regel können zwei gleich starke
+// Spieler (auch Bots) endlos zwischen denselben Zügen wechseln.
+func muehleStellungMerken(g *MuehleGame) {
+	if g == nil || g.Status != "active" {
+		return
+	}
+	if g.Stellungen == nil {
+		g.Stellungen = map[string]int{}
+	}
+	schluessel := strings.Join(g.State, "") + "|" + g.Current + "|" + g.Phase
+	g.Stellungen[schluessel]++
+	if g.Stellungen[schluessel] >= 3 {
+		g.Status = "finished"
+		g.Winner = ""
+		g.CapturePending = false
+		g.Note = "Remis – dieselbe Stellung zum dritten Mal."
+	}
 }
 
 // muehleAdvance: Sind alle 18 Steine gesetzt, beginnt die Zugphase – auch
@@ -220,6 +251,7 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		muehleBotTreiben(room.Muehle, time.Now())
 		game := cloneMuehle(room.Muehle)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -237,6 +269,7 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 		Index int    `json:"index"`
 		From  int    `json:"from"`
 		To    int    `json:"to"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -437,6 +470,23 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 			muehleAdvance(game, color)
 		}
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Muehle != nil && !room.gameSlotFree(room.Muehle.Status, room.Muehle.RedID, room.Muehle.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Mühle-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Muehle = muehleNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Muehle.Status = "active"
+		room.Muehle.BotID = botID(1)
+		room.Muehle.BotStufe = stufe
+		room.Muehle.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Mühle gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Muehle
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -446,6 +496,7 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fresh := muehleNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 		fresh.Status = "active"
+		fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 		room.Muehle = fresh
 
 	default:
@@ -454,6 +505,9 @@ func muehleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Muehle != nil && room.Muehle.BotID != "" && input.ID != room.Muehle.BotID {
+		room.Muehle.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := cloneMuehle(room.Muehle)
 	mu.Unlock()

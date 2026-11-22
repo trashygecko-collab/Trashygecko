@@ -24,6 +24,10 @@ type StreichholzGame struct {
 	Loser     string   `json:"loser,omitempty"`
 	Winner    string   `json:"winner,omitempty"`
 	Note      string   `json:"note,omitempty"`
+	// Bot: Kennung, Stufe und Ziehzeit (nicht im JSON).
+	BotID    string    `json:"botId,omitempty"`
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
 }
 
 func streichholzNewGame(hostID, hostName, guestID, guestName, id string) *StreichholzGame {
@@ -67,6 +71,50 @@ func cloneStreichholz(g *StreichholzGame) *StreichholzGame {
 	return &c
 }
 
+// streichholzNehmen prüft einen Zug und führt ihn aus – für Mensch und Bot
+// derselbe Weg. Rückgabe: HTTP-Nummer und Text (0 = genommen).
+func streichholzNehmen(g *StreichholzGame, color string, amount int) (int, string) {
+	if g == nil || g.Status != "active" {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	if g.Current != color {
+		return http.StatusConflict, "Der andere Spieler ist an der Reihe."
+	}
+	if amount < 1 || amount > 3 {
+		return http.StatusBadRequest, "Es dürfen nur 1, 2 oder 3 Hölzer sein."
+	}
+	if amount > g.Remaining {
+		return http.StatusConflict, "So viele Hölzer liegen nicht mehr."
+	}
+	for i := g.Remaining - amount; i < g.Remaining; i++ {
+		g.Taken[i] = color
+	}
+	g.Remaining -= amount
+	name := g.RedName
+	if color == "blue" {
+		name = g.BlueName
+	}
+	if g.Remaining == 0 {
+		g.Status = "finished"
+		g.Loser = color
+		if color == "red" {
+			g.Winner = "blue"
+		} else {
+			g.Winner = "red"
+		}
+		g.Note = name + " nimmt das letzte Streichholz und verliert."
+		return 0, ""
+	}
+	if color == "red" {
+		g.Current = "blue"
+	} else {
+		g.Current = "red"
+	}
+	g.Note = name + " nimmt " + streichholzAmount(amount) + "."
+	g.BotFrist = time.Time{}
+	return 0, ""
+}
+
 func streichholzHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -88,6 +136,7 @@ func streichholzHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		streichholzBotTreiben(room.Streichholz, time.Now())
 		game := cloneStreichholz(room.Streichholz)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -103,6 +152,7 @@ func streichholzHandler(w http.ResponseWriter, r *http.Request) {
 		ID     string `json:"id"`
 		ToID   string `json:"toId"`
 		Amount int    `json:"amount"`
+		Stufe  string `json:"stufe"` // nur bei action=bot
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -186,47 +236,29 @@ func streichholzHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
 			return
 		}
-		if game.Current != color {
+		if nr, text := streichholzNehmen(game, color, input.Amount); nr != 0 {
 			mu.Unlock()
-			http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
-			return
-		}
-		if input.Amount < 1 || input.Amount > 3 {
-			mu.Unlock()
-			http.Error(w, "Es dürfen nur 1, 2 oder 3 Hölzer sein.", http.StatusBadRequest)
-			return
-		}
-		if input.Amount > game.Remaining {
-			mu.Unlock()
-			http.Error(w, "So viele Hölzer liegen nicht mehr.", http.StatusConflict)
+			http.Error(w, text, nr)
 			return
 		}
 
-		for i := game.Remaining - input.Amount; i < game.Remaining; i++ {
-			game.Taken[i] = color
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Streichholz != nil && !room.gameSlotFree(room.Streichholz.Status, room.Streichholz.RedID, room.Streichholz.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Streichholz-Partie oder Einladung.", http.StatusConflict)
+			return
 		}
-		game.Remaining -= input.Amount
-
-		if game.Remaining == 0 {
-			// Wer das letzte Holz nimmt, verliert.
-			game.Status = "finished"
-			game.Loser = color
-			if color == "red" {
-				game.Winner = "blue"
-			} else {
-				game.Winner = "red"
-			}
-			game.Note = player.Name + " nimmt das letzte Streichholz und verliert."
-			break
-		}
-
-		if color == "red" {
-			game.Current = "blue"
-		} else {
-			game.Current = "red"
-		}
-		game.Note = player.Name + " nimmt " + streichholzAmount(input.Amount) + "."
-
+		room.Streichholz = streichholzNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Streichholz.Status = "active"
+		room.Streichholz.BotID = botID(1)
+		room.Streichholz.BotStufe = stufe
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 	case "reset":
 		game := room.Streichholz
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -236,6 +268,8 @@ func streichholzHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fresh := streichholzNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 		fresh.Status = "active"
+		fresh.BotID = game.BotID
+		fresh.BotStufe = game.BotStufe
 		room.Streichholz = fresh
 
 	default:

@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -18,21 +16,24 @@ type bgDie struct {
 }
 
 type BackgammonGame struct {
-	ID         string  `json:"id"`
-	RedID      string  `json:"redId"`
-	RedName    string  `json:"redName"`
-	BlueID     string  `json:"blueId"`
-	BlueName   string  `json:"blueName"`
-	Points     []int   `json:"points"`
-	Bar        [2]int  `json:"bar"`
-	Off        [2]int  `json:"off"`
-	Player     int     `json:"player"`
-	Dice       []bgDie `json:"dice"`
-	Rolled     bool    `json:"rolled"`
-	Status     string  `json:"status"` // invited, active, finished
-	Winner     string  `json:"winner,omitempty"`
-	Multiplier int     `json:"multiplier"`
-	Note       string  `json:"note,omitempty"`
+	ID         string    `json:"id"`
+	RedID      string    `json:"redId"`
+	RedName    string    `json:"redName"`
+	BlueID     string    `json:"blueId"`
+	BlueName   string    `json:"blueName"`
+	Points     []int     `json:"points"`
+	Bar        [2]int    `json:"bar"`
+	Off        [2]int    `json:"off"`
+	Player     int       `json:"player"`
+	Dice       []bgDie   `json:"dice"`
+	Rolled     bool      `json:"rolled"`
+	Status     string    `json:"status"` // invited, active, finished
+	Winner     string    `json:"winner,omitempty"`
+	Multiplier int       `json:"multiplier"`
+	Note       string    `json:"note,omitempty"`
+	BotID      string    `json:"botId,omitempty"`
+	BotStufe   string    `json:"-"`
+	BotFrist   time.Time `json:"-"`
 }
 
 func bgInitialPoints() []int {
@@ -308,6 +309,7 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		bgBotTreiben(room.Backgammon, time.Now())
 		game := bgClone(room.Backgammon)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -320,11 +322,12 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID   string `json:"id"`
-		ToID string `json:"toId"`
-		From *int   `json:"from"`
-		To   *int   `json:"to"`
-		Die  int    `json:"die"`
+		ID    string `json:"id"`
+		ToID  string `json:"toId"`
+		From  *int   `json:"from"`
+		To    *int   `json:"to"`
+		Die   int    `json:"die"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -395,6 +398,23 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		game.Status = "declined"
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Backgammon != nil && !room.gameSlotFree(room.Backgammon.Status, room.Backgammon.RedID, room.Backgammon.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Backgammon-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Backgammon = bgNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Backgammon.Status = "active"
+		room.Backgammon.BotID = botID(1)
+		room.Backgammon.BotStufe = stufe
+		room.Backgammon.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Backgammon gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "roll", "move", "reset":
 		game := room.Backgammon
 		if game == nil || (action != "reset" && game.Status != "active") {
@@ -423,30 +443,7 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			a := rand.Intn(6) + 1
-			b := rand.Intn(6) + 1
-			values := []int{a, b}
-			if a == b {
-				values = []int{a, a, a, a}
-			}
-			dice := make([]bgDie, len(values))
-			for i, v := range values {
-				dice[i] = bgDie{ID: "d" + strconv.Itoa(i), Value: v}
-			}
-			game.Dice = dice
-			game.Rolled = true
-
-			if a == b {
-				game.Note = "Pasch! Vier Züge mit der " + strconv.Itoa(a) + "."
-			} else {
-				game.Note = "Gewürfelt: " + strconv.Itoa(a) + " und " + strconv.Itoa(b) + "."
-			}
-
-			if !bgHasMove(game.Points, game.Bar, game.Player, game.Dice) {
-				game.Note = game.Note + " Kein Zug möglich."
-				bgNextTurn(game)
-				game.Note = bgName(game, game.Player) + " ist am Zug (kein Zug möglich)."
-			}
+			bgRoll(game)
 
 		case "move":
 			if game.Player != me {
@@ -516,6 +513,7 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 			fresh := bgNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 			fresh.Status = "active"
 			fresh.Note = fresh.RedName + " ist am Zug."
+			fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 			room.Backgammon = fresh
 		}
 
@@ -525,6 +523,9 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Backgammon != nil && room.Backgammon.BotID != "" && input.ID != room.Backgammon.BotID {
+		room.Backgammon.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := bgClone(room.Backgammon)
 	mu.Unlock()

@@ -18,6 +18,10 @@ type VierGewinntGame struct {
 	Status   string     `json:"status"`            // "invited", "active", "declined", "finished"
 	Winner   string     `json:"winner,omitempty"`  // "red", "blue", or "draw"
 	Winning  [][]int    `json:"winning,omitempty"` // winning cell coordinates [[r,c],...]
+	// Bot: Kennung, Stufe und Ziehzeit (nicht im JSON).
+	BotID    string    `json:"botId,omitempty"`
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
 }
 
 // checkVierGewinntWin checks if placing a disc at (r, c) leads to 4 in a row.
@@ -58,6 +62,51 @@ func newVierGewinntGrid() [][]string {
 	return grid
 }
 
+// vierGewinntSetzen prüft einen Zug und setzt ihn – für Mensch und Bot
+// derselbe Weg. Rückgabe: HTTP-Nummer und Text (0 = gesetzt).
+func vierGewinntSetzen(g *VierGewinntGame, color string, col int) (int, string) {
+	if g == nil || g.Status != "active" {
+		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
+	}
+	if g.Current != color {
+		return http.StatusConflict, "Der andere Spieler ist an der Reihe."
+	}
+	if col < 0 || col > 6 {
+		return http.StatusBadRequest, "Ungültige Spalte."
+	}
+	row := -1
+	for rIdx := 5; rIdx >= 0; rIdx-- {
+		if g.Grid[rIdx][col] == "" {
+			row = rIdx
+			break
+		}
+	}
+	if row == -1 {
+		return http.StatusBadRequest, "Diese Spalte ist voll."
+	}
+	g.Grid[row][col] = color
+	if winCells := checkVierGewinntWin(g.Grid, row, col, color); len(winCells) >= 4 {
+		g.Winner = color
+		g.Winning = winCells
+		g.Status = "finished"
+		return 0, ""
+	}
+	for cIdx := 0; cIdx < 7; cIdx++ {
+		if g.Grid[0][cIdx] == "" {
+			g.BotFrist = time.Time{}
+			if color == "red" {
+				g.Current = "blue"
+			} else {
+				g.Current = "red"
+			}
+			return 0, ""
+		}
+	}
+	g.Winner = "draw"
+	g.Status = "finished"
+	return 0, ""
+}
+
 func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
 	if code == "" {
@@ -79,6 +128,7 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		vierGewinntBotTreiben(room.VierGewinnt, time.Now())
 		game := cloneVierGewinnt(room.VierGewinnt)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -94,6 +144,7 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 		ID     string `json:"id"`
 		ToID   string `json:"toId"`
 		Column int    `json:"column"`
+		Stufe  string `json:"stufe"` // nur bei action=bot
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -195,53 +246,31 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Der andere Spieler ist an der Reihe.", http.StatusConflict)
 			return
 		}
-		col := input.Column
-		if col < 0 || col > 6 {
+		if nr, text := vierGewinntSetzen(game, color, input.Column); nr != 0 {
 			mu.Unlock()
-			http.Error(w, "Ungültige Spalte.", http.StatusBadRequest)
+			http.Error(w, text, nr)
 			return
 		}
 
-		// Find lowest free row in column
-		row := -1
-		for rIdx := 5; rIdx >= 0; rIdx-- {
-			if game.Grid[rIdx][col] == "" {
-				row = rIdx
-				break
-			}
-		}
-		if row == -1 {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.VierGewinnt != nil && !room.gameSlotFree(room.VierGewinnt.Status, room.VierGewinnt.RedID, room.VierGewinnt.BlueID) {
 			mu.Unlock()
-			http.Error(w, "Diese Spalte ist voll.", http.StatusBadRequest)
+			http.Error(w, "In diesem Spielraum läuft bereits eine Vier-gewinnt-Partie oder Einladung.", http.StatusConflict)
 			return
 		}
-
-		game.Grid[row][col] = color
-
-		// Check win
-		if winCells := checkVierGewinntWin(game.Grid, row, col, color); len(winCells) >= 4 {
-			game.Winner = color
-			game.Winning = winCells
-			game.Status = "finished"
-		} else {
-			// Check board full
-			full := true
-			for cIdx := 0; cIdx < 7; cIdx++ {
-				if game.Grid[0][cIdx] == "" {
-					full = false
-					break
-				}
-			}
-			if full {
-				game.Winner = "draw"
-				game.Status = "finished"
-			} else if color == "red" {
-				game.Current = "blue"
-			} else {
-				game.Current = "red"
-			}
+		room.VierGewinnt = &VierGewinntGame{
+			ID: randomCode(), RedID: input.ID, RedName: player.Name,
+			BlueID: botID(1), BlueName: botName(1),
+			Grid: newVierGewinntGrid(), Current: "red", Status: "active",
+			BotID: botID(1), BotStufe: stufe,
 		}
-
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 	case "reset":
 		game := room.VierGewinnt
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -254,6 +283,7 @@ func vierGewinntHandler(w http.ResponseWriter, r *http.Request) {
 		game.Winner = ""
 		game.Winning = nil
 		game.Status = "active"
+		game.BotFrist = time.Time{}
 
 	default:
 		mu.Unlock()

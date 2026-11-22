@@ -17,22 +17,25 @@ const (
 // KaeseGame ist der Spielstand einer Partie. Linien und Kästchen tragen ""
 // (noch frei), "red" oder "blue".
 type KaeseGame struct {
-	ID        string   `json:"id"`
-	RedID     string   `json:"redId"`
-	RedName   string   `json:"redName"`
-	BlueID    string   `json:"blueId"`
-	BlueName  string   `json:"blueName"`
-	Cols      int      `json:"cols"`
-	Rows      int      `json:"rows"`
-	H         []string `json:"h"`     // (Rows+1)*Cols waagerechte Linien
-	V         []string `json:"v"`     // Rows*(Cols+1) senkrechte Linien
-	Boxes     []string `json:"boxes"` // Rows*Cols geschlossene Kästchen
-	RedScore  int      `json:"redScore"`
-	BlueScore int      `json:"blueScore"`
-	Current   string   `json:"current"`
-	Status    string   `json:"status"` // invited, active, finished
-	Winner    string   `json:"winner,omitempty"`
-	Note      string   `json:"note,omitempty"`
+	ID        string    `json:"id"`
+	RedID     string    `json:"redId"`
+	RedName   string    `json:"redName"`
+	BlueID    string    `json:"blueId"`
+	BlueName  string    `json:"blueName"`
+	Cols      int       `json:"cols"`
+	Rows      int       `json:"rows"`
+	H         []string  `json:"h"`     // (Rows+1)*Cols waagerechte Linien
+	V         []string  `json:"v"`     // Rows*(Cols+1) senkrechte Linien
+	Boxes     []string  `json:"boxes"` // Rows*Cols geschlossene Kästchen
+	RedScore  int       `json:"redScore"`
+	BlueScore int       `json:"blueScore"`
+	Current   string    `json:"current"`
+	Status    string    `json:"status"` // invited, active, finished
+	Winner    string    `json:"winner,omitempty"`
+	Note      string    `json:"note,omitempty"`
+	BotID     string    `json:"botId,omitempty"`
+	BotStufe  string    `json:"-"`
+	BotFrist  time.Time `json:"-"`
 }
 
 func kaeseNewGame(hostID, hostName, guestID, guestName, id string) *KaeseGame {
@@ -149,6 +152,10 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		kaeseBotTreiben(room.Kaese, time.Now())
+		kaeseBotTreiben(room.Kaese, time.Now())
+		kaeseBotTreiben(room.Kaese, time.Now())
+		kaeseBotTreiben(room.Kaese, time.Now())
 		game := cloneKaese(room.Kaese)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -161,11 +168,12 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID   string `json:"id"`
-		ToID string `json:"toId"`
-		Dir  string `json:"dir"`
-		Row  int    `json:"row"`
-		Col  int    `json:"col"`
+		ID    string `json:"id"`
+		ToID  string `json:"toId"`
+		Dir   string `json:"dir"`
+		Row   int    `json:"row"`
+		Col   int    `json:"col"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -309,6 +317,23 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 			game.Note = "Endstand: " + game.RedName + " " + kaeseScore(game.RedScore) + " : " + kaeseScore(game.BlueScore) + " " + game.BlueName
 		}
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Kaese != nil && !room.gameSlotFree(room.Kaese.Status, room.Kaese.RedID, room.Kaese.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Käsekästchen-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Kaese = kaeseNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Kaese.Status = "active"
+		room.Kaese.BotID = botID(1)
+		room.Kaese.BotStufe = stufe
+		room.Kaese.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Käsekästchen gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Kaese
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -332,6 +357,9 @@ func kaesekaestcheHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Kaese != nil && room.Kaese.BotID != "" && input.ID != room.Kaese.BotID {
+		room.Kaese.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := cloneKaese(room.Kaese)
 	mu.Unlock()

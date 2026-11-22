@@ -27,17 +27,20 @@ type PigSpieler struct {
 }
 
 type PigGame struct {
-	ID      string       `json:"id"`
-	HostID  string       `json:"hostId"`
-	Status  string       `json:"status"` // invited, spiel, ende
-	Runde   int          `json:"runde"`
-	Zug     int          `json:"zug"`
-	Spieler []PigSpieler `json:"spieler"`
-	Wurf    int          `json:"wurf"`
-	Letzte  string       `json:"letzte,omitempty"`
-	Verlauf []string     `json:"verlauf"`
-	Sieger  string       `json:"sieger,omitempty"`
-	Note    string       `json:"note,omitempty"`
+	ID       string       `json:"id"`
+	HostID   string       `json:"hostId"`
+	Status   string       `json:"status"` // invited, spiel, ende
+	Runde    int          `json:"runde"`
+	Zug      int          `json:"zug"`
+	Spieler  []PigSpieler `json:"spieler"`
+	Wurf     int          `json:"wurf"`
+	Letzte   string       `json:"letzte,omitempty"`
+	Verlauf  []string     `json:"verlauf"`
+	Sieger   string       `json:"sieger,omitempty"`
+	Note     string       `json:"note,omitempty"`
+	BotID    string       `json:"botId,omitempty"`
+	BotStufe string       `json:"-"`
+	BotFrist time.Time    `json:"-"`
 }
 
 func pigNeuesSpiel(hostID, hostName, id string) *PigGame {
@@ -171,6 +174,7 @@ func pigHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		pigBotTreiben(room.Pig, time.Now())
 		game := pigAnzeige(room.Pig)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -182,7 +186,8 @@ func pigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID string `json:"id"`
+		ID    string `json:"id"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -222,6 +227,27 @@ func pigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Pig != nil {
+			slot := room.Pig.Status
+			if slot == "spiel" {
+				slot = "active"
+			}
+			if !room.gameSlotFree(slot, pigIDs(room.Pig)...) {
+				fail("In diesem Spielraum läuft bereits eine Runde Pig.", http.StatusConflict)
+				return
+			}
+		}
+		g := pigNeuesSpiel(input.ID, player.Name, randomCode())
+		g.Spieler = append(g.Spieler, PigSpieler{ID: botID(1), Name: botName(1), Farbe: 1, Ready: true})
+		g.Spieler[0].Ready = true
+		g.Runde = 1
+		g.pigRunde()
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.Pig = g
+
 	case "create":
 		if room.Pig != nil {
 			slot := room.Pig.Status
@@ -312,6 +338,9 @@ func pigHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		fail("Unbekannte Aktion.", http.StatusBadRequest)
 		return
+	}
+	if room.Pig != nil && room.Pig.BotID != "" && input.ID != room.Pig.BotID {
+		room.Pig.BotFrist = time.Time{}
 	}
 	room.LastActive = time.Now()
 	game := pigAnzeige(room.Pig)

@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -31,6 +29,9 @@ type MenschaergerGame struct {
 	Note         string       `json:"note,omitempty"`
 	Status       string       `json:"status"` // invited, active, finished
 	Winner       string       `json:"winner,omitempty"`
+	BotID        string       `json:"botId,omitempty"`
+	BotStufe     string       `json:"-"`
+	BotFrist     time.Time    `json:"-"`
 }
 
 var maenStartIndex = map[string]int{"green": 0, "yellow": 10, "blue": 20, "red": 30}
@@ -253,6 +254,9 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		maenBotTreiben(room.Menschaerger, time.Now())
+		maenBotTreiben(room.Menschaerger, time.Now())
+		maenBotTreiben(room.Menschaerger, time.Now())
 		game := cloneMenschaerger(room.Menschaerger)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -269,6 +273,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		ToID       string `json:"toId"`
 		MaxPlayers int    `json:"maxPlayers"`
 		Piece      int    `json:"piece"`
+		Stufe      string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -472,42 +477,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Ziehe zuerst deine Figur.", http.StatusConflict)
 			return
 		}
-		dice := rand.Intn(6) + 1
-		game.Dice = dice
-		game.LastDice = dice
-		game.Note = ""
-
-		// Dreimal würfeln nur, wenn keine Figur auf der Laufbahn steht und auch
-		// keine Figur im Ziel noch vorrücken könnte.
-		onTrack, laneCanAdvance := false, false
-		for _, progress := range player.Pieces {
-			if progress >= 0 && progress < 40 {
-				onTrack = true
-			}
-			if progress >= 40 && progress < 43 {
-				laneCanAdvance = true
-			}
-		}
-		if dice != 6 && !onTrack && !laneCanAdvance && !game.ExtraRoll {
-			game.RollAttempts++
-			if game.RollAttempts < 3 {
-				game.Dice = 0
-				game.Note = "Keine Sechs! Noch " + strconv.Itoa(3-game.RollAttempts) + " Wurfversuch(e)."
-				break
-			}
-			game.Dice = 0
-			maenNextPlayer(game)
-			game.Note = "Dreimal keine Sechs – Spielerwechsel …"
-			break
-		}
-		if dice == 6 {
-			game.RollAttempts = 0
-		}
-		if len(maenLegalMoves(player.Pieces, player.Color, dice)) == 0 {
-			game.Dice = 0
-			maenNextPlayer(game)
-			game.Note = "Kein gültiger Zug möglich – nächster Spieler …"
-		}
+		maenRoll(game)
 
 	case "move":
 		game := room.Menschaerger
@@ -552,6 +522,28 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 			game.Note = note
 		}
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Menschaerger != nil && (room.Menschaerger.Status == "invited" || room.Menschaerger.Status == "active") {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Partie.", http.StatusConflict)
+			return
+		}
+		room.Menschaerger = &MenschaergerGame{
+			ID: randomCode(), HostID: input.ID, MaxPlayers: 2,
+			Players: []MaenPlayer{
+				{ID: input.ID, Name: player.Name, Color: "red", Ready: true, Pieces: maenNewPieces()},
+				{ID: botID(1), Name: botName(1), Color: "yellow", Ready: true, Pieces: maenNewPieces()},
+			},
+			Current: 0, Status: "active",
+			BotID: botID(1), BotStufe: stufe,
+		}
+		room.Menschaerger.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Mensch ärgere dich nicht gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Menschaerger
 		if game == nil || game.Status != "finished" {
@@ -584,6 +576,9 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Menschaerger != nil && room.Menschaerger.BotID != "" && input.ID != room.Menschaerger.BotID {
+		room.Menschaerger.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := cloneMenschaerger(room.Menschaerger)
 	mu.Unlock()

@@ -29,6 +29,10 @@ type DameGame struct {
 	Current  string             `json:"current"` // "red" or "blue"
 	Status   string             `json:"status"`  // "invited", "active", "declined", "finished"
 	Winner   string             `json:"winner,omitempty"`
+	BotID    string             `json:"botId,omitempty"`
+	BotStufe string             `json:"-"`
+	BotFrist time.Time          `json:"-"`
+	Ruhe     int                `json:"-"`
 }
 
 func newDameBoard() [][]map[string]any {
@@ -275,6 +279,7 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		dameBotTreiben(room.Dame, time.Now())
 		game := cloneDame(room.Dame)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -290,6 +295,7 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string             `json:"id"`
 		ToID  string             `json:"toId"`
 		Board [][]map[string]any `json:"board"`
+		Stufe string             `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -403,12 +409,54 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Der Server entscheidet, wer als Nächstes zieht und wer gewonnen hat.
+		vorher := 0
+		for r := 0; r < 8; r++ {
+			for c := 0; c < 8; c++ {
+				if dameColor(game.Board[r][c]) != "" && dameColor(game.Board[r][c]) != color {
+					vorher++
+				}
+			}
+		}
 		game.Board = input.Board
 		game.Current = otherDameColor(color)
+		nachher := 0
+		for r := 0; r < 8; r++ {
+			for c := 0; c < 8; c++ {
+				if dameColor(game.Board[r][c]) != "" && dameColor(game.Board[r][c]) != color {
+					nachher++
+				}
+			}
+		}
+		if nachher < vorher {
+			game.Ruhe = 0
+		} else {
+			game.Ruhe++
+		}
 		if !dameHasAnyMove(game.Board, game.Current) {
 			game.Winner = color
 			game.Status = "finished"
+		} else if game.Ruhe >= 100 {
+			game.Status = "finished"
+			game.Winner = "draw"
 		}
+
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Dame != nil && !room.gameSlotFree(room.Dame.Status, room.Dame.RedID, room.Dame.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Dame-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Dame = &DameGame{
+			ID: randomCode(), RedID: input.ID, RedName: player.Name,
+			BlueID: botID(1), BlueName: botName(1),
+			Board: newDameBoard(), Current: "red", Status: "active",
+			BotID: botID(1), BotStufe: stufe,
+		}
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Dame gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
 
 	case "reset":
 		game := room.Dame
@@ -420,6 +468,7 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 		game.Board = newDameBoard()
 		game.Current = "red"
 		game.Winner = ""
+		game.Ruhe = 0
 		game.Status = "active"
 
 	default:
@@ -428,6 +477,9 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Dame != nil && room.Dame.BotID != "" && input.ID != room.Dame.BotID {
+		room.Dame.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := cloneDame(room.Dame)
 	mu.Unlock()

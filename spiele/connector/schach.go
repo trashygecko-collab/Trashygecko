@@ -36,20 +36,70 @@ type chessMove struct {
 }
 
 type ChessGame struct {
-	ID        string       `json:"id"`
-	RedID     string       `json:"redId"`
-	RedName   string       `json:"redName"`
-	BlueID    string       `json:"blueId"`
-	BlueName  string       `json:"blueName"`
-	State     chessState   `json:"state"`
-	Moves     []string     `json:"moves"`
-	CapturedW []chessPiece `json:"capturedW"`
-	CapturedB []chessPiece `json:"capturedB"`
-	LastFrom  *chessPos    `json:"lastFrom"`
-	LastTo    *chessPos    `json:"lastTo"`
-	Status    string       `json:"status"` // invited, active, finished
-	Winner    string       `json:"winner,omitempty"`
-	Note      string       `json:"note,omitempty"`
+	ID         string         `json:"id"`
+	RedID      string         `json:"redId"`
+	RedName    string         `json:"redName"`
+	BlueID     string         `json:"blueId"`
+	BlueName   string         `json:"blueName"`
+	State      chessState     `json:"state"`
+	Moves      []string       `json:"moves"`
+	CapturedW  []chessPiece   `json:"capturedW"`
+	CapturedB  []chessPiece   `json:"capturedB"`
+	LastFrom   *chessPos      `json:"lastFrom"`
+	LastTo     *chessPos      `json:"lastTo"`
+	Status     string         `json:"status"` // invited, active, finished
+	Winner     string         `json:"winner,omitempty"`
+	Note       string         `json:"note,omitempty"`
+	BotID      string         `json:"botId,omitempty"`
+	BotStufe   string         `json:"-"`
+	BotFrist   time.Time      `json:"-"`
+	Ruhe       int            `json:"-"`
+	Stellungen map[string]int `json:"-"`
+}
+
+// chessStellungsSchluessel beschreibt eine Stellung so, dass gleiche
+// Stellungen (Brett, Zugfarbe, Rochade, En passant) denselben Schlüssel haben.
+func chessStellungsSchluessel(s chessState) string {
+	var b strings.Builder
+	for r := 0; r < 8; r++ {
+		for c := 0; c < 8; c++ {
+			p := s.Board[r][c]
+			if p == nil {
+				b.WriteByte('.')
+				continue
+			}
+			b.WriteString(p.Color)
+			b.WriteString(p.Type)
+		}
+	}
+	b.WriteString("|" + s.Turn + "|")
+	for _, k := range []string{"wK", "wQ", "bK", "bQ"} {
+		if s.Castling[k] {
+			b.WriteByte('1')
+		} else {
+			b.WriteByte('0')
+		}
+	}
+	if s.EP != nil {
+		b.WriteByte(byte('a' + s.EP.C))
+		b.WriteByte(byte('0' + s.EP.R))
+	}
+	return b.String()
+}
+
+// chessRemisDreifach trägt die aktuelle Stellung ein und meldet Remis, sobald
+// dieselbe Stellung zum dritten Mal vorkommt. Das beendet auch das ewige
+// Schieben einer Dame gegen eine Dame.
+func chessRemisDreifach(g *ChessGame) bool {
+	if g == nil {
+		return false
+	}
+	if g.Stellungen == nil {
+		g.Stellungen = map[string]int{}
+	}
+	key := chessStellungsSchluessel(g.State)
+	g.Stellungen[key]++
+	return g.Stellungen[key] >= 3
 }
 
 var chessKnightSteps = [][2]int{
@@ -536,6 +586,9 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		chessBotTreiben(room.Schach, time.Now())
+		chessBotTreiben(room.Schach, time.Now())
+		chessBotTreiben(room.Schach, time.Now())
 		game := chessClone(room.Schach)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -553,6 +606,7 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 		From      chessPos `json:"from"`
 		To        chessPos `json:"to"`
 		Promotion string   `json:"promotion"`
+		Stufe     string   `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -693,6 +747,11 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 		game.LastFrom = &from
 		game.LastTo = &to
 		game.Moves = append(game.Moves, notation)
+		if capturedPiece != nil || piece.Type == "P" {
+			game.Ruhe = 0
+		} else {
+			game.Ruhe++
+		}
 
 		nextTurn := game.State.Turn
 		inCheck := chessInCheck(game.State, nextTurn)
@@ -707,7 +766,16 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 			moverWord = "Weiß"
 		}
 
+		dreifach := chessRemisDreifach(game)
 		switch {
+		case dreifach:
+			game.Status = "finished"
+			game.Winner = ""
+			game.Note = "Remis – dieselbe Stellung zum dritten Mal."
+		case game.Ruhe >= 100:
+			game.Status = "finished"
+			game.Winner = ""
+			game.Note = "Remis – 50 Züge ohne Schlag und ohne Bauernzug."
 		case !hasMove && inCheck:
 			game.Status = "finished"
 			game.Winner = color
@@ -722,6 +790,23 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 			game.Note = word + " ist am Zug."
 		}
 
+	case "bot":
+		stufe := botStufe(input.Stufe)
+		if room.Schach != nil && !room.gameSlotFree(room.Schach.Status, room.Schach.RedID, room.Schach.BlueID) {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Schach-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		room.Schach = chessNewGame(input.ID, player.Name, botID(1), botName(1), randomCode())
+		room.Schach.Status = "active"
+		room.Schach.BotID = botID(1)
+		room.Schach.BotStufe = stufe
+		room.Schach.Note = player.Name + " beginnt gegen " + botName(1) + " (" + botStufeText(stufe) + ")."
+		room.addMessage(Message{
+			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Text: "spielt Schach gegen " + botName(1) + " (" + botStufeText(stufe) + ").",
+		})
+
 	case "reset":
 		game := room.Schach
 		if game == nil || game.Status != "finished" || (input.ID != game.RedID && input.ID != game.BlueID) {
@@ -732,6 +817,7 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 		fresh := chessNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
 		fresh.Status = "active"
 		fresh.Note = "Weiß beginnt – wähle eine Figur."
+		fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
 		room.Schach = fresh
 
 	default:
@@ -740,6 +826,9 @@ func chessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if room.Schach != nil && room.Schach.BotID != "" && input.ID != room.Schach.BotID {
+		room.Schach.BotFrist = time.Time{}
+	}
 	room.LastActive = time.Now()
 	result := chessClone(room.Schach)
 	mu.Unlock()
