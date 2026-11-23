@@ -51,9 +51,15 @@ TGW.anmelden({
     if (art === "wurf") {
       var wert = z.wurf(1)[0];
       if (wert === 3) {
+        var weg = p.zug;
         TGW.note(z, p.name + " würfelt eine Drei – " + p.zug + " Punkte weg");
         p.zug = 0;
         this.zugBeenden(z, p);
+        if (!z.ende) {
+          TGW.meldung(z, p.name + " würfelt eine Drei – " +
+            (weg === 1 ? "1 Punkt" : weg + " Punkte") +
+            " weg. Jetzt ist " + z.spieler[z.dran].name + " dran.");
+        }
       } else {
         p.zug += wert;
         TGW.note(z, p.name + " würfelt " + wert + " (" + p.zug + ")");

@@ -50,6 +50,8 @@ type MastermindGame struct {
 	// ersetzt die Partie, damit gehört eine alte Rechnung nicht zur neuen.
 	BotZug     []int           `json:"-"`
 	BotRechnet *MastermindGame `json:"-"`
+	// BotGen zählt die Rechenversuche dieser Partie (siehe ChessGame.BotGen).
+	BotGen int `json:"-"`
 }
 
 func mastermindNewGame(hostID, hostName, guestID, guestName, id string, farben int) *MastermindGame {

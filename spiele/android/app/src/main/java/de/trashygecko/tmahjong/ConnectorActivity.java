@@ -115,7 +115,6 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
         space(body, 26);
         addCard(body, "Lokales Netzwerk", "Geräte im selben WLAN oder Handy-Hotspot finden und einen gemeinsamen Raum öffnen.", "Lokalen Raum öffnen", v -> showLocal());
         addCard(body, "Online verbinden", "Vorhandene TrashyGecko-Räume, Chat und Spiele über den bestehenden Online-Connector.", "Online-Connector öffnen", v -> openOnline());
-        addCard(body, "Alle Spiele (offline)", "Die komplette Sammlung aus dieser App: 91 Spiele, dazu die Startseite mit allen weiteren Seiten.", "Spiele öffnen", v -> { Intent i = new Intent(this, MainActivity.class); i.putExtra(MainActivity.EXTRA_START_PATH, "spiele/spiele.html"); startActivity(i); });
         TextView note = text("Lokale Räume koordinieren Nachrichten und Spielereignisse. Für Mehrspieler muss das jeweilige Spiel diese Ereignisse unterstützen.", 12, MUTED, false);
         note.setPadding(0, dp(20), 0, dp(8)); body.addView(note);
         TextView diagnostics = text(compatibilitySummary(), 11, MUTED, false);

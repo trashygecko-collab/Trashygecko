@@ -32,19 +32,22 @@ type DominoSpieler struct {
 }
 
 type DominoGame struct {
-	ID      string          `json:"id"`
-	HostID  string          `json:"hostId"`
-	Status  string          `json:"status"` // invited, spiel, ende
-	Runde   int             `json:"runde"`
-	Kette   [][2]int        `json:"kette"` // in Anlege-Reihenfolge, links nach rechts
-	Enden   [2]int          `json:"enden"` // offene Werte links/rechts, -1 wenn leer
-	Talon   int             `json:"talon"` // Steine im Vorrat
-	Zug     int             `json:"zug"`   // Sitz, der legen muss
-	Spieler []DominoSpieler `json:"spieler"`
-	Sieger  string          `json:"sieger,omitempty"`
-	Note    string          `json:"note,omitempty"`
+	ID       string          `json:"id"`
+	HostID   string          `json:"hostId"`
+	Status   string          `json:"status"` // invited, spiel, ende
+	Runde    int             `json:"runde"`
+	Kette    [][2]int        `json:"kette"` // in Anlege-Reihenfolge, links nach rechts
+	Enden    [2]int          `json:"enden"` // offene Werte links/rechts, -1 wenn leer
+	Talon    int             `json:"talon"` // Steine im Vorrat
+	Zug      int             `json:"zug"`   // Sitz, der legen muss
+	Spieler  []DominoSpieler `json:"spieler"`
+	Sieger   string          `json:"sieger,omitempty"`
+	Note     string          `json:"note,omitempty"`
+	BotID    string          `json:"botId,omitempty"`
+	BotStufe string          `json:"botStufe,omitempty"`
 
-	vorrat [][2]int // der echte Vorrat bleibt auf dem Server
+	vorrat   [][2]int  // der echte Vorrat bleibt auf dem Server
+	BotFrist time.Time // nächster Zug des Computers (nur serverseitig)
 }
 
 // dominoSatz liefert alle 28 Steine des Doppelsechs-Satzes.
@@ -374,6 +377,8 @@ func dominoHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		// Der Computer legt beim Abholen des Stands einen Stein.
+		dominoBotTreiben(room.Domino, time.Now())
 		game := dominoAnzeige(room.Domino, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -388,6 +393,7 @@ func dominoHandler(w http.ResponseWriter, r *http.Request) {
 		ID    string `json:"id"`
 		Stein [2]int `json:"stein"`
 		Seite string `json:"seite"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -428,6 +434,35 @@ func dominoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		// Mensch gegen Computer: beide sitzen, die Runde läuft sofort.
+		room.botNamenNeu()
+		if room.Domino != nil {
+			slot := room.Domino.Status
+			if slot == "spiel" {
+				slot = "active"
+			}
+			if !room.gameSlotFree(slot, dominoIDs(room.Domino)...) {
+				fail("In diesem Spielraum läuft bereits eine Runde Domino.", http.StatusConflict)
+				return
+			}
+		}
+		stufe := botStufe(input.Stufe)
+		g := dominoNeuesSpiel(input.ID, player.Name, randomCode())
+		g.Spieler[0].Ready = true
+		g.Spieler = append(g.Spieler, DominoSpieler{ID: botID(1), Name: room.botName(1), Ready: true})
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Runde = 1
+		g.dominoRunde()
+		g.BotFrist = time.Now().Add(botWartezeit(stufe))
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + "). " + g.Note
+		room.Domino = g
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Domino gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 	case "create":
 		if room.Domino != nil {
 			slot := room.Domino.Status

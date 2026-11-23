@@ -1,297 +1,193 @@
 package de.trashygecko.tmahjong;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.graphics.Color;
-import android.net.Uri;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.util.Log;
-import android.webkit.ConsoleMessage;
-import android.webkit.JavascriptInterface;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
-import androidx.webkit.WebViewAssetLoader;
-
-import java.io.InputStream;
-import java.util.Locale;
-import java.util.regex.Pattern;
-
-/** Local-first Homepage and games host. All static content is loaded from the APK assets. */
+/**
+ * Startansicht der App – nativ, vier Kacheln wie auf der alten HTML-Startseite (D-12).
+ *
+ * Spiele, Katalog und Connector öffnen eigene Activities; die HTML-Startseite liegt nur
+ * noch als `index.html` im Paket, damit „zurück zum Start“ aus einer Spielseite landet.
+ */
 public final class MainActivity extends Activity {
-    public static final String EXTRA_START_PATH = "de.trashygecko.tmahjong.START_PATH";
-    private static final String TAG = "TrashyGeckoHome";
-    private static final String HOST = "appassets.androidplatform.net";
-    private static final String LOCAL_ROOT = "https://" + HOST + "/";
-    private static final String HOME_URL = LOCAL_ROOT + "app.html";
-    private static final String ONLINE_HOST = "trashygecko.onrender.com";
-    private static final String ONLINE_ROOT = "https://" + ONLINE_HOST;
-    private static final Pattern SAFE_GAME = Pattern.compile("[A-Za-z0-9._/-]+\\.html");
+    private static final int BG = 0xFF07140F;
+    private static final int KARTE = 0xFF122B22;
+    private static final int LINIE = 0xFF24503F;
+    private static final int GOLD = 0xFFE8CD8E;
+    private static final int TEXT = 0xFFEAF3EC;
+    private static final int MUTED = 0xFF9FB8AA;
 
-    private WebView webView;
-    private volatile boolean trustedLocalPage;
-    private volatile String currentPagePath = "";
-    private volatile boolean onlineGamePage;
-    private AlertDialog modeDialog;
+    private TextView status;
 
-    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    @Override protected void onCreate(Bundle state) {
-        super.onCreate(state);
-        vollbild();
-        WebViewAssetLoader loader = HomepageAssets.baue(this);
-        try {
-            webView = new WebView(this);
-        } catch (RuntimeException error) {
-            showWebViewError();
-            return;
-        }
-        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
-        settings.setSupportZoom(false);
-        settings.setBuiltInZoomControls(false);
-        settings.setTextZoom(100);
-        // Die Seiten liegen im APK-Paket und ändern sich nur mit einem App-Update.
-        // Ein WebView-Cache würde nach dem Update noch die alten Dateien zeigen.
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        settings.setJavaScriptCanOpenWindowsAutomatically(false);
-        settings.setSupportMultipleWindows(false);
-        webView.setBackgroundColor(0xFF0B241D);
-        webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
-        webView.addJavascriptInterface(new HomepageBridge(), "TGApp");
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override public boolean onConsoleMessage(ConsoleMessage message) {
-                Log.i(TAG, message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")");
-                return true;
-            }
-        });
-        webView.setWebViewClient(new WebViewClient() {
-            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return loader.shouldInterceptRequest(request.getUrl());
-            }
-            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
-                trustedLocalPage = isLocalAsset(url);
-                try { currentPagePath = Uri.parse(url).getPath() == null ? "" : Uri.parse(url).getPath(); } catch (RuntimeException ignored) { currentPagePath = ""; }
-                if (trustedLocalPage) onlineGamePage = false;
-                if (isMahjongPage(url)) webView.addJavascriptInterface(new MahjongBridge(), "TMahjong");
-                else webView.removeJavascriptInterface("TMahjong");
-            }
-            @Override public void onPageFinished(WebView view, String url) {
-                trustedLocalPage = isLocalAsset(url);
-                try { currentPagePath = Uri.parse(url).getPath() == null ? "" : Uri.parse(url).getPath(); } catch (RuntimeException ignored) { currentPagePath = ""; }
-                Log.i(TAG, "Seite geladen: " + url);
-                if (trustedLocalPage && url.contains("/spiele/spiele.html")) injectGameModeChooser();
-            }
-            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) Log.e(TAG, "Seitenfehler " + error.getErrorCode() + " " + error.getDescription() + ": " + request.getUrl());
-            }
-            // Ab API 26: ein abgestürzter WebView-Prozess darf die App nicht mit einem
-            // schwarzen Bild zurücklassen. Ansicht verwerfen und den Startbildschirm neu aufbauen.
-            @Override public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
-                Log.e(TAG, "WebView-Prozess beendet (Absturz=" + (detail != null && detail.didCrash()) + ")");
-                if (webView != null && webView == view) {
-                    webView.removeJavascriptInterface("TGApp");
-                    webView.removeJavascriptInterface("TMahjong");
-                    webView.destroy();
-                    webView = null;
-                }
-                Toast.makeText(MainActivity.this, "Die Anzeige wurde neu gestartet.", Toast.LENGTH_SHORT).show();
-                recreate();
-                return true;
-            }
-            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return routeNavigation(request.getUrl());
-            }
-            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return routeNavigation(Uri.parse(url));
-            }
-        });
-        setContentView(webView);
-        String path = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_START_PATH);
-        String target = localGameUrl(path);
-        webView.loadUrl(target == null ? HOME_URL : target);
+    @Override protected void onCreate(Bundle zustand) {
+        super.onCreate(zustand);
+        WebBasis.vollbild(this);
+        setContentView(baueAnsicht());
     }
 
-    private boolean routeNavigation(Uri uri) {
-        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
-        String path = uri.getPath() == null ? "" : uri.getPath();
-        if (HOST.equals(host)) {
-            // Startbildschirm-Kacheln, die eine native Ansicht brauchen.
-            if (path.equalsIgnoreCase("/lokal") || path.equalsIgnoreCase("/lokal/")) {
-                openConnector("local");
-                return true;
-            }
-            if (path.equalsIgnoreCase("/extras") || path.equalsIgnoreCase("/extras/")) {
-                openConnector("extras");
-                return true;
-            }
-            // Die Universalfernbedienung ist ausschließlich über „Extras“ erreichbar.
-            if (path.equalsIgnoreCase("/WLAN-Fernbedienung/index.html") || path.startsWith("/WLAN-Fernbedienung/")) {
-                openConnector("extras");
-                return true;
-            }
-            return false;
-        }
-        if (ONLINE_HOST.equals(host)) {
-            if (path.equals("/connector") || path.startsWith("/connector/")) {
-                openConnector("online");
-                return true;
-            }
-            if (onlineGamePage) return false;
-            // The user's own TrashyGecko site stays in-app; other external sites use the browser.
-            if (path.startsWith("/spiele/")) {
-                onlineGamePage = true;
-                return false;
-            }
-        }
-        if ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) {
-            try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
-            catch (ActivityNotFoundException unavailable) { Toast.makeText(this, "Kein Browser für diesen Link verfügbar.", Toast.LENGTH_SHORT).show(); }
-            return true;
-        }
-        return true;
+    @Override protected void onResume() {
+        super.onResume();
+        if (status != null) status.setText(netzStatus());
     }
 
-    private void openConnector(String screen) {
-        Intent intent = new Intent(this, ConnectorActivity.class);
-        intent.putExtra(ConnectorActivity.EXTRA_INITIAL_SCREEN, screen);
-        startActivity(intent);
+    // ---------------------------------------------------------------- Aufbau
+
+    private View baueAnsicht() {
+        ScrollView rollen = new ScrollView(this);
+        rollen.setBackgroundColor(BG);
+        rollen.setFillViewport(true);
+
+        LinearLayout seite = new LinearLayout(this);
+        seite.setOrientation(LinearLayout.VERTICAL);
+        int rand = dp(18);
+        seite.setPadding(rand, dp(22), rand, dp(26));
+        rollen.addView(seite, new ScrollView.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout kopf = new LinearLayout(this);
+        kopf.setOrientation(LinearLayout.HORIZONTAL);
+        kopf.setGravity(Gravity.CENTER_VERTICAL);
+        TextView marke = text("TRASHYGECKO", 12, GOLD, true);
+        marke.setLetterSpacing(0.22f);
+        kopf.addView(marke, new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        status = text("", 12, MUTED, false);
+        kopf.addView(status);
+        seite.addView(kopf);
+
+        TextView titel = text("Was möchtest du spielen?", 28, GOLD, true);
+        titel.setPadding(0, dp(12), 0, dp(6));
+        seite.addView(titel);
+
+        TextView unter = text("Alles liegt auf dem Gerät – Spiele, Räume und Werkzeuge.", 15, MUTED, false);
+        unter.setPadding(0, 0, 0, dp(20));
+        seite.addView(unter);
+
+        kachel(seite, "Spiele",
+                "Spiele, Werkzeuge und Editoren. Einzelspieler läuft ohne Netz.",
+                v -> startActivity(new Intent(this, SpieleActivity.class)));
+        kachel(seite, "Lokales Netz",
+                "Raum aufmachen oder einem beitreten – ohne Internet, im selben WLAN.",
+                v -> starteConnector("local"));
+        kachel(seite, "Online-Räume",
+                "Chat und Spiele mit mehreren – auch die Würfelspiele. Braucht Internet.",
+                v -> starteConnector("online"));
+        kachel(seite, "Extras",
+                "Zusatzfunktionen – dort liegt auch die Universalfernbedienung für Fernseher im WLAN.",
+                v -> starteConnector("extras"));
+
+        TextView fuss = text("Keine Konten, keine Werbung. Spiele und Seiten liegen im App-Paket; "
+                + "nur Online-Räume brauchen ein Netz. Die Universalfernbedienung findest du unter Extras.",
+                12, MUTED, false);
+        fuss.setLineSpacing(0, 1.4f);
+        fuss.setPadding(0, dp(24), 0, 0);
+        seite.addView(fuss);
+        return rollen;
     }
 
-    private void injectGameModeChooser() {
-        if (webView == null) return;
-        // One listener on the document: the catalog rebuilds its tiles on every search,
-        // so listeners bound to single tiles would be lost with the old nodes.
-        String script = "(function(){if(window.__tgAndroidModeChooser)return;window.__tgAndroidModeChooser=1;"
-                + "document.addEventListener('click',function(ev){var t=ev.target;"
-                + "if(!t||!t.closest)return;var a=t.closest('a.spiel');"
-                + "if(!a||!a.querySelector('.m-online')||!window.TGApp)return;ev.preventDefault();"
-                + "var n=a.querySelector('.spiel-name');"
-                + "window.TGApp.chooseOnlineGame(a.getAttribute('href'),n?n.textContent:'');"
-                + "},true);})();";
-        webView.evaluateJavascript(script, null);
+    /** Eine Kachel: Punkt, Titel, Pfeil, darunter die Kurzbeschreibung. */
+    private void kachel(LinearLayout seite, String titel, String beschreibung,
+                        View.OnClickListener ziel) {
+        LinearLayout karte = new LinearLayout(this);
+        karte.setOrientation(LinearLayout.VERTICAL);
+        karte.setPadding(dp(16), dp(16), dp(16), dp(14));
+        karte.setBackground(flaeche(KARTE, dp(12), LINIE));
+        karte.setClickable(true);
+        karte.setFocusable(true);
+        LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        platz.bottomMargin = dp(12);
+        seite.addView(karte, platz);
+
+        LinearLayout zeile = new LinearLayout(this);
+        zeile.setOrientation(LinearLayout.HORIZONTAL);
+        zeile.setGravity(Gravity.CENTER_VERTICAL);
+        View punkt = new View(this);
+        punkt.setBackground(punkt());
+        LinearLayout.LayoutParams punktPlatz = new LinearLayout.LayoutParams(dp(9), dp(9));
+        punktPlatz.rightMargin = dp(10);
+        zeile.addView(punkt, punktPlatz);
+        zeile.addView(text(titel, 19, TEXT, true), new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        zeile.addView(text("›", 20, GOLD, false));
+        karte.addView(zeile);
+
+        TextView unten = text(beschreibung, 13, MUTED, false);
+        unten.setLineSpacing(0, 1.3f);
+        unten.setPadding(0, dp(6), 0, 0);
+        karte.addView(unten);
+
+        karte.setOnClickListener(ziel);
     }
 
-    private String safeGamePath(String value) {
-        if (!trustedLocalPage || value == null || value.length() > 240) return null;
-        if (!"/spiele/spiele.html".equals(currentPagePath)) return null;
-        String path = value.trim().replace('\\', '/');
-        while (path.startsWith("./")) path = path.substring(2);
-        if (path.startsWith("/") || path.contains("..") || path.indexOf('%') >= 0 || !SAFE_GAME.matcher(path).matches()) return null;
-        return "/spiele/" + path;
+    // -------------------------------------------------------------- Vernetzung
+
+    private void starteConnector(String bildschirm) {
+        startActivity(new Intent(this, ConnectorActivity.class)
+                .putExtra(ConnectorActivity.EXTRA_INITIAL_SCREEN, bildschirm));
     }
 
-    private String localGameUrl(String value) {
-        if (value == null || value.length() > 240) return null;
-        String path = value.trim().replace('\\', '/');
-        if (path.startsWith("/")) path = path.substring(1);
-        if (path.startsWith("spiele/")) path = path.substring("spiele/".length());
-        if (path.contains("..") || path.indexOf('%') >= 0 || !SAFE_GAME.matcher(path).matches()) return null;
-        return LOCAL_ROOT + "spiele/" + path;
+    /** Ohne Netz bleibt alles außer den Online-Räumen nutzbar – das sagt die Zeile. */
+    private String netzStatus() {
+        ConnectivityManager netz = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo aktiv = netz == null ? null : netz.getActiveNetworkInfo();
+        if (aktiv == null || !aktiv.isConnected()) return "offline spielbar";
+        String art = aktiv.getType() == ConnectivityManager.TYPE_WIFI ? "WLAN"
+                : aktiv.getType() == ConnectivityManager.TYPE_MOBILE ? "Mobilfunk" : "Netz";
+        return art + " · online bereit";
     }
 
-    private void showGameModeDialog(String path, String name) {
-        runOnUiThread(() -> {
-            // A quick double tap can arrive twice before the dialog is on screen.
-            if (modeDialog != null && modeDialog.isShowing()) return;
-            modeDialog = new AlertDialog.Builder(this)
-                .setTitle(name == null || name.trim().isEmpty() ? "Spielmodus" : name.trim().substring(0, Math.min(80, name.trim().length())))
-                .setMessage("Lokal/offline öffnet die eingebettete Spielseite. Online nutzt die vorhandenen Spielräume und den TrashyGecko-Server; dafür ist Internet erforderlich.")
-                .setNegativeButton("Lokal / offline", (dialog, which) -> {
-                    String local = LOCAL_ROOT + path.substring(1);
-                    onlineGamePage = false;
-                    webView.loadUrl(local);
-                })
-                .setPositiveButton("Online-Spiel", (dialog, which) -> {
-                    onlineGamePage = true;
-                    webView.loadUrl(ONLINE_ROOT + path);
-                })
-                .setNeutralButton("Abbrechen", null)
-                .show();
-        });
+    // -------------------------------------------------------------- Kleinkram
+
+    private GradientDrawable flaeche(int farbe, int radius, int randfarbe) {
+        GradientDrawable form = new GradientDrawable();
+        form.setColor(farbe);
+        form.setCornerRadius(radius);
+        form.setStroke(Math.max(1, dp(1)), randfarbe);
+        return form;
     }
 
-    private static boolean isLocalAsset(String url) {
-        try { Uri uri = Uri.parse(url); return "https".equals(uri.getScheme()) && HOST.equals(uri.getHost()); }
-        catch (RuntimeException ignored) { return false; }
+    private GradientDrawable punkt() {
+        GradientDrawable form = new GradientDrawable();
+        form.setShape(GradientDrawable.OVAL);
+        form.setColor(GOLD);
+        return form;
     }
 
-    private static boolean isMahjongPage(String url) {
-        try { return isLocalAsset(url) && "/spiele/brettspiele/mahjong/mahjong.html".equals(Uri.parse(url).getPath()); }
-        catch (RuntimeException ignored) { return false; }
+    private TextView text(String wert, int groesse, int farbe, boolean fett) {
+        TextView feld = new TextView(this);
+        feld.setText(wert);
+        feld.setTextSize(TypedValue.COMPLEX_UNIT_SP, groesse);
+        feld.setTextColor(farbe);
+        if (fett) feld.setTypeface(Typeface.DEFAULT_BOLD);
+        return feld;
     }
 
-    private void showWebViewError() {
-        TextView message = new TextView(this);
-        message.setText("TrashyGecko benötigt eine verfügbare Android System WebView. Aktiviere oder aktualisiere WebView/Chrome und starte die App erneut.");
-        message.setTextColor(Color.WHITE);
-        message.setPadding(32, 32, 32, 32);
-        setContentView(message);
+    private int dp(int wert) {
+        return Math.round(wert * getResources().getDisplayMetrics().density);
     }
 
-    private void vollbild() {
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        controller.hide(WindowInsetsCompat.Type.systemBars());
-        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-    }
+    // ------------------------------------------------------------ Lebenszyklus
 
-    @Override public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) vollbild();
-    }
-
-    private final class HomepageBridge {
-        @JavascriptInterface public void chooseOnlineGame(String relativePath, String name) {
-            String path = safeGamePath(relativePath);
-            if (path != null) showGameModeDialog(path, name);
+    @Override public void onWindowFocusChanged(boolean hatFokus) {
+        super.onWindowFocusChanged(hatFokus);
+        if (hatFokus) {
+            WebBasis.vollbild(this);
         }
     }
 
-    private final class MahjongBridge {
-        @JavascriptInterface public void verlassen() {
-            if (!"/spiele/brettspiele/mahjong/mahjong.html".equals(currentPagePath)) return;
-            runOnUiThread(() -> {
-                if (webView != null && webView.canGoBack()) webView.goBack();
-                else if (webView != null) webView.loadUrl(HOME_URL);
-            });
-        }
-    }
-
-    @Override protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        String target = localGameUrl(intent == null ? null : intent.getStringExtra(EXTRA_START_PATH));
-        if (target != null && webView != null) webView.loadUrl(target);
-    }
     @Override public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
-        else finishAffinity();
-    }
-
-    @Override protected void onPause() { if (webView != null) webView.onPause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (webView != null) webView.onResume(); }
-    @Override protected void onDestroy() {
-        trustedLocalPage = false;
-        if (modeDialog != null) { modeDialog.dismiss(); modeDialog = null; }
-        if (webView != null) { webView.removeJavascriptInterface("TGApp"); webView.removeJavascriptInterface("TMahjong"); webView.stopLoading(); webView.destroy(); webView = null; }
-        super.onDestroy();
+        finishAffinity();
     }
 }

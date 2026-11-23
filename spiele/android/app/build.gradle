@@ -144,6 +144,67 @@ tasks.register("verifyHomepageGames") {
     }
 }
 
+// Der Spielekatalog der Website bleibt die einzige Quelle. Für die native
+// Spieleliste entsteht daraus beim Bauen eine JSON-Datei im APK.
+tasks.register("katalogBauen") {
+    dependsOn "homepageKopieren"
+    def quelle = new File(wwwZiel, "spiele/spiele.html")
+    def register = new File(wwwZiel, "spiele/multiplayer-register.js")
+    def ziel = new File(projectDir, "src/main/assets/katalog.json")
+    inputs.file(quelle)
+    inputs.files(register).optional()
+    outputs.file(ziel)
+    doLast {
+        if (!quelle.isFile()) throw new GradleException("Spielekatalog fehlt: ${quelle}")
+        String html = quelle.getText("UTF-8")
+
+        def kategorien = []
+        def katMatcher = (html =~ /\{\s*id:\s*"([^"]+)",\s*name:\s*"([^"]+)"/)
+        while (katMatcher.find()) {
+            kategorien << [id: katMatcher.group(1), name: katMatcher.group(2)]
+        }
+        if (kategorien.isEmpty()) throw new GradleException("Keine Kategorien im Spielekatalog erkannt")
+        def katNamen = kategorien.collectEntries { [(it.id): it.name] }
+
+        String registerText = register.isFile() ? register.getText("UTF-8") : ""
+        String spieleBaum = new File(wwwZiel, "spiele").getPath().replace('\\', '/')
+
+        def spiele = []
+        def matcher = (html =~ /(?m)^\s*\["([^"]+)",\s*"([^"]+\.html)",\s*"([^"]+)",\s*"([^"]*)"(?:,\s*"([^"]*)")?\]/)
+        while (matcher.find()) {
+            String name = matcher.group(1)
+            String relative = matcher.group(2).replace('\\', '/')
+            if (relative.split('/').any { it == '..' }) throw new GradleException("Unsicherer Spielepfad: ${relative}")
+            File seite = new File(new File(wwwZiel, "spiele"), relative)
+            if (!seite.isFile()) throw new GradleException("Spiel fehlt in den Android-Assets: ${relative}")
+            List<String> merkmale = (matcher.group(4) ?: "").trim().split(/\s+/).findAll { it } as List<String>
+            if (registerText.contains("/spiele/${relative}")) {
+                if (!merkmale.contains("multi")) merkmale << "multi"
+                if (!merkmale.contains("online")) merkmale << "online"
+            }
+            spiele << [
+                name: name,
+                pfad: "spiele/${relative}",
+                kategorie: matcher.group(3),
+                kategorieName: katNamen[matcher.group(3)] ?: matcher.group(3),
+                merkmale: merkmale,
+                suche: (matcher.group(5) ?: "").trim().toLowerCase(Locale.ROOT)
+            ]
+        }
+        if (spiele.isEmpty()) throw new GradleException("Keine Spiele für katalog.json erkannt")
+
+        def daten = [
+            quelle: "spiele/spiele.html",
+            anzahl: spiele.size(),
+            kategorien: kategorien,
+            spiele: spiele
+        ]
+        ziel.parentFile.mkdirs()
+        ziel.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(daten)) + "\n", "UTF-8")
+        println("Spielekatalog für die App: ${spiele.size()} Spiele (${kategorien.size()} Kategorien) -> ${ziel}")
+    }
+}
+
 def apkQuelle = hasReleaseSigning
         ? layout.buildDirectory.file("outputs/apk/release/app-release.apk")
         : layout.buildDirectory.file("outputs/apk/debug/app-debug.apk")
@@ -159,7 +220,7 @@ tasks.register("remoteProtocolTest", JavaExec) {
     mainClass = "de.trashygecko.tmahjong.remote.RemoteProtocolSelfTest"
 }
 tasks.named("preBuild") {
-    dependsOn "homepageKopieren"
+    dependsOn "homepageKopieren", "katalogBauen"
 }
 
 

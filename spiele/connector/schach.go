@@ -56,8 +56,12 @@ type ChessGame struct {
 	// BotZug ist ein fertig gerechneter Zug. BotRechnet zeigt auf die Partie,
 	// für die die Suche außerhalb der Sperre gerade läuft – eine neue Partie
 	// ersetzt die alte, damit gehört ihre Rechnung nicht zur neuen.
-	BotZug     *chessMove     `json:"-"`
-	BotRechnet *ChessGame     `json:"-"`
+	BotZug     *chessMove `json:"-"`
+	BotRechnet *ChessGame `json:"-"`
+	// BotGen zählt die Rechenversuche dieser Partie. Ein Ergebnis zählt nur
+	// für den Versuch, aus dem es stammt – nach einer Notbremse darf eine alte
+	// Rechnung nicht die neue überholen.
+	BotGen     int            `json:"-"`
 	Ruhe       int            `json:"-"`
 	Stellungen map[string]int `json:"-"`
 }

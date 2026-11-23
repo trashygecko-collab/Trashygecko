@@ -66,13 +66,22 @@ func muehleBotTreiben(room *Room, jetzt time.Time) bool {
 
 	g.BotFrist = time.Time{}
 	g.BotRechnet = g
+	g.BotGen++
+	gen := g.BotGen
 	schnappschuss := cloneMuehle(g)
 	stufe := g.BotStufe
+	wache := botWacheStarten(botRechenFrist,
+		func() bool { return room.Muehle == g && g.BotRechnet == g && g.BotGen == gen },
+		func() {
+			g.BotRechnet = nil
+			g.BotFrist = time.Now()
+		})
 	go func() {
 		aktion, ok := muehleBotZug(schnappschuss, farbe, stufe)
 		mu.Lock()
 		defer mu.Unlock()
-		muehleBotErgebnis(room, g, aktion, ok)
+		wache.Stop()
+		muehleBotErgebnis(room, g, gen, aktion, ok)
 	}()
 	return false
 }
@@ -81,8 +90,8 @@ func muehleBotTreiben(room *Room, jetzt time.Time) bool {
 // Partie, für die gerechnet wurde: Wurde sie inzwischen ersetzt (Reset oder
 // neue Bot-Partie), verfällt das Ergebnis, ohne die neue Partie anzufassen –
 // insbesondere bleibt deren Rechen-Zustand stehen. Der Aufrufer hält die Sperre.
-func muehleBotErgebnis(room *Room, quelle *MuehleGame, aktion muehleBotAktion, ok bool) bool {
-	if quelle == nil || room.Muehle != quelle {
+func muehleBotErgebnis(room *Room, quelle *MuehleGame, gen int, aktion muehleBotAktion, ok bool) bool {
+	if quelle == nil || room.Muehle != quelle || quelle.BotGen != gen {
 		return false
 	}
 	quelle.BotRechnet = nil
@@ -95,6 +104,10 @@ func muehleBotErgebnis(room *Room, quelle *MuehleGame, aktion muehleBotAktion, o
 
 // muehleBotZug wählt eine Aktion. Gibt es keine, ist die Partie vorbei.
 func muehleBotZug(g *MuehleGame, farbe, stufe string) (muehleBotAktion, bool) {
+	return muehleBotZugMitFrist(g, farbe, stufe, neueBotFrist(botSuchFrist))
+}
+
+func muehleBotZugMitFrist(g *MuehleGame, farbe, stufe string, frist *botFrist) (muehleBotAktion, bool) {
 	aktionen := muehleBotAktionen(g, farbe)
 	if len(aktionen) == 0 {
 		return muehleBotAktion{}, false
@@ -114,11 +127,17 @@ func muehleBotZug(g *MuehleGame, farbe, stufe string) (muehleBotAktion, bool) {
 	beste := aktionen[0]
 	besterWert := -1 << 30
 	for _, aktion := range aktionen {
+		if frist.abgebrochen {
+			break
+		}
 		probe := cloneMuehle(g)
 		if !muehleBotAnwenden(probe, farbe, aktion) {
 			continue
 		}
-		wert := muehleBotSuche(probe, farbe, tiefe-1, -1<<30, 1<<30)
+		wert := muehleBotSuche(probe, farbe, tiefe-1, -1<<30, 1<<30, frist)
+		if frist.abgebrochen {
+			break
+		}
 		if wert > besterWert || (wert == besterWert && botZufall().Intn(2) == 0) {
 			beste, besterWert = aktion, wert
 		}
@@ -234,7 +253,10 @@ func muehleBotAnwenden(g *MuehleGame, farbe string, aktion muehleBotAktion) bool
 	return false
 }
 
-func muehleBotSuche(g *MuehleGame, farbe string, tiefe, alpha, beta int) int {
+func muehleBotSuche(g *MuehleGame, farbe string, tiefe, alpha, beta int, frist *botFrist) int {
+	if frist.vorbei() {
+		return 0
+	}
 	if g.Status == "finished" || tiefe <= 0 {
 		return muehleBotWert(g, farbe)
 	}
@@ -249,7 +271,10 @@ func muehleBotSuche(g *MuehleGame, farbe string, tiefe, alpha, beta int) int {
 			if !muehleBotAnwenden(probe, g.Current, aktion) {
 				continue
 			}
-			wert := muehleBotSuche(probe, farbe, tiefe-1, alpha, beta)
+			wert := muehleBotSuche(probe, farbe, tiefe-1, alpha, beta, frist)
+			if frist.abgebrochen {
+				break
+			}
 			if wert > best {
 				best = wert
 			}
@@ -268,7 +293,10 @@ func muehleBotSuche(g *MuehleGame, farbe string, tiefe, alpha, beta int) int {
 		if !muehleBotAnwenden(probe, g.Current, aktion) {
 			continue
 		}
-		wert := muehleBotSuche(probe, farbe, tiefe-1, alpha, beta)
+		wert := muehleBotSuche(probe, farbe, tiefe-1, alpha, beta, frist)
+		if frist.abgebrochen {
+			break
+		}
 		if wert < best {
 			best = wert
 		}

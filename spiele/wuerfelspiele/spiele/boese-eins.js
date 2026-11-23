@@ -66,6 +66,10 @@ TGW.anmelden({
     if (p.fertig) {
       if (TGW.endeNachHoechstem(z, function (q) { return q.summe; }, "Höchste Summe")) return;
       TGW.naechster(z);
+      if (wert === 1 && !z.ende) {
+        TGW.meldung(z, p.name + " würfelt eine Eins – die " + p.summe +
+          " Punkte sind weg. Jetzt ist " + z.spieler[z.dran].name + " dran.");
+      }
     }
   }
 });

@@ -450,18 +450,28 @@ async function api(aktion, koerper) {
   return r.json();
 }
 
+// Eine offene Runde tritt jedem bei, der die Seite im Raum oeffnet. Der
+// Server kennt "join"; hier wird es einmal je Seitenaufruf geschickt.
+let beitrittVersucht = false;
+
 async function hole() {
   if (!ONLINE || onlineBusy) return;
   onlineBusy = true;
+  let beitreten = false;
   try {
     const d = await api(null);
     onlineGame = d.game || null;
+    const g = onlineGame;
+    beitreten = !!(g && g.status === "invited" && !beitrittVersucht &&
+      !(g.spieler || []).some((s) => s.id === MYID));
+    if (beitreten) beitrittVersucht = true;
     zeichne();
   } catch (e) {
     elLage.textContent = e.message;
   } finally {
     onlineBusy = false;
   }
+  if (beitreten) schicke("join");
 }
 
 async function schicke(aktion, koerper) {
@@ -637,7 +647,10 @@ function zeichneOnline() {
     return;
   }
   const ich = zeichneAlles(g);
-  zeichneKarte(ich ? ich.karte : [], ich ? ich.karte.map((zahl) => (ich.markiert || []).includes(zahl)) : []);
+  // Vor dem Start (Status "invited") gibt es noch keine Karten: Der Server
+  // laesst das Feld dann ganz weg.
+  const karte = (ich && ich.karte) || [];
+  zeichneKarte(karte, karte.map((zahl) => ((ich && ich.markiert) || []).includes(zahl)));
   $("btnErstellen").classList.toggle("versteckt", true);
   $("btnBereit").classList.toggle("versteckt", g.status !== "invited");
   $("btnLos").classList.toggle("versteckt", g.status !== "invited");

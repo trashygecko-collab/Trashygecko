@@ -78,6 +78,14 @@ type HalmaGame struct {
 	Verlauf  []string       `json:"verlauf"`
 	Note     string         `json:"note,omitempty"`
 
+	BotID    string    `json:"botId,omitempty"`
+	BotStufe string    `json:"botStufe,omitempty"`
+	BotFrist time.Time // nächster Zug des Computers (nur serverseitig)
+	// BotZug merkt sich je Platz den letzten Zug. Damit kann der Bot nicht
+	// endlos denselben Zug hin und zurück schieben, wenn keine Figur näher
+	// ans Ziel kommt (Sternbrett, enge Häuser).
+	BotZug map[int][2]int `json:"-"`
+
 	brett *HalmaBrett
 }
 
@@ -500,6 +508,55 @@ func halmaBrettFuer(g *HalmaGame) *HalmaBrett {
 	return g.brett
 }
 
+// halmaZiehen führt einen Zug aus, wenn die Regeln ihn erlauben. Mensch und
+// Bot gehen durch dieselbe Prüfung: der Bot hat keinen eigenen Weg aufs Brett.
+// Der Text ist die Meldung für den Spieler ("" heißt: Zug ausgeführt).
+func halmaZiehen(g *HalmaGame, k, von, nach int) (string, bool) {
+	if g == nil || g.Status != "active" || k < 0 || k >= len(g.Spieler) {
+		return "Es läuft gerade keine aktive Partie.", false
+	}
+	b := halmaBrettFuer(g)
+	platz := g.Spieler[k].Platz
+	if von < 0 || von >= len(g.Belegung) || g.Belegung[von] != platz {
+		return "Das ist nicht deine Figur.", false
+	}
+	zug, gut := halmaZugPruefen(b, g.Belegung, g.Variante, von, nach)
+	if !gut {
+		return "Dieser Zug ist nach den Regeln nicht erlaubt.", false
+	}
+	zug.Spieler = k
+	if g.BotZug == nil {
+		g.BotZug = map[int][2]int{}
+	}
+	g.BotZug[platz] = [2]int{zug.Von, zug.Nach}
+	g.Belegung[zug.Nach] = platz
+	g.Belegung[zug.Von] = -1
+	g.Letzter = &HalmaZug{Von: zug.Von, Nach: zug.Nach, Weg: zug.Weg, Art: zug.Art, Spieler: k}
+	g.ZugNr++
+	text := g.Spieler[k].Name + ": "
+	if zug.Art == "sprung" {
+		text += "Sprung"
+		if len(zug.Weg) > 1 {
+			text += "kette über " + strconv.Itoa(len(zug.Weg)) + " Figuren"
+		}
+	} else {
+		text += "ein Schritt"
+	}
+	g.Verlauf = append(g.Verlauf, text+feldernamen(b, zug.Nach))
+	if len(g.Verlauf) > 40 {
+		g.Verlauf = g.Verlauf[len(g.Verlauf)-40:]
+	}
+	if halmaSieg(b, g.Belegung, platz) {
+		g.Status = "finished"
+		g.Sieger = k
+		g.Note = g.Spieler[k].Name + " hat alle Figuren im Ziel."
+	} else {
+		g.Current = (g.Current + 1) % len(g.Spieler)
+		g.Note = g.Spieler[g.Current].Name + " ist am Zug."
+	}
+	return "", true
+}
+
 // --------------------------------------------------------------- Handler
 
 func halmaHandler(w http.ResponseWriter, r *http.Request) {
@@ -523,6 +580,9 @@ func halmaHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if room.Halma != nil {
+			halmaBotTreiben(room.Halma, time.Now())
+		}
 		sicht := halmaSicht(room.Halma)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": sicht})
@@ -539,6 +599,7 @@ func halmaHandler(w http.ResponseWriter, r *http.Request) {
 		Anzahl   int    `json:"anzahl"`
 		Von      int    `json:"von"`
 		Nach     int    `json:"nach"`
+		Stufe    string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -567,6 +628,54 @@ func halmaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		// Mensch gegen Computer: der Computer sitzt im Gegenhaus, die Partie
+		// läuft sofort. Gerechnet wird er im GET, damit auch eine Seite ohne
+		// offenes Fenster weiterkommt.
+		room.botNamenNeu()
+		if room.Halma != nil && room.Halma.Status != "finished" {
+			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Halma-Partie.")
+			return
+		}
+		// Der Bot rechnet mit Abständen zum Zielhaus. Auf dem Sternbrett
+		// verkeilen sich zwei so rechnende Spieler im Gedränge vor den Häusern
+		// (gemessen: 1200 Züge ohne Sieger), deshalb spielt er die beiden
+		// Brettarten, die zuverlässig zu Ende gehen.
+		variante := input.Variante
+		if variante != halmaKlassisch && variante != halmaSprung {
+			variante = halmaKlassisch
+		}
+		anzahl := input.Anzahl
+		if !halmaEnthaelt(halmaSpielerzahlen(variante), anzahl) {
+			anzahl = 2
+		}
+		stufe := botStufe(input.Stufe)
+		g := halmaNeu(input.ID, player.Name, variante, anzahl)
+		b := halmaBrettFuer(g)
+		frei := halmaFreierPlatz(g)
+		if frei < 0 {
+			fehler(http.StatusConflict, "Kein freies Haus für den Computer.")
+			return
+		}
+		g.Spieler[0].Bereit = true
+		g.Spieler = append(g.Spieler, HalmaSpieler{ID: botID(1), Name: room.botName(1), Platz: frei, Art: "bot", Bereit: true})
+		g.Plaetze = halmaSitzplaetze(g)
+		g.Belegung = halmaAufstellung(b, g.Plaetze)
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Status = "active"
+		g.Current = 0
+		g.ZugNr = 1
+		g.Sieger = -1
+		g.BotFrist = time.Now().Add(botWartezeit(stufe))
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + "). " + player.Name + " beginnt."
+		room.Halma = g
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Halma gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if room.Halma != nil && room.Halma.Status != "finished" {
 			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Halma-Partie.")
@@ -680,42 +789,9 @@ func halmaHandler(w http.ResponseWriter, r *http.Request) {
 			fehler(http.StatusConflict, "Jetzt ist "+g.Spieler[g.Current].Name+" am Zug.")
 			return
 		}
-		b := halmaBrettFuer(g)
-		platz := g.Spieler[k].Platz
-		if input.Von < 0 || input.Von >= len(g.Belegung) || g.Belegung[input.Von] != platz {
-			fehler(http.StatusConflict, "Das ist nicht deine Figur.")
+		if text, gut := halmaZiehen(g, k, input.Von, input.Nach); !gut {
+			fehler(http.StatusConflict, text)
 			return
-		}
-		zug, gut := halmaZugPruefen(b, g.Belegung, g.Variante, input.Von, input.Nach)
-		if !gut {
-			fehler(http.StatusConflict, "Dieser Zug ist nach den Regeln nicht erlaubt.")
-			return
-		}
-		zug.Spieler = k
-		g.Belegung[zug.Nach] = platz
-		g.Belegung[zug.Von] = -1
-		g.Letzter = &HalmaZug{Von: zug.Von, Nach: zug.Nach, Weg: zug.Weg, Art: zug.Art, Spieler: k}
-		g.ZugNr++
-		text := g.Spieler[k].Name + ": "
-		if zug.Art == "sprung" {
-			text += "Sprung"
-			if len(zug.Weg) > 1 {
-				text += "kette über " + strconv.Itoa(len(zug.Weg)) + " Figuren"
-			}
-		} else {
-			text += "ein Schritt"
-		}
-		g.Verlauf = append(g.Verlauf, text+feldernamen(b, zug.Nach))
-		if len(g.Verlauf) > 40 {
-			g.Verlauf = g.Verlauf[len(g.Verlauf)-40:]
-		}
-		if halmaSieg(b, g.Belegung, platz) {
-			g.Status = "finished"
-			g.Sieger = k
-			g.Note = g.Spieler[k].Name + " hat alle Figuren im Ziel."
-		} else {
-			g.Current = (g.Current + 1) % len(g.Spieler)
-			g.Note = g.Spieler[g.Current].Name + " ist am Zug."
 		}
 
 	case "reset":

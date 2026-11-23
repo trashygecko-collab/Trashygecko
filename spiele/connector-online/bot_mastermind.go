@@ -182,12 +182,21 @@ func mastermindBotTreiben(room *Room, now time.Time) {
 	}
 
 	g.BotRechnet = g
+	g.BotGen++
+	gen := g.BotGen
 	schnappschuss := cloneMastermind(g)
+	wache := botWacheStarten(botRechenFrist,
+		func() bool { return room.Mastermind == g && g.BotRechnet == g && g.BotGen == gen },
+		func() {
+			g.BotRechnet = nil
+			g.BotFrist = time.Now()
+		})
 	go func() {
 		rate := mastermindBotRate(schnappschuss)
 		mu.Lock()
 		defer mu.Unlock()
-		mastermindBotErgebnis(room, g, rate)
+		wache.Stop()
+		mastermindBotErgebnis(room, g, gen, rate)
 	}()
 }
 
@@ -195,8 +204,8 @@ func mastermindBotTreiben(room *Room, now time.Time) {
 // die Partie, für die gerechnet wurde: Wurde sie inzwischen ersetzt (Reset oder
 // neue Bot-Partie), verfällt das Ergebnis, ohne die neue Partie anzufassen –
 // insbesondere bleibt deren Rechen-Zustand stehen. Der Aufrufer hält die Sperre.
-func mastermindBotErgebnis(room *Room, quelle *MastermindGame, rate []int) bool {
-	if quelle == nil || room.Mastermind != quelle {
+func mastermindBotErgebnis(room *Room, quelle *MastermindGame, gen int, rate []int) bool {
+	if quelle == nil || room.Mastermind != quelle || quelle.BotGen != gen {
 		return false
 	}
 	quelle.BotRechnet = nil

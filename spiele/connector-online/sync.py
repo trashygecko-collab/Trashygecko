@@ -4,6 +4,7 @@
 Aufruf:  python sync.py            (nur kopieren und Windows-exe bauen)
          python sync.py --linux    (zusätzlich eine Linux-Datei für den Server)
          python sync.py --nur-kopieren
+         python sync.py --pruefen  (nur vergleichen; Exit 1 bei Abweichung)
 
 Was hier bleibt und nicht überschrieben wird: main.go, netz.go, status.go,
 qr.go, sync.py, README.md und alles, was nicht aus ../connector stammt.
@@ -68,6 +69,38 @@ def kopieren():
     return neu, geaendert
 
 
+def pruefen():
+    """Vergleicht beide Bäume, ohne etwas zu kopieren.
+
+    Gemeldet wird jede gemeinsame Datei, die fehlt oder abweicht. Die
+    Online-eigenen Dateien (EIGENE) dürfen abweichen, müssen aber vorhanden
+    sein. Rückgabewert 0 = synchron, 1 = Abweichung.
+    """
+    fehlend = []
+    abweichend = []
+    gemeinsam = gemeinsame_dateien()
+    for name in gemeinsam:
+        quelle = os.path.join(QUELLE, name)
+        ziel = os.path.join(HIER, name)
+        if not os.path.isfile(ziel):
+            fehlend.append(name)
+        elif not gleich(quelle, ziel):
+            abweichend.append(name)
+    for name in sorted(EIGENE):
+        if not os.path.isfile(os.path.join(HIER, name)):
+            fehlend.append(name)
+
+    if fehlend:
+        print("fehlt in connector-online: " + ", ".join(fehlend))
+    if abweichend:
+        print("weicht ab: " + ", ".join(abweichend))
+        print("Änderung gehört in connector, dann: python sync.py --nur-kopieren")
+    if fehlend or abweichend:
+        return 1
+    print("synchron (%d gemeinsame Dateien, %d Online-Dateien)" % (len(gemeinsam), len(EIGENE)))
+    return 0
+
+
 def bauen(linux=False):
     print("go vet …")
     subprocess.run(["go", "vet", "./..."], cwd=HIER, check=True)
@@ -93,6 +126,9 @@ def bauen(linux=False):
 def main():
     if not os.path.isdir(QUELLE):
         raise SystemExit("Quellordner fehlt: %s" % QUELLE)
+
+    if "--pruefen" in sys.argv:
+        raise SystemExit(pruefen())
 
     kopieren()
     if "--nur-kopieren" in sys.argv:

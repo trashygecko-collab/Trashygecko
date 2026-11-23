@@ -252,6 +252,13 @@ button:disabled { opacity:.35; cursor:not-allowed; }
   color:#e8cd8e;
   min-height:24px;
 }
+#message.meldung {
+  color:#ffe6a8;
+  background:#173a2f;
+  border-left:3px solid #e8cd8e;
+  border-radius:6px;
+  font-weight:bold;
+}
 .controls {
   display:flex;
   gap:10px;
@@ -587,7 +594,15 @@ const ONLINE_API = "/api/uno";
 
 let G = null;
 let onlineBusy = false;
+let onlineLetzteTat = 0;
+let onlineLetzteAktion = "";
 let stateSeq = 0;
+// Rueckmeldung: Ein Pass bleibt rund zwei Sekunden stehen, damit die gezogene
+// Karte und der Grund lesbar sind, bevor der naechste Spielstand kommt.
+const ERGEBNIS_DAUER = 2000;
+let halteBis = 0;
+let meldungTimer = 0;
+let warteNeu = null;   // neuer Stand, der erst nach der Anzeige uebernommen wird
 
 // ---- Lokales Spiel an einem Gerät ----
 let players = [];
@@ -1068,8 +1083,9 @@ function render(){
 
   $("handTitle").textContent = ONLINE ? "DEINE KARTEN" : "KARTEN VON " + dran.toUpperCase();
 
-  $("drawButton").disabled = !(ichDran && s.phase === "playing" && !s.drawn);
+  $("drawButton").disabled = !(ichDran && s.phase === "playing" && !s.drawn) || Date.now() < halteBis;
   $("passButton").classList.toggle("hidden", !(ichDran && s.drawn));
+  $("passButton").disabled = Date.now() < halteBis;
   $("unoButton").classList.toggle("hidden", !(s.pendingUno === s.mySeat && s.status === "active"));
   $("unoButton").disabled = s.pendingUno !== s.mySeat;
 
@@ -1077,6 +1093,7 @@ function render(){
   $("challengeRow").classList.toggle("hidden", !s.mustChallenge);
 
   if (s.note) setMessage(s.note);
+  $("message").classList.toggle("meldung", Date.now() < halteBis);
 
   if (s.status === "finished") {
     $("message").textContent = s.winner ? s.winner + " hat gewonnen!" : "Spiel beendet.";
@@ -1145,9 +1162,31 @@ async function onlineFetch(url, options){
 }
 
 
+function meldungWert(note){ return /passt – /.test(note || ""); }
+
 function applyOnlineState(view){
   if (!view) return;
-  G = view;
+  if (Date.now() < halteBis) return;
+  const vorher = G;
+  const altNote = vorher && vorher.note || "";
+  if (vorher && view.note !== altNote && meldungWert(view.note)) {
+    // Der Server hat den Zug schon weitergegeben. Fuer die Anzeige bleibt der
+    // Wechsel beim handelnden Spieler, bis Karte und Grund lesbar waren; erst
+    // danach wird der neue Stand uebernommen.
+    warteNeu = view;
+    halteBis = Date.now() + ERGEBNIS_DAUER;
+    clearTimeout(meldungTimer);
+    meldungTimer = setTimeout(() => {
+      halteBis = 0;
+      const neu = warteNeu;
+      warteNeu = null;
+      if (neu) G = neu;
+      render();
+    }, ERGEBNIS_DAUER + 30);
+    G = Object.assign({}, view, { current: vorher.current });
+  } else {
+    G = view;
+  }
   renderLobby();
   if (G.status === "invited") {
     $("lobby").classList.remove("hidden");
@@ -1172,7 +1211,10 @@ async function refreshOnline(){
 }
 
 async function unoAction(action, payload){
+  const schluessel = action + "|" + JSON.stringify(payload || {});
   if (onlineBusy) return;
+  if (schluessel === onlineLetzteAktion && Date.now() - onlineLetzteTat < 400) return;
+  if (Date.now() < halteBis) return;
   onlineBusy = true;
   try{
     const data = await onlineFetch(ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
@@ -1185,7 +1227,7 @@ async function unoAction(action, payload){
     $("lobbyHint").textContent = e.message;
     $("message").textContent = e.message;
   }finally{
-    onlineBusy = false;
+    onlineBusy = false; onlineLetzteTat = Date.now(); onlineLetzteAktion = schluessel;
   }
 }
 

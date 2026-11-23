@@ -248,6 +248,13 @@ html[data-stil="buben"] .turn-box{background:#16181c;border-color:#23262c;color:
   margin:8px;
   font-weight:bold;
 }
+#status.meldung {
+  color:#ffe6a8;
+  background:#173a2f;
+  border-left:3px solid #d9bc7c;
+  border-radius:6px;
+  padding-left:8px;
+}
 #score {
   color:var(--gold);
   text-align:center;
@@ -559,7 +566,15 @@ const ONLINE_API = "/api/schwimmen";
 
 let G = null;
 let onlineBusy = false;
+let onlineLetzteTat = 0;
+let onlineLetzteAktion = "";
 let stateSeq = 0;
+// Rueckmeldung: Ein Pass bleibt rund zwei Sekunden stehen, damit die gezogene
+// Karte und der Grund lesbar sind, bevor der naechste Spielstand kommt.
+const ERGEBNIS_DAUER = 2000;
+let halteBis = 0;
+let meldungTimer = 0;
+let warteNeu = null;   // neuer Stand, der erst nach der Anzeige uebernommen wird
 
 // ---- Lokales Spiel an einem Gerät ----
 let players = [];
@@ -1019,9 +1034,10 @@ function render(){
   $("turnBanner").classList.toggle("you",ichDran&&!wertung&&s.status==="active");
   $("turnBanner").classList.toggle("knock",klopfrunde&&s.status==="active"&&!wertung);
 
-  $("status").textContent = (s.status==="finished"||wertung)
+  $("status").textContent = (s.status==="finished"||wertung||Date.now()<halteBis)
     ? (s.note || "")
     : dran+" ist am Zug";
+  $("status").classList.toggle("meldung",Date.now()<halteBis);
 
   // Verlauf der Züge: neuester Eintrag oben und hervorgehoben.
   const verlauf=$("log");
@@ -1065,10 +1081,11 @@ function render(){
   $("score").textContent = s.status==="finished" ? "" : "Deine Punkte: "+scoreText(s.score)+" / 31";
 
   const darfTauschen = ichDran && s.phase==="playing";
-  $("swapOne").disabled = !(darfTauschen && selectedHand>=0 && selectedTable>=0);
-  $("swapAll").disabled = !darfTauschen;
-  $("pass").disabled = !darfTauschen;
-  $("knock").disabled = !(darfTauschen && s.finalTurns<0);
+  const halten = Date.now()<halteBis;
+  $("swapOne").disabled = !(darfTauschen && selectedHand>=0 && selectedTable>=0) || halten;
+  $("swapAll").disabled = !darfTauschen || halten;
+  $("pass").disabled = !darfTauschen || halten;
+  $("knock").disabled = !(darfTauschen && s.finalTurns<0) || halten;
 
   // Rundenauswertung mit allen Karten – nur wenn die Runde vorbei ist.
   const reveal=$("reveal");
@@ -1210,6 +1227,44 @@ async function onlineFetch(url, options){
 }
 
 
+function meldungWert(note){ return /( schiebt\.|Alle schieben)/.test(note || ""); }
+
+// uebernehmen zeigt einen neuen Spielstand; waehrend der Rueckmeldung bleiben
+// Karten und Grund stehen, danach geht es mit dem naechsten Stand weiter.
+function uebernehmen(view){
+  if (!view) return;
+  if (Date.now() < halteBis) return;
+  const vorher=G;
+  const altNote=vorher&&vorher.note||"";
+  if (vorher && view.note!==altNote && meldungWert(view.note)) {
+    // Der Server hat den Zug schon weitergegeben. Fuer die Anzeige bleibt der
+    // Wechsel beim handelnden Spieler, bis Karte und Grund lesbar waren; erst
+    // danach wird der neue Stand uebernommen.
+    warteNeu=view;
+    halteBis=Date.now()+ERGEBNIS_DAUER;
+    clearTimeout(meldungTimer);
+    meldungTimer=setTimeout(()=>{
+      halteBis=0;
+      const neu=warteNeu;
+      warteNeu=null;
+      if (neu) G=neu;
+      render();
+    },ERGEBNIS_DAUER+30);
+    G=Object.assign({},view,{current:vorher.current,myTurn:vorher.myTurn});
+  } else {
+    G=view;
+  }
+  renderLobby();
+  if (G.status==="invited") {
+    $("lobby").classList.remove("hidden");
+    $("game").classList.add("hidden");
+    return;
+  }
+  $("lobby").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  render();
+}
+
 async function refreshOnline(){
   if (onlineBusy) return;
   const mySeq=++stateSeq;
@@ -1217,23 +1272,17 @@ async function refreshOnline(){
     const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&id="+encodeURIComponent(PLAYER_ID));
     if (mySeq<stateSeq) return;
     if (!data.game) return;
-    G=data.game;
-    renderLobby();
-    if (G.status==="invited") {
-      $("lobby").classList.remove("hidden");
-      $("game").classList.add("hidden");
-      return;
-    }
-    $("lobby").classList.add("hidden");
-    $("game").classList.remove("hidden");
-    render();
+    uebernehmen(data.game);
   }catch(e){
     $("lobbyHint").textContent="Verbindung wackelt – die Seite versucht es weiter …";
   }
 }
 
 async function schwimmAction(action,payload){
+  const schluessel=action+"|"+JSON.stringify(payload||{});
   if (onlineBusy) return;
+  if (schluessel===onlineLetzteAktion && Date.now()-onlineLetzteTat<400) return;
+  if (Date.now() < halteBis) return;
   onlineBusy=true;
   try{
     const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{
@@ -1241,16 +1290,12 @@ async function schwimmAction(action,payload){
       body:JSON.stringify({id:PLAYER_ID, ...(payload||{})})
     });
     stateSeq++;
-    G=data.game;
-    renderLobby();
-    $("lobby").classList.add("hidden");
-    $("game").classList.remove("hidden");
-    render();
+    uebernehmen(data.game);
   }catch(e){
     $("lobbyHint").textContent=e.message;
     $("status").textContent=e.message;
   }finally{
-    onlineBusy=false;
+    onlineBusy=false; onlineLetzteTat=Date.now(); onlineLetzteAktion=schluessel;
   }
 }
 

@@ -59,20 +59,23 @@ type WortsucheFund struct {
 }
 
 type WortsucheGame struct {
-	ID      string             `json:"id"`
-	HostID  string             `json:"hostId"`
-	Status  string             `json:"status"` // invited, spiel, ende
-	Runde   int                `json:"runde"`
-	Kante   int                `json:"kante"`
-	Gitter  [][]string         `json:"gitter"`
-	Worte   []string           `json:"worte"`
-	Funde   []WortsucheFund    `json:"funde"`
-	Spieler []WortsucheSpieler `json:"spieler"`
-	Rest    int                `json:"rest"` // Sekunden
-	Sieger  string             `json:"sieger,omitempty"`
-	Note    string             `json:"note,omitempty"`
+	ID       string             `json:"id"`
+	HostID   string             `json:"hostId"`
+	Status   string             `json:"status"` // invited, spiel, ende
+	Runde    int                `json:"runde"`
+	Kante    int                `json:"kante"`
+	Gitter   [][]string         `json:"gitter"`
+	Worte    []string           `json:"worte"`
+	Funde    []WortsucheFund    `json:"funde"`
+	Spieler  []WortsucheSpieler `json:"spieler"`
+	Rest     int                `json:"rest"` // Sekunden
+	Sieger   string             `json:"sieger,omitempty"`
+	Note     string             `json:"note,omitempty"`
+	BotID    string             `json:"botId,omitempty"`
+	BotStufe string             `json:"botStufe,omitempty"`
 
-	start time.Time // Beginn der Runde (nur serverseitig)
+	start    time.Time // Beginn der Runde (nur serverseitig)
+	BotFrist time.Time // nächster Fund des Computers (nur serverseitig)
 }
 
 func wortsucheNeuesSpiel(hostID, hostName, id string) *WortsucheGame {
@@ -318,6 +321,8 @@ func wortsucheHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		// Der Computer findet beim Abholen des Stands höchstens ein Wort.
+		wortsucheBotTreiben(room.Wortsuche, time.Now())
 		game := wortsucheAnzeige(room.Wortsuche)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -329,10 +334,11 @@ func wortsucheHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID   string `json:"id"`
-		Wort string `json:"wort"`
-		Von  [2]int `json:"von"`
-		Bis  [2]int `json:"bis"`
+		ID    string `json:"id"`
+		Wort  string `json:"wort"`
+		Von   [2]int `json:"von"`
+		Bis   [2]int `json:"bis"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -373,6 +379,29 @@ func wortsucheHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
+	case "bot":
+		// Mensch gegen Computer: beide sitzen, die Runde läuft sofort.
+		room.botNamenNeu()
+		if room.Wortsuche != nil && !room.gameSlotFree(room.Wortsuche.Status, wortsucheIDs(room.Wortsuche)...) {
+			fail("In diesem Spielraum läuft bereits eine Wortsuche.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		g := wortsucheNeuesSpiel(input.ID, player.Name, randomCode())
+		g.Spieler[0].Ready = true
+		g.Spieler = append(g.Spieler, WortsucheSpieler{ID: botID(1), Name: room.botName(1), Ready: true})
+		g.BotID, g.BotStufe = botID(1), stufe
+		g.Runde = 1
+		g.wortsucheRunde()
+		g.BotFrist = time.Now().Add(wortsucheBotPause(stufe))
+		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(stufe) + "). " + g.Note
+		room.Wortsuche = g
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Wortsuche gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
+		})
 	case "create":
 		if room.Wortsuche != nil && !room.gameSlotFree(room.Wortsuche.Status, wortsucheIDs(room.Wortsuche)...) {
 			fail("In diesem Spielraum läuft bereits eine Wortsuche.", http.StatusConflict)

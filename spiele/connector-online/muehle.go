@@ -66,7 +66,9 @@ type MuehleGame struct {
 	// Partie ersetzt die alte, damit gehört ihre Rechnung nicht zur neuen.
 	BotZug     *muehleBotAktion `json:"-"`
 	BotRechnet *MuehleGame      `json:"-"`
-	Stellungen map[string]int   `json:"-"`
+	// BotGen zählt die Rechenversuche dieser Partie (siehe ChessGame.BotGen).
+	BotGen     int            `json:"-"`
+	Stellungen map[string]int `json:"-"`
 }
 
 func muehleNewGame(hostID, hostName, guestID, guestName, id string) *MuehleGame {

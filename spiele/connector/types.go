@@ -244,6 +244,7 @@ type Room struct {
 	Rechen          *RechenGame
 	Mal             *Malbrett              // gemeinsame Zeichenfläche
 	Galgen          *GalgenGame            // Galgenmännchen
+	Quiz            *QuizGame              // Scherzshow (humorvolles Quiz)
 	Bingo           *BingoGame             // Bingo
 	Wortsuche       *WortsucheGame         // Wortsuche
 	Domino          *DominoGame            // Domino

@@ -58,11 +58,13 @@ func bomberBotTakt(g *BomberGame, stufe string) time.Duration {
 }
 
 // bomberBotLane sagt, ab wie vielen Sekunden Restzeit eine Schusslinie beim
-// Laufen gemieden wird. Mittel und schwer gehen gar nicht durch eine Bombe
-// (sie könnte dort stehen bleiben), leicht läuft achtlos durch.
+// Laufen gemieden wird. Alle drei Stufen gehen nicht durch eine Bombe: die
+// Flamme kommt schneller als jede Korrektur.
 func bomberBotLane(stufe string) float64 {
 	if botStufe(stufe) == botLeicht {
-		return 0.5
+		// Auch leicht meidet die eigene Schusslinie – die Stufe liegt im
+		// Tempo und im Zufall, nicht im Selbstmord.
+		return bomberBombenzeit
 	}
 	return bomberBombenzeit
 }
@@ -96,6 +98,15 @@ func bomberBotFeld(s *BomberSpieler) [2]int {
 // bomberBotGefahr sammelt je Feld die Sekunden bis zum Feuer. Steht eine
 // Flamme schon, sind es 0.
 func bomberBotGefahr(g *BomberGame) map[[2]int]float64 {
+	return bomberBotGefahrMit(g, nil)
+}
+
+// bomberBotGefahrMit rechnet zusätzlich eine noch nicht gelegte Bombe ein.
+// Gezählt wird in Zündreihenfolge: eine Bombe, die in eine fremde Flamme
+// gerät, zündet früher; eine Kiste, die eine Bombe wegräumt, macht den Weg
+// für eine später zündende Bombe frei. Genau diese beiden Fälle hat die alte
+// Schätzung übersehen – der Bot hielt Felder für sicher, die es nicht waren.
+func bomberBotGefahrMit(g *BomberGame, zusatz *BomberBombe) map[[2]int]float64 {
 	gefahr := map[[2]int]float64{}
 	setze := func(x, y int, rest float64) {
 		feld := [2]int{x, y}
@@ -106,22 +117,70 @@ func bomberBotGefahr(g *BomberGame) map[[2]int]float64 {
 	for _, f := range g.Flammen {
 		setze(f.X, f.Y, 0)
 	}
+
+	type zünder struct {
+		x, y, radius int
+		rest         float64
+		weg          bool
+	}
+	bomben := make([]zünder, 0, len(g.Bomben)+1)
 	for _, b := range g.Bomben {
 		rest := b.Rest
 		if rest < 0 {
 			rest = 0
 		}
-		setze(b.X, b.Y, rest)
+		bomben = append(bomben, zünder{b.X, b.Y, b.Radius, rest, false})
+	}
+	if zusatz != nil {
+		bomben = append(bomben, zünder{zusatz.X, zusatz.Y, zusatz.Radius, zusatz.Rest, false})
+	}
+	// Kisten: Zeitpunkt, zu dem sie fallen.
+	gefallen := map[[2]int]float64{}
+
+	for {
+		nächste := -1
+		for i := range bomben {
+			if bomben[i].weg {
+				continue
+			}
+			if nächste < 0 || bomben[i].rest < bomben[nächste].rest {
+				nächste = i
+			}
+		}
+		if nächste < 0 {
+			break
+		}
+		b := &bomben[nächste]
+		b.weg = true
+		t := b.rest
+		setze(b.x, b.y, t)
 		for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-			for i := 1; i <= b.Radius; i++ {
-				x, y := b.X+d[0]*i, b.Y+d[1]*i
+			for i := 1; i <= b.radius; i++ {
+				x, y := b.x+d[0]*i, b.y+d[1]*i
 				k := g.kachel(x, y)
 				if k == 1 {
 					break
 				}
-				setze(x, y, rest)
 				if k == 2 {
+					// Steht die Kiste schon (frühere Explosion)? Dann geht
+					// die Flamme weiter. Sonst brennt sie hier und fällt.
+					if fällt, ok := gefallen[[2]int{x, y}]; ok && fällt < t {
+						setze(x, y, t)
+						continue
+					}
+					setze(x, y, t)
+					gefallen[[2]int{x, y}] = t
 					break
+				}
+				setze(x, y, t)
+				// Bombe in der Flamme: zündet jetzt, nicht später.
+				for j := range bomben {
+					if bomben[j].weg || bomben[j].x != x || bomben[j].y != y {
+						continue
+					}
+					if bomben[j].rest > t {
+						bomben[j].rest = t
+					}
 				}
 			}
 		}
@@ -290,52 +349,44 @@ func bomberBotTrifftZiel(g *BomberGame, s *BomberSpieler, von [2]int) bool {
 }
 
 // bomberBotFlucht sucht nach dem Legen einer Bombe noch ein sicheres Feld.
-// Das eigene Feld zählt dabei nicht als sicher – dort liegt ja die Bombe.
+// Gerechnet wird in Zeit, nicht in Schritten: der Bot muss die Mitte jedes
+// Feldes vor dem Feuer erreichen, und die eigene Bombe zündet in 2,4 s.
+// Kettenreaktionen und fallende Kisten stecken in bomberBotGefahrMit.
 func bomberBotFlucht(g *BomberGame, s *BomberSpieler, von [2]int, gefahr map[[2]int]float64) bool {
-	mitBombe := map[[2]int]float64{}
-	for feld, rest := range gefahr {
-		mitBombe[feld] = rest
-	}
-	blast := map[[2]int]bool{}
-	setze := func(x, y int) {
-		feld := [2]int{x, y}
-		blast[feld] = true
-		if alt, ok := mitBombe[feld]; !ok || bomberBombenzeit < alt {
-			mitBombe[feld] = bomberBombenzeit
+	zusatz := &BomberBombe{X: von[0], Y: von[1], Nr: s.Nr, Rest: bomberBombenzeit, Radius: s.Feuer}
+	mit := bomberBotGefahrMit(g, zusatz)
+
+	kante := 1.0/(bomberTempo*s.Tempo) + 0.06
+	best := map[[2]int]float64{von: 0}
+	offen := [][2]int{von}
+	for len(offen) > 0 {
+		jetzt := offen[0]
+		offen = offen[1:]
+		t := best[jetzt]
+		if _, brennt := mit[jetzt]; jetzt != von && !brennt {
+			// Feld brennt nie: Ziel erreicht, wenn der Weg davor geklappt hat.
+			return true
 		}
-	}
-	setze(von[0], von[1])
-	for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-		for i := 1; i <= s.Feuer; i++ {
-			x, y := von[0]+d[0]*i, von[1]+d[1]*i
-			k := g.kachel(x, y)
-			if k == 1 {
-				break
+		for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+			nach := [2]int{jetzt[0] + d[0], jetzt[1] + d[1]}
+			if g.kachel(nach[0], nach[1]) != 0 {
+				continue
 			}
-			setze(x, y)
-			if k == 2 {
-				break
+			if nach != von && bomberBotBombeSteht(g, nach[0], nach[1]) {
+				continue
 			}
+			ankunft := t + kante
+			if rest, brennt := mit[nach]; brennt && rest <= ankunft+0.25 {
+				continue
+			}
+			if alt, ok := best[nach]; ok && alt <= ankunft {
+				continue
+			}
+			best[nach] = ankunft
+			offen = append(offen, nach)
 		}
 	}
-	// Durch die eigene Flamme darf man laufen – sie zündet erst in 2,4 s.
-	// Fremde Bomben und brennende Felder sind tabu.
-	sperre := func(x, y int) bool {
-		if blast[[2]int{x, y}] {
-			return false
-		}
-		rest, brennt := mitBombe[[2]int{x, y}]
-		return brennt && rest < bomberBombenzeit
-	}
-	weg := bomberBotWegSuche(g, von, func(x, y int) bool {
-		return !blast[[2]int{x, y}]
-	}, sperre)
-	if weg == nil {
-		return false
-	}
-	// Der Weg muss vor der Zündung zu schaffen sein.
-	maxSchritte := int(math.Floor((bomberBombenzeit - 0.35) * bomberTempo))
-	return len(weg) <= maxSchritte
+	return false
 }
 
 // bomberBotZug entscheidet Richtung und Bombe. ok ist false, wenn der Bot
@@ -356,10 +407,8 @@ func bomberBotZug(g *BomberGame) (int, int, bool, bool) {
 
 	// 1. Hier brennt es gleich (eigene Bombe, fremde Bombe, Flamme): weg –
 	// egal, wie viel Zeit bleibt. Wer in der Schusslinie stehen bleibt,
-	// stirbt.
-	// Leicht merkt es erst, wenn es schon brennt – mittel und schwer laufen
-	// los, sobald eine Bombe das Feld erwischt.
-	if rest, brennt := gefahr[meine]; brennt && (stufe != botLeicht || rest < 0.25) {
+	// stirbt. Das gilt für jede Stufe.
+	if rest, brennt := gefahr[meine]; brennt {
 		budget := int(rest * bomberTempo * 0.8)
 		if budget < 1 {
 			budget = 1
@@ -408,50 +457,63 @@ func bomberBotZug(g *BomberGame) (int, int, bool, bool) {
 	// 4. Bombe legen, wenn es etwas trifft und ein Fluchtweg bleibt.
 	if bomberBotEigeneBomben(g, s) < s.BombMax && !bomberBotBombeSteht(g, meine[0], meine[1]) &&
 		bomberBotTrifftZiel(g, s, meine) {
-		flucht := bomberBotFlucht(g, s, meine, gefahr)
-		// Leicht schaut nur in der Hälfte der Fälle nach einem Fluchtweg.
-		if (stufe == botLeicht && g.bomberBotZufall().Intn(100) < 50) || flucht {
+		// Auch die leichte Stufe legt keine Bombe ohne Fluchtweg. Sie irrt
+		// weiterhin gern umher und reagiert spät – aber Selbstmord ist keine
+		// Stufe, sondern ein Fehler.
+		if bomberBotFlucht(g, s, meine, gefahr) {
 			return 0, 0, true, true
 		}
 	}
 
-	// 5. Sonst: Extra holen, sonst auf den Gegner zu, sonst eine Kiste
-	// aufsprengen.
-	ziel := func(x, y int) bool {
-		for _, p := range g.Powerups {
-			if p.X == x && p.Y == y {
-				return true
-			}
-		}
-		return false
-	}
-	weg := bomberBotWegSuche(g, meine, ziel, brenntBald)
-	if weg == nil {
-		gegner := bomberBotGegner(g, s)
-		if gegner != nil && gegner.Leben {
-			zielFeld := bomberBotFeld(gegner)
-			weg = bomberBotWegSuche(g, meine, func(x, y int) bool {
-				return x == zielFeld[0] && y == zielFeld[1]
-			}, brenntBald)
+	// Leicht folgt einem Plan nur in etwa der Hälfte der Fälle – es trödelt
+	// und vertut sich, kommt aber voran.
+	if stufe == botLeicht && g.bomberBotZufall().Intn(100) < 50 {
+		if dx, dy, ok := bomberBotIrgendwohin(g, meine, gefahr); ok {
+			return dx, dy, false, true
 		}
 	}
-	if weg == nil {
-		// Kein Weg: an die nächste Kiste heran und sie wegräumen – aber nur an
-		// einer Stelle, an der nach der Bombe noch ein Fluchtweg bleibt.
-		// Sonst steht der Bot in einer Ecke und sprengt sich selbst.
-		weg = bomberBotWegSuche(g, meine, func(x, y int) bool {
-			nebenKiste := false
-			for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-				if g.kachel(x+d[0], y+d[1]) == 2 {
-					nebenKiste = true
-					break
+
+	var weg [][2]int
+	{
+		// 5. Sonst: Extra holen, sonst auf den Gegner zu, sonst eine Kiste
+		// aufsprengen.
+		ziel := func(x, y int) bool {
+			for _, p := range g.Powerups {
+				if p.X == x && p.Y == y {
+					return true
 				}
 			}
-			if !nebenKiste {
-				return false
+			return false
+		}
+		weg = bomberBotWegSuche(g, meine, ziel, brenntBald)
+		if weg == nil {
+			gegner := bomberBotGegner(g, s)
+			if gegner != nil && gegner.Leben {
+				zielFeld := bomberBotFeld(gegner)
+				weg = bomberBotWegSuche(g, meine, func(x, y int) bool {
+					return x == zielFeld[0] && y == zielFeld[1]
+				}, brenntBald)
 			}
-			return bomberBotFlucht(g, s, [2]int{x, y}, gefahr)
-		}, brenntBald)
+		}
+		if weg == nil {
+			// Kein Weg: an die nächste Kiste heran und sie wegräumen – aber nur an
+			// einer Stelle, an der nach der Bombe noch ein Fluchtweg bleibt.
+			// Sonst steht der Bot in einer Ecke und sprengt sich selbst.
+			weg = bomberBotWegSuche(g, meine, func(x, y int) bool {
+				nebenKiste := false
+				for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+					if g.kachel(x+d[0], y+d[1]) == 2 {
+						nebenKiste = true
+						break
+					}
+				}
+				if !nebenKiste {
+					return false
+				}
+				return bomberBotFlucht(g, s, [2]int{x, y}, gefahr)
+			}, brenntBald)
+		}
+
 	}
 	if len(weg) > 0 {
 		dx, dy := bomberBotRichtung(meine, weg[0])

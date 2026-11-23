@@ -29,6 +29,14 @@ type TetrisGame struct {
 	BlueGarbage int    `json:"blueGarbage"`
 	Winner      string `json:"winner,omitempty"`
 	Note        string `json:"note,omitempty"`
+
+	// Computergegner: eigenes Brett, Stufe und Denkpause. Das Feld bleibt beim
+	// Server (json:"-") – übertragen werden wie beim Menschen nur Linien,
+	// Leben und Müll.
+	BotID    string    `json:"-"`
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
+	BotFeld  *tetFeld  `json:"-"`
 }
 
 func tetrisNewGame(hostID, hostName, guestID, guestName, id string) *TetrisGame {
@@ -92,6 +100,8 @@ func tetrisHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		// Der Bot setzt seinen nächsten Stein, sobald sein Takt abgelaufen ist.
+		tetBotTreiben(room.Tetris, time.Now())
 		game := cloneTetris(room.Tetris)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -110,6 +120,7 @@ func tetrisHandler(w http.ResponseWriter, r *http.Request) {
 		Alive   *bool  `json:"alive"`
 		Garbage int    `json:"garbage"`
 		Taken   int    `json:"taken"`
+		Stufe   string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -159,6 +170,30 @@ func tetrisHandler(w http.ResponseWriter, r *http.Request) {
 			GameInvite: true,
 			Game:       "tetris",
 			GameID:     room.Tetris.ID,
+		})
+
+	case "bot":
+		if room.Tetris != nil && (room.Tetris.Status == "invited" || room.Tetris.Status == "active") {
+			mu.Unlock()
+			http.Error(w, "In diesem Spielraum läuft bereits eine Tetris-Partie oder Einladung.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		room.botNamenNeu()
+		game := tetrisNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
+		game.Status = "active"
+		game.Seed = rand.Int63n(1 << 30)
+		game.RedAlive = true
+		game.BlueAlive = true
+		game.BotID, game.BotStufe = botID(1), stufe
+		game.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.Tetris = game
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Tetris gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     time.Now().Format("15:04:05"),
+			SenderID: input.ID,
 		})
 
 	case "accept":
@@ -253,6 +288,10 @@ func tetrisHandler(w http.ResponseWriter, r *http.Request) {
 		game.BlueGarbage = 0
 		game.Winner = ""
 		game.Note = ""
+		if game.BotID != "" {
+			game.BotFeld = nil
+			game.BotFrist = time.Time{}
+		}
 
 	default:
 		mu.Unlock()

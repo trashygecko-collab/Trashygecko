@@ -10,7 +10,7 @@
  * nichts, bleibt sie gleich und die App behält ihre Kopie.
  */
 
-const VERSION = "a161e89e";
+const VERSION = "f2a2373c";
 const CACHE = "tspiele-" + VERSION;
 const START = "ios/ios.html";
 
@@ -97,7 +97,9 @@ const DATEIEN = [
     "brettspiele/mahjong/css/fonts/atkinson-hyperlegible-400.woff2",
     "brettspiele/mahjong/css/fonts/atkinson-hyperlegible-700.woff2",
     "brettspiele/mahjong/css/mahjong.css",
+    "brettspiele/mahjong/js/board-layout-100.js",
     "brettspiele/mahjong/js/board-layout-2.js",
+    "brettspiele/mahjong/js/board-layout-schwer.js",
     "brettspiele/mahjong/js/board-layout.js",
     "brettspiele/mahjong/js/board.js",
     "brettspiele/mahjong/js/dialoge.js",
@@ -110,6 +112,8 @@ const DATEIEN = [
     "brettspiele/mahjong/js/renderer.js",
     "brettspiele/mahjong/js/storage.js",
     "brettspiele/mahjong/mahjong.html",
+    "brettspiele/risiko/risiko-fern.js",
+    "brettspiele/risiko/risiko.html",
     "ios/app.webmanifest",
     "ios/icons/icon-180.png",
     "ios/icons/icon-192.png",

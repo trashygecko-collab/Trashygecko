@@ -1093,7 +1093,7 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 	var problem *caboFehler
 
 	switch action {
-	case "create", "solo":
+	case "create", "solo", "bot":
 		if room.Cabo != nil && room.Cabo.Status != "ende" {
 			mu.Unlock()
 			http.Error(w, "Es läuft schon eine Cabo-Runde.", http.StatusConflict)
@@ -1113,17 +1113,18 @@ func caboHandler(w http.ResponseWriter, r *http.Request) {
 			Time:     zeit,
 			SenderID: input.ID,
 		})
-		if action == "solo" {
+		if action == "solo" || action == "bot" {
+			room.botNamenNeu()
 			stufe := caboStufe(input.Stufe)
 			game.Spieler[0].Ready = true
 			game.Spieler = append(game.Spieler, CaboSpieler{
-				ID: "bot-1", Name: "Computer", Karten: []int{}, Bekannt: map[string]int{},
+				ID: botID(1), Name: room.botName(1), Karten: []int{}, Bekannt: map[string]int{},
 				Ready: true, Bot: true, Stufe: stufe,
 			})
 			game.Start = 0
 			game.Runde = 0
 			caboNeueRunde(game)
-			game.Note = "Einzelspieler gegen den Computer (" + stufe + "). " + game.Note
+			game.Note = "Einzelspieler gegen " + room.botName(1) + " (" + stufe + "). " + game.Note
 		}
 
 	case "join":

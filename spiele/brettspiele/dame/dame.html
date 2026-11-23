@@ -495,6 +495,9 @@ if (!onlineID) {
 let onlineGame = null;
 let onlineColor = "";
 let onlineOpponent = "";
+// Zaehlt die Abrufe: der eigene Zug nimmt seinen Stand sofort, ein Abruf, der
+// vorher loslief, darf ihn nicht wieder ueberschreiben.
+let onlineStand = 0;
 
 function leaveGame(){ tgVerlassen(); }
 
@@ -874,7 +877,7 @@ async function syncMultiplayerMove() {
     if (gameOver) {
       winColor = (current === "red" ? "blue" : "red");
     }
-    await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&action=move", {
+    const resp = await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&action=move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -884,6 +887,14 @@ async function syncMultiplayerMove() {
         winner: winColor
       })
     });
+    // Der Server antwortet schon mit dem neuen Stand.  Den sofort zeigen,
+    // statt bis zum naechsten Abruf (700 ms) die eigene Aufforderung stehen zu
+    // lassen - der Gegner ist ja laengst dran.
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.game) return;
+    onlineStand++;
+    renderMultiplayer(data.game);
   } catch(e) {}
 }
 
@@ -962,10 +973,14 @@ async function multiplayerHeartbeat() {
 
 async function refreshMultiplayer() {
   if (!onlineRoom || !onlineID) return;
+  const meine = ++onlineStand;
   try {
     const resp = await fetch("/api/dame?room=" + encodeURIComponent(onlineRoom) + "&id=" + encodeURIComponent(onlineID), { cache: "no-store" });
     if (!resp.ok) return;
     const data = await resp.json();
+    // Ein Zug kam inzwischen dazwischen: der eigene, gerade gezeigte Stand
+    // bleibt stehen, bis der naechste Abruf wirklich juenger ist.
+    if (meine < onlineStand) return;
     if (data.game) renderMultiplayer(data.game);
   } catch(e) {}
 }

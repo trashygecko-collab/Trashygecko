@@ -69,6 +69,13 @@
     z.log.unshift(text);
     if (z.log.length > 8) z.log.length = 8;
   };
+  /* Ergebniszeile für die kurze Anzeige (Vorbild: Zehntausend). Sie gehört in
+     den vorhandenen Verlauf und nennt den Nächsten ("Jetzt ist … dran.").
+     Daran erkennt der Rahmen sie; ein eigenes Feld im Spielstand braucht es
+     nicht – auch online kommt die Zeile mit dem normalen Stand mit. */
+  TGW.meldung = function (z, text) {
+    TGW.note(z, text);
+  };
   /* Höchster Wert gewinnt, sobald alle fertig sind. Liefert true, wenn das
      Spiel damit entschieden ist. */
   TGW.endeNachHoechstem = function (z, feld, was) {
@@ -215,6 +222,10 @@
   var z = null;          // Partiezustand
   var ruhig = false;     // prefers-reduced-motion
   var el = {};           // DOM-Verweise
+  var ergebnisText = null; // zuletzt gesehener oberster Verlaufseintrag
+  var ergebnisTimer = null;
+  var gesperrt = false;   // Tasten während der Ergebnisanzeige
+  var ERGEBNIS_DAUER = 2000;
 
   function neuerZustand(namen, varianten, saat) {
     var zustand = {
@@ -251,6 +262,11 @@
   function startePartie() {
     var namen = namenAusFeld();
     try { localStorage.setItem("tg-wuerfel-namen", JSON.stringify(namen)); } catch (e) { /* egal */ }
+    ergebnisText = null;
+    gesperrt = false;
+    if (ergebnisTimer) { clearTimeout(ergebnisTimer); ergebnisTimer = null; }
+    var altBand = document.getElementById("tg-ergebnis");
+    if (altBand) altBand.hidden = true;
     z = neuerZustand(namen, variantenAusFeld(), (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0);
     spiel.start(z);
     el.einrichten.hidden = true;
@@ -332,6 +348,10 @@
     }
 
     /* Tasten */
+    /* Online darf nur handeln, wer am Zug ist. Die Knöpfe bleiben sichtbar,
+       sind aber gesperrt – der Server lehnt fremde Züge ohnehin ab. */
+    var nichtDran = !!(z && !z.ende && TGW.online && TGW.online.binDran &&
+      !TGW.online.binDran());
     el.tasten.innerHTML = "";
     function taste(knopf, klasse) {
       if (!knopf) return;
@@ -339,7 +359,8 @@
       b.type = "button";
       b.className = "knopf " + (klasse || "");
       b.textContent = knopf.text;
-      b.disabled = knopf.an === false;
+      b.disabled = knopf.an === false || nichtDran;
+      if (nichtDran) b.title = "Du bist nicht am Zug.";
       b.addEventListener("click", function () { druecken(knopf.art, knopf.daten); });
       el.tasten.appendChild(b);
     }
@@ -430,10 +451,65 @@
       li.textContent = zeile;
       el.verlauf.appendChild(li);
     });
+
+    /* Ergebnis des letzten Zuges, wenn es eines zu erklären gibt. */
+    zeigeErgebnis(s);
+  }
+
+  /* --- Ergebnisanzeige -------------------------------------------------
+     Ein Band unter den Würfeln; die gewürfelten Augen bleiben stehen. Nach
+     ERGEBNIS_DAUER verschwindet es von selbst, die Tasten werden wieder frei.
+     Es gibt genau einen Timer: eine neue Meldung ersetzt die alte. */
+  function zeigeErgebnis(s) {
+    var log = (z && z.log) || [];
+    var oben = log.length ? String(log[0] || "") : "";
+    /* Der erste Stand nach dem Öffnen ist alt – nicht nachträglich zeigen. */
+    if (ergebnisText === null) { ergebnisText = oben; return; }
+    if (oben === ergebnisText) return;
+    var alt = ergebnisText;
+    ergebnisText = oben;
+    /* Auch wenn danach noch eine Rundennachricht kam: die neueste
+       Ergebniszeile der neuen Einträge zählt. */
+    var text = "";
+    for (var i = 0; i < log.length; i++) {
+      if (log[i] === alt) break;
+      if (/^Jetzt ist .+ dran\.$/.test(String(log[i] || ""))) {
+        text = String(log[i]);
+        break;
+      }
+    }
+    if (!text) return;
+    /* Bei der stummen Jule bleibt der Verlauf verborgen (siehe jule.js). */
+    if (s && Array.isArray(s.verlauf) && !s.verlauf.length) return;
+    var band = document.getElementById("tg-ergebnis");
+    if (!band) {
+      band = document.createElement("div");
+      band.id = "tg-ergebnis";
+      band.setAttribute("role", "status");
+      band.setAttribute("aria-live", "polite");
+      band.style.cssText = "margin:10px auto 0;max-width:520px;padding:12px 16px;" +
+        "border-radius:12px;background:#2b1d08;color:#ffe6b8;border:1px solid #c9a24a;" +
+        "font:600 16px/1.35 system-ui,-apple-system,sans-serif;text-align:center;" +
+        "box-shadow:0 6px 18px rgba(0,0,0,.35)";
+      el.tafel.insertBefore(band, el.tasten);
+    }
+    band.textContent = text;
+    band.hidden = false;
+    gesperrt = true;
+    clearTimeout(ergebnisTimer);
+    ergebnisTimer = setTimeout(function () {
+      ergebnisTimer = null;
+      gesperrt = false;
+      var b = document.getElementById("tg-ergebnis");
+      if (b) b.hidden = true;
+    }, ERGEBNIS_DAUER);
   }
 
   /* --- Aktionen -------------------------------------------------------- */
   function druecken(art, daten) {
+    /* Während der Ergebnisanzeige ruht die Bedienung – sonst würde der
+       Nächste den Grund des Wechsels überspringen. */
+    if (gesperrt) return;
     /* Online zählt allein der Server: online.js schickt den Zug dorthin und
        zeichnet danach den Stand, den er zurückgibt. */
     if (TGW.online) { TGW.online.aktion(art, daten); return; }

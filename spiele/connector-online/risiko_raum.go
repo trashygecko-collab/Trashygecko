@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -185,6 +186,42 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 	g := room.Risiko
 
 	switch action {
+	case "bot":
+		// Mensch gegen Computer in einem Aufruf: Lobby anlegen, die übrigen
+		// Plätze mit Bots füllen, Partie starten. Der Abruf treibt sie danach
+		// über risikoBotTreiben – dieselbe Stelle wie bei „botadd“.
+		if g != nil && g.Status != risikoStatusBeendet {
+			fehler(http.StatusConflict, errors.New("In diesem Spielraum läuft bereits eine Risiko-Partie."))
+			return
+		}
+		anzahl := input.Anzahl
+		if anzahl < risikoMinSpieler || anzahl > risikoMaxSpieler {
+			anzahl = risikoMinSpieler
+		}
+		room.botNamenNeu()
+		lobby := risikoNeueLobby(input.ID, player.Name, anzahl)
+		if _, bekannt := risikoModi[input.Modus]; bekannt {
+			lobby.Modus = input.Modus
+		}
+		lobby.Pause = risikoPauseWert(input.Pause)
+		stufe := risikoBotStufe(input.Stufe)
+		wesen := risikoBotWesen(input.Wesen)
+		for i := len(lobby.Spieler); i < anzahl; i++ {
+			n := i
+			lobby.Spieler = append(lobby.Spieler, RisikoSpieler{
+				ID: botID(n), Name: room.botName(n), Farbe: risikoFarben[i%len(risikoFarben)],
+				Bot: true, Stufe: stufe, Wesen: wesen, Team: -1, Bereit: true,
+			})
+		}
+		if err := risikoStarten(lobby, input.ID, jetzt); err != nil {
+			fehler(http.StatusConflict, err)
+			return
+		}
+		room.Risiko = lobby
+		room.addMessage(Message{Name: player.Name,
+			Text: "spielt Risiko gegen " + strconv.Itoa(anzahl-1) + " Computer (" + risikoBotStufeText(stufe) + ").",
+			Time: jetzt.Format("15:04:05"), SenderID: input.ID})
+
 	case "create":
 		if g != nil && g.Status != risikoStatusBeendet {
 			fehler(http.StatusConflict, errors.New("In diesem Spielraum läuft bereits eine Risiko-Partie."))
@@ -304,31 +341,10 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 			fehler(http.StatusForbidden, errors.New("Nur der Gastgeber startet die Partie."))
 			return
 		}
-		if len(g.Spieler) < g.Anzahl {
-			fehler(http.StatusConflict, errors.New(fmt.Sprintf("Es fehlen noch %d Spieler oder Bots.", g.Anzahl-len(g.Spieler))))
+		if err := risikoStarten(g, input.ID, jetzt); err != nil {
+			fehler(http.StatusConflict, err)
 			return
 		}
-		for _, sp := range g.Spieler {
-			if !sp.Bereit && !sp.Bot {
-				fehler(http.StatusConflict, errors.New(sp.Name+" ist noch nicht bereit."))
-				return
-			}
-		}
-		if g.Modus == "team" && len(g.Spieler)%2 == 1 {
-			fehler(http.StatusConflict, errors.New("Teamkrieg braucht eine gerade Spielerzahl."))
-			return
-		}
-		for i := range g.Spieler {
-			g.Spieler[i].Team = -1
-			if g.Modus == "team" {
-				g.Spieler[i].Team = i % 2
-			}
-			g.Spieler[i].Farbe = risikoFarben[i%len(risikoFarben)]
-		}
-		risikoAufbau(g, rand.New(rand.NewSource(jetzt.UnixNano())))
-		g.HostID = input.ID
-		g.Version++
-		risikoLog(g, "Partie gestartet ("+risikoModi[g.Modus]+").")
 
 	case "neu":
 		if g == nil || g.Status != risikoStatusBeendet {
@@ -418,6 +434,39 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 	sicht := risikoSichtFuer(room.Risiko, input.ID)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": sicht})
+}
+
+// risikoStarten prüft eine volle Lobby und baut die Partie auf. Mensch und
+// Bot gehen denselben Weg – „bot“ füllt nur die Plätze vorher auf.
+func risikoStarten(g *RisikoSpiel, hostID string, jetzt time.Time) error {
+	if g == nil || g.Status != risikoStatusLobby {
+		return errors.New("Es wartet keine Partie auf den Start.")
+	}
+	if len(g.Spieler) < g.Anzahl {
+		return fmt.Errorf("Es fehlen noch %d Spieler oder Bots.", g.Anzahl-len(g.Spieler))
+	}
+	for _, sp := range g.Spieler {
+		if !sp.Bereit && !sp.Bot {
+			return errors.New(sp.Name + " ist noch nicht bereit.")
+		}
+	}
+	if g.Modus == "team" && len(g.Spieler)%2 == 1 {
+		return errors.New("Teamkrieg braucht eine gerade Spielerzahl.")
+	}
+	for i := range g.Spieler {
+		g.Spieler[i].Team = -1
+		if g.Modus == "team" {
+			g.Spieler[i].Team = i % 2
+		}
+		g.Spieler[i].Farbe = risikoFarben[i%len(risikoFarben)]
+	}
+	risikoAufbau(g, rand.New(rand.NewSource(jetzt.UnixNano())))
+	if hostID != "" {
+		g.HostID = hostID
+	}
+	g.Version++
+	risikoLog(g, "Partie gestartet ("+risikoModi[g.Modus]+").")
+	return nil
 }
 
 // risikoNamenAuffrischen übernimmt einen geänderten Spielernamen aus dem

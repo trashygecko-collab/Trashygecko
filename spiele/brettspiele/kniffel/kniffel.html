@@ -196,6 +196,13 @@ select {
   font-size:13px;
   line-height:1.5;
 }
+.status.meldung {
+  color:#ffe6a8;
+  background:#173a2f;
+  border-left:3px solid #d8b25a;
+  border-color:#d8b25a;
+  font-weight:bold;
+}
 .score-head {
   display:flex;
   justify-content:space-between;
@@ -791,6 +798,13 @@ const PLAYER_ID=params.get("id")||"";
 const ONLINE_API="/api/kniffel";
 let onlineBusy=false;
 let onlineGame=null;
+// Nach dem Eintragen wechselt der Server sofort weiter. Fuer die Anzeige
+// bleibt der Zug beim eintragenden Spieler, bis Punkte und Meldung lesbar
+// waren; erst danach wird der neue Stand uebernommen.
+const ERGEBNIS_DAUER=2000;
+let halteBis=0;
+let meldungTimer=0;
+let warteNeu=null;
 
 function myTurn(){
   if(!onlineGame||onlineGame.status!=="active") return false;
@@ -798,26 +812,50 @@ function myTurn(){
   return !!p&&p.id===PLAYER_ID;
 }
 
+function meldungWert(note){ return /trägt .* Punkte ein\./.test(note||""); }
+
 function applyOnlineState(game){
   if(!game)return;
-  onlineGame=game;
+  if(Date.now()<halteBis)return;
+  const vorher=onlineGame;
+  const altNote=vorher&&vorher.note||"";
+  if(vorher && game.note!==altNote && meldungWert(game.note)){
+    warteNeu=game;
+    halteBis=Date.now()+ERGEBNIS_DAUER;
+    clearTimeout(meldungTimer);
+    meldungTimer=setTimeout(()=>{
+      halteBis=0;
+      const neu=warteNeu;
+      warteNeu=null;
+      if(neu) applyOnlineState(neu);
+    },ERGEBNIS_DAUER+30);
+    onlineGame=Object.assign({},game,{current:vorher.current});
+  } else {
+    onlineGame=game;
+  }
 
-  players=game.players.map(p=>({
+  players=onlineGame.players.map(p=>({
     name:p.name,
     color:p.color,
     scores:p.scores,
     kniffelBonus:p.kniffelBonus
   }));
-  currentPlayer=game.current;
-  dice=(game.dice&&game.dice.length===5)?game.dice.slice():[0,0,0,0,0];
-  rolls=game.rolls;
-  if(rolls===0) kept=[false,false,false,false,false];
+  currentPlayer=onlineGame.current;
+  dice=(onlineGame.dice&&onlineGame.dice.length===5)?onlineGame.dice.slice():[0,0,0,0,0];
+  rolls=onlineGame.rolls;
+  if(Date.now()<halteBis && vorher){
+    // Die Wuerfe, mit denen die Punkte erspielt wurden, bleiben stehen.
+    dice=(vorher.dice&&vorher.dice.length===5)?vorher.dice.slice():[0,0,0,0,0];
+    rolls=vorher.rolls||0;
+  } else if(rolls===0){
+    kept=[false,false,false,false,false];
+  }
 
   const label=document.querySelector('label[for="playerCount"]');
   const select=$("playerCount");
   const startBtn=$("startBtn");
 
-  if(game.status==="invited"){
+  if(onlineGame.status==="invited"){
     $("setup").classList.remove("hidden");
     $("game").classList.add("hidden");
     $("result").classList.add("hidden");
@@ -866,7 +904,7 @@ function applyOnlineState(game){
       startBtn.style.display="none";
       hint.textContent="Der Gastgeber startet, sobald alle BEREIT gedrückt haben.";
     }
-    if(game.note)setStatus(game.note);
+    if(onlineGame.note)setStatus(onlineGame.note);
     return;
   }
 
@@ -876,7 +914,7 @@ function applyOnlineState(game){
   $("readyBtn").style.display="none";
   $("lobbyHint").style.display="none";
 
-  if(game.status==="finished"){
+  if(onlineGame.status==="finished"){
     $("game").classList.add("hidden");
     finished=true;
     endGame();
@@ -895,9 +933,19 @@ function applyOnlineState(game){
     document.querySelectorAll(".die").forEach(b=>{ b.disabled=true; });
     const p=onlineGame.players[onlineGame.current];
     setStatus(p?("Warte auf "+p.name+" …"):"Warte …");
-  }else if(game.note){
-    setStatus(game.note);
+  }else if(onlineGame.note){
+    setStatus(onlineGame.note);
   }
+  // Waehrend der Rueckmeldung sehen alle den Grund, nicht nur der Eintragende.
+  if(Date.now()<halteBis && onlineGame.note)setStatus(onlineGame.note);
+  if(Date.now()<halteBis){
+    $("rollBtn").disabled=true;
+    $("finishBtn").disabled=true;
+    $("strikeBtn").disabled=true;
+    document.querySelectorAll(".scorebtn").forEach(b=>{ b.disabled=true; });
+    document.querySelectorAll(".die").forEach(b=>{ b.disabled=true; });
+  }
+  $("status").classList.toggle("meldung",Date.now()<halteBis);
 }
 
 async function rejoinRoom(){
@@ -940,6 +988,7 @@ async function refreshOnline(){
 
 async function kniffelAction(action,payload){
   if(onlineBusy)return;
+  if(Date.now()<halteBis)return;
   onlineBusy=true;
   try{
     const data=await onlineFetch(ONLINE_API+"?room="+encodeURIComponent(ROOM)+"&action="+action,{

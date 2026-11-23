@@ -30,6 +30,7 @@ type SyncSpieler struct {
 	Name   string `json:"name"`
 	Platz  int    `json:"platz"`
 	Bereit bool   `json:"bereit"`
+	Bot    bool   `json:"bot,omitempty"`
 }
 
 // SyncGame ist eine Partie eines Spiels mit verteiltem Spielstand.
@@ -45,6 +46,9 @@ type SyncGame struct {
 	Version int             `json:"version"`
 	Note    string          `json:"note"`
 	HostID  string          `json:"-"`
+	// Bot-Stufe und Denkpause gelten nur, solange ein Computer am Zug ist.
+	BotStufe string    `json:"-"`
+	BotFrist time.Time `json:"-"`
 }
 
 const syncStandMax = 256 * 1024 // ein Stand bleibt weit darunter
@@ -132,7 +136,13 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		sicht := syncSicht(*syncFeld(room, art))
+		g := *syncFeld(room, art)
+		// Das Labyrinth ist das einzige Spiel, dessen Regelwerk der Server
+		// selbst kennt – dort treibt jeder Abruf auch den Bot.
+		if art == "labyrinth" {
+			labyrinthBotTreiben(room, g, time.Now())
+		}
+		sicht := syncSicht(g)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": sicht})
 		return
@@ -147,6 +157,7 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 		Anzahl int             `json:"anzahl"`
 		Weiter int             `json:"weiter"`
 		Ende   bool            `json:"ende"`
+		Stufe  string          `json:"stufe"`
 		Stand  json.RawMessage `json:"stand"`
 	}
 	roh, err := io.ReadAll(io.LimitReader(r.Body, syncStandMax+4096))
@@ -183,6 +194,43 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 	g := *feld
 
 	switch action {
+	// Gegen Bots: der Mensch eröffnet, die übrigen Plätze gehören dem Server.
+	// Die erste Seite baut die Aufstellung wie bei jeder Partie und schickt
+	// sie als Stand; ab dem zweiten Zug spielt der Bot.
+	case "bot":
+		if g != nil && g.Status != "finished" {
+			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine "+regeln.Name+"-Partie.")
+			return
+		}
+		anzahl := input.Anzahl
+		if anzahl < regeln.Min || anzahl > regeln.Max {
+			anzahl = regeln.Min
+		}
+		stufe := botStufe(input.Stufe)
+		room.botNamenNeu()
+		neu := &SyncGame{
+			ID: randomCode(), Status: "active", Anzahl: anzahl, Current: 0,
+			Sieger: -1, ZugNr: 1, Version: 1, HostID: input.ID,
+			Spieler: []SyncSpieler{{ID: input.ID, Name: player.Name, Platz: 0}},
+			BotStufe: stufe,
+		}
+		var namen []string
+		for n := 1; n < anzahl; n++ {
+			neu.Spieler = append(neu.Spieler, SyncSpieler{
+				ID: botID(n), Name: room.botName(n), Platz: n, Bereit: true, Bot: true,
+			})
+			namen = append(namen, room.botName(n))
+		}
+		neu.Note = player.Name + " spielt gegen " + strings.Join(namen, " und ") +
+			" (" + botStufeText(stufe) + ")."
+		*feld = neu
+		room.addMessage(Message{
+			Name: player.Name,
+			Text: "spielt " + regeln.Name + " gegen " + strings.Join(namen, " und ") +
+				" (" + botStufeText(stufe) + ").",
+			Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+		})
+
 	case "create":
 		if g != nil && g.Status != "finished" {
 			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine "+regeln.Name+"-Partie.")
@@ -320,19 +368,11 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 		if weiter < 0 || weiter >= len(g.Spieler) {
 			weiter = (k + 1) % len(g.Spieler)
 		}
-		g.Stand = append(json.RawMessage{}, input.Stand...)
-		g.Current = weiter
-		g.Version++
-		g.Note = ""
-		if action == "stand" {
+		// Mensch und Bot setzen ihren Stand über dieselbe Stelle: Reihenfolge,
+		// Version, Zugnummer und „beendet“ prüft der Server für beide gleich.
+		syncStandUebernehmen(g, input.Stand, weiter, input.Ende, action == "zug")
+		if action == "stand" && !input.Ende {
 			g.Note = "Aufstellung steht."
-		} else {
-			g.ZugNr++
-		}
-		if input.Ende {
-			g.Status = "finished"
-			g.Sieger = weiter
-			g.Note = g.Spieler[weiter].Name + " gewinnt."
 		}
 
 	case "neu":
@@ -361,10 +401,38 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 		return
 	}
 
+	if art == "labyrinth" {
+		labyrinthBotFristSetzen(*feld, time.Now())
+	}
 	room.LastActive = time.Now()
 	result := syncSicht(*feld)
 	mu.Unlock()
 	jsonResponse(w, map[string]any{"game": result})
+}
+
+// syncStandUebernehmen setzt einen vollständigen Stand: neuer Stand, neuer
+// Spieler am Zug, neue Version. neuerZug zählt die Zugnummer hoch (ein Zug),
+// sonst handelt es sich um die Aufstellung. ende beendet die Partie und
+// erklärt den Spieler am Zug zum Sieger.
+func syncStandUebernehmen(g *SyncGame, stand json.RawMessage, weiter int, ende, neuerZug bool) {
+	if g == nil || len(g.Spieler) == 0 {
+		return
+	}
+	if weiter < 0 || weiter >= len(g.Spieler) {
+		weiter = (g.Current + 1) % len(g.Spieler)
+	}
+	g.Stand = append(json.RawMessage{}, stand...)
+	g.Current = weiter
+	g.Version++
+	g.Note = ""
+	if neuerZug {
+		g.ZugNr++
+	}
+	if ende {
+		g.Status = "finished"
+		g.Sieger = weiter
+		g.Note = g.Spieler[weiter].Name + " gewinnt."
+	}
 }
 
 // syncFehlerText macht aus einem Fehler einen kurzen Satz für den Client.

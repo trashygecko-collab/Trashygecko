@@ -21,6 +21,7 @@
   }
 
   var stand = null;      // letzte Antwort des Servers
+  var sendet = false;    // ein Zug ist unterwegs – kein zweiter Klick
   var gefragt = false;   // läuft gerade ein Ruf?
   var ersterRuf = true;  // der erste Abruf geht auch im Hintergrund-Tab raus
   var kasten = null;
@@ -32,6 +33,15 @@
   /* --- Server ---------------------------------------------------------- */
 
   function ruf(aktion, felder) {
+    /* Ein Klick löst genau einen Zug aus. Der zweite Klick eines Doppelklicks
+       käme sonst als „Du bist nicht am Zug.“ zurück, weil der Server den
+       Zugwechsel längst vollzogen hat. */
+    if (aktion && aktion !== "stand" && sendet) {
+      return Promise.resolve({});
+    }
+    if (aktion && aktion !== "stand") {
+      sendet = true;
+    }
     var adresse = "/api/wuerfel?room=" + encodeURIComponent(raum) +
       "&id=" + encodeURIComponent(kennung);
     var optionen = null;
@@ -57,10 +67,12 @@
         return antwort.json();
       })
       .then(function (daten) {
+        sendet = false;
         zeige(daten);
         return daten;
       })
       .catch(function () {
+        sendet = false;
         /* Netz weg: der nächste Durchlauf holt den Stand nach. */
       });
   }
@@ -270,6 +282,11 @@
   // Der Rahmen baut seine Seite bei DOMContentLoaded; dieser Aufsatz läuft
   // danach, damit Kasten und Spieltafel beide stehen.
   TGW.online = {
+    /* Ist der eigene Platz am Zug? Der Rahmen sperrt danach die Aktionsknöpfe. */
+    binDran: function () {
+      return !!stand && stand.status === "active" && stand.du >= 0 &&
+        stand.dran === stand.du;
+    },
     aktion: function (art, daten) {
       if (art === "neu") {
         ruf("neu");

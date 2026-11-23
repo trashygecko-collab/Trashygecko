@@ -69,6 +69,11 @@ TGW.anmelden({
     if (p.wuerfe >= 3) {
       p.wuerfe = 0;
       TGW.naechster(z);
+      if (wert === 0) {
+        TGW.meldung(z, p.name + " würfelt " + w.join(" · ") +
+          " – keine Zweierpunkte im letzten Wurf. Jetzt ist " +
+          z.spieler[z.dran].name + " dran.");
+      }
     }
   }
 });

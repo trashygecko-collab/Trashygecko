@@ -95,5 +95,9 @@ TGW.anmelden({
       return;
     }
     TGW.naechster(z);
+    if (treffer === 0) {
+      TGW.meldung(z, p.name + " trifft die " + p.stich + " nicht (" +
+        w.join(" · ") + "). Jetzt ist " + z.spieler[z.dran].name + " dran.");
+    }
   }
 });

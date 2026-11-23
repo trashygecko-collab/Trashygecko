@@ -216,6 +216,9 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/arschloch", arschlochHandler)
 	mux.HandleFunc("/api/sechsundsechzig", sechsundsechzigHandler)
 	mux.HandleFunc("/api/galgen", galgenHandler)
+	mux.HandleFunc("/api/quiz", quizHandler)
+	// Fragenkatalog der Scherzshow: GET = lesen, POST = bearbeiten (Editor).
+	mux.HandleFunc("/api/quizfragen", quizfragenHandler)
 	mux.HandleFunc("/api/bingo", bingoHandler)
 	mux.HandleFunc("/api/wortsuche", wortsucheHandler)
 	mux.HandleFunc("/api/domino", dominoHandler)

@@ -170,7 +170,9 @@
             // Lange Titel bekommen Platz, statt die Leiste zu sprengen.
             ".tg-mit-zurueck .titel{min-width:0;overflow:hidden;text-overflow:ellipsis;",
             "  white-space:nowrap}",
-            "@media(max-width:520px){.tg-zurueck{font-size:10px;padding:3px 6px}}"
+            // Am Handy wird der Knopf mit dem Finger getroffen: mindestens
+            // 30 px hoch statt der 23 px der dezenten PC-Fassung.
+            "@media(max-width:520px){.tg-zurueck{font-size:11px;padding:4px 9px;min-height:30px;box-sizing:border-box}}"
         ].join("");
 
         (document.head || document.documentElement).appendChild(stil);

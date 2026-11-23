@@ -72,6 +72,7 @@ TGW.anmelden({
       if (z.phase !== "wurf") return false;
       var w = z.wurf(2);
       var summe = w[0] + w[1];
+      var schon = summe !== 7 && !!p.aus[summe];
       if (summe === 7) {
         p.wahl = 0;
         z.phase = "waehlen";
@@ -87,6 +88,10 @@ TGW.anmelden({
         this.bonus(z, summe);
       }
       this.zugBeenden(z);
+      if (schon && !z.ende) {
+        TGW.meldung(z, p.name + " würfelt " + summe + " – die Zahl ist schon " +
+          "gestrichen. Jetzt ist " + z.spieler[z.dran].name + " dran.");
+      }
       return;
     }
     if (art === "waehlen") {

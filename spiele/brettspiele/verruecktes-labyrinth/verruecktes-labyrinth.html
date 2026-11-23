@@ -114,10 +114,11 @@ body[data-thema="buben"] select{background:#17252f}
 .pfeil{font-family:inherit;border:1px solid var(--linie2);background:#ffffff10;color:var(--gold);
  border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
  padding:0;min-width:0;min-height:0;flex:1 1 0;transition:background .12s,transform .08s}
+.pfeilPlatz{flex:1 1 0;min-width:0;min-height:0}
 .pfeil:hover:not(:disabled){background:#ffffff24}
 .pfeil:active:not(:disabled){transform:scale(.94)}
 .pfeil:disabled{opacity:.22;cursor:default}
-.pfeil svg{width:15px;height:15px;display:block;fill:currentColor}
+.pfeil svg{width:17px;height:17px;display:block;fill:currentColor}
 .brettHuelle{position:relative;grid-column:2;grid-row:2;line-height:0}
 canvas#brett{display:block;border-radius:12px;background:#00000030;
  box-shadow:inset 0 0 0 1px #ffffff18,0 14px 34px -18px #000}
@@ -172,8 +173,10 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
 .sieg .knopf{width:100%}
 
 @media (max-width:620px){
- body{padding:6px 5px 18px}
- .buehne{padding:8px 6px 4px;gap:8px}
+ body{padding:6px 2px 18px}
+ .buehne{padding:8px 0 4px;gap:8px}
+ .brettGitter{gap:3px}
+ .pfeil svg{width:15px;height:15px}
  .einrichtung{padding:14px 11px 16px}
  .einrichtung h1{font-size:19px}
  .reihe{gap:6px}
@@ -182,7 +185,14 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
  .aufgabe{font-size:11px;padding:2px 6px 2px 2px}
  .menueleiste{padding:8px}
  .menueleiste .knopf{font-size:12.5px;padding:8px 11px}
- .freiBox{padding:7px;gap:6px}
+ /* Am Handy steht der freie Stein als schmale Leiste UNTER dem Brett:
+    das Brett bekommt die volle Breite, nichts liegt auf dem Spielfeld. */
+ .buehne{flex-direction:column;align-items:center}
+ .freiBox{flex-direction:row;width:100%;max-width:430px;padding:6px 8px;gap:10px;align-items:center}
+ .freiBox .klein{font-size:10.5px}
+ .freiBox .dreh{width:auto;flex:1 1 auto;min-width:78px;font-size:12.5px;padding:9px 8px}
+ .freiBox canvas#frei{flex:0 0 auto}
+ .meldung{margin:6px 8px 0;font-size:12.5px;min-height:34px;padding:7px 10px}
  .titelleiste{gap:6px}
  .titelleiste .titel{font-size:10.5px;letter-spacing:.1em}
  /* Der Connector-Knopf wird am Handy zum Pfeil, sonst frisst er die Kopfzeile. */
@@ -311,6 +321,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     <h3>Ein Zug</h3>
     <ul>
      <li><b>Erst schieben:</b> Mit einem Pfeil am Rand wird der freie Gangstein in die Reihe oder Spalte geschoben. Der Gangstein am gegenüberliegenden Ende fällt heraus und ist der neue freie Stein.</li>
+     <li>Geschoben werden nur die Reihen und Spalten, an denen ein Pfeil steht – beim 7 × 7 sind das die drei mittleren Reihen und Spalten (zwölf Pfeile). Die Kacheln dazwischen sind fest im Plan verankert (16 Stück) und bewegen sich nie.</li>
      <li>Der freie Stein lässt sich vor dem Einschieben beliebig drehen (Knopf „Drehen“ oder direkt auf den Stein tippen).</li>
      <li><b>Verboten:</b> denselben Einschub sofort rückwärts zu wiederholen – also genau die Reihe oder Spalte, die zuletzt hineingeschoben wurde, von der Gegenseite erneut zu schieben.</li>
      <li><b>Dann ziehen:</b> Die eigene Figur darf beliebig weit durch offene Gänge laufen – auch um Ecken, aber nie durch eine Wand und nie durch eine andere Figur. Ein Zug darf auch ausgelassen werden („Zug beenden“).</li>
@@ -754,6 +765,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     kreuze: true,
     aufgaben: 5,
     feld: [],
+    fest: [],
     frei: null,
     drehung: 0,
     figuren: [],
@@ -898,6 +910,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     }
     var n = S.groesse;
     S.feld = baueFeld(n, S.kreuze);
+    S.fest = festMuster(n);
     S.frei = neuerFreierStein(S.kreuze);
     S.drehung = 0;
     S.letzter = null;
@@ -951,10 +964,32 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     return proSpieler;
   }
 
+  /* Klassisches Brett: Die Kacheln auf geraden Zeilen UND geraden Spalten
+     sind fest im Spielplan verankert (bei 7 × 7 sind das 16). Verschiebbar
+     sind deshalb nur die Reihen und Spalten dazwischen – 0-basiert die
+     ungeraden, bei 7 × 7 also 1, 3 und 5. Von jeder dieser sechs Linien
+     liegt an beiden Enden ein Pfeil: zwölf Pfeile wie im Original. */
+  function festMuster(n) {
+    var f = [], r, c;
+    for (r = 0; r < n; r++) {
+      for (c = 0; c < n; c++) f.push(r % 2 === 0 && c % 2 === 0);
+    }
+    return f;
+  }
+
+  function festZelle(i) { return !!(S.fest && S.fest[i]); }
+
+  /* Darf diese Linie überhaupt geschoben werden? */
+  function schiebeLinie(achse, index) {
+    if (index < 0 || index >= S.groesse) return false;
+    if (index % 2 === 0) return false;   /* feste Kacheln bleiben stehen */
+    return true;
+  }
+
   function schiebeErlaubt(achse, index, seite) {
     if (S.vorbei || S.laeuft) return false;
     if (S.phase !== "schieben") return false;
-    if (index < 0 || index >= S.groesse) return false;
+    if (!schiebeLinie(achse, index)) return false;
     if (achse === "r" && seite !== "links" && seite !== "rechts") return false;
     if (achse === "c" && seite !== "oben" && seite !== "unten") return false;
     if (S.letzter && S.letzter.achse === achse && S.letzter.index === index && S.letzter.seite === GEGEN[seite]) return false;
@@ -1158,11 +1193,15 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     if (offen[3]) ctx.rect(x, my - h, mx - x + h, band);
   }
 
-  function kachelZeichnen(ctx, x, y, z, kachel) {
+  function kachelZeichnen(ctx, x, y, z, kachel, fest) {
     var t = themaDaten();
     var i, offen = kachel.offen;
-    var band = z * .4;                         /* Breite des Gangs */
-    var mulde = Math.max(1.2, z * .042);       /* dunkle Rinne am Gangrand */
+    /* Der Gang ist gut 46 % der Kachel breit (bei 44 Pixeln am Handy rund
+       20 Pixel statt bisher 17). Die Mauer bleibt damit breiter als der Weg:
+       Gerade, Kurve, T-Stück und Kreuzung behalten ihre klare Silhouette,
+       statt zu einer hellen Fläche zu verschmelzen. */
+    var band = z * .46;                        /* Breite des Gangs */
+    var mulde = Math.max(1.6, z * .05);        /* dunkle Rinne am Gangrand */
     var hatWeg = anzahlOffen(kachel) > 0;
 
     /* --- 1. Steinmasse: alles, was nicht Gang ist ------------------------ */
@@ -1189,6 +1228,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     ctx.moveTo(x + z - .5, y); ctx.lineTo(x + z - .5, y + z);
     ctx.moveTo(x, y + z - .5); ctx.lineTo(x + z, y + z - .5);
     ctx.stroke();
+
 
     /* --- 2. Gang: Rinne, Bahn, Licht in der Mitte ------------------------ */
     if (hatWeg) {
@@ -1219,6 +1259,24 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
       ctx.fill();
     }
 
+    /* --- 2b. Kachelkante: jede Karte bleibt als eigener Stein erkennbar,
+       auch wo zwei Gänge nahtlos ineinanderlaufen. ----------------------- */
+    ctx.strokeStyle = "#0000002b";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + .5, y + .5, z - 1, z - 1);
+
+    /* Feste Kachel: sitzt im Spielplan fest und wird nie geschoben. Der
+       doppelte Rahmen sitzt genau auf der Kartenkante und kostet keinen Weg. */
+    if (fest) {
+      var fr = Math.max(1.5, z * .045);
+      ctx.strokeStyle = "#00000070";
+      ctx.lineWidth = fr;
+      ctx.strokeRect(x + fr / 2, y + fr / 2, z - fr, z - fr);
+      ctx.strokeStyle = t.wand + "9c";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + fr + .5, y + fr + .5, z - fr * 2 - 1, z - fr * 2 - 1);
+    }
+
     /* --- 3. Mauerwerk: geschlossene Seiten bekommen einen Schattenwurf,
        damit die Steinmasse zwischen den Gängen Tiefe zeigt --------------- */
     var wT = Math.max(2, z * .06);
@@ -1240,14 +1298,14 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
 
     /* --- 4. Gegenstand: eingelegtes Plättchen -------------------------- */
     if (kachel.g != null) {
-      var kante = z * (z < 52 ? .46 : .42);
+      var kante = z * .60;
       var px = x + (z - kante) / 2, py = y + (z - kante) / 2;
       ctx.save();
       ctx.shadowColor = "#00000088";
       ctx.shadowBlur = z * .08;
       ctx.shadowOffsetY = z * .022;
       /* dunkler Rand zuerst: das Plättchen hebt sich vom hellen Gang ab */
-      rr(ctx, px - kante * .05, py - kante * .05, kante * 1.1, kante * 1.1, kante * .22);
+      rr(ctx, px - kante * .085, py - kante * .085, kante * 1.17, kante * 1.17, kante * .24);
       ctx.fillStyle = t.tokenKante;
       ctx.fill();
       ctx.shadowColor = "transparent";
@@ -1257,7 +1315,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
       ctx.fillStyle = pv;
       rr(ctx, px, py, kante, kante, kante * .17);
       ctx.fill();
-      zeichneGegenstand(ctx, t.items[kachel.g].e, px + kante * .04, py + kante * .04, kante * .92, t.ink, t.token[0]);
+      zeichneGegenstand(ctx, t.items[kachel.g].e, px + kante * .11, py + kante * .11, kante * .78, t.ink, t.token[0]);
       ctx.restore();
     }
   }
@@ -1285,7 +1343,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     /* Die Figur füllt gut die halbe Kachel: bei 9 × 9 bleiben am Handy nur
        rund 33 Pixel je Feld, mit dem alten Maß war der Körper keine
        12 Pixel breit und die Kopfbedeckung nicht mehr zu erkennen. */
-    var s = z / 74;
+    var s = z / 62;
     var farbe = figur.farbe || "#e8cd8e";
     idx = idx || 0;
     var saum = Math.max(2, 3.4 * s);            /* heller Rand, gegen dunkle Gänge */
@@ -1446,20 +1504,20 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
         p = rc(i);
         var inLinie = A.achse === "r" ? p[0] === A.index : p[1] === A.index;
         if (inLinie) continue;
-        kachelZeichnen(g, p[1] * zelle, p[0] * zelle, zelle, S.feld[i]);
+        kachelZeichnen(g, p[1] * zelle, p[0] * zelle, zelle, S.feld[i], festZelle(i));
       }
       for (var k = 0; k < n; k++) {
         var rr2 = A.achse === "r" ? A.index : k;
         var cc2 = A.achse === "r" ? k : A.index;
-        kachelZeichnen(g, (cc2 + dx * A.t) * zelle, (rr2 + dy * A.t) * zelle, zelle, A.alt[idx(rr2, cc2)]);
+        kachelZeichnen(g, (cc2 + dx * A.t) * zelle, (rr2 + dy * A.t) * zelle, zelle, A.alt[idx(rr2, cc2)], false);
       }
       var einR = A.achse === "r" ? A.index : (A.seite === "oben" ? -1 : n);
       var einC = A.achse === "r" ? (A.seite === "links" ? -1 : n) : A.index;
-      kachelZeichnen(g, (einC + dx * A.t) * zelle, (einR + dy * A.t) * zelle, zelle, A.neu);
+      kachelZeichnen(g, (einC + dx * A.t) * zelle, (einR + dy * A.t) * zelle, zelle, A.neu, false);
     } else {
       for (r = 0; r < n; r++) {
         for (c = 0; c < n; c++) {
-          kachelZeichnen(g, c * zelle, r * zelle, zelle, S.feld[idx(r, c)]);
+          kachelZeichnen(g, c * zelle, r * zelle, zelle, S.feld[idx(r, c)], festZelle(idx(r, c)));
         }
       }
     }
@@ -1716,6 +1774,15 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
       if (!box) return;
       box.textContent = "";
       for (var i = 0; i < n; i++) {
+        if (!schiebeLinie(d.achse, i)) {
+          /* Feste Linie: hier steht kein Pfeil, nur ein Platzhalter, damit
+             die Pfeile genau über ihrer Reihe sitzen. */
+          var lücke = document.createElement("span");
+          lücke.className = "pfeilPlatz";
+          lücke.setAttribute("aria-hidden", "true");
+          box.appendChild(lücke);
+          continue;
+        }
         var b = document.createElement("button");
         b.type = "button";
         b.className = "pfeil";
@@ -1775,16 +1842,23 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     if (!brett || !freiCanvas || !el("spielbereich") || el("spielbereich").hidden) return;
     var buehne = document.querySelector(".buehne");
     if (!buehne) return;
-    var pfeil = window.innerWidth < 520 ? 30 : 34;
-    var platz = buehne.clientWidth - 6;
+    /* Am Handy steht der freie Stein unter dem Brett, dann zählt die volle
+       Breite. Die Höhe bleibt für Kopfzeile, Meldung und Spielerliste frei,
+       damit das Brett nie unter Bedienelementen verschwindet. */
+    var schmal = window.innerWidth < 620;
+    var pfeilS = schmal ? 27 : 34;   /* Breite der senkrechten Pfeilleisten */
+    var pfeilH = schmal ? 28 : 34;   /* Höhe der waagerechten Pfeilleisten */
+    var lücke = schmal ? 3 : 5;
+    var platz = buehne.clientWidth - 2;
     var freiBox = document.querySelector(".freiBox");
-    if (window.innerWidth >= 560 && freiBox) platz -= (freiBox.offsetWidth + 12);
-    platz -= 2 * (pfeil + 5);
-    var maxH = Math.max(240, window.innerHeight - 290);
+    if (!schmal && freiBox) platz -= (freiBox.offsetWidth + 12);
+    platz -= (pfeilS + pfeilH + 2 * lücke);
+    var maxH = Math.max(240, window.innerHeight - (schmal ? 244 : 268));
     var kante = Math.max(180, Math.min(platz, maxH));
-    zelle = Math.max(22, Math.floor(kante / S.groesse));
+    zelle = Math.max(24, Math.floor(kante / S.groesse));
     bpx = zelle * S.groesse;
-    dpr = Math.min(2, window.devicePixelRatio || 1);
+    /* Auf hochauflösenden Handys (3×) wird sonst unscharf skaliert. */
+    dpr = Math.min(3, window.devicePixelRatio || 1);
 
     brett.style.width = bpx + "px";
     brett.style.height = bpx + "px";
@@ -1796,16 +1870,18 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
       var s = el(id);
       if (!s) return;
       s.style.width = bpx + "px";
-      s.style.height = pfeil + "px";
+      s.style.height = pfeilH + "px";
     });
     ["streifenLinks", "streifenRechts"].forEach(function (id) {
       var s = el(id);
       if (!s) return;
-      s.style.width = pfeil + "px";
+      s.style.width = pfeilS + "px";
       s.style.height = bpx + "px";
     });
 
-    var fk = Math.max(58, Math.min(104, Math.round(bpx * 0.3)));
+    var fk = schmal
+      ? Math.max(56, Math.min(78, Math.round(bpx * .24)))
+      : Math.max(58, Math.min(104, Math.round(bpx * 0.3)));
     freiCanvas.style.width = fk + "px";
     freiCanvas.style.height = fk + "px";
     freiCanvas.width = Math.round(fk * dpr);
@@ -2363,6 +2439,7 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
         groesse: S.groesse, thema: S.thema, modus: S.modus, phase: S.phase,
         amZug: S.amZug, zuege: S.zuege, vorbei: S.vorbei, letzter: S.letzter,
         frei: S.frei, drehung: S.drehung,
+        fest: S.fest.slice(),
         feld: S.feld.map(function (t) { return { offen: t.offen.slice(), g: t.g }; }),
         figuren: S.figuren.map(function (f) {
           return { i: f.i, heim: f.heim, name: f.name, ki: f.ki, farbe: f.farbe, erledigt: f.erledigt, auf: f.auf.slice() };
@@ -2395,6 +2472,9 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
       S.laeuft = false;
       S.letzter = d.letzter || null;
       S.frei = { offen: (d.frei && d.frei.offen ? d.frei.offen : [1, 1, 0, 0]).slice(), g: d.frei ? d.frei.g : null };
+      S.fest = (d.fest && d.fest.length === S.groesse * S.groesse)
+        ? d.fest.map(function (v) { return !!v; })
+        : festMuster(S.groesse);
       S.drehung = d.drehung || 0;
       S.feld = d.feld.map(function (t) { return { offen: t.offen.slice(), g: t.g }; });
       S.figuren = d.figuren.map(function (f) {

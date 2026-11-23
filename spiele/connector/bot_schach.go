@@ -130,13 +130,24 @@ func chessBotTreiben(room *Room, jetzt time.Time) bool {
 
 	g.BotFrist = time.Time{}
 	g.BotRechnet = g
+	g.BotGen++
+	gen := g.BotGen
 	schnappschuss := chessClone(g)
 	stufe := g.BotStufe
+	// Notbremse: Die Suche hat ihre eigene Frist; meldet sie sich trotzdem
+	// nicht, wird der Platz nach botRechenFrist für einen Neuversuch frei.
+	wache := botWacheStarten(botRechenFrist,
+		func() bool { return room.Schach == g && g.BotRechnet == g && g.BotGen == gen },
+		func() {
+			g.BotRechnet = nil
+			g.BotFrist = time.Now()
+		})
 	go func() {
-		zug, ok := chessBotZug(schnappschuss, farbe, stufe)
+		zug, ok := chessBotRechnen(schnappschuss, farbe, stufe)
 		mu.Lock()
 		defer mu.Unlock()
-		chessBotErgebnis(room, g, zug, ok)
+		wache.Stop()
+		chessBotErgebnis(room, g, gen, zug, ok)
 	}()
 	return false
 }
@@ -145,8 +156,8 @@ func chessBotTreiben(room *Room, jetzt time.Time) bool {
 // Partie, für die gerechnet wurde: Wurde sie inzwischen ersetzt (Reset oder
 // neue Bot-Partie), verfällt das Ergebnis, ohne die neue Partie anzufassen –
 // insbesondere bleibt deren Rechen-Zustand stehen. Der Aufrufer hält die Sperre.
-func chessBotErgebnis(room *Room, quelle *ChessGame, zug chessMove, ok bool) bool {
-	if quelle == nil || room.Schach != quelle {
+func chessBotErgebnis(room *Room, quelle *ChessGame, gen int, zug chessMove, ok bool) bool {
+	if quelle == nil || room.Schach != quelle || quelle.BotGen != gen {
 		return false
 	}
 	quelle.BotRechnet = nil
@@ -171,7 +182,17 @@ func chessBotZuege(s chessState, farbe string) []chessMove {
 	return zuege
 }
 
+// chessBotRechnen ist die eigentliche Suche. In Tests lässt sie sich durch
+// eine hängende Funktion ersetzen, um die Notbremse zu prüfen.
+var chessBotRechnen = chessBotZug
+
 func chessBotZug(g *ChessGame, farbe, stufe string) (chessMove, bool) {
+	return chessBotZugMitFrist(g, farbe, stufe, neueBotFrist(botSuchFrist))
+}
+
+// chessBotZugMitFrist sucht einen Zug und bricht spätestens an der Frist ab.
+// Der beste bis dahin gefundene Zug ist immer ein erlaubter Zug.
+func chessBotZugMitFrist(g *ChessGame, farbe, stufe string, frist *botFrist) (chessMove, bool) {
 	zuege := chessBotZuege(g.State, farbe)
 	if len(zuege) == 0 {
 		return chessMove{}, false
@@ -190,8 +211,14 @@ func chessBotZug(g *ChessGame, farbe, stufe string) (chessMove, bool) {
 	beste := zuege[0]
 	besterWert := -1 << 30
 	for _, zug := range zuege {
+		if frist.abgebrochen {
+			break
+		}
 		next := chessApplyMove(g.State, zug, "Q")
-		wert := -chessBotSuche(next, farbe, tiefe-1, -1<<30, 1<<30)
+		wert := -chessBotSuche(next, farbe, tiefe-1, -1<<30, 1<<30, frist)
+		if frist.abgebrochen {
+			break
+		}
 		if wert > besterWert || (wert == besterWert && botZufall().Intn(2) == 0) {
 			beste, besterWert = zug, wert
 		}
@@ -199,7 +226,10 @@ func chessBotZug(g *ChessGame, farbe, stufe string) (chessMove, bool) {
 	return beste, true
 }
 
-func chessBotSuche(s chessState, farbe string, tiefe, alpha, beta int) int {
+func chessBotSuche(s chessState, farbe string, tiefe, alpha, beta int, frist *botFrist) int {
+	if frist.vorbei() {
+		return 0
+	}
 	zuege := chessBotZuege(s, s.Turn)
 	if len(zuege) == 0 {
 		if chessInCheck(s, s.Turn) {
@@ -216,7 +246,10 @@ func chessBotSuche(s chessState, farbe string, tiefe, alpha, beta int) int {
 	if s.Turn == farbe {
 		best := -1 << 30
 		for _, zug := range zuege {
-			wert := chessBotSuche(chessApplyMove(s, zug, "Q"), farbe, tiefe-1, alpha, beta)
+			wert := chessBotSuche(chessApplyMove(s, zug, "Q"), farbe, tiefe-1, alpha, beta, frist)
+			if frist.abgebrochen {
+				break
+			}
 			if wert > best {
 				best = wert
 			}
@@ -231,7 +264,10 @@ func chessBotSuche(s chessState, farbe string, tiefe, alpha, beta int) int {
 	}
 	best := 1 << 30
 	for _, zug := range zuege {
-		wert := chessBotSuche(chessApplyMove(s, zug, "Q"), farbe, tiefe-1, alpha, beta)
+		wert := chessBotSuche(chessApplyMove(s, zug, "Q"), farbe, tiefe-1, alpha, beta, frist)
+		if frist.abgebrochen {
+			break
+		}
 		if wert < best {
 			best = wert
 		}

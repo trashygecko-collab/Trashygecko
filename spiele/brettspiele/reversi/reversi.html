@@ -183,6 +183,10 @@ body {
   align-items:center;
   justify-content:center;
 }
+.status.meldung {
+  color:#ffe6a8;
+  font-weight:bold;
+}
 .controls {
   width:100%;
   display:flex;
@@ -367,6 +371,8 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
   const whiteScore = document.getElementById('whiteScore');
   const blackPlayer = document.getElementById('blackPlayer');
   const whitePlayer = document.getElementById('whitePlayer');
+  const blackName = blackPlayer.querySelector('.player-name');
+  const whiteName = whitePlayer.querySelector('.player-name');
   const blackTurn = document.getElementById('blackTurn');
   const whiteTurn = document.getElementById('whiteTurn');
   const passBtn = document.getElementById('passBtn');
@@ -382,6 +388,12 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
   let turn;
   let lastMove;
   let finished;
+  // Automatisches Aussetzen: Der Server wechselt sofort weiter. Fuer die
+  // Anzeige bleibt der aussetzende Spieler kurz am Zug; erst nach der
+  // Meldung wird der Wechsel uebernommen.
+  const AUSSETZ_DAUER = 2000;
+  let lokalSperre = false;
+  let lokalTimer = 0;
 
   const inside = (r,c) => r>=0 && r<8 && c>=0 && c<8;
 
@@ -452,7 +464,9 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
 
     boardEl.innerHTML = '';
 
-    const moves = finished ? [] : legalMoves(turn);
+    // Online zeigt nur der Spieler am Zug seine Möglichkeiten; sonst stünden
+    // beim Warten fremde Zugmarkierungen auf dem Brett.
+    const moves = finished || (ONLINE && !onlineDarfSetzen()) ? [] : legalMoves(turn);
 
     for(let r=0;r<8;r++) {
       for(let c=0;c<8;c++) {
@@ -513,7 +527,8 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
     whiteTurn.textContent =
       turn===-1 && !finished ? 'AM ZUG' : '';
 
-    passBtn.disabled = finished || moves.length!==0;
+    passBtn.disabled = finished || lokalSperre || Date.now()<halteBis ||
+      moves.length!==0 || (ONLINE && !onlineDarfSetzen());
   }
 
   function endGame() {
@@ -556,20 +571,34 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
     }
 
     const skipped = turn===1?'Schwarz':'Weiß';
-
-    turn = -turn;
+    const naechster = -turn;
 
     statusEl.textContent =
-      `${skipped} kann nicht setzen und muss aussetzen. Jetzt ist ${turn===1?'Schwarz':'Weiß'} dran.`;
-
+      `${skipped} kann nicht setzen und muss aussetzen. Jetzt ist ${naechster===1?'Schwarz':'Weiß'} dran.`;
+    statusEl.classList.add('meldung');
+    lokalSperre = true;
     render();
+
+    clearTimeout(lokalTimer);
+    lokalTimer = setTimeout(()=>{
+      lokalSperre = false;
+      turn = naechster;
+      statusEl.textContent =
+        (turn===1?'Schwarz':'Weiß') + ' ist am Zug.';
+      statusEl.classList.remove('meldung');
+      render();
+    }, AUSSETZ_DAUER+30);
   }
 
   function play(r,c) {
 
-    if(ONLINE) { playOnline(r,c); return; }
+    // Online prüft playOnline() selbst, ob ich setzen darf.
+    if(ONLINE) {
+      playOnline(r,c);
+      return;
+    }
 
-    if(finished) return;
+    if(finished || lokalSperre) return;
 
     const flips = flipsFor(r,c,turn);
 
@@ -594,15 +623,13 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
 
   function pass() {
 
+    // Der Knopf ist gesperrt, solange ich setzen kann oder warten muss.
     if(ONLINE) {
-
-      if(onlineBusy || finished || legalMoves(turn).length) return;
-
-      reversiAction('pass',{});
+      reversiAction('pass');
       return;
     }
 
-    if(finished || legalMoves(turn).length) return;
+    if(finished || lokalSperre || legalMoves(turn).length) return;
 
     if(!legalMoves(-turn).length) {
       endGame();
@@ -619,7 +646,11 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
 
   function newGame() {
 
-    if(ONLINE) { reversiAction('reset',{}); return; }
+    clearTimeout(lokalTimer);
+    lokalSperre = false;
+    statusEl.classList.remove('meldung');
+
+    if(ONLINE) { reversiAction('reset'); return; }
 
     board = Array.from(
       {length:8},
@@ -650,8 +681,22 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
   const ROOM = params.get('room') || '';
   const PLAYER_ID = params.get('id') || '';
   const ONLINE_API = '/api/reversi';
-  let onlineBusy = false;
+  let onlineBusy = false;     // eine Aktion ist unterwegs
+  let holeLaeuft = false;     // ein Abruf des Stands ist unterwegs
+  let fehlversuche = 0;       // erfolglose Abrufe in Folge
   let onlineGame = null;
+  let halteBis = 0;
+  let meldungTimer = 0;
+  let warteNeu = null;
+
+  // Setzen darf ich nur, wenn die Partie läuft, ich am Zug bin und keine
+  // Aussetz-Meldung mehr angezeigt wird. 1 = schwarz, -1 = weiß, 0 = Zuschauer.
+  function onlineDarfSetzen(){
+    if(!onlineGame || onlineGame.status !== 'active') return false;
+    const meine = onlineGame.redId === PLAYER_ID ? 1 :
+      onlineGame.blueId === PLAYER_ID ? -1 : 0;
+    return meine === turn && Date.now() >= halteBis;
+  }
 
   function onlineTurnName(){
     if(!onlineGame) return turn===1 ? 'Schwarz' : 'Weiß';
@@ -661,29 +706,65 @@ html[data-stil="maedchen"] .vs{color:#5b0f2e}
   function applyOnlineState(game){
 
     if(!game) return;
+    if(Date.now()<halteBis) return;
 
-    onlineGame = game;
-    board = (game.board||[]).map(row=>row.slice());
-    turn = game.turn;
-    lastMove = game.hasLast ? [game.lastR,game.lastC] : null;
-    finished = game.status === 'finished';
+    blackName.textContent = game.redName || 'SCHWARZ';
+    whiteName.textContent = game.blueName || 'WEISS';
+
+    const vorher = onlineGame;
+    const altNote = vorher && vorher.note || '';
+
+    if(vorher && game.note!==altNote &&
+       /kann nicht setzen und muss aussetzen/.test(game.note||'')){
+      warteNeu = game;
+      halteBis = Date.now()+AUSSETZ_DAUER;
+      clearTimeout(meldungTimer);
+      meldungTimer = setTimeout(()=>{
+        halteBis = 0;
+        const neu = warteNeu;
+        warteNeu = null;
+        if(neu) applyOnlineState(neu);
+      }, AUSSETZ_DAUER+30);
+      onlineGame = Object.assign({}, game, {turn: vorher.turn});
+    } else {
+      onlineGame = game;
+    }
+
+    board = (onlineGame.board||[]).map(row=>row.slice());
+    turn = onlineGame.turn;
+    lastMove = onlineGame.hasLast ? [onlineGame.lastR,onlineGame.lastC] : null;
+    finished = onlineGame.status === 'finished';
 
     render();
+    statusEl.classList.toggle('meldung', Date.now()<halteBis);
 
     if(finished){
       const s = count();
-      statusEl.textContent = game.winner==='draw'
+      statusEl.textContent = onlineGame.winner==='draw'
         ? `Spiel beendet! Unentschieden – ${s.b} zu ${s.w}.`
-        : `Spiel beendet! ${game.winner==='black'?game.redName:game.blueName} gewinnt mit ${Math.max(s.b,s.w)} zu ${Math.min(s.b,s.w)} Steinen.`;
+        : `Spiel beendet! ${onlineGame.winner==='black'?onlineGame.redName:onlineGame.blueName} gewinnt mit ${Math.max(s.b,s.w)} zu ${Math.min(s.b,s.w)} Steinen.`;
       return;
     }
 
-    if(game.status==='invited'){
-      statusEl.textContent = 'Warte auf die Antwort von '+game.blueName+' …';
+    if(onlineGame.status==='invited'){
+      statusEl.textContent = 'Warte auf die Antwort von '+onlineGame.blueName+' …';
       return;
     }
 
-    statusEl.textContent = game.note || (onlineTurnName()+' ist am Zug.');
+    if(onlineGame.status==='declined'){
+      statusEl.textContent = onlineGame.blueName+' hat die Einladung abgelehnt.';
+      return;
+    }
+
+    // Die Aussetz-Bemerkung schickt der Server bis zum naechsten Zug weiter.
+    // Nach den zwei Sekunden Anzeige gilt wieder der normale Zug-Hinweis,
+    // damit niemand denkt, es setze noch jemand aus.
+    const aussetzBemerkung = /kann nicht setzen und muss aussetzen/.test(onlineGame.note || '');
+    if(aussetzBemerkung && Date.now() >= halteBis){
+      statusEl.textContent = onlineTurnName()+' ist am Zug.';
+    } else {
+      statusEl.textContent = onlineGame.note || (onlineTurnName()+' ist am Zug.');
+    }
   }
 
   async function rejoinRoom(){
@@ -714,10 +795,65 @@ async function onlineFetch(url, options){
   return response.json();
 }
 
+async function reversiAction(action, daten){
+
+  if(onlineBusy) return;
+  onlineBusy = true;
+
+  try{
+    const ziel = ONLINE_API + '?room=' + encodeURIComponent(ROOM) +
+      '&action=' + encodeURIComponent(action);
+    const antwort = await onlineFetch(ziel, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(Object.assign({id:PLAYER_ID}, daten||{}))
+    });
+    if(antwort && antwort.game) applyOnlineState(antwort.game);
+  }catch(e){
+    statusEl.textContent = (e && e.message) || 'Die Aktion ist fehlgeschlagen.';
+  }finally{
+    onlineBusy = false;
+  }
+}
+
+function playOnline(r,c){
+
+  if(!onlineDarfSetzen()) return;
+  reversiAction('move', {r,c});
+}
+
+async function holeStand(){
+
+  if(holeLaeuft) return;
+  holeLaeuft = true;
+
+  try{
+    const antwort = await onlineFetch(
+      ONLINE_API + '?room=' + encodeURIComponent(ROOM) +
+      '&id=' + encodeURIComponent(PLAYER_ID)
+    );
+    fehlversuche = 0;
+    if(antwort && antwort.game) applyOnlineState(antwort.game);
+    else statusEl.textContent = 'In diesem Raum läuft keine Reversi-Partie.';
+  }catch(e){
+    // Erst der zweite Fehlschlag in Folge wird gemeldet – ein einzelner
+    // verlorener Abruf soll die Anzeige nicht überschreiben.
+    fehlversuche++;
+    if(fehlversuche >= 2){
+      statusEl.textContent = 'Verbindung: ' + ((e && e.message) || 'unterbrochen');
+    }
+  }finally{
+    holeLaeuft = false;
+  }
+}
+
 // Ohne diese Zeile blieb das Brett beim Öffnen leer – gezeichnet wurde erst
 // nach einem Klick auf "Neu starten".
 if (!ONLINE) {
   newGame();
+} else {
+  holeStand();
+  setInterval(holeStand, 1200);
 }
 })();
 </script>

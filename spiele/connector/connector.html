@@ -1451,6 +1451,7 @@ let currentDominoGame=null;
 let currentSchlangenGame=null;
 let currentPigGame=null;
 let currentGaenseGame=null;
+let currentQuizGame=null;
 
 // Die Spieleliste steht in der zentralen Spieleverwaltung
 // (/spiele/multiplayer-register.js). Dort sind Kategorie, Spielerzahl,
@@ -1662,7 +1663,8 @@ const SPIEL_ABFRAGEN={
  uno:refreshUno, schwimmen:refreshSchwimmen, arschloch:refreshArschloch,
  einsxeins:refreshEinsxeins, sechsundsechzig:refreshSechsundsechzig, galgen:refreshGalgen,
  bingo:refreshBingo, wortsuche:refreshWortsuche, domino:refreshDomino,
- schlangen:refreshSchlangen, pig:refreshPig, gaensespiel:refreshGaense
+ schlangen:refreshSchlangen, pig:refreshPig, gaensespiel:refreshGaense,
+ quizshow:refreshQuiz
 };
 
 // Sitze ich nur zu, sagt die Spielerliste, wer worin spielt (/api/players
@@ -1769,6 +1771,7 @@ function gameStateFor(gameId){
  if(gameId==="schlangen")return currentSchlangenGame;
  if(gameId==="pig")return currentPigGame;
  if(gameId==="gaensespiel")return currentGaenseGame;
+ if(gameId==="quizshow")return currentQuizGame;
  return currentTTTGame;
 }
 
@@ -3075,6 +3078,37 @@ async function refreshGalgen(players){
  }
 }
 
+// Scherzshow: ein Scherzfragen-Quiz. Die Punkte rechnet der Server, der Browser
+// schickt nur die gewählte Antwort (0–3).
+async function refreshQuiz(players){
+ let game=null;
+ try{
+  const r=await fetch("/api/quiz?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!r.ok)throw Error();
+  game=(await r.json()).game;
+ }catch(e){
+  return;
+ }
+ currentQuizGame=game;
+ if(!game)return;
+ const ich=game.spieler.find(s=>s.id===sessionID);
+ if(game.status!=="invited"){
+  tttStatus(game.status==="ende"
+   ? (game.note||"Scherzshow beendet.")
+   : "Scherzshow: Frage "+game.runde+" von "+game.runden+" – "+game.modusName+".","quizshow");
+  if(ich)addStatusButton("Zum Spiel",()=>openGame(gamePath("quizshow")));
+  return;
+ }
+ tttStatus("Scherzshow: "+game.spieler.length+" auf der Bühne ("+game.modusName+") – warte auf Bereitschaft.","quizshow");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("quizshow","join"))await refreshPlayers(); });
+ }else if(!ich.ready){
+  addStatusButton("Bereit",async()=>{ if(await gameApiAction("quizshow","ready"))await refreshPlayers(); });
+ }else{
+  addStatusButton("Los",async()=>{ if(await gameApiAction("quizshow","start"))openGame(gamePath("quizshow")); });
+ }
+}
+
 // Bingo: gemeinsame Karten, reihum zieht einer, wer zuerst eine Reihe hat, ruft Bingo.
 async function refreshBingo(players){
  let game=null;
@@ -3751,7 +3785,7 @@ const BOTS_SPIELE={
  tictactoe:"tictactoe",viergewinnt:"viergewinnt",streichholzspiel:"streichholz",
  muehle:"muehle",reversi:"reversi",dame:"dame",kalaha:"kalaha",
  kaesekaestche:"kaesekaestche",menschaerger:"menschaerger",schach:"schach",backgammon:"backgammon",
- pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",uno:"uno",maumau:"maumau",skyjo:"skyjo",schwimmen:"schwimmen",pong:"pong",tron:"tron",galgen:"galgen",arschloch:"arschloch",maexchen:"maexchen",sim:"sim",siebzehn:"siebzehn",sechsundsechzig:"sechsundsechzig",baccara:"baccara",poker:"poker",boston:"boston",chicago:"chicago",shipcrew:"shipcrew",einsxeins:"einsxeins",bomberman:"bomberman",go:"go",paare:"paare",hold:"hold",memory:"memory",mastermind:"mastermind",
+ pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",uno:"uno",maumau:"maumau",skyjo:"skyjo",schwimmen:"schwimmen",pong:"pong",tron:"tron",galgen:"galgen",arschloch:"arschloch",maexchen:"maexchen",sim:"sim",siebzehn:"siebzehn",sechsundsechzig:"sechsundsechzig",baccara:"baccara",poker:"poker",boston:"boston",chicago:"chicago",shipcrew:"shipcrew",einsxeins:"einsxeins",bomberman:"bomberman",go:"go",paare:"paare",hold:"hold",memory:"memory",mastermind:"mastermind",cabo:"cabo",wortsuche:"wortsuche",domino:"domino",halma:"halma",risiko:"risiko",labyrinth:"labyrinth",bubble:"bubble",snake:"snake",tetris:"tetris",
  // Die 18 Würfelspiele laufen alle über dieselbe Regelmaschine (/api/wuerfel).
  beelzebub:"wuerfel","boese-drei":"wuerfel","boese-eins":"wuerfel","der-turm":"wuerfel",
  "dufte-hundert":"wuerfel","eins-bis-sechzehn":"wuerfel",fenster:"wuerfel",

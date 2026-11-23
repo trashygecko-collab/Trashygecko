@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<script src="/spiele/brettspiele/wuerfel-common.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Scherzshow – TrashyGecko</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+:root{
+  --nacht:#050a14; --nacht2:#0a1327; --anthrazit:#111a2b; --flaeche:rgba(255,255,255,.045);
+  --linie:rgba(231,196,106,.18); --linie-hell:rgba(231,196,106,.42);
+  --gold:#e7c46a; --gold-tief:#b98f3e; --ink:#eef2fb; --muted:#93a0b8;
+  --gruen:#4fd18b; --rot:#e2534f; --blau:#2a3a63;
+  --schatten:0 18px 48px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;padding:12px;background:var(--nacht);color:var(--ink);
+  font-family:var(--tg-schrift);display:flex;justify-content:center;overflow:hidden;
+}
+/* Studio: zwei weiche Scheinwerfer, ein dunkler Bühnenboden */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(58% 46% at 18% -6%,rgba(231,196,106,.14),transparent 62%),
+    radial-gradient(52% 44% at 84% -10%,rgba(88,124,216,.18),transparent 64%),
+    radial-gradient(90% 70% at 50% 118%,rgba(20,32,58,.85),transparent 70%),
+    linear-gradient(180deg,var(--nacht2),var(--nacht) 62%);
+  animation:atem 9s ease-in-out infinite alternate;
+}
+@keyframes atem{from{opacity:.85}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
+.app{
+  position:relative;z-index:1;width:min(1180px,100%);height:100%;
+  display:flex;flex-direction:column;gap:10px;min-height:0;
+}
+
+/* ---- Kopf ------------------------------------------------------------- */
+.kopf{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.marke{display:flex;align-items:baseline;gap:8px;letter-spacing:.22em;font-size:13px;color:var(--gold)}
+.marke b{font-size:15px;letter-spacing:.3em}
+.marke small{color:var(--muted);letter-spacing:.14em;font-size:10px}
+.kennzahlen{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{
+  border:1px solid var(--linie);border-radius:999px;padding:5px 12px;font-size:11.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:rgba(255,255,255,.03);
+}
+.chip.gold{color:var(--gold);border-color:var(--linie-hell)}
+
+/* ---- Bühne ------------------------------------------------------------ */
+.buehne{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:10px}
+.karte{
+  background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+  border:1px solid var(--linie);border-radius:18px;box-shadow:var(--schatten);
+  backdrop-filter:blur(6px);
+}
+.frage-karte{padding:clamp(12px,2.2vh,22px) clamp(14px,2.4vw,30px);display:flex;flex-direction:column;gap:8px}
+.deck{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.deck b{color:var(--gold);font-weight:normal}
+#frage{
+  margin:0;font-size:clamp(19px,3.2vw,38px);line-height:1.22;letter-spacing:.005em;
+  text-align:center;text-wrap:balance;color:var(--ink);min-height:2.2em;
+  display:flex;align-items:center;justify-content:center;
+}
+.zeit{height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.zeit i{display:block;height:100%;width:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--gold-tief),var(--gold));transition:width .2s linear}
+.zeit.knapp i{background:linear-gradient(90deg,#a63a36,var(--rot))}
+
+/* ---- Moderator ------------------------------------------------------- */
+.moderator{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-radius:14px;
+  border:1px solid rgba(231,196,106,.3);
+  background:linear-gradient(120deg,rgba(231,196,106,.12),rgba(255,255,255,.02));
+  font-size:clamp(12.5px,1.3vw,15px);line-height:1.35;color:#f6eccd;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+.moderator .mikro{flex:0 0 auto;font-size:1.05em;line-height:1.2;filter:saturate(.8);opacity:.9}
+.moderator .inhalt{min-width:0}
+.moderator .wer{display:block;font-size:10.5px;letter-spacing:.19em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:1px}
+.moderator .satz{display:block}
+.moderator.frisch{animation:modRein .3s ease-out}
+@keyframes modRein{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.moderator.frisch{animation:none}}
+
+.antworten{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.antwort{
+  position:relative;display:flex;align-items:center;gap:12px;text-align:left;
+  padding:clamp(11px,2vh,18px) clamp(12px,1.8vw,20px);cursor:pointer;
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+  border:1px solid var(--linie);border-radius:14px;color:var(--ink);
+  font-family:inherit;font-size:clamp(14px,1.55vw,19px);line-height:1.25;
+  transition:transform .12s, border-color .2s, background .25s, opacity .25s;
+}
+.antwort .buchstabe{
+  flex:0 0 auto;width:2.1em;height:2.1em;display:grid;place-items:center;border-radius:10px;
+  border:1px solid var(--linie-hell);color:var(--gold);font-size:.82em;letter-spacing:.06em;
+}
+.antwort:hover:not(:disabled),.antwort:focus-visible:not(:disabled){
+  transform:translateY(-2px);border-color:var(--linie-hell);
+  background:linear-gradient(160deg,rgba(231,196,106,.14),rgba(255,255,255,.03));outline:none;
+}
+.antwort.meine{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.antwort:disabled{cursor:default}
+.antwort.wartet{opacity:.6}
+.antwort.richtig{
+  border-color:rgba(79,209,139,.8);background:linear-gradient(160deg,rgba(79,209,139,.24),rgba(79,209,139,.06));
+  box-shadow:0 0 26px rgba(79,209,139,.25);
+}
+.antwort.richtig .buchstabe{border-color:var(--gruen);color:var(--gruen)}
+.antwort.falsch{
+  border-color:rgba(226,83,79,.7);background:linear-gradient(160deg,rgba(226,83,79,.2),rgba(226,83,79,.04));
+  opacity:.75;
+}
+.antwort.falsch .buchstabe{border-color:var(--rot);color:var(--rot)}
+.antwort .plus{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:.8em;letter-spacing:.05em;color:var(--gold)}
+.antwort.richtig .plus{color:var(--gruen)}
+.antwort.falsch .plus{color:var(--rot)}
+
+/* ---- Leisten unten ---------------------------------------------------- */
+.spielerleiste{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.sp{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:12px;
+  border:1px solid var(--linie);background:rgba(255,255,255,.035);font-size:13px;
+}
+.sp b{color:var(--gold);font-weight:600;font-size:15px}
+.sp.ich{border-color:var(--linie-hell);background:rgba(231,196,106,.08)}
+.sp .punkt{width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.5}
+.sp.gesetzt .punkt{background:var(--gold);opacity:1}
+.sp.sieger b{color:var(--gruen)}
+
+.fuss{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;min-height:34px}
+.notiz{color:var(--muted);font-size:12.5px;letter-spacing:.03em}
+.knoepfe{display:flex;gap:8px;flex-wrap:wrap}
+button.aktion{
+  font-family:inherit;font-size:13px;letter-spacing:.06em;padding:9px 16px;border-radius:11px;
+  border:1px solid var(--linie-hell);background:rgba(255,255,255,.05);color:var(--ink);cursor:pointer;
+  transition:background .18s,transform .1s;
+}
+button.aktion:hover{background:rgba(231,196,106,.20)}
+button.aktion:active{transform:scale(.97)}
+button.aktion.haupt{background:linear-gradient(160deg,var(--gold),var(--gold-tief));color:#1a1206;border-color:transparent;font-weight:600}
+button.aktion.leise{border-color:rgba(255,255,255,.12);color:var(--muted)}
+button.aktion:disabled{opacity:.45;cursor:default}
+
+/* ---- Lobby, Auflösung, Ende ------------------------------------------ */
+.mitte{display:flex;flex-direction:column;gap:10px;align-items:stretch;justify-content:center;
+  flex:1 1 auto;min-height:0;overflow:auto}
+.panel{padding:clamp(14px,2.4vh,26px) clamp(16px,2.4vw,30px);display:flex;flex-direction:column;gap:12px}
+.panel h2{margin:0;font-size:clamp(18px,2.2vw,26px);letter-spacing:.04em;font-weight:600}
+.panel p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
+.lobby-liste{display:flex;flex-wrap:wrap;gap:8px}
+.lobby-liste .sp{font-size:14px;padding:9px 14px}
+.bereit{color:var(--gruen)}
+.aufloesung-karte{display:flex;flex-direction:column;gap:10px}
+.loesungstext{font-size:clamp(15px,1.8vw,20px);line-height:1.5}
+.loesungstext b{color:var(--gruen)}
+.aufloesung-satz{color:var(--gold);font-size:clamp(13.5px,1.5vw,16px);line-height:1.55}
+.rangliste{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.rang{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;
+  border:1px solid var(--linie);background:rgba(255,255,255,.035);font-size:15px}
+.rang .platz{width:2em;color:var(--muted);font-size:13px;letter-spacing:.1em}
+.rang .name{flex:1 1 auto}
+.rang .punkte{color:var(--gold);font-variant-numeric:tabular-nums}
+.rang.erster{border-color:var(--linie-hell);background:linear-gradient(120deg,rgba(231,196,106,.2),rgba(255,255,255,.03))}
+.rang.erster .platz{color:var(--gold)}
+.versteckt{display:none!important}
+
+/* ---- Handy und Tablet ------------------------------------------------ */
+@media (max-width:760px){
+  body{padding:8px}
+  .app{gap:7px}
+  .antworten{grid-template-columns:1fr;gap:7px}
+  .antwort{padding:11px 12px}
+  .moderator{padding:7px 10px;font-size:12px;gap:7px;border-radius:11px}
+  .moderator .wer{font-size:9.5px;letter-spacing:.15em}
+  .frage-karte{padding:10px 12px}
+  #frage{font-size:clamp(17px,5.4vw,26px);min-height:2.6em}
+  .markt small{display:none}
+  .sp{font-size:12px;padding:6px 10px}
+  .sp b{font-size:13.5px}
+  button.aktion{font-size:12px;padding:8px 12px}
+}
+@media (max-height:520px) and (orientation:landscape){
+  #frage{font-size:clamp(15px,3vw,22px);min-height:1.8em}
+  .antwort{padding:8px 10px;font-size:13px}
+  .frage-karte{padding:8px 12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="kopf">
+    <div class="marke"><b>SCHERZSHOW</b><small>HIRN AUS · MUND AUF</small></div>
+    <div class="kennzahlen">
+      <span class="chip gold" id="cModus">Scherzshow</span>
+      <span class="chip" id="cRunde">—</span>
+      <span class="chip" id="cZeit">—</span>
+    </div>
+  </header>
+
+  <div class="buehne">
+    <section class="karte frage-karte" id="frageKarte">
+      <div class="deck">
+        <span id="cKat">Kategorie</span>
+        <b id="cStufe">—</b>
+      </div>
+      <h1 id="frage">Die Bühne ist noch leer.</h1>
+      <div class="zeit" id="zeit"><i id="zeitBalken"></i></div>
+    </section>
+
+    <div class="moderator versteckt" id="moderator">
+      <span class="mikro" aria-hidden="true">🎤</span>
+      <div class="inhalt">
+        <b class="wer" id="modWer">Quizmaster</b>
+        <span class="satz" id="modSatz"></span>
+      </div>
+    </div>
+
+    <div class="antworten" id="antworten"></div>
+
+    <div class="mitte" id="mitte"></div>
+  </div>
+
+  <div class="spielerleiste" id="spieler"></div>
+
+  <div class="fuss">
+    <span class="notiz" id="notiz"></span>
+    <div class="knoepfe" id="knoepfe"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const params = new URLSearchParams(location.search);
+  const ROOM = (params.get("room") || "").toUpperCase();
+  const MYID = params.get("id") || "";
+  const MYNAME = params.get("name") || "";
+  const ONLINE = !!(ROOM && MYID);
+
+  const $ = id => document.getElementById(id);
+  const elFrage = $("frage"), elAntworten = $("antworten"), elMitte = $("mitte");
+  const elSpieler = $("spieler"), elNotiz = $("notiz"), elKnoepfe = $("knoepfe");
+  const elZeit = $("zeit"), elZeitBalken = $("zeitBalken");
+  const elMod = $("moderator"), elModWer = $("modWer"), elModSatz = $("modSatz");
+
+  let spiel = null, busy = false, restBis = 0, restGesamt = 0, ticker = null;
+
+  function api(aktion, koerper){
+    const url = "/api/quiz?room=" + encodeURIComponent(ROOM) +
+      (aktion ? "&action=" + encodeURIComponent(aktion) : "&id=" + encodeURIComponent(MYID));
+    const optionen = aktion
+      ? { method:"POST", headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(Object.assign({ id: MYID }, koerper || {})) }
+      : { cache:"no-store" };
+    return fetch(url, optionen).then(async r => {
+      if (!r.ok) throw new Error((await r.text()).trim() || "Aktion fehlgeschlagen.");
+      return r.json();
+    });
+  }
+
+  function uebernehmen(daten){
+    spiel = (daten && daten.game) || null;
+    restGesamt = spiel ? (spiel.zeitMs || 0) : 0;
+    restBis = spiel ? Date.now() + Math.max(0, spiel.restMs || 0) : 0;
+    zeichne();
+  }
+
+  async function hole(){
+    if (!ONLINE || busy) return;
+    busy = true;
+    try { uebernehmen(await api(null)); }
+    catch (e) { elNotiz.textContent = e.message; }
+    finally { busy = false; }
+  }
+
+  async function schicke(aktion, koerper){
+    if (!ONLINE || busy) return false;
+    busy = true;
+    try {
+      uebernehmen(await api(aktion, koerper));
+      return true;
+    } catch (e) {
+      elNotiz.textContent = e.message;
+      return false;
+    } finally {
+      busy = false;
+    }
+  }
+
+  function ich(){
+    if (!spiel || !spiel.spieler) return null;
+    return spiel.spieler.find(s => s.id === MYID) || null;
+  }
+
+  function knopf(text, aktion, haupt){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "aktion" + (haupt ? " haupt" : "");
+    b.textContent = text;
+    b.onclick = aktion;
+    return b;
+  }
+
+  /* ---- Kopf und Zeit --------------------------------------------------- */
+  function kopf(){
+    $("cModus").textContent = spiel ? spiel.modusName : "Scherzshow";
+    $("cRunde").textContent = spiel && spiel.runde
+      ? "Frage " + spiel.runde + " von " + spiel.runden : "—";
+    $("cKat").textContent = spiel && spiel.frage
+      ? (spiel.frage.katName || spiel.frage.kat) : (spiel && spiel.katName) || "Alle Kategorien";
+    $("cStufe").textContent = spiel && spiel.frage ? spiel.frage.stufeText : "—";
+  }
+
+  function uhrStarten(){
+    if (ticker) clearInterval(ticker);
+    ticker = setInterval(() => {
+      const rest = Math.max(0, restBis - Date.now());
+      const anteil = restGesamt > 0 ? Math.min(1, rest / restGesamt) : 0;
+      elZeitBalken.style.width = (anteil * 100).toFixed(1) + "%";
+      elZeit.classList.toggle("knapp", anteil > 0 && anteil < .3);
+      $("cZeit").textContent = spiel && (spiel.status === "spiel" || spiel.status === "aufloesung")
+        ? Math.ceil(rest / 1000) + " s" : "—";
+    }, 100);
+  }
+
+  /* ---- Spieler --------------------------------------------------------- */
+  function zeichneSpieler(){
+    elSpieler.innerHTML = "";
+    if (!spiel) return;
+    [...spiel.spieler]
+      .sort((a, b) => b.punkte - a.punkte)
+      .forEach(s => {
+        const d = document.createElement("div");
+        d.className = "sp" + (s.id === MYID ? " ich" : "") +
+          (s.antwort !== undefined ? " gesetzt" : "") +
+          (spiel.sieger && spiel.sieger.indexOf(s.id) >= 0 ? " sieger" : "");
+        const p = document.createElement("span");
+        p.className = "punkt";
+        const n = document.createElement("span");
+        n.textContent = s.name + (s.ready && spiel.status === "invited" ? " ✓" : "");
+        const b = document.createElement("b");
+        b.textContent = spiel.status === "invited" ? "bereit" : s.punkte;
+        if (spiel.status === "invited") b.className = s.ready ? "bereit" : "offen";
+        d.append(p, n, b);
+        elSpieler.appendChild(d);
+      });
+  }
+
+  /* ---- Antworten ------------------------------------------------------- */
+  function zeichneAntworten(){
+    elAntworten.innerHTML = "";
+    if (!spiel || !spiel.frage) return;
+    const buchstaben = ["A", "B", "C", "D"];
+    const loesung = spiel.loesung;
+    spiel.frage.antworten.forEach((text, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "antwort";
+      b.dataset.wahl = String(i);
+      const bu = document.createElement("span");
+      bu.className = "buchstabe";
+      bu.textContent = buchstaben[i];
+      const t = document.createElement("span");
+      t.className = "text";
+      t.textContent = text;
+      b.append(bu, t);
+      const meins = ich();
+      if (meins && meins.antwort === i) b.classList.add("meine");
+      if (spiel.status === "spiel"){
+        if (meins && meins.antwort !== undefined){
+          b.disabled = true;
+          b.classList.add("meins");
+        }
+      } else if (loesung){
+        b.disabled = true;
+        if (i === loesung.richtig) b.classList.add("richtig");
+        else if (meins && meins.antwort === i) b.classList.add("falsch");
+        // Punkte der Runde am eigenen Feld
+        if (meins && meins.antwort === i && meins.punkteRunde){
+          const p = document.createElement("span");
+          p.className = "plus";
+          p.textContent = (meins.punkteRunde > 0 ? "+" : "") + meins.punkteRunde;
+          b.appendChild(p);
+        }
+      }
+      if (spiel.status === "spiel"){
+        b.onclick = async () => {
+          b.disabled = true;
+          await schicke("antwort", { wahl: i });
+        };
+      }
+      elAntworten.appendChild(b);
+    });
+  }
+
+  /* ---- Moderator ------------------------------------------------------- */
+  // Die Ansage kommt fertig vom Server (gleicher Text für alle Spieler). Hier
+  // wird sie nur eingesetzt und – wenn sie neu ist – kurz eingeblendet.
+  let letzteMod = "";
+  function zeichneModerator(){
+    const m = spiel && spiel.moderator;
+    const text = m && m.text ? m.text : "";
+    if (!text){
+      elMod.classList.add("versteckt");
+      letzteMod = "";
+      return;
+    }
+    elMod.classList.remove("versteckt");
+    elModWer.textContent = m.name || "Quizmaster";
+    if (text !== letzteMod){
+      elModSatz.textContent = text;
+      letzteMod = text;
+      elMod.classList.remove("frisch");
+      void elMod.offsetWidth;   /* Neustart der Animation erzwingen */
+      elMod.classList.add("frisch");
+    }
+  }
+
+  /* ---- Die vier Zustände ---------------------------------------------- */
+  function zeichneLobby(){
+    const g = spiel;
+    elFrage.textContent = "Bühne frei für die Scherzshow";
+    elAntworten.innerHTML = "";
+    elMitte.innerHTML = "";
+    const panel = document.createElement("section");
+    panel.className = "karte panel";
+    const h = document.createElement("h2");
+    h.textContent = g ? "Noch " + g.spieler.length + " auf der Bühne" : "Keine Show";
+    panel.appendChild(h);
+    if (!g){
+      const p = document.createElement("p");
+      p.textContent = "Im Connector „Scherzshow“ auswählen und eine Runde anbieten – dann erscheint hier die Bühne.";
+      panel.appendChild(p);
+      elMitte.appendChild(panel);
+      return;
+    }
+    const p = document.createElement("p");
+    p.textContent = g.modusName + " · " + g.runden + " Fragen · " + Math.round(g.zeitMs / 1000) +
+      " s je Frage. Alle drücken „Bereit“, dann startet die Show.";
+    panel.appendChild(p);
+    const liste = document.createElement("div");
+    liste.className = "lobby-liste";
+    g.spieler.forEach(s => {
+      const d = document.createElement("div");
+      d.className = "sp" + (s.id === MYID ? " ich" : "");
+      const n = document.createElement("span");
+      n.textContent = s.name;
+      const b = document.createElement("b");
+      b.textContent = s.ready ? "bereit" : "wartet";
+      b.className = s.ready ? "bereit" : "offen";
+      d.append(n, b);
+      liste.appendChild(d);
+    });
+    panel.appendChild(liste);
+    elMitte.appendChild(panel);
+
+    const meins = ich();
+    if (meins){
+      elKnoepfe.appendChild(knopf(meins.ready ? "Doch nicht bereit" : "Bereit", () => schicke("ready"), !meins.ready));
+      elKnoepfe.appendChild(knopf("Show starten", () => schicke("start"), false));
+    } else if (g.spieler.length < 6){
+      elKnoepfe.appendChild(knopf("Mitspielen", () => schicke("join"), true));
+    }
+    const host = g.spieler.find(s => s.id === g.hostId);
+    elNotiz.textContent = "Gastgeber: " + (host ? host.name : "—");
+  }
+
+  function zeichneFrage(){
+    const g = spiel;
+    elFrage.textContent = g.frage ? g.frage.frage : "";
+    elAntworten.innerHTML = "";
+    elMitte.innerHTML = "";
+    zeichneAntworten();
+    const meins = ich();
+    const offen = g.spieler.filter(s => s.antwort === undefined).length;
+    elNotiz.textContent = meins && meins.antwort !== undefined
+      ? "Deine Antwort steht – " + (offen > 0 ? offen + " noch offen." : "alle haben geantwortet.")
+      : "Schnell sein lohnt: die erste richtige Antwort zählt am meisten.";
+  }
+
+  function zeichneAufloesung(){
+    const g = spiel;
+    elFrage.textContent = g.frage ? g.frage.frage : "";
+    elAntworten.innerHTML = "";
+    elMitte.innerHTML = "";
+    zeichneAntworten();
+    const panel = document.createElement("section");
+    panel.className = "karte panel aufloesung-karte";
+    const h = document.createElement("h2");
+    const loesung = g.loesung || {};
+    h.textContent = "Richtig ist " + "ABCD".charAt(loesung.richtig || 0) + ": " + (loesung.text || "");
+    const satz = document.createElement("p");
+    satz.className = "aufloesung-satz";
+    satz.textContent = loesung.aufloesung || "";
+    panel.append(h, satz);
+    const zwischen = document.createElement("p");
+    const naechste = Math.ceil(Math.max(0, g.restMs) / 1000);
+    zwischen.textContent = g.runde >= g.runden
+      ? "Danach kommt die Rangliste (" + naechste + " s)."
+      : "Nächste Frage in " + naechste + " s.";
+    panel.appendChild(zwischen);
+    elMitte.appendChild(panel);
+    elKnoepfe.appendChild(knopf(g.runde >= g.runden ? "Zur Rangliste" : "Weiter", () => schicke("weiter"), true));
+    elNotiz.textContent = punkteZeile();
+  }
+
+  function zeichneEnde(){
+    const g = spiel;
+    elFrage.textContent = g.sieger && g.sieger.length
+      ? "Vorhang – " + namen(g.sieger) + " gewinnt!"
+      : "Vorhang – unentschieden.";
+    elAntworten.innerHTML = "";
+    elMitte.innerHTML = "";
+    const panel = document.createElement("section");
+    panel.className = "karte panel";
+    const h = document.createElement("h2");
+    h.textContent = "Endstand nach " + g.runden + " Fragen";
+    panel.appendChild(h);
+    const liste = document.createElement("ol");
+    liste.className = "rangliste";
+    [...g.spieler].sort((a, b) => b.punkte - a.punkte).forEach((s, i) => {
+      const li = document.createElement("li");
+      li.className = "rang" + (g.sieger && g.sieger.indexOf(s.id) >= 0 ? " erster" : "");
+      const platz = document.createElement("span");
+      platz.className = "platz";
+      platz.textContent = "#" + (i + 1);
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = s.name + (s.id === MYID ? " (du)" : "");
+      const punkte = document.createElement("span");
+      punkte.className = "punkte";
+      punkte.textContent = s.punkte + " Punkte";
+      li.append(platz, name, punkte);
+      liste.appendChild(li);
+    });
+    panel.appendChild(liste);
+    const p = document.createElement("p");
+    p.textContent = g.note || "";
+    panel.appendChild(p);
+    elMitte.appendChild(panel);
+    if (MYID === g.hostId){
+      elKnoepfe.appendChild(knopf("Neue Show", async () => {
+        await schicke("create", { modus: g.modus, runden: g.runden, kat: g.kat });
+      }, true));
+    }
+    elKnoepfe.appendChild(knopf("Fragenkatalog", () => {
+      window.open("/spiele/quizshow/fragen.html?room=" + encodeURIComponent(ROOM) +
+        "&id=" + encodeURIComponent(MYID), "_blank");
+    }, false));
+    elNotiz.textContent = g.note || "";
+  }
+
+  function namen(ids){
+    return ids.map(id => {
+      const s = spiel.spieler.find(p => p.id === id);
+      return s ? s.name : id;
+    }).join(" und ");
+  }
+
+  function punkteZeile(){
+    const teile = spiel.spieler
+      .filter(s => s.punkteRunde)
+      .map(s => s.name + " " + (s.punkteRunde > 0 ? "+" : "") + s.punkteRunde);
+    return teile.length ? teile.join(" · ") : "Diesmal hat niemand gepunktet.";
+  }
+
+  /* ---- Zeichnen -------------------------------------------------------- */
+  function zeichne(){
+    kopf();
+    zeichneModerator();
+    zeichneSpieler();
+    elKnoepfe.innerHTML = "";
+    elMitte.innerHTML = "";
+    elAntworten.innerHTML = "";
+    elZeitBalken.style.width = "0%";
+    elNotiz.textContent = "";
+    if (ticker){ clearInterval(ticker); ticker = null; }
+    if (!spiel){ zeichneLobby(); return; }
+    if (spiel.status === "invited"){ zeichneLobby(); return; }
+    if (spiel.status === "spiel"){ zeichneFrage(); }
+    else if (spiel.status === "aufloesung"){ zeichneAufloesung(); }
+    else { zeichneEnde(); }
+    if (spiel.status === "spiel" || spiel.status === "aufloesung") uhrStarten();
+  }
+
+  /* ---- Tastatur -------------------------------------------------------- */
+  document.addEventListener("keydown", ev => {
+    if (!spiel) return;
+    const k = ev.key;
+    if (spiel.status === "spiel" && !ev.ctrlKey && !ev.metaKey){
+      const buchstaben = { a:0, b:1, c:2, d:3, A:0, B:1, C:2, D:3, 1:0, 2:1, 3:2, 4:3 };
+      const wahl = buchstaben[k];
+      if (wahl !== undefined){
+        const meins = ich();
+        if (!meins || meins.antwort !== undefined) return;
+        ev.preventDefault();
+        schicke("antwort", { wahl });
+      }
+      return;
+    }
+    if (spiel.status === "aufloesung" && (k === "Enter" || k === " ")){
+      ev.preventDefault();
+      schicke("weiter");
+    }
+  });
+
+  /* ---- Start ----------------------------------------------------------- */
+  zeichne();
+  if (!ONLINE){
+    elNotiz.textContent = "Bitte über den Connector öffnen – Raum und Spieler fehlen in der Adresse.";
+    return;
+  }
+  WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
+  setInterval(hole, 900);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
+})();
+</script>
+</body>
+</html>

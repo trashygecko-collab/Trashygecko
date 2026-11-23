@@ -60,6 +60,8 @@ type SnakeGame struct {
 	Zuletzt  time.Time      `json:"-"`
 	Rest     float64        `json:"-"`
 	Zufall   *rand.Rand     `json:"-"`
+	BotID    string         `json:"-"`
+	BotStufe string         `json:"-"`
 }
 
 type SnakeSpielerSicht struct {
@@ -358,6 +360,9 @@ func snakeWeiter(g *SnakeGame) {
 	for g.Rest >= snaTakt && g.Status == "spiel" && schritte < snaMaxSchritte {
 		g.Rest -= snaTakt
 		schritte++
+		// Der Bot setzt seine Richtung im selben Takt, in dem auch ein Mensch
+		// sie setzen würde – vor dem Schritt, durch dieselbe Prüfung.
+		snakeBotRichtung(g, g.BotStufe)
 		g.snakeSchritt()
 	}
 	if schritte >= snaMaxSchritte {
@@ -448,8 +453,9 @@ func snakeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID  string `json:"id"`
-		Dir string `json:"dir"`
+		ID    string `json:"id"`
+		Dir   string `json:"dir"`
+		Stufe string `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -475,6 +481,37 @@ func snakeHandler(w http.ResponseWriter, r *http.Request) {
 	zeit := time.Now().Format("15:04:05")
 
 	switch action {
+	// Gegen den Server-Bot: Mensch links, Computer rechts, beide bereit.
+	case "bot":
+		if room.Snake != nil && room.Snake.Status != "ende" {
+			mu.Unlock()
+			http.Error(w, "Es läuft schon eine Partie Snake.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		room.botNamenNeu()
+		spiel := snakeNeu(randomCode(), input.ID, []SnakeSpieler{
+			snakeNeuerSpieler(1, input.ID, player.Name),
+			snakeNeuerSpieler(2, botID(1), room.botName(1)),
+		}, time.Now().UnixNano())
+		spiel.BotID, spiel.BotStufe = botID(1), stufe
+		for i := range spiel.Spieler {
+			spiel.Spieler[i].Ready = true
+			spiel.Spieler[i].Sieg = 0
+		}
+		spiel.Runde = 1
+		spiel.Status = "spiel"
+		spiel.snakeNeueRunde()
+		spiel.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.Snake = spiel
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Snake gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if room.Snake != nil && room.Snake.Status != "ende" {
 			mu.Unlock()
@@ -630,6 +667,19 @@ func snakeHandler(w http.ResponseWriter, r *http.Request) {
 		frisch.Note = "Neue Partie – erst BEREIT drücken."
 		for _, p := range game.Spieler {
 			frisch.Spieler = append(frisch.Spieler, snakeNeuerSpieler(p.Nr, p.ID, p.Name))
+		}
+		frisch.BotID, frisch.BotStufe = game.BotID, game.BotStufe
+		if frisch.BotID != "" {
+			// Der Bot drückt nicht selbst: er ist bereit, die Partie startet
+			// mit demselben Klick.
+			for i := range frisch.Spieler {
+				frisch.Spieler[i].Ready = true
+				frisch.Spieler[i].Sieg = 0
+			}
+			frisch.Runde = 1
+			frisch.Status = "spiel"
+			frisch.snakeNeueRunde()
+			frisch.Note = "Los! Apfel fressen, nicht anstoßen."
 		}
 		room.Snake = frisch
 

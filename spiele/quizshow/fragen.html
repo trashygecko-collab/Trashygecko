@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="/spiele/token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Fragenkatalog – Scherzshow</title>
+<link rel="stylesheet" href="/spiele/schrift.css">
+<style>
+:root{
+  --nacht:#050a14; --nacht2:#0a1327; --gold:#e7c46a; --gold-tief:#b98f3e;
+  --ink:#eef2fb; --muted:#93a0b8; --linie:rgba(231,196,106,.18); --linie-hell:rgba(231,196,106,.45);
+  --gruen:#4fd18b; --rot:#e2534f; --feld:rgba(255,255,255,.045);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100%;padding:clamp(12px,2vw,26px);
+  background:
+    radial-gradient(60% 40% at 12% -8%,rgba(231,196,106,.12),transparent 62%),
+    radial-gradient(60% 40% at 88% -10%,rgba(88,124,216,.16),transparent 64%),
+    linear-gradient(180deg,var(--nacht2),var(--nacht) 60%);
+  color:var(--ink);font-family:var(--tg-schrift);
+}
+.kopf{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.marke{letter-spacing:.24em;font-size:13px;color:var(--gold)}
+.marke b{font-size:16px;letter-spacing:.3em}
+.marke small{color:var(--muted);letter-spacing:.14em;font-size:10px;margin-left:8px}
+.zahlen{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--linie);border-radius:999px;padding:5px 12px;font-size:11.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:rgba(255,255,255,.03)}
+.chip.gold{color:var(--gold);border-color:var(--linie-hell)}
+
+.lage{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.lage{grid-template-columns:1fr}}
+
+.karte{background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+  border:1px solid var(--linie);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.45);padding:14px}
+
+.werkzeuge{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+input[type=text],input[type=search],select,textarea{
+  font-family:inherit;font-size:14px;color:var(--ink);background:var(--feld);
+  border:1px solid var(--linie);border-radius:10px;padding:9px 12px;width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--linie-hell);background:rgba(231,196,106,.07)}
+textarea{resize:vertical;line-height:1.45;min-height:64px}
+select{cursor:pointer}
+option{background:#0b1526;color:var(--ink)}
+label.feld{display:flex;flex-direction:column;gap:5px;font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted)}
+button{font-family:inherit;font-size:13px;letter-spacing:.05em;padding:9px 14px;border-radius:10px;
+  border:1px solid var(--linie-hell);background:rgba(255,255,255,.05);color:var(--ink);cursor:pointer;
+  transition:background .18s,transform .1s}
+button:hover{background:rgba(231,196,106,.2)}
+button:active{transform:scale(.98)}
+button.haupt{background:linear-gradient(160deg,var(--gold),var(--gold-tief));color:#1a1206;border-color:transparent;font-weight:600}
+button.leise{border-color:rgba(255,255,255,.14);color:var(--muted)}
+button.mini{padding:6px 10px;font-size:12px}
+
+.suche{position:relative;flex:1 1 240px;min-width:180px}
+.filtern{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.filtern button{font-size:11.5px;padding:6px 11px;border-radius:999px;border-color:rgba(255,255,255,.12);color:var(--muted)}
+.filtern button.an{color:#1a1206;background:linear-gradient(160deg,var(--gold),var(--gold-tief));border-color:transparent}
+
+.liste{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 240px);overflow:auto;padding-right:2px}
+@media (max-width:900px){.liste{max-height:none}}
+.frage{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:12px;
+  border:1px solid var(--linie);background:rgba(255,255,255,.03)}
+.frage .kopfzeile{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.frage h3{margin:0;font-size:15px;font-weight:600;line-height:1.3}
+.frage .text{flex:1 1 auto;min-width:0}
+.frage .loesung{margin-top:4px;font-size:12.5px;color:var(--gold);line-height:1.4}
+.frage .aufloesung{color:var(--muted);font-size:12px;line-height:1.45;margin-top:2px}
+.frage .knopfreihe{display:flex;gap:6px;flex:0 0 auto}
+.tag{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--linie);
+  border-radius:999px;padding:3px 9px;color:var(--muted)}
+.tag.kat{color:var(--gold);border-color:var(--linie-hell)}
+.tag.s1{color:var(--gruen);border-color:rgba(79,209,139,.4)}
+.tag.s3{color:var(--rot);border-color:rgba(226,83,79,.45)}
+.leer{color:var(--muted);text-align:center;padding:26px 10px;font-size:13.5px}
+
+.editor{display:flex;flex-direction:column;gap:11px;position:sticky;top:12px}
+.editor h2{margin:0;font-size:17px;letter-spacing:.03em}
+.editor .reihe{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vorschau{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.vorschau .opt{display:flex;gap:7px;align-items:center;padding:7px 9px;border-radius:9px;
+  border:1px solid var(--linie);background:rgba(255,255,255,.03);font-size:12.5px;line-height:1.3}
+.vorschau .opt b{flex:0 0 auto;width:18px;color:var(--gold);font-weight:700}
+.vorschau .opt.richtig{border-color:rgba(79,209,139,.55);background:rgba(79,209,139,.10);color:var(--gruen)}
+.vorschau .fehler{grid-column:1/-1;font-size:12px;color:var(--rot);line-height:1.4}
+.tag.typ{color:#9fc4ff;border-color:rgba(159,196,255,.35)}
+.tag.warn{color:var(--rot);border-color:rgba(226,83,79,.45)}
+.knopfreihe{display:flex;gap:8px;flex-wrap:wrap}
+.meldung{font-size:12.5px;line-height:1.45;color:var(--muted);min-height:1.2em}
+.meldung.gut{color:var(--gruen)}
+.meldung.schlecht{color:var(--rot)}
+.import{display:flex;flex-direction:column;gap:8px;border-top:1px dashed rgba(255,255,255,.12);padding-top:11px}
+.import .reihe{grid-template-columns:1fr 1fr}
+.hinweis{font-size:11.5px;color:var(--muted);line-height:1.45}
+</style>
+</head>
+<body>
+<header class="kopf">
+  <div class="marke"><b>FRAGENKATALOG</b><small>SCHERZSHOW</small></div>
+  <div class="zahlen">
+    <span class="chip gold" id="zahlFragen">0 Fragen</span>
+    <span class="chip" id="zahlKats">0 Kategorien</span>
+    <span class="chip" id="zahlStand">—</span>
+  </div>
+</header>
+
+<div class="lage">
+  <section class="karte">
+    <div class="werkzeuge">
+      <div class="suche"><input type="search" id="suche" placeholder="Suchen in Frage, Antwort oder Auflösung …" autocomplete="off"></div>
+      <button class="haupt" id="neu">Neue Frage</button>
+      <button class="leise" id="export">Export</button>
+    </div>
+    <div class="filtern" id="filtern"></div>
+    <div class="liste" id="liste"></div>
+  </section>
+
+  <section class="karte editor">
+    <h2 id="editorTitel">Neue Frage</h2>
+    <div class="reihe">
+      <label class="feld">Kategorie<select id="fKat"></select></label>
+      <label class="feld">Schwierigkeit
+        <select id="fStufe">
+          <option value="1">leicht</option>
+          <option value="2" selected>mittel</option>
+          <option value="3">gemein</option>
+        </select>
+      </label>
+    </div>
+    <label class="feld">Frage<textarea id="fFrage" rows="3" placeholder="Was ist grün und klopft an die Tür?"></textarea></label>
+    <label class="feld">Richtige Antwort
+      <input type="text" id="fAntwort" placeholder="z. B. Klopfsalat" autocomplete="off">
+    </label>
+    <label class="feld">Antworttyp
+      <select id="fTyp"><option value="">automatisch erkennen</option></select>
+    </label>
+    <div class="feldblock">
+      <div class="hinweis" style="margin-bottom:6px">So würde die Show die vier Antworten mischen – die falschen stammen aus dem Pool der anderen Fragen. Platzhalter <b>{NAME}</b> im Fragetext wird im Spiel zur Lücke, der gesuchte Name steht nur in der Antwort.</div>
+      <div class="vorschau" id="vorschau"></div>
+    </div>
+    <label class="feld">Auflösung (der Witz in einem Satz)
+      <textarea id="fAufloesung" rows="2" placeholder="Klopfsalat. Er klopft dreimal, dann fällt er in sich zusammen."></textarea>
+    </label>
+    <div class="knopfreihe">
+      <button class="haupt" id="speichern">Speichern</button>
+      <button class="leise" id="abbrechen">Leeren</button>
+    </div>
+    <div class="meldung" id="meldung"></div>
+
+    <div class="import">
+      <div class="reihe">
+        <label class="feld">Paket importieren<input type="file" id="datei" accept="application/json,.json"></label>
+        <label class="feld">Neue Kategorie<input type="text" id="katName" placeholder="Name, z. B. Tierischer Unsinn"></label>
+      </div>
+      <div class="knopfreihe">
+        <button class="mini" id="katNeu">Kategorie anlegen</button>
+        <button class="mini leise" id="importErsetzen">Import: ersetzen</button>
+      </div>
+      <div class="hinweis">Import ohne Klick auf „ersetzen“ mischt das Paket in den Katalog; gleiche Kennungen werden überschrieben. Export lädt die komplette Datei zum Weitergeben.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const params = new URLSearchParams(location.search);
+  const ROOM = (params.get("room") || "").toUpperCase();
+  const MYID = params.get("id") || "";
+  const DARF_SCHREIBEN = !!(ROOM && MYID);
+  const BASIS = "/api/quizfragen?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(MYID);
+
+  const $ = id => document.getElementById(id);
+  const elListe = $("liste"), elFilter = $("filtern"), elMeldung = $("meldung");
+
+  let bank = { stand:"", kategorien:[], fragen:[] };
+  let filter = { text:"", kat:"", stufe:0 };
+  let bearbeitet = null; // Kennung der Frage im Editor, null = neue Frage
+
+  /* ---- Vorschau der vier Antworten ------------------------------------ */
+  const BUCHSTABEN = ["A","B","C","D"];
+  let vorschauTimer = null;
+
+  function vorschauZeichne(v){
+    const box = $("vorschau");
+    box.innerHTML = "";
+    if (!v){
+      const d = document.createElement("div");
+      d.className = "fehler";
+      d.textContent = "Richtige Antwort eintragen – dann zeigt die Vorschau die vier Möglichkeiten.";
+      box.appendChild(d);
+      return;
+    }
+    if (v.fehler){
+      const d = document.createElement("div");
+      d.className = "fehler";
+      d.textContent = "Nicht freigebbar: " + v.fehler;
+      box.appendChild(d);
+      return;
+    }
+    (v.antworten || []).forEach((a, i) => {
+      const z = document.createElement("div");
+      z.className = "opt" + (i === v.richtig ? " richtig" : "");
+      const b = document.createElement("b");
+      b.textContent = BUCHSTABEN[i];
+      const s = document.createElement("span");
+      s.textContent = a;
+      z.append(b, s);
+      box.appendChild(z);
+    });
+    if (v.typName){
+      const h = document.createElement("div");
+      h.className = "hinweis";
+      h.style.gridColumn = "1/-1";
+      h.textContent = "Antwortgruppe: " + v.typName;
+      box.appendChild(h);
+    }
+  }
+
+  function vorschauFragen(){
+    if (!DARF_SCHREIBEN) return;
+    const antwort = $("fAntwort").value.trim();
+    if (!antwort){ vorschauZeichne(null); return; }
+    const frage = {
+      id: bearbeitet || "",
+      kat: $("fKat").value,
+      stufe: Number($("fStufe").value) || 2,
+      typ: $("fTyp").value,
+      frage: $("fFrage").value.trim(),
+      antwort: antwort,
+      aufloesung: $("fAufloesung").value.trim()
+    };
+    fetch(BASIS, {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ id: MYID, action:"vorschau", frage: frage })
+    }).then(r => r.ok ? r.json() : r.text().then(t => { throw new Error(t.trim() || "Keine Vorschau."); }))
+      .then(vorschauZeichne)
+      .catch(e => { vorschauZeichne({ fehler: e.message }); });
+  }
+
+  /* ---- Laden und Zeichnen --------------------------------------------- */
+  function melde(text, art){
+    elMeldung.textContent = text || "";
+    elMeldung.className = "meldung" + (art ? " " + art : "");
+  }
+
+  function katName(id){
+    const k = bank.kategorien.find(x => x.id === id);
+    return k ? k.name : id;
+  }
+
+  function zeichneKategorien(){
+    const wahl = $("fKat");
+    const alt = wahl.value;
+    wahl.innerHTML = "";
+    bank.kategorien.forEach(k => {
+      const o = document.createElement("option");
+      o.value = k.id; o.textContent = k.name;
+      wahl.appendChild(o);
+    });
+    if (alt && bank.kategorien.some(k => k.id === alt)) wahl.value = alt;
+
+    const typWahl = $("fTyp");
+    const altTyp = typWahl.value;
+    typWahl.innerHTML = '<option value="">automatisch erkennen</option>';
+    (bank.typen || []).forEach(t => {
+      const o = document.createElement("option");
+      o.value = t.id; o.textContent = t.name;
+      typWahl.appendChild(o);
+    });
+    if (altTyp && (bank.typen || []).some(t => t.id === altTyp)) typWahl.value = altTyp;
+
+    elFilter.innerHTML = "";
+    const alle = document.createElement("button");
+    alle.type = "button";
+    alle.textContent = "Alle (" + bank.fragen.length + ")";
+    alle.className = filter.kat === "" ? "an" : "";
+    alle.onclick = () => { filter.kat = ""; zeichne(); };
+    elFilter.appendChild(alle);
+    bank.kategorien.forEach(k => {
+      const b = document.createElement("button");
+      b.type = "button";
+      const zahl = bank.fragen.filter(f => f.kat === k.id).length;
+      b.textContent = k.name + " (" + zahl + ")";
+      b.className = filter.kat === k.id ? "an" : "";
+      b.onclick = () => { filter.kat = filter.kat === k.id ? "" : k.id; zeichne(); };
+      elFilter.appendChild(b);
+    });
+    [["leicht",1],["mittel",2],["gemein",3]].forEach(([name, stufe]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = name;
+      b.className = filter.stufe === stufe ? "an" : "";
+      b.onclick = () => { filter.stufe = filter.stufe === stufe ? 0 : stufe; zeichne(); };
+      elFilter.appendChild(b);
+    });
+  }
+
+  function passt(f){
+    if (filter.kat && f.kat !== filter.kat) return false;
+    if (filter.stufe && f.stufe !== filter.stufe) return false;
+    if (!filter.text) return true;
+    const t = filter.text.toLowerCase();
+    return (f.frage + " " + (f.antwort || "") + " " + f.aufloesung + " " + katName(f.kat))
+      .toLowerCase().includes(t);
+  }
+
+  function zeichneListe(){
+    const sichtbar = bank.fragen.filter(passt);
+    elListe.innerHTML = "";
+    if (!bank.fragen.length){
+      const d = document.createElement("div");
+      d.className = "leer";
+      d.textContent = "Der Katalog ist leer. Rechts die erste Frage anlegen.";
+      elListe.appendChild(d);
+      return;
+    }
+    if (!sichtbar.length){
+      const d = document.createElement("div");
+      d.className = "leer";
+      d.textContent = "Keine Frage passt zum Filter.";
+      elListe.appendChild(d);
+      return;
+    }
+    sichtbar.forEach(f => {
+      const karte = document.createElement("article");
+      karte.className = "frage";
+      const text = document.createElement("div");
+      text.className = "text";
+      const kopf = document.createElement("div");
+      kopf.className = "kopfzeile";
+      const kat = document.createElement("span");
+      kat.className = "tag kat"; kat.textContent = katName(f.kat);
+      const stufe = document.createElement("span");
+      stufe.className = "tag s" + f.stufe;
+      stufe.textContent = f.stufe === 1 ? "leicht" : f.stufe === 3 ? "gemein" : "mittel";
+      const typTag = document.createElement("span");
+      typTag.className = "tag typ";
+      const v = (bank.vorschau || {})[f.id];
+      typTag.textContent = v ? v.typName : (f.typ || "automatisch");
+      kopf.append(kat, stufe, typTag);
+      if (v && v.fehler){
+        const w = document.createElement("span");
+        w.className = "tag warn";
+        w.textContent = "nicht spielbar";
+        kopf.appendChild(w);
+      }
+      const h = document.createElement("h3");
+      h.textContent = f.frage;
+      const l = document.createElement("div");
+      l.className = "loesung";
+      l.textContent = "Richtig: " + (f.antwort || "");
+      const a = document.createElement("div");
+      a.className = "aufloesung";
+      a.textContent = f.aufloesung;
+      text.append(kopf, h, l, a);
+      karte.appendChild(text);
+
+      if (DARF_SCHREIBEN){
+        const reihe = document.createElement("div");
+        reihe.className = "knopfreihe";
+        const b1 = document.createElement("button");
+        b1.className = "mini"; b1.type = "button"; b1.textContent = "Bearbeiten";
+        b1.onclick = () => bearbeiten(f);
+        const b2 = document.createElement("button");
+        b2.className = "mini leise"; b2.type = "button"; b2.textContent = "Löschen";
+        b2.onclick = () => loeschen(f);
+        reihe.append(b1, b2);
+        karte.appendChild(reihe);
+      }
+      elListe.appendChild(karte);
+    });
+  }
+
+  function zeichne(){
+    $("zahlFragen").textContent = bank.fragen.length + " Fragen";
+    $("zahlKats").textContent = bank.kategorien.length + " Kategorien";
+    $("zahlStand").textContent = bank.stand || "—";
+    zeichneKategorien();
+    zeichneListe();
+  }
+
+  async function laden(){
+    try {
+      const r = await fetch(BASIS, { cache:"no-store" });
+      if (!r.ok) throw new Error((await r.text()).trim() || "Katalog nicht lesbar.");
+      bank = await r.json();
+      if (!bank.kategorien) bank.kategorien = [];
+      if (!bank.fragen) bank.fragen = [];
+      zeichne();
+    } catch (e){
+      melde(e.message, "schlecht");
+    }
+  }
+
+  async function sende(koerper){
+    const r = await fetch(BASIS, {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(Object.assign({ id: MYID }, koerper))
+    });
+    if (!r.ok) throw new Error((await r.text()).trim() || "Nicht gespeichert.");
+    bank = await r.json();
+    if (!bank.kategorien) bank.kategorien = [];
+    if (!bank.fragen) bank.fragen = [];
+    zeichne();
+  }
+
+  /* ---- Editor --------------------------------------------------------- */
+  function bearbeiten(f){
+    bearbeitet = f.id;
+    $("editorTitel").textContent = "Frage bearbeiten";
+    $("fKat").value = f.kat;
+    $("fStufe").value = String(f.stufe);
+    $("fFrage").value = f.frage;
+    $("fAntwort").value = f.antwort || "";
+    $("fTyp").value = f.typ || "";
+    $("fAufloesung").value = f.aufloesung;
+    const v = (bank.vorschau || {})[f.id];
+    if (v) vorschauZeichne(v); else vorschauFragen();
+    melde("Kennung " + f.id, "");
+    $("fFrage").focus();
+  }
+
+  function leeren(){
+    bearbeitet = null;
+    $("editorTitel").textContent = "Neue Frage";
+    $("fFrage").value = "";
+    $("fAntwort").value = "";
+    $("fTyp").value = "";
+    $("fAufloesung").value = "";
+    vorschauZeichne(null);
+    melde("", "");
+  }
+
+  async function speichern(){
+    if (!DARF_SCHREIBEN){ melde("Zum Bearbeiten über den Connector öffnen – Raum und Spieler fehlen.", "schlecht"); return; }
+    const frage = {
+      id: bearbeitet || "",
+      kat: $("fKat").value,
+      stufe: Number($("fStufe").value) || 2,
+      frage: $("fFrage").value.trim(),
+      antwort: $("fAntwort").value.trim(),
+      typ: $("fTyp").value,
+      aufloesung: $("fAufloesung").value.trim()
+    };
+    if (!frage.frage){ melde("Die Frage fehlt noch.", "schlecht"); return; }
+    if (!frage.antwort){ melde("Die richtige Antwort fehlt.", "schlecht"); return; }
+    if (!frage.aufloesung){ melde("Eine Auflösung gehört dazu.", "schlecht"); return; }
+    try {
+      await sende({ action:"speichern", frage });
+      melde(bearbeitet ? "Frage gespeichert." : "Frage angelegt.", "gut");
+      leeren();
+    } catch (e){ melde(e.message, "schlecht"); }
+  }
+
+  async function loeschen(f){
+    if (!confirm("Frage löschen?\n\n" + f.frage)) return;
+    try {
+      await sende({ action:"loeschen", frageId: f.id });
+      if (bearbeitet === f.id) leeren();
+      melde("Frage gelöscht.", "gut");
+    } catch (e){ melde(e.message, "schlecht"); }
+  }
+
+  /* ---- Kategorien, Import, Export ------------------------------------- */
+  async function kategorieNeu(){
+    const name = $("katName").value.trim();
+    if (!name){ melde("Wie soll die Kategorie heißen?", "schlecht"); return; }
+    const id = name.toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue")
+      .replace(/ß/g,"ss").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    try {
+      await sende({ action:"kategorie", kategorie:{ id, name } });
+      $("katName").value = "";
+      melde("Kategorie " + name + " angelegt.", "gut");
+    } catch (e){ melde(e.message, "schlecht"); }
+  }
+
+  function exportieren(){
+    const daten = JSON.stringify({
+      stand: new Date().toISOString().slice(0,10),
+      kategorien: bank.kategorien, fragen: bank.fragen
+    }, null, 2);
+    const blob = new Blob([daten + "\n"], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "quizfragen-" + new Date().toISOString().slice(0,10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    melde(bank.fragen.length + " Fragen exportiert.", "gut");
+  }
+
+  async function importieren(ersetzen){
+    const datei = $("datei").files[0];
+    if (!datei){ melde("Erst eine JSON-Datei wählen.", "schlecht"); return; }
+    if (!DARF_SCHREIBEN){ melde("Zum Import über den Connector öffnen.", "schlecht"); return; }
+    try {
+      const paket = JSON.parse(await datei.text());
+      const fragen = Array.isArray(paket) ? paket : (paket.fragen || []);
+      const kategorien = Array.isArray(paket) ? [] : (paket.kategorien || []);
+      if (!fragen.length && !kategorien.length) throw new Error("Die Datei enthält keine Fragen.");
+      if (ersetzen && !confirm("Katalog vollständig durch das Paket ersetzen?\n\n" +
+        fragen.length + " Fragen kommen, " + bank.fragen.length + " gehen.")) return;
+      await sende({ action:"import", fragen, kategorien, ersetzen: !!ersetzen });
+      $("datei").value = "";
+      melde(fragen.length + " Fragen importiert.", "gut");
+    } catch (e){ melde(e.message, "schlecht"); }
+  }
+
+  /* ---- Verdrahtung ---------------------------------------------------- */
+  $("suche").addEventListener("input", ev => { filter.text = ev.target.value.trim(); zeichneListe(); });
+  $("neu").onclick = () => { leeren(); $("fFrage").focus(); };
+  $("speichern").onclick = speichern;
+  $("abbrechen").onclick = () => { leeren(); melde("", ""); };
+  $("export").onclick = exportieren;
+  $("katNeu").onclick = kategorieNeu;
+  $("importErsetzen").onclick = () => importieren(true);
+  $("datei").addEventListener("change", () => importieren(false));
+  ["fFrage","fAntwort"].forEach(id => $(id).addEventListener("input", () => {
+    clearTimeout(vorschauTimer);
+    vorschauTimer = setTimeout(vorschauFragen, 350);
+  }));
+  $("fTyp").addEventListener("change", vorschauFragen);
+  document.addEventListener("keydown", ev => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") speichern();
+  });
+  if (!DARF_SCHREIBEN){
+    $("speichern").disabled = true;
+    $("katNeu").disabled = true;
+    $("neu").disabled = true;
+    melde("Nur lesbar: Für Bearbeiten und Import die Seite über den Connector öffnen.", "");
+  }
+  laden();
+})();
+</script>
+</body>
+</html>

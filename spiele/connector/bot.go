@@ -158,6 +158,61 @@ func botWartezeit(stufe string) time.Duration {
 	return base + time.Duration(botZufall().Int63n(int64(260*time.Millisecond)))
 }
 
+// botSuchFrist begrenzt eine einzelne Spielsuche (Schach, Mühle). Gemessen
+// dauert ein Zug dort 40–160 ms; die Grenze greift nur in Ausnahmestellungen
+// und verhindert, dass eine Suche den Bot dauerhaft belegt.
+var botSuchFrist = 2 * time.Second
+
+// botRechenFrist ist die Notbremse für eine Rechnung, die in einer eigenen
+// Goroutine läuft. Meldet sie sich gar nicht zurück, wird die Partie zum
+// Neuversuch freigegeben, statt für immer auf „rechnet“ zu stehen. Sie liegt
+// über botSuchFrist: Eine normale Suche wird nie von der Wache abgebrochen.
+var botRechenFrist = 15 * time.Second
+
+// botFrist ist eine harte Rechenfrist. Geprüft wird nicht bei jedem Schritt
+// (das wäre teurer als die Suche selbst), sondern alle 256. Nach dem ersten
+// Ablauf bleibt sie abgelaufen, damit die Suche zügig zurückkehrt.
+type botFrist struct {
+	ende        time.Time
+	schritte    int
+	abgebrochen bool
+}
+
+func neueBotFrist(d time.Duration) *botFrist {
+	return &botFrist{ende: time.Now().Add(d)}
+}
+
+// vorbei meldet, ob die Frist abgelaufen ist.
+func (f *botFrist) vorbei() bool {
+	if f.abgebrochen {
+		return true
+	}
+	f.schritte++
+	if f.schritte&255 != 0 {
+		return false
+	}
+	if !time.Now().Before(f.ende) {
+		f.abgebrochen = true
+	}
+	return f.abgebrochen
+}
+
+// botWacheStarten überwacht eine Rechnung, die außerhalb der Sperre läuft.
+// Meldet sie sich nicht innerhalb der Frist und gilt sie noch als aktuell,
+// gibt freigeben den Platz für einen Neuversuch frei. Der Aufrufer hält die
+// Sperre; die Wache nimmt sie selbst. Der Rückgabewert muss nach dem Eintreffen
+// des Ergebnisses gestoppt werden.
+func botWacheStarten(frist time.Duration, nochAktuell func() bool, freigeben func()) *time.Timer {
+	return time.AfterFunc(frist, func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if !nochAktuell() {
+			return
+		}
+		freigeben()
+	})
+}
+
 // botZufall ist der Zufall eines Bot-Zuges (Streuung bei gleichen Zügen).
 // botSaat stellt den Bot-Zufall auf einen festen Wert (Tests). 0 heißt:
 // echter Zufall. Der Zähler sorgt dafür, dass jeder Aufruf eine neue Zahl

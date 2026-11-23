@@ -64,13 +64,22 @@ func kaeseBotTreiben(room *Room, jetzt time.Time) bool {
 
 	g.BotFrist = time.Time{}
 	g.BotRechnet = g
+	g.BotGen++
+	gen := g.BotGen
 	schnappschuss := cloneKaese(g)
 	stufe := g.BotStufe
+	wache := botWacheStarten(botRechenFrist,
+		func() bool { return room.Kaese == g && g.BotRechnet == g && g.BotGen == gen },
+		func() {
+			g.BotRechnet = nil
+			g.BotFrist = time.Now()
+		})
 	go func() {
 		linie, ok := kaeseBotWahl(schnappschuss, farbe, stufe)
 		mu.Lock()
 		defer mu.Unlock()
-		kaeseBotErgebnis(room, g, linie, ok)
+		wache.Stop()
+		kaeseBotErgebnis(room, g, gen, linie, ok)
 	}()
 	return false
 }
@@ -80,8 +89,8 @@ func kaeseBotTreiben(room *Room, jetzt time.Time) bool {
 // oder neuer Bot-Start), verfällt das Ergebnis, ohne die neue Partie
 // anzufassen – insbesondere bleibt deren Rechen-Zustand stehen. Der Aufrufer
 // hält die Sperre.
-func kaeseBotErgebnis(room *Room, quelle *KaeseGame, linie kaeseBotLinie, ok bool) bool {
-	if quelle == nil || room.Kaese != quelle {
+func kaeseBotErgebnis(room *Room, quelle *KaeseGame, gen int, linie kaeseBotLinie, ok bool) bool {
+	if quelle == nil || room.Kaese != quelle || quelle.BotGen != gen {
 		return false
 	}
 	quelle.BotRechnet = nil

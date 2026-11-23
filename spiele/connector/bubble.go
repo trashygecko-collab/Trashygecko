@@ -452,6 +452,9 @@ type BubbleGame struct {
 	Sieger   string          `json:"sieger,omitempty"`
 	Zuletzt  time.Time       `json:"-"`
 	Rest     float64         `json:"-"`
+	BotID    string          `json:"-"`
+	BotStufe string          `json:"-"`
+	BotFrist time.Time       `json:"-"`
 }
 
 type BubbleBrettSicht struct {
@@ -665,6 +668,8 @@ func bubbleHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		bubbleWeiter(room.Bubble)
+		// Der Bot schießt auf seinem eigenen Feld, sobald es frei ist.
+		bubbleBotTreiben(room.Bubble, time.Now())
 		game := bubbleAnsicht(room.Bubble, id)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"game": game})
@@ -679,6 +684,7 @@ func bubbleHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		ID     string  `json:"id"`
 		Winkel float64 `json:"winkel"`
+		Stufe  string  `json:"stufe"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -704,6 +710,32 @@ func bubbleHandler(w http.ResponseWriter, r *http.Request) {
 	zeit := time.Now().Format("15:04:05")
 
 	switch action {
+	// Gegen den Server-Bot: der Mensch bleibt Gastgeber, der Computer sitzt
+	// bereit am zweiten Feld, und das Duell startet sofort.
+	case "bot":
+		if room.Bubble != nil && room.Bubble.Status != "ende" {
+			mu.Unlock()
+			http.Error(w, "Es läuft schon ein Bubble-Shooter-Duell.", http.StatusConflict)
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		room.botNamenNeu()
+		spiel := bubbleNeu(randomCode(), input.ID, []BubbleSpieler{
+			{ID: input.ID, Name: player.Name, Nr: 1, Ready: true},
+			{ID: botID(1), Name: room.botName(1), Nr: 2, Ready: true},
+		})
+		spiel.BotID, spiel.BotStufe = botID(1), stufe
+		spiel.starten()
+		spiel.Note = player.Name + " spielt gegen " + room.botName(1) +
+			" (" + botStufeText(stufe) + ")."
+		room.Bubble = spiel
+		room.addMessage(Message{
+			Name:     player.Name,
+			Text:     "spielt Bubble Shooter gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Time:     zeit,
+			SenderID: input.ID,
+		})
+
 	case "create":
 		if room.Bubble != nil && room.Bubble.Status != "ende" {
 			mu.Unlock()
@@ -823,6 +855,17 @@ func bubbleHandler(w http.ResponseWriter, r *http.Request) {
 		frisch.Note = "Neues Duell – erst BEREIT drücken."
 		for _, p := range game.Spieler {
 			frisch.Spieler = append(frisch.Spieler, BubbleSpieler{ID: p.ID, Name: p.Name, Nr: p.Nr})
+		}
+		frisch.BotID, frisch.BotStufe = game.BotID, game.BotStufe
+		if frisch.BotID != "" {
+			// Der Bot drückt nicht selbst: er sitzt bereit, und die neue Runde
+			// beginnt mit demselben Klick.
+			for i := range frisch.Spieler {
+				if frisch.Spieler[i].ID == frisch.BotID {
+					frisch.Spieler[i].Ready = true
+				}
+			}
+			frisch.starten()
 		}
 		room.Bubble = frisch
 

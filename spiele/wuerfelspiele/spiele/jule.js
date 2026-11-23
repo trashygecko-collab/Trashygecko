@@ -66,5 +66,7 @@ TGW.anmelden({
     }
     TGW.note(z, p.name + " würfelt " + wert + " statt " + ziel);
     TGW.naechster(z);
+    TGW.meldung(z, p.name + " würfelt " + wert + " statt " + ziel +
+      " – kein Treffer. Jetzt ist " + z.spieler[z.dran].name + " dran.");
   }
 });

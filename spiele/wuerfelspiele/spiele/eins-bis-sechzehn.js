@@ -107,6 +107,8 @@ TGW.anmelden({
       if (!z.formeln.length) {
         TGW.note(z, p.name + " kann " + gesucht + " nicht bilden: " + w.join(" "));
         TGW.naechster(z);
+        TGW.meldung(z, p.name + " kann die " + gesucht + " aus " + w.join(" · ") +
+          " nicht bilden. Jetzt ist " + z.spieler[z.dran].name + " dran.");
         return;
       }
       z.phase = "waehlen";

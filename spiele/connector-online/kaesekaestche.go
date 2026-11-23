@@ -41,6 +41,8 @@ type KaeseGame struct {
 	// neuer Bot-Start ersetzen die Partie, damit verfällt ihre Rechnung.
 	BotZug     *kaeseBotLinie `json:"-"`
 	BotRechnet *KaeseGame     `json:"-"`
+	// BotGen zählt die Rechenversuche dieser Partie (siehe ChessGame.BotGen).
+	BotGen int `json:"-"`
 }
 
 func kaeseNewGame(hostID, hostName, guestID, guestName, id string) *KaeseGame {

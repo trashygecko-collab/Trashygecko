@@ -76,6 +76,7 @@ a{color:var(--gold)}
 .plus{color:var(--plus)}
 .minus{color:var(--minus)}
 .note{margin-top:10px;color:var(--muted);font-style:italic;font-size:14px}
+.note.meldung{color:var(--gold-hell);font-style:normal;font-weight:600;border-left:3px solid var(--gold-hell);padding-left:9px}
 .fehler{color:var(--fehler);font-size:14px;margin-top:8px}
 .liste{display:grid;gap:7px;margin:0 0 12px}
 .liste div{display:flex;justify-content:space-between;gap:10px;
@@ -215,6 +216,12 @@ const $=id=>document.getElementById(id);
 let game=null;
 let bankBetrag=500;   // Vorschlag für die Bank (Cent)
 let letzteDaten="";
+
+// Rueckmeldung: Ein Fehlzug bleibt rund zwei Sekunden stehen, damit Karte und
+// Grund lesbar sind, bevor der naechste Spielstand das Brett ueberschreibt.
+const ERGEBNIS_DAUER=2000;
+let halteBis=0;
+let meldungTimer=0;
 let fehlerTimer=0;
 
 function zeige(id,an){ $(id).hidden=!an; }
@@ -267,16 +274,23 @@ async function holen(){
   const d=await r.json();
   const roh=JSON.stringify(d.game);
   if(roh===letzteDaten)return;
+  if(Date.now()<halteBis)return;
   letzteDaten=roh;
-  game=d.game||null;
-  zeichne();
+  uebernehmen(d.game||null);
  }catch(e){
   $("note").textContent="Verbindung sucht …";
  }
 }
 
+let sendet=false;
+let letzteTat=0, letzteAktion="";
 async function tu(aktion,daten){
  if(!ONLINE)return;
+ const schluessel=aktion+"|"+JSON.stringify(daten||{});
+ if(sendet)return;
+ if(schluessel===letzteAktion && Date.now()-letzteTat<400)return;
+ if(Date.now()<halteBis)return;
+ sendet=true;
  try{
   const r=await fetch("/api/baccara?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
    method:"POST",headers:{"Content-Type":"application/json"},
@@ -285,12 +299,30 @@ async function tu(aktion,daten){
   const text=await r.text();
   if(!r.ok){ fehler(text.trim()||("Fehler "+r.status)); return; }
   const d=JSON.parse(text);
-  game=d.game||null;
   letzteDaten=JSON.stringify(d.game);
-  zeichne();
+  uebernehmen(d.game||null);
  }catch(e){
   fehler("Verbindung fehlgeschlagen.");
+ }finally{
+  sendet=false; letzteTat=Date.now(); letzteAktion=schluessel;
  }
+}
+
+
+function meldungWert(alt,neu){
+ return !!alt&&!!neu&&alt.status!=="runde"&&alt.status!=="ende"&&
+  (neu.status==="runde"||neu.status==="ende");
+}
+
+function uebernehmen(neu){
+ const vorher=game;
+ game=neu;
+ if(meldungWert(vorher,game)){
+  halteBis=Date.now()+ERGEBNIS_DAUER;
+  clearTimeout(meldungTimer);
+  meldungTimer=setTimeout(()=>{ zeichne(); },ERGEBNIS_DAUER+30);
+ }
+ zeichne();
 }
 
 function zeichne(){
@@ -348,6 +380,7 @@ function zeichne(){
   ? "Karten für "+game.ponteName+" – alle Pointeure spielen diese Hand."
   : "Noch keine Karten – erst setzen.";
  $("note").textContent=game.note||"";
+ $("note").classList.toggle("meldung",Date.now()<halteBis);
 
  // Sitze
  $("sitze").innerHTML=game.spieler.map((p,i)=>{
@@ -445,11 +478,14 @@ function zeichneWertung(){
  $("wertungInhalt").innerHTML=
   '<div class="klein" style="margin-bottom:8px">Ponte: '+ponte+' · Bank: '+bank+' · Bank danach '+euro(game.bank)+'</div>'+
   (zeilen||'<div class="klein">Keine Einsätze in dieser Runde.</div>')+
-  '<div class="note">'+escapeHtml(game.note||"")+'</div>';
+  '<div class="note'+(Date.now()<halteBis?" meldung":"")+'">'+escapeHtml(game.note||"")+'</div>';
  $("btnWeiter").hidden=ende;
+ $("btnWeiter").disabled=Date.now()<halteBis;
  $("btnWeiter").textContent=game.bankWechsel?"Neue Bank":"Nächste Runde";
  $("btnAbgeben").hidden=ende||!bankIch();
+ $("btnAbgeben").disabled=Date.now()<halteBis;
  $("btnNeu").hidden=!ende;
+ $("btnNeu").disabled=Date.now()<halteBis;
 }
 
 $("btnCreate").onclick=()=>tu("create");

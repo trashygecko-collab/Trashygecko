@@ -81,8 +81,10 @@ TGW.anmelden({
     p.hoelzer -= sechsenWeg;
     z.mitte += sechsenWeg;
     TGW.note(z, p.name + ": " + w.join(" ") + " · " + einsen + " nach links, " + sechsen + " in die Mitte");
+    var rausJetzt = false;
     if (p.hoelzer <= 0 && !p.raus) {
       p.raus = true;
+      rausJetzt = true;
       TGW.note(z, p.name + " ist ausgeschieden");
     }
     var uebrig = z.spieler.filter(function (q) { return !q.raus; });
@@ -92,5 +94,9 @@ TGW.anmelden({
       return;
     }
     this.naechsterAktiver(z);
+    if (rausJetzt && !z.ende) {
+      TGW.meldung(z, p.name + " hat keine Streichhölzer mehr und ist " +
+        "ausgeschieden. Jetzt ist " + z.spieler[z.dran].name + " dran.");
+    }
   }
 });

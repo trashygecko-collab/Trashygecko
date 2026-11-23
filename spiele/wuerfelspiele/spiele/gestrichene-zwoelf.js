@@ -67,6 +67,7 @@ TGW.anmelden({
     if (art !== "wurf") return false;
     var p = z.spieler[z.dran];
     var summe = z.wurf(2)[0] + z.wuerfel[1];
+    var schon = summe !== 7 && !!p.aus[summe];
     if (summe === 7) {
       p.punkte += 7;
       TGW.note(z, p.name + " würfelt die Sieben: +7 (" + p.punkte + ")");
@@ -80,6 +81,11 @@ TGW.anmelden({
     }
     p.zuege += 1;
     TGW.naechster(z);
+    if (schon && !z.ende) {
+      TGW.meldung(z, p.name + " hat die " + summe +
+        " schon gestrichen – 2 Punkte weg. Jetzt ist " +
+        z.spieler[z.dran].name + " dran.");
+    }
     if (this.rundeZuEnde(z)) return;
   },
   rundeZuEnde: function (z) {

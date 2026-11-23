@@ -79,6 +79,7 @@ a{color:var(--gold)}
 .zug button{flex:1 1 130px}
 .hinweis{margin-top:10px;color:var(--gold-hell);font-size:14px}
 .note{margin-top:10px;color:var(--muted);font-style:italic;font-size:14px}
+.note.meldung{color:var(--gold-hell);font-style:normal;font-weight:600;border-left:3px solid var(--gold-hell);padding-left:9px}
 .fehler{color:var(--fehler);font-size:14px;margin-top:8px}
 .gezogen{display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;
  margin:12px 0;padding:10px 0;border-top:1px solid var(--rand-4);border-bottom:1px solid var(--rand-4)}
@@ -296,6 +297,13 @@ let fehlerTimer=0;
 // neu gebaut – sonst gingen Klicks verloren, die gerade auf eine Karte zielen.
 let letzteDaten="";
 
+// Rueckmeldung: Ein Fehlzug bleibt rund zwei Sekunden stehen, damit Karte und
+// Grund lesbar sind, bevor der naechste Spielstand das Brett ueberschreibt.
+const ERGEBNIS_DAUER=2000;
+let halteBis=0;
+let meldungTimer=0;
+let warteNeu=null;   // neuer Stand, der erst nach der Anzeige uebernommen wird
+
 function zeige(id,an){ $(id).hidden=!an; }
 function sichtbar(id){ return !$(id).hidden; }
 
@@ -358,16 +366,23 @@ async function holen(){
   const d=await r.json();
   const roh=JSON.stringify(d.game);
   if(roh===letzteDaten)return;
+  if(Date.now()<halteBis)return;
   letzteDaten=roh;
-  game=d.game||null;
-  zeichne();
+  uebernehmen(d.game||null);
  }catch(e){
   $("note").textContent="Verbindung sucht …";
  }
 }
 
+let sendet=false;
+let letzteTat=0, letzteAktion="";
 async function tu(aktion,daten){
  if(!ONLINE)return;
+ const schluessel=aktion+"|"+JSON.stringify(daten||{});
+ if(sendet)return;
+ if(schluessel===letzteAktion && Date.now()-letzteTat<400)return;
+ if(Date.now()<halteBis)return;
+ sendet=true;
  try{
   const r=await fetch("/api/cabo?room="+encodeURIComponent(ROOM)+"&action="+encodeURIComponent(aktion),{
    method:"POST",headers:{"Content-Type":"application/json"},
@@ -376,13 +391,43 @@ async function tu(aktion,daten){
   const text=await r.text();
   if(!r.ok){ fehler(text.trim()||("Fehler "+r.status)); return; }
   const d=JSON.parse(text);
-  game=d.game||null;
   letzteDaten=JSON.stringify(d.game);
   modus=null; swapEigen=null; satzWahl=[];
-  zeichne();
+  uebernehmen(d.game||null);
  }catch(e){
   fehler("Verbindung fehlgeschlagen.");
+ }finally{
+  sendet=false; letzteTat=Date.now(); letzteAktion=schluessel;
  }
+}
+
+
+function meldungWert(note){ return /behauptet einen Satz . falsch/.test(note||""); }
+
+function uebernehmen(neu){
+ const vorher=game;
+ const alt=vorher&&vorher.note||"";
+ const note=neu&&neu.note||"";
+ if(vorher&&note!==alt&&meldungWert(note)){
+  // Der Server hat den Zug schon weitergegeben. Fuer die Anzeige bleibt der
+  // Wechsel beim handelnden Spieler, bis Karte und Grund lesbar waren; erst
+  // danach wird der neue Stand uebernommen.
+  warteNeu=neu;
+  halteBis=Date.now()+ERGEBNIS_DAUER;
+  clearTimeout(meldungTimer);
+  meldungTimer=setTimeout(()=>{
+   halteBis=0;
+   const z=warteNeu;
+   warteNeu=null;
+   if(z) game=z;
+   zeichne();
+  },ERGEBNIS_DAUER+30);
+  game=Object.assign({},neu,{zug:vorher.zug});
+  zeichne();
+  return;
+ }
+ game=neu;
+ zeichne();
 }
 
 function zielText(){
@@ -438,6 +483,7 @@ function zeichne(){
  zeige("wertung",offen);
 
  $("note").textContent=game.note||"";
+ $("note").classList.toggle("meldung",Date.now()<halteBis);
 
  // Tischmitte
  const ablageWert=game.ablageOben;
@@ -532,15 +578,16 @@ function zeichne(){
  if(game.status==="active"&&ichDran()&&gz==null){
   const b1=document.createElement("button");
   b1.textContent="Vom Ablagestapel";
-  b1.disabled=ablageWert==null;
+  b1.disabled=ablageWert==null||Date.now()<halteBis;
   b1.onclick=()=>tu("nehmen");
   const b2=document.createElement("button");
   b2.textContent="Vom Stapel ziehen";
+  b2.disabled=Date.now()<halteBis;
   b2.onclick=()=>tu("ziehen");
   const b3=document.createElement("button");
   b3.className="still";
   b3.textContent="CABO ansagen";
-  b3.disabled=game.caboVon>=0;
+  b3.disabled=game.caboVon>=0||Date.now()<halteBis;
   b3.onclick=()=>tu("cabo");
   zug.append(b1,b2,b3);
   modus=null; satzWahl=[];
@@ -632,8 +679,9 @@ function zeichneWertung(){
    '<span class="wzahlen">Karten <b>'+summe+'</b> · Runde <b>'+runde+'</b> · Gesamt <b>'+p.punkte+'</b></span></div>'+
    '<div class="wkarten">'+karten+'</div></div>';
  }).join("");
- $("wertungInhalt").innerHTML=zeilen+'<div class="note">'+escapeHtml(game.note||"")+'</div>';
+ $("wertungInhalt").innerHTML=zeilen+'<div class="note'+(Date.now()<halteBis?" meldung":"")+'">'+escapeHtml(game.note||"")+'</div>';
  $("btnWeiter").hidden=ende;
+ $("btnWeiter").disabled=Date.now()<halteBis;
  $("btnNeu").hidden=!ende;
 }
 

@@ -192,6 +192,8 @@ window.TGMultiplayer = {
       "text": "1×1-Rennen: Kopfrechnen um die Wette – richtig rechnen bringt Punkte." },
     { "id": "galgen", "name": "Galgenmännchen", "kat": "weitere", "pfad": "/spiele/brettspiele/galgen/galgen.html", "api": "galgen", "min": 2, "max": 6, "art": "tisch",
       "text": "Galgenmännchen: reihum raten – wer das letzte Feld füllt, gewinnt." },
+    { "id": "quizshow", "name": "Scherzshow", "kat": "weitere", "pfad": "/spiele/quizshow/quizshow.html", "api": "quiz", "min": 2, "max": 6, "art": "tisch",
+      "text": "Scherzfragen im Studio: vier Antworten, schnelle Finger oder ruhige Punkte – Wissen ist ausdrücklich nicht gefragt." },
     { "id": "wortsuche", "name": "Wortsuche", "kat": "weitere", "pfad": "/spiele/brettspiele/wortsuche/wortsuche.html", "api": "wortsuche", "min": 2, "max": 6, "art": "tisch",
       "text": "Wortsuche: beide suchen im selben Gitter – wer mehr Wörter findet." },
     { "id": "malen", "name": "Malen", "kat": "weitere", "pfad": "/spiele/malen/malen.html", "api": "malen", "min": 2, "max": 8, "art": "gemeinsam",
