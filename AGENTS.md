@@ -85,6 +85,11 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
   `file://`.
 - **Versteckte Tabs/WebView drosseln Timer**; Messungen im Browser-Testfenster sind
   dadurch verfälscht.
+- **Die verlinkten Homepage-Seiten liegen im APK** (D-24): `homepageKopieren` kopiert
+  neben `spiele/` die 19 Ordner aus `homepageSeiten` in `app/build.gradle` (Tagebuch,
+  Bücher, Rezepte, Anleitungen …). Eine neu verlinkte Rubrik gehört in diese Liste, sonst
+  ist ihre Kachel im APK tot, obwohl sie im Netz geht. Draußen bleiben der alte Spiegel
+  unter `css/` und `tagebuch/Textdokument (neu).txt`.
 - **Der Spielekatalog wird beim Bauen verändert** (zwei Zeilen entfernt). Ändert jemand
   die Katalogzeilen, bricht `homepageKopieren` bewusst mit `GradleException`.
 - **`assets/katalog.json` ist erzeugt**, nicht gepflegt (D-15, Aufgabe `katalogBauen`).
@@ -118,6 +123,18 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
   Lokales Netz, Online-Räume, Extras) als Views; die Kopfzeile zeigt den Netzstatus des
   Geräts. `start/app.html` liegt nur noch als `index.html` im Paket, damit „zurück zum
   Start“ aus einer Spielseite landet – wer die Kacheln ändert, ändert `MainActivity`.
+- **Farben und kleine Bausteine stehen in `Ansicht`** (`BG`, `KARTE`, `RAND`, `GOLD`,
+  `TEXT`, `MUTED`, `flaeche`, `text`, `dp`). Neue native Ansichten holen sie dort, statt
+eigene Farbkonstanten anzulegen – sonst laufen Start und Spieleliste farblich auseinander
+(so waren beide Grün- und Grautöne vor dem 23.11.2026 leicht verschieden).
+- **Ein WebView, der ins Internet zeigt, braucht drei Zustände** (D-23): vor dem Laden das
+  Netz prüfen, `onPageFinished` → „erreichbar“, `onReceivedError` im Hauptframe → deutsche
+  Meldung mit „Erneut versuchen“. Chromiums englische Fehlerseite ist kein Nutzertext, und
+  die Statuszeile darf den Erfolg nicht vorwegnehmen.
+- **Die echte Homepage liegt als `www/homepage.html` im Paket** (D-12) und wird nur über
+  „Extras → Homepage“ geöffnet (`HomepageActivity`). Sie entsteht beim Bauen aus der
+  `index.html` der Wurzel; `www/index.html` bleibt die alte App-Startseite als Rückweg.
+  Von der Website ist nur diese Startseite dabei, nicht Tagebuch, Bücher und Rezepte.
 - **Spielseiten laufen in `GameActivity`** (D-16). Wer WebView-Einstellungen ändert,
   ändert sie in `WebBasis` – sonst laufen die Ansichten auseinander.
 - **Emulator braucht Zeit**: `adb wait-for-device`, `getprop sys.boot_completed` prüfen,

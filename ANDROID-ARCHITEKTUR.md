@@ -65,12 +65,14 @@ Spiele ein. Sie wird nicht weiterentwickelt, bleibt aber als Verteilkopie besteh
 
 | Datei | Zeilen | Aufgabe |
 |---|---|---|
-| `MainActivity.java` | 193 | **native Startansicht** (D-12): Marke, Titel, vier Kacheln (Spiele, Lokales Netz, Online-Räume, Extras), Netzstatus des Geräts in der Kopfzeile, Vollbild – kein WebView |
-| `SpieleActivity.java` | 630 | **native Spieleliste** aus `assets/katalog.json`: Textsuche, Merkmalsfilter (UND), Kategorien mit Anzahl, Dialog „Lokal / Online“, startet `GameActivity`; `onConfigurationChanged` bricht die Chips für die neue Breite um (D-21), `onSaveInstanceState`/`stelleWieder` sichern Suche, Merkmale und Scrollposition über den Prozess-Tod (D-22, erst wiederherstellen, dann einmal zeichnen) |
+| `MainActivity.java` | 173 | **native Startansicht** (D-12): Marke, Titel, vier Kacheln (Spiele, Lokales Netz, Online-Räume, Extras), Netzstatus des Geräts in der Kopfzeile, Vollbild – kein WebView; Farben und Bausteine aus `Ansicht` |
+| `HomepageActivity.java` | 142 | die **echte Startseite der Website** (`assets/www/homepage.html`) im WebView, nur über „Extras → Homepage“ erreichbar, Zurück führt in die App (D-12) |
+| `SpieleActivity.java` | 614 | **native Spieleliste** aus `assets/katalog.json`: Textsuche, Merkmalsfilter (UND), Kategorien mit Anzahl, Dialog „Lokal / Online“, startet `GameActivity`; `onConfigurationChanged` bricht die Chips für die neue Breite um (D-21), `onSaveInstanceState`/`stelleWieder` sichern Suche, Merkmale und Scrollposition über den Prozess-Tod (D-22, erst wiederherstellen, dann einmal zeichnen) |
 | `GameActivity.java` | 219 | eine einzelne Spielseite (lokal aus den Assets oder vom Render-Server), Mahjong-Brücke, Zurück = Spiel verlassen |
 | `WebNavigation.java` | 142 | **die eine Link-Regel**: was im WebView bleibt, was `GameActivity`, `SpieleActivity` oder `ConnectorActivity` öffnet, was an den Browser geht |
 | `WebBasis.java` | 85 | gemeinsame WebView-Einstellungen, Vollbild, Konsolenprotokoll, Online-Host und Pfadprüfung |
-| `ConnectorActivity.java` | 442 | nativer Bereich „Connector“: Karten für Lokales Netz und Online, Extras; lokaler Chat; Galgen-WebView – **kein** Einstieg zur Spieleliste (D-20) |
+| `Ansicht.java` | 53 | gemeinsames Farbbild (`BG`, `KARTE`, `RAND`, `GOLD`, `TEXT`, `MUTED`) und die Bausteine `flaeche`, `text`, `dp` für Startansicht und Spieleliste |
+| `ConnectorActivity.java` | 494 | nativer Bereich „Connector“: Karten für Lokales Netz und Online, Extras; lokaler Chat; Galgen-WebView; Online-Kachel lädt ohne Netz gar nicht erst und zeigt statt Chromiums englischer Fehlerseite eine deutsche Meldung mit „Erneut versuchen“ (D-23); Zurück schließt direkt, wenn der Bereich über eine Kachel der Startansicht geöffnet wurde (`vonAussen`) – **kein** Einstieg zur Spieleliste (D-20) |
 | `LocalNetworkCoordinator.java` | 455 | NSD-Dienst `_trashygecko._tcp`, TCP-Relay im Gastgebergerät, Raumcode, Ereignis-Nummern, Deduplizierung, Wiederverbindung (12 Versuche, 120 s Kulanz) |
 | `GalgenLokal.java` | 355 | Regeln des Galgens für den lokalen Relay (Port von `spiele/connector/galgen.go`) |
 | `RemoteControlActivity.java` | 173 | Fernbedienung (WebView + native Brücke) |
@@ -88,6 +90,10 @@ die Fernbedienung und die alte Startseite als Rückweg:
 - `app.html` – die alte HTML-Startseite (Quelle `spiele/android/start/app.html`) liegt nur
   noch als `index.html` im Paket, damit „zurück zum Start“ aus einer Spielseite landet.
   Die App selbst öffnet sie nicht mehr.
+- `homepage.html` – die **echte Startseite der Website** (`index.html`), beim Bauen als
+  `homepage.html` mitkopiert (neben `main.css`); nur über „Extras → Homepage“
+  (`HomepageActivity`) erreichbar, Zurück führt in die App. Weitere Website-Seiten
+  (Tagebuch, Bücher, Rezepte …) liegen nicht im Paket.
 - `spiele/spiele.html` – **die Quelle des Spielekatalogs**: eine Desktop-Seite mit Suche,
   Filtern und der JS-Liste `SPIELE`; daraus entsteht beim Bauen `assets/katalog.json`.
   In der App zeigt `SpieleActivity` den Katalog nativ; die HTML-Seite bleibt im Paket
@@ -114,6 +120,10 @@ und die Liste springt wieder nach oben.
 ```
 :app:homepageKopieren   (Sync, hängt an preBuild)
    kopiert ../../../spiele/**  → app/src/main/assets/www/spiele/
+   kopiert außerdem die 19 Ordner aus `homepageSeiten` (anbau, batch, bucher, cheats, css,
+      filme, gedichte, html, musik, rezepte, russisch, script, seiten, sprueche, tagebuch,
+      tipps, weisheiten, witze, youtube) samt main.css → www/<ordner>/ (D-24);
+      ohne den alten css-Spiegel, musik/.backup-* und tagebuch/Textdokument (neu).txt
    kopiert ../../../WLAN-Fernbedienung/{index.html,styles.css,README.md,js} → www/fernbedienung/
    kopiert start/app.html → www/app.html und www/index.html
    entfernt danach zwei Katalogzeilen (APK-Installer, Fernbedienung) – bricht ab, wenn das Muster fehlt
@@ -222,7 +232,8 @@ App drumherum wird nativ.** Kein Nachbau von 91 Spielen, keine zweite Spiele-Eng
 
 - alle Spielseiten unter `spiele/**` samt `main.css`, Schriften, Bildern, Sounds;
 - die Fernbedienungs-Oberfläche (ausschließlich über **Extras**);
-- die echte Homepage (`index.html`) als eigener Eintrag unter **Extras → Homepage**,
+- die echte Homepage (`index.html`) als eigener Eintrag unter **Extras → Homepage**
+  (seit 23.11.2026 umgesetzt; im Paket liegt die Startseite, nicht die ganze Website),
   damit „die richtige TrashyGecko-Startseite“ lokal da ist, ohne die App zu ersetzen;
 - die bestehenden nativen Bausteine unverändert: `LocalNetworkCoordinator`, `GalgenLokal`,
   `RemoteControlActivity` + `remote/*`, `HomepageAssets`.

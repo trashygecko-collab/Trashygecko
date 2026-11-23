@@ -85,8 +85,12 @@ verletzt und muss neu entschieden werden.
 
 *Stand 23.11.2026:* Der Start ist nativ umgesetzt. `MainActivity` baut die vier Kacheln
 (Spiele, Lokales Netz, Online-Räume, Extras) als Views und zeigt den Netzstatus des
-Geräts; `start/app.html` liegt nur noch als `index.html` im Paket. *Offen:* der Eintrag
-„Extras → Homepage“ fehlt noch – dafür müsste die echte Website in die Assets.
+Geräts; `start/app.html` liegt nur noch als `index.html` im Paket.
+*Stand 23.11.2026 (Fortsetzung):* „Extras → Homepage“ ist umgesetzt. Beim Bauen wird die
+echte `index.html` als `www/homepage.html` mitkopiert (neben `main.css`) und von
+`HomepageActivity` geöffnet; `www/index.html` bleibt der Rückweg aus den Spielen. Im
+Paket liegt die Startseite selbst, nicht die übrigen Seiten der Website (Tagebuch,
+Bücher, Rezepte …).
 
 ## D-13 · Online-Ziel ist fest `https://trashygecko.onrender.com`
 Kein konfigurierbarer Server in den Einstellungen: die Spiele-Seiten bringen ihre
@@ -174,6 +178,38 @@ auf 0.
 `suchfeld.setText` den Textwächter auslöst, ist `stelleWiederLaeuft` gesetzt. Vorher lief
 `zeichne()` vor `stelleWieder`, dadurch blieb ein gesichertes Merkmal ohne Suchtext
 ungefiltert stehen.
+
+## D-23 · Kein englischer Chromium-Fehlertext: Online-Ziele zeigen eine deutsche Meldung
+Der Online-Connector liegt auf einem fremden Server. Ohne Netz zeigte der WebView bisher
+Chromiums „Webpage not available … net::ERR_INTERNET_DISCONNECTED“, und die Statuszeile
+behauptete weiter „Online-Connector · bestehender Server“ – beides war für Nutzer falsch.
+
+*Regel:* Vor dem Laden prüft `ConnectorActivity` das aktive Netz (`getActiveNetworkInfo()`,
+API-28-tauglich) und baut ohne Netz gar keinen WebView. Antwortet der Server trotz Netz
+nicht, fängt `onReceivedError` den Hauptframe ab. In beiden Fällen wird der WebView
+verworfen, eine deutsche Erklärung mit „Erneut versuchen“ gezeigt und der ehrliche Stand in
+die Statuszeile geschrieben („Offline · keine Verbindung“ bzw. „Online-Connector · Server
+nicht erreichbar“); nach erfolgreichem Laden steht dort „Online-Connector · Server erreichbar“.
+
+*Folge:* Ein WebView, der ins Internet zeigt, braucht diesen dreiteiligen Weg (laden →
+`onPageFinished` → `onReceivedError`), sonst lügt die Statuszeile. Erklärungen wiederholen
+keine englischen Chromium-Codes.
+
+## D-24 · Die verlinkten Homepage-Seiten liegen im APK, der alte css-Spiegel nicht
+Die Startseite ist eine Sammlung statischer Seiten; im APK lag bisher nur `index.html`.
+Fast jede Kachel lief deshalb auf 404. `homepageKopieren` kopiert jetzt die 19 Ordner,
+die von `index.html` aus erreichbar sind (`anbau`, `batch`, `bucher`, `cheats`, `css`,
+`filme`, `gedichte`, `html`, `musik`, `rezepte`, `russisch`, `script`, `seiten`, `sprueche`,
+`tagebuch`, `tipps`, `weisheiten`, `witze`, `youtube`) samt `main.css`.
+
+*Warum eine Liste statt „alles außer…“:* Der Baum enthält 521 KB alten Seiten-Spiegel
+unter `css/` (in `.gitignore`, mit alten Zugangsdaten), `musik/.backup-20261021-133340`
+und `tagebuch/Textdokument (neu).txt` ohne Seite. Eine Positivliste ist außerdem die
+Stelle, an der ein neuer Bereich auffällt.
+
+*Folge:* Ein neu verlinkter Ordner gehört in `homepageSeiten` in `app/build.gradle`; sonst
+ist seine Kachel im APK tot, während sie im Netz geht. Die Assets wachsen um 1,38 MB
+(204 Dateien), das APK um 0,5 MB.
 
 ## Verworfene Wege
 

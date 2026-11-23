@@ -3,7 +3,7 @@
 Grundregel: Hier steht nur, was **tatsächlich ausgeführt** wurde. Was nicht lief, steht als
 „nicht getestet“ – ein erfolgreicher Build ist **kein** Funktionsnachweis.
 
-Letzte Aktualisierung: 23.11.2026 (Etappe 3, Schritt 7: native Startansicht, Zustandssicherung).
+Letzte Aktualisierung: 23.11.2026 (Etappe 3, Schritt 11: Homepage-Seiten im APK).
 
 ---
 
@@ -21,6 +21,145 @@ Achtung für alle künftigen Tests: Eine **Debug**-APK lässt sich nicht über d
 release-signierte 1.15 legen (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Entweder mit
 `keystore.properties` release bauen oder auf dem Emulator testen. Ein Deinstallieren auf
 Gerät A löscht alle lokalen Spielstände.
+
+---
+
+## 1l. Etappe 3, Schritt 11 · Homepage-Seiten im APK (23.11.2026, 19:40–20:05)
+
+Geänderter Code: nur `spiele/android/app/build.gradle` – neue Liste `homepageSeiten`
+(19 Ordner) und ihre Aufnahme in `homepageKopieren`, dazu Ausnahmen für den alten
+`css/`-Spiegel, `musik/.backup-*` und `tagebuch/Textdokument (neu).txt`. Keine Java-Datei
+angefasst.
+
+| Prüfung | Ergebnis | Beleg |
+|---|---|---|
+| `:app:assembleDebug` | **erfolgreich**, `BUILD SUCCESSFUL in 18s`, exit 0 | Terminalausgabe |
+| APK-Größe | 11.460.085 → **11.959.743 B** (+499.658 B), `assets/www` 13 → 14 MB | `ls`, `du` |
+| Seiten im Paket | **303** HTML-Dateien (vorher nur Spiele + Startseite) | `find` |
+| Vollständigkeit | alle **204** von `index.html` aus erreichbaren Dateien liegen in `assets/www`; 0 unerwünschte Dateien (`.jks`, `.exe`, `.go`, `.apk`, `Textdokument`) | Prüfskript (Python, gleiche Linkregeln wie ein Browser) |
+| **Flugmodus** | `Active default network: none` während der ganzen Prüfung | `dumpsys connectivity` |
+| 23 lokale Adressen | `fetch` aus der geladenen Seite: **alle 200** (Tagebuch, Rezepte, Bücher, Witze, Tipps, Programmieren, Downloads, Musik, Filme, Youtube, Cheats, Gedichte, Russisch, Anbau, Sprüche, Weisheiten, HTML, Batch, Script, CSS-Seiten, `main.css`) | DevTools `Runtime.evaluate` |
+| Echte Klicks | Tagebuch → „Tagebuch“, Rezepte → „Rezepte“, Bücher → „Bücher“, Tipps → „Tipps“ (jeweils URL `appassets.androidplatform.net/…`) | DevTools, `logcat` `Homepage geladen: …` |
+| Zwei Ebenen tiefer | `tipps/tipps.html` → `hoersturz.html` („Hörsturz (Gehörsturz)“); `seiten/programmieren.html` → `../css/css.html` („CSS“) | DevTools |
+| Fehlzugriffe | **0** `Seitenfehler`, 0 kaputte Bilder (`document.images`), 0 `FATAL EXCEPTION` | `logcat`, DevTools |
+
+Der Weg im WebView: Debug-Build auf Emulator B, `adb forward tcp:9222`
+`localabstract:webview_devtools_remote_<pid>`, dann `Runtime.evaluate` über einen kleinen
+Node-Helfer in `Documents\arbeit\cdp.mjs` (nutzt `WebSocket` aus Node 24). Die Klicks sind
+echte `a.click()`-Aufrufe auf den Links der Startseite – derselbe Weg wie ein Fingertipp.
+Ein Ausrutscher beim Suchen: der erste relative Link auf der Tipps-Seite ist „<− back“ und
+führte nach `www/index.html` (App-Start) – so gewollt, kein Fehler.
+
+**Nicht getestet:** neun Ziele existieren auch in der Quelle nicht (Beispielpfade der
+Anleitungen `bilder/beispiel.jpg`, `home.png`, `html/home.png`, `css/bild.gif`,
+`css/bild.png`, „Adresse des Bildes“) und bleiben tot. Keine Sichtprüfung des Seitenbildes
+(nur DOM/URL/Log), kein Android-9-Gerät (gesperrt).
+
+---
+
+## 1k. Etappe 3, Schritt 10 · Online-Kachel ohne Netz (23.11.2026, 19:14–19:33)
+
+Geänderter Code: `ConnectorActivity.java` (458 → **494** Zeilen) – neu `istOnline()` und
+`zeigeOnlineFehler(...)`; `openOnline()` lädt ohne Netz nicht mehr, die Statuszeile folgt
+dem echten Verlauf statt sofort „bestehender Server“ zu behaupten.
+
+| Prüfung | Ergebnis | Beleg |
+|---|---|---|
+| `:app:assembleDebug` | **erfolgreich**, exit 0 | Terminalausgabe |
+| **Flugmodus, Online-Kachel** | Status „Offline · keine Verbindung“; Körper „Online-Connector nicht erreichbar“, deutscher Erklärungssatz, Knopf „Erneut versuchen“ – **keine** Chromium-Seite | `uiautomator` (`Active default network: none`) |
+| „Erneut versuchen“ nach Netzaus/an | Status „Online-Connector · Server erreichbar“, Seite lädt | `uiautomator` |
+| Server antwortet nicht (Testbau mit `…trashygecko.invalid`) | Status „Online-Connector · Server nicht erreichbar“, gleiche Meldung mit Knopf; Testbau danach zurückgebaut | `uiautomator` |
+| Abstürze | **0** `FATAL EXCEPTION` in allen Läufen | `logcat` |
+
+Der Server-Zweig lief über eine kurzzeitig geänderte `ONLINE_URL` auf eine nicht auflösbare
+Adresse; danach zurückgenommen, neu gebaut (`ONLINE_URL` wieder `…onrender.com/connector`)
+und der Flugmodus-Fall auf der Endfassung wiederholt.
+
+**Nicht getestet:** der gerenderte Seiteninhalt (WebView-Text erscheint nicht im UI-Baum,
+DevTools sind im Connector nicht freigeschaltet). Geprüft ist die Statuszeile, die aus
+`onPageFinished` kommt – also „Seite fertig geladen“, nicht „Seite sieht richtig aus“.
+
+---
+
+## 1j. Etappe 3, Schritt 9 · Startansicht aufgeräumt (23.11.2026, 19:00–19:07)
+
+Geänderter Code: neu `Ansicht.java` (53 Zeilen: `BG`, `KARTE`, `RAND`, `GOLD`, `TEXT`,
+`MUTED`, `flaeche`, `text`, `dp`), `MainActivity.java` (193 → **173** Zeilen),
+`SpieleActivity.java` (630 → **614** Zeilen). Beide Activities holen Farben und Bausteine
+jetzt aus `Ansicht`; in `MainActivity` gibt es keine eigenen Farbkonstanten und keinen
+`status != null`-Test mehr, in `SpieleActivity` bleibt nur der Chip-Füllton lokal.
+
+| Prüfung | Ergebnis | Beleg |
+|---|---|---|
+| `:app:assembleDebug` | **erfolgreich**, `BUILD SUCCESSFUL in 10s`, exit 0 | Terminalausgabe |
+| Startansicht Aufbau | Titel `[50,241][1030,394]`, Kacheln y 553/864/1175/1486, Status „WLAN · online bereit“ – gleiche Maße wie vor dem Umbau | `uiautomator` |
+| Spieleliste | „94 Spiele“ → Chip „Mehrspieler“ „70 von 94“ → „Zurücksetzen“ „94 Spiele“; `Liste: 94 Zeilen in 39 ms` | `uiautomator`, `logcat` |
+| Abstürze | **0** `FATAL EXCEPTION` | `logcat` |
+| **Android 9, Netzstatus** | Gerät A (API 28), Testbau mit eigener Paket-ID `…tmahjong.probe`: Log `Netzstatus: WLAN · online bereit`; `getActiveNetworkInfo()` liefert also auf Android 9 den WLAN-Typ, keine Ausnahme | `logcat` (Gerät A) |
+| Rückbau der Testfassung | Probe-Paket deinstalliert (`pm list packages` zeigt nur `de.trashygecko.tmahjong`), Logzeile und `applicationId` zurückgenommen, normaler Build erneut grün | `pm list`, Quelltext, Build |
+
+Warum die Testfassung: Eine Debug-APK lässt sich nicht über die release-signierte 1.15
+legen (D-14). Das Gerät hat eine gesicherte Sperre (`wm dismiss-keyguard` bleibt
+wirkungslos), deshalb lief die Messung über eine Protokollzeile hinter dem Sperrbildschirm
+statt über die sichtbare Ansicht. Die 1.15 auf dem Gerät blieb unangetastet.
+
+**Nicht getestet:** Startansicht und Offline-Zweig auf Android 9 mit Bildschirm (Sperre,
+Flugmodus dort nicht geschaltet) – der Offline-Zweig ist auf API 34 gemessen (1i).
+
+---
+
+## 1i. Etappe 3, Schritt 8 · Online-Kachel (23.11.2026, 18:52–18:59)
+
+Prüfung der Kachel „Online-Räume“ der nativen Startansicht. Das WebView-Ziel wurde über
+die Debug-Schnittstelle gelesen (`adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>`,
+dann `GET /json`); das Netz über `adb shell cmd connectivity airplane-mode` an- und
+abgeschaltet (`dumpsys connectivity`: „Active default network: none“). Debug-Build auf
+Emulator B, Gerät A unberührt.
+
+| Prüfung | Ergebnis | Beleg |
+|---|---|---|
+| Kachel öffnet den Connector | `ConnectorActivity` oben, WebView-Ziel **`https://trashygecko.onrender.com/connector`**, Seite geladen (Konsole: `Allow attribute …`, Quelle `https://trashygecko.onrender.com/connector`) | `dumpsys`, DevTools `/json`, `logcat` |
+| Inhalt der Seite | „Einzelspieler“, „Spiel auswählen“, „Alle Mehrspieler-Spiele“, „WÜRFELSPIELE“, „KARTENSPIELE“ | `uiautomator` |
+| Startstatus mit Netz | „WLAN · online bereit“ | `uiautomator` |
+| **Zurück, vor der Korrektur** | 1. Druck: Connector-Startseite („Spielen mit TrashyGecko“), 2. Druck: native Startansicht, 3. Druck: Launcher | `dumpsys`, `uiautomator` |
+| **Zurück, nach der Korrektur** | 1. Druck: `MainActivity` („Was möchtest du spielen?“) | `dumpsys`, `uiautomator` |
+| Ohne Netz (Flugmodus) | `Active default network: none`; Startansicht zeigt **„offline spielbar“** | `dumpsys connectivity`, `uiautomator` |
+| Kachel ohne Netz | `ConnectorActivity` öffnet trotzdem; WebView zeigt die Chromium-Fehlerseite **„Webpage not available … net::ERR_INTERNET_DISCONNECTED“** (englisch), Statuszeile weiter „Online-Connector · bestehender Server“ | Bildschirmfoto `arbeit/offline-online-kachel.png`, `uiautomator` |
+| Zurück ohne Netz | 1. Druck: `MainActivity`, Status „offline spielbar“ | `dumpsys`, `uiautomator` |
+| Netz wieder da | Flugmodus aus, Rückkehr auf den Start: „Mobilfunk · online bereit“ | `uiautomator` |
+| Abstürze | **0** `FATAL EXCEPTION` in allen drei Läufen | `logcat` |
+
+Korrektur: `ConnectorActivity` (453 → **458** Zeilen) merkt sich in `vonAussen`, ob sie über
+eine Kachel der Startansicht geöffnet wurde (`EXTRA_INITIAL_SCREEN` gesetzt). Zurück stoppt
+das lokale Netz und schließt dann die Activity, statt die Connector-Startseite einzublenden;
+ohne diesen Eintrag (Aufruf ohne Bildschirm) bleibt das bisherige Verhalten mit `showHome()`.
+
+**Nicht getestet:** eine echte Online-Partie, ein antwortender Server mit Fehlerseite,
+echtes Android 9.
+
+---
+
+## 1h. Etappe 3, Schritt 8 (23.11.2026, 18:47–18:51)
+
+Geänderter Code: neu `HomepageActivity.java` (142 Zeilen), `ConnectorActivity.java`
+(442 → **453** Zeilen: Karte „Homepage“, `isAssetAvailable`), `app/build.gradle`
+(`homepageKopieren` kopiert `index.html` als `www/homepage.html`), Manifest-Eintrag mit
+denselben `configChanges`. Debug-Build auf Emulator B, Gerät A unberührt.
+
+| Prüfung | Ergebnis | Beleg |
+|---|---|---|
+| `:app:assembleDebug` | **erfolgreich**, `BUILD SUCCESSFUL in 17s`, exit 0 | Terminalausgabe |
+| Startseite im Paket | `assets/www/homepage.html` md5 `08e7a1b8…` = `index.html` (7.117 B); `main.css` 17.579 B daneben; `www/index.html` (App-Start) 4.249 B unverändert | `md5sum`, `ls` |
+| Eintrag in Extras | Karte „Homepage“ `[94,1145][986,1212]`, Knopf „Homepage öffnen“ `[94,1383][986,1515]` | `uiautomator` |
+| Öffnen | `HomepageActivity` oben (`topResumedActivity`), Log `Homepage geladen: https://appassets.androidplatform.net/homepage.html` | `dumpsys`, `logcat` |
+| Inhalt | Titel „TrashyGecko“, „Google Search“, Links ChatGPT/deepseek/Gemini/…, Uhr „18:51:14 Uhr“ | `uiautomator` |
+| Lokal statt Netz | Herkunft `appassets.androidplatform.net`; einziger Fehlzugriff `www/favicon.ico` | `logcat` |
+| Zurück | `ConnectorActivity` wieder oben, Extras-Kopfzeile sichtbar | `uiautomator`, `dumpsys` |
+| Abstürze | **0** `FATAL EXCEPTION` | `logcat` |
+
+**Nicht getestet:** die Links auf weitere Website-Seiten (liegen nicht im Paket, laufen auf
+404), das Google-Formular (Mixed-Content-Warnung im Log, Suche nicht ausprobiert), echtes
+Android 9.
 
 ---
 

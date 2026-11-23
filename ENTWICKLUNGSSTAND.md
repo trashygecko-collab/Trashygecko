@@ -5,6 +5,156 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 23.11.2026 · Etappe 3, Schritt 11: Homepage-Seiten liegen im APK
+
+**Warum:** Im APK lag nur `index.html` (als `homepage.html`). Fast jede Kachel der
+Startseite (Tagebuch, Bücher, Rezepte, Tipps …) lief deshalb auf 404 – die Seite war ohne
+Netz weitgehend tot.
+
+**Was gemacht wurde** (D-24)
+- `app/build.gradle`: neue Liste `homepageSeiten` mit den 19 Ordnern, die `index.html`
+  verlinkt; `homepageKopieren` kopiert sie samt `main.css` nach `www/<ordner>/`. Draußen
+  bleiben der alte Seiten-Spiegel unter `css/` (in `.gitignore`, u. a. mit alten
+  Zugangsdaten), `musik/.backup-*` und `tagebuch/Textdokument (neu).txt`.
+- Sonst keine Codeänderung: `HomepageActivity`, `WebNavigation` und `HomepageAssets`
+  bleiben, weil interne Links schon im WebView bleiben.
+
+**Tatsächlich getestet** (Emulator Android 14, Flugmodus, `Active default network: none`)
+- `:app:assembleDebug` → `BUILD SUCCESSFUL in 18s`; APK 11.460.085 → **11.959.743 B**
+  (+499.658 B), `assets/www` 13 → 14 MB, **303** HTML-Seiten im Paket.
+- 23 lokale Adressen aus der Seite heraus abgerufen (`fetch`): alle **200**.
+- Echte Klicks: Tagebuch, Rezepte, Bücher, Tipps öffnen (Titel „Tagebuch“, „Rezepte“,
+  „Bücher“, „Tipps“), zwei Ebenen tiefer `tipps/hoersturz.html` („Hörsturz (Gehörsturz)“)
+  und `seiten/programmieren.html` → `../css/css.html` („CSS“).
+- 0 `Seitenfehler` im Protokoll, 0 kaputte Bilder, 0 `FATAL EXCEPTION`.
+
+**Offen**
+- Neun Ziele gibt es auch in der Quelle nicht (Beispielpfade der Anleitungen:
+  `bilder/beispiel.jpg`, `home.png`, `html/home.png`, `css/bild.gif`, `css/bild.png`,
+  „Adresse des Bildes“) – die bleiben tot, im Browser wie im APK.
+- Android 9 auf Gerät A (gesperrt) und eine Sichtprüfung des Seitenbildes.
+
+---
+
+## 23.11.2026 · Etappe 3, Schritt 10: Online-Kachel sagt die Wahrheit
+
+**Warum:** Ohne Netz zeigte die Online-Kachel Chromiums englische Fehlerseite
+(`net::ERR_INTERNET_DISCONNECTED`), während die Statuszeile „Online-Connector · bestehender
+Server“ behauptete. Ein Nutzer ohne Netz sah also eine englische Technikmeldung plus eine
+falsche Zusage.
+
+**Was gemacht wurde** (D-23)
+- `ConnectorActivity` (458 → **494**): `istOnline()` prüft vor dem Laden das aktive Netz;
+  ohne Netz wird gar kein WebView gebaut.
+- `zeigeOnlineFehler(...)` verwirft den WebView und zeigt „Online-Connector nicht erreichbar“
+  mit deutschem Erklärungssatz und Knopf „Erneut versuchen“.
+- Statuszeile folgt dem Verlauf: „wird geladen …“ → „Server erreichbar“; bei Fehler
+  „Offline · keine Verbindung“ bzw. „Online-Connector · Server nicht erreichbar“.
+- `onReceivedError` im Hauptframe greift auch, wenn das Netz da ist, der Server aber nicht
+  antwortet.
+
+**Tatsächlich getestet** (Emulator Android 14)
+- Flugmodus (`Active default network: none`): Kachel → deutsche Meldung mit Knopf, Status
+  „Offline · keine Verbindung“.
+- Flugmodus aus, Knopf gedrückt → Seite lädt, Status „Online-Connector · Server erreichbar“.
+- Server weg (Testbau mit unerreichbarer Adresse): Status „Server nicht erreichbar“, gleiche
+  Meldung; Testbau zurückgebaut, Endfassung erneut im Flugmodus geprüft.
+- 0 Abstürze in allen Läufen.
+
+**Offen**
+- Gerätetest Android 9 für diesen Weg (Gerät gesperrt, siehe Schritt 9) und eine Sichtprüfung
+  der geladenen Connector-Seite (WebView-Inhalt steht nicht im UI-Baum).
+
+---
+
+## 23.11.2026 · Etappe 3, Schritt 9: Startansicht und Spieleliste teilen Farben und Bausteine
+
+**Warum:** Die native Startansicht hatte ihr eigenes Farbbild (leicht andere Grün- und
+Grautöne als die Spieleliste) und eigene Kopien von `dp` und `flaeche`; `onResume` prüfte
+außerdem `status` auf null, obwohl die Ansicht in `onCreate` immer entsteht.
+
+**Was gemacht wurde**
+- Neu `Ansicht.java` (53 Zeilen): `BG`, `KARTE`, `RAND`, `GOLD`, `TEXT`, `MUTED` an einer
+  Stelle, dazu `flaeche(farbe,radius)`, `flaeche(farbe,radius,rand,breite)`, `text(...)` und
+  `dp(context,wert)`.
+- `MainActivity` (193 → **173**): benutzt nur noch `Ansicht`; eigene Farbkonstanten,
+  `text()`, `flaeche()`, `dp()` und der `status != null`-Test sind weg. Die Netzstatus-Logik
+  ist unverändert, nur mit einer Notiz zur API-Lage.
+- `SpieleActivity` (630 → **614**): Farben und Helfer ebenfalls aus `Ansicht`, lokal bleibt
+  nur der Chip-Füllton. `CHIP_RAND` ist entfallen, die Chip-Kante nimmt `Ansicht.RAND`.
+- Startseite nutzt jetzt dieselben Töne wie die Spieleliste (Hintergrund `#0B241D` statt
+  `#07140F`, Text `#E9F1EB`, Grau `#9AA7A0`, Karte `#123028`, Kante `#2B4C40`).
+
+**Tatsächlich getestet** (Emulator Android 14; Android 9 nur Statuslogik)
+- Build `BUILD SUCCESSFUL in 10s`; Startansicht mit gleichen Maßen (Titel y 241, Kacheln
+  553/864/1175/1486), Status „WLAN · online bereit“.
+- Spieleliste: „94 Spiele“ → „Mehrspieler“ „70 von 94“ → „Zurücksetzen“ „94 Spiele“,
+  `Liste: 94 Zeilen in 39 ms`, 0 Abstürze.
+- Android 9 (Gerät A, API 28): Testbau mit eigener Paket-ID, Gerät gesperrt, deshalb über
+  eine Protokollzeile gemessen – `Netzstatus: WLAN · online bereit`, keine Ausnahme.
+  Testbau wieder deinstalliert, die release-signierte 1.15 blieb unangetastet.
+
+**Offen**
+- Startansicht und Offline-Zweig auf Android 9 mit Bildschirm (Gerät gesperrt; Flugmodus
+  dort nicht geschaltet).
+
+**Nächster konkreter Arbeitsschritt**
+1. `keystore.properties` wiederherstellen → release bauen → Gerätetest Android 9.
+2. Danach Statusanzeige mit Serverprüfung und Einstellungen.
+
+---
+
+## 23.11.2026 · Etappe 3, Schritt 8: „Extras → Homepage“ mit der echten Startseite
+
+**Warum:** D-12 verlangt die echte Website als eigenen Eintrag unter Extras; bis hierher
+gab es den Eintrag nicht.
+
+**Was gemacht wurde**
+- `homepageKopieren` kopiert die echte `index.html` als `www/homepage.html`; `main.css`
+  liegt dort schon. `www/index.html` bleibt die alte App-Startseite (`app.html`) als
+  Rückweg aus Spielseiten – die beiden Namen kollidieren also nicht.
+- Neu `HomepageActivity` (142 Zeilen): WebView über denselben `HomepageAssets`-Lader,
+  Vollbild, `WebBasis`-Einstellungen und die Link-Regel `WebNavigation.pruefe(uri, true)`
+  („Spiele“ öffnet die native Liste, fremde Adressen den Browser); Zurück geht erst im
+  Verlauf zurück, sonst in die App.
+- `ConnectorActivity.showExtras` (442 → **453** Zeilen) hat die Karte „Homepage“; sie
+  erscheint nur, wenn `www/homepage.html` im Paket liegt (`isAssetAvailable`), sonst steht
+  dort ein Hinweis. Die Fernbedienungs-Prüfung nutzt jetzt denselben Helfer.
+- Manifest: `HomepageActivity` mit denselben `configChanges` wie die übrigen Activities.
+
+**Tatsächlich getestet** (Emulator Android 14, Debug-Build)
+- `:app:assembleDebug` → `BUILD SUCCESSFUL in 17s`; `assets/www/homepage.html`
+  md5-gleich zu `index.html` (`08e7a1b8…`), `main.css` 17.579 B daneben, `www/index.html`
+  (App-Start) unverändert 4.249 B.
+- Extras zeigt die Karte „Homepage“ (Titel `[94,1145]`, Knopf „Homepage öffnen“ `[94,1383]`).
+- Tipp auf den Knopf: `HomepageActivity` oben, Log
+  „Homepage geladen: https://appassets.androidplatform.net/homepage.html“; Inhalt:
+  Titel „TrashyGecko“, „Google Search“, Links (ChatGPT, deepseek, Gemini …), Uhr
+  „18:51:14 Uhr“. Einziger Fehlzugriff: `www/favicon.ico` (harmlos).
+- Zurück-Taste: wieder `ConnectorActivity` (Extras-Kopfzeile), 0 `FATAL EXCEPTION`.
+
+**Offen / nicht getestet**
+- Die weiteren Seiten der Website (Tagebuch, Bücher, Rezepte …) liegen seit Schritt 11
+  (D-24) im Paket; dieser Abschnitt bleibt als Stand von Schritt 8 stehen.
+- Das Google-Formular zielt auf `http://` und erzeugt eine Mixed-Content-Warnung im Log;
+  ob die Suche danach funktioniert, ist nicht geprüft.
+- Echtes Android 9.
+
+**Nachtrag (Online-Kachel, 18:52–18:59):** Die Kachel öffnet
+`https://trashygecko.onrender.com/connector` (Ziel über die WebView-Debug-Schnittstelle
+ausgelesen). Zurück führte vorher zuerst auf die Connector-Startseite und erst mit dem
+zweiten Druck auf den nativen Start; `ConnectorActivity` (453 → **458** Zeilen) merkt sich
+jetzt in `vonAussen`, ob sie über eine Kachel geöffnet wurde, stoppt das lokale Netz und
+schließt dann. Ohne Netz zeigt der WebView die englische Chromium-Fehlerseite
+(`net::ERR_INTERNET_DISCONNECTED`), die Statuszeile bleibt bei „bestehender Server“ – ein
+deutscher Fehlertext fehlt noch.
+
+**Nächster konkreter Arbeitsschritt**
+1. `keystore.properties` wiederherstellen → release bauen → Gerätetest Android 9.
+2. Danach Statusanzeige mit Serverprüfung und Einstellungen.
+
+---
+
 ## 23.11.2026 · Etappe 3, Schritt 7: native Startansicht, Zustandssicherung vereinfacht
 
 **Warum:** Der Start der App war wieder eine Webseite (`app.html` im WebView) – genau der

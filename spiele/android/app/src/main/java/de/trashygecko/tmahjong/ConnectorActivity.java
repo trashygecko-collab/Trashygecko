@@ -18,6 +18,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -61,6 +62,8 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
     private final List<LocalNetworkCoordinator.Room> rooms = new ArrayList<>();
     private boolean onOnlinePage;
     private boolean onHomeScreen = true;
+    /** Über eine Kachel der Startansicht geöffnet: Zurück führt dorthin, nicht auf die Connector-Startseite. */
+    private boolean vonAussen;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -74,6 +77,7 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
 
     private void showInitialScreen(Intent intent) {
         String screen = intent == null ? "" : intent.getStringExtra(EXTRA_INITIAL_SCREEN);
+        vonAussen = screen != null && !screen.isEmpty();
         if ("local".equals(screen)) showLocal();
         else if ("online".equals(screen)) openOnline();
         else if ("extras".equals(screen)) showExtras();
@@ -132,10 +136,21 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
         } else {
             body.addView(text("Die Fernbedienung ist in dieser APK nicht enthalten. Der Einstieg wurde deshalb nicht angezeigt.", 14, MUTED, false));
         }
+        if (isAssetAvailable("www/homepage.html")) {
+            addCard(body, "Homepage",
+                    "Die echte TrashyGecko-Startseite: Lesezeichen, interne Seiten und der Weg zur Spieleübersicht. Sie liegt im App-Paket und braucht kein Netz.",
+                    "Homepage öffnen", v -> startActivity(new Intent(this, HomepageActivity.class)));
+        } else {
+            body.addView(text("Die Homepage ist in dieser APK nicht enthalten. Der Einstieg wurde deshalb nicht angezeigt.", 14, MUTED, false));
+        }
     }
 
     private boolean isRemoteAssetAvailable() {
-        try (java.io.InputStream input = getAssets().open("www/fernbedienung/index.html")) {
+        return isAssetAvailable("www/fernbedienung/index.html");
+    }
+
+    private boolean isAssetAvailable(String pfad) {
+        try (java.io.InputStream input = getAssets().open(pfad)) {
             return input.read() >= 0;
         } catch (java.io.IOException unavailable) {
             return false;
@@ -293,7 +308,13 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
 
     private void openOnline() {
         schliesseSpiel();
-        onHomeScreen = false; onOnlinePage = true; bodyScroll.removeAllViews();
+        onHomeScreen = false; onOnlinePage = true;
+        if (!istOnline()) {
+            zeigeOnlineFehler("Der Online-Connector läuft auf einem Server im Internet und braucht dafür eine Verbindung. „Erneut versuchen“ prüft erneut. Spiele und lokale Räume funktionieren ohne Netz weiter.",
+                    "Offline · keine Verbindung");
+            return;
+        }
+        bodyScroll.removeAllViews();
         try { onlineView = new WebView(this); }
         catch (RuntimeException e) {
             onOnlinePage = false;
@@ -311,10 +332,39 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
                 if ("appassets.androidplatform.net".equals(uri.getHost())) return false;
                 startActivity(new Intent(Intent.ACTION_VIEW, uri)); return true;
             }
+            @Override public void onPageFinished(WebView view, String url) {
+                if (view == onlineView) status.setText("Online-Connector · Server erreichbar");
+            }
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError fehler) {
+                if (view != onlineView || !request.isForMainFrame()) return;
+                zeigeOnlineFehler("Der Server hat nicht geantwortet. Vielleicht fehlt gerade das Netz oder der Dienst ist nicht erreichbar. „Erneut versuchen“ prüft erneut. Spiele und lokale Räume funktionieren ohne Netz weiter.",
+                        "Online-Connector · Server nicht erreichbar");
+            }
         });
         bodyScroll.addView(onlineView, new ScrollView.LayoutParams(-1, -1));
+        status.setText("Online-Connector · wird geladen …");
         onlineView.loadUrl(ONLINE_URL);
-        status.setText("Online-Connector · bestehender Server");
+    }
+
+    /** Ein aktives Netz genügt für einen Versuch; ob der Server antwortet, entscheidet der WebView. */
+    private boolean istOnline() {
+        ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo aktiv = manager == null ? null : manager.getActiveNetworkInfo();
+        return aktiv != null && aktiv.isConnected();
+    }
+
+    /**
+     * Deutsche Meldung statt der englischen Chromium-Seite (net::ERR_INTERNET_DISCONNECTED).
+     * Gilt für beide Fälle: kein Netz und Server antwortet nicht.
+     */
+    private void zeigeOnlineFehler(String erklaerung, String statusText) {
+        onOnlinePage = false;
+        if (onlineView != null) { onlineView.stopLoading(); onlineView.destroy(); onlineView = null; }
+        showNativeBody(); body.removeAllViews();
+        status.setText(statusText);
+        body.addView(text("Online-Connector nicht erreichbar", 24, TEXT, true));
+        TextView grund = text(erklaerung, 14, MUTED, false); grund.setPadding(0, dp(8), 0, dp(16)); body.addView(grund);
+        Button erneut = button("Erneut versuchen"); erneut.setOnClickListener(v -> openOnline()); body.addView(erneut);
     }
 
     private void showNativeBody() {
@@ -428,7 +478,9 @@ public final class ConnectorActivity extends Activity implements LocalNetworkCoo
         if (onHomeScreen) { finish(); return; }
         if (spielView != null) { showLocal(); return; }
         if (onOnlinePage && onlineView != null && onlineView.canGoBack()) { onlineView.goBack(); return; }
-        if (network != null) network.stop(); showHome();
+        if (network != null) network.stop();
+        if (vonAussen) { finish(); return; }
+        showHome();
     }
 
     @Override protected void onDestroy() {

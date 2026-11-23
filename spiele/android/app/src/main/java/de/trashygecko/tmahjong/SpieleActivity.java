@@ -53,13 +53,8 @@ public final class SpieleActivity extends Activity {
     private static final String ZUSTAND_MERKMALE = "merkmale";
     private static final String ZUSTAND_SCROLL = "scroll";
 
-    private static final int BG = 0xFF0B241D;
-    private static final int KARTE = 0xFF123028;
+    /** Nur der Chip-Füllton ist hier eigen; Fläche, Text und Gold kommen aus {@link Ansicht}. */
     private static final int CHIP = 0xFF1A3A30;
-    private static final int CHIP_RAND = 0xFF2B4C40;
-    private static final int GOLD = 0xFFE8CD8E;
-    private static final int TEXT = 0xFFE9F1EB;
-    private static final int MUTED = 0xFF9AA7A0;
 
     /** Kurzform für die Zeile unter dem Spielnamen. */
     private static final Map<String, String> MERKMAL_TEXT = new LinkedHashMap<>();
@@ -203,9 +198,9 @@ public final class SpieleActivity extends Activity {
     private View baueAnsicht() {
         LinearLayout wurzel = new LinearLayout(this);
         wurzel.setOrientation(LinearLayout.VERTICAL);
-        wurzel.setBackgroundColor(BG);
-        int rand = dp(16);
-        wurzel.setPadding(rand, dp(12), rand, 0);
+        wurzel.setBackgroundColor(Ansicht.BG);
+        int rand = Ansicht.dp(this, 16);
+        wurzel.setPadding(rand, Ansicht.dp(this, 12), rand, 0);
 
         LinearLayout kopf = new LinearLayout(this);
         kopf.setOrientation(LinearLayout.HORIZONTAL);
@@ -213,15 +208,15 @@ public final class SpieleActivity extends Activity {
 
         TextView zurueck = new TextView(this);
         zurueck.setText("‹");
-        zurueck.setTextColor(GOLD);
+        zurueck.setTextColor(Ansicht.GOLD);
         zurueck.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
-        zurueck.setPadding(0, 0, dp(14), dp(2));
+        zurueck.setPadding(0, 0, Ansicht.dp(this, 14), Ansicht.dp(this, 2));
         zurueck.setOnClickListener(v -> finish());
         kopf.addView(zurueck);
 
         TextView titel = new TextView(this);
         titel.setText("Spiele");
-        titel.setTextColor(GOLD);
+        titel.setTextColor(Ansicht.GOLD);
         titel.setTypeface(Typeface.DEFAULT_BOLD);
         titel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         LinearLayout.LayoutParams titelPlatz = new LinearLayout.LayoutParams(0,
@@ -229,22 +224,22 @@ public final class SpieleActivity extends Activity {
         kopf.addView(titel, titelPlatz);
 
         zaehler = new TextView(this);
-        zaehler.setTextColor(MUTED);
+        zaehler.setTextColor(Ansicht.MUTED);
         zaehler.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         kopf.addView(zaehler);
         wurzel.addView(kopf);
 
         suchfeld = new EditText(this);
         suchfeld.setHint("Spiel suchen – z. B. Mau Mau, Kniffel, Halma");
-        suchfeld.setHintTextColor(MUTED);
-        suchfeld.setTextColor(TEXT);
+        suchfeld.setHintTextColor(Ansicht.MUTED);
+        suchfeld.setTextColor(Ansicht.TEXT);
         suchfeld.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         suchfeld.setSingleLine(true);
-        suchfeld.setBackground(flaeche(KARTE, dp(12)));
-        suchfeld.setPadding(dp(14), dp(10), dp(14), dp(10));
+        suchfeld.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12)));
+        suchfeld.setPadding(Ansicht.dp(this, 14), Ansicht.dp(this, 10), Ansicht.dp(this, 14), Ansicht.dp(this, 10));
         LinearLayout.LayoutParams suchPlatz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        suchPlatz.topMargin = dp(12);
+        suchPlatz.topMargin = Ansicht.dp(this, 12);
         wurzel.addView(suchfeld, suchPlatz);
         suchfeld.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
@@ -261,19 +256,19 @@ public final class SpieleActivity extends Activity {
         chipLeiste.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams chipPlatz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        chipPlatz.topMargin = dp(10);
+        chipPlatz.topMargin = Ansicht.dp(this, 10);
         wurzel.addView(chipLeiste, chipPlatz);
 
         rollen = new ScrollView(this);
         rollen.setClipToPadding(false);
         LinearLayout.LayoutParams rollPlatz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        rollPlatz.topMargin = dp(4);
+        rollPlatz.topMargin = Ansicht.dp(this, 4);
         wurzel.addView(rollen, rollPlatz);
 
         liste = new LinearLayout(this);
         liste.setOrientation(LinearLayout.VERTICAL);
-        liste.setPadding(0, 0, 0, dp(24));
+        liste.setPadding(0, 0, 0, Ansicht.dp(this, 24));
         rollen.addView(liste, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         return wurzel;
@@ -336,9 +331,9 @@ public final class SpieleActivity extends Activity {
         liste.removeAllViews();
         TextView hinweis = new TextView(this);
         hinweis.setText(text);
-        hinweis.setTextColor(TEXT);
+        hinweis.setTextColor(Ansicht.TEXT);
         hinweis.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        hinweis.setPadding(0, dp(12), 0, 0);
+        hinweis.setPadding(0, Ansicht.dp(this, 12), 0, 0);
         liste.addView(hinweis);
     }
 
@@ -351,7 +346,7 @@ public final class SpieleActivity extends Activity {
 
         // Immer aus der aktuellen Anzeigebreite: beim Umbau nach einer Drehung ist die
         // alte Breite der Ansicht noch nicht neu gemessen.
-        int platz = getResources().getDisplayMetrics().widthPixels - dp(32);
+        int platz = getResources().getDisplayMetrics().widthPixels - Ansicht.dp(this, 32);
         LinearLayout zeile = chipZeile();
         chipLeiste.addView(zeile);
         int belegt = 0;
@@ -380,7 +375,7 @@ public final class SpieleActivity extends Activity {
             chips.put(merkmal, chip);
             chip.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            int breite = chip.getMeasuredWidth() + dp(8);
+            int breite = chip.getMeasuredWidth() + Ansicht.dp(this, 8);
             if (belegt > 0 && belegt + breite > platz) {
                 zeile = chipZeile();
                 chipLeiste.addView(zeile);
@@ -397,7 +392,7 @@ public final class SpieleActivity extends Activity {
         zeile.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        platz.bottomMargin = dp(8);
+        platz.bottomMargin = Ansicht.dp(this, 8);
         zeile.setLayoutParams(platz);
         return zeile;
     }
@@ -409,7 +404,7 @@ public final class SpieleActivity extends Activity {
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
         }
         zeile.addView(chip);
-        return belegt + chip.getMeasuredWidth() + dp(8);
+        return belegt + chip.getMeasuredWidth() + Ansicht.dp(this, 8);
     }
 
     private TextView chip(String beschriftung) {
@@ -417,13 +412,13 @@ public final class SpieleActivity extends Activity {
         chip.setText(beschriftung);
         chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         chip.setGravity(Gravity.CENTER);
-        chip.setMinHeight(dp(38));
-        chip.setPadding(dp(14), dp(8), dp(14), dp(8));
+        chip.setMinHeight(Ansicht.dp(this, 38));
+        chip.setPadding(Ansicht.dp(this, 14), Ansicht.dp(this, 8), Ansicht.dp(this, 14), Ansicht.dp(this, 8));
         chip.setClickable(true);
         chip.setFocusable(true);
         LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        platz.rightMargin = dp(8);
+        platz.rightMargin = Ansicht.dp(this, 8);
         chip.setLayoutParams(platz);
         return chip;
     }
@@ -441,11 +436,11 @@ public final class SpieleActivity extends Activity {
 
     private void aussehen(TextView chip, boolean an) {
         GradientDrawable form = new GradientDrawable();
-        form.setCornerRadius(dp(19));
-        form.setColor(an ? GOLD : CHIP);
-        form.setStroke(Math.max(1, dp(1)), an ? GOLD : CHIP_RAND);
+        form.setCornerRadius(Ansicht.dp(this, 19));
+        form.setColor(an ? Ansicht.GOLD : CHIP);
+        form.setStroke(Math.max(1, Ansicht.dp(this, 1)), an ? Ansicht.GOLD : Ansicht.RAND);
         chip.setBackground(form);
-        chip.setTextColor(an ? BG : TEXT);
+        chip.setTextColor(an ? Ansicht.BG : Ansicht.TEXT);
         chip.setSelected(an);
     }
 
@@ -525,10 +520,10 @@ public final class SpieleActivity extends Activity {
     private View ueberschrift(String text) {
         TextView kopf = new TextView(this);
         kopf.setText(text);
-        kopf.setTextColor(GOLD);
+        kopf.setTextColor(Ansicht.GOLD);
         kopf.setTypeface(Typeface.DEFAULT_BOLD);
         kopf.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        kopf.setPadding(dp(4), dp(16), dp(4), dp(8));
+        kopf.setPadding(Ansicht.dp(this, 4), Ansicht.dp(this, 16), Ansicht.dp(this, 4), Ansicht.dp(this, 8));
         return kopf;
     }
 
@@ -550,18 +545,18 @@ public final class SpieleActivity extends Activity {
 
         LinearLayout zeile = new LinearLayout(this);
         zeile.setOrientation(LinearLayout.VERTICAL);
-        zeile.setBackground(flaeche(KARTE, dp(12)));
-        zeile.setPadding(dp(14), dp(11), dp(14), dp(11));
+        zeile.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12)));
+        zeile.setPadding(Ansicht.dp(this, 14), Ansicht.dp(this, 11), Ansicht.dp(this, 14), Ansicht.dp(this, 11));
         zeile.setClickable(true);
         zeile.setFocusable(true);
         LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        platz.bottomMargin = dp(8);
+        platz.bottomMargin = Ansicht.dp(this, 8);
         zeile.setLayoutParams(platz);
 
         TextView name = new TextView(this);
         name.setText(spiel.name);
-        name.setTextColor(TEXT);
+        name.setTextColor(Ansicht.TEXT);
         name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         zeile.addView(name);
 
@@ -569,9 +564,9 @@ public final class SpieleActivity extends Activity {
         if (!merkmale.isEmpty()) {
             TextView unten = new TextView(this);
             unten.setText(merkmale);
-            unten.setTextColor(MUTED);
+            unten.setTextColor(Ansicht.MUTED);
             unten.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            unten.setPadding(0, dp(3), 0, 0);
+            unten.setPadding(0, Ansicht.dp(this, 3), 0, 0);
             zeile.addView(unten);
         }
 
@@ -616,15 +611,4 @@ public final class SpieleActivity extends Activity {
     }
 
     // -------------------------------------------------------------- Kleinkram
-
-    private GradientDrawable flaeche(int farbe, int radius) {
-        GradientDrawable form = new GradientDrawable();
-        form.setColor(farbe);
-        form.setCornerRadius(radius);
-        return form;
-    }
-
-    private int dp(int wert) {
-        return Math.round(wert * getResources().getDisplayMetrics().density);
-    }
 }

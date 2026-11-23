@@ -76,11 +76,29 @@ def homepageQuelle = file("../../../")
 def wwwZiel = file("src/main/assets/www")
 def remoteQuelle = file("../../../WLAN-Fernbedienung")
 
+// Die Seiten, die die Startseite (index.html) verlinkt: Tagebuch, Buecher, Rezepte,
+// Anleitungen und so weiter. Ohne sie waeren die Kacheln der Homepage im APK tot.
+// Die Liste ist der erreichbare Teil des Baums (von index.html aus verfolgt);
+// css/ enthaelt daneben den alten Seiten-Spiegel, der unten ausgenommen wird.
+def homepageSeiten = ["anbau", "batch", "bucher", "cheats", "css", "filme", "gedichte", "html",
+                      "musik", "rezepte", "russisch", "script", "seiten", "sprueche", "tagebuch",
+                      "tipps", "weisheiten", "witze", "youtube"]
+
 tasks.register("homepageKopieren", Sync) {
-    // Nur was zur App gehoert: Spiele, Fernbedienung und die zwei geteilten
-    // Grunddateien. Die uebrige Homepage (Tagebuch, Cheats, Quellcode) bleibt draussen.
+    // Spiele, die verlinkten Homepage-Seiten, Fernbedienung und die geteilten
+    // Grunddateien. Quellcode, Tests und Altlasten bleiben draussen.
     from(homepageQuelle) {
         include "spiele/**", "main.css", "monofonto.ttf"
+        include homepageSeiten.collect { "${it}/**" }
+        exclude "**/.backup-*/**"
+        // Tagebucheintrag ohne Seite, in .gitignore als Altlast gefuehrt.
+        exclude "tagebuch/Textdokument (neu).txt"
+        // Der alte Seiten-Spiegel unter css/ (in .gitignore, u. a. mit alten
+        // Zugangsdaten) gehoert nicht ins APK - nur die fuenf Anleitungsseiten.
+        exclude "css/index.html", "css/main.css", "css/monofonto.ttf",
+                "css/batch/**", "css/bucher/**", "css/cheats/**", "css/css/**", "css/filme/**",
+                "css/gedichte/**", "css/html/**", "css/musik/**", "css/rezepte/**", "css/russisch/**",
+                "css/script/**", "css/seiten/**", "css/tipps/**", "css/witze/**"
         exclude "spiele/android/**", "spiele/connector/**", "spiele/connector-online/**"
         exclude "spiele/tests/**", "spiele/node_modules/**", "spiele/downloads/**"
         exclude "**/node_modules/**", "**/test-results/**", "**/playwright-report/**"
@@ -90,6 +108,12 @@ tasks.register("homepageKopieren", Sync) {
         // Keine Geheimnisse ins APK: das Betriebshandbuch nennt Passwoerter im Klartext,
         // schluessel.jks ist der Signaturschluessel selbst.
         exclude "ANLEITUNG.txt", "**/*.jks", "**/*.keystore"
+    }
+    // Die echte Startseite der Website (D-12) - als homepage.html, damit
+    // www/index.html weiterhin der Rueckweg aus den Spielen bleibt.
+    from(homepageQuelle) {
+        include "index.html"
+        rename { "homepage.html" }
     }
     from(remoteQuelle) {
         include "index.html", "styles.css", "README.md", "js/**"
