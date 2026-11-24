@@ -655,9 +655,29 @@ body.griff-aktiv iframe{pointer-events:none}
 .ueber-hl-text{padding:5px 7px 6px}
 .ueber-hl-text b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
  font-size:12px;line-height:1.25}
-.ueber-kat{margin:11px 0 5px;padding-bottom:4px;border-bottom:1px solid var(--c-rahmen);display:flex;align-items:baseline;gap:8px}
-.ueber-kat h4{margin:0;font-size:14px;letter-spacing:.02em}
-.ueber-kat small{color:var(--c-leise);font-size:11px}
+/* Jeder Spielebereich klappt für sich auf und zu. Zugeklappt bleibt die
+   Kopfzeile mit Name, Anzahl und den ersten Spielen stehen; die Karten
+   darunter sind ausgeblendet. Kein Bereich klappt einen anderen mit. */
+.ueber-bereich{margin:10px 0 0;border:1px solid var(--c-rahmen);border-radius:10px;
+ background:var(--c-flaeche-2);overflow:hidden}
+.ueber-bereich[open]{border-color:var(--c-rahmen-2)}
+.ueber-kat{margin:0;padding:9px 11px;border:none;border-bottom:1px solid var(--c-rahmen);
+ display:flex;align-items:baseline;gap:8px;cursor:pointer;list-style:none;
+ font-size:14px;font-weight:600;color:var(--c-text);background:var(--c-flaeche-3)}
+.ueber-bereich:not([open])>.ueber-kat{border-bottom:none}
+.ueber-kat::-webkit-details-marker{display:none}
+.ueber-bereich>summary::after{content:none;display:none}
+.ueber-kat h4{margin:0;font-size:14px;letter-spacing:.02em;color:inherit}
+.ueber-kat small{color:var(--c-leise);font-size:11px;white-space:nowrap}
+.ueber-kat:hover{background:var(--c-flaeche-2);color:var(--c-akzent)}
+.ueber-pfeil{flex:0 0 auto;font-size:10px;color:var(--c-akzent);transition:transform .15s}
+.ueber-bereich[open] .ueber-pfeil{transform:rotate(90deg)}
+.ueber-vorschau{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;text-align:right;color:var(--c-leise);font-size:11px;font-weight:normal}
+.ueber-bereich[open] .ueber-vorschau{display:none}
+.ueber-bereich>.ueber-gitter{padding:8px;border-top:1px solid var(--c-rahmen)}
+@media(max-width:560px){.ueber-kat{flex-wrap:wrap;row-gap:2px}
+ .ueber-vorschau{flex:1 1 100%;text-align:left}}
 .ueber-gitter{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
 .u-karte{display:flex;flex-direction:column;gap:4px;padding:8px 9px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);border-left:3px solid var(--u-akzent,var(--c-rahmen-2));min-width:0}
 .u-name{font-size:12.5px;line-height:1.22;font-weight:600;overflow-wrap:anywhere}
@@ -668,6 +688,19 @@ body.griff-aktiv iframe{pointer-events:none}
 .u-tag.online{color:#7fb7e8;border-color:#2c4a66}
 .u-tag.zwei{color:#e8cd8e;border-color:#5f5127}
 .u-tag.bot{color:#b9a0e8;border-color:#4a3d63}
+/* Jede Kachel lässt sich für sich zuklappen; zugeklappt bleibt der Name
+   stehen, der Rest (Text, Kennzeichen, Knöpfe) verschwindet. */
+.u-kopf{display:flex;align-items:flex-start;gap:5px}
+.u-kopf .u-name{flex:1 1 auto;min-width:0}
+.u-klapp{flex:0 0 auto;width:26px;min-width:26px;height:24px;padding:0;
+ font-size:11px;line-height:1;background:transparent;border:1px solid var(--c-rahmen);
+ border-radius:6px;color:var(--c-akzent);cursor:pointer}
+.u-klapp:hover{background:var(--c-flaeche-3);border-color:var(--c-rahmen-2)}
+.u-koerper{display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-width:0}
+.u-karte.zu .u-koerper{display:none}
+/* Zugeklappt nimmt die Kachel nur noch die Kopfzeile ein statt der ganzen
+   Zeilenhöhe – die anderen Kacheln der Zeile bleiben unberührt. */
+.u-karte.zu{align-self:start}
 .u-aktionen{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto;padding-top:3px}
 .u-knopf{font:inherit;font-size:11px;padding:4px 7px;border-radius:7px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
 .u-knopf.haupt{border-color:var(--c-akzent);color:var(--c-akzent);font-weight:600}
@@ -710,17 +743,15 @@ html[data-stil="maedchen"] #linkeSpalte h1{color:#3a0f24}
 body.spiel-offen #uebersicht{display:none}
 .name-box{margin:0}
 .name-box .name-known{margin-top:4px}
-/* Der Chat füllt in der linken Spalte den Rest. */
-#linkeSpalte #chatbox{flex:1 1 auto;min-height:210px;margin:0}
-#linkeSpalte #chat{flex:1 1 auto;height:auto;min-height:120px}
 @media(min-width:1024px){
  html,body{height:100%}
- body{height:100vh;max-height:100vh;overflow:hidden;padding:0;margin:0}
+ body{--chat-hoehe:clamp(220px,30vh,300px);height:100vh;max-height:100vh;overflow:hidden;padding:0;margin:0}
  .zentrale-geruest{display:grid;
   grid-template-columns:clamp(300px,var(--links-breite,32%),46vw) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) auto;
   height:100vh;max-height:100vh;overflow:clip;align-items:stretch;gap:0}
- .zentrale-geruest>main{height:100vh;min-height:0}
- #linkeSpalte{max-width:none;width:auto;margin:0;height:100vh;overflow:clip;
+ .zentrale-geruest>main{height:auto;min-height:0}
+ #linkeSpalte{max-width:none;width:auto;margin:0;height:auto;min-height:0;overflow-y:auto;
   padding:10px 12px 12px;gap:5px}
  /* Abstände kommen aus dem Raster, nicht aus den Rändern der Kästen. */
  #linkeSpalte>*{margin-top:0;margin-bottom:0}
@@ -737,11 +768,16 @@ body.spiel-offen #uebersicht{display:none}
  #linkeSpalte #zentrale{padding:8px 12px}
  #linkeSpalte .multi-titel{margin:8px 0 4px}
  #linkeSpalte .zr-hinweis{margin:0 0 4px}
- #chatbox{flex:1 1 auto;min-height:150px;display:flex;flex-direction:column;padding:0;border:none;background:none}
+ /* Der Chat steht ganz unten und geht über die ganze Breite – unter allen
+    Spielelementen. Eine eigene Zeile im Raster, damit die Seite selbst nicht
+    scrollt; der Verlauf scrollt in seinem Kasten. */
+ #chatbox{grid-column:1 / -1;grid-row:2;display:flex;flex-direction:column;
+  height:var(--chat-hoehe);min-height:0;padding:8px 12px 10px;margin:0;
+  border:none;border-top:1px solid var(--c-rahmen);border-radius:0;background:var(--c-grund)}
  #chat{flex:1 1 auto;height:auto;min-height:0;border:1px solid var(--c-rahmen-55);border-bottom:none;
   border-radius:8px 8px 0 0}
  .chat-compose{flex:0 0 auto;border:1px solid var(--c-rahmen-55);border-top:none;border-radius:0 0 8px 8px}
- #rechteSpalte{display:flex;flex-direction:column;height:100vh;min-width:0;
+ #rechteSpalte{display:flex;flex-direction:column;height:auto;min-height:0;min-width:0;
   border-left:1px solid var(--c-rahmen);background:var(--c-grund)}
  #rechtsKopf{min-height:50px;padding:8px 14px;border-top:none;flex:0 0 auto}
  #zurueckUebersicht{font-size:14px;padding:8px 14px}
@@ -751,7 +787,7 @@ body.spiel-offen #uebersicht{display:none}
  body.spiel-offen #spielFenster{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;height:auto;
   border:none;border-top:1px solid var(--c-rahmen)}
  body.spiel-offen #spielRahmen{flex:1 1 auto;min-height:0;height:auto}
- body.spiel-offen #spielGriff{display:block}
+ body.spiel-offen #spielGriff{display:block;bottom:var(--chat-hoehe)}
  body.spiel-offen #fullscreenBtn{display:none}
  .spiel-kopf{border-radius:0}
  .spiel-kopf .name{display:none}
@@ -823,6 +859,47 @@ body.spiel-offen #uebersicht{display:none}
       </div>
 </section>
 
+
+</main>
+
+<!-- Rechte Spalte: Spieleübersicht, beim Spielen das Spielfeld. -->
+<section id="rechteSpalte" aria-label="Spiele">
+<div id="rechtsKopf">
+ <button type="button" id="zurueckUebersicht">‹ Spieleauswahl</button>
+ <span id="rechtsTitel">Spiele</span>
+</div>
+<div id="uebersicht">
+<section id="modusbox" hidden>
+<div class="modus-buttons" role="tablist">
+<button type="button" class="modus-btn" id="modusSolo" data-modus="solo" role="tab" aria-selected="false">Einzelspieler</button>
+<button type="button" class="modus-btn" id="modusMulti" data-modus="multi" role="tab" aria-selected="false">Multiplayer</button>
+</div>
+<div id="soloPanel" class="modus-panel" hidden>
+<button type="button" id="soloSchalter" class="solo-schalter" aria-expanded="false">Spiele-Auswahl anzeigen</button>
+<div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
+<p class="solo-pch">Alle Spiele nach Kategorie, mit Kennzeichen für Einzelspieler, Online und „zu zweit“ – am PC öffnet sich das Spiel rechts neben dem Chat.</p>
+<p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
+</div>
+<div id="multiPanel" class="modus-panel" hidden>
+<div id="gameplayers"></div>
+<h3 class="multi-titel">Spielstatus</h3>
+<div id="game-status" class="empty leer">Noch keine Runde offen.</div>
+</div></section>
+</div>
+<!-- Einzelspieler-Spiel rechts neben dem Chat (nur auf großen Bildschirmen). -->
+<aside id="spielFenster" aria-label="Spiel">
+ <div class="spiel-kopf">
+  <span class="name" id="spielName">Spiel</span>
+  <span class="spiel-knoepfe">
+   <button type="button" id="spielVoll" class="spiel-knopf"
+           title="Vollbild" aria-label="Vollbild">⛶</button>
+   <button type="button" id="spielZu" class="spiel-knopf"
+           title="Spiel schließen" aria-label="Spiel schließen">×</button>
+  </span>
+ </div>
+ <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen" allowfullscreen></iframe>
+</aside>
+</section>
 <section id="chatbox" hidden>
 <div id="muteOverview" class="mute-list-tag" hidden></div>
 <div id="chat"></div>
@@ -875,46 +952,6 @@ body.spiel-offen #uebersicht{display:none}
 </div>
 <button type="button" id="toneClose" class="tone-close">Abbrechen</button>
 </div>
-</section>
-</main>
-
-<!-- Rechte Spalte: Spieleübersicht, beim Spielen das Spielfeld. -->
-<section id="rechteSpalte" aria-label="Spiele">
-<div id="rechtsKopf">
- <button type="button" id="zurueckUebersicht">‹ Spieleauswahl</button>
- <span id="rechtsTitel">Spiele</span>
-</div>
-<div id="uebersicht">
-<section id="modusbox" hidden>
-<div class="modus-buttons" role="tablist">
-<button type="button" class="modus-btn" id="modusSolo" data-modus="solo" role="tab" aria-selected="false">Einzelspieler</button>
-<button type="button" class="modus-btn" id="modusMulti" data-modus="multi" role="tab" aria-selected="false">Multiplayer</button>
-</div>
-<div id="soloPanel" class="modus-panel" hidden>
-<button type="button" id="soloSchalter" class="solo-schalter" aria-expanded="false">Spiele-Auswahl anzeigen</button>
-<div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
-<p class="solo-pch">Alle Spiele nach Kategorie, mit Kennzeichen für Einzelspieler, Online und „zu zweit“ – am PC öffnet sich das Spiel rechts neben dem Chat.</p>
-<p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
-</div>
-<div id="multiPanel" class="modus-panel" hidden>
-<div id="gameplayers"></div>
-<h3 class="multi-titel">Spielstatus</h3>
-<div id="game-status" class="empty leer">Noch keine Runde offen.</div>
-</div></section>
-</div>
-<!-- Einzelspieler-Spiel rechts neben dem Chat (nur auf großen Bildschirmen). -->
-<aside id="spielFenster" aria-label="Spiel">
- <div class="spiel-kopf">
-  <span class="name" id="spielName">Spiel</span>
-  <span class="spiel-knoepfe">
-   <button type="button" id="spielVoll" class="spiel-knopf"
-           title="Vollbild" aria-label="Vollbild">⛶</button>
-   <button type="button" id="spielZu" class="spiel-knopf"
-           title="Spiel schließen" aria-label="Spiel schließen">×</button>
-  </span>
- </div>
- <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen" allowfullscreen></iframe>
-</aside>
 </section>
 </div>
 <div id="spielGriff" role="separator" aria-orientation="vertical" tabindex="0"
@@ -1500,7 +1537,7 @@ async function joinSingleRoom(){
 }
 
 // Nach dem Betreten bei der Spielauswahl landen – auf dem Handy wirkt das wie
-// "ich bin jetzt drin", und der Chat steht direkt darunter.
+// "ich bin jetzt drin". Der Chat steht ganz unten unter allen Spielen.
 function scrollZuDenSpielen(){
  const box=document.getElementById("modusbox");
  if(!box||box.hidden)return;
@@ -4470,19 +4507,31 @@ function ueberPasst(e, filter, suche) {
   return heu.indexOf(suche) >= 0;
 }
 
-function ueberKarte(e, akzent) {
+const geschlosseneKarten = new Set();
+function ueberKarte(e, akzent, basis) {
   const karte = document.createElement("article");
   karte.className = "u-karte";
   if (akzent) karte.style.setProperty("--u-akzent", akzent);
+  const kopf = document.createElement("div");
+  kopf.className = "u-kopf";
   const name = document.createElement("div");
   name.className = "u-name";
   name.textContent = e.name;
-  karte.appendChild(name);
+  const klapp = document.createElement("button");
+  klapp.type = "button";
+  klapp.className = "u-klapp";
+  klapp.textContent = "▾";
+  klapp.setAttribute("aria-label", e.name + " ein- oder ausklappen");
+  kopf.append(name, klapp);
+  karte.appendChild(kopf);
+  const koerper = document.createElement("div");
+  koerper.className = "u-koerper";
+  karte.appendChild(koerper);
   if (e.text) {
     const t = document.createElement("p");
     t.className = "u-text";
     t.textContent = e.text;
-    karte.appendChild(t);
+    koerper.appendChild(t);
   }
   const tags = document.createElement("div");
   tags.className = "u-tags";
@@ -4497,7 +4546,7 @@ function ueberKarte(e, akzent) {
     tag.title = m[3];
     tags.appendChild(tag);
   });
-  karte.appendChild(tags);
+  koerper.appendChild(tags);
 
   const aktionen = document.createElement("div");
   aktionen.className = "u-aktionen";
@@ -4527,7 +4576,19 @@ function ueberKarte(e, akzent) {
     b.onclick = function () { botStarten(e.bot, botStufeWahl()); };
     aktionen.appendChild(b);
   }
-  karte.appendChild(aktionen);
+  koerper.appendChild(aktionen);
+  // Zustand je Kachel, damit ein Neuzeichnen (Suche, Filter, Spielerwechsel)
+  // das Zu- oder Aufklappen nicht zurücksetzt. Kacheln bleiben unabhängig.
+  const kartenKey = (basis || "liste") + ":" + e.pfad;
+  function setzeZu(zu) {
+    karte.classList.toggle("zu", zu);
+    klapp.textContent = zu ? "▸" : "▾";
+    klapp.setAttribute("aria-expanded", zu ? "false" : "true");
+    if (zu) geschlosseneKarten.add(kartenKey);
+    else geschlosseneKarten.delete(kartenKey);
+  }
+  setzeZu(geschlosseneKarten.has(kartenKey));
+  klapp.onclick = function () { setzeZu(!karte.classList.contains("zu")); };
   return karte;
 }
 
@@ -4554,6 +4615,46 @@ function spielAnbieten(id) {
 
 // Zeichnet die Übersicht in ein Ziel. filter ist der Startfilter
 // (alle | solo | online | zweit).
+// Ein Spielebereich (Kategorie) klappt für sich auf und zu. Zugeklappt bleiben
+// Name, Anzahl und die ersten Spielnamen sichtbar; die Wahl wird je Liste
+// gemerkt, damit Suche, Filter oder ein Spielerwechsel sie nicht zurücksetzt.
+// Kein Bereich öffnet oder schließt einen anderen.
+const offeneBereiche = new Set();
+function ueberBereich(name, key, liste, akzent, basis) {
+  const bereich = document.createElement("details");
+  bereich.className = "ueber-bereich";
+  const vollerKey = (basis || "liste") + ":" + key;
+  if (akzent) bereich.style.setProperty("--u-akzent", akzent);
+  const kopf = document.createElement("summary");
+  kopf.className = "ueber-kat";
+  const pfeil = document.createElement("span");
+  pfeil.className = "ueber-pfeil";
+  pfeil.setAttribute("aria-hidden", "true");
+  const h4 = document.createElement("h4");
+  h4.textContent = name;
+  const klein = document.createElement("small");
+  klein.textContent = liste.length + (liste.length === 1 ? " Spiel" : " Spiele");
+  const vorschau = document.createElement("span");
+  vorschau.className = "ueber-vorschau";
+  vorschau.textContent = liste.slice(0, 4).map(function (e) { return e.name; }).join(" · ") + (liste.length > 4 ? " …" : "");
+  kopf.append(pfeil, h4, klein, vorschau);
+  const gitter = document.createElement("div");
+  gitter.className = "ueber-gitter";
+  liste.forEach(function (e) { gitter.appendChild(ueberKarte(e, akzent, basis)); });
+  bereich.append(kopf, gitter);
+  if (ueberSuche || offeneBereiche.has(vollerKey)) {
+    bereich.open = true;
+    if (ueberSuche) bereich.dataset.auto = "1";
+  }
+  bereich.addEventListener("toggle", function () {
+    // Aufklappen wegen einer Suche wird nicht als eigene Wahl gemerkt.
+    if (bereich.dataset.auto === "1" && bereich.open) { bereich.dataset.auto = ""; return; }
+    if (bereich.open) offeneBereiche.add(vollerKey);
+    else offeneBereiche.delete(vollerKey);
+  });
+  return bereich;
+}
+
 function uebersichtZeichnen(ziel, filter) {
   if (!ziel) return;
   const eintraege = spielEintraege();
@@ -4566,6 +4667,7 @@ function uebersichtZeichnen(ziel, filter) {
   const sig = aktiv + "|" + ueberSuche + "|" + eintraege.length + "|" + SUPPORTED_GAMES.length;
   if (ziel.dataset.sig === sig && ziel.querySelector(".ueber")) return;
   ziel.dataset.sig = sig;
+  const klappBasis = ziel.id || (ziel.closest && ziel.closest("#gameplayers") ? "multi" : "liste");
 
   const box = document.createElement("div");
   box.className = "ueber";
@@ -4645,19 +4747,7 @@ function uebersichtZeichnen(ziel, filter) {
     const liste = eintraege.filter(function (e) { return e.kat === k.id && ueberPasst(e, aktiv, ueberSuche); });
     if (!liste.length) return;
     gezeigt += liste.length;
-    const kopf = document.createElement("div");
-    kopf.className = "ueber-kat";
-    kopf.style.setProperty("--u-akzent", k.akzent || "");
-    const h4 = document.createElement("h4");
-    h4.textContent = k.name;
-    const klein = document.createElement("small");
-    klein.textContent = liste.length + (liste.length === 1 ? " Spiel" : " Spiele");
-    kopf.append(h4, klein);
-    box.appendChild(kopf);
-    const gitter = document.createElement("div");
-    gitter.className = "ueber-gitter";
-    liste.forEach(function (e) { gitter.appendChild(ueberKarte(e, k.akzent)); });
-    box.appendChild(gitter);
+    box.appendChild(ueberBereich(k.name, k.id || k.name, liste, k.akzent, klappBasis));
   });
   // Nichts darf verschwinden: Spiele ohne passende Kategorie kommen zum Schluss.
   const rest = eintraege.filter(function (e) {
@@ -4665,16 +4755,7 @@ function uebersichtZeichnen(ziel, filter) {
   });
   if (rest.length) {
     gezeigt += rest.length;
-    const kopf = document.createElement("div");
-    kopf.className = "ueber-kat";
-    const h4 = document.createElement("h4");
-    h4.textContent = "Weitere";
-    kopf.appendChild(h4);
-    box.appendChild(kopf);
-    const gitter = document.createElement("div");
-    gitter.className = "ueber-gitter";
-    rest.forEach(function (e) { gitter.appendChild(ueberKarte(e)); });
-    box.appendChild(gitter);
+    box.appendChild(ueberBereich("Weitere", "rest", rest, "", klappBasis));
   }
   if (!gezeigt) {
     const leer = document.createElement("p");
@@ -5532,7 +5613,10 @@ async function refresh(){
    }
    box.appendChild(d);
   });
-  if(atBottom)box.scrollTop=box.scrollHeight;
+  // Beim ersten Zeichnen nach dem Beitritt immer unten stehen – auch wenn der
+  // Kasten beim Aufbau noch keine Höhe hatte. Danach gilt die Regel oben:
+  // Wer im Verlauf nach oben gescrollt hat, wird nicht heruntergerissen.
+  if(atBottom || !chatSprungBereit)box.scrollTop=box.scrollHeight;
   // Neue Nachricht: am Handy steht der Chat unter der Spielauswahl – die Seite
   // holt ihn ins Bild, sobald er nicht ohnehin zu sehen ist. Beim ersten
   // Zeichnen nach dem Beitritt bleibt die Ansicht, wo sie ist.
@@ -5548,14 +5632,16 @@ async function refresh(){
     const rect=chatbox.getBoundingClientRect();
     const imBild=rect.top>=-8&&rect.bottom<=window.innerHeight+8;
     if(!imBild){
-     // Läuft am Handy eine Partie, reißt die Seite nicht mehr zum Chat:
-     // die zentrale Bedienung zählt mit, der Knopf führt hin.
+     // Kein Sprung der Seite: Der Chat steht ganz unten und rückt neue
+     // Nachrichten in seinem eigenen Verlauf nach (oben schon geschehen).
+     // Läuft am Handy eine Partie, zählt die zentrale Bedienung mit; der
+     // schwebende Knopf führt zum Chat.
      if(window.TGMobil&&TGMobil.spielOffen()){
       // Alle seit dem letzten Stand eingetroffenen echten Nachrichten zählen.
       const ab=letzteChatZeile?beitraege.findIndex(m=>chatKennung(m)===letzteChatZeile):-1;
       const anzahl=beitraege.length-(ab+1);
       if(anzahl>0)TGMobil.ungesehen(anzahl);
-     }else chatbox.scrollIntoView({behavior:"smooth",block:"start"});
+     }
     }
    }
   }

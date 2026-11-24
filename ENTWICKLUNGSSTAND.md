@@ -5,6 +5,45 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 24.11.2026 · Connector: Spielebereiche und Kacheln einzeln klappbar, Chat ganz unten
+
+**Warum:** Die Spieleübersicht im Connector war eine lange, immer offene Liste; der Chat
+stand in der linken Spalte zwischen den Elementen und wurde am Handy weggeschoben.
+
+**Was gemacht wurde**
+- **Jeder Spielebereich klappt für sich** (native `<details>`, Zustand je Liste in
+  `offeneBereiche`): Kopfzeile mit Pfeil, Name, Anzahl und den ersten Spielnamen
+  („Würfel · Karten · …“). Standard zu; ein Bereich öffnet keinen anderen.
+- **Jede Kachel klappt für sich** (`geschlosseneKarten`): zugeklappt bleiben Name und
+  ein ▸-Knopf, Text/Kennzeichen/Knöpfe verschwinden. Standard offen, damit nichts
+  versteckt ist; gespielte Ansicht (iframe) wird dabei nicht neu geladen.
+- **Chat als eigene Vollbreiten-Zeile** unten im `.zentrale-geruest` (Desktop Rasterzeile 2,
+  `--chat-hoehe:clamp(220px,30vh,300px)`; am Handy nach den Spielen). `#spielGriff`
+  endet über dem Chat.
+- **Kein Seitensprung mehr** bei neuen Nachrichten: nur noch der Chatverlauf rückt nach
+  (`if(atBottom || !chatSprungBereit)…`); `chatbox.scrollIntoView` entfällt. Beim ersten
+  Aufbau nach dem Beitritt steht der Verlauf immer am Ende.
+
+**Geprüft** (Chromium, Testinstanz 8767, alle vier Kopien byte-gleich,
+md5 `7dea5c56664c7a76f955b678ee84abf9`)
+- Alle 8 Inline-Skripte `node --check` ohne Fehler.
+- Bereiche unabhängig: Würfel und Karten gleichzeitig offen, Schließen des einen lässt den
+  anderen offen; Suche „risiko“ öffnet nur Brettspiele (1 Karte), Leeren stellt die vorher
+  offenen Bereiche wieder her; Zustand über Größenänderung erhalten.
+- Kachel 174 px → 40 px beim Zuklappen, Nachbarkachel bleibt 174 px.
+- Desktop 1280 × 800: links 410 × 560, rechts 870 × 560, Chat 1280 × 240 bei y 560–800,
+  Seite ohne Scrollen; mit offenem Spiel Fenster 870 × 508, Chat darunter.
+- Handy 390 × 844: Chat beginnt bei y 1286 unter der Spielauswahl (372 × 287),
+  `scrollWidth` 374 → kein Querscrollen, Kategorie-Kopf 51 px.
+- Chat: initial `scrollTop` 48,8 bei max 49; Testkasten 60 px: nach neuer Nachricht
+  `top` 234 = `max` 234, `scrollY` bleibt 0.
+
+**Offen:** keine zweite echte Spielersitzung; eine eingehende Fremdnachricht wurde nicht
+live erzeugt (nur über den bestehenden Verlauf geprüft). Sicherung vor der Änderung:
+`sicherung/2026-11-24-connector-klapp/`.
+
+---
+
 ## 24.11.2026 · Spielhalle: eigene Spielsymbole, Kategorien-Navigation, sichtbare eigene Runde
 
 **Warum:** Die Spielkarten zeigten nur Buchstabenkürzel, zwischen Kategorien führte
