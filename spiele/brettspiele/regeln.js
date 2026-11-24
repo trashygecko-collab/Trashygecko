@@ -6,8 +6,8 @@
    Änderung am Spielstand.
 
    Eine Seite braucht nur:
-     <link rel="stylesheet" href="/spiele/brettspiele/regeln.css">
-     <script src="/spiele/brettspiele/regeln.js"></script>
+     <link rel="stylesheet" href="../brettspiele/regeln.css">
+     <script src="../brettspiele/regeln.js"></script>
      <p class="so-gehts">
        <b>So geht's</b><span class="so-text">…ein Satz…</span>
        <button type="button" class="so-mehr">Spielregeln</button>
