@@ -350,6 +350,21 @@ html:fullscreen body{padding:18px 1px}
  box-shadow:0 2px 10px var(--c-schatten-mittel)}
 .modus-panel{margin-top:14px}
 .multi-titel{margin:16px 0 6px;font-size:12px;color:var(--c-leise);font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+/* Spielzentrale: Raumcode, Einladung, laufende Partien. */
+.zentrale{margin:4px 0 6px}
+.zr-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.zr-code{font-family:ui-monospace,Consolas,monospace;font-size:17px;font-weight:700;letter-spacing:1px;color:var(--c-akzent);padding:6px 10px;border:1px solid var(--c-rahmen);border-radius:9px;background:var(--c-flaeche-3)}
+.zr-knopf,#zr-form button{font:inherit;font-size:13px;padding:8px 11px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
+.zr-knopf:hover,#zr-form button:hover{border-color:var(--c-akzent);color:var(--c-akzent)}
+.zr-hinweis{margin:4px 0 8px;font-size:12.5px;line-height:1.4;color:var(--c-leise)}
+#zr-form{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+#zr-codeFeld{flex:1 1 150px;min-width:0;min-height:40px;padding:8px 11px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);font:inherit}
+.zr-partien{display:flex;flex-direction:column;gap:7px;margin:6px 0}
+.zr-partie{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:9px 11px;border:1px solid var(--c-rahmen);border-radius:10px;background:var(--c-flaeche-3)}
+.zr-partie b{font-weight:700}
+.zr-partie small{display:block;color:var(--c-leise);font-weight:normal}
+.zr-partie button{font:inherit;font-size:13px;padding:7px 11px;border-radius:8px;border:1px solid var(--c-akzent);background:transparent;color:var(--c-akzent);cursor:pointer}
+.zr-partie button:hover{background:var(--c-akzent);color:var(--c-bg)}
 .name-tipp{display:block;margin-top:8px;font-size:11px;color:var(--c-leise);line-height:1.4}
 
 /* Grafikstil: gehoert dem Spieler, nicht dem Raum – steht oben, ohne Reiter. */
@@ -676,6 +691,24 @@ html:fullscreen body{padding:18px 1px}
 </div>
 
 <div id="multiPanel" class="modus-panel" hidden>
+<section class="zentrale" id="zentrale" aria-label="Spielzentrale">
+<h3 class="multi-titel">Spielzentrale</h3>
+<div class="zr-zeile">
+<span class="zr-code" id="zr-code" title="Raumcode">—</span>
+<button type="button" class="zr-knopf" id="zr-codeKopieren">Code kopieren</button>
+<button type="button" class="zr-knopf" id="zr-linkKopieren">Einladungslink</button>
+</div>
+<p class="zr-hinweis" id="zr-hinweis">Der Einladungslink führt Gäste direkt in diesen Raum.</p>
+<form id="zr-form">
+<input id="zr-codeFeld" placeholder="Raumcode, z. B. TG-AB12" maxlength="12" autocomplete="off" spellcheck="false" aria-label="Raumcode">
+<button type="submit">Raum betreten</button>
+</form>
+<div class="zr-zeile">
+<button type="button" class="zr-knopf" id="zr-neuerRaum">Neuen Raum öffnen</button>
+</div>
+<h3 class="multi-titel">Laufende Partien</h3>
+<div class="zr-partien" id="zr-partien"><p class="empty">Keine Partie läuft.</p></div>
+</section>
 <div id="gameplayers"></div>
 <h3 class="multi-titel">Spielstatus</h3>
 <div id="game-status" class="empty leer">Noch keine Runde offen.</div>
@@ -1123,6 +1156,141 @@ async function neuAnmelden(){
  if(!activeRoom)await joinSingleRoom();
 }
 
+// --------------------------------------------------------- Spielzentrale ---
+// Raumcode, Einladungslink, Raumwechsel und laufende Partien. Das liest nur
+// den vorhandenen Zustand (activeRoom, currentPlayersList) und benutzt die
+// bestehenden Endpunkte – an Räumen, Chat und Spielen ändert es nichts.
+
+function zentraleAdresse(){
+ return location.origin + location.pathname +
+  (activeRoom ? "?room=" + encodeURIComponent(activeRoom) : "");
+}
+
+function zentraleMeldung(text){
+ const p=document.getElementById("zr-hinweis");
+ if(p)p.textContent=text;
+}
+
+function zentraleKopieren(text, was){
+ const fertig=()=>zentraleMeldung(was+" kopiert.");
+ if(navigator.clipboard&&navigator.clipboard.writeText){
+  navigator.clipboard.writeText(text).then(fertig)
+   .catch(()=>{ window.prompt(was+" zum Kopieren:", text); });
+ } else {
+  window.prompt(was+" zum Kopieren:", text);
+ }
+}
+
+// Eine laufende Partie aus der Spielerliste (/api/players): jeder Spieler
+// meldet dort die Kennung seiner Partie mit.
+function laufendePartien(){
+ const gefunden=new Map();
+ (currentPlayersList||[]).forEach(p=>{
+  if(!p||!p.spiel)return;
+  const def=SUPPORTED_GAMES.find(g=>g.id===p.spiel);
+  if(!def)return;
+  const eintrag=gefunden.get(def.id)||{def:def, spieler:[]};
+  if(p.name&&eintrag.spieler.indexOf(p.name)<0)eintrag.spieler.push(p.name);
+  gefunden.set(def.id, eintrag);
+ });
+ return [...gefunden.values()];
+}
+
+function zentralePartienZeichnen(){
+ const box=document.getElementById("zr-partien");
+ if(!box)return;
+ const liste=laufendePartien();
+ if(!liste.length){
+  box.innerHTML='<p class="empty">Keine Partie läuft.</p>';
+  return;
+ }
+ box.textContent="";
+ liste.forEach(e=>{
+  const zeile=document.createElement("div");
+  zeile.className="zr-partie";
+  const text=document.createElement("div");
+  const titel=document.createElement("b");
+  titel.textContent=e.def.name;
+  const wer=document.createElement("small");
+  wer.textContent=e.spieler.length?e.spieler.join(", "):"läuft";
+  text.appendChild(titel); text.appendChild(wer);
+  zeile.appendChild(text);
+  const knopf=document.createElement("button");
+  knopf.type="button";
+  knopf.textContent="Fortsetzen";
+  knopf.onclick=()=>openGame(e.def.path);
+  zeile.appendChild(knopf);
+  box.appendChild(zeile);
+ });
+}
+
+function zentraleZeichnen(){
+ const code=document.getElementById("zr-code");
+ if(code)code.textContent=activeRoom||"—";
+ zentralePartienZeichnen();
+}
+
+// ?spiel=<kennung> kommt von der Spieleübersicht: dort schickt ein Online-Spiel
+// den Spieler hierher, statt eine eigene zweite Halle aufzubauen.
+function zentraleDeepLink(){
+ let wunsch="";
+ try{ wunsch=(new URLSearchParams(location.search).get("spiel")||"").trim(); }
+ catch(e){ return; }
+ if(!wunsch)return;
+ const def=SUPPORTED_GAMES.find(g=>g.id===wunsch);
+ if(!def){
+  zentraleMeldung("Dieses Spiel kennt der Connector nicht: "+wunsch);
+  return;
+ }
+ setModus("multi", false);
+ zentraleMeldung(def.name+" ist offen – Mitspieler im Chat einladen oder eine Runde anbieten.");
+ setTimeout(()=>{ openGame(def.path); }, 350);
+}
+
+function zentraleAufbau(){
+ const form=document.getElementById("zr-form");
+ const feld=document.getElementById("zr-codeFeld");
+ if(form)form.addEventListener("submit", ev=>{
+  ev.preventDefault();
+  const code=(feld.value||"").trim().toUpperCase();
+  if(!code){ feld.focus(); return; }
+  // Über die Adresse neu laden: der Server setzt den Platz sauber auf den
+  // gewünschten Raum, statt zwei Räume zu vermischen.
+  location.search="?room="+encodeURIComponent(code);
+ });
+
+ const kopierCode=document.getElementById("zr-codeKopieren");
+ if(kopierCode)kopierCode.addEventListener("click", ()=>{
+  if(!activeRoom){ zentraleMeldung("Noch kein Raum geöffnet."); return; }
+  zentraleKopieren(activeRoom, "Raumcode");
+ });
+
+ const kopierLink=document.getElementById("zr-linkKopieren");
+ if(kopierLink)kopierLink.addEventListener("click", ()=>{
+  if(!activeRoom){ zentraleMeldung("Noch kein Raum geöffnet."); return; }
+  zentraleKopieren(zentraleAdresse(), "Einladungslink");
+ });
+
+ const neuer=document.getElementById("zr-neuerRaum");
+ if(neuer)neuer.addEventListener("click", async ()=>{
+  neuer.disabled=true;
+  try{
+   const r=await fetch("/api/rooms",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:sessionID,name:playerName()})
+   });
+   if(!r.ok)throw new Error("Der Connector konnte keinen Raum öffnen.");
+   const raum=await r.json();
+   location.search="?room="+encodeURIComponent(raum.code);
+  }catch(e){
+   zentraleMeldung(e.message||"Kein neuer Raum möglich.");
+   neuer.disabled=false;
+  }
+ });
+
+ zentraleZeichnen();
+}
+
 async function join(roomDisplayName, wieder){
  const code=document.getElementById("room").value.trim().toUpperCase();
  if(!code)return;
@@ -1183,6 +1351,8 @@ async function join(roomDisplayName, wieder){
  pruefeSpielstart();        // und wissen, welches Spiel gerade läuft
   scrollZuDenSpielen();
   zeigeHinweisAusUrl();
+  zentraleZeichnen();
+  zentraleDeepLink();
  }catch(e){
   try{ sessionStorage.removeItem("tg-room"); }catch(err){}
   setRoomStatus(e.message);
@@ -1354,6 +1524,8 @@ async function refreshPlayers(){
   // Nach dem Abgleich der Spielstände noch einmal: erst jetzt steht fest, wer
   // schon an einem Tisch sitzt.
   renderGamePicker(list);
+  // Laufende Partien in der Spielzentrale auffrischen.
+  if(typeof zentraleZeichnen==="function")zentraleZeichnen();
  }catch(e){
  }finally{
   playersBusy=false;
@@ -5498,6 +5670,9 @@ document.getElementById("player").addEventListener("blur",()=>{
  },150);
 });
 document.getElementById("nameSpeichern").onclick=()=>nameUebernehmen(true);
+
+// Spielzentrale einmal aufbauen (Raumcode, Einladung, Raumwechsel, Partien).
+zentraleAufbau();
 
 const params=new URLSearchParams(location.search);
 if(params.get("room")){

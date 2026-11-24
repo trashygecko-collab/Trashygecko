@@ -162,6 +162,12 @@ func routes() http.Handler {
 	}
 	mux.HandleFunc("/connector", connectorPage)
 	mux.HandleFunc("/connector/", connectorPage)
+	// Die Homepage verlinkt den Connector unter seinem Dateipfad – so heißt die
+	// Seite auf GitHub Pages und in der Android-App. Im Docker-Abbild fehlt der
+	// Ordner spiele/connector (Quelltext und Programme bleiben draußen), dort
+	// antwortete diese Adresse bisher mit 404. Jetzt liefert der Server sie
+	// selbst aus, damit ein Link auf allen drei Wegen ankommt.
+	mux.HandleFunc("/spiele/connector/connector.html", connectorPage)
 	mux.HandleFunc("/api/status", status)
 	mux.HandleFunc("/api/spiele", spielRegister)
 	mux.HandleFunc("/api/rooms", roomsHandler)
