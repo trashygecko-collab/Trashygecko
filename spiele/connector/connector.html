@@ -1285,7 +1285,7 @@ function zentraleAufbau(){
   try{
    const r=await fetch("/api/rooms",{
     method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id:sessionID,name:playerName()})
+    body:JSON.stringify({id:sessionID,name:playerName(),neuerRaum:true})
    });
    if(!r.ok)throw new Error("Der Connector konnte keinen Raum öffnen.");
    const raum=await r.json();
@@ -4104,12 +4104,18 @@ function rundeInhalt(box,players){
  const los=document.createElement("button");
  los.type="button";
  los.className="runde-starten";
- los.textContent="Runde anbieten";
+ los.textContent=einladungZiel?"Runde anbieten – an "+einladungZiel.name:"Runde anbieten";
  los.onclick=async()=>{
   const def=SUPPORTED_GAMES.find(g=>g.id===selectedGame);
+  const ziel=einladungZiel;
   const ok=await angebotAktion("bieten",selectedGame);
+  if(!ok)return;
+  // Die Einladung steht als Satz im Chat – so sieht der Eingeladene sie auch
+  // dann, wenn die Angebotskarte gerade nicht sichtbar ist.
+  if(ziel)nachrichtZustellen({text:"Ich lade dich zu "+((def&&def.name)||selectedGame)+" ein, "+ziel.name+" – magst du mitspielen?",msgId:neueMsgId()});
+  einladungZiel=null;
   // Wer die Runde anbietet, sitzt schon am Tisch und bekommt das Feld gleich.
-  if(ok&&def)openGame(def.path);
+  if(def)openGame(def.path);
  };
  box.appendChild(los);
 
@@ -4832,16 +4838,23 @@ document.getElementById("toneWhisper").onclick=()=>{
  field.setSelectionRange(field.value.length,field.value.length);
  closeTonePicker();
 };
-// Zum Spiel einladen: führt zur Spielauswahl und merkt sich den Spieler.
+// Zum Spiel einladen: merkt sich den Angesprochenen, führt zur Spielauswahl
+// und schreibt seinen Namen auf den Angebots-Knopf. Erst mit dem Klick dort
+// geht das Angebot in den Chat – dann auch als Satz an den Eingeladenen.
+let einladungZiel=null;
 document.getElementById("toneGame").onclick=()=>{
  if(!toneTargetId)return;
+ einladungZiel={id:toneTargetId,name:toneTargetName||"Mitspieler"};
  closeTonePicker();
  setModus("multi", false);
  renderGamePicker(currentPlayersList);
+ // Die Auswahl baut ihre Teile einmal auf und lässt sie dann stehen – den
+ // Namen auf den Angebots-Knopf schreibt deshalb dieser Klick.
+ const los=document.querySelector("#gameplayers .runde-starten");
+ if(los)los.textContent="Runde anbieten – an "+einladungZiel.name;
  const box=document.getElementById("modusbox");
  if(box&&!box.hidden)box.scrollIntoView({behavior:"smooth",block:"start"});
- // Der Hinweis steht direkt in der Zeile des Spielers; die Statuszeile wird
- // vom Takt überschrieben und würde nur kurz aufblitzen.
+ tttStatus("Spiel wählen – der Knopf lädt "+einladungZiel.name+" ein.");
 };
 [1,2,3].forEach(min=>{
  document.getElementById("toneMute"+min).onclick=()=>{
@@ -4850,6 +4863,11 @@ document.getElementById("toneGame").onclick=()=>{
  };
 });
 document.querySelectorAll("#tonePicker .tone-buttons .tone-btn").forEach(btn=>{
+ // Nur die Sprüche tragen data-tone. „Runde anbieten“ hat einen eigenen
+ // Handler weiter oben – ohne diese Prüfung überschrieb ihn die Schleife,
+ // und der Klick schickte einen Spruch ohne Art an den Server (nichts
+ // passierte).
+ if(!btn.dataset.tone)return;
  btn.onclick=async()=>{
   if(!toneTargetId)return;
   const response=await fetch("/api/tone?room="+encodeURIComponent(activeRoom),{
@@ -5206,23 +5224,12 @@ function rahmenLeeren(){
  framePartie=null;
 }
 
-// Den eigenen Platz in der Partie freigeben. Der Server beendet die Runde und
-// meldet den Mitspielern den Abgang – niemand wartet auf einen, der weg ist.
-async function partieVerlassen(){
- if(!activeRoom||!sessionID)return false;
- try{
-  const r=await fetch("/api/leave?room="+encodeURIComponent(activeRoom),{
-   method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({id:sessionID})
-  });
-  return r.ok;
- }catch(e){ return false; }
-}
-
-// Rahmen schließen. Eine laufende Partie wird dabei ausgetragen; keine Partie
-// läuft stillschweigend weiter.
-async function spielSchliessen(){
- if(framePartie)await partieVerlassen();
+// Rahmen schließen. Das × heißt „Spiel schließen“ und meint genau das: das
+// Brett verschwindet, die Partie bleibt am Server stehen und lässt sich unter
+// „Laufende Partien“ mit „Fortsetzen“ wieder öffnen. Wer wirklich aufgeben
+// will, nutzt den Knopf im Spiel selbst – der meldet „verlassen“ und der
+// Rahmen geht über die Meldung des Spiels zu.
+function spielSchliessen(){
  rahmenLeeren();
 }
 
@@ -5343,12 +5350,9 @@ griff.addEventListener("keydown",e=>{
  if(e.key==="ArrowRight"){ breiteSetzen((linksBreite||window.innerWidth*0.42)+schritt,true); e.preventDefault(); }
 });
 
-// Das X im Rahmenkopf: erst fragen, dann austragen, dann schließen. Wer
-// abbricht, behält das Spiel vollständig offen.
-document.getElementById("spielZu").addEventListener("click",()=>{
- if(framePartie&&!window.confirm("Möchtest du die Partie wirklich verlassen?"))return;
- spielSchliessen();
-});
+// Das X im Rahmenkopf schließt nur das Brett. Die Partie bleibt am Server
+// stehen (siehe spielSchliessen) – nachfragen muss hier nichts mehr.
+document.getElementById("spielZu").addEventListener("click",spielSchliessen);
 window.addEventListener("resize",()=>{
  // Am Handy steht das Spiel unter dem Chat: ein Größenwechsel (etwa die
  // eingeblendete Adressleiste) darf die Partie nicht schließen.
