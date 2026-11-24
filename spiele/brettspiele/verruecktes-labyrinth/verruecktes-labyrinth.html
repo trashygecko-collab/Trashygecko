@@ -526,212 +526,251 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     g.closePath();
   }
 
+  /* Farben der Gegenstände: kräftig, mit dunkler Kontur. Die Plättchen
+     darunter sind in jeder Welt hell – dieselben Farben funktionieren also
+     überall. Auf dem Feld ist ein Gegenstand nur rund 20–30 px groß: zwei
+     bis drei große Formen mit dicker Kontur, keine feinen Details. */
+  var RAND = "#221a12";
+  var GOLD = "#f7c62c", GOLD_D = "#c98a08", ROT = "#e0383f", ROT_D = "#8f1f28",
+      BLAU = "#2f7bdc", BLAU_D = "#1b4d94", GRUEN = "#3fa93c", GRUEN_D = "#1f6b26",
+      LUFT = "#5cc8ea", LUFT_D = "#1f7c9c", BRAUN = "#a86a24", BRAUN_D = "#6a3d10",
+      CREME = "#f8ebc9", STAHL = "#c3d1dc", STAHL_D = "#77858f", EIS = "#a9e3f4";
+
+  /* Füllen und mit dunkler Kontur umranden. */
+  function fuell(g, c) { g.fillStyle = c; g.fill(); }
+  function umriss(g, w) {
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    g.lineWidth = w || .085;
+    g.strokeStyle = RAND;
+    g.stroke();
+  }
+
   var EMBLEM = {
+    /* Krone: drei Zacken, Goldband, roter Stein */
     krone: function (g) {
       g.beginPath();
-      g.moveTo(.12, .72); g.lineTo(.12, .3); g.lineTo(.3, .48); g.lineTo(.5, .18);
-      g.lineTo(.7, .48); g.lineTo(.88, .3); g.lineTo(.88, .72);
-      g.closePath(); g.fill();
-      rr(g, .12, .74, .76, .11, .03); g.fill();
+      g.moveTo(.10, .78); g.lineTo(.13, .28); g.lineTo(.31, .52); g.lineTo(.50, .16);
+      g.lineTo(.69, .52); g.lineTo(.87, .28); g.lineTo(.90, .78);
+      g.closePath(); fuell(g, GOLD); umriss(g);
+      rr(g, .09, .74, .82, .16, .04); fuell(g, GOLD_D); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .60, .075, 0, 6.2832); fuell(g, ROT); umriss(g, .045);
     },
+    /* Schlüssel: Ring links, Schaft rechts, zwei Zähne */
     schluessel: function (g) {
-      g.lineWidth = .13; g.beginPath(); g.arc(.29, .4, .15, 0, 6.2832); g.stroke();
-      g.lineWidth = .11; g.beginPath(); g.moveTo(.4, .49); g.lineTo(.84, .72); g.stroke();
-      g.beginPath(); g.moveTo(.73, .66); g.lineTo(.79, .55); g.stroke();
-      g.beginPath(); g.moveTo(.62, .61); g.lineTo(.68, .5); g.stroke();
+      var P = function () {
+        g.beginPath();
+        g.arc(.28, .50, .16, 0, 6.2832);
+        g.moveTo(.42, .50); g.lineTo(.88, .50);
+        g.moveTo(.70, .50); g.lineTo(.70, .72);
+        g.moveTo(.86, .50); g.lineTo(.86, .64);
+      };
+      g.lineCap = "round";
+      P(); g.lineWidth = .21; g.strokeStyle = RAND; g.stroke();
+      P(); g.lineWidth = .105; g.strokeStyle = GOLD; g.stroke();
     },
+    /* Edelstein: breiter geschliffener Diamant, helle Tafel oben */
     edelstein: function (g) {
-      g.beginPath(); g.moveTo(.5, .12); g.lineTo(.86, .42); g.lineTo(.5, .88); g.lineTo(.14, .42);
-      g.closePath(); g.fill();
-      g.lineWidth = .05; g.beginPath(); g.moveTo(.14, .42); g.lineTo(.86, .42); g.stroke();
+      g.beginPath(); g.moveTo(.50, .07); g.lineTo(.88, .40); g.lineTo(.50, .93); g.lineTo(.12, .40);
+      g.closePath(); fuell(g, LUFT_D); umriss(g);
+      g.beginPath(); g.moveTo(.50, .07); g.lineTo(.88, .40); g.lineTo(.12, .40);
+      g.closePath(); fuell(g, LUFT); umriss(g, .05);
     },
-    muenze: function (g, papier) {
-      g.beginPath(); g.arc(.5, .5, .33, 0, 6.2832); g.fill();
-      g.strokeStyle = papier; g.lineWidth = .055;
-      g.beginPath(); g.arc(.5, .5, .2, 0, 6.2832); g.stroke();
-      g.fillStyle = papier; stern5(g, .5, .5, .1); g.fill();
+    /* Münze: goldener Teller mit Stern */
+    muenze: function (g) {
+      g.beginPath(); g.arc(.50, .50, .37, 0, 6.2832); fuell(g, GOLD); umriss(g);
+      g.beginPath(); g.arc(.50, .50, .25, 0, 6.2832);
+      g.strokeStyle = GOLD_D; g.lineWidth = .06; g.stroke();
+      stern5(g, .50, .50, .18); fuell(g, GOLD_D);
     },
-    buch: function (g, papier) {
-      rr(g, .16, .2, .68, .6, .04); g.fill();
-      g.fillStyle = papier;
-      g.fillRect(.33, .24, .045, .52);
-      g.fillRect(.42, .32, .32, .035);
-      g.fillRect(.42, .43, .32, .035);
-      g.fillRect(.42, .54, .24, .035);
+    /* Buch: roter Deckel, heller Seitenblock, zwei Goldbänder */
+    buch: function (g) {
+      rr(g, .72, .22, .16, .56, .03); fuell(g, CREME); umriss(g, .06);
+      rr(g, .12, .14, .62, .72, .05); fuell(g, ROT); umriss(g);
+      rr(g, .18, .14, .08, .72, .03); fuell(g, ROT_D);
+      rr(g, .36, .34, .30, .10, .02); fuell(g, GOLD);
+      rr(g, .36, .56, .30, .10, .02); fuell(g, GOLD);
     },
-    ring: function (g, papier) {
-      g.lineWidth = .1; g.beginPath(); g.arc(.5, .58, .22, 0, 6.2832); g.stroke();
-      g.beginPath(); g.moveTo(.5, .14); g.lineTo(.63, .28); g.lineTo(.5, .42); g.lineTo(.37, .28);
-      g.closePath(); g.fill();
-      g.fillStyle = papier; g.beginPath(); g.arc(.5, .26, .045, 0, 6.2832); g.fill();
+    /* Ring: dicker Goldreifen mit blauem Stein */
+    ring: function (g) {
+      g.beginPath(); g.arc(.50, .62, .26, 0, 6.2832);
+      g.lineWidth = .22; g.strokeStyle = RAND; g.stroke();
+      g.lineWidth = .12; g.strokeStyle = GOLD; g.stroke();
+      g.beginPath(); g.moveTo(.50, .10); g.lineTo(.67, .26); g.lineTo(.50, .42); g.lineTo(.33, .26);
+      g.closePath(); fuell(g, BLAU); umriss(g, .065);
     },
-    glocke: function (g, papier) {
+    /* Glocke: goldene Glocke, dunkler Saum, Klöppel */
+    glocke: function (g) {
       g.beginPath();
-      g.moveTo(.18, .68);
-      g.quadraticCurveTo(.22, .3, .5, .14);
-      g.quadraticCurveTo(.78, .3, .82, .68);
-      g.closePath(); g.fill();
-      rr(g, .14, .7, .72, .085, .03); g.fill();
-      g.fillStyle = papier; g.beginPath(); g.arc(.5, .83, .065, 0, 6.2832); g.fill();
+      g.moveTo(.14, .70);
+      g.quadraticCurveTo(.18, .26, .50, .10);
+      g.quadraticCurveTo(.82, .26, .86, .70);
+      g.closePath(); fuell(g, GOLD); umriss(g);
+      rr(g, .10, .70, .80, .12, .05); fuell(g, GOLD_D); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .89, .07, 0, 6.2832); fuell(g, BRAUN_D); umriss(g, .045);
     },
+    /* Kelch: goldener Becher mit Rotwein */
     kelch: function (g) {
-      g.beginPath();
-      g.moveTo(.26, .18); g.lineTo(.74, .18); g.lineTo(.66, .52); g.lineTo(.34, .52);
-      g.closePath(); g.fill();
-      g.fillRect(.46, .52, .08, .22);
-      rr(g, .3, .76, .4, .1, .04); g.fill();
+      g.beginPath(); g.moveTo(.20, .14); g.lineTo(.80, .14); g.lineTo(.70, .54); g.lineTo(.30, .54);
+      g.closePath(); fuell(g, GOLD); umriss(g);
+      g.beginPath(); g.moveTo(.26, .21); g.lineTo(.74, .21); g.lineTo(.67, .47); g.lineTo(.33, .47);
+      g.closePath(); fuell(g, ROT);
+      rr(g, .44, .54, .12, .20, .02); fuell(g, GOLD); umriss(g, .05);
+      rr(g, .26, .74, .48, .12, .05); fuell(g, GOLD); umriss(g);
     },
-    trank: function (g, papier) {
-      g.beginPath(); g.arc(.5, .62, .26, 0, 6.2832); g.fill();
-      rr(g, .41, .24, .18, .22, .03); g.fill();
-      rr(g, .38, .14, .24, .1, .03); g.fill();
-      g.fillStyle = papier; g.beginPath(); g.arc(.42, .58, .06, 0, 6.2832); g.fill();
+    /* Heiltrank: Korken, Glaschals, grüne Kugel */
+    trank: function (g) {
+      rr(g, .40, .08, .20, .14, .04); fuell(g, BRAUN); umriss(g, .06);
+      rr(g, .40, .20, .20, .18, .03); fuell(g, "#d8eef4"); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .64, .30, 0, 6.2832); fuell(g, GRUEN); umriss(g);
+      g.beginPath(); g.arc(.40, .56, .075, 0, 6.2832); fuell(g, "#a8e86a"); g.fill();
     },
+    /* Kurzschwert: Stahlklinge, goldene Parierstange, brauner Griff */
     schwert: function (g) {
-      g.beginPath();
-      g.moveTo(.5, .08); g.lineTo(.58, .24); g.lineTo(.58, .6); g.lineTo(.5, .68);
-      g.lineTo(.42, .6); g.lineTo(.42, .24); g.closePath(); g.fill();
-      rr(g, .26, .58, .48, .075, .02); g.fill();
-      rr(g, .455, .66, .09, .16, .02); g.fill();
-      g.beginPath(); g.arc(.5, .86, .06, 0, 6.2832); g.fill();
+      g.beginPath(); g.moveTo(.50, .06); g.lineTo(.60, .26); g.lineTo(.60, .62); g.lineTo(.40, .62);
+      g.lineTo(.40, .26); g.closePath(); fuell(g, STAHL); umriss(g);
+      g.fillStyle = "#f4f9fc"; g.fillRect(.47, .12, .06, .46);
+      rr(g, .24, .60, .52, .10, .03); fuell(g, GOLD); umriss(g, .06);
+      rr(g, .45, .70, .10, .16, .03); fuell(g, BRAUN); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .90, .065, 0, 6.2832); fuell(g, GOLD); umriss(g, .05);
     },
-    schild: function (g, papier) {
+    /* Stahlschild: blaues Schild mit goldenem Kreuz */
+    schild: function (g) {
       g.beginPath();
-      g.moveTo(.5, .1); g.lineTo(.86, .24); g.lineTo(.82, .56);
-      g.quadraticCurveTo(.7, .8, .5, .9);
-      g.quadraticCurveTo(.3, .8, .18, .56); g.lineTo(.14, .24);
-      g.closePath(); g.fill();
-      g.strokeStyle = papier; g.lineWidth = .045;
-      g.beginPath(); g.moveTo(.5, .18); g.lineTo(.5, .8); g.stroke();
-      g.beginPath(); g.moveTo(.24, .4); g.lineTo(.76, .4); g.stroke();
+      g.moveTo(.50, .08); g.lineTo(.87, .22); g.lineTo(.83, .56);
+      g.quadraticCurveTo(.71, .82, .50, .92);
+      g.quadraticCurveTo(.29, .82, .17, .56); g.lineTo(.13, .22);
+      g.closePath(); fuell(g, BLAU); umriss(g);
+      g.fillStyle = GOLD;
+      g.fillRect(.455, .24, .09, .46);
+      g.fillRect(.27, .35, .46, .09);
     },
+    /* Hammer: Stahlkopf, brauner Stiel */
     hammer: function (g) {
-      rr(g, .18, .22, .64, .2, .04); g.fill();
-      rr(g, .44, .4, .1, .46, .03); g.fill();
-      g.beginPath(); g.moveTo(.18, .22); g.lineTo(.82, .22); g.lineTo(.78, .42); g.lineTo(.22, .42);
-      g.closePath(); g.fill();
+      rr(g, .44, .34, .12, .54, .03); fuell(g, BRAUN); umriss(g);
+      rr(g, .10, .16, .80, .26, .05); fuell(g, STAHL); umriss(g);
+      g.fillStyle = STAHL_D; g.fillRect(.14, .32, .74, .08);
     },
-    kette: function (g, papier) {
-      g.lineWidth = .09;
-      g.beginPath(); g.ellipse(.36, .34, .2, .13, -0.5, 0, 6.2832); g.stroke();
-      g.beginPath(); g.ellipse(.62, .55, .2, .13, -0.5, 0, 6.2832); g.stroke();
-      g.beginPath(); g.ellipse(.4, .74, .19, .12, -0.5, 0, 6.2832); g.stroke();
+    /* Kette: zwei große verschlungene Glieder */
+    kette: function (g) {
+      var glied = function (x, y, d) {
+        g.beginPath(); g.ellipse(x, y, .235, .155, d, 0, 6.2832);
+        g.lineWidth = .26; g.strokeStyle = RAND; g.stroke();
+        g.lineWidth = .14; g.strokeStyle = STAHL; g.stroke();
+      };
+      glied(.40, .38, -.7); glied(.60, .62, -.7);
     },
-    laterne: function (g, papier) {
-      rr(g, .26, .26, .48, .5, .05); g.fill();
-      g.fillRect(.44, .16, .12, .1);
-      g.strokeStyle = g.fillStyle; g.lineWidth = .05;
-      g.beginPath(); g.arc(.5, .16, .1, Math.PI, 0); g.stroke();
-      g.fillStyle = papier; rr(g, .36, .36, .28, .3, .04); g.fill();
-      g.fillStyle = g.strokeStyle; rr(g, .22, .76, .56, .1, .04); g.fill();
+    /* Laterne: dunkles Gehäuse, warmes Licht, Bügel */
+    laterne: function (g) {
+      g.beginPath(); g.arc(.50, .19, .11, Math.PI, 0);
+      g.lineWidth = .075; g.strokeStyle = RAND; g.stroke();
+      rr(g, .22, .24, .56, .54, .07); fuell(g, "#4b3620"); umriss(g);
+      rr(g, .32, .34, .36, .34, .05); fuell(g, "#ffd45e"); umriss(g, .05);
+      rr(g, .18, .15, .64, .11, .05); fuell(g, "#3a2a18"); umriss(g, .055);
+      rr(g, .18, .76, .64, .13, .05); fuell(g, "#3a2a18"); umriss(g, .055);
     },
-    schriftrolle: function (g, papier) {
-      rr(g, .22, .24, .56, .52, .04); g.fill();
-      g.fillStyle = papier;
-      g.fillRect(.3, .36, .4, .04);
-      g.fillRect(.3, .46, .4, .04);
-      g.fillRect(.3, .56, .26, .04);
-      g.fillStyle = g.strokeStyle;
-      g.beginPath(); g.arc(.22, .5, .07, 0, 6.2832); g.fill();
-      g.beginPath(); g.arc(.78, .5, .07, 0, 6.2832); g.fill();
+    /* Schriftrolle: Pergament, zwei gerollte Enden, rotes Siegelband */
+    schriftrolle: function (g) {
+      rr(g, .24, .16, .52, .68, .05); fuell(g, CREME); umriss(g);
+      rr(g, .11, .11, .18, .78, .08); fuell(g, "#e0c89c"); umriss(g, .065);
+      rr(g, .71, .11, .18, .78, .08); fuell(g, "#e0c89c"); umriss(g, .065);
+      rr(g, .38, .16, .24, .15, .03); fuell(g, ROT);
     },
-    blatt: function (g, papier) {
+    /* Blatt: grüne Blattform mit heller Mittelader */
+    blatt: function (g) {
       g.beginPath();
-      g.moveTo(.5, .1);
-      g.quadraticCurveTo(.9, .4, .5, .9);
-      g.quadraticCurveTo(.1, .4, .5, .1);
-      g.closePath(); g.fill();
-      g.strokeStyle = papier; g.lineWidth = .035;
-      g.beginPath(); g.moveTo(.5, .2); g.lineTo(.5, .82); g.stroke();
-      g.beginPath(); g.moveTo(.5, .42); g.lineTo(.34, .34); g.stroke();
-      g.beginPath(); g.moveTo(.5, .54); g.lineTo(.66, .46); g.stroke();
+      g.moveTo(.50, .05); g.quadraticCurveTo(.92, .40, .50, .95);
+      g.quadraticCurveTo(.08, .40, .50, .05); g.closePath();
+      fuell(g, GRUEN); umriss(g);
+      g.beginPath(); g.moveTo(.50, .16); g.lineTo(.50, .92);
+      g.strokeStyle = "#e7f7d9"; g.lineWidth = .07; g.stroke();
     },
-    pilz: function (g, papier) {
-      g.beginPath(); g.arc(.5, .48, .3, Math.PI, 0); g.closePath(); g.fill();
-      rr(g, .2, .46, .6, .07, .02); g.fill();
-      rr(g, .38, .54, .24, .28, .05); g.fill();
-      g.fillStyle = papier;
-      g.beginPath(); g.arc(.38, .36, .045, 0, 6.2832); g.fill();
-      g.beginPath(); g.arc(.6, .42, .035, 0, 6.2832); g.fill();
+    /* Waldpilz: roter Hut mit Tupfen, heller Stiel */
+    pilz: function (g) {
+      rr(g, .38, .46, .24, .38, .05); fuell(g, CREME); umriss(g);
+      g.beginPath(); g.arc(.50, .50, .36, Math.PI, 0); g.closePath();
+      fuell(g, ROT); umriss(g);
+      g.beginPath(); g.arc(.35, .37, .07, 0, 6.2832); fuell(g, "#fff6e8"); g.fill();
+      g.beginPath(); g.arc(.62, .41, .055, 0, 6.2832); g.fill();
     },
-    eichel: function (g, papier) {
-      g.beginPath(); g.arc(.5, .58, .24, Math.PI, 0); g.lineTo(.74, .58);
-      g.quadraticCurveTo(.74, .84, .5, .88);
-      g.quadraticCurveTo(.26, .84, .26, .58); g.closePath(); g.fill();
-      g.beginPath(); g.arc(.5, .46, .26, Math.PI, 0); g.closePath(); g.fill();
-      g.fillStyle = papier; g.fillRect(.47, .14, .06, .14);
+    /* Eichel: braune Kappe, helle Nuss, Stiel */
+    eichel: function (g) {
+      g.beginPath(); g.moveTo(.26, .44); g.lineTo(.74, .44);
+      g.quadraticCurveTo(.74, .86, .50, .92); g.quadraticCurveTo(.26, .86, .26, .44);
+      g.closePath(); fuell(g, "#e9bd7c"); umriss(g);
+      rr(g, .46, .10, .08, .16, .03); fuell(g, BRAUN_D); umriss(g, .05);
+      g.beginPath(); g.arc(.50, .44, .29, Math.PI, 0); g.closePath();
+      fuell(g, BRAUN); umriss(g);
     },
-    eule: function (g, papier) {
-      g.beginPath(); g.ellipse(.5, .58, .26, .3, 0, 0, 6.2832); g.fill();
-      g.beginPath(); g.arc(.5, .34, .24, 0, 6.2832); g.fill();
-      g.fillStyle = papier;
-      g.beginPath(); g.arc(.4, .33, .075, 0, 6.2832); g.fill();
-      g.beginPath(); g.arc(.6, .33, .075, 0, 6.2832); g.fill();
-      g.fillStyle = g.strokeStyle;
-      g.beginPath(); g.moveTo(.5, .38); g.lineTo(.56, .47); g.lineTo(.44, .47); g.closePath(); g.fill();
-      g.fillStyle = papier;
-      g.beginPath(); g.arc(.4, .33, .03, 0, 6.2832); g.fill();
-      g.beginPath(); g.arc(.6, .33, .03, 0, 6.2832); g.fill();
+    /* Eule: brauner Körper, zwei große Augen, Schnabel */
+    eule: function (g) {
+      g.beginPath(); g.ellipse(.50, .62, .27, .30, 0, 0, 6.2832); fuell(g, BRAUN); umriss(g);
+      g.beginPath(); g.arc(.50, .36, .28, 0, 6.2832); fuell(g, BRAUN); umriss(g);
+      g.beginPath(); g.arc(.36, .34, .135, 0, 6.2832); fuell(g, CREME); g.fill();
+      g.beginPath(); g.arc(.64, .34, .135, 0, 6.2832); g.fill();
+      g.beginPath(); g.arc(.36, .34, .07, 0, 6.2832); fuell(g, RAND); g.fill();
+      g.beginPath(); g.arc(.64, .34, .07, 0, 6.2832); g.fill();
+      g.beginPath(); g.moveTo(.50, .45); g.lineTo(.60, .57); g.lineTo(.40, .57);
+      g.closePath(); fuell(g, "#f0a12a"); g.fill();
     },
-    blume: function (g, papier) {
+    /* Blume: fünf rosa Blütenblätter, goldene Mitte */
+    blume: function (g) {
       var i, a;
       for (i = 0; i < 5; i++) {
         a = -Math.PI / 2 + i * 1.2566;
         g.beginPath();
-        g.ellipse(.5 + Math.cos(a) * .17, .48 + Math.sin(a) * .17, .13, .1, a, 0, 6.2832);
-        g.fill();
+        g.arc(.50 + Math.cos(a) * .19, .52 + Math.sin(a) * .19, .155, 0, 6.2832);
+        fuell(g, "#ef6fa4"); umriss(g, .055);
       }
-      g.fillStyle = papier; g.beginPath(); g.arc(.5, .48, .1, 0, 6.2832); g.fill();
-      g.fillStyle = g.strokeStyle; g.fillRect(.47, .62, .06, .26);
+      g.beginPath(); g.arc(.50, .52, .12, 0, 6.2832); fuell(g, GOLD); umriss(g, .06);
     },
-    fisch: function (g, papier) {
-      g.beginPath(); g.ellipse(.45, .5, .27, .16, 0, 0, 6.2832); g.fill();
-      g.beginPath(); g.moveTo(.68, .5); g.lineTo(.9, .34); g.lineTo(.9, .66); g.closePath(); g.fill();
-      g.fillStyle = papier; g.beginPath(); g.arc(.34, .45, .035, 0, 6.2832); g.fill();
+    /* Fisch: hellblauer Körper, dunkle Schwanzflosse, Auge */
+    fisch: function (g) {
+      g.beginPath(); g.moveTo(.64, .50); g.lineTo(.93, .24); g.lineTo(.93, .76);
+      g.closePath(); fuell(g, LUFT_D); umriss(g);
+      g.beginPath(); g.ellipse(.40, .50, .30, .20, 0, 0, 6.2832);
+      fuell(g, LUFT); umriss(g);
+      g.beginPath(); g.arc(.27, .44, .055, 0, 6.2832); fuell(g, RAND); g.fill();
     },
-    feder: function (g, papier) {
+    /* Feder: türkiser Kiel mit heller Seele */
+    feder: function (g) {
       g.beginPath();
-      g.moveTo(.7, .1);
-      g.quadraticCurveTo(.86, .44, .46, .72);
-      g.quadraticCurveTo(.3, .78, .24, .9);
-      g.quadraticCurveTo(.34, .58, .48, .4);
-      g.quadraticCurveTo(.58, .24, .7, .1);
-      g.closePath(); g.fill();
-      g.strokeStyle = papier; g.lineWidth = .035;
-      g.beginPath(); g.moveTo(.24, .9); g.lineTo(.72, .18); g.stroke();
+      g.moveTo(.74, .07); g.quadraticCurveTo(.88, .42, .52, .68);
+      g.quadraticCurveTo(.36, .80, .24, .93);
+      g.quadraticCurveTo(.40, .56, .50, .38); g.quadraticCurveTo(.60, .24, .74, .07);
+      g.closePath(); fuell(g, "#3fb6c9"); umriss(g);
+      g.beginPath(); g.moveTo(.24, .93); g.lineTo(.70, .16);
+      g.strokeStyle = CREME; g.lineWidth = .055; g.stroke();
     },
-    stern: function (g) { stern5(g, .5, .5, .38); g.fill(); },
+    /* Stern: goldener fünfzackiger Stern mit Kontur */
+    stern: function (g) { stern5(g, .50, .50, .42); fuell(g, GOLD); umriss(g, .07); },
+    /* Schneeflocke: drei Achsen mit je zwei Ästen, dunkle Kontur */
     schneeflocke: function (g) {
-      var i, a;
-      g.lineWidth = .07; g.lineCap = "round";
-      for (i = 0; i < 3; i++) {
-        a = i * Math.PI / 3;
+      var i, a, P = function () {
         g.beginPath();
-        g.moveTo(.5 - Math.cos(a) * .38, .5 - Math.sin(a) * .38);
-        g.lineTo(.5 + Math.cos(a) * .38, .5 + Math.sin(a) * .38);
-        g.stroke();
-      }
-      g.lineWidth = .055;
-      for (i = 0; i < 6; i++) {
-        a = i * Math.PI / 3;
-        var x = .5 + Math.cos(a) * .26, y = .5 + Math.sin(a) * .26;
-        g.beginPath();
-        g.moveTo(x, y);
-        g.lineTo(x + Math.cos(a + 2.3) * .11, y + Math.sin(a + 2.3) * .11);
-        g.stroke();
-        g.beginPath();
-        g.moveTo(x, y);
-        g.lineTo(x + Math.cos(a - 2.3) * .11, y + Math.sin(a - 2.3) * .11);
-        g.stroke();
-      }
+        for (i = 0; i < 3; i++) {
+          a = i * Math.PI / 3;
+          g.moveTo(.50 - Math.cos(a) * .40, .50 - Math.sin(a) * .40);
+          g.lineTo(.50 + Math.cos(a) * .40, .50 + Math.sin(a) * .40);
+        }
+        for (i = 0; i < 6; i++) {
+          a = i * Math.PI / 3;
+          var x = .50 + Math.cos(a) * .24, y = .50 + Math.sin(a) * .24;
+          g.moveTo(x, y); g.lineTo(x + Math.cos(a + 2.4) * .12, y + Math.sin(a + 2.4) * .12);
+          g.moveTo(x, y); g.lineTo(x + Math.cos(a - 2.4) * .12, y + Math.sin(a - 2.4) * .12);
+        }
+      };
+      g.lineCap = "round";
+      P(); g.lineWidth = .16; g.strokeStyle = RAND; g.stroke();
+      P(); g.lineWidth = .085; g.strokeStyle = "#8ddcf2"; g.stroke();
     },
-    kristall: function (g, papier) {
-      g.beginPath();
-      g.moveTo(.5, .08); g.lineTo(.78, .32); g.lineTo(.66, .86); g.lineTo(.34, .86);
-      g.lineTo(.22, .32); g.closePath(); g.fill();
-      g.strokeStyle = papier; g.lineWidth = .04;
-      g.beginPath(); g.moveTo(.5, .1); g.lineTo(.5, .84); g.stroke();
-      g.beginPath(); g.moveTo(.22, .32); g.lineTo(.5, .46); g.lineTo(.78, .32); g.stroke();
+    /* Eiskristall: hoher hellblauer Prismenkörper mit Facetten */
+    kristall: function (g) {
+      g.beginPath(); g.moveTo(.50, .05); g.lineTo(.80, .34); g.lineTo(.68, .93); g.lineTo(.32, .93);
+      g.lineTo(.20, .34); g.closePath(); fuell(g, EIS); umriss(g);
+      g.beginPath(); g.moveTo(.50, .08); g.lineTo(.50, .91);
+      g.moveTo(.20, .34); g.lineTo(.50, .50); g.lineTo(.80, .34);
+      g.lineWidth = .055; g.strokeStyle = "#2f8fb0"; g.stroke();
     }
   };
 
@@ -740,7 +779,6 @@ canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030
     g.save();
     g.translate(x, y);
     g.scale(s, s);
-    g.translate(-.5, -.5);
     g.fillStyle = farbe;
     g.strokeStyle = farbe;
     g.lineJoin = "round";

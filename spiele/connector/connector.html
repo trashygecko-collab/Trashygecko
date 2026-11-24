@@ -137,6 +137,10 @@ small{color:var(--c-leise)}
  font-weight:normal;letter-spacing:.03em;background:var(--c-flaeche-2);color:var(--c-sanft);
  border:1px solid var(--c-rahmen);border-radius:6px;cursor:pointer}
 .adresse-knopf:hover{background:var(--c-flaeche-3);color:var(--c-akzent);border-color:var(--c-rahmen-2);filter:none}
+/* Zwei Knöpfe nebeneinander: Adresse kopieren und Einladung teilen. */
+.adresse-knoepfe{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.adresse-knoepfe .adresse-knopf{margin:0}
+.adresse-hinweis{margin:7px 0 0;font-size:11.5px;line-height:1.35;color:var(--c-akzent);text-align:center}
 @media(max-width:430px){
  body{padding:5px 1px}
  section{padding:13px}
@@ -520,22 +524,6 @@ html:fullscreen body{padding:18px 1px}
  border:1px solid var(--c-rahmen-55);border-top:none;
  border-radius:0 0 6px 6px}
 .chat-send-row{border:none;padding:0;background:none}
-/* --- Handy: der Chat wird ein eigener großer Bildschirm -------------------
-   Nur Handys, Hoch- und Querformat (Querformat erkennt man an der geringen
-   Höhe). PC und Tablet behalten ihre 380 px unverändert.
-   Der ganze Chatkasten – Verlauf plus Eingabezeile – nimmt 72 % des sichtbaren
-   Bereichs ein; dvh folgt auch der eingeblendeten Tastatur, vh bleibt als
-   Rückfall für ältere Browser. Der Verlauf bekommt den Rest und scrollt selbst,
-   die Eingabezeile sitzt fest darunter und überdeckt keine Nachricht.
-   Die Seite behält ihr eigenes Scrollen: kein Festhalten von body oder main,
-   und overscroll-behavior bleibt ausdrücklich "auto" – am Anfang und Ende des
-   Verlaufs reicht der Wisch an die Seite weiter, statt zu hängen. */
-@media (max-width:600px), (max-width:1023px) and (max-height:520px){
- #chatbox{display:flex;flex-direction:column;height:58vh;height:58dvh}
- #chat{flex:1 1 auto;height:auto;min-height:0;
-  overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
- .chat-compose{flex:0 0 auto;position:relative}
-}
 /* --- Spiel neben dem Chat: nur auf großen Bildschirmen (PC) -------------- */
 #spielFenster{display:none}
 .spiel-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -548,7 +536,7 @@ html:fullscreen body{padding:18px 1px}
  background:#ffffff26;color:#fff;text-decoration:none;cursor:pointer;font-family:inherit}
 .spiel-knopf:hover{background:#ffffff40;filter:none}
 #spielRahmen{flex:1;width:100%;border:0;background:var(--c-grund);display:block}
-#spielGriff{display:none;position:fixed;top:0;bottom:0;left:var(--links-breite,32%);
+#spielGriff{display:none;position:fixed;top:0;bottom:0;left:clamp(30%,var(--links-breite,32%),35%);
  width:14px;margin-left:-7px;cursor:col-resize;z-index:40;touch-action:none;outline:none}
 #spielGriff::after{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;
  background:var(--c-rahmen-2);border-radius:2px;transition:background .15s}
@@ -558,28 +546,36 @@ html:fullscreen body{padding:18px 1px}
 body.griff-aktiv{cursor:col-resize;user-select:none}
 body.griff-aktiv iframe{pointer-events:none}
 
-/* --- Handy und Tablet: Spiel unter dem Chat, über die volle Breite --------
-   Bis 1023 px steht der Chat oben, das Spielfenster darunter in voller
-   Breite; der PC behält Chat links und Spiel rechts (@media 1024px oben).
-   Die Seite scrollt weiter, das Spielfeld behält seine eigene Bedienung.
-   Der schwebende Chat-Knopf kommt aus /spiele/mobil.js. */
+/* --- Handy und Tablet: untereinander, Chat oben, Spiele darunter ---------
+   Der Chat ist ein eigener Block mit begrenzter Höhe (keine Fußleiste über
+   die ganze Seite); die Eingabe sitzt unten in diesem Block. Die Seite
+   scrollt, damit Spiel und Auswahl erreichbar bleiben. */
 @media (max-width:1023px){
- /* Spielzentrale übereinander: Chat und Spieler oben, Spiele darunter. */
- #rechteSpalte{display:block}
+ /* Handy: Kopf, dann sofort der Chat – Spieler, Name und Einstellungen
+    folgen darunter. So sind Chat und Spiel ohne langes Scrollen da. */
+ #linkeSpalte #chatbox{order:1}
+ #linkeSpalte #zentrale{order:2}
+ #linkeSpalte #namePanel{order:3}
+ #linkeSpalte #einstellungen{order:4}
+ #chatbox{display:flex;flex-direction:column;flex:0 0 auto;height:44dvh;min-height:200px;
+  margin:0;padding:8px 10px 10px;border:none;background:none}
+ #chat{flex:1 1 auto;height:auto;min-height:0;overflow-y:auto;
+  overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+ .chat-compose{flex:0 0 auto;position:relative;margin:0}
+ #rechteSpalte{display:flex;flex-direction:column;border-top:1px solid var(--c-rahmen);
+  background:var(--c-grund)}
  #rechtsKopf{position:sticky;top:0;z-index:6}
+ #uebersicht{padding:10px 12px 16px}
  body.spiel-offen #zurueckUebersicht{display:inline-flex;align-items:center;gap:6px}
  body.spiel-offen #rechtsKopf{position:sticky;top:0;z-index:6;min-height:44px;padding:4px 10px}
  body.spiel-offen .spiel-kopf{display:none}
  body.spiel-offen #spielFenster{display:flex;flex-direction:column;
   border-top:1px solid var(--c-rahmen)}
- /* Das Feld nimmt die Höhe unter dem Kopf des Spielfensters (44 px) ein. */
  body.spiel-offen #spielRahmen{flex:0 0 auto;
   height:calc(100vh - 44px);height:calc(100dvh - 44px)}
  body.spiel-offen #fullscreenBtn{display:none}
- /* Beim Spielen bleibt der Chat kompakt, damit das Feld groß wird. */
- body.spiel-offen #chatbox{display:flex;flex-direction:column;height:34vh;height:34dvh;min-height:150px}
+ body.spiel-offen #chatbox{height:34vh;height:34dvh;min-height:150px}
  body.spiel-offen #chat{flex:1 1 auto;height:auto;min-height:0}
- /* 36 Kacheln sind über 1000 px lang – beim Spielen steht hier nur der Chat. */
  body.spiel-offen #soloListe{display:none}
  body.spiel-offen #soloListe.offen{display:block}
  body.spiel-offen #soloSchalter{display:block}
@@ -644,6 +640,15 @@ body.griff-aktiv iframe{pointer-events:none}
 .ueber-filter{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
 .ueber-chip{font:inherit;font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
 .ueber-chip[aria-pressed="true"]{border-color:var(--c-akzent);color:var(--c-akzent);font-weight:600}
+/* Hauptauswahl (Alle Spiele / Einzelspieler / Mehrspieler); darunter, nur bei
+   Mehrspieler, die zwei Arten als Unterfilter. */
+.ueber-haupt{margin:2px 0 8px}
+.ueber-hauptchip{font-size:13.5px;padding:7px 14px}
+.ueber-unter{margin:0 0 12px;padding-left:6px}
+.ueber-unter::before{content:"Mehrspieler:";align-self:center;font-size:11px;
+ color:var(--c-leise);margin-right:2px}
+.ueber-unterchip{font-size:12px;padding:5px 10px}
+#modusbox .modus-panel{margin-top:0}
 .ueber-such{width:100%;margin:0 0 12px;padding:9px 12px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);font:inherit}
 .ueber-highlights{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:2px 0 12px}
 .ueber-hl{display:flex;flex-direction:column;border-radius:9px;overflow:hidden;border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);color:inherit;text-decoration:none}
@@ -725,12 +730,28 @@ body.griff-aktiv iframe{pointer-events:none}
  .ueber-hl-text b{font-size:10.5px;line-height:1.2}
 }
 
-/* --- Spielzentrale: links Raum, Spieler und Chat; rechts Spiele ---------- */
-.zentrale-geruest{display:block}
+/* --- Spielzentrale: links Gemeinschaft, rechts Spiele ---------------------
+   Echte zwei Spalten: links Kopf, Spieler, Name, Einstellungen und Chat,
+   rechts Spieleübersicht bzw. Spielfeld. Beide Spalten scrollen für sich. */
+.zentrale-geruest{display:flex;flex-direction:column;min-height:100dvh}
+#linkeSpalte{display:flex;flex-direction:column;min-height:0}
+#chatbox[hidden]{display:none}
+.links-kopf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+ gap:4px 10px;padding:10px 12px;border-bottom:1px solid var(--c-rahmen);
+ background:var(--c-flaeche-2)}
+.links-kopf h1{margin:0;font-size:17px;letter-spacing:.12em}
+.links-kopf #verbindung{margin:0;padding:0;border:0;background:none;font-size:11.5px}
+#einstellungen{border-bottom:1px solid var(--c-rahmen)}
+#einstellungen>summary{cursor:pointer;padding:7px 12px;font-size:11.5px;
+ color:var(--c-leise);list-style:none}
+#einstellungen>summary::-webkit-details-marker{display:none}
+#einstellungen>summary::after{content:"▾";float:right;color:var(--c-akzent)}
+#einstellungen[open]>summary::after{content:"▴"}
+.einstellungen-inhalt{display:flex;flex-direction:column;gap:8px;padding:0 12px 10px}
+#zr-partienBlock:has(#zr-partien .empty){display:none}
 #rechteSpalte{padding:0;margin:0;background:none;border:none;border-radius:0}
 /* Der Titel steht links auf der Stilfarbe – im Rosa braucht er die dunkle Schrift. */
 html[data-stil="maedchen"] #linkeSpalte h1{color:#3a0f24}
-.zentrale-geruest>main{display:flex;flex-direction:column;gap:8px}
 #rechtsKopf{display:flex;align-items:center;gap:10px;padding:9px 12px;
  border-top:1px solid var(--c-rahmen);border-bottom:1px solid var(--c-rahmen);
  background:var(--c-flaeche-2)}
@@ -745,56 +766,61 @@ body.spiel-offen #uebersicht{display:none}
 .name-box .name-known{margin-top:4px}
 @media(min-width:1024px){
  html,body{height:100%}
- body{--chat-hoehe:clamp(220px,30vh,300px);height:100vh;max-height:100vh;overflow:hidden;padding:0;margin:0}
+ body{height:100dvh;max-height:100dvh;overflow:hidden;padding:0;margin:0}
  .zentrale-geruest{display:grid;
-  grid-template-columns:clamp(300px,var(--links-breite,32%),46vw) minmax(0,1fr);
-  grid-template-rows:minmax(0,1fr) auto;
-  height:100vh;max-height:100vh;overflow:clip;align-items:stretch;gap:0}
- .zentrale-geruest>main{height:auto;min-height:0}
- #linkeSpalte{max-width:none;width:auto;margin:0;height:auto;min-height:0;overflow-y:auto;
-  padding:10px 12px 12px;gap:5px}
- /* Abstände kommen aus dem Raster, nicht aus den Rändern der Kästen. */
- #linkeSpalte>*{margin-top:0;margin-bottom:0}
- #linkeSpalte h1{font-size:18px;margin:0 0 2px;letter-spacing:.1em;flex:0 0 auto}
- #linkeSpalte section{margin:0;padding:10px 12px;border-radius:9px}
+  grid-template-columns:clamp(30%,var(--links-breite,32%),35%) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  height:100dvh;max-height:100dvh;overflow:hidden;align-items:stretch;gap:0}
+ #linkeSpalte{display:flex;flex-direction:column;height:100%;min-height:0;min-width:0;
+  overflow:hidden;margin:0;padding:0;border-right:1px solid var(--c-rahmen)}
+ .links-kopf{flex:0 0 auto;padding:8px 12px}
+ .links-kopf h1{font-size:15px}
+ /* Spieler kompakt unter dem Kopf. */
+ #linkeSpalte #zentrale{flex:0 1 auto;max-height:30vh;overflow-y:auto;margin:0;
+  padding:8px 12px;border-bottom:1px solid var(--c-rahmen);border-radius:0;background:none}
+ #linkeSpalte #zr-titel,#linkeSpalte #zr-hinweis{display:none}
+ #linkeSpalte #zentrale .multi-titel{margin:2px 0 4px;font-size:10px;letter-spacing:.08em}
+ #linkeSpalte .zr-spieler{max-height:none;margin:0 0 4px;gap:4px}
+ #linkeSpalte .zr-spieler-zeile{padding:4px 8px;border-radius:7px}
+ #linkeSpalte .zr-spieler-zeile b{font-size:13px}
+ #linkeSpalte .zr-spieler-zeile .zr-knopf{padding:4px 8px;font-size:11.5px}
+ #linkeSpalte .zr-partien{max-height:none;margin:0}
+ #linkeSpalte #namePanel{flex:0 0 auto;margin:0;padding:7px 12px;
+  border-bottom:1px solid var(--c-rahmen);border-radius:0}
+ #linkeSpalte #namePanel .multi-titel,#linkeSpalte #namePanel .name-known{display:none}
+ #linkeSpalte #namePanel .line{margin:0;gap:6px}
+ #linkeSpalte #namePanel input{padding:5px 8px;font-size:13px}
+ #linkeSpalte #namePanel button{padding:5px 10px;font-size:13px}
+ #linkeSpalte #einstellungen{flex:0 0 auto}
  #linkeSpalte .stil-zeile{margin:0}
- #linkeSpalte #zentrale{padding:10px 12px}
- #linkeSpalte .zr-spieler{max-height:112px;overflow-y:auto}
- #linkeSpalte .zr-partien{max-height:104px;overflow-y:auto}
- #linkeSpalte #namePanel{padding:8px 12px}
- #linkeSpalte #namePanel .line{margin:4px 0 0}
- #linkeSpalte #namePanel .name-known{margin:4px 0 0}
- #linkeSpalte #namePanel .name-tipp{display:none}
- #linkeSpalte #zentrale{padding:8px 12px}
- #linkeSpalte .multi-titel{margin:8px 0 4px}
- #linkeSpalte .zr-hinweis{margin:0 0 4px}
- /* Der Chat steht ganz unten und geht über die ganze Breite – unter allen
-    Spielelementen. Eine eigene Zeile im Raster, damit die Seite selbst nicht
-    scrollt; der Verlauf scrollt in seinem Kasten. */
- #chatbox{grid-column:1 / -1;grid-row:2;display:flex;flex-direction:column;
-  height:var(--chat-hoehe);min-height:0;padding:8px 12px 10px;margin:0;
-  border:none;border-top:1px solid var(--c-rahmen);border-radius:0;background:var(--c-grund)}
- #chat{flex:1 1 auto;height:auto;min-height:0;border:1px solid var(--c-rahmen-55);border-bottom:none;
-  border-radius:8px 8px 0 0}
- .chat-compose{flex:0 0 auto;border:1px solid var(--c-rahmen-55);border-top:none;border-radius:0 0 8px 8px}
- #rechteSpalte{display:flex;flex-direction:column;height:auto;min-height:0;min-width:0;
-  border-left:1px solid var(--c-rahmen);background:var(--c-grund)}
- #rechtsKopf{min-height:50px;padding:8px 14px;border-top:none;flex:0 0 auto}
- #zurueckUebersicht{font-size:14px;padding:8px 14px}
+ #linkeSpalte #addressbox{margin:0;padding:0;background:none;border:none}
+ /* Chat: füllt den Rest der linken Spalte, die Eingabe bleibt unten. */
+ #chatbox{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
+  margin:0;padding:8px 12px 10px;border:none;background:none}
+ #chat{flex:1 1 auto;height:auto;min-height:0;overflow-y:auto;
+  border:1px solid var(--c-rahmen-55);border-bottom:none;border-radius:8px 8px 0 0}
+ .chat-compose{flex:0 0 auto;position:relative;margin:0;
+  border:1px solid var(--c-rahmen-55);border-top:none;border-radius:0 0 8px 8px}
+ /* Rechte Spalte: Übersicht oder Spielfeld, nie beides. */
+ #rechteSpalte{display:flex;flex-direction:column;height:100%;min-height:0;min-width:0;
+  overflow:hidden;border:none;background:var(--c-grund)}
+ #rechtsKopf{flex:0 0 auto;min-height:48px;padding:8px 16px;border-top:none}
  body.spiel-offen #zurueckUebersicht{display:inline-flex;align-items:center;gap:6px}
- #uebersicht{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 16px 20px}
+ #uebersicht{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 18px 20px}
  #spielFenster{display:none}
- body.spiel-offen #spielFenster{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;height:auto;
+ body.spiel-offen #spielFenster{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
   border:none;border-top:1px solid var(--c-rahmen)}
  body.spiel-offen #spielRahmen{flex:1 1 auto;min-height:0;height:auto}
- body.spiel-offen #spielGriff{display:block;bottom:var(--chat-hoehe)}
+ body.spiel-offen #spielGriff{display:block;top:0;bottom:0;
+  left:clamp(30%,var(--links-breite,32%),35%)}
  body.spiel-offen #fullscreenBtn{display:none}
  .spiel-kopf{border-radius:0}
  .spiel-kopf .name{display:none}
  .solo-pch{display:block;margin:10px 0 0;font-size:13px;color:var(--c-leise)}
  #fullscreenBtn{display:none}
+ #soloSchalter{display:none}
+ #soloListe{display:block}
 }
-
 </style>
 <link rel="stylesheet" href="/spiele/design.css">
 <link rel="stylesheet" href="/spiele/schrift.css">
@@ -802,36 +828,10 @@ body.spiel-offen #uebersicht{display:none}
 <body class="connector-seite">
 <div class="zentrale-geruest">
 <main id="linkeSpalte">
-
-<h1>TRASHYGECKO CONNECTOR</h1>
-
-<div class="stil-zeile">
-  <div data-tg-stil></div>
-  <small>gilt für alle Spiele – deine Wahl, der Raum ändert sie nicht</small>
-</div>
-
-<!-- Adresse und QR-Code nur bei Bedarf aufklappen. -->
-<section id="addressbox">
-<details>
-<summary>QR-Code</summary>
-<div id="qrwrap"><img id="qrcode" alt="QR-Code" hidden></div>
-<div id="addresses">Adressen werden gesucht …</div>
-<button type="button" class="adresse-knopf" onclick="copyAddress()">Adresse kopieren</button>
-</details>
-<details id="weitereBox">
-<summary>Weitere Spielmöglichkeiten</summary>
-<div id="weitereInhalt">
-<div id="weitereZwei"></div>
-<div id="weitereExtras"></div>
-</div>
-</details>
-</section>
-
-<button type="button" id="fullscreenBtn" title="Vollbild ein/aus" aria-label="Vollbild"><span id="fsIcon">⛶</span><span id="fsWord">Vollbild</span></button>
-
-<input id="room" type="hidden">
-<p id="roomstatus" hidden></p>
+<header class="links-kopf">
+<h1>TRASHYGECKO</h1>
 <p id="verbindung" data-zustand="start">Verbindung wird hergestellt</p>
+</header>
 
 <section class="zentrale" id="zentrale" aria-label="Spielzentrale">
 <h3 class="multi-titel" id="zr-titel">Gemeinsamer Spielraum</h3>
@@ -843,8 +843,10 @@ body.spiel-offen #uebersicht{display:none}
 </div>
 <h3 class="multi-titel">Anwesende Spieler</h3>
 <div class="zr-spieler" id="zr-spieler"><p class="empty">Niemand sonst da.</p></div>
+<div class="zr-partien-block" id="zr-partienBlock">
 <h3 class="multi-titel">Laufende Partien</h3>
 <div class="zr-partien" id="zr-partien"><p class="empty">Keine Partie läuft.</p></div>
+</div>
 </section>
 
 <section id="namePanel" class="name-box" aria-label="Dein Name">
@@ -855,51 +857,42 @@ body.spiel-offen #uebersicht{display:none}
 </div>
 <div id="nameKnown" class="name-known">
 <strong id="eigenerName" title="So siehst du für die anderen aus">…</strong>
-      <small class="name-tipp">Neuen Namen tippen, Enter oder „Speichern“ übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
-      </div>
+<small class="name-tipp">Neuen Namen tippen, Enter oder „Speichern“ übernimmt. Feld leeren heißt: der Raum vergibt einen Namen.</small>
+</div>
 </section>
 
-
-</main>
-
-<!-- Rechte Spalte: Spieleübersicht, beim Spielen das Spielfeld. -->
-<section id="rechteSpalte" aria-label="Spiele">
-<div id="rechtsKopf">
- <button type="button" id="zurueckUebersicht">‹ Spieleauswahl</button>
- <span id="rechtsTitel">Spiele</span>
+<details id="einstellungen">
+<summary>Grafikstil, Einladung &amp; Vollbild</summary>
+<div class="einstellungen-inhalt">
+<div class="stil-zeile">
+  <div data-tg-stil></div>
+  <small>gilt für alle Spiele – deine Wahl, der Raum ändert sie nicht</small>
 </div>
-<div id="uebersicht">
-<section id="modusbox" hidden>
-<div class="modus-buttons" role="tablist">
-<button type="button" class="modus-btn" id="modusSolo" data-modus="solo" role="tab" aria-selected="false">Einzelspieler</button>
-<button type="button" class="modus-btn" id="modusMulti" data-modus="multi" role="tab" aria-selected="false">Multiplayer</button>
+<section id="addressbox">
+<details>
+<summary>QR-Code &amp; Einladung</summary>
+<div id="qrwrap"><img id="qrcode" alt="QR-Code" hidden></div>
+<div id="addresses">Adressen werden gesucht …</div>
+<div class="adresse-knoepfe">
+<button type="button" class="adresse-knopf" onclick="copyAddress()">Adresse kopieren</button>
+<button type="button" class="adresse-knopf" id="teilenKnopf" onclick="einladungTeilen()">Einladung teilen</button>
 </div>
-<div id="soloPanel" class="modus-panel" hidden>
-<button type="button" id="soloSchalter" class="solo-schalter" aria-expanded="false">Spiele-Auswahl anzeigen</button>
-<div id="soloListe" class="solo-liste"><p class="empty">Liste wird geladen …</p></div>
-<p class="solo-pch">Alle Spiele nach Kategorie, mit Kennzeichen für Einzelspieler, Online und „zu zweit“ – am PC öffnet sich das Spiel rechts neben dem Chat.</p>
-<p class="solo-hinweis"><a href="/spiele/spiele.html" target="_blank" rel="noopener">Ganze Spiele-Übersicht öffnen</a></p>
+<p id="teilenHinweis" class="adresse-hinweis" hidden></p>
+</details>
+<details id="weitereBox">
+<summary>Weitere Spielmöglichkeiten</summary>
+<div id="weitereInhalt">
+<div id="weitereZwei"></div>
+<div id="weitereExtras"></div>
 </div>
-<div id="multiPanel" class="modus-panel" hidden>
-<div id="gameplayers"></div>
-<h3 class="multi-titel">Spielstatus</h3>
-<div id="game-status" class="empty leer">Noch keine Runde offen.</div>
-</div></section>
-</div>
-<!-- Einzelspieler-Spiel rechts neben dem Chat (nur auf großen Bildschirmen). -->
-<aside id="spielFenster" aria-label="Spiel">
- <div class="spiel-kopf">
-  <span class="name" id="spielName">Spiel</span>
-  <span class="spiel-knoepfe">
-   <button type="button" id="spielVoll" class="spiel-knopf"
-           title="Vollbild" aria-label="Vollbild">⛶</button>
-   <button type="button" id="spielZu" class="spiel-knopf"
-           title="Spiel schließen" aria-label="Spiel schließen">×</button>
-  </span>
- </div>
- <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen" allowfullscreen></iframe>
-</aside>
+</details>
 </section>
+<button type="button" id="fullscreenBtn" title="Vollbild ein/aus" aria-label="Vollbild"><span id="fsIcon">⛶</span><span id="fsWord">Vollbild</span></button>
+<input id="room" type="hidden">
+<p id="roomstatus" hidden></p>
+</div>
+</details>
+
 <section id="chatbox" hidden>
 <div id="muteOverview" class="mute-list-tag" hidden></div>
 <div id="chat"></div>
@@ -953,6 +946,38 @@ body.spiel-offen #uebersicht{display:none}
 <button type="button" id="toneClose" class="tone-close">Abbrechen</button>
 </div>
 </section>
+</main>
+
+
+<!-- Rechte Spalte: Spieleübersicht, beim Spielen das Spielfeld. -->
+<section id="rechteSpalte" aria-label="Spiele">
+<div id="rechtsKopf">
+ <button type="button" id="zurueckUebersicht">‹ Spieleauswahl</button>
+ <span id="rechtsTitel">Spiele</span>
+</div>
+<div id="uebersicht">
+<section id="modusbox" hidden>
+<div id="multiPanel" class="modus-panel">
+<div id="gameplayers"></div>
+<h3 class="multi-titel">Spielstatus</h3>
+<div id="game-status" class="empty leer">Noch keine Runde offen.</div>
+</div></section>
+</div>
+<!-- Einzelspieler-Spiel rechts neben dem Chat (nur auf großen Bildschirmen). -->
+<aside id="spielFenster" aria-label="Spiel">
+ <div class="spiel-kopf">
+  <span class="name" id="spielName">Spiel</span>
+  <span class="spiel-knoepfe">
+   <button type="button" id="spielVoll" class="spiel-knopf"
+           title="Vollbild" aria-label="Vollbild">⛶</button>
+   <button type="button" id="spielZu" class="spiel-knopf"
+           title="Spiel schließen" aria-label="Spiel schließen">×</button>
+  </span>
+ </div>
+ <iframe id="spielRahmen" title="Spiel" allow="autoplay; fullscreen" allowfullscreen></iframe>
+</aside>
+</section>
+
 </div>
 <div id="spielGriff" role="separator" aria-orientation="vertical" tabindex="0"
      aria-label="Breite von Chat und Spiel ziehen" title="Breite ziehen"></div>
@@ -961,255 +986,7 @@ body.spiel-offen #uebersicht{display:none}
 <script src="/spiele/mobil.js"></script>
 <!-- Zentrale Spieleverwaltung: Kategorien, Spielerzahlen, Beschreibungen. -->
 <script src="/spiele/multiplayer-register.js"></script>
-<script>
-/* Spieldaten für die Connector-Übersicht.
-   Wortgleich aus spiele/spiele.html übernommen (Kategorien, Spiele, Texte,
-   Highlights) – dieselben Namen, Pfade und Beschreibungen, damit beide
-   Seiten nicht auseinanderlaufen. Bei Änderungen dort hier nachziehen. */
-window.TGSpieldaten = (function () {
- var KATEGORIEN = [
-    { id: "wuerfel", name: "Würfelspiele", akzent: "#8fd0a8",
-      text: "Kniffel, 10.000, Mäxchen – hier entscheiden die Würfel." },
-    { id: "karten", name: "Kartenspiele", akzent: "#e8cd8e",
-      text: "UNO, Mau Mau, Poker und Solitär – alles mit einem Blatt Karten." },
-    { id: "brett", name: "Brettspiele", akzent: "#7fb7e8",
-      text: "Schach, Mühle, Halma, Risiko – Brett- und Gesellschaftsspiele." },
-    { id: "denk", name: "Denkspiele", akzent: "#b9a0e8",
-      text: "Sudoku, Memory, Mastermind – knobeln, merken und kombinieren." },
-    { id: "arcade", name: "Arcade und Geschicklichkeit", akzent: "#f0a35e",
-      text: "Pac-Man, Tetris, Snake, Flipper – Klassiker und ruhige Finger." },
-    { id: "quiz", name: "Quiz und Partyspiele", akzent: "#ef9e9e",
-      text: "Rateshows und Partyspiele – schnell antworten, gemeinsam lachen." }
-  ];
- var SPIELE = [
-    /* --- Kartenspiele -------------------------------------------------- */
-    ["Arschloch", "kartenspiele/arschloch/arschloch.html", "karten", "lokal online multi"],
-    ["Baccara", "kartenspiele/baccara/baccara.html", "karten", "online multi", "baccarat"],
-    ["Cabo", "kartenspiele/cabo/cabo.html", "karten", "online multi"],
-    ["Mau Mau", "kartenspiele/maumau/maumau.html", "karten", "lokal online multi", "maumau"],
-    ["Poker", "kartenspiele/poker/poker.html", "karten", "online multi", "texas holdem"],
-    ["Sechsundsechzig", "kartenspiele/sechsundsechzig/sechsundsechzig.html", "karten", "online multi", "66"],
-    ["17 und 4", "kartenspiele/siebzehn/siebzehn.html", "karten", "online multi", "blackjack siebzehn"],
-    ["SKYJO", "kartenspiele/skyjo/skyjo.html", "karten", "lokal online multi"],
-    ["Solitär", "kartenspiele/solitaer/solitaer.html", "karten", "solo", "klondike spider freecell pyramid tripeaks patience solitaire"],
-    ["31 Schwimmen", "kartenspiele/schwimmen/schwimmen.html", "karten", "lokal online multi", "einunddreissig knack"],
-    ["UNO", "kartenspiele/uno/uno.html", "karten", "lokal online multi"],
-
-    /* --- Würfelspiele -------------------------------------------------- */
-    ["10.000", "brettspiele/zehntausend/zehntausend.html", "wuerfel", "lokal online multi", "10000 zehntausend"],
-    ["Auf nach Boston", "brettspiele/boston/boston.html", "wuerfel", "lokal online multi", "boston"],
-    ["Chicago", "brettspiele/chicago/chicago.html", "wuerfel", "lokal online multi"],
-    ["Kniffel", "brettspiele/kniffel/kniffel.html", "wuerfel", "solo lokal multi", "yahtzee"],
-    ["Lügen Mäxchen", "brettspiele/maexchen/maexchen.html", "wuerfel", "lokal online multi", "maexchen mäxchen"],
-    ["Pig", "brettspiele/pig/pig.html", "wuerfel", "lokal online multi", "schweinchen"],
-    ["Ship Captain Crew", "brettspiele/shipcrew/shipcrew.html", "wuerfel", "lokal online multi", "schiffe versenken"],
-
-    /* --- Würfelspiel-Sammlung (lokal am selben Gerät) ------------------- */
-    ["Beelzebub", "wuerfelspiele/beelzebub.html", "wuerfel", "solo lokal multi"],
-    ["Der Turm", "wuerfelspiele/der-turm.html", "wuerfel", "lokal multi"],
-    ["Die böse Drei", "wuerfelspiele/boese-drei.html", "wuerfel", "solo lokal multi"],
-    ["Die böse Eins", "wuerfelspiele/boese-eins.html", "wuerfel", "solo lokal multi"],
-    ["Dufte Hundert", "wuerfelspiele/dufte-hundert.html", "wuerfel", "solo lokal multi"],
-    ["Eins bis Sechzehn", "wuerfelspiele/eins-bis-sechzehn.html", "wuerfel", "solo lokal multi"],
-    ["Fenster würfeln", "wuerfelspiele/fenster.html", "wuerfel", "solo lokal multi"],
-    ["Gestrichene Zwölf", "wuerfelspiele/gestrichene-zwoelf.html", "wuerfel", "solo lokal multi"],
-    ["Hin und her", "wuerfelspiele/hin-und-her.html", "wuerfel", "solo lokal multi"],
-    ["Hohe Hausnummer", "wuerfelspiele/hohe-hausnummer.html", "wuerfel", "solo lokal multi"],
-    ["Jule", "wuerfelspiele/jule.html", "wuerfel", "solo lokal multi", "stumme jule"],
-    ["Pärchen", "wuerfelspiele/paerchen.html", "wuerfel", "solo lokal multi"],
-    ["Plus-Minus", "wuerfelspiele/plus-minus.html", "wuerfel", "solo lokal multi"],
-    ["Rentmeister", "wuerfelspiele/rentmeister.html", "wuerfel", "solo lokal multi"],
-    ["Streichhölzer auswürfeln", "wuerfelspiele/streichhoelzer.html", "wuerfel", "lokal multi", "streichhoelzer"],
-    ["Teure Sieben", "wuerfelspiele/teure-sieben.html", "wuerfel", "lokal multi"],
-    ["Unter oder über sieben", "wuerfelspiele/unter-oder-ueber.html", "wuerfel", "solo lokal multi"],
-    ["Würfelpoker", "wuerfelspiele/wuerfelpoker.html", "wuerfel", "solo lokal multi", "poker würfel"],
-
-    /* --- Brettspiele --------------------------------------------------- */
-    ["Backgammon", "brettspiele/backgammon/backgammon.html", "brett", "lokal online multi"],
-    ["Bingo", "brettspiele/bingo/bingo.html", "brett", "lokal online multi"],
-    ["Dame", "brettspiele/dame/dame.html", "brett", "lokal online multi", "checkers"],
-    ["Das verrückte Labyrinth", "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", "brett", "solo lokal multi computer", "gaenge schieben schaetze labyrinth"],
-    ["Domino", "brettspiele/domino/domino.html", "brett", "lokal online multi computer"],
-    ["Gänsespiel", "brettspiele/gaensespiel/gaensespiel.html", "brett", "lokal online multi", "ganzespiel"],
-    ["Go", "brettspiele/go/go.html", "brett", "lokal online multi", "goban baduk"],
-    ["Halma", "brettspiele/halma/halma.html", "brett", "solo lokal online multi computer", "sternhalma sprunghalma"],
-    ["Hold the Line", "brettspiele/hold/holdtheline.html", "brett", "lokal online multi"],
-    ["Käsekästchen", "brettspiele/kaesekaestche/kaesekaestche.html", "brett", "lokal online multi", "punkte verbinden dots boxes"],
-    ["Kalaha", "brettspiele/kalaha/kalaha.html", "brett", "lokal online multi", "mancala"],
-    ["Mahjong", "brettspiele/mahjong/mahjong.html", "brett", "solo", "mahjongg steine"],
-    ["Mensch ärgere dich nicht", "brettspiele/menschaerger/menschaerger.html", "brett", "lokal online multi", "ludo"],
-    ["Mühle", "brettspiele/muehle/muehle.html", "brett", "lokal online multi", "muehle"],
-    ["Reversi", "brettspiele/reversi/reversi.html", "brett", "lokal online multi", "othello"],
-    ["Risiko – Welt erobern", "brettspiele/risiko/risiko.html", "brett", "lokal multi computer", "erobern weltkarte strategie armeen wuerfel"],
-    ["Schach", "brettspiele/schach/schach.html", "brett", "lokal online multi", "chess"],
-    ["Schiffe versenken", "brettspiele/schiffe/schiffe.html", "brett", "online multi", "battleship flotte"],
-    ["Schlangen und Leitern", "brettspiele/schlangen/schlangen.html", "brett", "lokal online multi", "leiterlispiel"],
-    ["Sim", "brettspiele/sim/sim.html", "brett", "lokal online multi", "verbindungslinien"],
-    ["Tic Tac Toe", "brettspiele/tictac/tictactoe.html", "brett", "lokal online multi", "tic-tac-toe drei gewinnt"],
-    ["Vier gewinnt", "brettspiele/viergewinnt/viergewinnt.html", "brett", "lokal online multi", "connect four"],
-
-    /* --- Denkspiele ---------------------------------------------------- */
-    ["1×1-Training", "1x1/1x1.html", "denk", "solo online multi", "einmaleins rechnen mathe"],
-    ["Bejeweled", "bejeweled/bejeweled.html", "denk", "solo highscore", "juwelen match 3"],
-    ["Galgenmännchen", "brettspiele/galgen/galgen.html", "denk", "lokal online multi", "hangman galgen"],
-    ["Lights Out", "lightsout/lightsout.html", "denk", "solo highscore", "lichter"],
-    ["Mastermind", "brettspiele/mastermind/mastermind.html", "denk", "solo highscore", "farbcode"],
-    ["Memory", "brettspiele/memory/memory.html", "denk", "solo highscore", "kartenspiel gedaechtnis"],
-    ["Minensucher", "minesweeper/minesweeper.html", "denk", "solo highscore", "minesweeper"],
-    ["Paare finden", "brettspiele/paare/paare.html", "denk", "lokal online multi", "memory paare"],
-    ["15-Puzzle", "puzzle15/puzzle15.html", "denk", "solo highscore", "schiebepuzzle puzzel"],
-    ["SameGame", "samegame/samegame.html", "denk", "solo highscore", "steine wegklicken"],
-    ["Sokoban", "sokoban/sokoban.html", "denk", "solo highscore", "kisten schieben"],
-    ["Steine-Solitär", "brettspiele/solitaer/solitaer.html", "denk", "solo highscore", "solitär solitaire peg steine"],
-    ["21 Streichhölzer", "brettspiele/streichholzspiel/streichholzspiel.html", "denk", "lokal online multi", "streichhoelzer nim"],
-    ["Sudoku", "sudoku/sudoku.html", "denk", "solo highscore"],
-    ["Wortsuche", "brettspiele/wortsuche/wortsuche.html", "denk", "lokal online multi", "wortsalat buchstaben"],
-
-    /* --- Quiz und Partyspiele ------------------------------------------ */
-    ["Scherzshow", "quizshow/quizshow.html", "quiz", "online multi", "quiz scherzfragen witze rate show"],
-
-    /* --- Arcade und Geschicklichkeit ----------------------------------- */
-    ["Acia", "acia/acia.html", "arcade", "solo lokal", "farben bloecke leveleditor"],
-    ["Arkanoid", "arkanoid/arkanoid.html", "arcade", "solo highscore", "breakout schlaeger"],
-    ["Bubble Shooter", "bubbleshooter/bubbleshooter.html", "arcade", "solo lokal online multi highscore", "blasen"],
-    ["Flappy Bird", "flappybird/flappybird.html", "arcade", "solo highscore", "flappy"],
-    ["Frogger", "frogger/frogger.html", "arcade", "solo highscore", "frosch"],
-    ["Gold Miner", "goldminer/goldminer.html", "arcade", "solo", "goldgraeber haken"],
-    ["Pac-Man", "pacman/pacman.html", "arcade", "solo highscore", "pacman geister"],
-    ["Pong", "pong/pong.html", "arcade", "solo lokal online multi computer highscore"],
-    ["Snake", "snake/snake.html", "arcade", "solo online multi highscore", "nokia schlange"],
-    ["Space Invaders", "invaders/invaders.html", "arcade", "solo highscore", "invaders alien"],
-    ["Super Pimmelchen", "pimmel/spimmel.html", "arcade", "solo highscore", "spimmel retro"],
-    ["Tetris", "tetris/tetris.html", "arcade", "solo online multi", "kloetze steine"],
-    ["Tron", "tron/tron.html", "arcade", "lokal online multi", "lichtrennen lightcycle"],
-    ["Voigt Zone", "zone/voigtzone.html", "arcade", "solo", "qix flaechen"],
-    ["Bomberman", "bomberman/bomberman.html", "arcade", "lokal online multi", "bombe"],
-    ["Flipper", "flipper/flipper.html", "arcade", "solo highscore", "pinball"],
-    ["Labyrinth Plus!", "brettspiele/labyrinth/labyrinth.html", "arcade", "solo highscore", "kugel kippen"],
-    ["Tower Bloxx", "towerbloxx/towerbloxx.html", "arcade", "solo highscore", "turm stapeln"],
-    ["Doodle Jump", "doodlejump/doodlejump.html", "arcade", "solo highscore", "springen plattformen"],
-    ["Durst", "durst/durst.html", "arcade", "solo", "bier level abenteuer"]
-  ];
- var TEXTE = {
-    "kartenspiele/arschloch/arschloch.html": "Karten abwerfen und am Ende die Plätze tauschen.",
-    "kartenspiele/baccara/baccara.html": "Auf Spieler oder Bank setzen – näher an neun gewinnt.",
-    "kartenspiele/cabo/cabo.html": "Vier verdeckte Karten tauschen und möglichst niedrig bleiben.",
-    "kartenspiele/maumau/maumau.html": "Farbe oder Zahl bedienen, sieben ziehen, Mau sagen.",
-    "kartenspiele/poker/poker.html": "Texas Hold'em mit Blinds, Einsatzrunden und Showdown.",
-    "kartenspiele/sechsundsechzig/sechsundsechzig.html": "24 Karten, Stiche sammeln und 66 Punkte erreichen.",
-    "kartenspiele/siebzehn/siebzehn.html": "Gegen die Bank auf 21 kommen, ohne zu überkaufen.",
-    "kartenspiele/skyjo/skyjo.html": "Karten aufdecken und tauschen – die niedrigste Summe gewinnt.",
-    "kartenspiele/solitaer/solitaer.html": "Klondike, Spider und mehr – Kartenlegen in Ruhe.",
-    "kartenspiele/schwimmen/schwimmen.html": "Drei Karten tauschen und klopfen – wer am nächsten an 31 ist.",
-    "kartenspiele/uno/uno.html": "Farben wechseln, aussetzen und mit +2 und +4 ärgern.",
-
-    "brettspiele/zehntausend/zehntausend.html": "Sechs Würfel, Punkte sichern – wer zuerst 10.000 hat.",
-    "brettspiele/boston/boston.html": "Würfelrunde mit Ansagen, auch die Würfe der anderen zählen.",
-    "brettspiele/chicago/chicago.html": "Filze, Würfe und der beste Wurf der Runde.",
-    "brettspiele/kniffel/kniffel.html": "Fünf Würfel, drei Würfe, 13 Kategorien.",
-    "brettspiele/maexchen/maexchen.html": "Zwei verdeckte Würfel, Ansage und Zweifel.",
-    "brettspiele/pig/pig.html": "Würfeln und sammeln – aber vor der Eins aufhören.",
-    "brettspiele/shipcrew/shipcrew.html": "Schiff, Kapitän, Crew – dann 500 Punkte sammeln.",
-    "wuerfelspiele/beelzebub.html": "Drei Würfel zählen plus, ein roter zählt minus.",
-    "wuerfelspiele/der-turm.html": "Eigene Stichzahl treffen und Steine aus dem Turm holen.",
-    "wuerfelspiele/boese-drei.html": "So oft würfeln wie du willst – eine Drei löscht den Zug.",
-    "wuerfelspiele/boese-eins.html": "Fünf Würfe werden addiert – eine Eins stoppt sofort.",
-    "wuerfelspiele/dufte-hundert.html": "Pasch wird multipliziert, sonst addiert – Ziel 100.",
-    "wuerfelspiele/eins-bis-sechzehn.html": "Die Zahlen 1 bis 16 aus drei Würfeln bilden.",
-    "wuerfelspiele/fenster.html": "Nur Zweien zählen – eine 1, zwei 4, drei 9.",
-    "wuerfelspiele/gestrichene-zwoelf.html": "Summen von 2 bis 12 würfeln und streichen.",
-    "wuerfelspiele/hin-und-her.html": "Jede Zahl umschalten – alle sechs gleichzeitig streichen.",
-    "wuerfelspiele/hohe-hausnummer.html": "Drei Würfe auf Hunderter, Zehner und Einer verteilen.",
-    "wuerfelspiele/jule.html": "Die Treppe 1 bis 6 hoch und zurück würfeln.",
-    "wuerfelspiele/paerchen.html": "Vier Würfel, zwei zählen plus, zwei minus.",
-    "wuerfelspiele/plus-minus.html": "Neun Würfe im Muster plus, plus, minus.",
-    "wuerfelspiele/rentmeister.html": "Sechs feste Zahlen, jede mal einem gewählten Würfel.",
-    "wuerfelspiele/streichhoelzer.html": "Einsen nach links, Sechsen in die Mitte – Hölzer räumen.",
-    "wuerfelspiele/teure-sieben.html": "2–6 und 8–12 streichen, die Sieben zählt doppelt.",
-    "wuerfelspiele/unter-oder-ueber.html": "Vor dem Wurf ansagen – richtig bringt Punkte.",
-    "wuerfelspiele/wuerfelpoker.html": "Fünf Würfel, zwei Nachwürfe, volle Pokerwertung.",
-
-    "brettspiele/backgammon/backgammon.html": "24 Punkte, Würfel und der eigene Heimbereich.",
-    "brettspiele/bingo/bingo.html": "Zahlen ziehen und Reihen auf der eigenen Karte abhaken.",
-    "brettspiele/dame/dame.html": "Mit Schlagzwang – wer keine Figur mehr hat, verliert.",
-    "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html": "Gänge verschieben und Gegenstände einsammeln.",
-    "brettspiele/domino/domino.html": "Passende Steine anlegen, sonst nachziehen.",
-    "brettspiele/gaensespiel/gaensespiel.html": "Das Rennen ums Brett mit seinen Glücksfeldern.",
-    "brettspiele/go/go.html": "Auf 9×9 Gebiet gewinnen und Steine schlagen.",
-    "brettspiele/halma/halma.html": "Figuren ins gegenüberliegende Haus bringen.",
-    "brettspiele/hold/holdtheline.html": "Die eigene Linie gegen den Gegner halten.",
-    "brettspiele/kaesekaestche/kaesekaestche.html": "Linien ziehen und Kästchen schließen.",
-    "brettspiele/kalaha/kalaha.html": "Steine verteilen und im eigenen Kasten sammeln.",
-    "brettspiele/mahjong/mahjong.html": "Steinpaare finden und das Brett abräumen.",
-    "brettspiele/menschaerger/menschaerger.html": "Würfeln, rauswerfen und als Erster im Ziel.",
-    "brettspiele/muehle/muehle.html": "Setzen, ziehen, Mühlen schließen und Steine abräumen.",
-    "brettspiele/reversi/reversi.html": "Steine einschließen und umdrehen – Mehrheit gewinnt.",
-    "brettspiele/risiko/risiko.html": "Armeen, Würfel und Missionen – die Welt erobern.",
-    "brettspiele/schach/schach.html": "Alle Regeln, matt oder Aufgabe.",
-    "brettspiele/schiffe/schiffe.html": "Flotten setzen und die des Gegners treffen.",
-    "brettspiele/schlangen/schlangen.html": "Würfeln, klettern und wieder zurückfallen.",
-    "brettspiele/sim/sim.html": "Linien setzen – wer das letzte Dreieck schließt, verliert.",
-    "brettspiele/tictac/tictactoe.html": "Drei gewinnt auf dem Neon-Brett.",
-    "brettspiele/viergewinnt/viergewinnt.html": "Steine fallen lassen und vier in eine Reihe bringen.",
-
-    "1x1/1x1.html": "Einmaleins üben – gegen die Zeit oder andere.",
-    "bejeweled/bejeweled.html": "Juwelen tauschen und Reihen sprengen.",
-    "brettspiele/galgen/galgen.html": "Buchstaben raten, bevor das Männchen fertig ist.",
-    "lightsout/lightsout.html": "Lichter ausschalten – jeder Klick kippt die Nachbarn.",
-    "brettspiele/mastermind/mastermind.html": "Den Farbcode in möglichst wenigen Versuchen knacken.",
-    "brettspiele/memory/memory.html": "Kartenpaare finden und im Kopf behalten.",
-    "minesweeper/minesweeper.html": "Minen markieren, ohne auf eine zu treten.",
-    "brettspiele/paare/paare.html": "Dasselbe Brett lösen – wer ist schneller?",
-    "puzzle15/puzzle15.html": "Steine schieben, bis die Zahlen stimmen.",
-    "samegame/samegame.html": "Gleichfarbige Blöcke wegklicken, bis nichts mehr bleibt.",
-    "sokoban/sokoban.html": "Kisten in die richtigen Ecken schieben.",
-    "brettspiele/solitaer/solitaer.html": "Steine überspringen, bis nur einer übrig bleibt.",
-    "brettspiele/streichholzspiel/streichholzspiel.html": "Reihum ein bis drei nehmen – wer das letzte nimmt, verliert.",
-    "sudoku/sudoku.html": "Zahlen 1 bis 9 in jede Reihe, Spalte und Box.",
-    "brettspiele/wortsuche/wortsuche.html": "Wörter im Buchstabengitter finden.",
-
-    "quizshow/quizshow.html": "Vier Antworten, schnelle Finger – Wissen ist nicht gefragt.",
-
-    "acia/acia.html": "Farbblöcke verbinden und eigene Level bauen.",
-    "arkanoid/arkanoid.html": "Mit dem Schläger den Ball halten und Steine abbrechen.",
-    "bubbleshooter/bubbleshooter.html": "Blasen schießen und gleiche Farben sprengen.",
-    "flappybird/flappybird.html": "Durch die Lücken flattern, so weit es geht.",
-    "frogger/frogger.html": "Über Straße und Fluss nach Hause.",
-    "goldminer/goldminer.html": "Mit dem Haken Gold und Schätze hochziehen.",
-    "pacman/pacman.html": "Punkte fressen und den Geistern entkommen.",
-    "pong/pong.html": "Schläger unten und oben – der Ball wird schneller.",
-    "snake/snake.html": "Fressen, wachsen und nicht in die eigene Spur fahren.",
-    "invaders/invaders.html": "Reihen von Aliens abschießen und Deckung nutzen.",
-    "pimmel/spimmel.html": "Retro-Hüpfer mit eigenen Leveln.",
-    "tetris/tetris.html": "Reihen füllen, bevor der Stapel oben ankommt.",
-    "tron/tron.html": "Lichtspuren ziehen – wer anstößt, verliert.",
-    "zone/voigtzone.html": "Flächen abgrenzen und Gegner aussperren.",
-    "bomberman/bomberman.html": "Bomben legen und den Gegner in die Flammen locken.",
-    "flipper/flipper.html": "Die Kugel mit den Flippern oben halten.",
-    "brettspiele/labyrinth/labyrinth.html": "Kugel durchs Labyrinth kippen und Ziele treffen.",
-    "towerbloxx/towerbloxx.html": "Stockwerke stapeln, bis der Turm wächst.",
-    "doodlejump/doodlejump.html": "Plattform für Plattform nach oben springen.",
-    "durst/durst.html": "Level-Abenteuer – Flaschen sammeln und weiterkommen."
-  };
- var HIGHLIGHTS = [
-    { pfad: "brettspiele/menschaerger/menschaerger.html", bild: "",
-      text: "Würfeln, rauswerfen und als Erster im Ziel." },
-    { pfad: "brettspiele/mahjong/mahjong.html", bild: "bilder/highlights/mahjong.jpg",
-      text: "Steine paaren, Schichten freilegen – ruhiges Denkspiel mit 144 Steinen." },
-    { pfad: "brettspiele/zehntausend/zehntausend.html", bild: "bilder/highlights/zehntausend.jpg",
-      text: "Sechs Würfel, sichere Punkte, ein Tisch für zwei bis sechs – auch online." },
-    { pfad: "brettspiele/risiko/risiko.html", bild: "bilder/highlights/risiko.jpg",
-      text: "Weltkarte, Armeen, Würfel – Eroberung für zwei bis sechs Spieler." },
-    { pfad: "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", bild: "bilder/highlights/labyrinth.jpg",
-      text: "Gänge schieben, Schätze einsammeln – das Brett verändert sich mit jedem Zug." },
-    /* Flipper steht bewusst nicht mehr hier – die Qualität reicht für eine
-       Empfehlung nicht. Er bleibt in der Kategorie „Arcade“ erhalten. */
-    { pfad: "quizshow/quizshow.html", bild: "bilder/highlights/quizshow.jpg",
-      text: "Scherzshow mit Moderator: Fragen, Antworten, Punkte – auch mit Freunden." }
-  ];
- return { kategorien: KATEGORIEN, spiele: SPIELE, texte: TEXTE, highlights: HIGHLIGHTS };
-})();
-</script>
+<script src="/spiele/spieldaten.js"></script>
 <script>
 // Harte Obergrenze für jeden API-Ruf. Ohne sie kann ein einziger hängender
 // Request die Seite dauerhaft blockieren: refresh() setzt chatBusy und würde
@@ -1309,11 +1086,10 @@ nameField.addEventListener("input",()=>{
 });
 zeigeNamen(!!nameField.value.trim());
 
-// Drei Ansichten über dem Chat: Einzelspieler, Multiplayer, Namen ändern.
+// Eine einzige Spieleliste rechts; die Filter oben sind die Navigation.
 let modus="multi", modusDavor="multi";
 function setModus(neu, mitFokus){
- // Der eigene Name steht links in der Spielzentrale und ist immer da – die
- // Reiter rechts schalten nur noch zwischen Einzelspieler und Multiplayer.
+ // „name“ holt nur das Namensfeld links in den Blick.
  if(neu==="name"){
   zeigeNamen(false);
   // Nach dem Klick auf den eigenen Namen im Chat gibt der Browser dem Knopf
@@ -1321,21 +1097,14 @@ function setModus(neu, mitFokus){
   if(mitFokus!==false)setTimeout(()=>{ nameField.focus(); nameField.select(); },0);
   return;
  }
- if(neu!=="solo"&&neu!=="multi")neu="multi";
- modusDavor=neu;
- modus=neu;
- try{ sessionStorage.setItem("tg-modus",neu); }catch(e){}
- document.querySelectorAll("#modusbox .modus-btn").forEach(btn=>{
-  btn.setAttribute("aria-selected",btn.dataset.modus===neu?"true":"false");
- });
- document.getElementById("soloPanel").hidden=neu!=="solo";
- document.getElementById("multiPanel").hidden=neu!=="multi";
- if(neu==="solo")ladeAlleinSpiele();
- if(neu==="multi"&&currentPlayersList.length)renderGamePicker(currentPlayersList);
+ // Es gibt keine Reiter mehr: die Liste ist immer dieselbe.
+ modus="multi";
+ modusDavor="multi";
+ try{ sessionStorage.setItem("tg-modus","multi"); }catch(e){}
+ const multiPanel=document.getElementById("multiPanel");
+ if(multiPanel)multiPanel.hidden=false;
+ if(currentPlayersList.length)renderGamePicker(currentPlayersList);
 }
-document.querySelectorAll("#modusbox .modus-btn").forEach(btn=>{
- btn.onclick=()=>setModus(btn.dataset.modus);
-});
 
 // Vollbild an/aus. Die Seite bleibt im Vollbild scrollbar, Zoomen (Strg + +/-)
 // funktioniert weiter, weil weder Tasten noch Gesten abgefangen werden.
@@ -1467,6 +1236,45 @@ async function copyAddress(){
  }
 }
 
+// Einladung per WhatsApp & Co.: Link mit Raumcode teilen. Auf dem Handy öffnet
+// navigator.share das Systemblatt (WhatsApp, Signal, Mail …); wo das fehlt
+// (Desktop-Browser), wird der Link kopiert. Den Code muss niemand abtippen.
+let teilenHinweisUhr=0;
+function teilenHinweis(text){
+ const p=document.getElementById("teilenHinweis");
+ if(!p)return;
+ p.textContent=text;
+ p.hidden=false;
+ clearTimeout(teilenHinweisUhr);
+ teilenHinweisUhr=setTimeout(function(){ p.hidden=true; },4000);
+}
+
+async function einladungTeilen(){
+ if(!activeRoom){
+  teilenHinweis("Der Raum öffnet noch – gleich noch einmal tippen.");
+  return;
+ }
+ // Die Adresse aus /api/status ist die, die ein anderes Gerät wirklich erreicht
+ // (WLAN-IP bzw. öffentliche Adresse) – localhost wäre eine Attrappe.
+ const basis=(typeof address==="string"&&address&&!istNurLokal(address))?address:zentraleAdresse();
+ const adresse=basis+(basis.indexOf("?")>=0?"&":"?")+"room="+encodeURIComponent(activeRoom);
+ const text="TrashyGecko – spiel mit mir! Raum "+activeRoom;
+ if(navigator.share){
+  try{
+   await navigator.share({title:"TrashyGecko", text:text, url:adresse});
+   return;
+  }catch(e){
+   if(e&&e.name==="AbortError")return;   // abgebrochen: nichts weiter tun
+  }
+ }
+ try{
+  await navigator.clipboard.writeText(text+"\n"+adresse);
+  teilenHinweis("Link kopiert – jetzt in WhatsApp einfügen.");
+ }catch(e){
+  prompt("Einladungslink:",adresse);
+ }
+}
+
 /* Es gibt genau einen Raum: einmal betreten, drin bleiben. */
 // Namen übernehmen: der Server trägt ihn sofort ein und schreibt die
 // Chatzeile "alter Name: heißt jetzt neuer Name." Ist das Feld leer,
@@ -1541,7 +1349,14 @@ async function joinSingleRoom(){
 function scrollZuDenSpielen(){
  const box=document.getElementById("modusbox");
  if(!box||box.hidden)return;
- setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),60);
+ setTimeout(()=>{
+  // Der Kopf der Spiele-Spalte klebt am oberen Rand; ohne Abstand verschwinden
+  // die Reiter "Einzelspieler/Multiplayer" halb darunter.
+  const kopf=document.getElementById("rechtsKopf");
+  const klebt=kopf&&getComputedStyle(kopf).position==="sticky";
+  box.style.scrollMarginTop=(klebt?kopf.getBoundingClientRect().height+8:0)+"px";
+  box.scrollIntoView({behavior:"smooth",block:"start"});
+ },60);
 }
 
 function presenceRufen(code, neu){
@@ -2299,7 +2114,7 @@ function statusAnzeigen(meldung){
  statusGezeichnet=kennung;
  const box=document.getElementById("game-status");
  box.classList.toggle("leer", !!meldung.leer);  // sonst steht etwas Echtes da
- box.textContent=meldung.text;
+ box.textContent=meldung.text||(meldung.leer?"Noch keine Runde offen.":"");
  if(meldung.hinweis){
   const zeile=document.createElement("span");
   zeile.className="angebot-ende";
@@ -4464,9 +4279,9 @@ function spielWahlZeichnen(wrap){
 
 
 // ---------------------------------------------------------------- Übersicht
-// Eine Karte je Spiel. Die Daten stehen wortgleich in TGSpieldaten (aus
-// spiele/spiele.html); die Merkmale kommen aus der Homepage, „online“ zusätzlich
-// aus der Spieleverwaltung des Connectors. Jedes Spiel erscheint genau einmal,
+// Eine Karte je Spiel. Namen, Texte und Merkmale stehen in /spiele/spieldaten.js
+// (dieselbe Datei wie in der Spielhalle); „online“ kommt aus der
+// Spieleverwaltung des Connectors. Jedes Spiel erscheint genau einmal,
 // die Spielarten stehen als Kennzeichen an der Karte.
 let ueberSuche = "";
 
@@ -4476,14 +4291,12 @@ function spielEintraege() {
     const pfad = z[1];
     const on = SUPPORTED_GAMES.find(function (g) { return g.path === "/spiele/" + pfad; }) || null;
     let merk = String(z[3] || "").split(/\s+/).filter(Boolean);
-    if (on && merk.indexOf("online") < 0) merk.push("online");
-    if (on && merk.indexOf("multi") < 0) merk.push("multi");
-    const zwei = merk.indexOf("lokal") >= 0 && merk.indexOf("multi") >= 0;
     return {
       name: z[0], pfad: pfad, kat: z[2], merk: merk,
       text: texte[pfad] || "", online: on,
       bot: on && BOTS_SPIELE[on.id] ? on.id : "",
-      zwei: zwei
+      solo: merk.indexOf("solo") >= 0,
+      zwei: merk.indexOf("zwei") >= 0
     };
   });
   // Spiele, die nur die Connector-Verwaltung kennt (etwa „Malen“, dessen Fläche
@@ -4491,15 +4304,16 @@ function spielEintraege() {
   SUPPORTED_GAMES.forEach(function (g) {
     if (liste.some(function (e) { return "/spiele/" + e.pfad === g.path; })) return;
     liste.push({
-      name: g.name, pfad: g.path.replace(/^\/spiele\//, ""), kat: "", merk: ["online", "multi"],
-      text: g.text || "", online: g, bot: "", zwei: false
+      name: g.name, pfad: g.path.replace(/^\/spiele\//, ""), kat: "", merk: [],
+      text: g.text || "", online: g, bot: "", solo: false, zwei: false
     });
   });
   return liste;
 }
 
 function ueberPasst(e, filter, suche) {
-  if (filter === "solo" && e.merk.indexOf("solo") < 0) return false;
+  if (filter === "solo" && !e.solo) return false;
+  if (filter === "multi" && !e.online && !e.zwei) return false;
   if (filter === "online" && !e.online) return false;
   if (filter === "zweit" && !e.zwei) return false;
   if (!suche) return true;
@@ -4537,7 +4351,7 @@ function ueberKarte(e, akzent, basis) {
   tags.className = "u-tags";
   // Nur was kein Knopf schon sagt: Online und Computer zeigen die Aktionen
   // unten, und die Reiter oben filtern danach. Das haelt die Karte ruhig.
-  [["solo", e.merk.indexOf("solo") >= 0, "Einzelspieler", "Für eine Person"],
+  [["solo", e.solo, "Einzelspieler", "Für eine Person"],
    ["zwei", e.zwei, "Zu zweit", "Zwei Personen an einem Gerät"]].forEach(function (m) {
     if (!m[1]) return;
     const tag = document.createElement("span");
@@ -4620,6 +4434,7 @@ function spielAnbieten(id) {
 // gemerkt, damit Suche, Filter oder ein Spielerwechsel sie nicht zurücksetzt.
 // Kein Bereich öffnet oder schließt einen anderen.
 const offeneBereiche = new Set();
+let bereicheStartOffen = false;
 function ueberBereich(name, key, liste, akzent, basis) {
   const bereich = document.createElement("details");
   bereich.className = "ueber-bereich";
@@ -4642,9 +4457,11 @@ function ueberBereich(name, key, liste, akzent, basis) {
   gitter.className = "ueber-gitter";
   liste.forEach(function (e) { gitter.appendChild(ueberKarte(e, akzent, basis)); });
   bereich.append(kopf, gitter);
-  if (ueberSuche || offeneBereiche.has(vollerKey)) {
+  // Beim ersten Zeichnen stehen alle Kategorien offen: viele Spiele auf einmal.
+  if (ueberSuche || bereicheStartOffen || offeneBereiche.has(vollerKey)) {
     bereich.open = true;
     if (ueberSuche) bereich.dataset.auto = "1";
+    else offeneBereiche.add(vollerKey);
   }
   bereich.addEventListener("toggle", function () {
     // Aufklappen wegen einer Suche wird nicht als eigene Wahl gemerkt.
@@ -4672,15 +4489,20 @@ function uebersichtZeichnen(ziel, filter) {
   const box = document.createElement("div");
   box.className = "ueber";
 
-  // Filter: die drei Spielarten aus dem Auftrag plus „Alle“.
+  // Drei Hauptauswahlen: alle Spiele, Einzelspieler, Mehrspieler. Die zwei
+  // Mehrspieler-Arten stehen als Unterfilter darunter, nicht als eigene
+  // Hauptnavigation.
   const leiste = document.createElement("div");
-  leiste.className = "ueber-filter";
-  [["alle", "Alle"], ["solo", "Einzelspieler"], ["online", "Online-Mehrspieler"], ["zweit", "Zu zweit am Gerät"]].forEach(function (f) {
+  leiste.className = "ueber-filter ueber-haupt";
+  [["alle", "Alle Spiele"], ["solo", "Einzelspieler"], ["multi", "Mehrspieler"]].forEach(function (f) {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "ueber-chip";
+    b.className = "ueber-chip ueber-hauptchip";
     b.textContent = f[1];
-    b.setAttribute("aria-pressed", f[0] === aktiv ? "true" : "false");
+    const dran = f[0] === "multi"
+      ? (aktiv === "multi" || aktiv === "online" || aktiv === "zweit")
+      : aktiv === f[0];
+    b.setAttribute("aria-pressed", dran ? "true" : "false");
     b.onclick = function () {
       ziel.dataset.filter = f[0];
       ziel.dataset.sig = "";
@@ -4689,6 +4511,24 @@ function uebersichtZeichnen(ziel, filter) {
     leiste.appendChild(b);
   });
   box.appendChild(leiste);
+  if (aktiv === "multi" || aktiv === "online" || aktiv === "zweit") {
+    const unter = document.createElement("div");
+    unter.className = "ueber-filter ueber-unter";
+    [["online", "Online-Mehrspieler"], ["zweit", "Zu zweit am Gerät"]].forEach(function (f) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ueber-chip ueber-unterchip";
+      b.textContent = f[1];
+      b.setAttribute("aria-pressed", aktiv === f[0] ? "true" : "false");
+      b.onclick = function () {
+        ziel.dataset.filter = f[0];
+        ziel.dataset.sig = "";
+        uebersichtZeichnen(ziel, f[0]);
+      };
+      unter.appendChild(b);
+    });
+    box.appendChild(unter);
+  }
 
   const suche = document.createElement("input");
   suche.type = "search";
@@ -4741,6 +4581,8 @@ function uebersichtZeichnen(ziel, filter) {
     }
   }
 
+  // Am PC stehen alle Kategorien offen; am Handy bleiben sie zugeklappt.
+  bereicheStartOffen = offeneBereiche.size === 0 && window.innerWidth >= 1024;
   const kats = (TGSpieldaten && TGSpieldaten.kategorien) || [];
   let gezeigt = 0;
   kats.forEach(function (k) {
@@ -6509,11 +6351,12 @@ if(window.TGMobil)TGMobil.einrichten({
 const soloSchalter=document.getElementById("soloSchalter");
 const soloListe=document.getElementById("soloListe");
 function soloAuswahl(offen){
+ if(!soloListe||!soloSchalter)return;
  soloListe.classList.toggle("offen",offen);
  soloSchalter.setAttribute("aria-expanded",String(offen));
  soloSchalter.textContent=offen?"Spiele-Auswahl ausblenden":"Spiele-Auswahl anzeigen";
 }
-soloSchalter.addEventListener("click",()=>soloAuswahl(!soloListe.classList.contains("offen")));
+if(soloSchalter)soloSchalter.addEventListener("click",()=>soloAuswahl(!soloListe.classList.contains("offen")));
 setInterval(()=>{ if(imVordergrund()) refresh(); },1000);
 setInterval(()=>{ if(imVordergrund()) refreshPlayers(); },3000);
 setInterval(()=>{ if(imVordergrund()) ladeEinladungen(); },3000);

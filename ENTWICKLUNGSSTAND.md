@@ -5,6 +5,390 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 24.11.2026 · Schritt 2: Alte Zahlen und Bauskripte bereinigt
+
+- **Spielzahlen:** Die App-Kachel in `spiele.html` sagte „91 Spiele offline“ →
+  **94**. Der App-Start (`start/app.html`) sagte „65 Spiele mit mehreren“ →
+  **71** (Online-Spiele; 72 ist die Vereinigung mit den lokalen
+  Zwei-Personen-Spielen). `spiele/android/README.md` nannte zweimal 91 →
+  **94**. `ANDROID-ARCHITEKTUR.md`: 91 → 94, 9 → **6 Kategorien** (so viele
+  stehen in `spieldaten.js` und `katalog.json`). `ENTSCHEIDUNGEN.md`: 91 → 94,
+  Stand 24.11.2026 mit 6 Kategorien; der alte Widerspruch bleibt als Hinweis
+  („früher stand dort 91, im Katalog 94“) erhalten.
+- **Alte Bauskripte aus dem App-Paket:** `gewonnen_js_bauen.py` und
+  `lob_js_bauen.py` lagen als Kopien unter
+  `assets/www/spiele/` und damit im APK. Entfernt; `homepageKopieren`
+  schließt jetzt `**/*.py`, `**/*.sh` und `**/*.ps1` aus. Die Quellwerkzeuge
+  unter `spiele/` bleiben (sie bauen `gewonnen.js`/`lob.js` aus den lokalen
+  Textdateien).
+- **Keine eingebettete Spieleliste mehr:** `KATEGORIEN`, `SPIELE`, `TEXTE`
+  und `HIGHLIGHTS` werden nur noch in `spiele/spieldaten.js` definiert.
+  `spiele.html` und beide `connector.html` laden die Datei je einmal
+  (`<script src…spieldaten.js>`), enthalten keine Pfad-Zeilen der alten Liste
+  (0 Treffer) und keine Inline-Definition. Gemessen im laufenden Connector:
+  Halle **94 Karten**, Connector **95 Karten**, je **1** Daten-Skript,
+  **0** Inline-Listen, **0** Seitenfehler.
+- **Noch nicht neu gebaut:** Das vorhandene APK (17 / 1.16) enthält die zwei
+  `.py`-Kopien und die alte Cabo-Zuordnung weiterhin; beides verschwindet
+  erst mit dem Neubau in Schritt 4. Nichts veröffentlicht, nichts gepusht.
+
+---
+## 24.11.2026 · Spielzuordnung abgeschlossen: Cabo ist Einzelspieler
+
+**Prüfung (alle 94 Spiele der Halle):**
+- **Online (71):** Register-Eintrag, Seitenaufruf des eigenen Endpunkts (direkt oder über
+  das jeweilige Modul, z. B. `wuerfelspiele/online.js`, `halma/js/main.js`,
+  `risiko-fern.js`, `paare` über `API+"/paare"`), Route als `mux.HandleFunc` in
+  `connector/server.go`; `go test -run Register` grün. Kein Spiel außerhalb des
+  Registers ruft einen Spiel-Endpunkt auf.
+- **Lokal (55):** 54 Spiele mit ausdrücklichem Zwei-Personen-Modus (Spielerzahl 2,
+  „2 Spieler“, „Lokal 2–4“, geteilte Steuerung/abwechselnde Seiten); Arschloch lokal
+  3–9 (Optionen 3…9), also lokal, aber nicht zu zweit.
+- **Einzelspieler (56):** Solo-Modus, „1 Spieler“ oder Gegner-KI.
+
+**Korrektur:** `Cabo` hat einen eigenen Knopf **„Gegen Computer“** (`#btnSolo` →
+`tu("solo")`, Schwierigkeit Leicht/Mittel/Schwer) und war fälschlich ohne
+Einzelspieler geführt. In `spieldaten.js` jetzt `solo`. Damit: **56 Einzelspieler**,
+55 lokal, 54 zu zweit, 71 online, Mehrspieler 72. Gemessen: Connector 95/56/72/71/54,
+Halle Solo 56, Cabo in beiden „Solo“+„Online“.
+
+**Arschloch und Acia – kein Widerspruch, zwei verschiedene Fragen:**
+- Arschloch: lokal 3–9 → „Lokal“ ja, „Zu zweit“ nein.
+- Acia: 1 oder 2 Spieler → „Lokal“ ja, „Zu zweit“ ja.
+- Die Halle kennzeichnet „Lokal“ (Mehrspieler am Gerät, beliebige Zahl), der Connector
+  filtert „Zu zweit“ (genau zwei). In der App müssen beide Kennzeichen nebeneinander
+  stehen: Acia „Lokal“ **und** „Zu zweit“, Arschloch nur „Lokal“ (plus Online).
+
+**Nicht angefasst:** Versionsnummer (weiter 17 / 1.16), APK und App-Assets – die werden
+erst beim abschließenden Neubau erzeugt und enthalten deshalb noch Cabo ohne
+Einzelspieler. Nichts veröffentlicht, nichts gepusht.
+
+---
+
+## 24.11.2026 · APK mit den gemeinsamen Spieldaten neu gebaut
+
+**Anlass:** Die Spielhalle in der App soll dieselben Merks zeigen wie Website und
+Connector. Der Android-Bau las den Katalog aber noch aus `spiele/spiele.html`, wo die
+Liste seit dem Umbau nicht mehr steht – ohne Anpassung wäre der Bau gar nicht
+durchgelaufen.
+
+**Geändert** (`android/app/build.gradle`, beide Ablagen)
+- `verifyHomepageGames` und `katalogBauen` lesen die Spieleliste, Kategorien, Texte und
+  Highlights aus `spiele/spieldaten.js`; die Spielzeichen (`SPIELSYMBOLE`, `IKONEN`,
+  `SYMBOLREGELN`) weiter aus `spiele.html`.
+- Die native Spieleliste kennt kein `zwei`: der Bau lässt es weg und ergänzt bei
+  `lokal` das Merkmal `multi` (Mehrspieler am Gerät). `katalog.json` nennt als Quelle
+  jetzt `spiele/spieldaten.js`.
+
+**Gebaut** (signierte Release-APK, gleicher Schlüssel wie zuvor: CN=TrashyGecko,
+SHA-256 `73019c01…`): `gradle clean packageTrashyGeckoApk`, **BUILD SUCCESSFUL in 37 s**,
+94 Spiele geprüft. APK **14.669.149 B**, md5 `c41dbb0e…`, versionCode 17 / 1.16, in
+beiden Ablagen als `spiele/android/tmahjong.apk`.
+
+**Im APK geprüft**
+- `assets/www/spiele/spiele.html` lädt `spieldaten.js`; `assets/www/spiele/spieldaten.js`
+  enthält Arschloch `lokal` und Acia `solo lokal zwei`.
+- `assets/katalog.json`: 94 Spiele, Quelle `spiele/spieldaten.js`; Arschloch
+  `[lokal, multi, online]`, Acia `[solo, lokal, multi]`, Bingo `[solo, multi, online]`.
+- App-Halle im Testbrowser (aus den Build-Assets): 94 Karten, Arschloch „Lokal & Online“,
+  Acia „Solo“+„Lokal“, Bingo/Galgenmännchen „Solo“+„Online“, 0 Fehler, 0 Antworten ≥ 400.
+- Die Installer-Kacheln (`android/*.apk`) und die Fernbedienungs-Kachel fehlen in der
+  App-Halle wie bisher (der Bau entfernt sie aus der Kopie).
+
+**Aufgeräumt:** `app/build`, `.gradle` und `build` wieder entfernt. APK nicht auf einem
+Gerät installiert (kein Gerät angeschlossen), nichts veröffentlicht, nichts gepusht.
+
+---
+
+## 24.11.2026 · Spielarten: eine Quelle für Spielhalle und Connector
+
+**Befund:** Die Trennung war nicht sauber. `lokal` hieß in der Halle „Mehrspieler am
+selben Gerät“ (auch Arschloch ab drei), im Connector über `lokal && multi` aber „zu
+zweit“. `multi` wurde dort aus dem Online-Register dazuerfunden – deshalb brauchte Acia
+ein künstliches `multi`, und Arschloch musste sein `lokal` verlieren, obwohl es lokal
+spielbar ist. Dieselben 94 Spiele standen außerdem zweimal (inline in `spiele.html` und
+eingebettet in `connector.html`) und waren bereits auseinandergelaufen.
+
+**Geändert**
+- Neue gemeinsame Datei `spiele/spieldaten.js` (Kategorien, Spiele, Kurztexte,
+  Highlights). Die Halle lädt `spieldaten.js`, der Connector `/spiele/spieldaten.js`;
+  die eingebettete Kopie im Connector ist ersatzlos weg (rund 240 Zeilen).
+- Merkmale eindeutig: `solo`, `lokal` (am Gerät, beliebige Spielerzahl), `zwei` (lokal
+  zu zweit), `computer`, `highscore`, `controller`. `online` und `multi` sind keine
+  Merkmale mehr: online kommt ausschließlich aus `multiplayer-register.js`, multi ist
+  `online || zwei`.
+- Arschloch: `lokal` ohne `zwei` – die Halle zeigt wieder „Lokal & Online“, der
+  Connector zählt es nicht zu „zu zweit“. Acia: `solo lokal zwei`.
+- Code: Connector liest `solo`/`zwei` direkt aus den Merkmalen (kein `lokal && multi`,
+  kein Register-Push mehr); die Halle nutzt `s.online`, ohne `multi`/`online` in die
+  Merkmale zu schreiben, und hat den „Mehrspieler“-Zweig in `modiVon` verloren.
+
+**Gemessen** (Playwright, 1440 × 1000): Halle 94 Karten – Solo 55, nur Online 16,
+Lokal & Online 54, nur Lokal 1 (Acia), Bots 5; Bingo/Galgenmännchen/Paare
+finden/Wortsuche „Solo“+„Online“, Arschloch wieder „Lokal & Online“, Risiko und Domino
+„Solo“+„Lokal & Online“+„Bots“; 0 Konsolenfehler, 0 Antworten ≥ 400, `spieldaten.js`
+200 (20.598 B). Connector: Alle 95, Einzelspieler 55, Mehrspieler 72, Online 71, Zu
+zweit 54; Acia weiter nur lokal, Arschloch nicht unter „zu zweit“, 0 Fehler.
+
+**Nachtrag (gleicher Tag):** Die dritte Kopie der Spieleliste – die Spielhalle in den
+Web-Assets der Android-App – trug noch die alten Merks (Arschloch „lokal online multi“,
+Acia „solo lokal“). Sie ist jetzt ebenfalls auf die gemeinsame Datei gezogen: in beiden
+Ablagen liegen `spiele.html` und `spieldaten.js` byte-gleich zur Quelle, die App-Halle
+lädt `spieldaten.js` und zeigt dieselben Kennzeichen (94 Karten, 0 Fehler, 0 Antworten
+≥ 400). Alte Merk-Zeilen gibt es außerhalb von Sicherungen und Build-Zwischenständen
+nicht mehr; die APK selbst wurde nicht neu gebaut.
+
+**Nicht geändert:** Navigation, Filterbedienung, Spielseiten, Server- und Go-Code.
+`spieldaten.js` `b6d27ce4…`, `spiele.html` `87cc12cc…`, `connector.html` `a9bf7a94…` –
+in beiden Ablagen und in den App-Assets gleich. Nichts veröffentlicht, nichts gepusht.
+
+---
+
+## 24.11.2026 · Spielhalle: Merks an die geprüfte Zuordnung angeglichen
+
+**Warum:** Die Spielkarten in `spiele/spiele.html` zeigten für Bingo, Galgenmännchen,
+Paare finden und Wortsuche „Lokal & Online“, obwohl deren lokaler Modus Einzelspieler ist
+(der Connector war bereits korrigiert, die Halle nicht).
+
+**Geändert** (SPIELE-Zeilen in `spiele.html`)
+- `Bingo`, `Galgenmännchen`, `Paare finden`, `Wortsuche`: `lokal online multi` →
+  `solo online multi`.
+- `Risiko – Welt erobern` und `Domino`: `solo` ergänzt (Computergegner) – damit stimmen
+  auch diese Karten mit der geprüften Zuordnung überein.
+- `Arschloch` bleibt `lokal online multi` (lokal erst ab 3 Spielern, also nicht „zu
+  zweit“, aber sehr wohl am Gerät), `Acia` bleibt `solo lokal` (kein Online).
+
+**Gemessen** (Playwright, echte Seite, 1440 × 1000, 0 Konsolenfehler): Bingo,
+Galgenmännchen, Paare finden, Wortsuche zeigen **„Solo“ + „Online“** (vorher
+„Lokal & Online“); Risiko und Domino **„Solo“ + „Lokal & Online“ + „Bots“**; Arschloch
+„Lokal & Online“, Acia „Solo“ + „Lokal“.
+
+**Nicht geändert:** Filter, Navigation, Spielseiten, Connector. Beide Ablagen byte-gleich
+(`spiele.html` md5 `9036603d…`). Die Web-Assets der Android-App
+(`spiele/android/app/src/main/assets/www/spiele/spiele.html`) tragen weiterhin die alte
+Kopie und wurden nicht angefasst. Nichts veröffentlicht, nichts gepusht.
+
+---
+
+## 24.11.2026 · Verrücktes Labyrinth: Suchgegenstände neu gezeichnet
+
+**Warum:** Die 25 Gegenstandssymbole waren einfarbige Silhouetten in der Tintenfarbe der
+Welt und saßen durch einen halben Einheitsversatz (`translate(-.5,-.5)` in
+`zeichneGegenstand`) nicht mittig auf ihrem Plättchen, sondern ragten oben links heraus.
+Auf dem Feld (16–42 px) war kaum zu erkennen, wonach gesucht wird.
+
+**Geändert** (`spiele/brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html`,
+beide Ablagen byte-gleich, md5 `75b21e73a879a219827f97fd55a81925`)
+- Zeichenblock der Gegenstände ersetzt: jede Figur jetzt zwei- bis dreifarbig mit dicker
+  dunkler Kontur – Krone, Schlüssel, Edelstein, Münze, Buch, Ring, Glocke, Kelch,
+  Heiltrank, Schwert, Schild, Hammer, Kette, Laterne, Schriftrolle, Blatt, Pilz, Eichel,
+  Eule, Blume, Fisch, Feder, Stern, Schneeflocke, Eiskristall. Nur große Formen, keine
+  feinen Details.
+- Eine Zeile: der Versatz in `zeichneGegenstand` entfernt – die drei Aufrufer übergeben
+  ohnehin die linke obere Ecke, das Symbol sitzt nun mittig im Plättchen.
+- **Unverändert:** Zuordnung Aufgabe → Gegenstand (alle acht Namen je Welt), Karten, Wände,
+  Figuren, Regeln, Suchlogik, Spielerreihenfolge, Mehrspieler. Diff zum alten Stand: genau
+  zwei Stellen, 235 Zeilen neu / 177 alt.
+
+**Geprüft** (Chromium/Playwright, Server 8797, 1280 × 900 und 390 × 844, alle sieben Welten)
+- Feldgrößen: 7 × 7 am Handy Brett 315 px → Kachel 45 px, Plättchen 27 px, Symbol 21 px;
+  7 × 7 am PC Brett 630 px → Kachel 90 px, Plättchen 54 px, Symbol 42 px; 9 × 9 am Handy
+  Kachel 35 px, Plättchen 21 px, Symbol 16,4 px. Aufgaben-Chips 26 px (Canvas 56 px).
+- Kontrast der dunklen Kontur zum Plättchen: **7,95 : 1** ab 24 px, **3,80 : 1** bei 20 px
+  (schwächster Wert, Schneeflocke), 3,34 : 1 bei 16 px.
+- Je Symbol 1–7 deutlich getrennte Farbtöne (Flächenanteil ≥ 6 %), Deckung 25–76 % der
+  Plättchenfläche.
+- Alle sieben Welten am PC und am Handy durchgeklickt, 9 × 9 nachgeprüft: keine Konsolen-
+  oder Seitenfehler, Gegenstände sitzen mittig und heben sich vom hellen Plättchen ab.
+- Kontaktbogen aller 25 Symbole in 56/32/24/20/16 px:
+  `arbeit/screens/labyrinth-gegenstaende/bogen-groessen.png`; Brettfotos je Welt daneben.
+- Gesichert: `arbeit/sicherung/2026-11-24-labyrinth-gegenstaende/verruecktes-labyrinth.vorher.html`
+  (md5 `88712e1729e9a2d69de3f74a426b73e5`).
+
+**Offen**
+- Bei 16 px (9 × 9 am Handy) werden Feder und Kette feiner; erkennbar, aber am Rand der
+  Deutlichkeit. 5 × 5 und 7 × 7 sind unkritisch.
+- Nicht committet, nicht veröffentlicht (Regel „nichts committen").
+
+## 24.11.2026 · Connector: Spielarten an den Spielen selbst geprüft
+
+**Warum:** „Mehrspieler“ und „Online-Mehrspieler“ zeigten beide 71 Spiele. Die Zuordnung
+kam aus dem `merk`-Feld und der Mitgliedschaft in `multiplayer-register.js`, nicht aus
+der tatsächlichen Spielintegration.
+
+**Geprüft**
+- **Online (71):** Für jedes der 71 Register-Spiele ruft die Spielseite ihren eigenen
+  Endpunkt auf (`/api/<id>` bzw. `/api/wuerfel`, 18 Würfelspiele über
+  `wuerfelspiele/online.js`). Jede dieser Routen existiert als `mux.HandleFunc` in
+  `connector/server.go`; `go test -run Register ./...` grün. Kein Spiel außerhalb des
+  Registers ruft einen Spiel-Endpunkt auf → 71 online bestätigt, keine Streichung.
+- **Zu zweit (54):** nur Spiele mit ausdrücklichem lokalen Modus für zwei Personen am
+  Gerät (Spielerzahl-Auswahl ab 2, „2 Spieler“, „Lokal 2–4 Spieler“, geteilte Steuerung).
+  `lokal` im `merk`-Feld bedeutete teils nur „ohne Server“.
+- **Einzelspieler (55):** Solo-Modus, Gegner-KI oder „1 Spieler“ vorhanden.
+
+**Korrigiert** (TGSpieldaten in `connector.html`)
+- `Acia`: `solo lokal` → `solo lokal multi` (1/2 Spieler, geteilte Tasten) – damit erstmals
+  unter „Zu zweit“ und „Mehrspieler“.
+- `Arschloch`: `lokal online multi` → `online multi` (lokal erst ab 3 Spielern).
+- `Bingo`, `Galgenmännchen`, `Paare finden`, `Wortsuche`: `lokal online multi` →
+  `solo online multi` (der lokale Modus ist Einzelspieler, keine zweite Person).
+- `Risiko – Welt erobern`: `lokal multi computer` → `solo lokal multi computer`.
+- `Domino`: `lokal online multi computer` → `solo lokal online multi computer`
+  („Gegen Computer“).
+
+**Gemessen** (Playwright, lokaler Connector, 1920 × 1080, 0 Konsolenfehler): Alle 95,
+Einzelspieler 55, Mehrspieler 72, Online 71, Zu zweit 54. Schnittmenge Online ∩ Zu zweit
+53, nur lokal `Acia`, Vereinigung 71 + 54 − 53 = 72 = Mehrspieler. Jede Ansicht ohne
+Doppelungen.
+
+**Nicht geändert:** Navigation, Spielseiten, Server- und Go-Spielmechanik. Alle vier
+`connector.html`-Kopien byte-gleich. Nichts veröffentlicht, nichts gepusht.
+
+---
+
+## 24.11.2026 · Connector: drei Hauptfilter statt doppelter Reiter
+
+**Warum:** Rechts oben standen zwei Reiter („Einzelspieler“, „Multiplayer“) und darunter
+noch einmal vier Filter („Alle“, „Einzelspieler“, „Online-Mehrspieler“, „Zu zweit am
+Gerät“). „Einzelspieler“ kam doppelt vor, „Multiplayer“/„Mehrspieler“ waren zwei
+Bezeichnungen für dasselbe.
+
+**Was gemacht wurde**
+- Die Reiterzeile samt Solo-Bereich (`#modusSolo`, `#modusMulti`, `#soloPanel`,
+  `#soloListe`) ist entfernt. Es gibt genau **eine** Spieleliste rechts.
+- Oben stehen nur noch drei Hauptauswahlen: **Alle Spiele** (alle), **Einzelspieler**
+  (solo), **Mehrspieler** (multi = online oder zu zweit).
+- Bei „Mehrspieler“ erscheinen darunter die zwei Unterfilter **Online-Mehrspieler** und
+  **Zu zweit am Gerät** (mit „Mehrspieler:“ davor); außerhalb dieses Zweigs sind sie weg.
+- `ueberPasst()` kennt den Filter `multi`; die Reiter-Reste (`setModus`, `soloAuswahl`)
+  sind abgesichert, `sessionStorage` merkt sich nur noch „multi“.
+
+**Gemessen** (Playwright, lokaler Connector, 1920 × 1080)
+- Hauptleiste: `["Alle Spiele","Einzelspieler","Mehrspieler"]`, 0 Reiter-Knöpfe mehr.
+- Karten: Alle **95** (95 verschiedene Namen), Einzelspieler **49**, Mehrspieler **71**,
+  Online-Mehrspieler **71**, Zu zweit am Gerät **58**; jedes Spiel genau einmal je Ansicht.
+  Die 49 + 71 ergeben 120, weil 25 Spiele beides können (z. B. Kniffel solo und zu zweit);
+  die Sammlung bleibt bei 95 Spielen.
+- Unterfilter erscheinen nur bei „Mehrspieler“ (`["Online-Mehrspieler","Zu zweit am Gerät"]`),
+  bei „Alle Spiele“ und „Einzelspieler“ ist die Reihe leer; Highlights (6) nur bei
+  „Alle Spiele“.
+- Zweispaltige Anordnung unverändert: links 614 px, rechts 1306 px, Chat unten links;
+  Spiel öffnet rechts (1306 × 1030), „‹ Spieleauswahl“ 131 × 33, Raum bleibt gleich.
+- Handy 390 × 844: Hauptleiste 342 px breit, Unterfilter passen, `scrollWidth` 390
+  (kein Querscrollen). 0 Skriptfehler auf allen Seiten.
+
+**Offen:** Render und Pages haben den Stand noch nicht (nicht veröffentlicht), nichts
+committet. Server- und Spielmechanik unangetastet.
+
+---
+
+## 24.11.2026 · Connector: echte zwei Spalten
+
+**Warum:** Der Chat lief als breite Leiste über den unteren Rand der ganzen Seite, die
+Spieleauswahl saß in der oberen rechten Ecke, und die linke Spalte war voller Einstellungen
+und Formulare. Die Aufteilung war nicht die, die sie sein sollte.
+
+**Was gemacht wurde**
+- Der Chat liegt jetzt **in** der linken Spalte (`#chatbox` im `<main>`), nicht mehr als
+  Geschwister unter beiden Spalten. Die alten Regeln (`grid-column:1 / -1`, Chatzeile im
+  Raster, `58dvh`-Sondermaß) sind ersetzt, nicht überdeckt.
+- Links (30–35 %, Standard 32 %): Kopfzeile mit TRASHYGECKO und Verbindungsstatus, kompakte
+  Spielerliste, Namenszeile, zugeklappte Einstellungen („Grafikstil, Einladung & Vollbild“),
+  darunter der Chat: Verlauf scrollt, Eingabe sitzt unten links.
+- Rechts (65–70 %): Übersicht mit Filtern, Suche, sechs flachen Highlights und allen
+  Kategorien; am PC sind die Kategorien offen (95 Karten, sieben je Zeile), am Handy
+  zugeklappt. Beim Start einer Partie ersetzt das Spielfeld die Übersicht; „‹ Spieleauswahl“
+  führt zurück, ohne den Raum zu verlassen.
+- Handy: Chat direkt unter dem Kopf (44 dvh), Spieler/Name/Einstellungen darunter, Spiele
+  folgen; kein horizontales Scrollen.
+
+**Geprüft** (Playwright gegen den lokalen Connector)
+- **1920 × 1080:** links 614 px (32 %), rechts 1306 px (68 %), beide 1080 px hoch; Chat 816 px
+  hoch, Eingabe bei y 1015–1061 unten links; Seite scrollt nicht (Höhe 1080), kein
+  Querüberlauf. Übersicht 1306 × 1032 scrollt für sich. Spiel öffnen: Feld 1306 × 1030 rechts,
+  Übersicht weg, „‹ Spieleauswahl“ 131 × 33, Raumcode unverändert, Chat bleibt sichtbar.
+  Zurück: Übersicht wieder da, „Verbunden“. 0 Skriptfehler.
+- **1366 × 768 / 1024 × 768** (Einstellungen aufgeklappt): links 437 / 328 px, Chat 375 / 391 px,
+  Eingabe vollständig sichtbar, kein Überlauf.
+- **390 × 844:** Breite 390 px ohne Querscrollen; Chat bei y 46–417 mit Eingabe bei 352–398;
+  Spiele darunter; Spiel öffnet 801 px hoch, Zurück-Knopf sticky, Raum unverändert,
+  0 Skriptfehler.
+- Chat senden, Einzelspieler-Reiter (49 Karten), Einstellungen mit „Einladung teilen“
+  (115 × 28 px) funktionieren weiter.
+
+**Offen:** Render und Pages haben diesen Stand noch nicht (nicht veröffentlicht); nichts
+committet. Spielfenster und Serverlogik (Go) sind unverändert.
+
+---
+
+## 24.11.2026 · Connector: „Einladung teilen“ neben dem QR-Code
+
+**Warum:** Eine Runde per WhatsApp einzuladen hieß bisher: Raumcode abtippen. Der Link lag
+nirgends griffbereit.
+
+**Was gemacht wurde**
+- `connector.html`: unter dem QR-Bild stehen zwei Knöpfe nebeneinander („Adresse kopieren“,
+  „Einladung teilen“); das Aufklappfeld heißt jetzt „QR-Code & Einladung“.
+- `einladungTeilen()` nutzt `navigator.share` (Handy: Systemblatt mit WhatsApp, Signal,
+  Mail …) und fällt sonst auf die Zwischenablage zurück („Link kopiert – jetzt in WhatsApp
+  einfügen.“), zuletzt auf ein Eingabefeld. Text: „TrashyGecko – spiel mit mir! Raum CODE“.
+- Der Link nimmt die erreichbare Adresse aus `/api/status` (WLAN-IP bzw. öffentliche
+  Adresse) und hängt `?room=CODE` an; `localhost` wird bewusst nicht geteilt.
+- Vier Kopien gleich (md5 `629f3603…`), keine Änderung an Räumen, Chat oder Spielen.
+
+**Geprüft** (Playwright, lokaler Connector Port 8769)
+- Desktop 1440 × 900 ohne `navigator.share`: Zwischenablage
+  „…Raum TG-F5E5 / http://192.168.2.106:8769/connector?room=TG-F5E5“, Hinweis sichtbar,
+  0 Skriptfehler, kein Querscrollen.
+- Handy 390 × 844: `navigator.share` mit `{title, text, url}` samt Raumcode aufgerufen;
+  beide Knöpfe in einer Reihe (65–343 px von 390), kein Querscrollen, 0 Skriptfehler.
+- Einladungslink in einem zweiten Kontext geöffnet: **gleicher Raum** (TG-F5E5),
+  0 Skriptfehler.
+- **Offen:** kein echter WhatsApp-Aufruf auf einem Gerät (nur die System-Schnittstelle
+  geprüft); Render und Pages haben den Stand noch nicht (nicht veröffentlicht).
+
+---
+
+## 24.11.2026 · App-Halle: eigene Spielzeichen, Kategorien-Wechsel, Spielstatus repariert
+
+**Warum:** Die frische APK auf dem Emulator zeigte die neue Halle nur halb: eigene
+Spielzeichen fehlten, unter einer Kategorie führte kein Weg zu den anderen, und im
+Connector (Online-Räume) verschwanden die Reiter unter dem klebenden Kopf, während der
+Spielstatus als leerer Kasten stehen blieb.
+
+**Was gemacht wurde**
+- `Spielsymbol.java` (neu): zeichnet die Zeichen der Web-Halle im 24er-Raster mit der
+  Kategorie-Farbe; liest `<path>`, `<circle>` und `<rect>` über
+  `androidx.core.graphics.PathParser`, also dieselben Linien wie `spiele.html`.
+- `katalogBauen` liest `SPIELSYMBOLE`, `SYMBOLREGELN` und `IKONEN` aus `spiele.html` und
+  schreibt je Spiel `symbol`, je Kategorie `ikon` und alle Zeichen als `symbole` in
+  `katalog.json` – eine Quelle, kein zweiter Katalog.
+- `SpieleActivity`: Spielzeile mit Zeichen links, Kategorie-Kacheln mit dem echten Symbol
+  statt Textzeichen (⚄ ♠ ♞ …), „Andere Kategorien“ unter einer geöffneten Kategorie wie in
+  der Web-Halle. Die Suche findet wieder alle Spiele; vorher blieb sie in der offenen
+  Kategorie („schach“ → 0 Treffer).
+- `connector.html`: `scrollZuDenSpielen()` setzt `scroll-margin-top` auf die Höhe des
+  klebenden Kopfs (die Reiter lagen 29 px darunter); `statusAnzeigen()` schreibt bei leerem
+  Stand wieder „Noch keine Runde offen.“ statt eines 140 px hohen leeren Kastens.
+- Beide Ablagen gleich: vier `connector.html` md5 `b4b3e379…`, `Spielsymbol.java`,
+  `SpieleActivity.java` und `build.gradle` je md5-gleich. Version bleibt **1.16 / 17**.
+
+**Geprüft**
+- `:app:assembleDebug` grün in beiden Ablagen; `katalogBauen`: 94 Spiele, 6 Kategorien,
+  45 Spielzeichen.
+- Emulator 1080 × 2340 (Debug-APK installiert): Start mit 94 Spielen und 6 Highlights;
+  Würfelspiele 25 Karten mit Zeichen; „Andere Kategorien“ zeigt 5 Kacheln und wechselt
+  (Würfelspiele → Kartenspiele); Suche „schach“ → 1 Treffer mit Kronen-Symbol; 0 `FATAL`,
+  0 Skriptfehler.
+- Connector lokal (Port 8769, Playwright): 390 × 844 Reiter-Oberkante **59 px** bei
+  Kopf-Unterkante **43 px** (vorher 11 px bei 40 px, also 29 px verdeckt); Status
+  „Noch keine Runde offen.“ bei 390 und 1440 (vorher leer).
+- **Offen:** Render und Pages haben den Stand noch nicht (nicht veröffentlicht); die
+  „eigene Runde“ im Connector nur bis zur Statuszeile geprüft, keine Partie eröffnet.
+
+---
+
 ## 24.11.2026 · Connector: Spielebereiche und Kacheln einzeln klappbar, Chat ganz unten
 
 **Warum:** Die Spieleübersicht im Connector war eine lange, immer offene Liste; der Chat

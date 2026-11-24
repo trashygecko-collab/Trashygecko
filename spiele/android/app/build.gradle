@@ -105,6 +105,8 @@ tasks.register("homepageKopieren", Sync) {
         exclude "**/backup-before-*/**", "**/*.backup-*"
         exclude "**/*.go", "**/*_test.go", "**/go.mod", "**/go.sum", "**/*.exe", "**/*-linux"
         exclude "**/*.apk", "**/*.log", "spiele/package.json", "spiele/package-lock.json", "spiele/playwright.config.js"
+        // Bauskripte gehoeren nicht ins APK (nur Werkzeuge fuer die Quellen).
+        exclude "**/*.py", "**/*.sh", "**/*.ps1"
         // Keine Geheimnisse ins APK: das Betriebshandbuch nennt Passwoerter im Klartext,
         // schluessel.jks ist der Signaturschluessel selbst.
         exclude "ANLEITUNG.txt", "**/*.jks", "**/*.keystore"
@@ -146,7 +148,7 @@ tasks.register("homepageKopieren", Sync) {
 tasks.register("verifyHomepageGames") {
     dependsOn "homepageKopieren"
     doLast {
-        File katalog = new File(homepageQuelle, "spiele/spiele.html")
+        File katalog = new File(homepageQuelle, "spiele/spieldaten.js")
         String inhalt = katalog.getText("UTF-8")
         def matcher = (inhalt =~ /(?m)^\s*\["([^"]+)",\s*"([^"]+\.html)",\s*"([^"]+)",\s*"([^"]*)"/)
         List<String> rows = []
@@ -180,17 +182,44 @@ tasks.register("verifyHomepageGames") {
 tasks.register("katalogBauen") {
     dependsOn "homepageKopieren"
     def quelle = new File(wwwZiel, "spiele/spiele.html")
+    def datenDatei = new File(wwwZiel, "spiele/spieldaten.js")
     def register = new File(wwwZiel, "spiele/multiplayer-register.js")
     def ziel = new File(projectDir, "src/main/assets/katalog.json")
     inputs.file(quelle)
+    inputs.file(datenDatei)
     inputs.files(register).optional()
     outputs.file(ziel)
     doLast {
         if (!quelle.isFile()) throw new GradleException("Spielekatalog fehlt: ${quelle}")
         String html = quelle.getText("UTF-8")
+        String katalogInhalt = datenDatei.getText("UTF-8")
+
+        // Spielzeichen: dieselben Symbole wie in der Web-Halle. Die Regeln greifen auf
+        // den Spielpfad zu, der Rückfall ist die Kategorie (spielSymbol in spiele.html).
+        def symbole = [:]
+        def symbolBlock = (html =~ /(?s)var SPIELSYMBOLE\s*=\s*\{(.*?)\n\s*\};/)
+        if (symbolBlock.find()) {
+            def eintrag = (symbolBlock.group(1) =~ /(?m)^\s*([A-Za-z0-9_]+):\s*symbolSvg\('(.*)'\),?\s*$/)
+            while (eintrag.find()) symbole[eintrag.group(1)] = eintrag.group(2)
+        }
+        if (symbole.isEmpty()) throw new GradleException("Keine Spielsymbole im Spielekatalog erkannt")
+
+        def ikonen = [:]
+        def ikonenBlock = (html =~ /(?s)var IKONEN\s*=\s*\{(.*?)\n\s*\};/)
+        if (ikonenBlock.find()) {
+            def eintrag = (ikonenBlock.group(1) =~ /(?m)^\s*([A-Za-z0-9_]+):\s*'(<svg.*?<\/svg>)',?\s*$/)
+            while (eintrag.find()) ikonen[eintrag.group(1)] = eintrag.group(2)
+        }
+
+        def symbolRegeln = []
+        def regelnBlock = (html =~ /(?s)var SYMBOLREGELN\s*=\s*\[(.*?)\n\s*\];/)
+        if (regelnBlock.find()) {
+            def regel = (regelnBlock.group(1) =~ /\[\/(.+?)\/,\s*"([^"]+)"\]/)
+            while (regel.find()) symbolRegeln << [regel.group(1), regel.group(2)]
+        }
 
         def kategorien = []
-        def katMatcher = (html =~ /(?s)\{\s*id:\s*"([^"]+)",\s*name:\s*"([^"]+)",(.*?)\}/)
+        def katMatcher = (katalogInhalt =~ /(?s)\{\s*id:\s*"([^"]+)",\s*name:\s*"([^"]+)",(.*?)\}/)
         while (katMatcher.find()) {
             String block = katMatcher.group(3)
             def akzentTreffer = (block =~ /akzent:\s*"([^"]+)"/)
@@ -199,36 +228,49 @@ tasks.register("katalogBauen") {
                 id: katMatcher.group(1),
                 name: katMatcher.group(2),
                 akzent: akzentTreffer.find() ? akzentTreffer.group(1) : "#e8cd8e",
-                text: textTreffer.find() ? textTreffer.group(1) : ""
+                text: textTreffer.find() ? textTreffer.group(1) : "",
+                ikon: ikonen[katMatcher.group(1)] ?: ""
             ]
         }
         if (kategorien.isEmpty()) throw new GradleException("Keine Kategorien im Spielekatalog erkannt")
         def katNamen = kategorien.collectEntries { [(it.id): it.name] }
 
-        // Kurzbeschreibungen und Highlights stehen in derselben Datei wie der Katalog.
+        // Kurzbeschreibungen und Highlights stehen in spieldaten.js.
         def texte = [:]
-        def textMatcher = (html =~ /(?m)^\s*"([^"]+\.html)":\s*"([^"]+)"/)
+        def textMatcher = (katalogInhalt =~ /(?m)^\s*"([^"]+\.html)":\s*"([^"]+)"/)
         while (textMatcher.find()) texte[textMatcher.group(1)] = textMatcher.group(2)
 
         def highlights = []
-        def hlMatcher = (html =~ /\{\s*pfad:\s*"([^"]+)",\s*bild:\s*"([^"]+)"/)
+        def hlMatcher = (katalogInhalt =~ /\{\s*pfad:\s*"([^"]+)",\s*bild:\s*"([^"]+)"/)
         while (hlMatcher.find()) highlights << [pfad: hlMatcher.group(1), bild: hlMatcher.group(2)]
 
         String registerText = register.isFile() ? register.getText("UTF-8") : ""
         String spieleBaum = new File(wwwZiel, "spiele").getPath().replace('\\', '/')
 
         def spiele = []
-        def matcher = (html =~ /(?m)^\s*\["([^"]+)",\s*"([^"]+\.html)",\s*"([^"]+)",\s*"([^"]*)"(?:,\s*"([^"]*)")?\]/)
+        def matcher = (katalogInhalt =~ /(?m)^\s*\["([^"]+)",\s*"([^"]+\.html)",\s*"([^"]+)",\s*"([^"]*)"(?:,\s*"([^"]*)")?\]/)
         while (matcher.find()) {
             String name = matcher.group(1)
             String relative = matcher.group(2).replace('\\', '/')
             if (relative.split('/').any { it == '..' }) throw new GradleException("Unsicherer Spielepfad: ${relative}")
             File seite = new File(new File(wwwZiel, "spiele"), relative)
             if (!seite.isFile()) throw new GradleException("Spiel fehlt in den Android-Assets: ${relative}")
-            List<String> merkmale = (matcher.group(4) ?: "").trim().split(/\s+/).findAll { it } as List<String>
+            List<String> merkmale = (matcher.group(4) ?: "").trim().split(/\s+/).findAll { it && it != "zwei" } as List<String>
             if (registerText.contains("/spiele/${relative}")) {
                 if (!merkmale.contains("multi")) merkmale << "multi"
                 if (!merkmale.contains("online")) merkmale << "online"
+            }
+            // Die App kennt kein „zwei“: lokal ist Mehrspieler am Gerät.
+            if (merkmale.contains("lokal") && !merkmale.contains("multi")) merkmale << "multi"
+            String symbol = null
+            for (def regel : symbolRegeln) {
+                if (java.util.regex.Pattern.compile(regel[0]).matcher(relative).find()) {
+                    symbol = regel[1]
+                    break
+                }
+            }
+            if (symbol == null || !symbole.containsKey(symbol)) {
+                symbol = symbole.containsKey(matcher.group(3)) ? matcher.group(3) : "denk"
             }
             spiele << [
                 name: name,
@@ -237,21 +279,24 @@ tasks.register("katalogBauen") {
                 kategorieName: katNamen[matcher.group(3)] ?: matcher.group(3),
                 merkmale: merkmale,
                 suche: (matcher.group(5) ?: "").trim().toLowerCase(Locale.ROOT),
-                text: texte[relative] ?: ""
+                text: texte[relative] ?: "",
+                symbol: symbol
             ]
         }
         if (spiele.isEmpty()) throw new GradleException("Keine Spiele für katalog.json erkannt")
 
         def daten = [
-            quelle: "spiele/spiele.html",
+            quelle: "spiele/spieldaten.js",
             anzahl: spiele.size(),
             kategorien: kategorien,
             highlights: highlights,
+            symbole: symbole,
             spiele: spiele
         ]
         ziel.parentFile.mkdirs()
         ziel.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(daten)) + "\n", "UTF-8")
-        println("Spielekatalog für die App: ${spiele.size()} Spiele (${kategorien.size()} Kategorien) -> ${ziel}")
+        println("Spielekatalog für die App: ${spiele.size()} Spiele (${kategorien.size()} Kategorien), "
+                + "${symbole.size()} Spielzeichen -> ${ziel}")
     }
 }
 

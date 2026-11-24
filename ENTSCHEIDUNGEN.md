@@ -16,7 +16,7 @@ machen und alle lokalen Spielstände kosten.
 die Application-ID nicht.
 
 ## D-02 · Spiele bleiben Web-Technik, die App wird nativ
-91 Spiele als HTML/Canvas/JS neu zu schreiben wäre Monate Arbeit ohne Spielgewinn.
+94 Spiele als HTML/Canvas/JS neu zu schreiben wäre Monate Arbeit ohne Spielgewinn.
 Nativ wird alles, was der Nutzer als **App** erlebt: Start, Spieleliste, Navigation,
 Status, Einstellungen. Die Spiele laufen weiter in einem WebView mit Asset-Loader.
 *Folge:* Es gibt genau **einen** WebView-Wirt für Spiele (`GameActivity`, aus
@@ -110,7 +110,7 @@ Aufgabe `katalogBauen`): Name, Pfad, Kategorie, Kategoriename, Merkmale, Suchwor
 Quelle bleibt ausschließlich der Website-Katalog (D-05); die JSON-Datei wird nicht
 eingecheckt und nicht von Hand gepflegt. Der Bau bricht ab, wenn der Katalog nicht
 gelesen werden kann, ein Eintrag auf eine fehlende Datei zeigt oder 0 Spiele übrig sind.
-Stand 23.11.2026: 94 Spiele, 9 Kategorien.
+Stand 24.11.2026: 94 Spiele, 6 Kategorien.
 
 ## D-16 · Spielseiten liegen in einer eigenen Activity
 `GameActivity` zeigt eine einzelne Spielseite (lokal oder online), `MainActivity` behält
@@ -151,7 +151,7 @@ Lokal-Bildschirm wurde verworfen – dort geht es um Räume und Chat, spielbar i
 der Galgen.
 *Folge:* Der Connector kümmert sich um Räume (lokal/online) und Extras, nicht um die
 Spieleliste. Ein Einstieg dorthin wird dort nicht wieder ergänzt – sonst gibt es zwei
-Türen zu einer Liste, und die Texte laufen wie bei „91 Spiele“ auseinander.
+Türen zu einer Liste, und die Texte laufen auseinander (früher stand dort „91 Spiele“, im Katalog 94).
 
 ## D-21 · Drehung baut keine Activity neu – Breitenabhängiges wird nachgezogen
 Alle Activities tragen `configChanges` für `orientation|screenSize|…`, werden bei einer
@@ -261,7 +261,7 @@ nicht alle Besucher im offenen Hauptraum landen.
 | Vorschlag | Warum verworfen |
 |---|---|
 | Alles in Kotlin/Compose neu schreiben | Neue Abhängigkeiten (D-11), Risiko für alle Spiele, kein Mehrwert |
-| Spiele nativ nachbauen | Monate Arbeit, 91 Spiele, laufende Pflege doppelt |
+| Spiele nativ nachbauen | Monate Arbeit, 94 Spiele, laufende Pflege doppelt |
 | Go-Connector in die App einbetten (gomobile) | Zweite Engine, Konflikte mit lokalen Räumen (D-03) |
 | Nur die Website im WebView (Status quo von `T.Spiele`) | Genau das, was abgelöst werden soll |
 | Spielekatalog als zweite JSON-Datei pflegen | Zwei Wahrheiten, sofort auseinanderlaufend (D-05) |

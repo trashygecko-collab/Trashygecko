@@ -1,0 +1,742 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// Angebot ist eine offene Runde: Der Ersteller bietet ein Spiel für den ganzen
+// Raum an. Jeder sieht die Karte im Chat und tritt mit einem Klick bei – es
+// braucht keine Einladung an einzelne Spieler mehr.
+type Angebot struct {
+	ID         string `json:"id"`
+	Game       string `json:"game"`
+	GameName   string `json:"gameName"`
+	VonID      string `json:"vonId"`
+	VonName    string `json:"vonName"`
+	Pairs      int    `json:"pairs,omitempty"`
+	Kind       string `json:"kind,omitempty"`
+	MaxPlayers int    `json:"maxPlayers,omitempty"`
+}
+
+// spielApi ordnet der Kennung aus der Spieleliste den API-Pfad zu.
+var spielApi = map[string]string{
+	"tictactoe":          "tictactoe",
+	"viergewinnt":        "viergewinnt",
+	"dame":               "dame",
+	"paare":              "paare",
+	"menschaerger":       "menschaerger",
+	"kaesekaestche":      "kaesekaestche",
+	"sim":                "sim",
+	"kalaha":             "kalaha",
+	"streichholzspiel":   "streichholz",
+	"muehle":             "muehle",
+	"reversi":            "reversi",
+	"hold":               "hold",
+	"memory":             "memory",
+	"mastermind":         "mastermind",
+	"skyjo":              "skyjo",
+	"kniffel":            "kniffel",
+	"zehntausend":        "zehntausend",
+	"maexchen":           "maexchen",
+	"boston":             "boston",
+	"chicago":            "chicago",
+	"shipcrew":           "shipcrew",
+	"halma":              "halma",
+	"schach":             "schach",
+	"go":                 "go",
+	"backgammon":         "backgammon",
+	"maumau":             "maumau",
+	"uno":                "uno",
+	"schwimmen":          "schwimmen",
+	"arschloch":          "arschloch",
+	"einsxeins":          "einsxeins",
+	"poker":              "poker",
+	"cabo":               "cabo",
+	"siebzehn":           "siebzehn",
+	"baccara":            "baccara",
+	"schiffe":            "schiffe",
+	"pong":               "pong",
+	"tron":               "tron",
+	"bomberman":          "bomberman",
+	"bubble":             "bubble",
+	"snake":              "snake",
+	"tetris":             "tetris",
+	"sechsundsechzig":    "sechsundsechzig",
+	"galgen":             "galgen",
+	"quizshow":           "quiz",
+	"bingo":              "bingo",
+	"wortsuche":          "wortsuche",
+	"domino":             "domino",
+	"schlangen":          "schlangen",
+	"pig":                "pig",
+	"gaensespiel":        "gaensespiel",
+	"risiko":             "risiko",
+	"labyrinth":          "labyrinth",
+	"malen":              "malen",
+	"beelzebub":          "wuerfel",
+	"boese-drei":         "wuerfel",
+	"boese-eins":         "wuerfel",
+	"der-turm":           "wuerfel",
+	"dufte-hundert":      "wuerfel",
+	"eins-bis-sechzehn":  "wuerfel",
+	"fenster":            "wuerfel",
+	"gestrichene-zwoelf": "wuerfel",
+	"hin-und-her":        "wuerfel",
+	"hohe-hausnummer":    "wuerfel",
+	"jule":               "wuerfel",
+	"paerchen":           "wuerfel",
+	"plus-minus":         "wuerfel",
+	"rentmeister":        "wuerfel",
+	"streichhoelzer":     "wuerfel",
+	"teure-sieben":       "wuerfel",
+	"unter-oder-ueber":   "wuerfel",
+	"wuerfelpoker":       "wuerfel",
+}
+
+// spielAnzeige sind die Namen, wie sie im Chat stehen.
+var spielAnzeige = map[string]string{
+	"tictactoe":          "Tic Tac Toe",
+	"viergewinnt":        "Vier gewinnt",
+	"dame":               "Dame",
+	"paare":              "Paare finden",
+	"menschaerger":       "Mensch ärgere dich nicht",
+	"kaesekaestche":      "Käsekästchen",
+	"sim":                "Sim",
+	"kalaha":             "Kalaha",
+	"streichholzspiel":   "21 Streichhölzer",
+	"muehle":             "Mühle",
+	"reversi":            "Reversi",
+	"hold":               "Hold the Line",
+	"memory":             "Memory",
+	"mastermind":         "Mastermind",
+	"skyjo":              "SKYJO",
+	"kniffel":            "Kniffel",
+	"zehntausend":        "10.000",
+	"maexchen":           "Lügen Mäxchen",
+	"boston":             "Auf nach Boston",
+	"chicago":            "Chicago",
+	"shipcrew":           "Ship Captain Crew",
+	"halma":              "Halma",
+	"schach":             "Schach",
+	"go":                 "Go",
+	"backgammon":         "Backgammon",
+	"maumau":             "Mau Mau",
+	"uno":                "UNO",
+	"schwimmen":          "31 Schwimmen",
+	"arschloch":          "Arschloch",
+	"einsxeins":          "1×1-Rennen",
+	"poker":              "Poker",
+	"cabo":               "Cabo",
+	"siebzehn":           "17 und 4",
+	"baccara":            "Baccara",
+	"schiffe":            "Schiffe versenken",
+	"pong":               "Pong",
+	"tron":               "Tron",
+	"bomberman":          "Bomberman",
+	"bubble":             "Bubble Shooter",
+	"snake":              "Snake",
+	"sechsundsechzig":    "Sechsundsechzig",
+	"galgen":             "Galgenmännchen",
+	"quizshow":           "Scherzshow",
+	"bingo":              "Bingo",
+	"wortsuche":          "Wortsuche",
+	"domino":             "Domino",
+	"schlangen":          "Schlangen und Leitern",
+	"pig":                "Pig",
+	"gaensespiel":        "Gänsespiel",
+	"risiko":             "Risiko",
+	"labyrinth":          "Das verrückte Labyrinth",
+	"tetris":             "Tetris",
+	"malen":              "Malen",
+	"beelzebub":          "Beelzebub",
+	"boese-drei":         "Die böse Drei",
+	"boese-eins":         "Die böse Eins",
+	"der-turm":           "Der Turm",
+	"dufte-hundert":      "Dufte Hundert",
+	"eins-bis-sechzehn":  "Eins bis Sechzehn",
+	"fenster":            "Fenster würfeln",
+	"gestrichene-zwoelf": "Gestrichene Zwölf",
+	"hin-und-her":        "Hin und her",
+	"hohe-hausnummer":    "Hohe Hausnummer",
+	"jule":               "Jule",
+	"paerchen":           "Pärchen",
+	"plus-minus":         "Plus-Minus",
+	"rentmeister":        "Rentmeister",
+	"streichhoelzer":     "Streichhölzer auswürfeln",
+	"teure-sieben":       "Teure Sieben",
+	"unter-oder-ueber":   "Unter oder über sieben",
+	"wuerfelpoker":       "Würfelpoker",
+}
+
+// Tischspiele: dort sitzen mehrere, die Runde wird beim Anbieten eröffnet.
+var tischspiel = map[string]bool{
+	"kniffel":            true,
+	"maumau":             true,
+	"uno":                true,
+	"schwimmen":          true,
+	"arschloch":          true,
+	"einsxeins":          true,
+	"poker":              true,
+	"cabo":               true,
+	"siebzehn":           true,
+	"baccara":            true,
+	"schiffe":            true,
+	"pong":               true,
+	"tron":               true,
+	"bomberman":          true,
+	"bubble":             true,
+	"snake":              true,
+	"sechsundsechzig":    true,
+	"galgen":             true,
+	"quizshow":           true,
+	"bingo":              true,
+	"wortsuche":          true,
+	"domino":             true,
+	"schlangen":          true,
+	"pig":                true,
+	"gaensespiel":        true,
+	"risiko":             true,
+	"labyrinth":          true,
+	"zehntausend":        true,
+	"maexchen":           true,
+	"boston":             true,
+	"chicago":            true,
+	"shipcrew":           true,
+	"halma":              true,
+	"beelzebub":          true,
+	"boese-drei":         true,
+	"boese-eins":         true,
+	"der-turm":           true,
+	"dufte-hundert":      true,
+	"eins-bis-sechzehn":  true,
+	"fenster":            true,
+	"gestrichene-zwoelf": true,
+	"hin-und-her":        true,
+	"hohe-hausnummer":    true,
+	"jule":               true,
+	"paerchen":           true,
+	"plus-minus":         true,
+	"rentmeister":        true,
+	"streichhoelzer":     true,
+	"teure-sieben":       true,
+	"unter-oder-ueber":   true,
+	"wuerfelpoker":       true,
+}
+
+// Gemeinsame Fläche: Malen hat kein Gegenüber und keinen Spielstand, der
+// geprüft werden müsste. Wer beitritt, malt auf demselben Brett mit – das
+// Angebot bleibt offen, damit nach und nach alle dazukommen können.
+var gemeinsam = map[string]bool{
+	"malen": true,
+}
+
+func spielName(id string) string {
+	if name, ok := spielAnzeige[id]; ok {
+		return name
+	}
+	return id
+}
+
+// spielStatus liefert den Zustand der Runde, die zu diesem Spiel im Raum
+// steht. ok=false heißt: es steht gar keine Runde. Nur Tischspiele legen beim
+// Anbieten sofort eine an – bei Einladungen entsteht sie erst beim Annehmen.
+func (r *Room) spielStatus(spiel string) (string, bool) {
+	switch spiel {
+	case "kniffel":
+		if g := r.Kniffel; g != nil {
+			return g.Status, true
+		}
+	case "maumau":
+		if g := r.MauMau; g != nil {
+			return g.Status, true
+		}
+	case "uno":
+		if g := r.Uno; g != nil {
+			return g.Status, true
+		}
+	case "schwimmen":
+		if g := r.Schwimmen; g != nil {
+			return g.Status, true
+		}
+	case "arschloch":
+		if g := r.Arschloch; g != nil {
+			return g.Status, true
+		}
+	case "einsxeins":
+		if g := r.Rechen; g != nil {
+			return g.Status, true
+		}
+	case "poker":
+		if g := r.Poker; g != nil {
+			return g.Status, true
+		}
+	case "cabo":
+		if g := r.Cabo; g != nil {
+			return g.Status, true
+		}
+	case "siebzehn":
+		if g := r.Siebzehn; g != nil {
+			return g.Status, true
+		}
+	case "baccara":
+		if g := r.Baccara; g != nil {
+			return g.Status, true
+		}
+	case "schiffe":
+		if g := r.Schiffe; g != nil {
+			return g.Status, true
+		}
+	case "pong":
+		if g := r.Pong; g != nil {
+			return g.Status, true
+		}
+	case "tron":
+		if g := r.Tron; g != nil {
+			return g.Status, true
+		}
+	case "bomberman":
+		if g := r.Bomberman; g != nil {
+			return g.Status, true
+		}
+	case "bubble":
+		if g := r.Bubble; g != nil {
+			return g.Status, true
+		}
+	case "snake":
+		if g := r.Snake; g != nil {
+			return g.Status, true
+		}
+	case "sechsundsechzig":
+		if g := r.Sechsundsechzig; g != nil {
+			return g.Status, true
+		}
+	case "galgen":
+		if g := r.Galgen; g != nil {
+			return g.Status, true
+		}
+	case "quizshow":
+		if g := r.Quiz; g != nil {
+			return g.Status, true
+		}
+	case "bingo":
+		if g := r.Bingo; g != nil {
+			return g.Status, true
+		}
+	case "wortsuche":
+		if g := r.Wortsuche; g != nil {
+			return g.Status, true
+		}
+	case "domino":
+		if g := r.Domino; g != nil {
+			return g.Status, true
+		}
+	case "schlangen":
+		if g := r.Schlangen; g != nil {
+			return g.Status, true
+		}
+	case "pig":
+		if g := r.Pig; g != nil {
+			return g.Status, true
+		}
+	case "gaensespiel":
+		if g := r.Gaense; g != nil {
+			return g.Status, true
+		}
+	case "risiko":
+		if g := r.Risiko; g != nil {
+			return g.Status, true
+		}
+	case "labyrinth":
+		if g := r.Labyrinth; g != nil {
+			return g.Status, true
+		}
+	case "zehntausend":
+		if g := r.ZehnTausend; g != nil {
+			return g.Status, true
+		}
+	case "maexchen":
+		if g := r.Maexchen; g != nil {
+			return g.Status, true
+		}
+	case "boston":
+		if g := r.Boston; g != nil {
+			return g.Status, true
+		}
+	case "chicago":
+		if g := r.Chicago; g != nil {
+			return g.Status, true
+		}
+	case "shipcrew":
+		if g := r.ShipCrew; g != nil {
+			return g.Status, true
+		}
+	case "halma":
+		if g := r.Halma; g != nil {
+			return g.Status, true
+		}
+	default:
+		// Die 18 Würfelspiele teilen sich einen Tisch – gemeint ist nur der,
+		// der auch angeboten wurde.
+		if spielApi[spiel] == "wuerfel" {
+			if g := r.Wuerfel; g != nil && g.Spiel == spiel {
+				return g.Status, true
+			}
+		}
+	}
+	return "", false
+}
+
+// angebotNochOffen sagt, ob das Angebot noch jemanden aufnehmen kann. Neue
+// Spieler nimmt allein die Lobby auf (Status "invited"); sobald die Runde
+// läuft – auch wenn sie erst auf der Spielseite gestartet wurde – oder zu Ende
+// ist, ist das Angebot erledigt. Die Halle muss dafür nichts aufräumen.
+func (r *Room) angebotNochOffen(a *Angebot) bool {
+	if a == nil {
+		return false
+	}
+	// Malen ist eine gemeinsame Fläche ohne Plätze: sie bleibt offen.
+	if gemeinsam[a.Game] {
+		return true
+	}
+	// Einladungen an einen Spieler erledigen sich beim Annehmen oder Ablehnen.
+	if !tischspiel[a.Game] {
+		return true
+	}
+	status, da := r.spielStatus(a.Game)
+	if !da {
+		return false
+	}
+	return status == "invited"
+}
+
+// spielAufruf ruft einen Spiel-Endpunkt von innen auf – wie ein Klick eines
+// Spielers. So gelten beim Beitritt genau dieselben Prüfungen wie sonst.
+func spielAufruf(api, code, aktion string, felder map[string]any) (int, string) {
+	// Der Aufruf gilt als Klick des Spielers, also gehört sein Token dazu –
+	// sonst weist die Kennungsprüfung ihn als fremdes Gerät ab.
+	if id, ok := felder["id"].(string); ok && id != "" {
+		mu.Lock()
+		if room := rooms[code]; room != nil {
+			if p, gefunden := room.Players[id]; gefunden {
+				felder["token"] = p.Token
+			}
+		}
+		mu.Unlock()
+	}
+	body, _ := json.Marshal(felder)
+	ziel := "/api/" + api + "?room=" + url.QueryEscape(code) + "&action=" + url.QueryEscape(aktion)
+	req := httptest.NewRequest(http.MethodPost, ziel, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	routes().ServeHTTP(rec, req)
+	return rec.Code, strings.TrimSpace(rec.Body.String())
+}
+
+// angebotHandler: GET liefert das offene Angebot des Raums (oder null),
+// POST bietet eine Runde an, tritt ihr bei oder zieht sie zurück.
+func angebotHandler(w http.ResponseWriter, r *http.Request) {
+	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("room")))
+	if code == "" {
+		http.Error(w, "Spielraum-Code fehlt", http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		mu.Lock()
+		var angebot *Angebot
+		if room := rooms[code]; room != nil && room.Angebot != nil {
+			// Läuft die Runde schon, ist das Angebot erledigt – egal, wer sie
+			// gestartet hat. Bisher räumte nur die Halle ihr eigenes Angebot auf;
+			// ein Start aus der Spielseite heraus ließ es stehen.
+			if room.angebotNochOffen(room.Angebot) {
+				kopie := *room.Angebot
+				angebot = &kopie
+			} else {
+				room.Angebot = nil
+			}
+		}
+		mu.Unlock()
+		jsonResponse(w, angebot)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Methode nicht erlaubt", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		ID         string `json:"id"`
+		Action     string `json:"action"`
+		Game       string `json:"game"`
+		Pairs      int    `json:"pairs"`
+		Kind       string `json:"kind"`
+		MaxPlayers int    `json:"maxPlayers"`
+		// Zwei Spiele brauchen beim Eröffnen eine Angabe: Halma die Brettform,
+		// Ship Captain Crew die Rundenzahl. Beides steht in der Spielauswahl und
+		// wird hier an das Spiel durchgereicht.
+		Variante string `json:"variante"`
+		Anzahl   int    `json:"anzahl"`
+		Runden   int    `json:"runden"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
+		return
+	}
+	input.ID = kennung(r)
+	aktion := strings.ToLower(strings.TrimSpace(input.Action))
+
+	switch aktion {
+	case "bieten":
+		spiel := strings.ToLower(strings.TrimSpace(input.Game))
+		api, bekannt := spielApi[spiel]
+		if !bekannt {
+			http.Error(w, "Dieses Spiel lässt sich nicht anbieten.", http.StatusBadRequest)
+			return
+		}
+		mu.Lock()
+		room := rooms[code]
+		if room == nil {
+			mu.Unlock()
+			http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
+			return
+		}
+		room.cleanPlayers()
+		player, ok := room.Players[input.ID]
+		if !ok {
+			mu.Unlock()
+			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
+			return
+		}
+		room.Angebot = &Angebot{
+			ID:         randomCode(),
+			Game:       spiel,
+			GameName:   spielName(spiel),
+			VonID:      input.ID,
+			VonName:    player.Name,
+			Pairs:      input.Pairs,
+			Kind:       input.Kind,
+			MaxPlayers: input.MaxPlayers,
+		}
+		room.LastActive = time.Now()
+		mu.Unlock()
+
+		// Tischspiele sofort eröffnen: der Ersteller sitzt schon, die anderen
+		// kommen über den Knopf im Chat dazu.
+		if tischspiel[spiel] {
+			felder := map[string]any{"id": input.ID}
+			felder["spiel"] = spiel
+			if input.Pairs > 0 {
+				felder["pairs"] = input.Pairs
+			}
+			if input.Kind != "" {
+				felder["kind"] = input.Kind
+			}
+			if input.MaxPlayers > 0 {
+				felder["maxPlayers"] = input.MaxPlayers
+			}
+			// Kommt nichts mit (alte Seite im Zwischenspeicher, Angebot aus
+			// einem alten Tab), gilt der Standard – sonst ließe sich das Spiel
+			// gar nicht eröffnen.
+			if spiel == "halma" {
+				if input.Variante == "" {
+					input.Variante = "klassisch"
+				}
+				if input.Anzahl == 0 {
+					input.Anzahl = 2
+				}
+				felder["variante"] = input.Variante
+				felder["anzahl"] = input.Anzahl
+			}
+			if spiel == "shipcrew" {
+				if input.Runden == 0 {
+					input.Runden = 5
+				}
+				felder["runden"] = input.Runden
+			}
+			if nr, text := spielAufruf(api, code, "create", felder); nr >= 300 {
+				mu.Lock()
+				if room := rooms[code]; room != nil && room.Angebot != nil && room.Angebot.VonID == input.ID {
+					room.Angebot = nil
+				}
+				mu.Unlock()
+				http.Error(w, "Das Spiel lässt sich gerade nicht öffnen: "+text, http.StatusConflict)
+				return
+			}
+		}
+
+		mu.Lock()
+		if room := rooms[code]; room != nil && room.Angebot != nil {
+			room.addMessage(Message{
+				Name:       player.Name,
+				Text:       "bietet " + spielName(spiel) + " an.",
+				Time:       time.Now().Format("15:04:05"),
+				SenderID:   input.ID,
+				GameInvite: true,
+				Game:       spiel,
+				GameID:     room.Angebot.ID,
+			})
+		}
+		mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+		return
+
+	case "annehmen":
+		mu.Lock()
+		room := rooms[code]
+		if room == nil {
+			mu.Unlock()
+			http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
+			return
+		}
+		room.cleanPlayers()
+		player, ok := room.Players[input.ID]
+		if !ok {
+			mu.Unlock()
+			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
+			return
+		}
+		if room.Angebot == nil {
+			mu.Unlock()
+			http.Error(w, "Es steht gerade kein Angebot offen.", http.StatusConflict)
+			return
+		}
+		if room.Angebot.VonID == input.ID {
+			mu.Unlock()
+			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
+			return
+		}
+		if !room.angebotNochOffen(room.Angebot) {
+			room.Angebot = nil
+			mu.Unlock()
+			http.Error(w, "Die Runde ist schon gestartet – hier ist nichts mehr offen.", http.StatusConflict)
+			return
+		}
+		angebot := *room.Angebot
+		mu.Unlock()
+
+		api := spielApi[angebot.Game]
+		if gemeinsam[angebot.Game] {
+			// Nichts zu öffnen: die Fläche liegt schon auf dem Server, jeder
+			// Malt-Strich kommt dort an. Nur die Meldung im Chat fehlt noch.
+		} else if tischspiel[angebot.Game] {
+			if nr, text := spielAufruf(api, code, "join", map[string]any{"id": input.ID, "spiel": angebot.Game}); nr >= 300 {
+				http.Error(w, text, http.StatusConflict)
+				return
+			}
+		} else {
+			felder := map[string]any{"id": angebot.VonID, "toId": input.ID}
+			if angebot.Pairs > 0 {
+				felder["pairs"] = angebot.Pairs
+			}
+			if angebot.Kind != "" {
+				felder["kind"] = angebot.Kind
+			}
+			if angebot.MaxPlayers > 0 {
+				felder["maxPlayers"] = angebot.MaxPlayers
+			}
+			if nr, text := spielAufruf(api, code, "invite", felder); nr >= 300 {
+				http.Error(w, text, http.StatusConflict)
+				return
+			}
+			if nr, text := spielAufruf(api, code, "accept", map[string]any{"id": input.ID}); nr >= 300 {
+				http.Error(w, text, http.StatusConflict)
+				return
+			}
+		}
+
+		mu.Lock()
+		if room := rooms[code]; room != nil {
+			text := player.Name + " spielt jetzt " + angebot.GameName + " mit."
+			if gemeinsam[angebot.Game] {
+				text = player.Name + " malt jetzt mit."
+			}
+			room.addMessage(Message{
+				Text:   text,
+				Time:   time.Now().Format("15:04:05"),
+				System: true,
+			})
+			// Spiele für zwei sind damit besetzt – das Angebot ist erledigt.
+			// An Tischen bleiben freie Plätze offen.
+			if !tischspiel[angebot.Game] && !gemeinsam[angebot.Game] && room.Angebot != nil && room.Angebot.ID == angebot.ID {
+				room.Angebot = nil
+			}
+		}
+		mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+		return
+
+	case "ablehnen":
+		// Zu zweit ist ein Angebot eine Einladung an genau diesen einen
+		// Spieler – der darf sie auch ablehnen. Sind mehr im Raum, kann
+		// jemand anderes noch mitspielen; dann bleibt das Angebot stehen.
+		mu.Lock()
+		defer mu.Unlock()
+		room := rooms[code]
+		if room == nil {
+			http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
+			return
+		}
+		room.cleanPlayers()
+		player, ok := room.Players[input.ID]
+		if !ok {
+			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
+			return
+		}
+		if room.Angebot == nil {
+			http.Error(w, "Es steht gerade kein Angebot offen.", http.StatusConflict)
+			return
+		}
+		if room.Angebot.VonID == input.ID {
+			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
+			return
+		}
+		if room.anwesend() > 2 {
+			http.Error(w, "Es sind noch andere im Raum – das Angebot bleibt offen.", http.StatusConflict)
+			return
+		}
+		room.Angebot = nil
+		room.LastActive = time.Now()
+		room.addMessage(Message{
+			Text:   player.Name + " lehnt ab.",
+			Time:   time.Now().Format("15:04:05"),
+			System: true,
+		})
+		w.WriteHeader(http.StatusNoContent)
+		return
+
+	case "zurueck":
+		mu.Lock()
+		defer mu.Unlock()
+		room := rooms[code]
+		if room == nil {
+			http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
+			return
+		}
+		player, ok := room.Players[input.ID]
+		if !ok {
+			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
+			return
+		}
+		if room.Angebot == nil || room.Angebot.VonID != input.ID {
+			http.Error(w, "Es steht kein eigenes Angebot offen.", http.StatusConflict)
+			return
+		}
+		room.Angebot = nil
+		room.addMessage(Message{
+			Text:   player.Name + " zieht das Angebot zurück.",
+			Time:   time.Now().Format("15:04:05"),
+			System: true,
+		})
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	http.Error(w, "Unbekannte Aktion", http.StatusBadRequest)
+}

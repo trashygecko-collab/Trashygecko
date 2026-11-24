@@ -99,6 +99,8 @@ public final class SpieleActivity extends Activity {
         String id;
         String name;
         String text = "";
+        /** Zeichen der Web-Halle (SVG) – leer, wenn der Katalog keins nennt. */
+        String ikon = "";
         int akzent = Ansicht.GOLD;
     }
 
@@ -109,6 +111,8 @@ public final class SpieleActivity extends Activity {
         String kategorie;
         String text = "";
         String suche = "";
+        /** Name des Spielzeichens aus `symbole` (z. B. `krone`). */
+        String symbol = "";
         /** Name, Suchwörter, Text und Kategorie in Kleinbuchstaben (mit und ohne Umlaute). */
         String suchtext = "";
         List<String> merkmale = new ArrayList<>();
@@ -131,6 +135,8 @@ public final class SpieleActivity extends Activity {
     private final Map<String, TextView> chips = new LinkedHashMap<>();
     /** Einmal geladene Vorschaubilder; klein genug für die Kacheln. */
     private final Map<String, Bitmap> bilder = new HashMap<>();
+    /** Spielzeichen aus `katalog.json` (Name → SVG-Inhalt), Quelle ist spiele.html. */
+    private final Map<String, String> symbole = new HashMap<>();
 
     private LinearLayout liste;
     private LinearLayout chipLeiste;
@@ -383,9 +389,18 @@ public final class SpieleActivity extends Activity {
                     if (kategorie.id.isEmpty()) continue;
                     kategorie.name = eintrag.optString("name", kategorie.id);
                     kategorie.text = eintrag.optString("text", "");
+                    kategorie.ikon = eintrag.optString("ikon", "");
                     kategorie.akzent = farbe(eintrag.optString("akzent", ""), Ansicht.GOLD);
                     kategorien.add(kategorie);
                     kategorieNach.put(kategorie.id, kategorie);
+                }
+            }
+
+            JSONObject zeichen = daten.optJSONObject("symbole");
+            if (zeichen != null) {
+                for (java.util.Iterator<String> namen = zeichen.keys(); namen.hasNext(); ) {
+                    String name = namen.next();
+                    symbole.put(name, zeichen.optString(name, ""));
                 }
             }
 
@@ -400,6 +415,7 @@ public final class SpieleActivity extends Activity {
                     spiel.kategorie = eintrag.optString("kategorie");
                     spiel.text = eintrag.optString("text", "");
                     spiel.suche = eintrag.optString("suche", "");
+                    spiel.symbol = eintrag.optString("symbol", "");
                     JSONArray merk = eintrag.optJSONArray("merkmale");
                     if (merk != null) {
                         for (int m = 0; m < merk.length(); m++) {
@@ -618,7 +634,9 @@ public final class SpieleActivity extends Activity {
 
         if (trefferAnsicht) {
             titel.setText(!filter.isEmpty() ? "Suche" : (offen == null ? "Gefiltert" : offen.name));
-            int sichtbar = zeichneTreffer(ANSICHT_KATEGORIE.equals(ansicht) && offen != null ? offen : null);
+            // Die Suche findet alle Spiele, ein Merkmalsfilter bleibt in der offenen Kategorie.
+            int sichtbar = zeichneTreffer(filter.isEmpty() && ANSICHT_KATEGORIE.equals(ansicht) && offen != null
+                    ? offen : null);
             zaehler.setText(sichtbar + (filter.isEmpty() ? " Spiele" : " Treffer"));
         } else if (offen != null) {
             titel.setText(offen.name);
@@ -676,6 +694,19 @@ public final class SpieleActivity extends Activity {
         }
         if (sichtbar == 0) {
             zeigeHinweis("Kein Spiel dieser Kategorie passt zu Suche und Filtern.");
+        }
+
+        // Direkt weiter zur nächsten Kategorie – wie in der Web-Halle.
+        List<View> andere = new ArrayList<>();
+        for (Kategorie weitere : kategorien) {
+            if (weitere.id.equals(kategorie.id)) continue;
+            int anzahl = anzahlIn(weitere.id);
+            if (anzahl == 0) continue;
+            andere.add(kategorieKachel(weitere, anzahl));
+        }
+        if (!andere.isEmpty()) {
+            liste.addView(ueberschrift("Andere Kategorien"));
+            haengeRaster(andere, spaltenKategorien());
         }
         return sichtbar;
     }
@@ -883,8 +914,11 @@ public final class SpieleActivity extends Activity {
         karte.addView(innen, new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView symbol = Ansicht.text(this, symbolFuer(kategorie.id), 20, kategorie.akzent, true);
-        innen.addView(symbol);
+        Spielsymbol zeichen = new Spielsymbol(this);
+        zeichen.setze(kategorie.ikon, kategorie.akzent);
+        LinearLayout.LayoutParams zeichenPlatz = new LinearLayout.LayoutParams(
+                Ansicht.dp(this, 24), Ansicht.dp(this, 24));
+        innen.addView(zeichen, zeichenPlatz);
 
         TextView name = Ansicht.text(this, kategorie.name, 15, Ansicht.TEXT, true);
         name.setPadding(0, Ansicht.dp(this, 2), 0, 0);
@@ -918,16 +952,6 @@ public final class SpieleActivity extends Activity {
         rest.text = "Spiele ohne bekannte Kategorie.";
         rest.akzent = Ansicht.MUTED;
         return kategorieKachel(rest, anzahl);
-    }
-
-    private static String symbolFuer(String kategorieId) {
-        if ("wuerfel".equals(kategorieId)) return "⚄";
-        if ("karten".equals(kategorieId)) return "♠";
-        if ("brett".equals(kategorieId)) return "♞";
-        if ("denk".equals(kategorieId)) return "◆";
-        if ("arcade".equals(kategorieId)) return "◉";
-        if ("quiz".equals(kategorieId)) return "?";
-        return "▦";
     }
 
     /** Vorschaubild aus den App-Assets; einmal geladen und verkleinert. */
@@ -973,7 +997,7 @@ public final class SpieleActivity extends Activity {
         if (vorhanden != null) return vorhanden;
 
         LinearLayout zeile = new LinearLayout(this);
-        zeile.setOrientation(LinearLayout.VERTICAL);
+        zeile.setOrientation(LinearLayout.HORIZONTAL);
         zeile.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12), Ansicht.RAND,
                 Math.max(1, Ansicht.dp(this, 1))));
         zeile.setPadding(Ansicht.dp(this, 14), Ansicht.dp(this, 11),
@@ -986,12 +1010,27 @@ public final class SpieleActivity extends Activity {
         platz.bottomMargin = Ansicht.dp(this, 8);
         zeile.setLayoutParams(platz);
 
+        Kategorie kategorie = kategorieNach.get(spiel.kategorie);
+        Spielsymbol zeichen = new Spielsymbol(this);
+        zeichen.setze(symbole.get(spiel.symbol),
+                kategorie == null ? Ansicht.GOLD : kategorie.akzent);
+        LinearLayout.LayoutParams zeichenPlatz = new LinearLayout.LayoutParams(
+                Ansicht.dp(this, 26), Ansicht.dp(this, 26));
+        zeichenPlatz.rightMargin = Ansicht.dp(this, 11);
+        zeichenPlatz.topMargin = Ansicht.dp(this, 1);
+        zeile.addView(zeichen, zeichenPlatz);
+
+        LinearLayout innen = new LinearLayout(this);
+        innen.setOrientation(LinearLayout.VERTICAL);
+        zeile.addView(innen, new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
         TextView name = new TextView(this);
         name.setText(spiel.name);
         name.setTextColor(Ansicht.TEXT);
         name.setTypeface(Typeface.DEFAULT_BOLD);
         name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        zeile.addView(name);
+        innen.addView(name);
 
         if (!spiel.text.isEmpty()) {
             TextView beschreibung = new TextView(this);
@@ -1000,7 +1039,7 @@ public final class SpieleActivity extends Activity {
             beschreibung.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             beschreibung.setLineSpacing(0, 1.25f);
             beschreibung.setPadding(0, Ansicht.dp(this, 2), 0, 0);
-            zeile.addView(beschreibung);
+            innen.addView(beschreibung);
         }
 
         String merkmale = merkmaleText(spiel);
@@ -1010,7 +1049,7 @@ public final class SpieleActivity extends Activity {
             unten.setTextColor(Ansicht.MUTED);
             unten.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             unten.setPadding(0, Ansicht.dp(this, 4), 0, 0);
-            zeile.addView(unten);
+            innen.addView(unten);
         }
 
         zeile.setOnClickListener(v -> starte(spiel));

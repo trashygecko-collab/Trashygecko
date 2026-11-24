@@ -129,7 +129,7 @@ und die Liste springt wieder nach oben.
    entfernt danach zwei Katalogzeilen (APK-Installer, Fernbedienung) – bricht ab, wenn das Muster fehlt
 :app:katalogBauen   (hängt an preBuild)
    liest den fertigen Katalog www/spiele/spiele.html und schreibt src/main/assets/katalog.json
-   (94 Spiele, 9 Kategorien, Merkmale; bricht bei 0 Spielen oder fehlender Datei ab)
+   (94 Spiele, 6 Kategorien, Merkmale; bricht bei 0 Spielen oder fehlender Datei ab)
 :app:verifyHomepageGames
    prüft jeden Katalogeintrag gegen Quelle und Asset, schreibt build/reports/homepage-integration/spiele-manifest.md
 :app:packageTrashyGeckoApk
@@ -192,7 +192,7 @@ Heimnetze gedacht. Ports werden dynamisch gewählt und über NSD bekanntgegeben.
 ## 4. Zielbild
 
 Grundsatz: **Die Spiele bleiben Web-Technik** (sie sind es und sie funktionieren), **die
-App drumherum wird nativ.** Kein Nachbau von 91 Spielen, keine zweite Spiele-Engine.
+App drumherum wird nativ.** Kein Nachbau von 94 Spielen, keine zweite Spiele-Engine.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
