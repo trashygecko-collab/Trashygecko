@@ -8,14 +8,17 @@
 <link rel="stylesheet" href="../main.css">
 
 
-<link rel="stylesheet" href="/spiele/schrift.css">
-<link rel="stylesheet" href="/spiele/design.css">
-<link rel="stylesheet" href="/spiele/halle.css">
-<script src="/spiele/stil.js"></script>
-<script src="/spiele/netz.js"></script>
-<script src="/spiele/token.js"></script>
+<!-- Relative Pfade: die Seite liegt in /spiele/ und läuft so sowohl auf der
+     Domain-Wurzel (Render, lokaler Server) als auch unter einem Unterpfad
+     (GitHub Pages /Trashygecko/) und in der APK (file://). -->
+<link rel="stylesheet" href="schrift.css">
+<link rel="stylesheet" href="design.css">
+<link rel="stylesheet" href="halle.css">
+<script src="stil.js"></script>
+<script src="netz.js"></script>
+<script src="token.js"></script>
 <!-- Zentrale Spieleverwaltung: welche Spiele der Connector online anbietet. -->
-<script src="/spiele/multiplayer-register.js"></script>
+<script src="multiplayer-register.js"></script>
 </head>
 
 <body class="spiele-seite">
@@ -321,7 +324,11 @@
     { pfad: "brettspiele/risiko/risiko.html", bild: "bilder/highlights/risiko.jpg",
       text: "Weltkarte, Armeen, Würfel – Eroberung für zwei bis sechs Spieler." },
     { pfad: "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", bild: "bilder/highlights/labyrinth.jpg",
-      text: "Gänge schieben, Schätze einsammeln – das Brett verändert sich mit jedem Zug." }
+      text: "Gänge schieben, Schätze einsammeln – das Brett verändert sich mit jedem Zug." },
+    { pfad: "flipper/flipper.html", bild: "bilder/highlights/flipper.jpg",
+      text: "Silberkugel, Flipperfinger, Mittelstift – eine Runde am Tisch." },
+    { pfad: "quizshow/quizshow.html", bild: "bilder/highlights/quizshow.jpg",
+      text: "Scherzshow mit Moderator: Fragen, Antworten, Punkte – auch mit Freunden." }
   ];
 
   /* ---------------------------------------------------------- Werkzeuge --- */
@@ -779,7 +786,7 @@
       if (!anzahl) return;
       var a = el("a", "kat");
       a.style.setProperty("--i", String(Math.min(kats.childNodes.length, 8)));
-      a.href = "#/k/" + encodeURIComponent(k.id);
+      a.href = "#kat-" + encodeURIComponent(k.id);
       a.style.setProperty("--akzent", k.akzent);
       var ik = el("span", "kat-ikon");
       ik.innerHTML = IKONEN[k.id] || IKONEN.denk;
@@ -797,6 +804,25 @@
       kats.appendChild(a);
     });
     box.appendChild(kats);
+
+    /* Jede Kategorie zusätzlich als eigener Abschnitt mit allen Spielen – wie in
+       der früheren Übersicht. Die Karten oben sind die Sprungmarken dorthin. */
+    KATEGORIEN.forEach(function (k) {
+      var liste = spiele.filter(function (s) { return s.kat === k.id; }).sort(nachName);
+      if (!liste.length) return;
+      var abschnitt = el("section", "kat-abschnitt");
+      abschnitt.id = "kat-" + k.id;
+      abschnitt.style.setProperty("--akzent", k.akzent);
+      abschnitt.appendChild(ansichtKopf(IKONEN[k.id] || IKONEN.denk, k.name, k.text,
+        String(liste.length), k.akzent));
+      abschnitt.appendChild(kartenRaster(liste, false));
+      var mehr = el("a", "mehr-zeile");
+      mehr.textContent = liste.length === 1 ? "Ansehen \u203a"
+        : "Alle " + liste.length + " ansehen \u203a";
+      mehr.href = "#/k/" + encodeURIComponent(k.id);
+      abschnitt.appendChild(mehr);
+      box.appendChild(abschnitt);
+    });
 
     var werk = el("a", "kasten-link");
     werk.href = "#/werkzeuge";
@@ -1011,9 +1037,17 @@
     var h = (location.hash || "").replace(/^#\/?/, "");
     aktiveModi = [];
     sucheLaeuft = false;
+    /* #kat-… springt auf der Startseite zum Kategorie-Abschnitt. */
+    var anker = null;
+    if (h.indexOf("kat-") === 0) {
+      anker = "kat-" + decodeURIComponent(h.slice(4));
+      h = "";
+    }
     if (h.indexOf("k/") === 0) {
       zustand.ansicht = "kategorie";
       zustand.id = decodeURIComponent(h.slice(2));
+      /* Alte Adresse aus der früheren Übersicht. */
+      if (zustand.id === "action") zustand.id = "arcade";
     } else if (h === "highlights") {
       zustand.ansicht = "highlights";
       zustand.id = null;
@@ -1027,6 +1061,10 @@
     suchfeld.value = "";
     suchfeldBox.classList.remove("hat-text");
     zeichne(true);
+    if (anker) {
+      var ziel = document.getElementById(anker);
+      if (ziel) ziel.scrollIntoView({ block: "start" });
+    }
   }
 
   suchfeld.addEventListener("input", function () {
@@ -1064,6 +1102,6 @@
 })();
 </script>
 
-<script src="/spiele/halle-online.js"></script>
+<script src="halle-online.js"></script>
 </body>
 </html>

@@ -290,12 +290,14 @@
     hinweis.id = "ob-hinweis";
     bereich.appendChild(hinweis);
 
-    var suchzeile = document.querySelector(".suchzeile");
-    if (suchzeile && suchzeile.parentNode) {
-      suchzeile.parentNode.insertBefore(bereich, suchzeile.nextSibling);
+    /* Unterhalb der Spieleübersicht: die Halle darf Kategorien und Spiele nicht
+       verdrängen. Sie steht hinter <main>, also unter allen Abschnitten. */
+    var inhalt = document.getElementById("inhalt");
+    if (inhalt && inhalt.parentNode) {
+      inhalt.parentNode.insertBefore(bereich, inhalt.nextSibling);
     } else {
       var halle = document.querySelector(".halle") || document.body;
-      halle.insertBefore(bereich, halle.firstChild);
+      halle.appendChild(bereich);
     }
     ui.bereich = bereich;
     ui.titel = titelText;
