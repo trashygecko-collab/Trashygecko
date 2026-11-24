@@ -188,6 +188,9 @@ type Room struct {
 	Code      string
 	OwnerID   string
 	OwnerName string
+	// Privat kennzeichnet den Raum zweier eingeladener Spieler. Der
+	// gemeinsame Hauptraum hat das Kennzeichen nie.
+	Privat bool
 	// EmptySince merkt sich, seit wann niemand mehr im Raum ist. Solange das
 	// nicht lange her ist, bleiben laufende Partien liegen (Handy gesperrt,
 	// Rechner zu, kurze Pause).

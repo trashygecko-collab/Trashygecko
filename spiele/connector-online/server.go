@@ -171,6 +171,9 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/status", status)
 	mux.HandleFunc("/api/spiele", spielRegister)
 	mux.HandleFunc("/api/rooms", roomsHandler)
+	// Private Einladungen: ohne sichtbaren Code, der Server gibt den Raum
+	// allein an die beiden Beteiligten weiter.
+	mux.HandleFunc("/api/einladung", einladungHandler)
 	mux.HandleFunc("/api/presence", presence)
 	mux.HandleFunc("/api/players", playersHandler)
 	mux.HandleFunc("/api/qr", qrCode)

@@ -361,12 +361,18 @@ html:fullscreen body{padding:18px 1px}
 /* Spielzentrale: Raumcode, Einladung, laufende Partien. */
 .zentrale{margin:4px 0 6px}
 .zr-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
-.zr-code{font-family:ui-monospace,Consolas,monospace;font-size:17px;font-weight:700;letter-spacing:1px;color:var(--c-akzent);padding:6px 10px;border:1px solid var(--c-rahmen);border-radius:9px;background:var(--c-flaeche-3)}
-.zr-knopf,#zr-form button{font:inherit;font-size:13px;padding:8px 11px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
-.zr-knopf:hover,#zr-form button:hover{border-color:var(--c-akzent);color:var(--c-akzent)}
+.zr-einladungen{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:10px 12px;border:1px solid var(--c-akzent);border-radius:10px;background:var(--c-flaeche-3)}
+.zr-einladungen[hidden]{display:none}
+.zr-einladungen p{flex:1 1 100%;margin:0;font-size:13px;line-height:1.4;color:var(--c-text)}
+.zr-privat{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:10px 12px;border:1px solid var(--c-rahmen);border-radius:10px;background:var(--c-flaeche-3);font-size:13px}
+.zr-privat[hidden]{display:none}
+.zr-spieler{display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}
+.zr-spieler-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;border:1px solid var(--c-rahmen);border-radius:9px;background:var(--c-flaeche-2)}
+.zr-spieler-zeile b{font-size:14px}
+.zr-knopf{font:inherit;font-size:13px;padding:8px 11px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
+.zr-knopf:hover{border-color:var(--c-akzent);color:var(--c-akzent)}
 .zr-hinweis{margin:4px 0 8px;font-size:12.5px;line-height:1.4;color:var(--c-leise)}
 #zr-form{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
-#zr-codeFeld{flex:1 1 150px;min-width:0;min-height:40px;padding:8px 11px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);font:inherit}
 .zr-partien{display:flex;flex-direction:column;gap:7px;margin:6px 0}
 .zr-partie{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:9px 11px;border:1px solid var(--c-rahmen);border-radius:10px;background:var(--c-flaeche-3)}
 .zr-partie b{font-weight:700}
@@ -700,20 +706,15 @@ html:fullscreen body{padding:18px 1px}
 
 <div id="multiPanel" class="modus-panel" hidden>
 <section class="zentrale" id="zentrale" aria-label="Spielzentrale">
-<h3 class="multi-titel">Spielzentrale</h3>
-<div class="zr-zeile">
-<span class="zr-code" id="zr-code" title="Raumcode">—</span>
-<button type="button" class="zr-knopf" id="zr-codeKopieren">Code kopieren</button>
-<button type="button" class="zr-knopf" id="zr-linkKopieren">Einladungslink</button>
+<h3 class="multi-titel" id="zr-titel">Gemeinsamer Spielraum</h3>
+<p class="zr-hinweis" id="zr-hinweis">Alle Spieler sind hier zusammen – Chat und Spielangebote gelten für alle.</p>
+<div class="zr-einladungen" id="zr-einladungen" hidden></div>
+<div class="zr-privat" id="zr-privat" hidden>
+<span id="zr-privatText">Privater Raum</span>
+<button type="button" class="zr-knopf" id="zr-zurueck">Zurück zum Spielraum</button>
 </div>
-<p class="zr-hinweis" id="zr-hinweis">Der Einladungslink führt Gäste direkt in diesen Raum.</p>
-<form id="zr-form">
-<input id="zr-codeFeld" placeholder="Raumcode, z. B. TG-AB12" maxlength="12" autocomplete="off" spellcheck="false" aria-label="Raumcode">
-<button type="submit">Raum betreten</button>
-</form>
-<div class="zr-zeile">
-<button type="button" class="zr-knopf" id="zr-neuerRaum">Neuen Raum öffnen</button>
-</div>
+<h3 class="multi-titel">Anwesende Spieler</h3>
+<div class="zr-spieler" id="zr-spieler"><p class="empty">Niemand sonst da.</p></div>
 <h3 class="multi-titel">Laufende Partien</h3>
 <div class="zr-partien" id="zr-partien"><p class="empty">Keine Partie läuft.</p></div>
 </section>
@@ -767,6 +768,7 @@ html:fullscreen body{padding:18px 1px}
 <button type="button" class="tone-btn evil" data-tone="evil">Ganz böse</button>
 <button type="button" id="toneWhisper" class="tone-btn whisper">Nur an diese Person schreiben</button>
 <button type="button" id="toneGame" class="tone-btn game">Runde anbieten</button>
+<button type="button" id="tonePrivat" class="tone-btn privat">Privat einladen</button>
 </div>
 <div id="toneRename" class="tone-rename" hidden>
 <label for="toneRenameFeld">Neuer Name für <strong id="toneRenameAlt">…</strong></label>
@@ -1122,6 +1124,7 @@ async function joinSingleRoom(){
   }));
   if(!r.ok)throw Error("Connector nicht erreichbar.");
   const room=await r.json();
+  privatRaum=null;
   document.getElementById("room").value=room.code;
   await join(room.name);
  }catch(e){
@@ -1232,10 +1235,62 @@ function zentralePartienZeichnen(){
  });
 }
 
+// Privater Raum (nur auf Einladung). Sein Code steht nirgends auf der Seite –
+// er lebt allein in dieser Variablen, damit ein Neuladen wieder im
+// gemeinsamen Raum landet.
+let privatRaum=null;
+let privatSeit=0;
+let einladungGemeldet="";
+// Nur wer selbst eingeladen hat und auf Antwort wartet, wechselt beim
+// „angenommen“ in den privaten Raum. Nach einem Neuladen steht diese Marke
+// nicht mehr – dann bleibt es beim gemeinsamen Spielraum.
+let einladungWartend=false;
+
 function zentraleZeichnen(){
- const code=document.getElementById("zr-code");
- if(code)code.textContent=activeRoom||"—";
+ const titel=document.getElementById("zr-titel");
+ if(titel)titel.textContent=privatRaum?("Privater Raum – "+privatRaum.partner):"Gemeinsamer Spielraum";
+ const banner=document.getElementById("zr-privat");
+ if(banner)banner.hidden=!privatRaum;
+ const text=document.getElementById("zr-privatText");
+ if(text&&privatRaum)text.textContent="Ihr spielt zu zweit: "+privatRaum.partner+" und du.";
+ const hinweis=document.getElementById("zr-hinweis");
+ if(hinweis)hinweis.textContent=privatRaum
+  ? "Nur ihr beide seid hier – Chat, Angebote und Partien bleiben unter euch."
+  : "Alle Spieler sind hier zusammen – Chat und Spielangebote gelten für alle.";
+ zentraleSpielerZeichnen();
  zentralePartienZeichnen();
+}
+
+// Wer da ist – mit einem Knopf zum privaten Einladen. Im privaten Raum gibt
+// es nichts einzuladen: dort sind schon alle.
+function zentraleSpielerZeichnen(){
+ const box=document.getElementById("zr-spieler");
+ if(!box)return;
+ const da=(currentPlayersList||[]).filter(p=>p&&p.id!==sessionID&&p.anwesend!==false);
+ box.textContent="";
+ if(!da.length){
+  const leer=document.createElement("p");
+  leer.className="empty";
+  leer.textContent="Niemand sonst da – sobald jemand kommt, steht er hier.";
+  box.appendChild(leer);
+  return;
+ }
+ da.forEach(p=>{
+  const zeile=document.createElement("div");
+  zeile.className="zr-spieler-zeile";
+  const name=document.createElement("b");
+  name.textContent=p.name||"Spieler";
+  zeile.appendChild(name);
+  if(!privatRaum){
+   const knopf=document.createElement("button");
+   knopf.type="button";
+   knopf.className="zr-knopf";
+   knopf.textContent="Privat einladen";
+   knopf.onclick=()=>privatEinladen(p.id, p.name||"Spieler");
+   zeile.appendChild(knopf);
+  }
+  box.appendChild(zeile);
+ });
 }
 
 // ?spiel=<kennung> kommt von der Spieleübersicht: dort schickt ein Online-Spiel
@@ -1256,47 +1311,136 @@ function zentraleDeepLink(){
 }
 
 function zentraleAufbau(){
- const form=document.getElementById("zr-form");
- const feld=document.getElementById("zr-codeFeld");
- if(form)form.addEventListener("submit", ev=>{
-  ev.preventDefault();
-  const code=(feld.value||"").trim().toUpperCase();
-  if(!code){ feld.focus(); return; }
-  // Über die Adresse neu laden: der Server setzt den Platz sauber auf den
-  // gewünschten Raum, statt zwei Räume zu vermischen.
-  location.search="?room="+encodeURIComponent(code);
- });
-
- const kopierCode=document.getElementById("zr-codeKopieren");
- if(kopierCode)kopierCode.addEventListener("click", ()=>{
-  if(!activeRoom){ zentraleMeldung("Noch kein Raum geöffnet."); return; }
-  zentraleKopieren(activeRoom, "Raumcode");
- });
-
- const kopierLink=document.getElementById("zr-linkKopieren");
- if(kopierLink)kopierLink.addEventListener("click", ()=>{
-  if(!activeRoom){ zentraleMeldung("Noch kein Raum geöffnet."); return; }
-  zentraleKopieren(zentraleAdresse(), "Einladungslink");
- });
-
- const neuer=document.getElementById("zr-neuerRaum");
- if(neuer)neuer.addEventListener("click", async ()=>{
-  neuer.disabled=true;
-  try{
-   const r=await fetch("/api/rooms",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id:sessionID,name:playerName(),neuerRaum:true})
-   });
-   if(!r.ok)throw new Error("Der Connector konnte keinen Raum öffnen.");
-   const raum=await r.json();
-   location.search="?room="+encodeURIComponent(raum.code);
-  }catch(e){
-   zentraleMeldung(e.message||"Kein neuer Raum möglich.");
-   neuer.disabled=false;
-  }
- });
-
+ const zurueck=document.getElementById("zr-zurueck");
+ if(zurueck)zurueck.addEventListener("click", zurueckInHauptraum);
  zentraleZeichnen();
+}
+
+// Einladung an genau diesen Spieler. Der private Raum entsteht dabei im
+// Hintergrund – niemand muss einen Code sehen oder eintippen.
+async function privatEinladen(id, name){
+ if(!activeRoom||!sessionID||!id)return;
+ if(privatRaum){ tttStatus("Ihr seid schon im privaten Raum."); return; }
+ tttStatus("Einladung an "+name+" ist unterwegs …");
+ try{
+  const r=await fetch("/api/einladung?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,action:"senden",zielId:id})
+  });
+  if(!r.ok){ tttStatus((await r.text()).trim()||"Einladung nicht möglich."); return; }
+  einladungWartend=true;
+  tttStatus(name+" bekommt die Einladung angezeigt.");
+ }catch(e){ tttStatus("Verbindung verloren."); }
+}
+
+// Eingehende und laufende Einladungen abfragen. Nimmt der andere an, steht
+// hier „angenommen“ – dann wechseln beide in den privaten Raum.
+async function ladeEinladungen(){
+ if(!activeRoom||!sessionID)return;
+ try{
+  const r=await fetch("/api/einladung?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID),{cache:"no-store"});
+  if(!r.ok)return;
+  const d=await r.json();
+  const eingehend=(d.eingehend||[])[0]||null;
+  const ausgehend=(d.ausgehend||[])[0]||null;
+  einladungenZeichnen(eingehend, ausgehend);
+  // Bleibt der Mitspieler weg (Tab zu, Neuladen), führt der Weg zurück in den
+  // gemeinsamen Raum. Die ersten Sekunden zählen nicht: Nach dem Wechsel steht
+  // die Spielerliste noch nicht.
+  if(privatRaum&&Date.now()-privatSeit>15000){
+   const andere=(currentPlayersList||[]).filter(p=>p&&p.id!==sessionID&&p.anwesend!==false);
+   if(!andere.length&&einladungGemeldet!=="allein:"+privatRaum.code){
+    einladungGemeldet="allein:"+privatRaum.code;
+    tttStatus(privatRaum.partner+" ist zurück im Spielraum.");
+    setTimeout(()=>{ if(privatRaum)zurueckInHauptraum(); },2000);
+   }
+  }
+  if(eingehend&&einladungGemeldet!=="ein:"+eingehend.vonId){
+   einladungGemeldet="ein:"+eingehend.vonId;
+   tttStatus(eingehend.vonName+" lädt dich privat ein – im Reiter Multiplayer annehmen.");
+  }
+  if(ausgehend&&ausgehend.stand==="abgelehnt"&&einladungGemeldet!==ausgehend.vonId+ausgehend.zielId){
+   einladungGemeldet=ausgehend.vonId+ausgehend.zielId;
+   einladungWartend=false;
+   tttStatus((ausgehend.zielName||"Der Spieler")+" hat abgelehnt.");
+  }
+  if(einladungWartend&&ausgehend&&ausgehend.stand==="angenommen"&&ausgehend.raum&&(!privatRaum||privatRaum.code!==ausgehend.raum)){
+   einladungWartend=false;
+   await raumWechseln(ausgehend.raum, ausgehend.zielName||"Mitspieler");
+  }
+ }catch(e){}
+}
+
+function einladungenZeichnen(eingehend, ausgehend){
+ const box=document.getElementById("zr-einladungen");
+ if(!box)return;
+ const zeilen=[];
+ if(eingehend&&eingehend.stand==="offen")zeilen.push(eingehend.vonName+" lädt dich in einen privaten Raum ein.");
+ if(ausgehend&&ausgehend.stand==="offen")zeilen.push("Einladung an "+ausgehend.zielName+" läuft …");
+ if(!zeilen.length){ box.hidden=true; box.textContent=""; return; }
+ box.hidden=false;
+ box.textContent="";
+ zeilen.forEach(t=>{ const p=document.createElement("p"); p.textContent=t; box.appendChild(p); });
+ if(eingehend&&eingehend.stand==="offen"){
+  const ja=document.createElement("button");
+  ja.type="button"; ja.className="zr-knopf"; ja.textContent="Annehmen";
+  ja.onclick=()=>einladungAnnehmen(eingehend.vonId);
+  const nein=document.createElement("button");
+  nein.type="button"; nein.className="zr-knopf"; nein.textContent="Ablehnen";
+  nein.onclick=()=>einladungAblehnen(eingehend.vonId);
+  box.append(ja, nein);
+ }
+}
+
+async function einladungAnnehmen(vonId){
+ try{
+  const r=await fetch("/api/einladung?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,action:"annehmen",vonId:vonId})
+  });
+  if(!r.ok){ tttStatus((await r.text()).trim()||"Die Einladung gilt nicht mehr."); return; }
+  const d=await r.json();
+  await raumWechseln(d.raum, d.vonName||"Mitspieler");
+ }catch(e){ tttStatus("Verbindung verloren."); }
+}
+
+async function einladungAblehnen(vonId){
+ try{
+  await fetch("/api/einladung?room="+encodeURIComponent(activeRoom),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,action:"ablehnen",vonId:vonId})
+  });
+ }catch(e){}
+ await ladeEinladungen();
+}
+
+// Raumwechsel ohne Neuladen: Chat und Partien hängen an activeRoom, also
+// genügt der neue Raumname. Ein privater Raum landet nie in der Adresse und
+// nie im Sitzungsspeicher.
+async function raumWechseln(code, partner){
+ if(!code)return;
+ rahmenLeeren();
+ privatRaum={code:code, partner:partner||"Mitspieler"};
+ privatSeit=Date.now();
+ document.getElementById("room").value=code;
+ await join("Privater Raum", false);
+ zentraleZeichnen();
+ if(activeRoom===code)tttStatus("Privater Raum mit "+privatRaum.partner+" – Chat und Partie gelten nur für euch.");
+}
+
+// Zurück in den gemeinsamen Spielraum. Der private Platz wird freigegeben;
+// ist der Raum leer, verschwindet er.
+async function zurueckInHauptraum(){
+ const code=privatRaum?privatRaum.code:"";
+ if(code){ try{ await fetch("/api/einladung?room="+encodeURIComponent(code),{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({id:sessionID,action:"zurueck",raum:code})
+ }); }catch(e){} }
+ privatRaum=null;
+ rahmenLeeren();
+ await joinSingleRoom();
+ zentraleZeichnen();
+ tttStatus("Wieder im gemeinsamen Spielraum.");
 }
 
 async function join(roomDisplayName, wieder){
@@ -1337,9 +1481,9 @@ async function join(roomDisplayName, wieder){
    nameMerken(vergeben.name);
   }
   activeRoom=code;
-  // Merken, damit ein neu geladener Tab (Handy im Hintergrund) direkt wieder
-  // im Raum landet, statt den Namen erneut zu verlangen.
-  try{ sessionStorage.setItem("tg-room",code); }catch(e){}
+  // Kein Raum im Sitzungsspeicher: Nach einem Neuladen landet jeder wieder im
+  // gemeinsamen Spielraum, nie in einem privaten.
+  try{ sessionStorage.removeItem("tg-room"); }catch(e){}
   lastChatSignature="";
   letzteChatZeile="";
   chatSprungBereit=false;
@@ -1367,22 +1511,6 @@ async function join(roomDisplayName, wieder){
  }
 }
 
-// Nach einem Neuladen direkt wieder hinein – die Handys laden den Tab im
-// Hintergrund neu, sobald der Speicher knapp wird.
-async function restoreRoom(){
- // Ein Raum in der Adresse hat Vorrang: so kommt man aus einem verlassenen
- // Spiel direkt wieder im richtigen Raum an.
- if(new URLSearchParams(location.search).get("room"))return;
- let code="";
- try{ code=sessionStorage.getItem("tg-room")||""; }catch(e){}
- if(!code)return;
- if(!document.getElementById("player").value.trim())return;
- document.getElementById("room").value=code;
- await join();
- // Der Connector wurde neu gestartet und hat einen neuen Raum: dann frisch
- // betreten, statt mit einer toten Kennung stehen zu bleiben.
- if(!activeRoom)await joinSingleRoom();
-}
 
 // Wer wirklich etwas tut (klickt, tippt, scrollt), meldet das beim nächsten
 // Lebenszeichen mit. Sonst gilt er nach einer Minute als kurz weg.
@@ -4818,6 +4946,13 @@ function closeTonePicker(){
  toneTargetId=null;
 }
 document.getElementById("toneClose").onclick=closeTonePicker;
+// Privat einladen: derselbe Weg wie in der Spielerliste, ohne Code.
+document.getElementById("tonePrivat").onclick=()=>{
+ if(!toneTargetId)return;
+ const zielId=toneTargetId, zielName=toneTargetName||"Spieler";
+ closeTonePicker();
+ privatEinladen(zielId, zielName);
+};
 document.getElementById("toneRenameSave").onclick=umbenennenSpeichern;
 document.getElementById("toneRenameAbbrechen").onclick=closeTonePicker;
 // Enter übernimmt, Escape bricht ab – wie im übrigen Chat.
@@ -5256,6 +5391,9 @@ window.addEventListener("message",ev=>{
  if(d.art!=="ende"&&d.art!=="verlassen")return;
  rahmenLeeren();
  zeigeSpielHinweis(d.hinweis);
+ // Im privaten Raum ist die gemeinsame Partie der einzige Grund dort: Ist sie
+ // vorbei oder einer gegangen, kehren beide in den Spielraum zurück.
+ if(privatRaum)setTimeout(()=>{ if(privatRaum)zurueckInHauptraum(); },1500);
 });
 
 // Sicherheitsnetz: Manche Spielseiten leiten von sich aus auf /connector um
@@ -5610,7 +5748,9 @@ if(eigeneDateienFehlen()){
  setRoomStatus("Die Seite lädt ihre eigenen Dateien nicht: /spiele/token.js fehlt. Ohne Token weist der Server jede Anfrage ab - das liegt an der Auslieferung, nicht an der Verbindung.");
 }
 // Ohne gespeicherten Raum direkt hinein – ohne Klick und ohne Namen.
-restoreRoom().finally(()=>{ if(!activeRoom)joinSingleRoom(); });
+// Jeder landet im gemeinsamen Spielraum – ein privater Raum wird nie
+// wiederhergestellt.
+joinSingleRoom();
 // Im Hintergrund (Handy in der Tasche, anderer Tab) laufen die schnellen
 // Abfragen nicht mit – das kostet Akku und Daten. Der Herzschlag bleibt
 // gedrosselt, damit der Platz nicht verfällt.
@@ -5645,6 +5785,7 @@ function soloAuswahl(offen){
 soloSchalter.addEventListener("click",()=>soloAuswahl(!soloListe.classList.contains("offen")));
 setInterval(()=>{ if(imVordergrund()) refresh(); },1000);
 setInterval(()=>{ if(imVordergrund()) refreshPlayers(); },3000);
+setInterval(()=>{ if(imVordergrund()) ladeEinladungen(); },3000);
 setInterval(()=>{ if(imVordergrund()) loadMutes(); },3000);
 // Zurück im sichtbaren Tab: sofort ein Durchlauf, ohne einen zweiten Timer.
 document.addEventListener("visibilitychange",()=>{
@@ -5686,16 +5827,8 @@ document.getElementById("nameSpeichern").onclick=()=>nameUebernehmen(true);
 // Spielzentrale einmal aufbauen (Raumcode, Einladung, Raumwechsel, Partien).
 zentraleAufbau();
 
-const params=new URLSearchParams(location.search);
-if(params.get("room")){
- document.getElementById("room").value=params.get("room");
- // Zurück aus einem Spiel: mit gespeichertem Namen direkt hinein.
- if(nameField.value.trim()){
-  join();
- }else{
-  setRoomStatus("Bitte gib deinen Namen ein und tritt dem Raum bei.");
- }
-}
+// Alte Links mit ?room=… führen nicht mehr in einen eigenen Raum: Es gibt nur
+// den gemeinsamen Spielraum, wer hier ankommt landet dort (joinSingleRoom).
 </script>
 </body>
 </html>
