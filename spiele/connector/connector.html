@@ -4354,7 +4354,7 @@ let ueberSuche = "";
 
 function spielEintraege() {
   const texte = (TGSpieldaten && TGSpieldaten.texte) || {};
-  return ((TGSpieldaten && TGSpieldaten.spiele) || []).map(function (z) {
+  const liste = ((TGSpieldaten && TGSpieldaten.spiele) || []).map(function (z) {
     const pfad = z[1];
     const on = SUPPORTED_GAMES.find(function (g) { return g.path === "/spiele/" + pfad; }) || null;
     let merk = String(z[3] || "").split(/\s+/).filter(Boolean);
@@ -4368,6 +4368,16 @@ function spielEintraege() {
       zwei: zwei
     };
   });
+  // Spiele, die nur die Connector-Verwaltung kennt (etwa „Malen“, dessen Fläche
+  // im Connector selbst liegt), kommen hinten dazu – kein Spiel verschwindet.
+  SUPPORTED_GAMES.forEach(function (g) {
+    if (liste.some(function (e) { return "/spiele/" + e.pfad === g.path; })) return;
+    liste.push({
+      name: g.name, pfad: g.path.replace(/^\/spiele\//, ""), kat: "", merk: ["online", "multi"],
+      text: g.text || "", online: g, bot: "", zwei: false
+    });
+  });
+  return liste;
 }
 
 function ueberPasst(e, filter, suche) {
@@ -4454,7 +4464,11 @@ function spielAnbieten(id) {
     tttStatus("Einstellungen für " + def.name + " wählen, dann „Runde anbieten“.");
     return;
   }
-  angebotAktion("bieten", id).then(function (ok) { if (ok) openGame(def.path); });
+  angebotAktion("bieten", id).then(function (ok) {
+    if (!ok) return;
+    if (id === "malen") openMalen();
+    else openGame(def.path);
+  });
 }
 
 // Zeichnet die Übersicht in ein Ziel. filter ist der Startfilter
