@@ -18,6 +18,14 @@
 
   var CONNECTOR = "connector/connector.html";
 
+  /* Auf GitHub Pages liegt nur die statische Seite – Räume, Chat und Partien
+     brauchen den Go-Server. Dort gilt deshalb die laufende Adresse. */
+  var CONNECTOR_WEB = "https://trashygecko.onrender.com/spiele/connector/connector.html";
+
+  function connectorBasis() {
+    return /\.github\.io$/.test(location.hostname) ? CONNECTOR_WEB : CONNECTOR;
+  }
+
   // Im APK (file://) gibt es keinen Server: dort bleibt der direkte Weg.
   function hatConnector() {
     return location.protocol === "http:" || location.protocol === "https:";
@@ -36,7 +44,7 @@
   function ziel(pfad) {
     if (!hatConnector()) return "";
     var id = kennungFuer(pfad);
-    return CONNECTOR + (id ? "?spiel=" + encodeURIComponent(id) : "");
+    return connectorBasis() + (id ? "?spiel=" + encodeURIComponent(id) : "");
   }
 
   window.TGHalle = {
@@ -69,7 +77,7 @@
     var a = document.createElement("a");
     a.id = "online-knopf";
     a.className = "online-knopf";
-    a.href = CONNECTOR;
+    a.href = connectorBasis();
     a.setAttribute("title", "Räume, Einladungen, Chat und alle Partien");
     var punkt = document.createElement("span");
     punkt.className = "punkt";
