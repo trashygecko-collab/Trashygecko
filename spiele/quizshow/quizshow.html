@@ -252,7 +252,10 @@ button.aktion:disabled{opacity:.45;cursor:default}
   const elZeit = $("zeit"), elZeitBalken = $("zeitBalken");
   const elMod = $("moderator"), elModWer = $("modWer"), elModSatz = $("modSatz");
 
-  let spiel = null, busy = false, restBis = 0, restGesamt = 0, ticker = null;
+  // busy = Abfrage läuft, sendet = eigene Aktion läuft. Getrennt, damit ein
+  // laufendes Nachladen keinen Klick auf eine Antwort verschluckt (der Spieler
+  // hätte sonst "nicht geantwortet" und die Runde liefe in die Höchstzeit).
+  let spiel = null, busy = false, sendet = false, restBis = 0, restGesamt = 0, ticker = null;
 
   function api(aktion, koerper){
     const url = "/api/quiz?room=" + encodeURIComponent(ROOM) +
@@ -275,7 +278,7 @@ button.aktion:disabled{opacity:.45;cursor:default}
   }
 
   async function hole(){
-    if (!ONLINE || busy) return;
+    if (!ONLINE || busy || sendet) return;
     busy = true;
     try { uebernehmen(await api(null)); }
     catch (e) { elNotiz.textContent = e.message; }
@@ -283,8 +286,8 @@ button.aktion:disabled{opacity:.45;cursor:default}
   }
 
   async function schicke(aktion, koerper){
-    if (!ONLINE || busy) return false;
-    busy = true;
+    if (!ONLINE || sendet) return false;
+    sendet = true;
     try {
       uebernehmen(await api(aktion, koerper));
       return true;
@@ -292,7 +295,7 @@ button.aktion:disabled{opacity:.45;cursor:default}
       elNotiz.textContent = e.message;
       return false;
     } finally {
-      busy = false;
+      sendet = false;
     }
   }
 
@@ -374,12 +377,12 @@ button.aktion:disabled{opacity:.45;cursor:default}
       t.textContent = text;
       b.append(bu, t);
       const meins = ich();
+      const schonGeantwortet = !!(meins && meins.antwort !== undefined);
       if (meins && meins.antwort === i) b.classList.add("meine");
       if (spiel.status === "spiel"){
-        if (meins && meins.antwort !== undefined){
-          b.disabled = true;
-          b.classList.add("meins");
-        }
+        // Wer geantwortet hat, sieht die vier Antworten weiter (gut lesbar),
+        // kann aber keine zweite abgeben.
+        if (schonGeantwortet) b.disabled = true;
       } else if (loesung){
         b.disabled = true;
         if (i === loesung.richtig) b.classList.add("richtig");
@@ -394,7 +397,9 @@ button.aktion:disabled{opacity:.45;cursor:default}
       }
       if (spiel.status === "spiel"){
         b.onclick = async () => {
+          if (schonGeantwortet) return;
           b.disabled = true;
+          elNotiz.textContent = "Antwort ist unterwegs …";
           await schicke("antwort", { wahl: i });
         };
       }

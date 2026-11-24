@@ -61,16 +61,16 @@ func status(w http.ResponseWriter, r *http.Request) {
 	}
 	// url ist die Adresse, die Mitspieler eintippen sollen. Lokal ist das die
 	// LAN-Adresse; die Online-Fassung setzt hier ihre öffentliche Adresse ein.
-	url := ""
-	if primary != "" {
-		url = "http://" + primary + ":" + port + "/connector"
-	}
+	// Online ist die LAN-Adresse des Containers (10.x) für Mitspieler wertlos:
+	// es gilt die Adresse, unter der die Seite im Netz steht. publicURL nimmt
+	// PUBLIC_URL oder leitet sie aus der Anfrage ab (hinter dem Proxy https).
+	url := publicURL(r) + "/connector"
 	jsonResponse(w, map[string]any{
 		"port":     port,
 		"ip":       primary,
 		"ips":      ips,
 		"url":      url,
 		"homepage": home,
-		"online":   false,
+		"online":   true,
 	})
 }

@@ -398,8 +398,20 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 			if n < 1 {
 				n = 1
 			}
-			for i := 0; i < n && err == nil; i++ {
-				err = risikoSetzeArmee(g, k, input.Gebiet)
+			// Nie mehr setzen, als im Vorrat liegt: vorher kam nach den letzten
+			// Armeen ein Fehler zurueck, obwohl die Figuren schon standen - und
+			// genau dieser Zweig speicherte den Stand dann nicht.
+			if g.Phase == risikoPhaseAufstellen {
+				if rest := g.Spieler[k].StartPool; n > rest {
+					n = rest
+				}
+			} else if n > g.Pool {
+				n = g.Pool
+			}
+			for i := 0; i < n; i++ {
+				if err = risikoSetzeArmee(g, k, input.Gebiet); err != nil {
+					break
+				}
 			}
 		case "aufstellenFertig":
 			err = risikoAufstellenFertig(g, k)

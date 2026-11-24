@@ -432,3 +432,32 @@ geprüft, hier nur als Ausgangsstand zitiert:
 - Emulator B meldete beim Prüfen zeitweise `Can't find service: package` – er war noch
   nicht fertig gebootet. Vor Gerätetests immer `adb wait-for-device` und
   `getprop sys.boot_completed` prüfen.
+
+---
+
+## 6. Scherzshow-Zeitsteuerung, Prüfung am 24.11.2026 (Go-Tests, kein Gerät)
+
+Ausgeführt in `spiele/connector` (und nach `sync.py` in `spiele/connector-online`):
+
+- `go vet ./...` – ohne Befund.
+- `go test -run "TestQuiz" -skip "TestQuizModeratorSituationen" ./...` und
+  `go test -run "TestScherzshow" ./...` – alle Tests bestanden, darunter die neuen:
+  - `TestQuizAntwortzeitUndSofortigesEnde`: 30 000 ms in beiden Modi; nach zwei von drei
+    Antworten läuft die Runde, mit der dritten endet sie sofort; der nächste Abruf zeigt
+    Auflösung samt Lösung, Restdauer ≤ 7 s; ohne letzte Antwort endet sie erst mit der
+    Frist, eine Antwort zum Fristende wird abgelehnt; `quizZeit(0) = 30 s`.
+  - `TestScherzshowTempoEndetSofort`: über die echten Routen (`create`, `join`, `ready`,
+    `start`, `antwort`) im Tempo-Modus; der Stand meldet 30 000 ms, nach der letzten
+    Antwort steht „aufloesung“ samt Lösung, gemessene Dauer < 5 s.
+  - `TestScherzshowUeberDieRouten` prüft zusätzlich `zeitMs = 30 000` und eine
+    Auflösungsdauer von 0 < x ≤ 7000 ms im Punktequiz.
+- `node --check` auf dem ausgelagerten Skript der Spielseite – ohne Befund.
+- Zehn Wiederholungen der Zeit- und Routentests (`-count=10`) ohne Fehler.
+- **Nicht** geprüft: Klicken im Browser gegen einen laufenden Connector (keine
+  Zwei-Spieler-Sitzung im Browser aufgebaut); die Seitenänderung ist nur syntaktisch
+  und über die Servertests abgedeckt.
+- Nebenbefund (vorbestehend): `TestQuizModeratorSituationen/falschantwort` schlägt
+  gelegentlich fehl („keine Antwortzitate in 300 Runden“, zufallsabhängig). Mit der
+  **alten** `quiz.go` aus `sicherung/quizzeit-2026-11-24/` trat derselbe Fehlschlag auf
+  (6 Läufe, mindestens einer rot) – die Zeitsteuerung ist nicht die Ursache. Der Test
+  gehört zum Moderator-Vorrat und wurde nicht verändert.

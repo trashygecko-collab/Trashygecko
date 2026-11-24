@@ -5,6 +5,219 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 24.11.2026 · Spielhalle: eigene Spielsymbole, Kategorien-Navigation, sichtbare eigene Runde
+
+**Warum:** Die Spielkarten zeigten nur Buchstabenkürzel, zwischen Kategorien führte
+nur der Umweg über den Start, und eine eröffnete Runde war nach dem Schließen des
+Tisches nicht mehr sichtbar.
+
+**Was gemacht wurde**
+- **Eigene Spielsymbole für alle 94 Karten:** 45 SVG-Zeichen (Würfel, Karten, Krone, Mühle, Bombe,
+  Kiste, Juwel, Alien, Galgen …), Zuordnung über Pfadregeln, Rückfall Kategorie.
+  Gemessen: 94/94 Karten mit Symbol, Würfelspiele 25/25.
+- **Kategorien-Navigation:** unter jeder Kategorie die fünf anderen als Kacheln mit
+  Symbol, Name und Spielzahl; gemessen 5 Ziele, beschriftet.
+- **Eigene Runde bleibt sichtbar:** Leisten-Knopf „Runde: 10.000“, Panel-Block
+  „Offene Runde“ mit Tisch öffnen / Zurückziehen (`/api/angebot` `zurueck`);
+  „Partie fortsetzen“ überlebt das Schließen (`letzterTisch`, `tg-halle-tisch`).
+- **Textfehler behoben:** `el(tag, klasse)` nimmt keinen dritten Parameter – Stern,
+  ›-Pfeil, „Raum + Chat“ und die Kategorien-Beschriftungen waren leer. Jetzt
+  `textContent`; Zurück-Pfeil der Suche ist ein echtes `←`.
+
+**Geprüft** (Chromium, Connector 8768, zwei Ursprünge: 127.0.0.1 und
+192.168.56.1)
+- Raum TG-6348, Anna + Gast YU1, je 2 Spieler; 10.000 eröffnet, Angebot
+  angenommen, beide bereit, Host startet; Chat in beide Richtungen (9 Beiträge);
+  0 Konsolenfehler.
+- Nach dem Schließen: „Runde: 10.000“ in der Leiste, Panel „Deine Runde wartet …“,
+  Tisch öffnet ohne zweite Runde.
+- Handy 390 × 844: Start/Kategorie/Highlights je 0 px Querscrollen.
+- `go test -run Register ./...`: PASS (71 Register-Einträge, 70 Katalogspiele,
+  24 Spiele ohne Online-Teil, `malen` ist Werkzeug).
+- APK neu gebaut (Assets enthalten `halle.css`, `halle-online.js`), Version
+  unverändert 1.16 / Code 17.
+
+**Nachtrag: Bereitschaft und Start in der Halle, drei weitere Spiele geprüft**
+- Die Tisch-Kopfzeile hat **Bereit** und **Spiel starten** (Gastgeber, erst wenn
+  alle bereit sind). Dieselben Endpunkte wie die Spielseite (`action=ready/start`),
+  keine zweite Lobby.
+- **Galgen/Kniffel/Schach** vollständig über die Halle gespielt (Raum TG-96F2,
+  Loopback + LAN): Beitritt, Bereit, Start, laufende Partie sichtbar, 0 Fehler.
+- Behoben: laufender Zustand `spiel` wurde nicht als „Partie läuft“ erkannt;
+  offenes Tisch-Angebot blieb nach dem Start stehen; Schach (ohne `players`)
+  meldete fälschlich „Warte auf Mitspieler“.
+- Handy 390 px mit den neuen Knöpfen: 0 px Querscrollen in Kopfzeile und Seite.
+
+**Offen:** vier Spiele durchgespielt (10.000, Kniffel, Galgen, Schach), 66 weitere
+ungetestet; zwei Ursprünge auf einem Rechner statt zwei echter Geräte; kein
+Freundesystem im Connector (Anwesenheit nur im Raum); Start aus der Spielseite
+räumt das Hallen-Angebot nicht auf (Connector hat keine gemeinsame Statusabfrage).
+
+---
+
+## 24.11.2026 · Web-Spielhalle: neue Optik, neue Highlights, durchgängiger Online-Ablauf
+
+**Warum:** Die Übersicht war grau und schlicht; Räume, Einladungen und Chat lagen nur im
+Connector, nicht in der Spielhalle.
+
+**Highlights**
+- Flipper und Quizshow sind aus den vier Highlights entfernt, **Mahjong** und **10.000**
+  sind neu. Bilder: `spiele/bilder/highlights/{mahjong,zehntausend}.jpg` (1392 × 752,
+  91 KB / 86 KB), erzeugt im Stil der vorhandenen zwei Bilder.
+- Jede Highlight-Karte zeigt Bild, Kategorie, Kurztext, Modus-Marken und einen direkten
+  Einstieg; 10.000 trägt zusätzlich „Online 2–6“. Der Pfad `/spiele/bilder/highlights/…`
+  bleibt im Katalog und damit im Android-Bau unverändert.
+
+**Optik** (`spiele/halle.css`, ersetzt das bisherige Inline-CSS in `spiele.html`)
+- Dunkler Grund aus drei Radialverläufen, feinem Raster und Vignette; Kategorie-Farben
+  wirken als Tint, Rand, Symbol und Akzentkante. Große Bildkarten, sechs
+  Kategorie-Kacheln, kompakte Spielkarten mit Modus-Chips.
+- Hover/Fokus-Animationen, gestaffelter Auftritt (`--i`, 26 ms), `prefers-reduced-motion`
+  schaltet alles ab, `prefers-contrast:more` hebt Texte an, Fokus bleibt sichtbar.
+- Raster: Handy 1 Spalte Karten/2 Kategorien, ab 560 px 2, ab 940 px 3, ab 1240 px 4
+  Karten und 6 Kategorien. Kopfzeile und Online-Leiste sind auf 390 px einzeilig.
+- Mädchen-/Buben-Stil bleiben über die vorhandenen `--tg-*`-Tokens erhalten; die dunklen
+  Kartenspiele wurden nicht angefasst.
+
+**Online** (`spiele/halle-online.js`, neue Schicht – kein zweiter Connector)
+- Identität wie im Connector: `tg-player-id`, `tg-player-name`, `token.js`; ohne Namen
+  entsteht „Gast XYZ“, änderbar im Panel.
+- „Mit Freunden spielen“ legt einen **eigenen Raum** an (`POST /api/rooms` mit
+  `neuerRaum`), Einladungen laufen über `?raum=CODE`, Raumcode und QR-Bild
+  (`/api/qr?url=`). Betreten per Code oder Link; Anwesenheit über `/api/presence` und
+  `/api/players` (20 s / 7,5 s).
+- Offene Runde über `/api/angebot`: Host „bieten“ (Tischspiele erzeugt der Server),
+  Gäste „annehmen“ oder „ablehnen“; eigene Runde lässt sich wieder öffnen. Ein
+  laufendes Spiel wird über `/api/<spiel>` erkannt und fortgesetzt statt doppelt eröffnet.
+- Der Tisch läuft im Overlay als **dieselbe Spielseite** (`?room&name&id&v`); Bereitschaft
+  und Start bleiben dort, wo die Lobby schon war. Die Kopfzeile zeigt Spielerzahl,
+  Bereitschaft und Status (alle 2,5 s).
+- Chat: `/api/messages`, als Dock rechts (Desktop) bzw. Blatt unten (Handy), ungelesene
+  Beiträge am Chat-Knopf, Einladungszeilen mit „Mitspielen/Ablehnen“.
+- Reconnect: 409 → gleicher Platz neu, 403 → neue Kennung (höchstens alle 30 s),
+  404 → neuer Raum; gespeicherter Raum und Tisch werden beim Laden wieder aufgenommen.
+- Nur Spiele aus `multiplayer-register.js` bekommen den Online-Einstieg; alle anderen
+  starten unverändert sofort. Der Filter „Online spielbar“ zeigt die echten Fälle.
+
+**Geprüft** (Chromium/Playwright, zwei getrennte Kontexte, Connector lokal Port 8769)
+- Startseite 1440 × 900: 4 Highlights, 6 Kategorien, keine Konsolenfehler.
+- Raum TG-5BD3 über „Mit Freunden spielen“, Gast über `?raum=TG-5BD3`: beide sehen
+  2 Spieler. 10.000 → „Online-Runde“ → Tisch; Gast nimmt das Angebot an; beide „Bereit“,
+  Host startet. Danach in beiden Köpfen „Partie läuft · 2 Spieler“.
+- Chat in beide Richtungen („Hallo von A …“, „Hallo von B …“), 10 Beiträge im Verlauf.
+- Handy 390 × 844: gleicher Ablauf, Chat als Blatt unten (62 % Höhe), Screenshots geprüft.
+- Neuladen des Gasts → „Partie fortsetzen“ → laufende Partie wieder da. Schließen und
+  erneut 10.000 wählen → „Eigene Runde öffnen“, **1 am Tisch** (keine zweite Runde).
+- „Jetzt spielen“ führt weiterhin auf `…/zehntausend.html` **ohne** `?room`.
+- `node --check` für `halle-online.js` und die ausgelagerte Inline-JS: grün.
+
+**Android**
+- `:app:katalogBauen` neu: 94 Spiele, 6 Kategorien, Highlights Mahjong/10.000/Risiko/
+  Labyrinth. `:app:packageTrashyGeckoApk`: 14.690.966 B,
+  md5 `0c0450069e852ff4151b9e79e7658ddb`; APK enthält `halle.css`, `halle-online.js` und
+  beide neuen Bilder. Version bleibt **1.16 / Code 17** (Änderung nur mit Rückfrage).
+- Die App selbst wurde in dieser Runde nicht neu installiert/getestet.
+
+**Offen**
+- Ende-zu-Ende nur mit 10.000 geprüft; die übrigen Online-Spiele des Registers nutzen
+  denselben Weg, wurden aber nicht durchgespielt.
+- Zwei Browser-Kontexte auf einem Rechner, **kein** echtes zweites Gerät im WLAN.
+- Bereitschaft/Start bleiben bewusst in der Spielseite; die Halle zeigt nur den Stand.
+- Ohne laufenden Connector bleibt die Halle beim Einzelspieler-Teil.
+
+---
+
+## 23.11.2026 · App-Spielhalle: Startseite, Kategorien und Suche aus `katalog.json`
+
+**Warum:** Die Web-Spielhalle hatte Kategorien, Highlights und eine Suche, die App zeigte
+weiterhin die flache Liste mit 94 Einträgen.
+
+**Was gemacht wurde** (D-26)
+- `katalogBauen` überträgt jetzt auch die Kurzbeschreibungen (`TEXTE`), die
+  Kategorie-Texte samt `akzent`-Farbe und die vier `HIGHLIGHTS` nach `katalog.json`
+  (94 Spiele mit Text, 6 Kategorien, 4 Highlights). Die Zeilenform in `spiele.html`
+  bleibt unverändert; Highlight-Pfade werden relativ zu `spiele/` aufgelöst.
+- `SpieleActivity` (614 → **1055** Zeilen) hat drei Ansichten: Start mit vier
+  Highlight-Karten (2 Spalten, ab 900 dp 4) und sechs Kategorie-Kacheln (2/3/6 Spalten je
+  Breite), eine Kategorie mit Beschreibung und **nur** ihren Spielen sowie die
+  Trefferliste für Suche/Filter, nach Kategorie gruppiert. Jede Spielkarte zeigt Name,
+  Kurztext und vorhandene Modi; die Suche prüft Name, Suchwörter, Text und
+  Kategoriename (Umlaute egal), die Chips bleiben unverändert (UND).
+- Zurück führt in dieser Reihenfolge: Filter löschen → Kategorie verlassen → Activity
+  beenden; der Pfeil in der Kopfzeile nimmt denselben Weg.
+- Prozess-Tod: `onSaveInstanceState` sichert zusätzlich Ansicht und offene Kategorie
+  (`ZUSTAND_ANSICHT`, `ZUSTAND_KATEGORIE`); Suche, Merkmale und Scroll bleiben wie
+  bisher. Die Reihenfolge `stelleWieder` → einmal `zeichne` ist unverändert.
+- Highlight-Bilder kommen aus `assets/www/spiele/bilder/highlights/*.jpg`, verkleinert
+  gelesen (`inSampleSize = 3`, ~464 × 251); Karten einer Rasterzeile bekommen die Höhe
+  der höchsten Karte.
+
+**Geprüft (Emulator 1080 × 2340, Debug-APK)**
+- Start: „94 Spiele“, 7 Filter-Chips, 4 Highlights (Karten einer Zeile gleich hoch),
+  6 Kacheln mit 25/11/22/15/20/1 Spielen, keine abgeschnittenen Texte.
+- „Würfelspiele“ → 25 Einträge mit Beschreibung; Suche „kniffel“ → „1 Treffer“.
+- Prozess-Tod in der Kategorie bei Scroll 1014: `am kill` (PID 18129 → leer), Start
+  über die Übersicht → PID 18451, Log „Ansicht kategorie (wuerfel), Scroll 1014“,
+  Liste an derselben Stelle. Suche „kniffel“ überlebte ebenso („1 Treffer“).
+- Prozess-Tod mit dem endgültigen Bau: Suche „bejeweled“ gesetzt, `am kill`
+  (PID 4883 → leer), Task zurückgeholt → PID 5308, Log „Zustand wiederhergestellt:
+  „bejeweled“, 0 Merkmale, Ansicht start“, „1 Treffer“.
+- Dialog „Lokal / offline“ / „Online-Spiel“ erscheint, „Lokal / offline“ öffnet
+  `GameActivity`; Bejeweled lädt („Neues Spiel“, Anleitung, Spielfeld), der Prozess
+  bleibt, 0 `FATAL` im Logcat. (Beim ersten Versuch verschwand der Emulator selbst –
+  Adb „device offline“, kein App-Absturz; nach einem Neustart lief es.)
+- `:app:assembleDebug` und `:app:packageTrashyGeckoApk` grün; `katalog.json` in beiden
+  Ablagen md5-gleich (`440ee0e5…`), ebenso `SpieleActivity.java` (`005b4b3d…`) und
+  `build.gradle` (`9a5f009d…`).
+- App **1.16** (versionCode 17), signiert (CN=TrashyGecko), **14.475.624 B**;
+  `tmahjong.apk` und `TrashyGecko.apk` in beiden Ablagen md5-gleich (`ed23415b…`).
+
+**Grenze:** Keine ganze Partie durchgespielt; Mehrspieler nur bis zum Modus-Dialog
+geprüft (die Spielseiten selbst sind unverändert). Nicht committet, nicht veröffentlicht.
+
+## 23.11.2026 · Spielhalle: Kategorien, Highlights und Suche statt langer Liste
+
+**Warum:** Die Spieleübersicht war eine einzige, immer länger werdende Liste mit
+aufklappbaren Abschnitten. Am Handy musste man weit scrollen, Kategorien und Spielmodi
+waren nicht auf einen Blick zu erkennen.
+
+**Was gemacht wurde** (D-25)
+- `spiele/spiele.html` neu aufgebaut: Startseite mit vier großen Highlight-Karten, sechs
+  Kategorie-Kacheln (Würfel, Karten, Brett, Denken, Arcade/Geschicklichkeit,
+  Quiz/Partyspiele), zentrale Suche und je Kategorie eine eigene Ansicht mit kompakten
+  Spielkarten (Name, Symbol, Kurzbeschreibung, vorhandene Spielmodi, „Spielen“).
+- Ansichten über Hash-Adressen (`#/k/wuerfel`, `#/highlights`, `#/werkzeuge`); der
+  Zurück-Pfeil bleibt beim Scrollen oben stehen. Keine waagerechte Scrollleiste.
+- Spielmodi kommen ausschließlich aus den vorhandenen Merkmalen (`solo`, `lokal`,
+  `online`, `computer`); nicht vorhandene Modi werden nicht angezeigt. Die Auswahl
+  passiert weiterhin erst im Spiel.
+- Kategorie-Zuordnung gestrafft: Action, Jump & Run und Abenteuer gehören jetzt zu
+  „Arcade und Geschicklichkeit“, die Scherzshow zu „Quiz und Partyspiele“. Das zweite
+  „Solitär“ heißt zur Unterscheidung „Steine-Solitär“ (gleiche URL, gleiches Spiel).
+- Katalogzeilen in `SPIELE`/`WERKZEUGE` unverändert im Format – `katalogBauen` und
+  `homepageKopieren` lesen sie weiterhin. Neu sind nur `TEXTE` (Kurzbeschreibungen),
+  `HIGHLIGHTS` und vier Vorschaubilder unter `spiele/bilder/highlights/`.
+- Nichts an Spielen, Connector, Spielständen, URLs oder der Grafikstil-Auswahl geändert.
+
+**Tatsächlich getestet** (Playwright gegen `python -m http.server`, Desktop-Chromium)
+- 360×740: 6 Kategorie-Kacheln, 4 Highlights, Startseite **1274 px** hoch (vorher 1809),
+  keine waagerechte Scrollleiste; Würfelspiele 25 Karten, davon 16 mit Einzelspieler.
+- Suche: „mau“ → Mau Mau, „kniffel“ → Kniffel, „muhle“ → Mühle (ohne Umlaut),
+  „qqqq“ → Hinweis; Leeren stellt die Übersicht wieder her.
+- Modi: UNO zeigt „Mehrspieler: lokal & online“, Solitär nur „Einzelspieler“.
+- 1280×800: 6 Kacheln und 4 Highlights je in einer Reihe, Spielkarten in 4 Spalten.
+- Alle **94** Spiele per HTTP **200**; UNO, Schach, Jule und Pong laden ohne Konsolen-,
+  Seiten- oder Ladefehler. Grafikstil „Mädchen“ greift weiterhin.
+- `:app:katalogBauen` und `:app:verifyHomepageGames`: **94 Spiele, 6 Kategorien**,
+  `BUILD SUCCESSFUL in 41s`; die APK-Kopie enthält die beiden Installer-Zeilen nicht mehr.
+
+**Offen**
+- Nur Browserprüfung bei zwei Größen; kein Emulator- oder Gerätetest in dieser Runde.
+- Die zwei zufallsabhängigen Go-Tests (Quiz-Antwortzitate, Zehntausend-Wurf) bleiben
+  sporadisch – unabhängig von dieser Arbeit.
+
+---
+
 ## 23.11.2026 · Etappe 3, Schritt 11: Homepage-Seiten liegen im APK
 
 **Warum:** Im APK lag nur `index.html` (als `homepage.html`). Fast jede Kachel der
@@ -554,3 +767,40 @@ werden, was tatsächlich existiert, was fehlt und warum.
   mit vier Kacheln, `LOAD_NO_CACHE`, `onRenderProcessGone`, Release-Signatur eingeführt.
 - **1.13 und früher**: Umbau von „nur Mahjong“ zur Spiele-App, lokale Räume, Galgen im
   LAN, Fernbedienung.
+
+---
+
+## Scherzshow: Zeitsteuerung (24.11.2026)
+
+- **Antwortzeit 30 s in beiden Modi** (`quizZeitTempo` und `quizZeitPunkte` in
+  `spiele/connector/quiz.go`, vorher 20 s bzw. 15 s). Die Zeit ist eine Höchstzeit;
+  angezeigt wird sie aus `zeitMs`, die Spielseite hat keine eigenen Sekunden.
+- **Sofortiger Rundenabschluss**: `quizAntwort` wertet aus, sobald `quizAlleDran()`
+  meldet, dass alle Spieler geantwortet haben – es wird nicht auf die Restzeit
+  gewartet. Bestand schon, ist jetzt durch Tests festgenagelt; ebenso der Abgang
+  eines Spielers (`quizRemoveSeat`) und die Frist als Obergrenze.
+- **Spielseite** (`spiele/quizshow/quizshow.html`): Nachladen und eigene Aktion haben
+  getrennte Sperren (`busy` / `sendet`). Vorher verschluckte ein laufendes Nachladen
+  (alle 900 ms) einen Klick auf eine Antwort – der Spieler stand dann als „hat nicht
+  geantwortet“ da und die Runde lief in die Höchstzeit. Wer geantwortet hat, sieht
+  Frage, alle vier Antworten und den Quizmaster-Kommentar weiter, kann aber keine
+  zweite Antwort abgeben.
+- Auflösungsdauer unverändert 7 s (`quizPauseZeit`), Punkte, Fragen, Regeln und
+  Gestaltung unverändert.
+- Binaries neu gebaut (`trashygecko-connector.exe`, `trashygecko-connector-online.exe`,
+  `trashygecko-connector-online-linux`), `connector-online` über `sync.py` abgeglichen,
+  APK neu gebaut (14.677.021 B). Sicherung: `Homepage/sicherung/quizzeit-2026-11-24/`.
+
+## Spielehalle ohne Fuß (24.11.2026)
+
+- Der Fußbereich unter dem Spielekatalog ist ganz weg: Links (Startseite, Highlights,
+  Werkzeuge & Extras), Datum/Uhrzeit und das Gameboy-Zeichen aus Text. Mit dem Rest der
+  Seite hatte er nichts mehr zu tun.
+- Entfernt: `<footer class="fuss">` samt Inhalt und das 1-s-Skript für Datum/Uhrzeit in
+  `spiele/spiele.html`; die Regeln `.fuss`, `.fuss-links`, `#local-date-time`, `.gameboy`
+  (auch die Handy-Regel `.gameboy{display:none}`) in `spiele/halle.css`. Reine
+  Anzeige – Katalog, Suche, Filter, Online-Halle unverändert.
+- Geprüft (Chromium 390×844 und 1280×800): 0 Elemente `.fuss`/`footer`/`.gameboy`,
+  letztes Element ist die Hallen-Auswahl, Seite 1647 px bzw. 1030 px hoch, kein
+  Querscrollen, keine Konsolenfehler, 10 Karten wie zuvor.
+- Beide Ablagen und die Android-Assets byte-gleich; APK neu 14.676.443 B.

@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -15,6 +18,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -24,6 +28,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,16 +39,19 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Die Spieleübersicht der App – nativ, aus `assets/katalog.json`.
+ * Die Spielhalle der App – nativ, aus `assets/katalog.json`.
  *
  * Die Datei entsteht beim Bauen aus `spiele/spiele.html` (Aufgabe
- * `katalogBauen`, D-15); hier wird sie nur gelesen. Ein Tipp auf ein Spiel
- * öffnet {@link GameActivity}, bei Online-Spielen vorher die Frage
- * „Lokal / Online“ – wie bisher im Katalog.
+ * `katalogBauen`, D-15); hier wird sie nur gelesen. Die Startansicht zeigt
+ * Highlights und Kategorie-Kacheln, eine Kategorie zeigt nur ihre Spiele, und
+ * die Suche findet weiterhin alle Spiele unabhängig von der Kategorie.
+ * Ein Tipp auf ein Spiel öffnet {@link GameActivity}, bei Online-Spielen
+ * vorher die Frage „Lokal / Online“ – wie bisher im Katalog.
  *
  * Suche und Merkmalsfilter verhalten sich wie im HTML-Katalog: Die Suche
- * prüft Name und Suchwörter, jedes gewählte Merkmal muss zusätzlich zutreffen,
- * und angeboten werden nur Merkmale, die im Katalog wirklich vorkommen.
+ * prüft Name, Suchwörter, Kurztext und Kategoriename, jedes gewählte Merkmal
+ * muss zusätzlich zutreffen, und angeboten werden nur Merkmale, die im
+ * Katalog wirklich vorkommen. Ein Spiel steht genau einmal im Katalog.
  */
 public final class SpieleActivity extends Activity {
     private static final String TAG = "TrashyGeckoSpiele";
@@ -52,6 +60,13 @@ public final class SpieleActivity extends Activity {
     private static final String ZUSTAND_SUCHE = "suche";
     private static final String ZUSTAND_MERKMALE = "merkmale";
     private static final String ZUSTAND_SCROLL = "scroll";
+    private static final String ZUSTAND_ANSICHT = "ansicht";
+    private static final String ZUSTAND_KATEGORIE = "kategorie";
+
+    private static final String ANSICHT_START = "start";
+    private static final String ANSICHT_KATEGORIE = "kategorie";
+    /** Sammelansicht für Spiele, deren Kategorie im Katalog fehlt (alte Kataloge). */
+    private static final String REST = "__rest";
 
     /** Nur der Chip-Füllton ist hier eigen; Fläche, Text und Gold kommen aus {@link Ansicht}. */
     private static final int CHIP = 0xFF1A3A30;
@@ -62,11 +77,11 @@ public final class SpieleActivity extends Activity {
     private static final Map<String, String> MERKMAL_FILTER = new LinkedHashMap<>();
 
     static {
-        MERKMAL_TEXT.put("solo", "Solo");
+        MERKMAL_TEXT.put("solo", "Einzelspieler");
         MERKMAL_TEXT.put("lokal", "Lokal");
         MERKMAL_TEXT.put("multi", "Mehrspieler");
         MERKMAL_TEXT.put("online", "Online");
-        MERKMAL_TEXT.put("computer", "Computer");
+        MERKMAL_TEXT.put("computer", "Gegen Bots");
         MERKMAL_TEXT.put("highscore", "Rekord");
         MERKMAL_TEXT.put("controller", "Pad");
 
@@ -79,26 +94,47 @@ public final class SpieleActivity extends Activity {
         MERKMAL_FILTER.put("controller", "Controller");
     }
 
+    /** Eine Kategorie aus katalog.json. */
+    private static final class Kategorie {
+        String id;
+        String name;
+        String text = "";
+        int akzent = Ansicht.GOLD;
+    }
+
     /** Ein Eintrag aus katalog.json. */
     private static final class Spiel {
         String name;
         String pfad;
         String kategorie;
-        List<String> merkmale = new ArrayList<>();
+        String text = "";
         String suche = "";
+        /** Name, Suchwörter, Text und Kategorie in Kleinbuchstaben (mit und ohne Umlaute). */
+        String suchtext = "";
+        List<String> merkmale = new ArrayList<>();
         boolean online;
     }
 
+    /** Ein hervorgehobenes Spiel samt Vorschaubild. */
+    private static final class Highlight {
+        Spiel spiel;
+        String bild;
+    }
+
     private final List<Spiel> spiele = new ArrayList<>();
-    private final List<String> kategorien = new ArrayList<>();
-    private final Map<String, String> kategorieNamen = new LinkedHashMap<>();
+    private final List<Kategorie> kategorien = new ArrayList<>();
+    private final Map<String, Kategorie> kategorieNach = new LinkedHashMap<>();
+    private final List<Highlight> highlights = new ArrayList<>();
     private final List<String> aktiveMerkmale = new ArrayList<>();
     /** Einmal gebaute Zeilenansichten – ein Filterwechsel hängt sie nur um. */
     private final Map<Spiel, View> zeilen = new HashMap<>();
     private final Map<String, TextView> chips = new LinkedHashMap<>();
+    /** Einmal geladene Vorschaubilder; klein genug für die Kacheln. */
+    private final Map<String, Bitmap> bilder = new HashMap<>();
 
     private LinearLayout liste;
     private LinearLayout chipLeiste;
+    private TextView titel;
     private TextView zaehler;
     private TextView zurueckChip;
     private EditText suchfeld;
@@ -106,6 +142,10 @@ public final class SpieleActivity extends Activity {
     private String filter = "";
     /** Beim Wiederherstellen zeichnet noch nicht der Textwächter – das tut `stelleWieder`. */
     private boolean stelleWiederLaeuft;
+    /** Ansicht: Startseite mit Kacheln oder eine geöffnete Kategorie. */
+    private String ansicht = ANSICHT_START;
+    private String offeneKategorie;
+    private boolean katalogFehler;
 
     @Override protected void onCreate(Bundle zustand) {
         super.onCreate(zustand);
@@ -117,20 +157,23 @@ public final class SpieleActivity extends Activity {
 
     /**
      * Wird die Activity vom System beendet (Prozess-Tod im Hintergrund, „Aktivitäten nicht
-     * behalten“), entsteht sie neu. Suchtext, Merkmalswahl und Scrollposition werden deshalb
-     * gesichert – die Drehung allein braucht das nicht (`configChanges`).
+     * behalten“), entsteht sie neu. Suchtext, Merkmalswahl, Scrollposition und die geöffnete
+     * Ansicht werden deshalb gesichert – die Drehung allein braucht das nicht
+     * (`configChanges`).
      */
     @Override protected void onSaveInstanceState(Bundle zustand) {
         super.onSaveInstanceState(zustand);
         zustand.putString(ZUSTAND_SUCHE, suchfeld.getText().toString());
         zustand.putStringArrayList(ZUSTAND_MERKMALE, new ArrayList<>(aktiveMerkmale));
         zustand.putInt(ZUSTAND_SCROLL, rollen.getScrollY());
+        zustand.putString(ZUSTAND_ANSICHT, ansicht);
+        zustand.putString(ZUSTAND_KATEGORIE, offeneKategorie);
     }
 
     /**
      * Holt den gesicherten Zustand zurück und zeichnet die Liste danach genau einmal – ohne
-     * Sicherung ist das der erste Aufbau. Unbekannte Merkmale aus einem älteren Bundle
-     * entfallen, weil `baueChips` nur vorhandene anbietet.
+     * Sicherung ist das der erste Aufbau. Unbekannte Merkmale oder Kategorien aus einem
+     * älteren Bundle entfallen, weil `baueChips` nur vorhandene anbietet.
      */
     private void stelleWieder(Bundle zustand) {
         int scroll = 0;
@@ -140,6 +183,15 @@ public final class SpieleActivity extends Activity {
                 for (String merkmal : merkmale) {
                     if (MERKMAL_FILTER.containsKey(merkmal)) aktiveMerkmale.add(merkmal);
                 }
+            }
+
+            String gespeicherteAnsicht = zustand.getString(ZUSTAND_ANSICHT, ANSICHT_START);
+            String gespeicherteKategorie = zustand.getString(ZUSTAND_KATEGORIE, null);
+            if (ANSICHT_KATEGORIE.equals(gespeicherteAnsicht)
+                    && gespeicherteKategorie != null
+                    && kategorieNach.containsKey(gespeicherteKategorie)) {
+                ansicht = ANSICHT_KATEGORIE;
+                offeneKategorie = gespeicherteKategorie;
             }
 
             String text = zustand.getString(ZUSTAND_SUCHE, "");
@@ -155,7 +207,9 @@ public final class SpieleActivity extends Activity {
             }
             scroll = zustand.getInt(ZUSTAND_SCROLL, 0);
             Log.i(TAG, "Zustand wiederhergestellt: „" + text + "“, "
-                    + aktiveMerkmale.size() + " Merkmale, Scroll " + scroll);
+                    + aktiveMerkmale.size() + " Merkmale, Ansicht " + ansicht
+                    + (offeneKategorie == null ? "" : " (" + offeneKategorie + ")")
+                    + ", Scroll " + scroll);
         }
 
         chipAussehen();
@@ -179,10 +233,10 @@ public final class SpieleActivity extends Activity {
     /**
      * Die Drehung baut die Activity nicht neu (`configChanges` im Manifest), also bleiben
      * Suchtext, gewählte Merkmale und Scrollposition von selbst erhalten – anders als beim
-     * Prozess-Tod, den {@link #onSaveInstanceState} abdeckt. Die Chip-Leiste
-     * wurde aber für die alte Breite umbrochen – im Querformat passen alle in eine Zeile,
-     * im Hochformat wäre der Rest abgeschnitten. Deshalb hier mit der neuen Breite neu
-     * umbrechen; die Auswahl steht in {@link #aktiveMerkmale} und bleibt bestehen.
+     * Prozess-Tod, den {@link #onSaveInstanceState} abdeckt. Die Chip-Leiste und das
+     * Kategorie-Raster wurden aber für die alte Breite gebaut – im Querformat passen mehr
+     * Spalten. Deshalb hier mit der neuen Breite neu aufbauen; die Auswahl steht in
+     * {@link #aktiveMerkmale} und bleibt bestehen.
      */
     @Override public void onConfigurationChanged(Configuration neu) {
         super.onConfigurationChanged(neu);
@@ -190,7 +244,39 @@ public final class SpieleActivity extends Activity {
         if (chipLeiste == null || spiele.isEmpty()) return;
         int scroll = rollen == null ? 0 : rollen.getScrollY();
         baueChips();
+        zeichne();
         if (rollen != null) rollen.post(() -> rollen.scrollTo(0, scroll));
+    }
+
+    /**
+     * Zurück führt erst aus Suche und Filtern, dann aus einer Kategorie in die Übersicht
+     * und erst zuletzt aus der Spieleliste heraus. Die Kopfzeile nutzt denselben Weg,
+     * damit Bildschirmtaste und Pfeil sich gleich verhalten.
+     */
+    @Override public void onBackPressed() {
+        if (!filter.isEmpty() || !aktiveMerkmale.isEmpty()) {
+            zuruecksetzen();
+            return;
+        }
+        if (ANSICHT_KATEGORIE.equals(ansicht)) {
+            ansicht = ANSICHT_START;
+            offeneKategorie = null;
+            zeichne();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    private void zurueck() {
+        if (!filter.isEmpty() || !aktiveMerkmale.isEmpty()) {
+            zuruecksetzen();
+        } else if (ANSICHT_KATEGORIE.equals(ansicht)) {
+            ansicht = ANSICHT_START;
+            offeneKategorie = null;
+            zeichne();
+        } else {
+            finish();
+        }
     }
 
     // ---------------------------------------------------------------- Aufbau
@@ -210,12 +296,13 @@ public final class SpieleActivity extends Activity {
         zurueck.setText("‹");
         zurueck.setTextColor(Ansicht.GOLD);
         zurueck.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
-        zurueck.setPadding(0, 0, Ansicht.dp(this, 14), Ansicht.dp(this, 2));
-        zurueck.setOnClickListener(v -> finish());
+        zurueck.setPadding(0, 0, Ansicht.dp(this, 14), Ansicht.dp(this, 14));
+        zurueck.setContentDescription("Zurück");
+        zurueck.setOnClickListener(v -> zurueck());
         kopf.addView(zurueck);
 
-        TextView titel = new TextView(this);
-        titel.setText("Spiele");
+        titel = new TextView(this);
+        titel.setText("Spielhalle");
         titel.setTextColor(Ansicht.GOLD);
         titel.setTypeface(Typeface.DEFAULT_BOLD);
         titel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
@@ -230,7 +317,7 @@ public final class SpieleActivity extends Activity {
         wurzel.addView(kopf);
 
         suchfeld = new EditText(this);
-        suchfeld.setHint("Spiel suchen – z. B. Mau Mau, Kniffel, Halma");
+        suchfeld.setHint("Spiel suchen – z. B. Kniffel");
         suchfeld.setHintTextColor(Ansicht.MUTED);
         suchfeld.setTextColor(Ansicht.TEXT);
         suchfeld.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
@@ -291,9 +378,14 @@ public final class SpieleActivity extends Activity {
                 for (int i = 0; i < kat.length(); i++) {
                     JSONObject eintrag = kat.optJSONObject(i);
                     if (eintrag == null) continue;
-                    String id = eintrag.optString("id");
-                    kategorien.add(id);
-                    kategorieNamen.put(id, eintrag.optString("name", id));
+                    Kategorie kategorie = new Kategorie();
+                    kategorie.id = eintrag.optString("id");
+                    if (kategorie.id.isEmpty()) continue;
+                    kategorie.name = eintrag.optString("name", kategorie.id);
+                    kategorie.text = eintrag.optString("text", "");
+                    kategorie.akzent = farbe(eintrag.optString("akzent", ""), Ansicht.GOLD);
+                    kategorien.add(kategorie);
+                    kategorieNach.put(kategorie.id, kategorie);
                 }
             }
 
@@ -306,6 +398,7 @@ public final class SpieleActivity extends Activity {
                     spiel.name = eintrag.optString("name");
                     spiel.pfad = eintrag.optString("pfad");
                     spiel.kategorie = eintrag.optString("kategorie");
+                    spiel.text = eintrag.optString("text", "");
                     spiel.suche = eintrag.optString("suche", "");
                     JSONArray merk = eintrag.optJSONArray("merkmale");
                     if (merk != null) {
@@ -314,17 +407,65 @@ public final class SpieleActivity extends Activity {
                         }
                     }
                     spiel.online = spiel.merkmale.contains("online");
+                    Kategorie kategorie = kategorieNach.get(spiel.kategorie);
+                    String roh = spiel.name + " " + spiel.suche + " " + spiel.text + " "
+                            + (kategorie == null ? "" : kategorie.name);
+                    spiel.suchtext = (roh + " " + ohneUmlaute(roh)).toLowerCase(Locale.ROOT);
                     if (!spiel.name.isEmpty() && WebBasis.istSichereSeite(spiel.pfad)) {
                         spiele.add(spiel);
                     }
                 }
             }
-            Log.i(TAG, "Katalog: " + spiele.size() + " Spiele, " + kategorien.size() + " Kategorien");
+
+            JSONArray hervorgehoben = daten.optJSONArray("highlights");
+            if (hervorgehoben != null) {
+                for (int i = 0; i < hervorgehoben.length(); i++) {
+                    JSONObject eintrag = hervorgehoben.optJSONObject(i);
+                    if (eintrag == null) continue;
+                    String pfad = eintrag.optString("pfad");
+                    Spiel spiel = spielNach(pfad);
+                    if (spiel == null) continue;
+                    Highlight highlight = new Highlight();
+                    highlight.spiel = spiel;
+                    highlight.bild = eintrag.optString("bild", "");
+                    highlights.add(highlight);
+                }
+            }
+
+            Log.i(TAG, "Katalog: " + spiele.size() + " Spiele, " + kategorien.size()
+                    + " Kategorien, " + highlights.size() + " Highlights");
             baueChips();
         } catch (Exception fehler) {
             Log.e(TAG, "Katalog nicht lesbar", fehler);
-            zeigeHinweis("Der Spielekatalog fehlt im App-Paket. Bitte die App neu installieren.");
+            katalogFehler = true;
         }
+    }
+
+    /**
+     * Highlights nennen den Pfad relativ zu `spiele/` (`brettspiele/…`), der Katalog
+     * dagegen mit Präfix (`spiele/brettspiele/…`) – beide Formen treffen dasselbe Spiel.
+     */
+    private Spiel spielNach(String pfad) {
+        String relativ = pfad.startsWith("spiele/") ? pfad.substring("spiele/".length()) : pfad;
+        for (Spiel spiel : spiele) {
+            if (spiel.pfad.equals(pfad) || spiel.pfad.equals("spiele/" + relativ)) return spiel;
+        }
+        Log.w(TAG, "Highlight ohne Spiel: " + pfad);
+        return null;
+    }
+
+    private static int farbe(String wert, int ersatz) {
+        if (wert == null || wert.isEmpty()) return ersatz;
+        try {
+            return Color.parseColor(wert);
+        } catch (IllegalArgumentException fehler) {
+            return ersatz;
+        }
+    }
+
+    private static String ohneUmlaute(String text) {
+        String zerlegt = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+        return zerlegt.replace("ß", "ss");
     }
 
     private void zeigeHinweis(String text) {
@@ -464,57 +605,153 @@ public final class SpieleActivity extends Activity {
         if (liste == null) return;
         long beginn = System.nanoTime();
         liste.removeAllViews();
-        int sichtbar = 0;
 
-        for (String id : kategorien) {
+        if (katalogFehler) {
+            titel.setText("Spielhalle");
+            zaehler.setText("");
+            zeigeHinweis("Der Spielekatalog fehlt im App-Paket. Bitte die App neu installieren.");
+            return;
+        }
+
+        Kategorie offen = offeneKategorie == null ? null : kategorieNach.get(offeneKategorie);
+        boolean trefferAnsicht = istGefiltert();
+
+        if (trefferAnsicht) {
+            titel.setText(!filter.isEmpty() ? "Suche" : (offen == null ? "Gefiltert" : offen.name));
+            int sichtbar = zeichneTreffer(ANSICHT_KATEGORIE.equals(ansicht) && offen != null ? offen : null);
+            zaehler.setText(sichtbar + (filter.isEmpty() ? " Spiele" : " Treffer"));
+        } else if (offen != null) {
+            titel.setText(offen.name);
+            int sichtbar = zeichneKategorie(offen);
+            zaehler.setText(sichtbar + " Spiele");
+        } else if (REST.equals(offeneKategorie)) {
+            titel.setText("Weitere Spiele");
+            int sichtbar = zeichneRest();
+            zaehler.setText(sichtbar + " Spiele");
+        } else {
+            titel.setText("Spielhalle");
+            zeichneStart();
+            zaehler.setText(spiele.size() + " Spiele");
+        }
+
+        rollen.scrollTo(0, 0);
+        Log.i(TAG, "Liste: " + liste.getChildCount() + " Ansichten in "
+                + ((System.nanoTime() - beginn) / 1000000L) + " ms");
+    }
+
+    /** Startansicht: Highlights und Kategorie-Kacheln, keine lange Spieleliste. */
+    private void zeichneStart() {
+        if (!highlights.isEmpty()) {
+            liste.addView(ueberschrift("Highlights"));
+            List<View> karten = new ArrayList<>();
+            for (Highlight highlight : highlights) karten.add(highlightKarte(highlight));
+            haengeRaster(karten, spaltenHighlights());
+        }
+
+        liste.addView(ueberschrift("Kategorien"));
+        List<View> kacheln = new ArrayList<>();
+        for (Kategorie kategorie : kategorien) {
+            kacheln.add(kategorieKachel(kategorie, anzahlIn(kategorie.id)));
+        }
+        // Spiele ohne bekannte Kategorie sollen nicht verschwinden.
+        int rest = restAnzahl();
+        if (rest > 0) kacheln.add(restKachel(rest));
+        haengeRaster(kacheln, spaltenKategorien());
+    }
+
+    /** Eine geöffnete Kategorie: Beschreibung und ausschließlich ihre Spiele. */
+    private int zeichneKategorie(Kategorie kategorie) {
+        if (!kategorie.text.isEmpty()) {
+            TextView beschreibung = Ansicht.text(this, kategorie.text, 13, Ansicht.MUTED, false);
+            beschreibung.setLineSpacing(0, 1.3f);
+            beschreibung.setPadding(Ansicht.dp(this, 4), 0, Ansicht.dp(this, 4), Ansicht.dp(this, 10));
+            liste.addView(beschreibung);
+        }
+
+        int sichtbar = 0;
+        for (Spiel spiel : spiele) {
+            if (!kategorie.id.equals(spiel.kategorie) || !passt(spiel)) continue;
+            liste.addView(zeile(spiel));
+            sichtbar++;
+        }
+        if (sichtbar == 0) {
+            zeigeHinweis("Kein Spiel dieser Kategorie passt zu Suche und Filtern.");
+        }
+        return sichtbar;
+    }
+
+    /** Spiele ohne bekannte Kategorie – nur für ältere Kataloge. */
+    private int zeichneRest() {
+        TextView beschreibung = Ansicht.text(this, "Spiele ohne bekannte Kategorie.", 13, Ansicht.MUTED, false);
+        beschreibung.setPadding(Ansicht.dp(this, 4), 0, Ansicht.dp(this, 4), Ansicht.dp(this, 10));
+        liste.addView(beschreibung);
+        int sichtbar = 0;
+        for (Spiel spiel : spiele) {
+            if (kategorieNach.containsKey(spiel.kategorie) || !passt(spiel)) continue;
+            liste.addView(zeile(spiel));
+            sichtbar++;
+        }
+        if (sichtbar == 0) zeigeHinweis("Kein Spiel passt zu Suche und Filtern.");
+        return sichtbar;
+    }
+
+    /**
+     * Trefferliste (Suche oder Merkmalsfilter), nach Kategorien gruppiert. Ist eine
+     * Kategorie geöffnet, bleibt die Trefferliste auf sie beschränkt; die Suche findet
+     * dagegen weiterhin alle Spiele.
+     */
+    private int zeichneTreffer(Kategorie nur) {
+        int sichtbar = 0;
+        for (Kategorie kategorie : kategorien) {
+            if (nur != null && !nur.id.equals(kategorie.id)) continue;
             List<Spiel> treffer = new ArrayList<>();
             for (Spiel spiel : spiele) {
-                if (!id.equals(spiel.kategorie) || !passt(spiel)) continue;
+                if (!kategorie.id.equals(spiel.kategorie) || !passt(spiel)) continue;
                 treffer.add(spiel);
             }
             if (treffer.isEmpty()) continue;
-
-            liste.addView(ueberschrift(anzahlText(id, treffer.size())));
-
+            liste.addView(ueberschrift(kategorie.name + "  ·  " + treffer.size()));
             for (Spiel spiel : treffer) {
                 liste.addView(zeile(spiel));
                 sichtbar++;
             }
         }
 
-        // Spiele ohne bekannte Kategorie sollen nicht verschwinden.
-        List<Spiel> rest = new ArrayList<>();
-        for (Spiel spiel : spiele) {
-            if (!kategorien.contains(spiel.kategorie) && passt(spiel)) rest.add(spiel);
-        }
-        if (!rest.isEmpty()) {
-            liste.addView(ueberschrift("Weitere  ·  " + rest.size()));
-            for (Spiel spiel : rest) {
-                liste.addView(zeile(spiel));
-                sichtbar++;
+        if (nur == null) {
+            List<Spiel> rest = new ArrayList<>();
+            for (Spiel spiel : spiele) {
+                if (kategorieNach.containsKey(spiel.kategorie) || !passt(spiel)) continue;
+                rest.add(spiel);
+            }
+            if (!rest.isEmpty()) {
+                liste.addView(ueberschrift("Weitere  ·  " + rest.size()));
+                for (Spiel spiel : rest) {
+                    liste.addView(zeile(spiel));
+                    sichtbar++;
+                }
             }
         }
 
-        zaehler.setText(istGefiltert()
-                ? sichtbar + " von " + spiele.size()
-                : spiele.size() + " Spiele");
-        if (sichtbar == 0 && istGefiltert()) {
+        if (sichtbar == 0) {
             zeigeHinweis("Kein Spiel passt zu Suche und Filtern. „Zurücksetzen“ zeigt wieder alle.");
         }
-        rollen.scrollTo(0, 0);
-        Log.i(TAG, "Liste: " + sichtbar + " Zeilen in "
-                + ((System.nanoTime() - beginn) / 1000000L) + " ms");
+        return sichtbar;
     }
 
-    /** Kategorie-Kopf; bei aktivem Filter wie im HTML-Katalog „x / gesamt“. */
-    private String anzahlText(String id, int treffer) {
-        String name = kategorieNamen.containsKey(id) ? kategorieNamen.get(id) : id;
-        if (!istGefiltert()) return name + "  ·  " + treffer;
-        int gesamt = 0;
+    private int anzahlIn(String kategorieId) {
+        int anzahl = 0;
         for (Spiel spiel : spiele) {
-            if (id.equals(spiel.kategorie)) gesamt++;
+            if (kategorieId.equals(spiel.kategorie)) anzahl++;
         }
-        return name + "  ·  " + treffer + " / " + gesamt;
+        return anzahl;
+    }
+
+    private int restAnzahl() {
+        int anzahl = 0;
+        for (Spiel spiel : spiele) {
+            if (!kategorieNach.containsKey(spiel.kategorie)) anzahl++;
+        }
+        return anzahl;
     }
 
     private View ueberschrift(String text) {
@@ -527,10 +764,202 @@ public final class SpieleActivity extends Activity {
         return kopf;
     }
 
+    private int spaltenKategorien() {
+        int breite = getResources().getConfiguration().screenWidthDp;
+        if (breite >= 900) return 6;
+        if (breite >= 600) return 3;
+        return 2;
+    }
+
+    private int spaltenHighlights() {
+        return getResources().getConfiguration().screenWidthDp >= 900 ? 4 : 2;
+    }
+
+    /**
+     * Legt Karten in Zeilen zu je `spalten` Stück. Die Karten einer Zeile werden vorher
+     * auf die Spaltenbreite gemessen und bekommen die Höhe der höchsten Karte – sonst
+     * stehen Kacheln mit zweizeiliger Beschreibung tiefer als ihre Nachbarn. Die letzte
+     * Zeile wird mit leeren Flächen aufgefüllt, damit die Karten ihre Breite behalten.
+     */
+    private void haengeRaster(List<View> teile, int spalten) {
+        if (teile.isEmpty()) return;
+        int breite = getResources().getDisplayMetrics().widthPixels - Ansicht.dp(this, 32);
+        int abstand = Ansicht.dp(this, 8);
+        int spaltenBreite = Math.max(1, (breite - abstand * (spalten - 1)) / spalten);
+
+        for (int start = 0; start < teile.size(); start += spalten) {
+            int ende = Math.min(start + spalten, teile.size());
+            List<View> reihe = teile.subList(start, ende);
+            int hoehe = 0;
+            for (View teil : reihe) {
+                teil.measure(View.MeasureSpec.makeMeasureSpec(spaltenBreite, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                hoehe = Math.max(hoehe, teil.getMeasuredHeight());
+            }
+
+            LinearLayout zeile = new LinearLayout(this);
+            zeile.setOrientation(LinearLayout.HORIZONTAL);
+            for (int i = 0; i < spalten; i++) {
+                boolean gefuellt = i < reihe.size();
+                View teil = gefuellt ? reihe.get(i) : new View(this);
+                LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
+                        0, gefuellt ? hoehe : 1, 1f);
+                if (i < spalten - 1) platz.rightMargin = abstand;
+                teil.setLayoutParams(platz);
+                zeile.addView(teil);
+            }
+            LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            platz.bottomMargin = abstand;
+            liste.addView(zeile, platz);
+        }
+    }
+
+    /** Große Karte für ein Highlight – Bild, Name, Kurztext und Startmöglichkeit. */
+    private View highlightKarte(Highlight highlight) {
+        LinearLayout karte = new LinearLayout(this);
+        karte.setOrientation(LinearLayout.VERTICAL);
+        karte.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12), Ansicht.RAND,
+                Math.max(1, Ansicht.dp(this, 1))));
+        karte.setClipToOutline(true);
+        karte.setClickable(true);
+        karte.setFocusable(true);
+        karte.setMinimumHeight(Ansicht.dp(this, 186));
+        karte.setContentDescription(highlight.spiel.name + " spielen");
+
+        ImageView bild = new ImageView(this);
+        bild.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        karte.addView(bild, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, Ansicht.dp(this, 92)));
+        ladeBild(bild, highlight.bild);
+
+        LinearLayout innen = new LinearLayout(this);
+        innen.setOrientation(LinearLayout.VERTICAL);
+        innen.setPadding(Ansicht.dp(this, 10), Ansicht.dp(this, 8),
+                Ansicht.dp(this, 10), Ansicht.dp(this, 10));
+        karte.addView(innen, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView name = Ansicht.text(this, highlight.spiel.name, 14, Ansicht.TEXT, true);
+        name.setMaxLines(2);
+        innen.addView(name);
+
+        if (!highlight.spiel.text.isEmpty()) {
+            TextView text = Ansicht.text(this, highlight.spiel.text, 12, Ansicht.MUTED, false);
+            text.setLineSpacing(0, 1.25f);
+            text.setPadding(0, Ansicht.dp(this, 2), 0, 0);
+            innen.addView(text);
+        }
+
+        TextView start = Ansicht.text(this, "Spielen ›", 12, Ansicht.GOLD, true);
+        start.setPadding(0, Ansicht.dp(this, 5), 0, 0);
+        innen.addView(start);
+
+        karte.setOnClickListener(v -> starte(highlight.spiel));
+        return karte;
+    }
+
+    /** Kachel einer Kategorie: Symbol, Name, Kurzbeschreibung und Anzahl. */
+    private View kategorieKachel(final Kategorie kategorie, int anzahl) {
+        LinearLayout karte = new LinearLayout(this);
+        karte.setOrientation(LinearLayout.HORIZONTAL);
+        karte.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12), Ansicht.RAND,
+                Math.max(1, Ansicht.dp(this, 1))));
+        karte.setClipToOutline(true);
+        karte.setClickable(true);
+        karte.setFocusable(true);
+        karte.setMinimumHeight(Ansicht.dp(this, 116));
+        karte.setContentDescription(kategorie.name + " – " + anzahl + " Spiele");
+
+        View streifen = new View(this);
+        streifen.setBackgroundColor(kategorie.akzent);
+        karte.addView(streifen, new LinearLayout.LayoutParams(
+                Ansicht.dp(this, 4), LinearLayout.LayoutParams.MATCH_PARENT));
+
+        LinearLayout innen = new LinearLayout(this);
+        innen.setOrientation(LinearLayout.VERTICAL);
+        innen.setPadding(Ansicht.dp(this, 10), Ansicht.dp(this, 9),
+                Ansicht.dp(this, 10), Ansicht.dp(this, 9));
+        karte.addView(innen, new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView symbol = Ansicht.text(this, symbolFuer(kategorie.id), 20, kategorie.akzent, true);
+        innen.addView(symbol);
+
+        TextView name = Ansicht.text(this, kategorie.name, 15, Ansicht.TEXT, true);
+        name.setPadding(0, Ansicht.dp(this, 2), 0, 0);
+        innen.addView(name);
+
+        if (!kategorie.text.isEmpty()) {
+            TextView text = Ansicht.text(this, kategorie.text, 11, Ansicht.MUTED, false);
+            text.setLineSpacing(0, 1.25f);
+            text.setPadding(0, Ansicht.dp(this, 2), 0, 0);
+            innen.addView(text);
+        }
+
+        TextView zahl = Ansicht.text(this, anzahl + (anzahl == 1 ? " Spiel" : " Spiele"),
+                11, Ansicht.MUTED, false);
+        zahl.setPadding(0, Ansicht.dp(this, 6), 0, 0);
+        innen.addView(zahl);
+
+        karte.setOnClickListener(v -> {
+            ansicht = ANSICHT_KATEGORIE;
+            offeneKategorie = kategorie.id;
+            zeichne();
+        });
+        return karte;
+    }
+
+    /** Auffangkachel für Spiele mit unbekannter Kategorie (nur bei alten Katalogen). */
+    private View restKachel(int anzahl) {
+        Kategorie rest = new Kategorie();
+        rest.id = REST;
+        rest.name = "Weitere Spiele";
+        rest.text = "Spiele ohne bekannte Kategorie.";
+        rest.akzent = Ansicht.MUTED;
+        return kategorieKachel(rest, anzahl);
+    }
+
+    private static String symbolFuer(String kategorieId) {
+        if ("wuerfel".equals(kategorieId)) return "⚄";
+        if ("karten".equals(kategorieId)) return "♠";
+        if ("brett".equals(kategorieId)) return "♞";
+        if ("denk".equals(kategorieId)) return "◆";
+        if ("arcade".equals(kategorieId)) return "◉";
+        if ("quiz".equals(kategorieId)) return "?";
+        return "▦";
+    }
+
+    /** Vorschaubild aus den App-Assets; einmal geladen und verkleinert. */
+    private void ladeBild(ImageView ziel, String relativ) {
+        if (relativ == null || relativ.isEmpty()) {
+            ziel.setVisibility(View.GONE);
+            return;
+        }
+        Bitmap bitmap = bilder.get(relativ);
+        if (bitmap == null) {
+            String pfad = "www/spiele/" + relativ;
+            try (InputStream strom = getAssets().open(pfad)) {
+                BitmapFactory.Options optionen = new BitmapFactory.Options();
+                // 1392×752 gezeigt auf höchstens ~450 px – ein Viertel reicht und spart Speicher.
+                optionen.inSampleSize = 3;
+                bitmap = BitmapFactory.decodeStream(strom, null, optionen);
+                if (bitmap != null) bilder.put(relativ, bitmap);
+            } catch (Exception fehler) {
+                Log.w(TAG, "Vorschaubild fehlt: " + pfad, fehler);
+            }
+        }
+        if (bitmap == null) {
+            ziel.setVisibility(View.GONE);
+        } else {
+            ziel.setImageBitmap(bitmap);
+        }
+    }
+
     private boolean passt(Spiel spiel) {
         if (!filter.isEmpty()) {
-            String name = spiel.name.toLowerCase(Locale.ROOT);
-            if (!name.contains(filter) && !spiel.suche.contains(filter)) return false;
+            if (!spiel.suchtext.contains(filter)
+                    && !spiel.suchtext.contains(ohneUmlaute(filter))) return false;
         }
         for (String merkmal : aktiveMerkmale) {
             if (!spiel.merkmale.contains(merkmal)) return false;
@@ -538,17 +967,20 @@ public final class SpieleActivity extends Activity {
         return true;
     }
 
-    /** Zeile eines Spiels – einmal gebaut, danach nur noch eingehängt. */
+    /** Karte eines Spiels – einmal gebaut, danach nur noch eingehängt. */
     private View zeile(Spiel spiel) {
         View vorhanden = zeilen.get(spiel);
         if (vorhanden != null) return vorhanden;
 
         LinearLayout zeile = new LinearLayout(this);
         zeile.setOrientation(LinearLayout.VERTICAL);
-        zeile.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12)));
-        zeile.setPadding(Ansicht.dp(this, 14), Ansicht.dp(this, 11), Ansicht.dp(this, 14), Ansicht.dp(this, 11));
+        zeile.setBackground(Ansicht.flaeche(Ansicht.KARTE, Ansicht.dp(this, 12), Ansicht.RAND,
+                Math.max(1, Ansicht.dp(this, 1))));
+        zeile.setPadding(Ansicht.dp(this, 14), Ansicht.dp(this, 11),
+                Ansicht.dp(this, 14), Ansicht.dp(this, 11));
         zeile.setClickable(true);
         zeile.setFocusable(true);
+        zeile.setContentDescription(spiel.name + " spielen");
         LinearLayout.LayoutParams platz = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         platz.bottomMargin = Ansicht.dp(this, 8);
@@ -557,16 +989,27 @@ public final class SpieleActivity extends Activity {
         TextView name = new TextView(this);
         name.setText(spiel.name);
         name.setTextColor(Ansicht.TEXT);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
         name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         zeile.addView(name);
+
+        if (!spiel.text.isEmpty()) {
+            TextView beschreibung = new TextView(this);
+            beschreibung.setText(spiel.text);
+            beschreibung.setTextColor(Ansicht.MUTED);
+            beschreibung.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            beschreibung.setLineSpacing(0, 1.25f);
+            beschreibung.setPadding(0, Ansicht.dp(this, 2), 0, 0);
+            zeile.addView(beschreibung);
+        }
 
         String merkmale = merkmaleText(spiel);
         if (!merkmale.isEmpty()) {
             TextView unten = new TextView(this);
             unten.setText(merkmale);
             unten.setTextColor(Ansicht.MUTED);
-            unten.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            unten.setPadding(0, Ansicht.dp(this, 3), 0, 0);
+            unten.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            unten.setPadding(0, Ansicht.dp(this, 4), 0, 0);
             zeile.addView(unten);
         }
 
@@ -609,6 +1052,4 @@ public final class SpieleActivity extends Activity {
         absicht.putExtra(GameActivity.EXTRA_ONLINE, online);
         startActivity(absicht);
     }
-
-    // -------------------------------------------------------------- Kleinkram
 }

@@ -14,6 +14,7 @@ Für den Android-Teil sind zusätzlich Pflicht:
 | `spiele/` | alle Spiele (HTML/JS/Canvas), `spiele/spiele.html` = Katalog (einzige Quelle der Spieleliste) |
 | `spiele/connector/` | Go-Connector für Windows (Chat, Räume, Spiel-APIs), liefert die Homepage lokal aus |
 | `spiele/connector-online/` | Go-Connector für den Render-Dienst, per `sync.py` mit `connector/` synchron |
+| `spiele/halle.css`, `spiele/halle-online.js` | Optik und Online-Schicht der Spielhalle (D-27); Räume/Chat über den Connector, keine zweite Identität |
 | `spiele/android/` | **die Android-App** (Gradle; Quellen, Assets entstehen beim Bauen) |
 | `apps/t-spiele/` | Altlast: Zwei-Knopf-App in den Browser (kein Gradle, wird nicht weiterentwickelt) |
 | `WLAN-Fernbedienung/` | Web-Modul der Fernbedienung (in der App nur unter Extras) |
@@ -63,7 +64,9 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
   ist (die App enthält mehr, als die Dateiliste vermuten lässt).
 - **Keine funktionierende Funktion entfernen**, nur weil eine neue Architektur einfacher
   wäre. Was noch nicht funktioniert, wird dokumentiert und gezielt behoben.
-- **Keine neuen Bibliotheken** ohne Eintrag in `ENTSCHEIDUNGEN.md`. Vorhanden sind nur
+- **Keine neuen Bibliotheken** ohne Eintrag in `ENTSCHEIDUNGEN.md`.
+- **Online-Funktionen der Spielhalle** laufen über den Connector (D-27). Keine zweite
+  Kennung, keinen zweiten Chat und keine Kopie der Spielseiten anlegen. Vorhanden sind nur
   `androidx.core` und `androidx.webkit`.
 - **Spiele bleiben Web-Technik.** Native wird die App drumherum (siehe D-02).
 - **Application-ID, Signatur und Version nicht zurücksetzen** (D-01, D-07).
@@ -100,8 +103,9 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
   alten Breite stehen und die Filter-Chips werden abgeschnitten (am 23.11.2026 so
   passiert und behoben).
 - **Prozess-Tod deckt `onSaveInstanceState` ab** (D-22): Die Ansichten der Spieleliste
-  haben keine IDs, das System sichert von sich aus nichts. Suchtext, Merkmale und
-  Scrollposition werden in `SpieleActivity` selbst ins Bundle gelegt und in `onCreate`
+  haben keine IDs, das System sichert von sich aus nichts. Suchtext, Merkmale,
+  Scrollposition, die Ansicht und die offene Kategorie werden in `SpieleActivity` selbst
+  ins Bundle gelegt und in `onCreate`
   über `stelleWieder` zurückgeholt (Scroll erst nach dem ersten Layout). Neue
   Filterarten müssen dort mitgesichert werden.
 - **Reihenfolge bei der Wiederherstellung** (D-22): erst `stelleWieder`, dann **einmal**
@@ -112,12 +116,18 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
   `adb shell am kill de.trashygecko.tmahjong` (`pidof` prüfen: leer) → über die
   Übersicht (Recents) zurück. Ein Start per `am start … MAIN/LAUNCHER` räumt den Task
   auf `MainActivity` ab und taugt dafür nicht.
+- **Drei Ansichten in der App-Spielhalle** (D-26): Start (`ANSICHT_START`), Kategorie
+  (`ANSICHT_KATEGORIE` + `offeneKategorie`) und Trefferliste. Zurück heißt Filter
+  löschen → Kategorie verlassen → Activity beenden; `zurueck()` und `onBackPressed`
+  nehmen denselben Weg. Kategorie-Kacheln und Highlights sind Karten aus `katalog.json`;
+  die Kategorie-Symbole stehen in `symbolFuer`.
 - **Einen zweiten Einstieg zur Spieleliste gibt es nicht** (D-20): die Kachel „Spiele“ auf
   der Startseite ist der einzige Weg. Der Connector bietet bewusst keine Spiele-Karte an –
   die frühere lag auf einem Bildschirm, den man von der App aus nicht direkt erreicht.
 - **Merkmalsfilter und Suche gibt es zweimal**: `passt(s, q)` in `spiele.html` und
   `passt(spiel)` in `SpieleActivity`. Beide verknüpfen Chips mit UND und kombinieren sie
-  mit der Suche (D-19); wer die Regel ändert, ändert sie an beiden Stellen. Neue
+  mit der Suche (D-19); die App sucht wie das Web in Name, Suchwörtern, Kurztext und
+  Kategoriename. Wer die Regel ändert, ändert sie an beiden Stellen. Neue
   Merkmalsnamen brauchen eine Zeile in `MERKMAL_FILTER`, sonst fehlt der Chip.
 - **Die Startansicht ist nativ** (D-12): `MainActivity` baut die vier Kacheln (Spiele,
   Lokales Netz, Online-Räume, Extras) als Views; die Kopfzeile zeigt den Netzstatus des

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -98,6 +99,17 @@ func syncIDs(g *SyncGame) []string {
 		ids = append(ids, p.ID)
 	}
 	return ids
+}
+
+// syncSitzOrdnung haelt die Sitzliste in Platz-Reihenfolge. Der Spielstand
+// nummeriert die Figuren nach Platz, und Current/Weiter sind Indizes in genau
+// dieser Liste: ohne feste Ordnung wuerde nach einem spaeteren Beitritt der
+// falsche Spieler ziehen.
+func syncSitzOrdnung(g *SyncGame) {
+	if g == nil {
+		return
+	}
+	sort.SliceStable(g.Spieler, func(a, b int) bool { return g.Spieler[a].Platz < g.Spieler[b].Platz })
 }
 
 func syncName(art string) string {
@@ -231,6 +243,51 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 			Time: time.Now().Format("15:04:05"), SenderID: input.ID,
 		})
 
+	// botadd setzt einen Computer auf einen freien Platz, solange die Partie
+	// noch nicht laeuft. Damit lassen sich gemischte Runden bauen (zwei
+	// Menschen und zwei Computer): der Computer ist einfach ein Sitz wie jeder
+	// andere, gespielt wird er vom Server (bot_labyrinth.go).
+	case "botadd":
+		if g == nil || g.Status != "invited" {
+			fehler(http.StatusConflict, "Computer lassen sich nur vor dem Start setzen.")
+			return
+		}
+		if syncPlatzVon(g, input.ID) != 0 {
+			fehler(http.StatusForbidden, "Nur der Gastgeber setzt Computer.")
+			return
+		}
+		if len(g.Spieler) >= g.Anzahl {
+			fehler(http.StatusConflict, "Es ist kein Platz mehr frei.")
+			return
+		}
+		frei := -1
+		for p := 0; p < g.Anzahl; p++ {
+			belegt := false
+			for _, s := range g.Spieler {
+				if s.Platz == p {
+					belegt = true
+					break
+				}
+			}
+			if !belegt {
+				frei = p
+				break
+			}
+		}
+		if frei < 0 {
+			fehler(http.StatusConflict, "Es ist kein Platz mehr frei.")
+			return
+		}
+		stufe := botStufe(input.Stufe)
+		if g.BotStufe == "" {
+			g.BotStufe = stufe
+		}
+		bot := SyncSpieler{ID: botID(frei), Name: room.botName(frei), Platz: frei, Bereit: true, Bot: true}
+		g.Spieler = append(g.Spieler, bot)
+		syncSitzOrdnung(g)
+		g.Version++
+		g.Note = bot.Name + " (" + botStufeText(stufe) + ") setzt sich dazu."
+
 	case "create":
 		if g != nil && g.Status != "finished" {
 			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine "+regeln.Name+"-Partie.")
@@ -293,6 +350,7 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 			return
 		}
 		g.Spieler = append(g.Spieler, SyncSpieler{ID: input.ID, Name: player.Name, Platz: frei})
+		syncSitzOrdnung(g)
 		if action == "join" {
 			g.Note = player.Name + " spielt mit."
 		} else {
@@ -324,12 +382,20 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 			fehler(http.StatusConflict, regeln.Name+" braucht mindestens "+strconv.Itoa(regeln.Min)+" Spieler.")
 			return
 		}
+		// Alle Plätze müssen besetzt sein: die Spielseite baut so viele Figuren
+		// wie Plätze am Tisch stehen. Ein halber Tisch würde Figuren ohne Sitz
+		// erzeugen – deshalb füllt der Gastgeber fehlende Plätze mit Computern.
+		if len(g.Spieler) < g.Anzahl {
+			fehler(http.StatusConflict, "Es fehlen noch Spieler: "+strconv.Itoa(len(g.Spieler))+" von "+strconv.Itoa(g.Anzahl)+" Plätzen besetzt.")
+			return
+		}
 		for _, p := range g.Spieler {
 			if !p.Bereit {
 				fehler(http.StatusConflict, p.Name+" ist noch nicht bereit.")
 				return
 			}
 		}
+		syncSitzOrdnung(g)
 		g.Status = "active"
 		g.Current = 0
 		g.Sieger = -1

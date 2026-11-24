@@ -2,411 +2,101 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spiele</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a211b">
+<title>Spielhalle – TrashyGecko</title>
 <link rel="stylesheet" href="../main.css">
 
-<style>
-/* =========================================================================
-   Spieleübersicht – Kategorien, Filter, Suche
-   Die Daten stehen unten im Skript in einer einzigen Liste (SPIELE).
-   ========================================================================= */
-.spiele-container{
-  width:min(1100px,94%);
-  margin:22px auto 30px;
-}
 
-/* --- Such- und Filterleiste -------------------------------------------- */
-.leiste{
-  position:sticky;
-  top:0;
-  z-index:5;
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:8px;
-  margin:0 0 18px;
-  padding:10px 12px;
-  border:1px solid #d9bc7c33;
-  border-radius:12px;
-  background:linear-gradient(#123329f2,#0f2b23f2);
-  backdrop-filter:blur(4px);
-}
-
-.leiste input[type=search]{
-  flex:1 1 220px;
-  min-width:0;
-  padding:9px 11px;
-  border:1px solid #d9bc7c66;
-  border-radius:8px;
-  background:#0f2b23;
-  color:#efe6d2;
-  font-size:15px;
-}
-
-.leiste input[type=search]::placeholder{color:#9db3a7}
-
-.leiste .reset{
-  padding:8px 11px;
-  border:1px solid #d9bc7c55;
-  border-radius:8px;
-  background:#0f2b23;
-  color:#e8cd8e;
-  font-size:13px;
-  cursor:pointer;
-}
-
-.leiste .reset:hover{border-color:#e8cd8e}
-
-.filter{
-  flex:1 1 100%;
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-}
-
-.filter button{
-  padding:5px 10px;
-  border:1px solid #d9bc7c44;
-  border-radius:999px;
-  background:#0e2a22;
-  color:#cfe0d5;
-  font-size:12.5px;
-  cursor:pointer;
-}
-
-.filter button[aria-pressed=true]{
-  border-color:#e8cd8e;
-  background:#1d5241;
-  color:#fff3d6;
-  box-shadow:0 0 8px #e8cd8e33;
-}
-
-.treffer{
-  flex:1 1 100%;
-  margin:0;
-  font-size:12.5px;
-  color:#b9c9bf;
-}
-
-/* --- Kategorien --------------------------------------------------------- */
-.kategorie{
-  margin:0 0 14px;
-  border:1px solid #d9bc7c33;
-  border-left:4px solid var(--akzent,#e8cd8e);
-  border-radius:12px;
-  background:rgba(15,43,35,.55);
-  overflow:hidden;
-}
-
-.kategorie-kopf{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  width:100%;
-  margin:0;
-  padding:11px 14px;
-  border:0;
-  background:none;
-  color:#e8cd8e;
-  font-family:var(--tg-schrift,inherit);
-  font-size:17px;
-  text-align:left;
-  cursor:pointer;
-}
-
-.kategorie-kopf:hover{background:#ffffff08}
-.kategorie-kopf:focus-visible{outline:2px solid #e8cd8e;outline-offset:-2px}
-
-.kategorie-kopf .punkt{
-  flex:0 0 auto;
-  width:9px;height:9px;
-  border-radius:50%;
-  background:var(--akzent,#e8cd8e);
-}
-
-.kategorie-kopf .titel{flex:1 1 auto}
-.kategorie-kopf .titel small{
-  display:block;
-  margin-top:2px;
-  font-family:inherit;
-  font-size:11.5px;
-  font-weight:normal;
-  color:#b9c9bf;
-}
-
-.zahl{
-  flex:0 0 auto;
-  padding:2px 9px;
-  border:1px solid #d9bc7c44;
-  border-radius:999px;
-  font-size:12px;
-  color:#f2e3bc;
-  background:#0d251e;
-}
-
-.pfeil{
-  flex:0 0 auto;
-  font-size:13px;
-  color:#b9c9bf;
-  transition:transform .15s;
-}
-
-.kategorie-kopf[aria-expanded=false] .pfeil{transform:rotate(-90deg)}
-
-.kacheln{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(152px,1fr));
-  gap:8px;
-  padding:0 12px 13px;
-}
-
-.kategorie.zu .kacheln{display:none}
-
-/* --- Spielkarten -------------------------------------------------------- */
-a.spiel{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-  min-height:46px;
-  padding:7px 9px;
-  border:1px solid #d9bc7c33;
-  border-radius:8px;
-  background:#0f2b23;
-  color:#e8cd8e;
-  text-decoration:none;
-  transition:border-color .15s,background .15s,transform .15s;
-}
-
-a.spiel:hover,a.spiel:focus-visible{
-  border-color:#e8cd8e;
-  background:#184536;
-  transform:translateY(-1px);
-}
-
-.spiel-name{
-  font-size:14px;
-  line-height:1.2;
-}
-
-.merkmale{
-  display:flex;
-  flex-wrap:wrap;
-  gap:3px;
-}
-
-.m{
-  padding:0 5px;
-  border-radius:999px;
-  border:1px solid currentColor;
-  font-size:9.5px;
-  line-height:1.5;
-  letter-spacing:.01em;
-  opacity:.92;
-}
-
-.m-solo{color:#9be0a8}
-.m-multi{color:#c9d6cf}
-.m-lokal{color:#7fd8c8}
-.m-online{color:#8ec2f0}
-.m-computer{color:#c9b0f0}
-.m-highscore{color:#f0d27a}
-.m-controller{color:#f0a97a}
-
-/* --- Werkzeuge und Rahmen ---------------------------------------------- */
-.werkzeuge{
-  margin-top:22px;
-  border-left-color:#9aa7a0;
-  --akzent:#9aa7a0;
-}
-
-.bereich-hinweis{
-  margin:0 0 10px;
-  padding:0 14px;
-  font-size:12px;
-  color:#b9c9bf;
-}
-
-.gameboy{
-  text-align:center;
-  margin:30px auto 15px;
-}
-
-.gameboy pre{
-  display:inline-block;
-  text-align:left;
-  font-size:13px;
-  line-height:1.1;
-  overflow-x:auto;
-  max-width:100%;
-}
-
-#local-date-time{
-  text-align:center;
-  color:#e8cd8e;
-  font-family:var(--tg-schrift);
-  font-size:20px;
-  line-height:1.5;
-  margin:15px 0 25px;
-}
-
-.spiele-suche{
-  text-align:center;
-  margin:20px auto;
-}
-
-.spiele-suche input[type=text]{
-  max-width:70%;
-  padding:9px;
-}
-
-@media(max-width:640px){
-  .leiste{padding:9px;gap:6px}
-  .leiste input[type=search]{flex:1 1 100%;font-size:16px}
-  .kategorie-kopf{padding:10px 12px;font-size:15.5px}
-  .kategorie-kopf .titel small{font-size:11px}
-  .kacheln{grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:6px;padding:0 9px 10px}
-  .spiel-name{font-size:13px}
-  .spiele-container{width:96%;margin-top:14px}
-}
-
-/* Kopfbereich der Übersicht im Grün-Gold-Look */
-body{background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;color:#e8cd8e}
-.eins{color:#e8cd8e!important;text-shadow:none!important}
-.class1{color:#e8cd8e!important;border-color:#d9bc7c!important;background:#0f2b23!important;text-shadow:none!important;box-shadow:none!important}
-input[type=text]{background:#0f2b23;color:#efe6d2;border:1px solid #d9bc7c66;border-radius:6px;padding:6px}
-input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;border-radius:6px;padding:6px 10px;text-shadow:none;box-shadow:none}
-</style>
 <link rel="stylesheet" href="/spiele/schrift.css">
 <link rel="stylesheet" href="/spiele/design.css">
+<link rel="stylesheet" href="/spiele/halle.css">
 <script src="/spiele/stil.js"></script>
+<script src="/spiele/netz.js"></script>
+<script src="/spiele/token.js"></script>
 <!-- Zentrale Spieleverwaltung: welche Spiele der Connector online anbietet. -->
 <script src="/spiele/multiplayer-register.js"></script>
 </head>
 
 <body class="spiele-seite">
 
-<table>
-<tr><td><a href="../index.html" class="class1" target="_self">&lt;&minus;back</a></td></tr>
-</table>
+<div class="halle">
 
-<div class="spiele-suche">
-<form method="GET" action="https://www.google.de/search">
-<input type="text" name="q" size="30" maxlength="255">
-<input type="hidden" name="hl" value="de">
-<input type="submit" name="btnG" value="Google Search">
-</form>
-</div>
+  <header class="kopf">
+    <a class="heim" href="../index.html" title="Zur Startseite" aria-label="Zur Startseite">Start</a>
+    <div class="kopf-text">
+      <p class="marke">TrashyGecko &middot; Spiele</p>
+      <h1>Spiel<span>halle</span></h1>
+      <p class="unter" id="unterzeile">Spiele nach Thema</p>
+    </div>
+    <div class="kopf-aktionen">
+      <a class="extras-link" href="#/werkzeuge">Extras</a>
+    </div>
+  </header>
 
-<table>
-<tr><td><p class="eins">Spiele</p></td></tr>
-</table>
-
-<div class="spiele-container">
-
-  <div class="leiste">
-    <input type="search" id="suche" placeholder="Spiel suchen – z. B. Mau Mau, Kniffel, Halma" aria-label="Spiele durchsuchen" autocomplete="off">
-    <button type="button" class="reset" id="reset">Filter zurücksetzen</button>
-    <div class="filter" id="filter" role="group" aria-label="Nach Eigenschaften filtern"></div>
-    <p class="treffer" id="treffer" aria-live="polite"></p>
+  <div class="suchzeile" id="suchzeile">
+    <a class="zurueck-schnell" id="zurueck-schnell" href="#/" aria-label="Zurück zur Übersicht" hidden>&larr;</a>
+    <div class="suchfeld" id="suchfeld">
+      <input type="search" id="suche" placeholder="Spiel suchen – z. B. Kniffel" aria-label="Alle Spiele durchsuchen" autocomplete="off" spellcheck="false">
+      <button type="button" class="loeschen" id="suche-loeschen" aria-label="Suche leeren">&times;</button>
+    </div>
   </div>
 
-  <div id="kategorien"></div>
-
-  <section class="kategorie werkzeuge" aria-labelledby="werkzeuge-titel">
-    <h2 class="kategorie-kopf" id="werkzeuge-titel" style="cursor:default">
-      <span class="punkt"></span>
-      <span class="titel">Werkzeuge &amp; Extras<small>Keine Spiele – Hilfsmittel, Apps und Editoren, die früher unter „Extras“ standen.</small></span>
-      <span class="zahl" id="werkzeug-zahl"></span>
-    </h2>
-    <div class="kacheln" id="werkzeuge"></div>
-  </section>
+  <main id="inhalt"></main>
 
 </div>
-
-<div class="gameboy">
-<pre>
- _n_________________
-|_|_______________|_|
-|  ,-------------.  |
-| |  .---------.  | |
-| |  |         |  | |
-| |  |         |  | |
-| |  |         |  | |
-| |  `---------'  | |
-| `---------------' |
-|   _ GAME BOY      |
-| _| |_         ,-. |
-||_ O _|   ,-. "._,"|
-|  |_|    "._,"   A |
-|    _  _    B      |
-|   // //           |
-|  // //    \\\\\\  |
-|  `  `      \\\\\\ ,
-|________...______,"
-</pre>
-</div>
-
-<div id="local-date-time">
-<div id="local-date"></div>
-<div id="local-time"></div>
-</div>
-
-<table>
-<tr><td><a href="../index.html" class="class1" target="_self">&lt;&minus;back</a></td></tr>
-</table>
 
 <script>
 /* =========================================================================
-   Zentrale Spieleliste
+   ZENTRALE SPIELESAMMLUNG
    -------------------------------------------------------------------------
-   Jedes Spiel steht genau einmal hier:  [Name, Pfad, Kategorie, Merkmale, Suche]
-     Name      Anzeigename (alphabetisch sortiert wird beim Laden)
-     Pfad      Link zur Spielseite, wie bisher
-     Kategorie eine id aus KATEGORIEN – die interne Zuordnung. Eine Kategorie
-               mit „ersatz“ bekommt erst ab zwei Spielen einen eigenen
-               Abschnitt; darunter laufen ihre Spiele unter der Ersatz-
-               Kategorie mit (so bleiben Jump & Run und Abenteuer als Merkmal
-               erhalten, ohne als Ein-Spiel-Kategorie dazustehen).
-     Merkmale  Leerzeichen-getrennte Kennungen aus MERKMALE
-               (solo multi lokal online computer highscore controller)
-     Suche     optional: weitere Suchwörter, z. B. „yahtzee“
-   Neues Spiel = eine Zeile ergänzen, fertig. Keine Sonderfälle im Code.
+   Diese Datei bleibt die einzige Quelle der Spieleliste. Sie wird auch vom
+   Android-Bau gelesen (spiele/android/app/build.gradle: homepageKopieren und
+   katalogBauen). Deshalb haben die Zeilen in SPIELE und WERKZEUGE eine feste
+   Form – bitte nicht umsortieren oder mit zusätzlichen Feldern ergänzen.
+   Eine Spielzeile ist ein Array mit Name, Pfad, Kategorie, Merkmalen und
+   optionalen Suchwörtern – genau wie in den vorhandenen Zeilen darunter.
+
+   Die KATEGORIEN-Einträge beginnen immer mit dem Schlüssel id, danach name;
+   daran erkennt der Android-Bau die Kategorien.
+
+   Aufbau:
+     Name       Anzeigename
+     Pfad       Spielseite, wie bisher (URLs bleiben unverändert)
+     Kategorie  eine id aus KATEGORIEN (jedes Spiel genau einmal)
+     Merkmale   Leerzeichen-getrennt: solo lokal online multi computer
+                highscore controller. Die Merkmale multi/online ergänzt die
+                Seite automatisch aus multiplayer-register.js, damit
+                Übersicht und Connector nicht auseinanderlaufen.
+     Suchwörter optional, z. B. "yahtzee"
+
+   Kurzbeschreibung und Symbol stehen in TEXTE (Schlüssel = Pfad). Fehlt ein
+   Eintrag, greift der Text der Kategorie – ein neues Spiel ist also mit einer
+   Zeile in SPIELE sofort benutzbar.
+
+   Highlights stehen in HIGHLIGHTS; sie bleiben zusätzlich in ihrer Kategorie
+   und sind keine zweite Spielverwaltung.
    ========================================================================= */
 (function () {
   "use strict";
 
-  var MERKMALE = {
-    solo:      ["Solo",     "Einzelspieler"],
-    multi:     ["Multi",    "Mehrspieler"],
-    lokal:     ["Lokal",    "Lokal am selben Gerät"],
-    online:    ["Online",   "Online-Multiplayer über den Connector"],
-    computer:  ["Computer", "Gegen den Computer"],
-    highscore: ["Rekord",   "Highscore / Bestwert"],
-    controller:["Pad",      "Controller-Unterstützung"]
-  };
-
+  /* ---------------------------------------------------------- Kategorien --- */
   var KATEGORIEN = [
-    { id: "karten", name: "Kartenspiele", akzent: "#e8cd8e",
-      text: "Mau Mau, Poker, UNO, Solitär – Spiele mit einem Blatt Karten." },
     { id: "wuerfel", name: "Würfelspiele", akzent: "#8fd0a8",
-      text: "Kniffel, Yahtzee, Würfelpoker & Co. – alles, was mit Würfeln entschieden wird." },
+      text: "Kniffel, 10.000, Mäxchen – hier entscheiden die Würfel." },
+    { id: "karten", name: "Kartenspiele", akzent: "#e8cd8e",
+      text: "UNO, Mau Mau, Poker und Solitär – alles mit einem Blatt Karten." },
     { id: "brett", name: "Brettspiele", akzent: "#7fb7e8",
-      text: "Halma, Mahjong, Mensch ärgere dich nicht, Schach, Mühle und andere Brett- und Gesellschaftsspiele." },
-    { id: "denk", name: "Denk- und Knobelspiele", akzent: "#b9a0e8",
-      text: "Sudoku, Rechen- und Logikspiele, Gedächtnis- und Worträtsel." },
-    { id: "arcade", name: "Arcade und Klassiker", akzent: "#f0a35e",
-      text: "Die Klassiker aus der Spielhalle: Pac-Man, Tetris, Snake, Pong, Frogger …" },
-    { id: "action", name: "Action und Geschicklichkeit", akzent: "#ef7d7d",
-      text: "Reaktion, Zielen und ruhige Finger – Bomberman, Flipper, Labyrinth, Tower Bloxx." },
-    { id: "jump", name: "Jump & Run", akzent: "#6ee0c0",
-      text: "Hüpfen, klettern, weiterkommen.", ersatz: "arcade" },
-    { id: "abenteuer", name: "Abenteuer und Strategie", akzent: "#d8c169",
-      text: "Kleine Abenteuer mit Leveln, Wegen und Umwegen.", ersatz: "arcade" },
-    { id: "sonstige", name: "Sonstige Spiele", akzent: "#9aa7a0",
-      text: "Nur für Spiele, die wirklich in keine andere Kategorie passen." }
+      text: "Schach, Mühle, Halma, Risiko – Brett- und Gesellschaftsspiele." },
+    { id: "denk", name: "Denkspiele", akzent: "#b9a0e8",
+      text: "Sudoku, Memory, Mastermind – knobeln, merken und kombinieren." },
+    { id: "arcade", name: "Arcade und Geschicklichkeit", akzent: "#f0a35e",
+      text: "Pac-Man, Tetris, Snake, Flipper – Klassiker und ruhige Finger." },
+    { id: "quiz", name: "Quiz und Partyspiele", akzent: "#ef9e9e",
+      text: "Rateshows und Partyspiele – schnell antworten, gemeinsam lachen." }
   ];
 
+  /* ------------------------------------------------------------- Spiele --- */
   var SPIELE = [
     /* --- Kartenspiele -------------------------------------------------- */
     ["Arschloch", "kartenspiele/arschloch/arschloch.html", "karten", "lokal online multi"],
@@ -474,11 +164,10 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
     ["Tic Tac Toe", "brettspiele/tictac/tictactoe.html", "brett", "lokal online multi", "tic-tac-toe drei gewinnt"],
     ["Vier gewinnt", "brettspiele/viergewinnt/viergewinnt.html", "brett", "lokal online multi", "connect four"],
 
-    /* --- Denk- und Knobelspiele ---------------------------------------- */
+    /* --- Denkspiele ---------------------------------------------------- */
     ["1×1-Training", "1x1/1x1.html", "denk", "solo online multi", "einmaleins rechnen mathe"],
     ["Bejeweled", "bejeweled/bejeweled.html", "denk", "solo highscore", "juwelen match 3"],
     ["Galgenmännchen", "brettspiele/galgen/galgen.html", "denk", "lokal online multi", "hangman galgen"],
-    ["Scherzshow", "quizshow/quizshow.html", "denk", "online multi", "quiz scherzfragen witze rate show"],
     ["Lights Out", "lightsout/lightsout.html", "denk", "solo highscore", "lichter"],
     ["Mastermind", "brettspiele/mastermind/mastermind.html", "denk", "solo highscore", "farbcode"],
     ["Memory", "brettspiele/memory/memory.html", "denk", "solo highscore", "kartenspiel gedaechtnis"],
@@ -487,12 +176,15 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
     ["15-Puzzle", "puzzle15/puzzle15.html", "denk", "solo highscore", "schiebepuzzle puzzel"],
     ["SameGame", "samegame/samegame.html", "denk", "solo highscore", "steine wegklicken"],
     ["Sokoban", "sokoban/sokoban.html", "denk", "solo highscore", "kisten schieben"],
-    ["Solitär (Brettspiel)", "brettspiele/solitaer/solitaer.html", "denk", "solo highscore", "peg solitaire steine"],
+    ["Steine-Solitär", "brettspiele/solitaer/solitaer.html", "denk", "solo highscore", "solitär solitaire peg steine"],
     ["21 Streichhölzer", "brettspiele/streichholzspiel/streichholzspiel.html", "denk", "lokal online multi", "streichhoelzer nim"],
     ["Sudoku", "sudoku/sudoku.html", "denk", "solo highscore"],
     ["Wortsuche", "brettspiele/wortsuche/wortsuche.html", "denk", "lokal online multi", "wortsalat buchstaben"],
 
-    /* --- Arcade und Klassiker ------------------------------------------ */
+    /* --- Quiz und Partyspiele ------------------------------------------ */
+    ["Scherzshow", "quizshow/quizshow.html", "quiz", "online multi", "quiz scherzfragen witze rate show"],
+
+    /* --- Arcade und Geschicklichkeit ----------------------------------- */
     ["Acia", "acia/acia.html", "arcade", "solo lokal", "farben bloecke leveleditor"],
     ["Arkanoid", "arkanoid/arkanoid.html", "arcade", "solo highscore", "breakout schlaeger"],
     ["Bubble Shooter", "bubbleshooter/bubbleshooter.html", "arcade", "solo lokal online multi highscore", "blasen"],
@@ -507,20 +199,132 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
     ["Tetris", "tetris/tetris.html", "arcade", "solo online multi", "kloetze steine"],
     ["Tron", "tron/tron.html", "arcade", "lokal online multi", "lichtrennen lightcycle"],
     ["Voigt Zone", "zone/voigtzone.html", "arcade", "solo", "qix flaechen"],
-
-    /* --- Action und Geschicklichkeit ----------------------------------- */
-    ["Bomberman", "bomberman/bomberman.html", "action", "lokal online multi", "bombe"],
-    ["Flipper", "flipper/flipper.html", "action", "solo highscore", "pinball"],
-    ["Labyrinth Plus!", "brettspiele/labyrinth/labyrinth.html", "action", "solo highscore", "kugel kippen"],
-    ["Tower Bloxx", "towerbloxx/towerbloxx.html", "action", "solo highscore", "turm stapeln"],
-
-    /* --- Jump & Run ---------------------------------------------------- */
-    ["Doodle Jump", "doodlejump/doodlejump.html", "jump", "solo highscore", "springen plattformen"],
-
-    /* --- Abenteuer und Strategie --------------------------------------- */
-    ["Durst", "durst/durst.html", "abenteuer", "solo", "bier level abenteuer"]
+    ["Bomberman", "bomberman/bomberman.html", "arcade", "lokal online multi", "bombe"],
+    ["Flipper", "flipper/flipper.html", "arcade", "solo highscore", "pinball"],
+    ["Labyrinth Plus!", "brettspiele/labyrinth/labyrinth.html", "arcade", "solo highscore", "kugel kippen"],
+    ["Tower Bloxx", "towerbloxx/towerbloxx.html", "arcade", "solo highscore", "turm stapeln"],
+    ["Doodle Jump", "doodlejump/doodlejump.html", "arcade", "solo highscore", "springen plattformen"],
+    ["Durst", "durst/durst.html", "arcade", "solo", "bier level abenteuer"]
   ];
 
+  /* --------------------------------------------------- Kurzbeschreibungen --- */
+  /* Schlüssel ist immer der Pfad aus SPIELE. */
+  var TEXTE = {
+    "kartenspiele/arschloch/arschloch.html": "Karten abwerfen und am Ende die Plätze tauschen.",
+    "kartenspiele/baccara/baccara.html": "Auf Spieler oder Bank setzen – näher an neun gewinnt.",
+    "kartenspiele/cabo/cabo.html": "Vier verdeckte Karten tauschen und möglichst niedrig bleiben.",
+    "kartenspiele/maumau/maumau.html": "Farbe oder Zahl bedienen, sieben ziehen, Mau sagen.",
+    "kartenspiele/poker/poker.html": "Texas Hold'em mit Blinds, Einsatzrunden und Showdown.",
+    "kartenspiele/sechsundsechzig/sechsundsechzig.html": "24 Karten, Stiche sammeln und 66 Punkte erreichen.",
+    "kartenspiele/siebzehn/siebzehn.html": "Gegen die Bank auf 21 kommen, ohne zu überkaufen.",
+    "kartenspiele/skyjo/skyjo.html": "Karten aufdecken und tauschen – die niedrigste Summe gewinnt.",
+    "kartenspiele/solitaer/solitaer.html": "Klondike, Spider und mehr – Kartenlegen in Ruhe.",
+    "kartenspiele/schwimmen/schwimmen.html": "Drei Karten tauschen und klopfen – wer am nächsten an 31 ist.",
+    "kartenspiele/uno/uno.html": "Farben wechseln, aussetzen und mit +2 und +4 ärgern.",
+
+    "brettspiele/zehntausend/zehntausend.html": "Sechs Würfel, Punkte sichern – wer zuerst 10.000 hat.",
+    "brettspiele/boston/boston.html": "Würfelrunde mit Ansagen, auch die Würfe der anderen zählen.",
+    "brettspiele/chicago/chicago.html": "Filze, Würfe und der beste Wurf der Runde.",
+    "brettspiele/kniffel/kniffel.html": "Fünf Würfel, drei Würfe, 13 Kategorien.",
+    "brettspiele/maexchen/maexchen.html": "Zwei verdeckte Würfel, Ansage und Zweifel.",
+    "brettspiele/pig/pig.html": "Würfeln und sammeln – aber vor der Eins aufhören.",
+    "brettspiele/shipcrew/shipcrew.html": "Schiff, Kapitän, Crew – dann 500 Punkte sammeln.",
+    "wuerfelspiele/beelzebub.html": "Drei Würfel zählen plus, ein roter zählt minus.",
+    "wuerfelspiele/der-turm.html": "Eigene Stichzahl treffen und Steine aus dem Turm holen.",
+    "wuerfelspiele/boese-drei.html": "So oft würfeln wie du willst – eine Drei löscht den Zug.",
+    "wuerfelspiele/boese-eins.html": "Fünf Würfe werden addiert – eine Eins stoppt sofort.",
+    "wuerfelspiele/dufte-hundert.html": "Pasch wird multipliziert, sonst addiert – Ziel 100.",
+    "wuerfelspiele/eins-bis-sechzehn.html": "Die Zahlen 1 bis 16 aus drei Würfeln bilden.",
+    "wuerfelspiele/fenster.html": "Nur Zweien zählen – eine 1, zwei 4, drei 9.",
+    "wuerfelspiele/gestrichene-zwoelf.html": "Summen von 2 bis 12 würfeln und streichen.",
+    "wuerfelspiele/hin-und-her.html": "Jede Zahl umschalten – alle sechs gleichzeitig streichen.",
+    "wuerfelspiele/hohe-hausnummer.html": "Drei Würfe auf Hunderter, Zehner und Einer verteilen.",
+    "wuerfelspiele/jule.html": "Die Treppe 1 bis 6 hoch und zurück würfeln.",
+    "wuerfelspiele/paerchen.html": "Vier Würfel, zwei zählen plus, zwei minus.",
+    "wuerfelspiele/plus-minus.html": "Neun Würfe im Muster plus, plus, minus.",
+    "wuerfelspiele/rentmeister.html": "Sechs feste Zahlen, jede mal einem gewählten Würfel.",
+    "wuerfelspiele/streichhoelzer.html": "Einsen nach links, Sechsen in die Mitte – Hölzer räumen.",
+    "wuerfelspiele/teure-sieben.html": "2–6 und 8–12 streichen, die Sieben zählt doppelt.",
+    "wuerfelspiele/unter-oder-ueber.html": "Vor dem Wurf ansagen – richtig bringt Punkte.",
+    "wuerfelspiele/wuerfelpoker.html": "Fünf Würfel, zwei Nachwürfe, volle Pokerwertung.",
+
+    "brettspiele/backgammon/backgammon.html": "24 Punkte, Würfel und der eigene Heimbereich.",
+    "brettspiele/bingo/bingo.html": "Zahlen ziehen und Reihen auf der eigenen Karte abhaken.",
+    "brettspiele/dame/dame.html": "Mit Schlagzwang – wer keine Figur mehr hat, verliert.",
+    "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html": "Gänge verschieben und Gegenstände einsammeln.",
+    "brettspiele/domino/domino.html": "Passende Steine anlegen, sonst nachziehen.",
+    "brettspiele/gaensespiel/gaensespiel.html": "Das Rennen ums Brett mit seinen Glücksfeldern.",
+    "brettspiele/go/go.html": "Auf 9×9 Gebiet gewinnen und Steine schlagen.",
+    "brettspiele/halma/halma.html": "Figuren ins gegenüberliegende Haus bringen.",
+    "brettspiele/hold/holdtheline.html": "Die eigene Linie gegen den Gegner halten.",
+    "brettspiele/kaesekaestche/kaesekaestche.html": "Linien ziehen und Kästchen schließen.",
+    "brettspiele/kalaha/kalaha.html": "Steine verteilen und im eigenen Kasten sammeln.",
+    "brettspiele/mahjong/mahjong.html": "Steinpaare finden und das Brett abräumen.",
+    "brettspiele/menschaerger/menschaerger.html": "Würfeln, rauswerfen und als Erster im Ziel.",
+    "brettspiele/muehle/muehle.html": "Setzen, ziehen, Mühlen schließen und Steine abräumen.",
+    "brettspiele/reversi/reversi.html": "Steine einschließen und umdrehen – Mehrheit gewinnt.",
+    "brettspiele/risiko/risiko.html": "Armeen, Würfel und Missionen – die Welt erobern.",
+    "brettspiele/schach/schach.html": "Alle Regeln, matt oder Aufgabe.",
+    "brettspiele/schiffe/schiffe.html": "Flotten setzen und die des Gegners treffen.",
+    "brettspiele/schlangen/schlangen.html": "Würfeln, klettern und wieder zurückfallen.",
+    "brettspiele/sim/sim.html": "Linien setzen – wer das letzte Dreieck schließt, verliert.",
+    "brettspiele/tictac/tictactoe.html": "Drei gewinnt auf dem Neon-Brett.",
+    "brettspiele/viergewinnt/viergewinnt.html": "Steine fallen lassen und vier in eine Reihe bringen.",
+
+    "1x1/1x1.html": "Einmaleins üben – gegen die Zeit oder andere.",
+    "bejeweled/bejeweled.html": "Juwelen tauschen und Reihen sprengen.",
+    "brettspiele/galgen/galgen.html": "Buchstaben raten, bevor das Männchen fertig ist.",
+    "lightsout/lightsout.html": "Lichter ausschalten – jeder Klick kippt die Nachbarn.",
+    "brettspiele/mastermind/mastermind.html": "Den Farbcode in möglichst wenigen Versuchen knacken.",
+    "brettspiele/memory/memory.html": "Kartenpaare finden und im Kopf behalten.",
+    "minesweeper/minesweeper.html": "Minen markieren, ohne auf eine zu treten.",
+    "brettspiele/paare/paare.html": "Dasselbe Brett lösen – wer ist schneller?",
+    "puzzle15/puzzle15.html": "Steine schieben, bis die Zahlen stimmen.",
+    "samegame/samegame.html": "Gleichfarbige Blöcke wegklicken, bis nichts mehr bleibt.",
+    "sokoban/sokoban.html": "Kisten in die richtigen Ecken schieben.",
+    "brettspiele/solitaer/solitaer.html": "Steine überspringen, bis nur einer übrig bleibt.",
+    "brettspiele/streichholzspiel/streichholzspiel.html": "Reihum ein bis drei nehmen – wer das letzte nimmt, verliert.",
+    "sudoku/sudoku.html": "Zahlen 1 bis 9 in jede Reihe, Spalte und Box.",
+    "brettspiele/wortsuche/wortsuche.html": "Wörter im Buchstabengitter finden.",
+
+    "quizshow/quizshow.html": "Vier Antworten, schnelle Finger – Wissen ist nicht gefragt.",
+
+    "acia/acia.html": "Farbblöcke verbinden und eigene Level bauen.",
+    "arkanoid/arkanoid.html": "Mit dem Schläger den Ball halten und Steine abbrechen.",
+    "bubbleshooter/bubbleshooter.html": "Blasen schießen und gleiche Farben sprengen.",
+    "flappybird/flappybird.html": "Durch die Lücken flattern, so weit es geht.",
+    "frogger/frogger.html": "Über Straße und Fluss nach Hause.",
+    "goldminer/goldminer.html": "Mit dem Haken Gold und Schätze hochziehen.",
+    "pacman/pacman.html": "Punkte fressen und den Geistern entkommen.",
+    "pong/pong.html": "Schläger unten und oben – der Ball wird schneller.",
+    "snake/snake.html": "Fressen, wachsen und nicht in die eigene Spur fahren.",
+    "invaders/invaders.html": "Reihen von Aliens abschießen und Deckung nutzen.",
+    "pimmel/spimmel.html": "Retro-Hüpfer mit eigenen Leveln.",
+    "tetris/tetris.html": "Reihen füllen, bevor der Stapel oben ankommt.",
+    "tron/tron.html": "Lichtspuren ziehen – wer anstößt, verliert.",
+    "zone/voigtzone.html": "Flächen abgrenzen und Gegner aussperren.",
+    "bomberman/bomberman.html": "Bomben legen und den Gegner in die Flammen locken.",
+    "flipper/flipper.html": "Die Kugel mit den Flippern oben halten.",
+    "brettspiele/labyrinth/labyrinth.html": "Kugel durchs Labyrinth kippen und Ziele treffen.",
+    "towerbloxx/towerbloxx.html": "Stockwerke stapeln, bis der Turm wächst.",
+    "doodlejump/doodlejump.html": "Plattform für Plattform nach oben springen.",
+    "durst/durst.html": "Level-Abenteuer – Flaschen sammeln und weiterkommen."
+  };
+
+  /* ---------------------------------------------------------- Highlights --- */
+  /* pfad = Eintrag aus SPIELE, bild = Vorschau unter spiele/bilder/highlights. */
+  var HIGHLIGHTS = [
+    { pfad: "brettspiele/mahjong/mahjong.html", bild: "bilder/highlights/mahjong.jpg",
+      text: "Steine paaren, Schichten freilegen – ruhiges Denkspiel mit 144 Steinen." },
+    { pfad: "brettspiele/zehntausend/zehntausend.html", bild: "bilder/highlights/zehntausend.jpg",
+      text: "Sechs Würfel, sichere Punkte, ein Tisch für zwei bis sechs – auch online." },
+    { pfad: "brettspiele/risiko/risiko.html", bild: "bilder/highlights/risiko.jpg",
+      text: "Weltkarte, Armeen, Würfel – Eroberung für zwei bis sechs Spieler." },
+    { pfad: "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", bild: "bilder/highlights/labyrinth.jpg",
+      text: "Gänge schieben, Schätze einsammeln – das Brett verändert sich mit jedem Zug." }
+  ];
+
+  /* ---------------------------------------------------------- Werkzeuge --- */
   var WERKZEUGE = [
     ["Würfelbecher", "wuerfel/wuerfel.html", "Sechs Würfel, einzeln festhalten"],
     ["Sanduhr", "sanduhr/sanduhr.html", "Neon-Sanduhr mit Laufzeit"],
@@ -536,273 +340,730 @@ input[type=submit]{background:#0f2b23;color:#e8cd8e;border:1px solid #d9bc7c;bor
     ["WLAN-Universalfernbedienung", "../WLAN-Fernbedienung/index.html", "Fernseher im WLAN steuern"]
   ];
 
-  /* --- Aufbau --------------------------------------------------------- */
-  var suche = document.getElementById("suche");
-  var filterBox = document.getElementById("filter");
-  var trefferText = document.getElementById("treffer");
-  var kategorienBox = document.getElementById("kategorien");
-  var werkzeugeBox = document.getElementById("werkzeuge");
-  var werkzeugZahl = document.getElementById("werkzeug-zahl");
-  var schmal = window.matchMedia("(max-width: 700px)");
+  /* ------------------------------------------------------------- Symbole --- */
+  var IKONEN = {
+    wuerfel: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.4" cy="8.4" r="1.2"/><circle cx="15.6" cy="8.4" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="8.4" cy="15.6" r="1.2"/><circle cx="15.6" cy="15.6" r="1.2"/></svg>',
+    karten: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3.5" width="12" height="16.5" rx="2.5"/><path d="M5.2 6.6 4 19.1a2 2 0 0 0 1.8 2.2l1.4.1"/><path d="m14 8-3 7.5"/><path d="m13 12.5 2.4 1.2"/></svg>',
+    brett: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg>',
+    denk: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 18.5h5"/><path d="M10.3 21.5h3.4"/><path d="M12 3a6.2 6.2 0 0 0-3.6 11.2c.6.5 1 1.3 1 2.1h5.2c0-.8.4-1.6 1-2.1A6.2 6.2 0 0 0 12 3Z"/></svg>',
+    arcade: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7.5" width="19" height="9.5" rx="4.7"/><path d="M6.4 12.2h3.2M8 10.6v3.2"/><circle cx="15.8" cy="11.2" r="1"/><circle cx="17.9" cy="13.2" r="1"/></svg>',
+    quiz: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.7 2.7 0 1 1 3.7 2.5c-.7.3-1.1.9-1.1 1.7v.3"/><circle cx="12" cy="17" r="1"/></svg>',
+    highlights: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.6 5.3 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8Z"/></svg>',
+    werkzeuge: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.2a4.6 4.6 0 0 0-6.1 5.9L3.6 17.1l3.3 3.3 5-5a4.6 4.6 0 0 0 5.9-6.1l-3 3-2.4-2.4Z"/></svg>'
+  };
 
-  // Welche Spiele der Connector wirklich anbietet, steht in der zentralen
-  // Spieleverwaltung (/spiele/multiplayer-register.js). Die Merkmale „Multi“
-  // und „Online“ kommen von dort – so können Übersicht und Connector nicht
-  // auseinanderlaufen, wenn ein Spiel dazukommt.
+
+  /* ------------------------------------------------------- Spielsymbole --- */
+  /* Jedes Spiel bekommt ein eigenes Zeichen statt eines Buchstabenpaars.
+     Gezeichnet wird mit denselben Linien wie die Kategorie-Symbole; die Farbe
+     kommt vom Kategorie-Akzent. Die Regeln greifen auf den Pfad zu, der
+     Rückfall ist die Kategorie. */
+  function symbolSvg(inhalt) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + inhalt + "</svg>";
+  }
+
+  var SPIELSYMBOLE = {
+    wuerfel: symbolSvg('<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.4" cy="8.4" r="1.15"/><circle cx="15.6" cy="8.4" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="8.4" cy="15.6" r="1.15"/><circle cx="15.6" cy="15.6" r="1.15"/>'),
+    karten: symbolSvg('<rect x="8" y="3.5" width="12" height="16.5" rx="2.5"/><path d="M5.2 6.6 4 19.1a2 2 0 0 0 1.8 2.2l1.4.1"/><path d="m14.5 8.4-2.6 6.6"/><path d="m12.3 12.2 2.2 1.1"/>'),
+    brett: symbolSvg('<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/>'),
+    denk: symbolSvg('<path d="M9.5 18.5h5M10.3 21.5h3.4"/><path d="M12 3a6.2 6.2 0 0 0-3.6 11.2c.6.5 1 1.3 1 2.1h5.2c0-.8.4-1.6 1-2.1A6.2 6.2 0 0 0 12 3Z"/>'),
+    quiz: symbolSvg('<circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.7 2.7 0 1 1 3.7 2.5c-.7.3-1.1.9-1.1 1.7v.3"/><circle cx="12" cy="17" r="1"/>'),
+    arcade: symbolSvg('<rect x="2.5" y="7.5" width="19" height="9.5" rx="4.7"/><path d="M6.4 12.2h3.2M8 10.6v3.2"/><circle cx="15.8" cy="11.2" r="1"/><circle cx="17.9" cy="13.2" r="1"/>'),
+    ball: symbolSvg('<circle cx="12" cy="12" r="8"/><path d="M4.6 9.4c5.2 2 9.6 2 14.8 0M4.6 14.6c5.2-2 9.6-2 14.8 0"/>'),
+    irrgarten: symbolSvg('<path d="M4 4h16v16H4z"/><path d="M4 9h6V4M14 4v6h6M20 14h-6v6M9 20v-4H4"/>'),
+    rakete: symbolSvg('<path d="M12 3c3 3 4 7 4 11H8c0-4 1-8 4-11Z"/><path d="M8 14l-3 4 4-1M16 14l3 4-4-1"/><circle cx="12" cy="9" r="1.4"/><path d="M10 21h4"/>'),
+    schiff: symbolSvg('<path d="M4 16h16l-2 4H6z"/><path d="M12 16V4l6 4-6 3"/>'),
+    bombe: symbolSvg('<circle cx="10.5" cy="14" r="6"/><path d="M15 9.5 18 6"/><path d="M18 6c1-2 3-1 3-1"/>'),
+    schlange: symbolSvg('<path d="M4 17c3 0 3-4 6-4s3 4 6 4 4-2 4-5c0-2-1.6-3.5-3.5-3.5"/><circle cx="19" cy="8.5" r="1.2"/>'),
+    linie: symbolSvg('<path d="M4 19c4-8 12-8 16-14"/><circle cx="4" cy="19" r="1.5"/><circle cx="20" cy="5" r="1.5"/>'),
+    blocks: symbolSvg('<rect x="3.5" y="11" width="5" height="5"/><rect x="8.5" y="11" width="5" height="5"/><rect x="8.5" y="6" width="5" height="5"/><rect x="13.5" y="6" width="5" height="5"/><rect x="13.5" y="11" width="5" height="5"/><rect x="3.5" y="16" width="5" height="3.5"/>'),
+    puzzle: symbolSvg('<path d="M9.5 4.5a2.5 2.5 0 0 1 5 0V7H17a2.5 2.5 0 0 1 0 5h-2.5v2.5a2.5 2.5 0 0 1-5 0V12H7a2.5 2.5 0 0 1 0-5h2.5Z"/>'),
+    juwel: symbolSvg('<path d="m12 3 7 6-7 12L5 9Z"/><path d="M5 9h14M12 3v18"/>'),
+    vogel: symbolSvg('<path d="M3 13c4 0 5-4 9-4s5 4 9 2c-2 5-6 7-10 6-5-1-8-2-8-4Z"/><circle cx="8" cy="11" r=".9"/><path d="M9 8 7 4"/>'),
+    flasche: symbolSvg('<path d="M9 3h6v4l2 3v9a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2V10l2-3Z"/><path d="M7 14h10"/>'),
+    bauer: symbolSvg('<circle cx="12" cy="7" r="3"/><path d="M8 20h8l-1-4H9zM7 20h10"/>'),
+    globus: symbolSvg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/>'),
+    buchstabe: symbolSvg('<path d="m6 19 6-15 6 15M9 13h6"/>'),
+    rechnen: symbolSvg('<path d="M4 8h6M7 5v6M14 8h6M15 17l4 4M19 17l-4 4"/>'),
+    paar: symbolSvg('<rect x="2.5" y="5" width="8" height="11" rx="2"/><rect x="13.5" y="8" width="8" height="11" rx="2"/><circle cx="6.5" cy="10.5" r="1"/><circle cx="17.5" cy="13.5" r="1"/>'),
+    flipper: symbolSvg('<path d="m4 19 6-7M20 19l-6-7"/><circle cx="12" cy="8" r="2.2"/><path d="M4 19H3M20 19h1"/>'),
+    alien: symbolSvg('<path d="M12 3c5 0 8 3.5 8 8 0 4-3 6-4 9H8c-1-3-4-5-4-9 0-4.5 3-8 8-8Z"/><circle cx="9" cy="11" r="1.2"/><circle cx="15" cy="11" r="1.2"/>'),
+    leiter: symbolSvg('<path d="M8 3v18M16 3v18M8 7h8M8 12h8M8 17h8"/>'),
+    punkte: symbolSvg('<circle cx="7" cy="7" r="1.6"/><circle cx="17" cy="7" r="1.6"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/>'),
+    krone: symbolSvg('<path d="M4 8l3 4 5-6 5 6 3-4v10H4z"/><path d="M4 20h16"/>'),
+    muehle: symbolSvg('<circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="12" cy="18" r="2.2"/><path d="M8 7.5h8M7.5 8l3.5 8M16.5 8 13 16"/>'),
+    domino: symbolSvg('<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M12 4v16"/><circle cx="8" cy="8" r="1"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="15" r="1"/>'),
+    ziel: symbolSvg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>'),
+    steine: symbolSvg('<rect x="3.5" y="3.5" width="17" height="17" rx="1"/><circle cx="8.5" cy="8.5" r="2.8"/><circle cx="15.5" cy="15.5" r="2.8"/>'),
+    schlaeger: symbolSvg('<path d="M4 18h9"/><circle cx="17" cy="9" r="2.8"/><path d="M19 7l2.5-2.5"/>'),
+    turm: symbolSvg('<rect x="5.5" y="15" width="13" height="5"/><rect x="7.5" y="9.5" width="9" height="5"/><rect x="9" y="3.5" width="6" height="5.5"/>'),
+    sprung: symbolSvg('<path d="M12 21V6M6 12l6-6 6 6"/><path d="M4 21h16"/>'),
+    kiste: symbolSvg('<rect x="3.5" y="5.5" width="17" height="14" rx="2"/><path d="m4.5 6.5 15 12M19.5 6.5l-15 12"/>'),
+    mine: symbolSvg('<circle cx="12" cy="12" r="5"/><path d="M12 2.5V6M12 18v3.5M2.5 12H6M18 12h3.5M5.3 5.3 7.8 7.8M16.2 16.2l2.5 2.5M18.7 5.3 16.2 7.8M7.8 16.2 5.3 18.7"/>'),
+    streichholz: symbolSvg('<path d="M7 20 15.5 8"/><path d="M15.5 8c-1.5-2.5 1-5 3.5-4.5-1 2 0 4-1 5.5"/>'),
+    pac: symbolSvg('<path d="M12 3a9 9 0 1 0 6.4 15.4L12 12l6.4-6.4A9 9 0 0 0 12 3Z"/><circle cx="15.5" cy="7.5" r=".9"/>'),
+    auto: symbolSvg('<path d="M4 16h16M5 16l1.5-5h11L19 16"/><rect x="3" y="16" width="18" height="3" rx="1.5"/><circle cx="7" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>'),
+    tictac: symbolSvg('<path d="M9 3.5v17M15 3.5v17M3.5 9h17M3.5 15h17"/><path d="m5 5 3 3M8 5 5 8"/><circle cx="17.5" cy="17.5" r="1.8"/>'),
+    saeule: symbolSvg('<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M6 17h3M11 17h3M16 17h2M6 7h4M6 11h4M14 7h4M14 11h4"/>'),
+    schale: symbolSvg('<path d="M3 11h18c0 4-4 7-9 7s-9-3-9-7Z"/><circle cx="9" cy="7" r="1"/><circle cx="14" cy="6" r="1"/><circle cx="12" cy="9" r="1"/>'),
+    gebiet: symbolSvg('<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9H9v5.5H3.5zM14.5 9H20v11h-5.5zM9 3.5V9M9 14.5V20.5"/>'),
+    galgen: symbolSvg('<path d="M3 21h18M7 21V3h10M17 3v4"/><circle cx="14.5" cy="9.5" r="2.5"/><path d="M14.5 12v5M11.5 17h6M12 14l2.5 2M17 14l-2.5 2"/>')
+  };
+
+  var SYMBOLREGELN = [
+    [/acia/, "rakete"], [/arkanoid|pong/, "schlaeger"], [/bubbleshooter/, "ball"],
+    [/flappybird/, "vogel"], [/frogger/, "auto"], [/goldminer|bejeweled/, "juwel"],
+    [/pacman/, "pac"], [/snake/, "schlange"], [/tron/, "linie"], [/invaders/, "alien"],
+    [/bomberman/, "bombe"], [/flipper/, "flipper"], [/verruecktes-labyrinth|brettspiele\/labyrinth/, "irrgarten"],
+    [/towerbloxx/, "turm"], [/doodlejump/, "sprung"], [/durst/, "flasche"], [/1x1/, "rechnen"],
+    [/galgen/, "galgen"], [/lightsout/, "denk"], [/mastermind/, "punkte"],
+    [/brettspiele\/memory|brettspiele\/paare/, "paar"], [/minesweeper/, "mine"],
+    [/puzzle15/, "puzzle"], [/samegame|tetris/, "blocks"], [/sokoban/, "kiste"],
+    [/solitaer/, "karten"], [/brettspiele\/streichholzspiel/, "streichholz"],
+    [/wortsuche/, "buchstabe"], [/quizshow/, "quiz"], [/schach/, "krone"],
+    [/muehle/, "muehle"], [/domino/, "domino"], [/bingo/, "ziel"], [/schlangen/, "leiter"],
+    [/risiko/, "globus"], [/schiffe/, "schiff"], [/kalaha/, "schale"],
+    [/backgammon/, "brett"], [/gaensespiel/, "brett"], [/kaesekaestche/, "brett"],
+    [/go\/go\.html|reversi/, "steine"], [/halma|sim\//, "punkte"],
+    [/tictactoe/, "tictac"], [/viergewinnt/, "saeule"], [/holdtheline/, "linie"],
+    [/dame/, "punkte"], [/menschaerger/, "bauer"], [/draw/, "punkte"]
+  ];
+
+  function spielSymbol(s) {
+    for (var i = 0; i < SYMBOLREGELN.length; i++) {
+      if (SYMBOLREGELN[i][0].test(s.pfad)) return SPIELSYMBOLE[SYMBOLREGELN[i][1]];
+    }
+    return SPIELSYMBOLE[s.kat] || SPIELSYMBOLE.denk;
+  }
+
+  /* ---------------------------------------------------------------- Aufbau --- */
+  var inhalt = document.getElementById("inhalt");
+  var unterzeile = document.getElementById("unterzeile");
+  var suchfeld = document.getElementById("suche");
+  var suchfeldBox = document.getElementById("suchfeld");
+  var zurueckSchnell = document.getElementById("zurueck-schnell");
+  var loeschen = document.getElementById("suche-loeschen");
+
+  var katNach = {};
+  var aktiveModi = [];
+  KATEGORIEN.forEach(function (k) { katNach[k.id] = k; });
+
+  /* Die Merkmale multi/online kommen aus der zentralen Spieleverwaltung des
+     Connectors – so kann die Übersicht nicht von ihm abweichen. */
   var online = (window.TGMultiplayer && window.TGMultiplayer.spiele) || [];
 
-  var spiele = SPIELE.map(function (s) {
-    var merk = (s[3] || "").split(" ").filter(function (m) { return m; });
-    if (online.some(function (g) { return g.pfad === "/spiele/" + s[1]; })) {
+  function ohneUmlaute(s) {
+    try {
+      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ß/g, "ss");
+    } catch (e) {
+      return s.replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss");
+    }
+  }
+
+  var spiele = SPIELE.map(function (z) {
+    var merk = (z[3] || "").split(" ").filter(function (m) { return m; });
+    if (online.some(function (g) { return g.pfad === "/spiele/" + z[1]; })) {
       if (merk.indexOf("multi") < 0) merk.push("multi");
       if (merk.indexOf("online") < 0) merk.push("online");
     }
-    merk.forEach(function (m) {
-      if (!MERKMALE[m] && window.console) console.warn("Unbekanntes Merkmal:", m, "bei", s[0]);
-    });
+    var kategorie = katNach[z[2]];
+    var text = TEXTE[z[1]] || (kategorie ? kategorie.text : "");
+    var such = [z[0], z[4] || "", text, kategorie ? kategorie.name : ""].join(" ").toLowerCase();
     return {
-      name: s[0], pfad: s[1], kat: s[2], merk: merk,
-      suche: (s[4] || "").toLowerCase()
+      name: z[0],
+      pfad: z[1],
+      kat: z[2],
+      merk: merk,
+      text: text,
+      suchtext: such + " " + ohneUmlaute(such)
     };
   });
 
-  var genutzt = {};
-  spiele.forEach(function (s) { s.merk.forEach(function (m) { genutzt[m] = true; }); });
+  /* Doppelte Pfade wären ein zweiter Spieleintrag – im Konsolenprotokoll
+     sichtbar, in der Oberfläche kann das nicht entstehen. */
+  var gesehen = {};
+  spiele.forEach(function (s) {
+    if (gesehen[s.pfad] && window.console) console.warn("Doppelter Spieleintrag:", s.pfad);
+    gesehen[s.pfad] = true;
+    if (!katNach[s.kat] && window.console) console.warn("Unbekannte Kategorie:", s.kat, "bei", s.name);
+  });
 
-  function gespeichert() {
-    try { return JSON.parse(localStorage.getItem("tg-spiele-zu") || "null"); } catch (e) { return null; }
+  function nachName(a, b) {
+    return a.name.localeCompare(b.name, "de", { numeric: true, sensitivity: "base" });
   }
 
-  function merken(liste) {
-    try { localStorage.setItem("tg-spiele-zu", JSON.stringify(liste)); } catch (e) { /* egal */ }
-  }
-
-  /* Erster Besuch: am Handy alles eingeklappt, am PC offen. */
-  var zu = gespeichert();
-  if (!zu) {
-    zu = schmal.matches ? KATEGORIEN.map(function (k) { return k.id; }) : [];
-  }
-
-  var aktiv = [];
-
-  function passt(s, q) {
-    if (q && s.name.toLowerCase().indexOf(q) < 0 && s.suche.indexOf(q) < 0) return false;
-    for (var i = 0; i < aktiv.length; i++) {
-      if (s.merk.indexOf(aktiv[i]) < 0) return false;
+  function spielNach(pfad) {
+    for (var i = 0; i < spiele.length; i++) {
+      if (spiele[i].pfad === pfad) return spiele[i];
     }
-    return true;
+    return null;
   }
 
-  function kachel(s) {
-    var a = document.createElement("a");
-    a.className = "spiel";
+  /* ------------------------------------------------------------- Bausteine --- */
+  function el(tag, klasse) {
+    var n = document.createElement(tag);
+    if (klasse) n.className = klasse;
+    return n;
+  }
+
+  function leeren(n) {
+    while (n.firstChild) n.removeChild(n.firstChild);
+  }
+
+  function monogramm(name) {
+    var w = name.split(/\s+/).filter(function (t) {
+      return /[0-9A-Za-zÄÖÜäöüß]/.test(t.charAt(0));
+    });
+    if (!w.length) return "?";
+    if (w.length === 1) return name.slice(0, 2).toUpperCase();
+    return (w[0].charAt(0) + w[1].charAt(0)).toUpperCase();
+  }
+
+  /* Farben und Beschriftung der Spielmodi – nur was das Spiel wirklich kann. */
+  function modiVon(s) {
+    var m = s.merk, aus = [];
+    var lokal = m.indexOf("lokal") >= 0;
+    var onlineM = m.indexOf("online") >= 0;
+
+    /* Kurz für die Karte, der ganze Satz steht im Tooltip. */
+    if (m.indexOf("solo") >= 0) aus.push({ cls: "m-solo", text: "Solo", lang: "Einzelspieler" });
+    if (lokal && onlineM) aus.push({ cls: "m-multi", text: "Lokal & Online", lang: "Mehrspieler: lokal am Ger\u00e4t und online" });
+    else if (lokal) aus.push({ cls: "m-lokal", text: "Lokal", lang: "Mehrspieler am selben Ger\u00e4t" });
+    else if (onlineM) aus.push({ cls: "m-online", text: "Online", lang: "Mehrspieler online \u00fcber den Connector" });
+    else if (m.indexOf("multi") >= 0) aus.push({ cls: "m-multi", text: "Mehrspieler" });
+    if (m.indexOf("computer") >= 0) aus.push({ cls: "m-bots", text: "Bots", lang: "Gegen den Computer" });
+    if (m.indexOf("highscore") >= 0) aus.push({ cls: "m-extra", text: "Rekord", lang: "Highscore / Bestwert" });
+    if (m.indexOf("controller") >= 0) aus.push({ cls: "m-extra", text: "Pad", lang: "Controller-Unterst\u00fctzung" });
+    return aus;
+  }
+
+  function hatModus(s, key) {
+    if (key === "solo") return s.merk.indexOf("solo") >= 0;
+    if (key === "computer") return s.merk.indexOf("computer") >= 0;
+    if (key === "online") return s.merk.indexOf("online") >= 0;
+    return s.merk.indexOf("multi") >= 0 || s.merk.indexOf("lokal") >= 0 || s.merk.indexOf("online") >= 0;
+  }
+
+  function modiChips(s) {
+    var box = el("span", "karte-modi");
+    modiVon(s).forEach(function (m) {
+      var b = el("span", "modus " + m.cls);
+      b.textContent = m.text;
+      if (m.lang) b.title = m.lang;
+      box.appendChild(b);
+    });
+    return box;
+  }
+
+  function setzeTitel(text) {
+    document.title = text ? text + " – Spielhalle" : "Spielhalle – TrashyGecko";
+  }
+
+  function kartenRaster(liste, mitKategorie) {
+    var raster = el("div", "karten");
+    liste.forEach(function (s, i) {
+      var k = karte(s, mitKategorie);
+      k.style.setProperty("--i", String(Math.min(i, 12)));
+      raster.appendChild(k);
+    });
+    return raster;
+  }
+
+  /* Spiele, für die der Connector eine Online-Runde kennt, fragen zuerst den
+     Modus ab. Alle anderen starten wie bisher sofort. */
+  function onlineDef(s) {
+    for (var i = 0; i < online.length; i++) {
+      if (online[i].pfad === "/spiele/" + s.pfad) return online[i];
+    }
+    return null;
+  }
+
+  function karte(s, mitKategorie) {
+    var k = katNach[s.kat] || {};
+    var def = onlineDef(s);
+    var a = el("a", "karte");
     a.href = s.pfad;
-    a.dataset.art = s.kat;            // interne Zuordnung, unabhängig vom Abschnitt
-    var name = document.createElement("span");
-    name.className = "spiel-name";
-    name.textContent = s.name;
-    a.appendChild(name);
-    if (s.merk.length) {
-      var box = document.createElement("span");
-      box.className = "merkmale";
-      s.merk.forEach(function (m) {
-        var info = MERKMALE[m];
-        if (!info) return;
-        var b = document.createElement("span");
-        b.className = "m m-" + m;
-        b.textContent = info[0];
-        b.title = info[1];
-        box.appendChild(b);
-      });
-      a.appendChild(box);
+    if (k.akzent) a.style.setProperty("--akzent", k.akzent);
+
+    var sym = el("span", "symbol");
+    sym.innerHTML = spielSymbol(s);
+    sym.setAttribute("aria-hidden", "true");
+    if (def) {
+      var punkt = el("span", "online-punkt");
+      punkt.title = "Auch online spielbar";
+      sym.appendChild(punkt);
     }
+    a.appendChild(sym);
+
+    var text = el("span", "karte-text");
+    if (mitKategorie && k.name) {
+      var kat = el("span", "karte-kat");
+      kat.textContent = k.name;
+      text.appendChild(kat);
+    }
+    var name = el("span", "karte-name");
+    name.textContent = s.name;
+    text.appendChild(name);
+
+    var desc = el("span", "karte-desc");
+    desc.textContent = s.text;
+    text.appendChild(desc);
+
+    var modi = modiChips(s);
+    if (modi.childNodes.length) text.appendChild(modi);
+    a.appendChild(text);
+
+    var start = el("span", "karte-start");
+    start.textContent = def ? "Modi ›" : "Spielen ›";
+    a.appendChild(start);
+    a.setAttribute("aria-label", def ? s.name + " – Spielmodus wählen" : s.name + " spielen");
+
+    a.addEventListener("click", function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (!def || !window.TGHalle) return;
+      e.preventDefault();
+      window.TGHalle.auswahl(s.pfad, s.name, s.text, s.merk);
+    });
     return a;
   }
 
-  function baueKategorie(k, liste, gesamt, gefiltert) {
-    var abschnitt = document.createElement("section");
-    abschnitt.className = "kategorie";
-    abschnitt.style.setProperty("--akzent", k.akzent);
-    if (zu.indexOf(k.id) >= 0 && !gefiltert) abschnitt.classList.add("zu");
+  function highlightKarte(h, gross) {
+    var s = spielNach(h.pfad);
+    if (!s) return null;
+    var k = katNach[s.kat] || {};
+    var def = onlineDef(s);
 
-    var kopf = document.createElement("button");
-    kopf.type = "button";
-    kopf.className = "kategorie-kopf";
-    kopf.setAttribute("aria-expanded", abschnitt.classList.contains("zu") ? "false" : "true");
+    var a = el("a", "hl" + (gross ? " hl--gross" : ""));
+    a.href = s.pfad;
+    if (k.akzent) a.style.setProperty("--hl-akzent", k.akzent);
 
-    var punkt = document.createElement("span");
-    punkt.className = "punkt";
-    var titel = document.createElement("span");
-    titel.className = "titel";
-    titel.textContent = k.name;
-    var klein = document.createElement("small");
-    klein.textContent = k.text;
-    titel.appendChild(klein);
-    var zahl = document.createElement("span");
-    zahl.className = "zahl";
-    zahl.textContent = gefiltert ? liste.length + " / " + gesamt : String(gesamt);
-    var pfeil = document.createElement("span");
-    pfeil.className = "pfeil";
-    pfeil.textContent = "▼";
-    pfeil.setAttribute("aria-hidden", "true");
+    var bild = el("img", "hl-bild");
+    bild.src = h.bild;
+    bild.alt = "";
+    bild.width = 1392;
+    bild.height = 752;
+    bild.loading = "lazy";
+    a.appendChild(bild);
 
-    kopf.appendChild(punkt);
-    kopf.appendChild(titel);
-    kopf.appendChild(zahl);
-    kopf.appendChild(pfeil);
+    a.appendChild(el("span", "hl-schleier"));
 
-    var raster = document.createElement("div");
-    raster.className = "kacheln";
-    raster.id = "kat-" + k.id;
-    kopf.setAttribute("aria-controls", raster.id);
-    liste.forEach(function (s) { raster.appendChild(kachel(s)); });
+    var badge = el("span", "hl-badge");
+    var stern = el("span", "stern");
+    stern.textContent = "★";
+    badge.appendChild(stern);
+    badge.appendChild(document.createTextNode(" Highlight"));
+    a.appendChild(badge);
 
-    kopf.addEventListener("click", function () {
-      var jetztZu = abschnitt.classList.toggle("zu");
-      kopf.setAttribute("aria-expanded", jetztZu ? "false" : "true");
-      var i = zu.indexOf(k.id);
-      if (jetztZu && i < 0) zu.push(k.id);
-      if (!jetztZu && i >= 0) zu.splice(i, 1);
-      merken(zu);
+    if (def) {
+      var onlineMarke = el("span", "hl-badge online");
+      onlineMarke.appendChild(el("span", "punkt"));
+      onlineMarke.appendChild(document.createTextNode(
+        " Online " + (def.min || 2) + "–" + (def.max || def.min || 2)));
+      a.appendChild(onlineMarke);
+    }
+
+    var text = el("div", "hl-text");
+    var kat = el("span", "hl-kat");
+    kat.textContent = (k.name || "Spiel") + (def ? " · Online" : "");
+    text.appendChild(kat);
+
+    var name = el("span", "hl-name");
+    name.textContent = s.name;
+    text.appendChild(name);
+
+    var desc = el("span", "hl-desc");
+    desc.textContent = h.text || s.text;
+    text.appendChild(desc);
+
+    /* In der großen Ansicht zusätzlich zeigen, was das Spiel kann. */
+    if (gross) {
+      var modi = modiChips(s);
+      if (modi.childNodes.length) {
+        modi.className = "hl-modi";
+        text.appendChild(modi);
+      }
+    }
+
+    var fuss = el("div", "hl-fuss");
+    var start = el("span", "hl-start");
+    start.appendChild(document.createTextNode("Jetzt spielen "));
+    var pfeil = el("span", "pfeil");
+    pfeil.textContent = "›";
+    start.appendChild(pfeil);
+    fuss.appendChild(start);
+    if (def) {
+      var raumMarke = el("span", "hl-modi-text");
+      raumMarke.textContent = "Raum + Chat";
+      fuss.appendChild(raumMarke);
+    }
+    text.appendChild(fuss);
+
+    a.appendChild(text);
+    a.setAttribute("aria-label", s.name + " jetzt spielen");
+
+    a.addEventListener("click", function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (!def || !window.TGHalle) return;
+      e.preventDefault();
+      window.TGHalle.auswahl(s.pfad, s.name, h.text || s.text, s.merk);
     });
-
-    abschnitt.appendChild(kopf);
-    abschnitt.appendChild(raster);
-    return abschnitt;
+    return a;
   }
 
-  var katNach = {};
-  KATEGORIEN.forEach(function (k) { katNach[k.id] = k; });
-
-  function zeichne() {
-    var q = suche.value.trim().toLowerCase();
-    var gefiltert = !!q || aktiv.length > 0;
-    var sichtbar = 0;
-    var gezeigt = 0;
-    kategorienBox.innerHTML = "";
-
-    /* Wie viele Spiele stecken in welcher Kategorie? Eine Kategorie mit
-       „ersatz“, in der weniger als zwei Spiele liegen, bekommt keinen eigenen
-       Abschnitt – ihre Spiele erscheinen unter der Ersatz-Kategorie. */
-    var anzahl = {};
-    spiele.forEach(function (s) { anzahl[s.kat] = (anzahl[s.kat] || 0) + 1; });
-    function abschnittVon(s) {
-      var k = katNach[s.kat];
-      if (k && k.ersatz && anzahl[s.kat] < 2) return katNach[k.ersatz] || k;
-      return k;
+  function abschnittKopf(titel, linkText, linkZiel) {
+    var kopf = el("div", "abschnitt");
+    var h = el("h2");
+    h.textContent = titel;
+    kopf.appendChild(h);
+    if (linkText) {
+      var a = el("a", "mehr");
+      a.href = linkZiel;
+      a.textContent = linkText;
+      kopf.appendChild(a);
     }
-    var gruppen = {};
-    spiele.forEach(function (s) {
-      var k = abschnittVon(s);
-      if (!k) return;
-      (gruppen[k.id] = gruppen[k.id] || []).push(s);
-    });
+    return kopf;
+  }
 
-    KATEGORIEN.forEach(function (k) {
-      var alle = gruppen[k.id] || [];
-      if (!alle.length) return;
-      var liste = alle.filter(function (s) { return passt(s, q); });
-      if (!liste.length) return;
-      liste.sort(function (a, b) {
-        return a.name.localeCompare(b.name, "de", { numeric: true, sensitivity: "base" });
+  function ansichtKopf(ikone, titel, beschreibung, zahl, akzent) {
+    var kopf = el("div", "ansicht-kopf");
+    if (akzent) kopf.style.setProperty("--akzent", akzent);
+    var ik = el("span", "ikon");
+    ik.innerHTML = ikone;
+    kopf.appendChild(ik);
+    var h = el("h2");
+    h.textContent = titel;
+    kopf.appendChild(h);
+    var z = el("span", "zahl");
+    z.textContent = zahl;
+    kopf.appendChild(z);
+
+    var box = el("div");
+    box.appendChild(kopf);
+    if (beschreibung) {
+      var p = el("p", "ansicht-text");
+      p.textContent = beschreibung;
+      box.appendChild(p);
+    }
+    return box;
+  }
+
+  function leerHinweis(text) {
+    var p = el("p", "leer");
+    p.textContent = text;
+    return p;
+  }
+
+  /* --------------------------------------------------------------- Ansichten --- */
+  function zeigeStart(scroll) {
+    setzeTitel("");
+    unterzeile.textContent = spiele.length + " Spiele \u00b7 " + KATEGORIEN.length + " Kategorien";
+    zurueckSchnell.hidden = true;
+
+    var box = el("div");
+
+    if (HIGHLIGHTS.length) {
+      box.appendChild(abschnittKopf("Highlights", "Alle ansehen \u203a", "#/highlights"));
+      var hl = el("div", "highlights");
+      HIGHLIGHTS.forEach(function (h, i) {
+        var k = highlightKarte(h, false);
+        if (k) { k.style.setProperty("--i", String(i)); hl.appendChild(k); }
       });
-      sichtbar += liste.length;
-      gezeigt++;
-      kategorienBox.appendChild(baueKategorie(k, liste, alle.length, gefiltert));
-    });
-
-    if (!sichtbar) {
-      var leer = document.createElement("p");
-      leer.className = "bereich-hinweis";
-      leer.style.padding = "18px 14px";
-      leer.textContent = "Kein Spiel passt zu Suche und Filtern. „Filter zurücksetzen“ zeigt wieder alle.";
-      kategorienBox.appendChild(leer);
+      box.appendChild(hl);
     }
 
-    if (gefiltert) {
-      trefferText.textContent = sichtbar + " von " + spiele.length + " Spielen" +
-        (gezeigt !== 1 ? " in " + gezeigt + " Kategorien" : " in 1 Kategorie");
+    box.appendChild(abschnittKopf("Kategorien", null, null));
+    var kats = el("div", "kategorien");
+    KATEGORIEN.forEach(function (k) {
+      var anzahl = 0;
+      spiele.forEach(function (s) { if (s.kat === k.id) anzahl++; });
+      if (!anzahl) return;
+      var a = el("a", "kat");
+      a.style.setProperty("--i", String(Math.min(kats.childNodes.length, 8)));
+      a.href = "#/k/" + encodeURIComponent(k.id);
+      a.style.setProperty("--akzent", k.akzent);
+      var ik = el("span", "kat-ikon");
+      ik.innerHTML = IKONEN[k.id] || IKONEN.denk;
+      a.appendChild(ik);
+      var name = el("span", "kat-name");
+      name.textContent = k.name;
+      a.appendChild(name);
+      var txt = el("span", "kat-text");
+      txt.textContent = k.text;
+      a.appendChild(txt);
+      var zahl = el("span", "kat-zahl");
+      zahl.textContent = anzahl + (anzahl === 1 ? " Spiel" : " Spiele");
+      a.appendChild(zahl);
+      a.setAttribute("aria-label", k.name + " \u2013 " + anzahl + " Spiele");
+      kats.appendChild(a);
+    });
+    box.appendChild(kats);
+
+    var werk = el("a", "kasten-link");
+    werk.href = "#/werkzeuge";
+    var werkInhalt = el("span", "kasten-inhalt");
+    var werkTitel = el("strong");
+    werkTitel.textContent = "Werkzeuge & Extras";
+    werkInhalt.appendChild(werkTitel);
+    var werkText = el("span", "kasten-text");
+    werkText.textContent = "W\u00fcrfelbecher, Sanduhr, Rechner, Level-Editoren und Apps";
+    werkInhalt.appendChild(werkText);
+    werk.appendChild(werkInhalt);
+    var pfeil = el("span", "pfeil");
+    pfeil.textContent = "\u203a";
+    werk.appendChild(pfeil);
+    box.appendChild(werk);
+
+    leeren(inhalt);
+    inhalt.appendChild(box);
+    if (scroll) window.scrollTo(0, 0);
+  }
+
+  function zeigeKategorie(id, scroll) {
+    var k = katNach[id];
+    if (!k) { zeigeStart(scroll); return; }
+
+    var alle = spiele.filter(function (s) { return s.kat === id; }).sort(nachName);
+    var sichtbar = alle.filter(function (s) {
+      return aktiveModi.every(function (m) { return hatModus(s, m); });
+    });
+
+    setzeTitel(k.name);
+    unterzeile.textContent = alle.length + (alle.length === 1 ? " Spiel" : " Spiele");
+    zurueckSchnell.hidden = false;
+
+    var box = el("div");
+    box.appendChild(ansichtKopf(IKONEN[id] || IKONEN.denk, k.name, k.text,
+      sichtbar.length === alle.length ? String(alle.length) : sichtbar.length + " / " + alle.length, k.akzent));
+
+    var modi = el("div", "modi-filter");
+    modi.setAttribute("role", "group");
+    modi.setAttribute("aria-label", "Nach Spielmodus filtern");
+    var vorhanden = [
+      ["solo", "Einzelspieler"],
+      ["multi", "Mehrspieler"],
+      ["online", "Online spielbar"],
+      ["computer", "Gegen Bots"]
+    ].filter(function (m) {
+      return alle.some(function (s) { return hatModus(s, m[0]); });
+    });
+
+    if (vorhanden.length > 1) {
+      vorhanden.forEach(function (m) {
+        var b = el("button");
+        b.type = "button";
+        b.textContent = m[1];
+        b.setAttribute("aria-pressed", aktiveModi.indexOf(m[0]) >= 0 ? "true" : "false");
+        b.addEventListener("click", function () {
+          var i = aktiveModi.indexOf(m[0]);
+          if (i >= 0) aktiveModi.splice(i, 1);
+          else aktiveModi.push(m[0]);
+          zeichne(false);
+        });
+        modi.appendChild(b);
+      });
+      box.appendChild(modi);
+    }
+
+    if (aktiveModi.length) {
+      var zeile = el("p", "ergebnis-zeile");
+      zeile.textContent = sichtbar.length + " von " + alle.length + " Spielen passen zum Filter.";
+      box.appendChild(zeile);
+    }
+
+    if (!sichtbar.length) {
+      box.appendChild(leerHinweis("Kein Spiel dieser Kategorie passt zum gewählten Modus. Tippe den Filter erneut an, um ihn zu lösen."));
     } else {
-      trefferText.textContent = spiele.length + " Spiele in " + gezeigt + " Kategorien";
+      box.appendChild(kartenRaster(sichtbar, false));
     }
+
+    /* Direkt weiter zur nächsten Kategorie, ohne über den Start zurück. */
+    var wechsel = el("nav", "kat-wechsel");
+    wechsel.setAttribute("aria-label", "Andere Kategorien");
+    KATEGORIEN.forEach(function (k) {
+      if (k.id === id) return;
+      var anzahl = spiele.filter(function (s) { return s.kat === k.id; }).length;
+      if (!anzahl) return;
+      var a = el("a", "kat-wechsel-link");
+      a.href = "#/k/" + encodeURIComponent(k.id);
+      a.style.setProperty("--akzent", k.akzent);
+      var ik = el("span", "kat-wechsel-ikon");
+      ik.innerHTML = IKONEN[k.id] || IKONEN.denk;
+      a.appendChild(ik);
+      var txt = el("span", "kat-wechsel-text");
+      var stark = el("strong");
+      stark.textContent = k.name;
+      txt.appendChild(stark);
+      var klein = el("span");
+      klein.textContent = anzahl + (anzahl === 1 ? " Spiel" : " Spiele");
+      txt.appendChild(klein);
+      a.appendChild(txt);
+      wechsel.appendChild(a);
+    });
+    box.appendChild(wechsel);
+
+    leeren(inhalt);
+    inhalt.appendChild(box);
+    if (scroll) window.scrollTo(0, 0);
   }
 
-  /* --- Filterknöpfe --------------------------------------------------- */
-  Object.keys(MERKMALE).forEach(function (m) {
-    if (!genutzt[m]) return;               // keine leeren Filter anbieten
-    var b = document.createElement("button");
-    b.type = "button";
-    b.textContent = (m === "solo" ? "Einzelspieler" :
-                     m === "multi" ? "Mehrspieler" :
-                     m === "lokal" ? "Lokal am Gerät" :
-                     m === "online" ? "Online" :
-                     m === "computer" ? "Gegen Computer" :
-                     m === "highscore" ? "Highscore" : "Controller");
-    b.dataset.merkmal = m;
-    b.setAttribute("aria-pressed", "false");
-    b.title = MERKMALE[m][1];
-    b.addEventListener("click", function () {
-      var i = aktiv.indexOf(m);
-      if (i >= 0) { aktiv.splice(i, 1); b.setAttribute("aria-pressed", "false"); }
-      else { aktiv.push(m); b.setAttribute("aria-pressed", "true"); }
-      zeichne();
+  function zeigeHighlights(scroll) {
+    setzeTitel("Highlights");
+    unterzeile.textContent = HIGHLIGHTS.length + " Spiele";
+    zurueckSchnell.hidden = false;
+
+    var box = el("div");
+    box.appendChild(ansichtKopf(IKONEN.highlights, "Highlights",
+      "Besondere Eigenentwicklungen und ausgewählte Spiele – groß ins Bild gesetzt.", String(HIGHLIGHTS.length), "#e8cd8e"));
+
+    var raster = el("div", "highlights gross");
+    HIGHLIGHTS.forEach(function (h) {
+      var k = highlightKarte(h, true);
+      if (k) raster.appendChild(k);
     });
-    filterBox.appendChild(b);
-  });
+    box.appendChild(raster);
 
-  document.getElementById("reset").addEventListener("click", function () {
-    suche.value = "";
-    aktiv = [];
-    Array.prototype.forEach.call(filterBox.children, function (b) {
-      b.setAttribute("aria-pressed", "false");
+    leeren(inhalt);
+    inhalt.appendChild(box);
+    if (scroll) window.scrollTo(0, 0);
+  }
+
+  function zeigeWerkzeuge(scroll) {
+    setzeTitel("Werkzeuge");
+    unterzeile.textContent = WERKZEUGE.length + " Eintr\u00e4ge";
+    zurueckSchnell.hidden = false;
+
+    var box = el("div");
+    box.appendChild(ansichtKopf(IKONEN.werkzeuge, "Werkzeuge & Extras",
+      "Keine Spiele – Hilfsmittel, Apps und Editoren. Die Spiele bleiben in ihren Kategorien.",
+      String(WERKZEUGE.length), "#9aa7a0"));
+
+    var raster = el("div", "karten");
+    WERKZEUGE.forEach(function (w) {
+      var a = el("a", "karte");
+      a.href = w[1];
+      if (/^https?:/i.test(w[1])) {
+        a.target = "_blank";
+        a.rel = "noopener";
+      }
+      var sym = el("span", "symbol");
+      sym.textContent = monogramm(w[0]);
+      sym.setAttribute("aria-hidden", "true");
+      a.appendChild(sym);
+      var text = el("span", "karte-text");
+      var name = el("span", "karte-name");
+      name.textContent = w[0];
+      text.appendChild(name);
+      var desc = el("span", "karte-desc");
+      desc.textContent = w[2] || "";
+      text.appendChild(desc);
+      a.appendChild(text);
+      var start = el("span", "karte-start");
+      start.textContent = "Öffnen \u203a";
+      a.appendChild(start);
+      raster.appendChild(a);
     });
-    zeichne();
-    suche.focus();
+    box.appendChild(raster);
+
+    leeren(inhalt);
+    inhalt.appendChild(box);
+    if (scroll) window.scrollTo(0, 0);
+  }
+
+  function zeigeSuche(q, scroll) {
+    var n = ohneUmlaute(q.toLowerCase());
+    var treffer = spiele.filter(function (s) {
+      return s.suchtext.indexOf(n) >= 0;
+    }).sort(nachName);
+
+    setzeTitel("Suche");
+    unterzeile.textContent = treffer.length + " Treffer";
+    zurueckSchnell.hidden = false;
+
+    var box = el("div");
+    box.appendChild(ansichtKopf(IKONEN.denk, "Suche",
+      "\u201e" + q + "\u201c \u2013 in allen Kategorien.", String(treffer.length), "#e8cd8e"));
+
+    if (!treffer.length) {
+      box.appendChild(leerHinweis("Kein Spiel gefunden. Versuche einen Teil des Namens, zum Beispiel \u201eMau\u201c oder \u201eW\u00fcrfel\u201c."));
+    } else {
+      box.appendChild(kartenRaster(treffer, true));
+    }
+
+    leeren(inhalt);
+    inhalt.appendChild(box);
+    if (scroll) window.scrollTo(0, 0);
+  }
+
+  /* --------------------------------------------------------------- Steuerung --- */
+  var zustand = { ansicht: "start", id: null };
+  var sucheLaeuft = false;
+
+  function zeichne(scroll) {
+    var q = suchfeld.value.trim();
+    if (q) { zeigeSuche(q, scroll); return; }
+    if (zustand.ansicht === "kategorie") zeigeKategorie(zustand.id, scroll);
+    else if (zustand.ansicht === "highlights") zeigeHighlights(scroll);
+    else if (zustand.ansicht === "werkzeuge") zeigeWerkzeuge(scroll);
+    else zeigeStart(scroll);
+  }
+
+  function route() {
+    var h = (location.hash || "").replace(/^#\/?/, "");
+    aktiveModi = [];
+    sucheLaeuft = false;
+    if (h.indexOf("k/") === 0) {
+      zustand.ansicht = "kategorie";
+      zustand.id = decodeURIComponent(h.slice(2));
+    } else if (h === "highlights") {
+      zustand.ansicht = "highlights";
+      zustand.id = null;
+    } else if (h === "werkzeuge") {
+      zustand.ansicht = "werkzeuge";
+      zustand.id = null;
+    } else {
+      zustand.ansicht = "start";
+      zustand.id = null;
+    }
+    suchfeld.value = "";
+    suchfeldBox.classList.remove("hat-text");
+    zeichne(true);
+  }
+
+  suchfeld.addEventListener("input", function () {
+    var q = suchfeld.value.trim();
+    suchfeldBox.classList.toggle("hat-text", suchfeld.value.length > 0);
+    if (q) {
+      var ersteSuche = !sucheLaeuft;
+      sucheLaeuft = true;
+      zeichne(ersteSuche);
+    } else {
+      sucheLaeuft = false;
+      zeichne(false);
+    }
   });
 
-  suche.addEventListener("input", zeichne);
-
-  /* --- Werkzeuge ------------------------------------------------------ */
-  WERKZEUGE.forEach(function (w) {
-    var a = document.createElement("a");
-    a.className = "spiel";
-    a.href = w[1];
-    var name = document.createElement("span");
-    name.className = "spiel-name";
-    name.textContent = w[0];
-    var hinweis = document.createElement("span");
-    hinweis.className = "m m-multi";
-    hinweis.textContent = w[2];
-    hinweis.style.border = "0";
-    hinweis.style.padding = "0";
-    a.appendChild(name);
-    a.appendChild(hinweis);
-    werkzeugeBox.appendChild(a);
+  suchfeld.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      suchfeld.value = "";
+      suchfeldBox.classList.remove("hat-text");
+      sucheLaeuft = false;
+      zeichne(false);
+    }
   });
-  werkzeugZahl.textContent = String(WERKZEUGE.length);
 
-  zeichne();
+  loeschen.addEventListener("click", function () {
+    suchfeld.value = "";
+    suchfeldBox.classList.remove("hat-text");
+    sucheLaeuft = false;
+    zeichne(false);
+    suchfeld.focus();
+  });
+
+  window.addEventListener("hashchange", route);
+  route();
 })();
 </script>
 
-<script>
-(function(){
-  const dateFormatter=new Intl.DateTimeFormat('de-DE',{
-    weekday:'long',day:'numeric',month:'long',year:'numeric'
-  });
-  const timeFormatter=new Intl.DateTimeFormat('de-DE',{
-    hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
-  });
-
-  function updateDateTime(){
-    const now=new Date();
-    document.getElementById('local-date').textContent=dateFormatter.format(now);
-    document.getElementById('local-time').textContent=timeFormatter.format(now)+' Uhr';
-  }
-
-  updateDateTime();
-  window.setInterval(updateDateTime,1000);
-})();
-</script>
+<script src="/spiele/halle-online.js"></script>
 </body>
 </html>

@@ -20,7 +20,8 @@ package main
    Tempo-Modus ergibt sich aus der Serveruhr beim Eintreffen, doppelt antworten
    geht nicht, nach Ablauf der Frist zählt keine Antwort mehr.
 
-   Eine Runde endet, wenn alle geantwortet haben oder die Zeit abgelaufen ist.
+   Eine Runde endet, sobald alle geantwortet haben – sonst mit Ablauf der
+   Höchstzeit (30 s in beiden Modi).
    Danach zeigt die Auflösung die richtige Antwort samt Spruch; nach der Pause
    kommt die nächste Frage, nach der letzten die Rangliste. Angetrieben wird
    das – wie überall hier – vom GET der Spielseite.
@@ -40,8 +41,11 @@ const (
 	quizMaxSpieler  = 6
 	quizMaxRunden   = 20
 	quizStandardRun = 5
-	quizZeitTempo   = 20 * time.Second
-	quizZeitPunkte  = 15 * time.Second
+	// Maximale Antwortzeit je Frage – in beiden Modi 30 s. Früher Schluss ist
+	// Absicht: Haben alle Spieler geantwortet, wertet quizAntwort sofort aus
+	// (quizAlleDran), statt die Restzeit abzuwarten.
+	quizZeitTempo   = 30 * time.Second
+	quizZeitPunkte  = 30 * time.Second
 	quizPauseZeit   = 7 * time.Second
 )
 

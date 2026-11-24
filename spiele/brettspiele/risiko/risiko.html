@@ -803,8 +803,13 @@ input[type="text"]{width:132px}
     return true;
   }
 
-  function aufstellenFertig() {
+  /* fuer ist der Spieler, dessen Vorrat gerade leer wurde. Ein verspaeteter
+     Aufruf (260-ms-Timer nach der letzten Armee, Doppelklick auf "Aufstellung
+     beenden") traf sonst schon den Naechsten: der verlor seinen ganzen
+     Startvorrat, und die Partie sprang ohne seine Figuren ins Verstaerken. */
+  function aufstellenFertig(fuer) {
     if (FERN) { FERN.sende("aufstellenFertig"); return true; }
+    if (typeof fuer === "number" && S.phase === "aufstellen" && S.amZug !== fuer) return true;
     var sp = S.spieler[S.amZug];
     if (sp && S.phase === "aufstellen") sp.startPool = 0;
     var naechster = -1;
@@ -1731,13 +1736,18 @@ input[type="text"]{width:132px}
     if (S.spieler[S.amZug].ki) return;
     S.auswahl = S.auswahl || null;
     if (S.phase === "aufstellen" || S.phase === "verstaerken") {
+      /* Nach der letzten Startarmee drehte bisher erst ein Timer (260 ms)
+         weiter: ein Klick in dieser Luecke verpuffte. Jetzt ist sofort der
+         Naechste dran, und der Klick zaehlt fuer ihn. */
+      if (!FERN && S.phase === "aufstellen" && (S.spieler[S.amZug].startPool || 0) === 0) aufstellenFertig(S.amZug);
       if (aufstellenMoeglich(id)) {
         setzeArmee(id);
         S.auswahl = id;
         aktualisiere();
-        if (S.phase === "aufstellen" && (S.spieler[S.amZug].startPool || 0) === 0) {
-          window.setTimeout(function () { if (S.phase === "aufstellen") aufstellenFertig(); }, 260);
-        }
+        /* Letzte Armee: sofort weitergeben (wie der Server). Der frueher hier
+           stehende 260-ms-Timer machte den naechsten Klick zu einem Blindgänger
+           und konnte im Doppelfall den Vorrat des Naechsten loeschen. */
+        if (S.phase === "aufstellen" && (S.spieler[S.amZug].startPool || 0) === 0) aufstellenFertig(S.amZug);
         return;
       }
       S.auswahl = id;
@@ -1845,7 +1855,7 @@ input[type="text"]{width:132px}
   function aktion(akt) {
     if (S.vorbei && akt !== "neu") return;
     if (akt === "neu") { zurueckZurEinrichtung(); return; }
-    if (akt === "aufstellenFertig") { aufstellenFertig(); return; }
+    if (akt === "aufstellenFertig") { aufstellenFertig(S.amZug); return; }
     if (FERN && (akt === "restHier" || akt === "alleHier")) {
       var rest = akt === "restHier" ? (S.spieler[S.amZug].startPool || 0) : S.pool;
       if (S.auswahl && rest > 0) FERN.sende("setzen", { gebiet: S.auswahl, armeen: rest });
@@ -1857,6 +1867,9 @@ input[type="text"]{width:132px}
       /* Nur auf ein eigenes Gebiet legen – sonst würde die Schleife nie enden. */
       while ((sp.startPool || 0) > 0 && ziel && setzeArmee(ziel)) { /* weiter */ }
       S.auswahl = ziel;
+      /* Vorrat leer: sofort weitergeben. Sonst haette der Spieler hier
+         festgesteckt, weil "Aufstellung beenden" schon gesperrt ist. */
+      if (S.phase === "aufstellen" && (sp.startPool || 0) === 0) aufstellenFertig(S.amZug);
       aktualisiere(); return;
     }
     if (akt === "alleHier") {
@@ -2125,7 +2138,7 @@ input[type="text"]{width:132px}
       aktualisiere();
     },
     setze: setzeArmee,
-    aufstellenFertig: aufstellenFertig,
+    aufstellenFertig: function () { return aufstellenFertig(S.amZug); },
     verstaerkenEnde: beendeVerstaerken,
     angriff: angriffRunde,
     nachruecken: nachruecken,
@@ -2151,7 +2164,7 @@ input[type="text"]{width:132px}
         missionen: S.missionen, vorbei: !!S.vorbei,
         spieler: S.spieler.map(function (x) {
           return { name: x.name, farbe: x.farbe, ki: x.ki, stufe: x.stufe, hand: x.hand.slice(),
-                   ausgeschieden: x.ausgeschieden, team: x.team };
+                   ausgeschieden: x.ausgeschieden, team: x.team, startPool: x.startPool || 0 };
         })
       }));
     },
@@ -2161,7 +2174,8 @@ input[type="text"]{width:132px}
       S.missionen = d.missionen || []; S.vorbei = !!d.vorbei;
       S.spieler = d.spieler.map(function (x, i) {
         return { id: i, name: x.name, farbe: x.farbe, ki: !!x.ki, stufe: x.stufe || "normal",
-                 hand: (x.hand || []).slice(), ausgeschieden: !!x.ausgeschieden, team: x.team, startPool: 0 };
+                 hand: (x.hand || []).slice(), ausgeschieden: !!x.ausgeschieden, team: x.team,
+                 startPool: x.startPool || 0 };
       });
       S.log = []; S.auswahl = null; S.ziel = null; S.nachruecken = null; S.verschoben = false;
       S.kartenWahl = [];

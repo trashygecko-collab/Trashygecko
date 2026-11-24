@@ -171,6 +171,10 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
+			// NeuerRaum legt einen zusätzlichen Spielraum an, statt den festen
+			// Hauptraum zurückzugeben. Mehrere Räume laufen damit gleichzeitig
+			// und unabhängig (eigene Sitze, eigene Spielstände).
+			NeuerRaum bool `json:"neuerRaum"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&input)
 		input.ID = kennung(r)
@@ -181,6 +185,29 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 		pName = limitName(pName)
 
 		ensureMainRoom()
+		if input.NeuerRaum {
+			mu.Lock()
+			code := randomCode()
+			for rooms[code] != nil {
+				code = randomCode()
+			}
+			titel := roomTitle(pName)
+			rooms[code] = &Room{
+				Code:       code,
+				OwnerID:    input.ID,
+				OwnerName:  pName,
+				Name:       titel,
+				Created:    time.Now(),
+				LastActive: time.Now(),
+				Players:    map[string]Player{},
+				Messages:   []Message{},
+				Mutes:      map[string]time.Time{},
+				MsgTimes:   map[string][]time.Time{},
+			}
+			mu.Unlock()
+			jsonResponse(w, map[string]string{"code": code, "name": titel})
+			return
+		}
 		mu.Lock()
 		room := rooms[mainRoomCode]
 		if room == nil {

@@ -26,8 +26,8 @@ android {
         applicationId "de.trashygecko.tmahjong"
         minSdk 21
         targetSdk 34
-        versionCode 16
-        versionName "1.15"
+        versionCode 17
+        versionName "1.16"
     }
 
     signingConfigs {
@@ -161,6 +161,13 @@ tasks.register("verifyHomepageGames") {
             rows.add("| ${name.replace('|','\\|')} | `spiele/${relative}` | `${matcher.group(3)}` | `${matcher.group(4).trim()}` |")
         }
         if (rows.isEmpty()) throw new GradleException("Keine aktiven Spiele im Homepage-Katalog erkannt")
+        def hlBilder = (inhalt =~ /\{\s*pfad:\s*"([^"]+)",\s*bild:\s*"([^"]+)"/)
+        int hlZahl = 0
+        while (hlBilder.find()) {
+            File bild = new File(new File(wwwZiel, "spiele"), hlBilder.group(2))
+            if (!bild.isFile()) throw new GradleException("Highlight-Bild fehlt in den Android-Assets: ${hlBilder.group(2)}")
+            hlZahl++
+        }
         File report = new File(buildDir, "reports/homepage-integration/spiele-manifest.md")
         report.parentFile.mkdirs()
         report.setText("# Homepage-Spiele in TrashyGecko\n\nAktive Katalogeinträge: ${rows.size()}. Die HTML-Seite und ihre Unterordner sowie gemeinsam genutzte Dateien unter `spiele/` werden in gleicher relativer Struktur nach `app/src/main/assets/www/` kopiert.\n\n| Spiel | Homepage-Datei | Kategorie | Katalogmerkmale |\n|---|---|---|---|\n${rows.join('\n')}\n\nSkripte, CSS, Grafiken, Audio und Schriften werden aus dem vollständigen statischen `spiele/`-Baum mitkopiert. Online-Mehrspieler benötigt weiterhin den vorhandenen TrashyGecko-Connector-Server. Der Kopierschritt lässt Connector-Quellcode, Testläufe, `node_modules`, Android-Projekt/Backups und alte APK-Installer aus.\n", "UTF-8")
@@ -183,12 +190,29 @@ tasks.register("katalogBauen") {
         String html = quelle.getText("UTF-8")
 
         def kategorien = []
-        def katMatcher = (html =~ /\{\s*id:\s*"([^"]+)",\s*name:\s*"([^"]+)"/)
+        def katMatcher = (html =~ /(?s)\{\s*id:\s*"([^"]+)",\s*name:\s*"([^"]+)",(.*?)\}/)
         while (katMatcher.find()) {
-            kategorien << [id: katMatcher.group(1), name: katMatcher.group(2)]
+            String block = katMatcher.group(3)
+            def akzentTreffer = (block =~ /akzent:\s*"([^"]+)"/)
+            def textTreffer = (block =~ /text:\s*"([^"]+)"/)
+            kategorien << [
+                id: katMatcher.group(1),
+                name: katMatcher.group(2),
+                akzent: akzentTreffer.find() ? akzentTreffer.group(1) : "#e8cd8e",
+                text: textTreffer.find() ? textTreffer.group(1) : ""
+            ]
         }
         if (kategorien.isEmpty()) throw new GradleException("Keine Kategorien im Spielekatalog erkannt")
         def katNamen = kategorien.collectEntries { [(it.id): it.name] }
+
+        // Kurzbeschreibungen und Highlights stehen in derselben Datei wie der Katalog.
+        def texte = [:]
+        def textMatcher = (html =~ /(?m)^\s*"([^"]+\.html)":\s*"([^"]+)"/)
+        while (textMatcher.find()) texte[textMatcher.group(1)] = textMatcher.group(2)
+
+        def highlights = []
+        def hlMatcher = (html =~ /\{\s*pfad:\s*"([^"]+)",\s*bild:\s*"([^"]+)"/)
+        while (hlMatcher.find()) highlights << [pfad: hlMatcher.group(1), bild: hlMatcher.group(2)]
 
         String registerText = register.isFile() ? register.getText("UTF-8") : ""
         String spieleBaum = new File(wwwZiel, "spiele").getPath().replace('\\', '/')
@@ -212,7 +236,8 @@ tasks.register("katalogBauen") {
                 kategorie: matcher.group(3),
                 kategorieName: katNamen[matcher.group(3)] ?: matcher.group(3),
                 merkmale: merkmale,
-                suche: (matcher.group(5) ?: "").trim().toLowerCase(Locale.ROOT)
+                suche: (matcher.group(5) ?: "").trim().toLowerCase(Locale.ROOT),
+                text: texte[relative] ?: ""
             ]
         }
         if (spiele.isEmpty()) throw new GradleException("Keine Spiele für katalog.json erkannt")
@@ -221,6 +246,7 @@ tasks.register("katalogBauen") {
             quelle: "spiele/spiele.html",
             anzahl: spiele.size(),
             kategorien: kategorien,
+            highlights: highlights,
             spiele: spiele
         ]
         ziel.parentFile.mkdirs()

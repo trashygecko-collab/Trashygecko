@@ -211,6 +211,51 @@ Stelle, an der ein neuer Bereich auffällt.
 ist seine Kachel im APK tot, während sie im Netz geht. Die Assets wachsen um 1,38 MB
 (204 Dateien), das APK um 0,5 MB.
 
+## D-25 · Spielhalle: Kategorien und Highlights sind Ansichten derselben Liste
+`spiele/spiele.html` bleibt die einzige Spielequelle (D-05). Kategorien, Spielmodi und
+Highlights werden aus derselben `SPIELE`-Liste abgeleitet; die Kategorie-, Highlight- und
+Werkzeugansichten sind reine Ansichten über Hash-Adressen (`#/k/…`), kein zweiter
+Katalog. Kurzbeschreibungen (`TEXTE`) und Vorschaubilder (`HIGHLIGHTS`) stehen in
+derselben Datei und sind optional – ein neues Spiel braucht weiterhin nur eine Zeile in
+`SPIELE`.
+
+*Warum:* Eine zweite Liste für Kategorien oder Highlights würde sofort auseinanderlaufen
+und die Android-Ansicht (`katalogBauen`) brechen. Die Zeilenform bleibt deshalb
+unverändert; der Android-Bau liest sie weiterhin mit denselben Ausdrücken.
+
+*Folge:* Ein Spiel steht genau einmal in `SPIELE` und gehört zu genau einer Kategorie.
+Ein Highlight ist eine zusätzliche Empfehlung, kein eigener Eintrag. Wer die Zeilenform
+ändert, muss `homepageKopieren`, `katalogBauen` und `verifyHomepageGames` mitziehen.
+
+## D-26 · Die App-Spielhalle hat dieselben drei Ansichten wie das Web
+`SpieleActivity` liest weiterhin nur `assets/katalog.json`. `katalogBauen` überträgt
+zusätzlich Kurztexte, Kategorie-Texte/-Farben und die Highlights aus `spiele.html`; die
+App kennt drei Ansichten (Start, Kategorie, Treffer) und hält sie in `ansicht` und
+`offeneKategorie`.
+
+*Warum:* Die App soll sich wie die Web-Spielhalle anfühlen, ohne einen zweiten Katalog
+zu pflegen. Ein Highlight ist nur ein Verweis auf ein Spiel, keine Kopie.
+
+*Folge:* Neue Kategorien brauchen in `SpieleActivity.symbolFuer` ein Zeichen (sonst ▦),
+neue Highlights erscheinen automatisch. Prozess-Tod sichert zusätzlich Ansicht und
+Kategorie; die Zurück-Reihenfolge (Filter → Kategorie → Activity) gilt für die
+Systemtaste und den Pfeil gemeinsam.
+
+## D-27 · Die Spielhalle nutzt den Connector, statt einen zweiten zu bauen
+`spiele/halle-online.js` spricht ausschließlich vorhandene Endpunkte an: `/api/rooms`,
+`/api/presence`, `/api/players`, `/api/messages`, `/api/angebot` und die Spiel-APIs.
+Kennung, Name und Token sind dieselben wie im Connector (`tg-player-id`,
+`tg-player-name`, `token.js`); der Tisch ist die bestehende Spielseite im Overlay, keine
+Kopie. Bereitschaft und Start bleiben dort, die Halle zeigt den Stand und den Chat.
+
+*Warum:* Ein zweiter Raum-, Einladungs- oder Chatweg würde Identitäten und Spielstände
+trennen; der Connector kann das bereits, inklusive Reconnect und Flüstern.
+
+*Folge:* Neue Online-Spiele erscheinen automatisch, sobald sie in
+`multiplayer-register.js` stehen; die Halle braucht keine Spiel-Liste. Ohne Connector
+bleibt der Einzelspieler-Teil nutzbar. Ein eigener Raum entsteht beim Verbinden, damit
+nicht alle Besucher im offenen Hauptraum landen.
+
 ## Verworfene Wege
 
 | Vorschlag | Warum verworfen |

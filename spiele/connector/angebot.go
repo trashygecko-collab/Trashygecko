@@ -243,6 +243,178 @@ func spielName(id string) string {
 	return id
 }
 
+// spielStatus liefert den Zustand der Runde, die zu diesem Spiel im Raum
+// steht. ok=false heißt: es steht gar keine Runde. Nur Tischspiele legen beim
+// Anbieten sofort eine an – bei Einladungen entsteht sie erst beim Annehmen.
+func (r *Room) spielStatus(spiel string) (string, bool) {
+	switch spiel {
+	case "kniffel":
+		if g := r.Kniffel; g != nil {
+			return g.Status, true
+		}
+	case "maumau":
+		if g := r.MauMau; g != nil {
+			return g.Status, true
+		}
+	case "uno":
+		if g := r.Uno; g != nil {
+			return g.Status, true
+		}
+	case "schwimmen":
+		if g := r.Schwimmen; g != nil {
+			return g.Status, true
+		}
+	case "arschloch":
+		if g := r.Arschloch; g != nil {
+			return g.Status, true
+		}
+	case "einsxeins":
+		if g := r.Rechen; g != nil {
+			return g.Status, true
+		}
+	case "poker":
+		if g := r.Poker; g != nil {
+			return g.Status, true
+		}
+	case "cabo":
+		if g := r.Cabo; g != nil {
+			return g.Status, true
+		}
+	case "siebzehn":
+		if g := r.Siebzehn; g != nil {
+			return g.Status, true
+		}
+	case "baccara":
+		if g := r.Baccara; g != nil {
+			return g.Status, true
+		}
+	case "schiffe":
+		if g := r.Schiffe; g != nil {
+			return g.Status, true
+		}
+	case "pong":
+		if g := r.Pong; g != nil {
+			return g.Status, true
+		}
+	case "tron":
+		if g := r.Tron; g != nil {
+			return g.Status, true
+		}
+	case "bomberman":
+		if g := r.Bomberman; g != nil {
+			return g.Status, true
+		}
+	case "bubble":
+		if g := r.Bubble; g != nil {
+			return g.Status, true
+		}
+	case "snake":
+		if g := r.Snake; g != nil {
+			return g.Status, true
+		}
+	case "sechsundsechzig":
+		if g := r.Sechsundsechzig; g != nil {
+			return g.Status, true
+		}
+	case "galgen":
+		if g := r.Galgen; g != nil {
+			return g.Status, true
+		}
+	case "quizshow":
+		if g := r.Quiz; g != nil {
+			return g.Status, true
+		}
+	case "bingo":
+		if g := r.Bingo; g != nil {
+			return g.Status, true
+		}
+	case "wortsuche":
+		if g := r.Wortsuche; g != nil {
+			return g.Status, true
+		}
+	case "domino":
+		if g := r.Domino; g != nil {
+			return g.Status, true
+		}
+	case "schlangen":
+		if g := r.Schlangen; g != nil {
+			return g.Status, true
+		}
+	case "pig":
+		if g := r.Pig; g != nil {
+			return g.Status, true
+		}
+	case "gaensespiel":
+		if g := r.Gaense; g != nil {
+			return g.Status, true
+		}
+	case "risiko":
+		if g := r.Risiko; g != nil {
+			return g.Status, true
+		}
+	case "labyrinth":
+		if g := r.Labyrinth; g != nil {
+			return g.Status, true
+		}
+	case "zehntausend":
+		if g := r.ZehnTausend; g != nil {
+			return g.Status, true
+		}
+	case "maexchen":
+		if g := r.Maexchen; g != nil {
+			return g.Status, true
+		}
+	case "boston":
+		if g := r.Boston; g != nil {
+			return g.Status, true
+		}
+	case "chicago":
+		if g := r.Chicago; g != nil {
+			return g.Status, true
+		}
+	case "shipcrew":
+		if g := r.ShipCrew; g != nil {
+			return g.Status, true
+		}
+	case "halma":
+		if g := r.Halma; g != nil {
+			return g.Status, true
+		}
+	default:
+		// Die 18 Würfelspiele teilen sich einen Tisch – gemeint ist nur der,
+		// der auch angeboten wurde.
+		if spielApi[spiel] == "wuerfel" {
+			if g := r.Wuerfel; g != nil && g.Spiel == spiel {
+				return g.Status, true
+			}
+		}
+	}
+	return "", false
+}
+
+// angebotNochOffen sagt, ob das Angebot noch jemanden aufnehmen kann. Neue
+// Spieler nimmt allein die Lobby auf (Status "invited"); sobald die Runde
+// läuft – auch wenn sie erst auf der Spielseite gestartet wurde – oder zu Ende
+// ist, ist das Angebot erledigt. Die Halle muss dafür nichts aufräumen.
+func (r *Room) angebotNochOffen(a *Angebot) bool {
+	if a == nil {
+		return false
+	}
+	// Malen ist eine gemeinsame Fläche ohne Plätze: sie bleibt offen.
+	if gemeinsam[a.Game] {
+		return true
+	}
+	// Einladungen an einen Spieler erledigen sich beim Annehmen oder Ablehnen.
+	if !tischspiel[a.Game] {
+		return true
+	}
+	status, da := r.spielStatus(a.Game)
+	if !da {
+		return false
+	}
+	return status == "invited"
+}
+
 // spielAufruf ruft einen Spiel-Endpunkt von innen auf – wie ein Klick eines
 // Spielers. So gelten beim Beitritt genau dieselben Prüfungen wie sonst.
 func spielAufruf(api, code, aktion string, felder map[string]any) (int, string) {
@@ -279,8 +451,15 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		var angebot *Angebot
 		if room := rooms[code]; room != nil && room.Angebot != nil {
-			kopie := *room.Angebot
-			angebot = &kopie
+			// Läuft die Runde schon, ist das Angebot erledigt – egal, wer sie
+			// gestartet hat. Bisher räumte nur die Halle ihr eigenes Angebot auf;
+			// ein Start aus der Spielseite heraus ließ es stehen.
+			if room.angebotNochOffen(room.Angebot) {
+				kopie := *room.Angebot
+				angebot = &kopie
+			} else {
+				room.Angebot = nil
+			}
 		}
 		mu.Unlock()
 		jsonResponse(w, angebot)
@@ -431,6 +610,12 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		if room.Angebot.VonID == input.ID {
 			mu.Unlock()
 			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
+			return
+		}
+		if !room.angebotNochOffen(room.Angebot) {
+			room.Angebot = nil
+			mu.Unlock()
+			http.Error(w, "Die Runde ist schon gestartet – hier ist nichts mehr offen.", http.StatusConflict)
 			return
 		}
 		angebot := *room.Angebot

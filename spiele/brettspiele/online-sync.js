@@ -42,7 +42,7 @@
         for (var i = 0; i < anzahl; i++) ki.push(false);
         SP.neu({ modus: "welt", anzahl: anzahl, namen: namen, ki: ki });
       } else {
-        SP.neu({ modus: "mehrspieler", spielerzahl: anzahl, groesse: 7, kreuze: true, aufgaben: 5 });
+        SP.neu({ modus: "mehrspieler", spielerzahl: (namen.length || anzahl), namen: namen, groesse: 7, kreuze: true, aufgaben: 5 });
       }
     },
     /* Risiko braucht den Aufbau der Karte (start); das Labyrinth zeigt das
@@ -133,7 +133,7 @@
   /* ------------------------------------------------------------------ Anzeige */
   function namenListe() {
     return (spiel.spieler || []).map(function (p) {
-      return p.name + (p.bereit ? " ✓" : "");
+      return p.name + (p.bot ? " (Computer)" : "") + (p.bereit ? " ✓" : "");
     }).join(" · ");
   }
 
@@ -146,7 +146,12 @@
       leisteText.textContent = "Lobby " + spiel.spieler.length + "/" + anzahl + ": " + namenListe() +
         (meinPlatz < 0 ? " – du sitzt noch nicht" : "");
       if (meinPlatz >= 0) knopf("Bereit", function () { aktion("ready"); });
-      if (meinPlatz === 0) knopf("Start", function () { aktion("start"); });
+      if (meinPlatz === 0) {
+        if (spiel.spieler.length < spiel.anzahl) {
+          knopf("+ Computer", function () { aktion("botadd", { stufe: "mittel" }); });
+        }
+        knopf("Start", function () { aktion("start"); });
+      }
       sperren("Warten auf den Start – " + spiel.spieler.length + " von " + anzahl + " sitzen am Tisch.");
       return;
     }

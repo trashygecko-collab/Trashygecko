@@ -123,7 +123,7 @@ small{color:var(--c-leise)}
 #verbindung[data-zustand="weg"]{color:var(--c-weg)}
 @keyframes verbindung-puls{0%,100%{opacity:.25}50%{opacity:1}}
 #qrwrap{display:flex;align-items:center;justify-content:center;margin-top:14px}
-#qrcode{width:176px;height:176px;background:white;padding:8px;border-radius:8px;image-rendering:pixelated}
+#qrcode{width:176px;height:176px;max-width:100%;background:white;padding:8px;border-radius:8px;image-rendering:auto}
 /* Leiser Knopf in Altrosa, klein und ohne kräftige Füllung. */
 .adresse-knopf{display:block;margin:12px auto 0;padding:6px 11px;font-size:12px;
  font-weight:normal;letter-spacing:.03em;background:var(--c-flaeche-2);color:var(--c-sanft);
@@ -945,33 +945,71 @@ function playerName(){
  return document.getElementById("player").value.trim();
 }
 
+// Nur Adressen, die ein anderes Geraet wirklich erreicht. "localhost" im
+// QR-Code waere eine Attrappe: das Handy ruft damit sich selbst auf.
+function istNurLokal(adresse){
+ try{
+  const h=new URL(adresse).hostname.toLowerCase();
+  return h==="localhost"||h==="127.0.0.1"||h==="::1"||h==="[::1]"||h.endsWith(".local");
+ }catch(e){ return true; }
+}
+
+let letzteQrAdresse="";
+
 async function loadStatus(){
+ const box=document.getElementById("addresses");
+ const qr=document.getElementById("qrcode");
  try{
   const s=await fetch("/api/status").then(r=>r.json());
   const chosen=s.ip||(s.ips&&s.ips[0])||"";
-  const box=document.getElementById("addresses");
   box.innerHTML="";
 
-  // Lokal ist das die LAN-Adresse, online die öffentliche Adresse des Servers.
-  address=s.url||(chosen?"http://"+chosen+":"+s.port+"/connector":"");
+  // /api/status liefert die Adresse, unter der die Seite erreichbar ist:
+  // online die oeffentliche, lokal die LAN-Adresse. Sie wird unveraendert
+  // angezeigt - eine lokale IP kommt nur, wenn es keine oeffentliche gibt.
+  if(s.url){
+   address=s.url;
+  }else if(s.online){
+   address=location.origin+"/connector";
+  }else{
+   address=chosen?"http://"+chosen+":"+s.port+"/connector":"";
+  }
+  const p=document.createElement("p");
   if(address){
-   const p=document.createElement("p");
    p.textContent=address;
-   box.appendChild(p);
-
-   const qr=document.getElementById("qrcode");
-   if(qr){
-    qr.src="/api/qr"+(chosen?"?ip="+encodeURIComponent(chosen):"");
-    qr.hidden=false;
-   }
   }else{
    address="http://localhost:"+s.port+"/connector";
-   box.textContent="Keine passende Netzwerkadresse gefunden.";
+   p.textContent="Keine Netzwerkadresse gefunden - Mitspieler im WLAN erreichen diesen Rechner so nicht.";
+  }
+  box.appendChild(p);
+
+  if(qr){
+   if(address&&!istNurLokal(address)){
+    if(address!==letzteQrAdresse){
+     letzteQrAdresse=address;
+     // Scheitert das Bild (Adresse gerade nicht erreichbar), beim naechsten
+     // Takt neu versuchen statt dauerhaft ein kaputtes Bild zu zeigen.
+     qr.onerror=function(){ letzteQrAdresse=""; };
+     qr.src="/api/qr?url="+encodeURIComponent(address);
+     qr.hidden=false;
+    }
+   }else{
+    letzteQrAdresse="";
+    qr.hidden=true;
+    qr.removeAttribute("src");
+   }
   }
  }catch(e){
-  document.getElementById("addresses").textContent="Adressen konnten nicht geladen werden.";
+  box.textContent="Adressen konnten nicht geladen werden.";
  }
 }
+
+// Netzwechsel (WLAN umgesteckt, anderer Router) aendert die Adresse: alle 20 s
+// und beim Zurueckkommen neu nachsehen. Das Bild wird nur bei echter Aenderung
+// neu geladen, sonst flackert es bei jedem Takt.
+window.setInterval(function(){ if(!document.hidden) loadStatus(); },20000);
+window.addEventListener("online",function(){ loadStatus(); });
+document.addEventListener("visibilitychange",function(){ if(!document.hidden) loadStatus(); });
 
 async function copyAddress(){
  try{
