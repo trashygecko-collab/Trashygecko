@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12040c">
+<title>Rotlicht – vom Straßenstrich zum Luxusimperium</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+
+:root{
+  --bg:#0d0309; --bg2:#1a0713;
+  --pink:#ff3d8a; --pink-hell:#ff8dbb; --gold:#ffcf5c; --gold-tief:#e0a52e;
+  --ink:#ffeaf3; --muted:#c68dab;
+  --flaeche:rgba(38,10,26,.9); --flaeche-hell:rgba(58,14,38,.92);
+  --rand:rgba(255,61,138,.3); --rand-gold:rgba(255,207,92,.28);
+  --gut:#7ef0b0; --schlecht:#ff7b7b;
+}
+
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; min-height:100dvh; color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:15px; line-height:1.45;
+  background:
+    radial-gradient(1100px 560px at 82% -12%, #430c2a 0%, rgba(67,12,42,0) 62%),
+    radial-gradient(820px 520px at -10% 108%, #2b0620 0%, rgba(43,6,32,0) 60%),
+    linear-gradient(#13040d,#080105 72%);
+  background-attachment:fixed;
+  padding:10px 12px calc(20px + env(safe-area-inset-bottom));
+  overflow-x:hidden;
+}
+b,strong{font-weight:700}
+.geld-zahl,.zahl{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ------------------------------------------------------------- Grundgerüst */
+.fenster{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+
+.kopf{
+  position:sticky; top:6px; z-index:30;
+  display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap;
+  padding:10px 14px; border-radius:16px;
+  border:1px solid var(--rand);
+  background:linear-gradient(180deg,rgba(48,10,32,.96),rgba(24,6,16,.96));
+  box-shadow:0 12px 32px #000a, inset 0 1px 0 #ffffff14;
+  backdrop-filter:blur(8px);
+}
+.marke{display:flex;flex-direction:column;gap:1px;min-width:0}
+.logo{font-size:21px;font-weight:900;letter-spacing:.15em;line-height:1.05;white-space:nowrap}
+.logo span{color:var(--pink);text-shadow:0 0 12px #ff3d8acc,0 0 34px #ff3d8a55}
+.unter{font-size:11px;color:var(--muted);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.konto{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0}
+.geld{font-size:clamp(22px,4.4vw,30px);font-weight:900;letter-spacing:.01em;line-height:1.1;
+  background:linear-gradient(#fff3c9,#ffcf5c 55%,#ff9ec4);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 10px #ffcf5c40);
+  transition:transform .12s ease}
+.geld.puls{transform:scale(1.045)}
+.geld-neben{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap}
+.geld-neben b{color:var(--ink)}
+.geld-neben .punkt{opacity:.5}
+.kopf .tg-zurueck{order:9;flex:0 0 auto}
+.kopf .tg-zurueck{color:#ffd9ea !important;background:#2a0a1c !important;border-color:#ff3d8a66 !important;opacity:.9}
+
+/* ------------------------------------------------------------------ Bühne */
+.buehne{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--rand);
+  background:#0a0207;box-shadow:0 16px 40px #0008, inset 0 0 0 1px #ffffff08}
+.szene{position:relative;height:clamp(170px,25vh,260px);overflow:hidden;isolation:isolate}
+
+.himmel{position:absolute;inset:0;
+  background:linear-gradient(#160419 0%,#34082a 42%,#6d1140 76%,#a3255c 100%)}
+.himmel::after{content:"";position:absolute;inset:auto 0 0 0;height:45%;
+  background:radial-gradient(120% 100% at 50% 100%,#ff5f9e33,transparent 70%)}
+.stern{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.7;
+  animation:funkeln 4s ease-in-out infinite}
+.mond{position:absolute;top:12%;right:9%;width:34px;height:34px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#fff7e2,#ffdcae 60%,#e8b98a);
+  box-shadow:0 0 26px #ffd9a055,0 0 70px #ffb3d055}
+.skyline{position:absolute;left:0;right:0;bottom:16%;display:flex;align-items:flex-end;justify-content:center;gap:2px;opacity:.85}
+.sk{flex:1 1 0;max-width:64px;background:linear-gradient(#26081a,#14040d);
+  border-top-left-radius:3px;border-top-right-radius:3px;
+  box-shadow:inset 0 1px 0 #ff3d8a22}
+.sk i{display:block;width:3px;height:3px;margin:4px auto;background:#ffcf5c88;border-radius:1px}
+
+.strasse{position:absolute;left:0;right:0;bottom:0;height:16%;
+  background:linear-gradient(#200b16,#0a0308 70%)}
+.strasse::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,#ff3d8a66,transparent)}
+.strasse::after{content:"";position:absolute;left:0;right:0;top:52%;height:2px;
+  background:repeating-linear-gradient(90deg,#ffcf5c66 0 14px,transparent 14px 30px);opacity:.5}
+
+.haus{position:absolute;bottom:16%;left:50%;transform:translateX(-50%);
+  width:var(--b,26%);height:var(--h,34%);
+  background:linear-gradient(180deg,#3d0f27,#240817 70%);
+  border:1px solid #ff3d8a55;border-bottom:none;
+  box-shadow:0 0 26px #ff3d8a2e, inset 0 0 22px #00000066;
+  display:flex;flex-direction:column;justify-content:flex-start;gap:4px;
+  padding:8px 6px 0;transition:width .5s ease,height .5s ease}
+.haus .dach{position:absolute;left:-8%;right:-8%;top:-9px;height:10px;border-radius:6px 6px 2px 2px;
+  background:linear-gradient(#ff4f95,#8d1140);box-shadow:0 0 16px #ff3d8a88}
+.fassade{display:flex;flex-direction:column;gap:5px;flex:1;min-height:0}
+.reihe{display:flex;gap:5px;justify-content:center;flex:1;min-height:0}
+.fenster{flex:1 1 0;border-radius:2px;background:#ffd9a0;opacity:.9;
+  box-shadow:0 0 9px #ffb96a99;animation:flackern 7s ease-in-out infinite}
+.fenster.aus{background:#2a0a1c;box-shadow:none;opacity:.75;animation:none}
+.fenster.rot{background:#ff6fa8;box-shadow:0 0 12px #ff3d8acc}
+.schild{position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  padding:2px 8px;border-radius:5px;background:#2a0416;border:1px solid #ff5fa8;
+  font-size:9px;font-weight:800;letter-spacing:.12em;white-space:nowrap;color:#ffd9ea;
+  text-shadow:0 0 6px #ff3d8a,0 0 16px #ff3d8a;box-shadow:0 0 18px #ff3d8a66;
+  animation:neon 5.5s ease-in-out infinite}
+.vordach{position:absolute;left:-6%;right:-6%;bottom:-6px;height:9px;
+  background:repeating-linear-gradient(90deg,#ffcf5c 0 7px,#8d1140 7px 14px);
+  border-radius:2px;box-shadow:0 4px 12px #0008}
+
+.laterne{position:absolute;left:8%;bottom:16%;width:3px;height:78px;background:#2c1020}
+.laterne::before{content:"";position:absolute;top:-4px;left:-11px;width:25px;height:8px;border-radius:4px;
+  background:#3a1526;border:1px solid #ffcf5c55}
+.laterne::after{content:"";position:absolute;top:2px;left:-8px;width:19px;height:6px;border-radius:3px;
+  background:#ffcf5c;box-shadow:0 0 18px #ffcf5c99,0 0 44px #ffcf5c55}
+.kiste{position:absolute;left:20%;bottom:16%;width:22px;height:15px;border-radius:2px;
+  background:linear-gradient(#8a5a34,#5c3a20);border:1px solid #c89a6a44;transform:rotate(-4deg)}
+.palme{position:absolute;right:5%;bottom:16%;width:4px;height:62px;background:#3d2418;display:none}
+.palme::before{content:"";position:absolute;top:-12px;left:-17px;width:38px;height:22px;border-radius:50% 50% 40% 40%;
+  background:radial-gradient(circle at 50% 60%,#2f7a4a,#174a2c);box-shadow:0 0 14px #2f7a4a44}
+.volk{position:absolute;bottom:16%;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:flex-end}
+.mensch{width:6px;height:16px;border-radius:3px 3px 1px 1px;background:#12030a;position:relative;opacity:.9}
+.mensch::before{content:"";position:absolute;top:-6px;left:1px;width:4px;height:4px;border-radius:50%;background:#12030a}
+.auto{position:absolute;bottom:calc(16% + 2px);left:-30%;width:54px;height:15px;border-radius:7px 9px 3px 3px;
+  background:linear-gradient(#ff6fa8,#8d1140);box-shadow:0 0 16px #ff3d8a66;animation:fahren 9s linear infinite;display:none}
+.auto::before{content:"";position:absolute;bottom:-3px;left:8px;width:9px;height:7px;border-radius:50%;background:#0a0308;
+  box-shadow:28px 0 0 #0a0308}
+.hubschrauber{position:absolute;top:16%;left:-12%;width:16px;height:7px;border-radius:4px;background:#ffd9ea;
+  box-shadow:0 0 16px #ff3d8acc;animation:fliegen 16s linear infinite;display:none}
+.hubschrauber::before{content:"";position:absolute;top:-4px;left:5px;width:14px;height:2px;background:#ffd9ea;border-radius:2px}
+
+.szene[data-s="3"] .auto,.szene[data-s="4"] .auto,.szene[data-s="5"] .auto,
+.szene[data-s="6"] .auto{display:block}
+.szene[data-s="7"] .auto,.szene[data-s="8"] .auto,.szene[data-s="9"] .auto,
+.szene[data-s="10"] .auto{display:block}
+.szene[data-s="5"] .palme,.szene[data-s="6"] .palme,.szene[data-s="7"] .palme,
+.szene[data-s="8"] .palme,.szene[data-s="9"] .palme,.szene[data-s="10"] .palme{display:block}
+.szene[data-s="10"] .hubschrauber{display:block}
+
+
+/* Auf hohen Stufen verschwindet das Straßenmobiliar, das Haus nimmt die Bühne */
+.szene[data-s="4"] .kiste,.szene[data-s="5"] .kiste,.szene[data-s="6"] .kiste,
+.szene[data-s="7"] .kiste,.szene[data-s="8"] .kiste,.szene[data-s="9"] .kiste,
+.szene[data-s="10"] .kiste{display:none}
+.szene[data-s="6"] .laterne,.szene[data-s="7"] .laterne,.szene[data-s="8"] .laterne,
+.szene[data-s="9"] .laterne,.szene[data-s="10"] .laterne{opacity:.35}
+
+.buehne-unten{position:absolute;left:0;right:0;bottom:0;padding:8px 10px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:linear-gradient(transparent,#0a0207ee 45%)}
+.stufe-chip{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:999px;
+  background:#1c0713ee;border:1px solid var(--rand);font-size:12px;font-weight:700;white-space:nowrap}
+.stufe-nr{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(#ffcf5c,#e0a52e);color:#2a0416;font-size:12px;font-weight:900}
+.fortschritt{position:relative;flex:1 1 140px;min-width:120px;height:22px;border-radius:999px;
+  background:#1a0612cc;border:1px solid var(--rand-gold);overflow:hidden}
+.fortschritt i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);
+  background:linear-gradient(90deg,#ff3d8a,#ffcf5c);transition:transform .25s linear}
+.fortschritt span{position:relative;z-index:1;display:block;text-align:center;font-size:11px;line-height:20px;
+  font-weight:700;color:#fff;text-shadow:0 1px 3px #000}
+
+/* ---------------------------------------------------------------- Aktionen */
+.aktionen{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aktion{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:3px;
+  padding:12px 14px 16px;border-radius:16px;min-height:104px;text-align:left;cursor:pointer;
+  color:var(--ink);border:1px solid var(--rand);
+  background:linear-gradient(158deg,#3a0b24,#200612 78%);
+  box-shadow:inset 0 1px 0 #ffffff12,0 8px 22px #0006;
+  transition:transform .1s ease,border-color .2s,box-shadow .2s;font:inherit}
+.aktion:hover{border-color:#ff8dbb99;box-shadow:inset 0 1px 0 #ffffff1a,0 10px 26px #0008,0 0 22px #ff3d8a33}
+.aktion:active{transform:translateY(1px) scale(.995)}
+.aktion.bereit{border-color:#ffcf5c99;box-shadow:inset 0 1px 0 #ffffff1a,0 0 24px #ffcf5c33}
+.aktion.verbraucht{color:#ffeaf3b0}
+.a-kopf{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+.a-name{font-size:16px;font-weight:800;letter-spacing:.02em}
+.a-betrag{font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;
+  text-shadow:0 0 12px #ffcf5c44;white-space:nowrap;font-size:15px}
+.a-text{font-size:12px;color:var(--muted);max-width:34ch}
+.a-status{margin-top:auto;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.a-status .punkt{width:7px;height:7px;border-radius:50%;background:#666;flex:0 0 auto}
+.a-status.frei .punkt{background:var(--gut);box-shadow:0 0 10px var(--gut)}
+.a-status.wartet .punkt{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.takt-balken{position:absolute;left:0;bottom:0;height:4px;width:100%;transform-origin:left;
+  background:linear-gradient(90deg,#ff3d8a,#ffcf5c);transition:transform .2s linear}
+.a-symbol{position:absolute;right:10px;top:8px;font-size:26px;opacity:.16;pointer-events:none}
+.a-vorrat{font-size:11px;color:var(--muted);font-weight:600}
+.a-vorrat b{color:var(--ink)}
+.kondom-leiste{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 12px;border-radius:12px;background:#1c0713cc;border:1px dashed var(--rand);
+  font-size:12px;color:var(--muted)}
+.kondom-leiste b{color:var(--ink)}
+.kondom-leiste .knopf{margin-left:auto}
+
+/* ----------------------------------------------------------------- Knöpfe */
+.knopf{font:inherit;font-size:13px;font-weight:700;min-height:40px;padding:8px 12px;
+  border-radius:10px;border:1px solid var(--rand-gold);background:#2a0a1c;color:var(--ink);
+  cursor:pointer;transition:background .15s,border-color .15s,transform .1s,opacity .2s}
+.knopf:hover{background:#3a0f26;border-color:#ffcf5c99}
+.knopf:active{transform:translateY(1px)}
+.knopf.kauf{background:linear-gradient(#ff4f95,#c2175f);border-color:#ff9ec4;color:#fff;
+  box-shadow:0 6px 16px #ff3d8a33}
+.knopf.kauf:hover{background:linear-gradient(#ff68a5,#d42069)}
+.knopf.zu-teuer{opacity:.5;cursor:not-allowed}
+.knopf:disabled{opacity:.45;cursor:not-allowed}
+.knopf.klein{min-height:34px;padding:5px 9px;font-size:12px}
+
+/* ------------------------------------------------------------------ Reiter */
+.reiter{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.reiter::-webkit-scrollbar{display:none}
+.reiter button{flex:1 1 auto;min-width:88px;min-height:42px;padding:9px 12px;border-radius:12px;
+  font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  background:#1b0712;color:var(--muted);border:1px solid #ff3d8a26;transition:.15s}
+.reiter button:hover{color:var(--ink);border-color:#ff3d8a55}
+.reiter button.aktiv{color:#2a0416;background:linear-gradient(#ffe6a8,#ffb4d2);
+  border-color:#ffcf5c;box-shadow:0 0 20px #ff3d8a44}
+.reiter button .zahl-reiter{display:inline-block;margin-left:5px;padding:0 5px;border-radius:8px;
+  background:#ff3d8a33;font-size:11px}
+
+/* ------------------------------------------------------------------ Karten */
+.inhalt{min-height:220px}
+.karten{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(255px,1fr))}
+.karte{display:flex;flex-direction:column;gap:7px;padding:12px;border-radius:14px;
+  background:linear-gradient(180deg,var(--flaeche-hell),var(--flaeche));
+  border:1px solid var(--rand);box-shadow:inset 0 1px 0 #ffffff0d,0 6px 18px #0005;
+  transition:border-color .2s,transform .15s}
+.karte:hover{border-color:#ff8dbb66}
+.karte.gesperrt{opacity:.62;filter:saturate(.45)}
+.karte.fertig{border-color:#ffcf5c66;background:linear-gradient(180deg,#43122c,#25101c)}
+
+.k-kopf{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.k-name{font-weight:800;font-size:15px;min-width:0;overflow-wrap:anywhere}
+.k-rolle{display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.k-badge{margin-left:auto;flex:0 0 auto;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;
+  background:#ffcf5c22;color:var(--gold);border:1px solid #ffcf5c55;white-space:nowrap}
+.k-badge.aus{background:#ffffff0d;color:var(--muted);border-color:#ffffff1a}
+.k-text{margin:0;font-size:12px;color:var(--muted);line-height:1.4}
+.k-werte{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);
+  padding:6px 0 0;border-top:1px solid #ffffff10;margin-top:auto}
+.k-werte b{color:var(--ink);font-variant-numeric:tabular-nums}
+.k-kauf{display:flex;gap:6px;flex-wrap:wrap}
+.k-kauf .knopf{flex:1 1 30%}
+.k-sperre{font-size:11px;color:var(--gold);font-weight:700}
+
+.abschnitt{display:flex;align-items:baseline;gap:8px;margin:4px 0 2px}
+.abschnitt h2{margin:0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.abschnitt span{color:var(--muted)}
+
+.stufe-karte{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:16px;
+  border:1px solid var(--rand-gold);
+  background:radial-gradient(120% 140% at 100% 0%,#4a122f 0%,#220812 60%)}
+.stufe-karte h3{margin:0;font-size:18px;letter-spacing:.01em}
+.stufe-karte .stufen-text{margin:0;font-size:13px;color:var(--muted);max-width:62ch}
+.stufe-reihe{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding-top:8px;border-top:1px solid #ffffff12;font-size:12px;color:var(--muted)}
+.stufe-reihe b{color:var(--ink)}
+.stufe-reihe .knopf{margin-left:auto}
+.stufen-liste{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.stufen-punkt{display:flex;align-items:center;gap:8px}
+.stufen-punkt i{width:7px;height:7px;border-radius:50%;background:#ffffff1f;flex:0 0 auto}
+.stufen-punkt.erreicht i{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+.stufen-punkt.erreicht{color:var(--ink)}
+
+.erfolge{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.erfolg{display:flex;gap:9px;align-items:flex-start;padding:10px;border-radius:12px;
+  border:1px solid #ffffff14;background:#1b0712aa}
+.erfolg .medaille{flex:0 0 auto;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  font-size:14px;background:#ffffff10;color:var(--muted);border:1px solid #ffffff1a}
+.erfolg.hat .medaille{background:linear-gradient(#ffcf5c,#e0a52e);color:#2a0416;border-color:#ffe6a8;
+  box-shadow:0 0 16px #ffcf5c55}
+.erfolg .e-name{font-weight:800;font-size:13px}
+.erfolg .e-text{color:var(--muted);line-height:1.35}
+.erfolg.hat .e-text{color:#f4d6e4}
+.erfolg .e-bonus{font-size:11px;color:var(--gold);font-weight:700}
+
+.werte-liste{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:14px}
+.wert{padding:10px 12px;border-radius:12px;background:#1b0712aa;border:1px solid #ffffff12}
+.wert span{display:block;font-size:11px;color:var(--muted);letter-spacing:.03em}
+.wert b{font-size:15px;font-variant-numeric:tabular-nums}
+
+.chronik{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.chronik li{display:flex;gap:9px;padding:8px 10px;border-radius:10px;background:#1b0712aa;
+  border:1px solid #ffffff10;font-size:13px}
+.chronik time{flex:0 0 auto;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.leer{padding:16px;border-radius:12px;border:1px dashed #ffffff22;color:var(--muted);text-align:center}
+
+.fussnote{margin:4px 2px 0;font-size:11px;color:#ffffff5c;line-height:1.5}
+.fussnote button{background:none;border:none;color:#ffffff66;font:inherit;text-decoration:underline;
+  cursor:pointer;padding:0;margin-left:8px}
+.fussnote button:hover{color:var(--pink-hell)}
+
+/* ------------------------------------------------------------- Flieger/Toast */
+.flieger{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.flug{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:20px;color:#fff;
+  text-shadow:0 0 10px #ff3d8a,0 0 24px #ffcf5c;animation:aufsteigen 1s ease-out forwards;white-space:nowrap}
+.toasts{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  z-index:90;display:flex;flex-direction:column;gap:6px;align-items:center;width:min(92vw,520px);pointer-events:none}
+.toast{padding:9px 14px;border-radius:12px;font-size:13px;font-weight:600;
+  background:#2a0a1cf2;border:1px solid var(--rand);color:var(--ink);
+  box-shadow:0 10px 28px #000a;animation:toast-rein .25s ease-out, toast-weg .3s ease-in 3.4s forwards}
+.toast.gut{border-color:#7ef0b088;color:#d8ffe9}
+.toast.gold{border-color:#ffcf5c99;color:#fff3c9}
+
+/* ------------------------------------------------------------ Offline-Bericht */
+.schleier{position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:16px;
+  background:#060108e0;backdrop-filter:blur(4px)}
+.bericht{width:min(92vw,420px);padding:20px;border-radius:18px;text-align:center;
+  background:linear-gradient(180deg,#3a0b24,#1c0613);border:1px solid var(--rand-gold);
+  box-shadow:0 24px 60px #000c,0 0 40px #ff3d8a2e}
+.bericht h2{margin:0 0 6px;font-size:19px}
+.bericht p{margin:0 0 4px;font-size:13px;color:var(--muted)}
+.bericht .summe{font-size:30px;font-weight:900;color:var(--gold);margin:8px 0 2px;
+  text-shadow:0 0 22px #ffcf5c4d;font-variant-numeric:tabular-nums}
+.bericht .knopf{margin-top:14px;width:100%}
+
+/* ---------------------------------------------------------------- Animation */
+@keyframes funkeln{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes flackern{0%,100%{opacity:.92}47%{opacity:.92}50%{opacity:.5}53%{opacity:.92}76%{opacity:.7}79%{opacity:.92}}
+@keyframes neon{0%,100%{opacity:1}48%{opacity:1}50%{opacity:.55}52%{opacity:1}90%{opacity:.85}}
+@keyframes fahren{0%{left:-30%}100%{left:112%}}
+@keyframes fliegen{0%{left:-12%;top:22%}50%{top:12%}100%{left:112%;top:20%}}
+@keyframes aufsteigen{0%{opacity:1;transform:translate(-50%,-50%) scale(.9)}
+  100%{opacity:0;transform:translate(-50%,-190%) scale(1.15)}}
+@keyframes toast-rein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes toast-weg{to{opacity:0;transform:translateY(-6px)}}
+@keyframes hüpf{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
+}
+
+/* ------------------------------------------------------------------ Handy */
+@media (max-width:640px){
+  body{padding:8px 9px calc(16px + env(safe-area-inset-bottom));font-size:14px}
+  .kopf{border-radius:14px;padding:9px 11px;gap:4px 10px;
+    display:grid;grid-template-columns:1fr auto;grid-template-areas:"marke zurueck" "konto konto";
+    align-items:center}
+  .marke{grid-area:marke}
+  .konto{grid-area:konto;margin-left:0;align-items:flex-start}
+  .kopf .tg-zurueck{grid-area:zurueck;justify-self:end;align-self:center}
+  .geld{font-size:26px}
+  .logo{font-size:18px}
+  .unter{font-size:10.5px}
+  .aktionen{grid-template-columns:1fr}
+  .aktion{min-height:92px}
+  .karten{grid-template-columns:1fr}
+  .szene{height:clamp(150px,22vh,210px)}
+  .buehne-unten{padding:6px 8px}
+  .fortschritt{height:20px}
+  .reiter button{min-width:78px;font-size:12.5px;padding:8px 9px}
+}
+@media (max-height:460px) and (orientation:landscape){
+  .szene{height:118px}
+  .kopf{position:static}
+  .buehne-unten{padding:4px 8px}
+  .stufe-chip{font-size:11px;padding:2px 8px 2px 2px}
+  .fortschritt span{line-height:16px;font-size:10px}
+  .fortschritt{height:18px}
+}
+</style>
+</head>
+<body>
+
+<main class="fenster">
+
+  <header class="kopf">
+    <div class="marke">
+      <div class="logo">ROT<span>LICHT</span></div>
+      <div class="unter">Vom Straßenstrich zum Luxusimperium</div>
+    </div>
+    <div class="konto">
+      <div class="geld" id="geld">0,00 €</div>
+      <div class="geld-neben">
+        <span id="proStunde">0,00 €/h</span>
+        <span class="punkt">·</span>
+        <span>Stufe <b id="stufeNr">1</b></span>
+        <span class="punkt">·</span>
+        <b id="stufeName">Straßenarbeit</b>
+      </div>
+    </div>
+  </header>
+
+  <section class="buehne" aria-label="Dein Viertel">
+    <div class="szene" id="szene" data-s="1">
+      <div class="himmel"></div>
+      <div class="sterne" id="sterne"></div>
+      <div class="mond"></div>
+      <div class="skyline" id="skyline"></div>
+      <div class="strasse"></div>
+      <div class="laterne"></div>
+      <div class="kiste"></div>
+      <div class="haus" id="haus">
+        <div class="dach"></div>
+        <div class="schild" id="schild">24/7</div>
+        <div class="fassade" id="fassade"></div>
+        <div class="vordach"></div>
+      </div>
+      <div class="palme"></div>
+      <div class="auto"></div>
+      <div class="hubschrauber"></div>
+      <div class="volk" id="volk"></div>
+    </div>
+    <div class="buehne-unten">
+      <div class="stufe-chip"><span class="stufe-nr" id="stufeChipNr">1</span><span id="stufeKurz">Straßenarbeit</span></div>
+      <div class="fortschritt" id="fortschritt">
+        <i id="fortschrittBalken"></i>
+        <span id="fortschrittText">Nächste Stufe: 500 €</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="aktionen" aria-label="Eigene Arbeit">
+    <button class="aktion bereit" id="aktionHand" type="button">
+      <span class="a-symbol" aria-hidden="true">✋</span>
+      <span class="a-kopf"><span class="a-name">Handarbeit</span><span class="a-betrag" id="betragHand">20 €</span></span>
+      <span class="a-text">Einmal je Spielstunde. Mit den eigenen Händen, ohne Personal.</span>
+      <span class="a-status frei" id="statusHand"><span class="punkt"></span><span id="statusHandText">Bereit</span></span>
+      <i class="takt-balken" id="balkenHand" style="transform:scaleX(0)"></i>
+    </button>
+
+    <button class="aktion bereit" id="aktionExtra" type="button">
+      <span class="a-symbol" aria-hidden="true">💶</span>
+      <span class="a-kopf"><span class="a-name">Zusatzgeschäft</span><span class="a-betrag" id="betragExtra">50 €</span></span>
+      <span class="a-text">Einmal je Spielstunde, verbraucht ein Kondom.</span>
+      <span class="a-status frei" id="statusExtra"><span class="punkt"></span><span id="statusExtraText">Bereit</span></span>
+      <span class="a-vorrat">Vorrat: <b id="kondome">0</b> Kondome</span>
+      <i class="takt-balken" id="balkenExtra" style="transform:scaleX(0)"></i>
+    </button>
+
+    <div class="kondom-leiste">
+      <span>Viererpack <b>5 €</b> · ein Zusatzgeschäft = ein Kondom</span>
+      <button class="knopf klein" id="kondomeKaufen" type="button">Nachkaufen</button>
+    </div>
+  </section>
+
+  <nav class="reiter" id="reiter" role="tablist" aria-label="Bereiche">
+    <button type="button" role="tab" data-tab="personal" class="aktiv">Personal</button>
+    <button type="button" role="tab" data-tab="ausbau">Ausbau</button>
+    <button type="button" role="tab" data-tab="erfolge">Erfolge</button>
+    <button type="button" role="tab" data-tab="chronik">Chronik</button>
+  </nav>
+
+  <section class="inhalt" id="inhalt" role="tabpanel"></section>
+
+  <p class="fussnote">
+    Alle Personen sind erwachsen, alle Tätigkeiten freiwillig. Die Handlung ist erfunden,
+    übertrieben und nicht grafisch. Der Spielstand liegt nur in diesem Browser.
+    <button type="button" id="neuAnfangen">Neu anfangen</button>
+  </p>
+</main>
+
+<div class="flieger" id="flieger" aria-hidden="true"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="schleier" id="berichtSchleier" hidden>
+  <div class="bericht" role="dialog" aria-modal="true" aria-labelledby="berichtTitel">
+    <h2 id="berichtTitel">Willkommen zurück</h2>
+    <p id="berichtZeit">Du warst kurz weg.</p>
+    <div class="summe" id="berichtSumme">0 €</div>
+    <p id="berichtHinweis">Das Personal hat ohne dich weitergearbeitet.</p>
+    <button class="knopf kauf" id="berichtKnopf" type="button">Weiter im Geschäft</button>
+  </div>
+</div>
+
+<script src="../zurueck.js" data-ziel=".kopf"></script>
+<script src="rotlicht-kern.js"></script>
+<script src="rotlicht-oberflaeche.js"></script>
+</body>
+</html>

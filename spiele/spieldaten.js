@@ -142,7 +142,8 @@ window.TGSpieldaten = (function () {
     ["Labyrinth Plus!", "brettspiele/labyrinth/labyrinth.html", "arcade", "solo highscore", "kugel kippen"],
     ["Tower Bloxx", "towerbloxx/towerbloxx.html", "arcade", "solo highscore", "turm stapeln"],
     ["Doodle Jump", "doodlejump/doodlejump.html", "arcade", "solo highscore", "springen plattformen"],
-    ["Durst", "durst/durst.html", "arcade", "solo", "bier level abenteuer"]
+    ["Durst", "durst/durst.html", "arcade", "solo", "bier level abenteuer"],
+    ["Rotlicht", "rotlicht/rotlicht.html", "arcade", "solo", "idle clicker wirtschaft imperium"]
   ];
  var TEXTE = {
     "kartenspiele/arschloch/arschloch.html": "Karten abwerfen und am Ende die Plätze tauschen.",
@@ -243,7 +244,8 @@ window.TGSpieldaten = (function () {
     "brettspiele/labyrinth/labyrinth.html": "Kugel durchs Labyrinth kippen und Ziele treffen.",
     "towerbloxx/towerbloxx.html": "Stockwerke stapeln, bis der Turm wächst.",
     "doodlejump/doodlejump.html": "Plattform für Plattform nach oben springen.",
-    "durst/durst.html": "Level-Abenteuer – Flaschen sammeln und weiterkommen."
+    "durst/durst.html": "Level-Abenteuer – Flaschen sammeln und weiterkommen.",
+    "rotlicht/rotlicht.html": "Vom Straßenstrich zum Luxusimperium – Idle-Clicker mit Personal, Ausbau und Offline-Ertrag."
   };
  var HIGHLIGHTS = [
     { pfad: "brettspiele/mahjong/mahjong.html", bild: "bilder/highlights/mahjong.jpg",
