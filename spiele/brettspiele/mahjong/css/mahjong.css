@@ -91,6 +91,12 @@ button {
     flex-wrap: wrap;
     padding: 0.25rem 0.125rem 0.625rem;
     border-bottom: 1px solid rgba(201, 173, 125, 0.25);
+
+    /* Maßstab für die Abkürzungen unten: gemessen wird der Platz, den die
+       Kopfzeile wirklich hat.  Kein Geräteabruf, kein Fensterbreiten-Filter -
+       ein schmales Fenster am Rechner wird genauso behandelt wie ein Handy. */
+    container-type: inline-size;
+    container-name: kopfzeile;
 }
 
 /* Die Level-Wahl ist der erste Knopf der Reihe und holt sich Hoehe, Polsterung,
@@ -113,6 +119,29 @@ button {
    Bloecke fassen die Nummer nicht mehr an. */
 #levelNumber {
     font-size: 0.875rem;
+}
+
+/* Kurzform der Variante ("HS") und das Wort "Level": beide stehen im Dokument,
+   sichtbar ist immer nur eine Fassung.  Welche, entscheidet die Breite der
+   Kopfzeile in der Container-Abfrage am Ende dieser Datei. */
+.level-satz-kurz,
+.level-nummer-wort {
+    display: none;
+}
+
+/* Levelnummer mit Beschriftung: ohne das Wort steht in der schmalen Ansicht
+   nur "12", mit ihm "Level 12". */
+.level-nummer {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.level-nummer-wort {
+    font-size: 0.5625rem;
+    font-weight: bold;
+    letter-spacing: 0.03125rem;
 }
 
 .stats {
@@ -195,7 +224,10 @@ button {
        Die Reihe nimmt den Platz neben den Zahlen; steht sie allein in einer
        Zeile, spannt sie die ganze Breite. */
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* minmax(min-content, 1fr): die Level-Wahl bekommt nie weniger Platz als
+       ihr Text braucht. Mit einem blanken 1fr schrumpfte ihre Spalte unter die
+       Textbreite und der Knopf malte über TIPP und MISCHEN. */
+    grid-template-columns: minmax(min-content, 1fr) auto minmax(min-content, 1fr);
     align-items: center;
     gap: 0.375rem;
     flex: 1 1 auto;
@@ -248,7 +280,8 @@ button {
 /* Im schweren Modus steht ein vierter Knopf in der Reihe: Level links, TIPP,
    MISCHEN, EINSTELLUNGEN rechts.  Leicht bleibt bei drei Spalten. */
 body[data-modus="schwer"] .game-buttons {
-    grid-template-columns: 1fr auto auto 1fr;
+    grid-template-columns:
+        minmax(min-content, 1fr) auto auto minmax(min-content, 1fr);
 }
 
 #mixButton {
@@ -373,11 +406,13 @@ body[data-modus="schwer"] .game-buttons {
        keine Steine blockiert. */
     position: absolute;
     top: 0.375rem;
-    left: 50%;
-    transform: translateX(-50%);
+    /* Volle Brettbreite: mit "left: 50%" ohne rechte Kante blieb nur die halbe
+       Breite übrig. Lange Tipps standen dadurch in einer schmalen Spalte und
+       liefen am unteren Rand aus dem Feld. Der Text bleibt mittig. */
+    left: 0;
+    right: 0;
     z-index: 3;
-    max-width: calc(100% - 1rem);
-    padding: 0.2em 0.4em;
+    padding: 0.2em 0.5em;
     /* Nur Text: lesbar bleibt sie durch den weichen Schatten, der auch auf
        hellen Steinen traegt. */
     text-shadow:
@@ -2330,3 +2365,68 @@ html[data-stil="buben"] .board-area{
     border-color:#2b3540;
 }
 html[data-stil="buben"] .speicher-hinweis{background:#12181d;border-color:#2b3540;color:#e6e9ec}
+
+/* =====================================
+   SCHMALE KOPFZEILE
+===================================== */
+
+/* Reicht der Platz in der Kopfzeile nicht, treten die Abkürzungen an die
+   Stelle der vollen Bezeichnungen.  Gemessen wird die Kopfzeile selbst
+   (@container kopfzeile), und die Schwelle steht in rem - sie wächst also mit
+   der Grundschrift aus js/groesse.js mit, genau wie die Knöpfe.  Ein Handy
+   quer bleibt damit bei den vollen Bezeichnungen, ein schmales Fenster am
+   Rechner wird abgekürzt. */
+
+/* Ab hier passen "HANDY · SCHWER 01" und TIPP/MISCHEN/EINSTELLUNGEN nicht mehr
+   nebeneinander: die Variante wird zu ihren Anfangsbuchstaben ("HS"), die
+   Levelnummer bekommt das Wort "Level" davor. */
+@container kopfzeile (max-width: 24rem) {
+    .level-satz {
+        display: none;
+    }
+
+    .level-satz-kurz,
+    .level-nummer-wort {
+        display: inline;
+    }
+
+    /* TIPP bleibt in voller Länge und vollständig lesbar - dafür rücken die
+       Knöpfe enger zusammen.  Ganz schmale Fenster (unter etwa 330 px) lassen
+       die Reihe umbrechen, statt seitlich über den Rand zu laufen. */
+    .game-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.1875rem;
+    }
+
+    .game-buttons button {
+        padding: 0.25rem;
+        letter-spacing: 0.25px;
+    }
+
+    #levelButton {
+        gap: 0.3125rem;
+        min-width: 0;
+    }
+
+    /* Die Nummer bleibt so groß wie die Zahlen der Kopfzeile, damit sie neben
+       "Level" nicht untergeht; die 700er-Regel (1,0625rem) ist hier zu breit. */
+    #levelNumber {
+        font-size: 0.9375rem;
+    }
+}
+
+/* Sehr schmale Fenster (um 320 px): "TIPP" und die drei übrigen Knöpfe
+   brauchen den Platz, den das Wort "Level" belegt.  Die Nummer bleibt stehen -
+   nur die Beschriftung davor fällt weg, damit nichts umbricht. */
+@container kopfzeile (max-width: 17.5rem) {
+    .level-nummer-wort {
+        display: none;
+    }
+
+    .game-buttons {
+        gap: 0.125rem;
+    }
+}

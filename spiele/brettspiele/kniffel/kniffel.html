@@ -518,6 +518,7 @@ let dice=[0,0,0,0,0];
 let kept=[false,false,false,false,false];
 let rolls=0;
 let finished=false;
+let endeGemeldet=false;   // Ergebnis-Spruch nur einmal je Partie
 
 function sum(v){return v.reduce((a,b)=>a+b,0)}
 function sumFace(v,n){return v.filter(x=>x===n).length*n}
@@ -750,6 +751,15 @@ function finishRound(){
 }
 function endGame(){
   finished=true;
+  // Ergebnis-Spruch aus den zentralen Connector-Listen (einmal je Partie).
+  // Online bekommt jeder seinen eigenen Platz, lokal gilt der Sieger.
+  if (window.TGErgebnis && !endeGemeldet) {
+    endeGemeldet = true;
+    const ranking0 = [...players].sort((a, b) => playerTotal(b) - playerTotal(a))[0];
+    const eigen = ONLINE ? players.find((p) => p.id === PLAYER_ID) : null;
+    if (eigen && ranking0 && playerTotal(eigen) < playerTotal(ranking0)) TGErgebnis.verloren();
+    else TGErgebnis.gewonnen();
+  }
   $("game").classList.add("hidden");
   $("result").classList.remove("hidden");
 
@@ -1047,5 +1057,7 @@ if(ONLINE){
   setInterval(refreshOnline,1500);
 }
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

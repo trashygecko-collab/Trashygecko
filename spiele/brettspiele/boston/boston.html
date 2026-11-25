@@ -844,6 +844,12 @@ function zeigeEnde() {
   $("endeSchleier").hidden = false;
   const sieger = G.siegerNamen || [];
   $("endeTitel").textContent = sieger.length > 1 ? "Geteilte Sieger" : (sieger[0] || "?") + " gewinnt";
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen. */
+  if (window.TGErgebnis) {
+    const eigen = (G.players || []).find((p) => p.id === ICH);
+    if (eigen && sieger.length && sieger.indexOf(eigen.name) < 0) TGErgebnis.verloren();
+    else TGErgebnis.gewonnen();
+  }
   const best = G.players.reduce((m, p) => Math.max(m, p.siege), 0);
   $("endeUnter").textContent = G.runden + " Runden gespielt – " + best +
     (best === 1 ? " Siegpunkt" : " Siegpunkte") + " für den ersten Platz.";
@@ -1013,5 +1019,7 @@ window.TGBO = {
   summe: () => (G && G.players[G.current] ? (G.players[G.current].halten || []).reduce((a, b) => a + b, 0) : 0)
 };
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

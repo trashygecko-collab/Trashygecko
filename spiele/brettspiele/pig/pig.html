@@ -163,6 +163,7 @@ let lokal = null;
 let onlineGame = null;
 let sperre = false;
 let blaseTimer = 0;
+let endeGemeldet = false;   // Ergebnis-Spruch nur einmal je Runde
 
 const warte = WG.warte;
 const fehler = (text) => { elFehler.textContent = text || ""; };
@@ -258,6 +259,18 @@ function kopfZeichnen(sp) {
     elLog.appendChild(d);
   }
   elEnde.classList.toggle("wg-versteckt", sp.status !== "ende");
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen, sobald das Ende
+     feststeht: online nach dem eigenen Platz, lokal für den Sieger. */
+  if (sp.status === "ende") {
+    if (!endeGemeldet && window.TGErgebnis) {
+      endeGemeldet = true;
+      const eigen = ONLINE ? (sp.spieler || []).find((x) => x.id === MYID) : null;
+      if (eigen && sp.sieger && eigen.id !== sp.sieger) TGErgebnis.verloren();
+      else TGErgebnis.gewonnen();
+    }
+  } else if (endeGemeldet) {
+    endeGemeldet = false;
+  }
   const meinZug = ONLINE
     ? !!(dran && dran.id === MYID)
     : sp.status === "spiel";
@@ -407,5 +420,7 @@ if (ONLINE) {
  if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

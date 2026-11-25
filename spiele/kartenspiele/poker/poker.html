@@ -195,6 +195,7 @@ let game=null;
 let ziel=0;              // geplanter Einsatz beim Erhöhen (Cent)
 let fehlerZeit=0;
 let serverHinweis="";   // Grund, wenn der Raum die Partie beendet hat
+let ergebnisGemeldet=false; // Partieende schon mit Spruch gemeldet
 
 function euro(cent){
  if(cent==null)return "—";
@@ -285,8 +286,23 @@ function zeichne(){
   return;
  }
 
- zeige("lobby",false); zeige("spieltisch",true);
+  zeige("lobby", false); zeige("spieltisch",true);
  const meiner=ich();
+
+ // Partieende (nur noch einer mit Chips): einmal den zentralen Spruch zeigen.
+ if(game.status==="ende"){
+  if(!ergebnisGemeldet){
+   ergebnisGemeldet=true;
+   if(window.TGErgebnis){
+    if(!meiner)TGErgebnis.lob();
+    else{
+     const bester=Math.max.apply(null,game.spieler.map(p=>p.chips));
+     if(meiner.chips>=bester)TGErgebnis.gewonnen();
+     else TGErgebnis.verloren();
+    }
+   }
+  }
+ }else ergebnisGemeldet=false;
 
  $("strasse").textContent=strassenText(game);
  $("pot").textContent=euro(game.pot);
@@ -464,5 +480,7 @@ if(!ONLINE){
  if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

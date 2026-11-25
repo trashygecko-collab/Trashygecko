@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="../token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b241d">
+<title>1x1</title>
+
+<style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--leiste:#0b241d;
+--panel:#0f2b23;--flaeche:#14372b;--flaeche-hell:#1a4636;--mulde:#0a1f19;--tief:#08120f;
+--rand:#d9bc7c;--sieger:#d9bc7c;--rand-1:#d9bc7c88;--rand-2:#d9bc7c55;--rand-3:#d9bc7c44;
+--rand-4:#d9bc7c40;--rand-5:#d9bc7c33;--rand-6:#d9bc7c22;
+--karte:#f6edda;--muted:#c6d8cd;--plus:#9ed7ab;--minus:#e8b3a6;
+--plus-hell:#9ed7ab2e;--minus-hell:#e8b3a62e;
+--schatten:#00000066;--schatten-2:#00000055;--schatten-3:#00000040;--glanz:#e8cd8e55;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button {
+    font-family: inherit;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle 900px at 50% -10%, var(--bg-1) 0%, var(--bg-2) 46%, var(--bg-3) 100%) fixed;
+    color: var(--text);
+    font-family:var(--tg-schrift);
+}
+
+.game {
+    width: 100%;
+    max-width: 490px;
+    padding: 22px;
+    background: var(--panel);
+    border: 1px solid var(--rand-2);
+    border-radius: 20px;
+    box-shadow: 0 12px 34px var(--schatten);
+}
+
+a.back {
+    display: block;
+    box-sizing: border-box;
+    text-align: center;
+    text-decoration: none;
+}
+
+h2 {
+    margin: 12px 0 18px;
+    text-align: center;
+    color: var(--gold-hell);
+    font-size: 19px;
+    font-weight: normal;
+    letter-spacing: .04em;
+}
+
+.intro {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+/* AUSWAHL */
+
+.menu-buttons {
+    display: grid;
+    gap: 14px;
+}
+
+.menu-button {
+    padding: 20px 16px;
+    border: 1px solid var(--rand-4);
+    border-radius: 13px;
+    background: var(--flaeche);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, border-color .15s;
+}
+
+.menu-button:hover,
+.level-button:hover {
+    background: var(--flaeche-hell);
+    border-color: var(--rand-1);
+}
+
+.menu-button:active,
+.level-button:active {
+    transform: scale(.98);
+    background: var(--bg-1);
+    border-color: var(--gold);
+}
+
+.menu-title {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 21px;
+    font-weight: bold;
+    color: var(--gold);
+}
+
+.menu-description {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* SCHWIERIGKEIT */
+
+#levelScreen,
+#gameScreen,
+#endScreen,
+#zahlenScreen,
+#kettenScreen {
+    display: none;
+}
+
+.levels {
+    display: grid;
+    gap: 12px;
+}
+
+.level-button {
+    padding: 17px 14px;
+    border: 1px solid var(--rand-4);
+    border-radius: 12px;
+    background: var(--flaeche);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, border-color .15s;
+}
+
+.level-title {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 19px;
+    font-weight: bold;
+    color: var(--gold);
+}
+
+.level-description {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.back {
+    width: 100%;
+    margin-top: 15px;
+    padding: 13px;
+    border: 1px solid var(--rand-3);
+    border-radius: 10px;
+    background: var(--flaeche);
+    color: var(--gold-hell);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.back:hover {
+    background: var(--flaeche-hell);
+}
+
+/* SPIEL */
+
+.stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.stat {
+    flex: 1;
+    padding: 10px 5px;
+    text-align: center;
+    border: 1px solid var(--rand-5);
+    border-radius: 10px;
+    background: var(--flaeche);
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .04em;
+}
+
+.stat strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 20px;
+    color: var(--gold);
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.progress {
+    height: 7px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    background: var(--mulde);
+    border-radius: 10px;
+}
+
+.progress-bar {
+    width: 10%;
+    height: 100%;
+    background: var(--gold);
+    box-shadow: 0 0 10px var(--glanz);
+    transition: width .3s;
+}
+
+.question-panel {
+    min-height: 185px;
+    padding: 20px 10px;
+    text-align: center;
+    border: 1px solid var(--rand-5);
+    border-radius: 15px;
+    background: var(--flaeche);
+    box-shadow: inset 0 0 26px var(--schatten-2);
+}
+
+.operation {
+    margin-bottom: 15px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.question {
+    min-height: 65px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    font-size: clamp(32px, 9vw, 48px);
+    font-weight: bold;
+    color: var(--karte);
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.equation-line {
+    font-size: clamp(22px, 6vw, 31px);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.target {
+    color: var(--muted);
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.answer-label {
+    margin: 17px 0 8px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 2px;
+}
+
+.display {
+    height: 58px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid var(--rand-5);
+    border-radius: 10px;
+    background: var(--tief);
+    color: var(--gold);
+    font-size: 31px;
+    font-weight: bold;
+    box-shadow: inset 0 0 18px var(--schatten);
+}
+
+.display.correct {
+    color: var(--plus);
+    border-color: var(--plus);
+    box-shadow: inset 0 0 18px var(--plus-hell);
+}
+
+.display.wrong {
+    color: var(--minus);
+    border-color: var(--minus);
+    box-shadow: inset 0 0 18px var(--minus-hell);
+}
+
+.feedback {
+    min-height: 35px;
+    margin: 10px 0 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+}
+
+.feedback.good {
+    color: var(--plus);
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.feedback.bad {
+    color: var(--minus);
+}
+
+.merken-zahl {
+    font-size: clamp(20px, 6.4vw, 34px);
+    letter-spacing: .12em;
+    color: var(--gold);
+    text-shadow:0 1px 2px var(--schatten);
+    word-break: break-all;
+}
+
+.merken-frage {
+    color: var(--muted);
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.kette {
+    font-size: clamp(17px, 4.9vw, 26px);
+    line-height: 1.6;
+    letter-spacing: .04em;
+    color: var(--karte);
+}
+
+.kette-frage {
+    color: var(--muted);
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+/* TASTEN */
+
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 9px;
+    margin-top: 12px;
+}
+
+.key {
+    height: 57px;
+    border: 1px solid var(--rand-5);
+    border-radius: 11px;
+    background: var(--flaeche);
+    color: var(--karte);
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--mulde);
+}
+
+.key:hover:not(:disabled) {
+    background: var(--flaeche-hell);
+}
+
+.key:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 var(--mulde);
+    background: var(--bg-1);
+}
+
+.key:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.key.action {
+    color: var(--muted);
+    border-color: var(--rand-6);
+    font-size: 18px;
+}
+
+.submit {
+    width: 100%;
+    height: 56px;
+    margin-top: 13px;
+    border: 1px solid var(--gold);
+    border-radius: 11px;
+    background: var(--gold);
+    color: var(--leiste);
+    font-size: 17px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px var(--schatten-3);
+}
+
+.submit:hover:not(:disabled) {
+    background: var(--gold-hell);
+}
+
+.submit:active {
+    transform: scale(.98);
+}
+
+.submit:disabled {
+    opacity: .4;
+}
+
+/* ENDE */
+
+.end-screen {
+    padding: 15px 5px;
+    text-align: center;
+}
+
+.end-screen h2 {
+    color: var(--gold);
+    font-size: 27px;
+}
+
+.final-score {
+    margin: 20px 0;
+    color: var(--gold);
+    font-size: 60px;
+    font-weight: bold;
+    text-shadow:0 1px 2px var(--schatten);
+}
+
+.final-text {
+    margin-bottom: 24px;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.restart,
+.change-level {
+    width: 100%;
+    padding: 16px;
+    border-radius: 11px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.restart {
+    border: 1px solid var(--gold);
+    background: var(--gold);
+    color: var(--leiste);
+}
+
+.change-level {
+    margin-top: 10px;
+    border: 1px solid var(--rand-3);
+    background: var(--flaeche);
+    color: var(--muted);
+}
+
+@media (max-width: 380px) {
+    body {
+        padding: 8px;
+    }
+
+    .game {
+        padding: 15px;
+    }
+
+    .key {
+        height: 51px;
+    }
+
+}
+
+@media (max-height: 720px) {
+    body {
+        align-items: flex-start;
+    }
+
+    .game {
+        padding: 15px;
+    }
+
+    .question-panel {
+        padding: 13px 8px;
+    }
+
+    .key {
+        height: 48px;
+    }
+
+}
+/* --- Online-Rennen im Connector ------------------------------------- */
+
+/* Der Verlassen-Knopf gehört nur in den Online-Betrieb. */
+body:not(.online) [data-tg-verlassen] {
+    display: none;
+}
+
+body.online .nur-lokal {
+    display: none !important;
+}
+
+.stat.zeit { display: none; }
+
+body.online .stat.zeit { display: block; }
+
+#onlineLobby {
+    display: none;
+    text-align: center;
+}
+
+#onlineLobby h2 {
+    margin-bottom: 6px;
+    color: var(--gold);
+    text-shadow:0 1px 2px var(--schatten);
+    font-size: 22px;
+    letter-spacing: .06em;
+}
+
+.online-meta {
+    margin: 6px 0 14px;
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: .08em;
+}
+
+.online-seats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.online-seat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--rand-5);
+    background: var(--flaeche);
+    font-size: 14px;
+}
+
+.online-seat.bereit { border-color: var(--plus); }
+
+.online-seat strong {
+    color: var(--sieger);
+    font-size: 12px;
+    letter-spacing: .06em;
+}
+
+.online-settings {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 12px 0;
+    font-size: 12px;
+    color: var(--gold);
+}
+
+.online-settings select {
+    display: block;
+    margin-top: 4px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rand-3);
+    background: var(--panel);
+    color: var(--karte);
+    font: inherit;
+}
+
+.ol-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: .08em;
+    cursor: pointer;
+    color: var(--leiste);
+    background: var(--gold);
+}
+
+.ol-btn.zweit {
+    color: var(--text);
+    background: var(--flaeche);
+    border: 1px solid var(--rand-3);
+}
+
+.ol-btn[hidden] { display: none; }
+
+.online-stand {
+    margin: -8px 0 14px;
+    color: var(--gold);
+    font-size: 12px;
+    text-align: center;
+    letter-spacing: .04em;
+}
+
+.online-stand .fertig { color: var(--plus); }
+
+.online-rank {
+    text-align: left;
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+.online-rank .sieger { color: var(--sieger); }
+
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#8f2450;--leiste:#ffeaf3;
+--panel:#ffe3ef;--flaeche:#fff0f7;--flaeche-hell:var(--leiste);--mulde:var(--bg-1);--tief:#fffafc;
+--rand:#ef7aa8;--rand-1:#ef7aa888;--rand-2:#ef7aa855;--rand-3:#ef7aa844;
+--rand-4:#ef7aa840;--rand-5:#ef7aa833;--rand-6:#ef7aa822;
+--karte:var(--gold-hell);--muted:var(--gold);--plus:#1f7a4d;--minus:#b0286a;
+--plus-hell:#1f7a4d2e;--minus-hell:#b0286a2e;
+--schatten:#8f245040;--schatten-2:#8f245433;--schatten-3:#8f245426;--glanz:var(--rand-2);
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:var(--text);--gold:#c8ff3d;--leiste:#0a0d10;
+--panel:#111316;--flaeche:#171c22;--flaeche-hell:#20262e;--mulde:#0a0f14;--tief:#05080b;
+--rand:#e0242f;--rand-1:#e0242f88;--rand-2:#e0242f55;--rand-3:#e0242f44;
+--rand-4:#e0242f40;--rand-5:#e0242f33;--rand-6:#e0242f22;
+--karte:#eef3f7;--muted:#adb4bc;--plus:#6dff4a;--minus:#ff8a90;
+--plus-hell:#6dff4a2e;--minus-hell:#ff8a902e;
+--schatten:#00000080;--schatten-2:#00000066;--schatten-3:#0000004d;--glanz:#c8ff3d55;
+}
+/* Lobby-Label: in den neuen Stilen die Akzentfarbe */
+html[data-stil="maedchen"],html[data-stil="buben"]{--sieger:var(--gold)}
+</style>
+<script src="../stil.js"></script>
+<link rel="stylesheet" href="../schrift.css">
+</head>
+
+<body>
+
+<div class="game">
+
+    <!-- SPIELART AUSWÄHLEN -->
+
+    <div id="startScreen">
+
+        <h2>WAS MÖCHTEST DU SPIELEN?</h2>
+
+        <div class="menu-buttons">
+
+            <button class="menu-button" onclick="selectMode('arithmetic')">
+                <span class="menu-title">＋ − × ÷ GRUNDRECHENARTEN</span>
+                <span class="menu-description">
+                    Plus, Minus, Mal und Geteilt.<br>
+                    Acht Aufgaben pro Runde.
+                </span>
+            </button>
+
+            <button class="menu-button" onclick="selectMode('equations')">
+                <span class="menu-title">x GLEICHUNGEN</span>
+                <span class="menu-description">
+                    Rechne mit Variablen wie a, b und c.<br>
+                    Finde die gesuchte Zahl.
+                </span>
+            </button>
+
+            <button class="menu-button" onclick="selectNumbers()">
+                <span class="menu-title">123 ZAHLEN MERKEN</span>
+                <span class="menu-description">
+                    Zahl ansehen, merken und eintippen.<br>
+                    Fünf Zahlen pro Spiel.
+                </span>
+            </button>
+
+            <button class="menu-button" onclick="selectSequences()">
+                <span class="menu-title">→ ZAHLENKETTEN</span>
+                <span class="menu-description">
+                    Muster erkennen und die nächste Zahl finden.<br>
+                    Drei Stufen, fünf Ketten pro Spiel.
+                </span>
+            </button>
+
+        </div>
+
+        <a class="back nur-lokal" href="../spiele.html">
+            ← ZU DEN SPIELEN
+        </a>
+
+    </div>
+
+    <!-- SCHWIERIGKEIT AUSWÄHLEN -->
+
+    <div id="levelScreen">
+
+        <h2 id="levelHeading">SCHWIERIGKEIT</h2>
+
+        <div class="intro" id="levelIntro"></div>
+
+        <div class="levels">
+
+            <button class="level-button" onclick="startGame(1)">
+                <span class="level-title">STUFE 1 · LEICHT</span>
+                <span class="level-description" id="desc1"></span>
+            </button>
+
+            <button class="level-button" onclick="startGame(2)">
+                <span class="level-title">STUFE 2 · MITTEL</span>
+                <span class="level-description" id="desc2"></span>
+            </button>
+
+            <button class="level-button" onclick="startGame(3)">
+                <span class="level-title">STUFE 3 · SCHWER</span>
+                <span class="level-description" id="desc3"></span>
+            </button>
+
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← ZURÜCK
+        </button>
+
+    </div>
+
+    <!-- ZAHLEN MERKEN: ZIFFERNZAHL AUSWÄHLEN -->
+
+    <div id="zahlenScreen">
+
+        <h2>WIE VIELE ZIFFERN?</h2>
+
+        <div class="intro">
+            Merke dir die angezeigte Zahl und tippe sie danach ein.<br>
+            Ein Spiel besteht aus fünf Zahlen.
+        </div>
+
+        <div class="levels">
+
+            <button class="level-button" onclick="startNumbersGame(5)">
+                <span class="level-title">5 ZIFFERN</span>
+                <span class="level-description">Kurz und knackig.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(6)">
+                <span class="level-title">6 ZIFFERN</span>
+                <span class="level-description">Eine Ziffer mehr.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(7)">
+                <span class="level-title">7 ZIFFERN</span>
+                <span class="level-description">Jetzt wird es knifflig.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(8)">
+                <span class="level-title">8 ZIFFERN</span>
+                <span class="level-description">Volle Konzentration.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(9)">
+                <span class="level-title">9 ZIFFERN</span>
+                <span class="level-description">Für geübte Köpfe.</span>
+            </button>
+
+            <button class="level-button" onclick="startNumbersGame(10)">
+                <span class="level-title">10 ZIFFERN</span>
+                <span class="level-description">Meisterklasse.</span>
+            </button>
+
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← ZURÜCK
+        </button>
+
+    </div>
+
+    <!-- ZAHLENKETTEN: STUFE AUSWÄHLEN -->
+
+    <div id="kettenScreen">
+
+        <h2>ZAHLENKETTEN</h2>
+
+        <div class="intro">
+            Erkenne das Muster und tippe die nächste Zahl ein.<br>
+            Ein Spiel besteht aus fünf Ketten.
+        </div>
+
+        <div class="levels">
+
+            <button class="level-button" onclick="startSequenceGame(1)">
+                <span class="level-title">STUFE 1 · LEICHT</span>
+                <span class="level-description">Gleicher Schritt bis 5 · Zahlen bis 100</span>
+            </button>
+
+            <button class="level-button" onclick="startSequenceGame(2)">
+                <span class="level-title">STUFE 2 · MITTEL</span>
+                <span class="level-description">Gleicher Schritt bis 10 · Zahlen bis 200</span>
+            </button>
+
+            <button class="level-button" onclick="startSequenceGame(3)">
+                <span class="level-title">STUFE 3 · SCHWER</span>
+                <span class="level-description">Zwei wechselnde Schritte</span>
+            </button>
+
+        </div>
+
+        <button class="back" onclick="showStartScreen()">
+            ← ZURÜCK
+        </button>
+
+    </div>
+
+    <!-- SPIEL -->
+
+    <div id="gameScreen">
+
+        <div class="stats">
+
+            <div class="stat">
+                FRAGE
+                <strong id="questionCount">1 / 8</strong>
+            </div>
+
+            <div class="stat">
+                RICHTIG
+                <strong id="score">0</strong>
+            </div>
+
+            <div class="stat zeit">
+                ZEIT
+                <strong id="onlineClock">0,0 s</strong>
+            </div>
+
+        </div>
+
+        <div style="text-align:center;margin:0 0 4px">
+            <button type="button" data-tg-verlassen hidden onclick="tgVerlassen()"
+                style="padding:6px 14px;border-radius:999px;border:1px solid rgba(246,237,218,.28);background:rgba(246,237,218,.06);color:inherit;font:inherit;font-size:13px;cursor:pointer;opacity:.75">
+                Spiel verlassen
+            </button>
+        </div>
+
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="online-stand" id="onlineStand"></div>
+
+        <div class="question-panel">
+
+            <div class="operation" id="operation"></div>
+
+            <div class="question" id="question"></div>
+
+            <div class="answer-label">DEINE ANTWORT</div>
+
+            <div class="display" id="display">?</div>
+
+        </div>
+
+        <div class="feedback" id="feedback">
+            Tippe unten deine Antwort ein.
+        </div>
+
+        <div class="keypad">
+
+            <button class="key" onclick="addNumber('7')">7</button>
+            <button class="key" onclick="addNumber('8')">8</button>
+            <button class="key" onclick="addNumber('9')">9</button>
+            <button class="key action" onclick="clearAnswer()">C</button>
+
+            <button class="key" onclick="addNumber('4')">4</button>
+            <button class="key" onclick="addNumber('5')">5</button>
+            <button class="key" onclick="addNumber('6')">6</button>
+            <button class="key action" onclick="deleteNumber()">⌫</button>
+
+            <button class="key" onclick="addNumber('1')">1</button>
+            <button class="key" onclick="addNumber('2')">2</button>
+            <button class="key" onclick="addNumber('3')">3</button>
+            <button class="key" onclick="addNumber('0')">0</button>
+
+        </div>
+
+        <button class="submit" id="submitButton" onclick="submitAnswer()">
+            ANTWORT
+        </button>
+
+        <button class="back nur-lokal" onclick="showStartScreen()">
+            ← SPIEL ABBRECHEN
+        </button>
+
+    </div>
+
+    <!-- SPIELENDE -->
+
+    <div id="endScreen" class="end-screen">
+
+        <h2>RUNDE BEENDET!</h2>
+
+        <div class="final-score" id="finalScore">0 / 8</div>
+
+        <div class="final-text" id="finalText"></div>
+
+        <button class="restart nur-lokal" onclick="nochEineRunde()">
+            NOCH EINE RUNDE
+        </button>
+
+        <button class="change-level nur-lokal" id="stufeButton" onclick="aendereStufe()">
+            SCHWIERIGKEIT ÄNDERN
+        </button>
+
+        <button class="back nur-lokal" onclick="showStartScreen()">
+            ZURÜCK ZUR AUSWAHL
+        </button>
+
+        <div id="onlineEndButtons" style="display:none">
+            <button class="ol-btn" id="onlineAgain" hidden>NOCH EINE RUNDE</button>
+            <button class="ol-btn zweit" id="onlineBack">ZUM CONNECTOR</button>
+        </div>
+
+    </div>
+
+    <!-- ONLINE-LOBBY (Connector) -->
+
+    <div id="onlineLobby">
+
+        <h2>1×1-RENNEN</h2>
+
+        <div class="online-meta" id="onlineMeta"></div>
+
+        <div class="intro" id="onlineNote"></div>
+
+        <div class="online-seats" id="onlineSeats"></div>
+
+        <div class="online-settings" id="onlineSettings">
+            <label>
+                SPIELART
+                <select id="onlineMode">
+                    <option value="arithmetic">Grundrechenarten</option>
+                    <option value="equations">Gleichungen</option>
+                    <option value="memory">Zahlen merken</option>
+                    <option value="sequences">Zahlenketten</option>
+                </select>
+            </label>
+            <label>
+                STUFE
+                <select id="onlineLevel">
+                    <option value="1">Leicht</option>
+                    <option value="2">Mittel</option>
+                    <option value="3">Schwer</option>
+                </select>
+            </label>
+        </div>
+
+        <button class="ol-btn" id="onlineJoin">MITSPIELEN</button>
+        <button class="ol-btn" id="onlineReady" hidden>BEREIT</button>
+        <button class="ol-btn" id="onlineStart" hidden>RUNDE STARTEN</button>
+        <button class="ol-btn zweit" id="onlineLeave">SPIEL VERLASSEN</button>
+
+    </div>
+
+</div>
+
+<script src="../netz.js"></script>
+<script src="../lob.js"></script>
+
+<script>
+
+let currentMode = "arithmetic";
+let currentLevel = 1;
+let questionNumber = 0;
+let score = 0;
+let correctAnswer = 0;
+let answer = "";
+let answered = false;
+let playing = false;
+
+let totalQuestions = 8;
+
+// Zahlen merken
+let zahlenLaenge = 5;
+let merkenPhase = false;
+let merkenZahl = "";
+
+// Zahlenketten
+let ketteRegel = "";
+
+function randomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// SPIELART AUSWÄHLEN
+
+function selectMode(mode) {
+
+    currentMode = mode;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "block";
+
+    const heading = document.getElementById("levelHeading");
+    const intro = document.getElementById("levelIntro");
+
+    if (mode === "arithmetic") {
+
+        heading.textContent = "GRUNDRECHENARTEN";
+
+        intro.textContent =
+            "Vier Rechenarten, drei Schwierigkeitsstufen. Alle Aufgaben bleiben reine Rechenaufgaben.";
+
+        document.getElementById("desc1").textContent =
+            "+ und − bis 10 · × und ÷ bis 5 × 5";
+
+        document.getElementById("desc2").textContent =
+            "+ und − bis 100 · × und ÷ bis 10 × 10";
+
+        document.getElementById("desc3").textContent =
+            "+ und − bis 1000 · × und ÷ bis 20 × 20";
+
+    } else {
+
+        heading.textContent = "GLEICHUNGEN";
+
+        intro.textContent =
+            "Finde den Wert der gesuchten Variablen. Jede Stufe baut auf der vorherigen auf.";
+
+        document.getElementById("desc1").textContent =
+            "Eine Variable, Ergebnis bis 10 · × bis 10 × 10, ÷ nur durch 10";
+
+        document.getElementById("desc2").textContent =
+            "Zwei Variablen, Ergebnis bis 100 · × bis 10 × 10, ÷ nur durch 10";
+
+        document.getElementById("desc3").textContent =
+            "Drei Variablen, Ergebnis bis 500 · × bis 10 × 10, ÷ nur durch 10";
+    }
+}
+
+// MENÜS
+
+function showStartScreen() {
+
+    playing = false;
+
+    document.getElementById("startScreen").style.display = "block";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+}
+
+function showLevelScreen() {
+
+    playing = false;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "block";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+}
+
+// ZAHLEN MERKEN
+
+function selectNumbers() {
+
+    playing = false;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "block";
+}
+
+// ZAHLENKETTEN
+
+function selectSequences() {
+
+    playing = false;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "block";
+}
+
+function startSequenceGame(stufe) {
+
+    currentMode = "sequences";
+    currentLevel = stufe;
+    totalQuestions = 5;
+    questionNumber = 0;
+    score = 0;
+    answer = "";
+    answered = false;
+    merkenPhase = false;
+    playing = true;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    document.getElementById("score").textContent = "0";
+
+    createQuestion();
+}
+
+function startNumbersGame(ziffern) {
+
+    currentMode = "numbers";
+    zahlenLaenge = ziffern;
+    totalQuestions = 5;
+    questionNumber = 0;
+    score = 0;
+    answer = "";
+    answered = false;
+    merkenPhase = false;
+    playing = true;
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("zahlenScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    document.getElementById("score").textContent = "0";
+
+    createQuestion();
+}
+
+// SPIELSTART
+
+function startGame(level) {
+
+    currentLevel = level;
+    totalQuestions = 8;
+    questionNumber = 0;
+    score = 0;
+    answer = "";
+    answered = false;
+    merkenPhase = false;
+    playing = true;
+
+    document.getElementById("levelScreen").style.display = "none";
+    document.getElementById("kettenScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    document.getElementById("score").textContent = "0";
+
+    createQuestion();
+}
+
+// FRAGEN ERSTELLEN
+
+function createQuestion() {
+
+    if (currentMode === "numbers") {
+        createNumberQuestion();
+    } else if (currentMode === "sequences") {
+        createSequenceQuestion();
+    } else if (currentMode === "arithmetic") {
+        createArithmeticQuestion();
+    } else {
+        createEquationQuestion();
+    }
+
+    answered = false;
+    answer = "";
+
+    updateDisplay();
+
+    document.getElementById("display").className = "display";
+
+    document.getElementById("feedback").className = "feedback";
+
+    document.getElementById("submitButton").disabled = false;
+
+    document.querySelectorAll(".key").forEach(button => {
+        button.disabled = false;
+    });
+
+    document.getElementById("questionCount").textContent =
+        (questionNumber + 1) + " / " + totalQuestions;
+
+    document.getElementById("progressBar").style.width =
+        ((questionNumber + 1) / totalQuestions * 100) + "%";
+
+    if (currentMode === "numbers") {
+
+        merkenPhase = true;
+
+        document.getElementById("display").style.display = "none";
+        document.querySelector(".answer-label").style.display = "none";
+
+        document.getElementById("feedback").textContent =
+            "Merke dir die Zahl und tippe dann auf FERTIG.";
+
+        document.getElementById("submitButton").textContent = "FERTIG";
+
+        document.querySelectorAll(".key").forEach(button => {
+            button.disabled = true;
+        });
+
+    } else {
+
+        merkenPhase = false;
+
+        document.getElementById("display").style.display = "";
+        document.querySelector(".answer-label").style.display = "";
+
+        document.getElementById("feedback").textContent =
+            "Tippe unten deine Antwort ein.";
+
+        document.getElementById("submitButton").textContent = "ANTWORT";
+    }
+}
+
+// ========================================
+// ZAHLEN MERKEN
+// ========================================
+
+function createNumberQuestion() {
+
+    let zahl = "";
+
+    for (let i = 0; i < zahlenLaenge; i++) {
+        zahl += (i === 0 ? randomNumber(1, 9) : randomNumber(0, 9));
+    }
+
+    merkenZahl = zahl;
+    correctAnswer = zahl;
+
+    document.getElementById("operation").textContent =
+        "MERKEN · " + zahlenLaenge + " ZIFFERN";
+
+    document.getElementById("question").innerHTML =
+        '<div class="merken-zahl">' + zahl + "</div>";
+}
+
+// ========================================
+// ZAHLENKETTEN
+// Sechs Zahlen sind sichtbar, die siebte ist gesucht.
+// ========================================
+
+const KETTEN_GLIEDER = 6;
+
+function ketteMitSchritt(start, art, schritt) {
+
+    const werte = [start];
+    const schritte = [];
+
+    for (let i = 0; i < KETTEN_GLIEDER; i++) {
+
+        let wert = werte[werte.length - 1];
+
+        if (art === "+") wert = wert + schritt;
+        else if (art === "−") wert = wert - schritt;
+        else if (art === "×") wert = wert * schritt;
+        else wert = wert / schritt;
+
+        if (!Number.isInteger(wert) || wert < 1) return null;
+
+        werte.push(wert);
+        schritte.push(art + schritt);
+    }
+
+    return { werte: werte, schritte: schritte };
+}
+
+// STUFE 1: ein Schritt bis 5, Zahlen bis 100
+
+function ketteLeicht() {
+
+    for (let versuch = 0; versuch < 300; versuch++) {
+
+        const wuerfel = randomNumber(1, 10);
+        const art = wuerfel <= 4 ? "+" : wuerfel <= 8 ? "−" : wuerfel === 9 ? "×" : "÷";
+        let start, schritt, kette;
+
+        if (art === "+") {
+
+            schritt = randomNumber(1, 5);
+            start = randomNumber(1, 100 - KETTEN_GLIEDER * schritt);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "−") {
+
+            schritt = randomNumber(1, 5);
+            start = randomNumber(KETTEN_GLIEDER * schritt + 1, 100);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "×") {
+
+            kette = ketteMitSchritt(1, art, 2);
+
+        } else {
+
+            kette = ketteMitSchritt(64, art, 2);
+        }
+
+        if (kette && Math.max.apply(null, kette.werte) <= 100) return kette;
+    }
+
+    return { werte: [2, 4, 6, 8, 10, 12, 14], schritte: ["+2", "+2", "+2", "+2", "+2", "+2"] };
+}
+
+// STUFE 2: ein Schritt bis 10, Zahlen bis 200
+
+function ketteMittel() {
+
+    for (let versuch = 0; versuch < 300; versuch++) {
+
+        const wuerfel = randomNumber(1, 100);
+        const art = wuerfel <= 36 ? "+" : wuerfel <= 72 ? "−" : wuerfel <= 86 ? "×" : "÷";
+        let start, schritt, kette;
+
+        if (art === "+") {
+
+            schritt = randomNumber(1, 10);
+            start = randomNumber(1, 200 - KETTEN_GLIEDER * schritt);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "−") {
+
+            schritt = randomNumber(1, 10);
+            start = randomNumber(KETTEN_GLIEDER * schritt + 1, 200);
+            kette = ketteMitSchritt(start, art, schritt);
+
+        } else if (art === "×") {
+
+            kette = ketteMitSchritt(randomNumber(1, 3), art, 2);
+
+        } else {
+
+            kette = ketteMitSchritt(64 * randomNumber(1, 3), art, 2);
+        }
+
+        if (kette && Math.max.apply(null, kette.werte) <= 200) return kette;
+    }
+
+    return { werte: [10, 20, 30, 40, 50, 60, 70], schritte: ["+10", "+10", "+10", "+10", "+10", "+10"] };
+}
+
+// STUFE 3: zwei wechselnde Schritte (z. B. +1, dann ×2)
+
+function ketteSchwer() {
+
+    for (let versuch = 0; versuch < 600; versuch++) {
+
+        const schritte = [];
+
+        for (let i = 0; i < 2; i++) {
+
+            const art = ["+", "−", "×", "÷"][randomNumber(0, 3)];
+            const wert = (art === "+" || art === "−")
+                ? randomNumber(1, 10)
+                : randomNumber(2, 5);
+
+            schritte.push({ art: art, wert: wert });
+        }
+
+        if (schritte[0].art === schritte[1].art) continue;
+
+        let wert = randomNumber(1, 25);
+        const werte = [wert];
+        const angewendet = [];
+        let passt = true;
+
+        for (let i = 0; i < KETTEN_GLIEDER; i++) {
+
+            const schritt = schritte[i % 2];
+
+            if (schritt.art === "+") wert = wert + schritt.wert;
+            else if (schritt.art === "−") wert = wert - schritt.wert;
+            else if (schritt.art === "×") wert = wert * schritt.wert;
+            else wert = wert / schritt.wert;
+
+            if (!Number.isInteger(wert) || wert < 1 || wert > 999) {
+                passt = false;
+                break;
+            }
+
+            werte.push(wert);
+            angewendet.push(schritt.art + schritt.wert);
+        }
+
+        if (passt && new Set(werte).size >= 5) return { werte: werte, schritte: angewendet };
+    }
+
+    return { werte: [5, 6, 12, 13, 26, 27, 54], schritte: ["+1", "×2", "+1", "×2", "+1", "×2"] };
+}
+
+function createSequenceQuestion() {
+
+    let kette;
+
+    if (currentLevel === 1) kette = ketteLeicht();
+    else if (currentLevel === 2) kette = ketteMittel();
+    else kette = ketteSchwer();
+
+    const werte = kette.werte;
+
+    correctAnswer = werte[werte.length - 1];
+    ketteRegel = regelText(kette.schritte);
+
+    const sichtbar = werte.slice(0, KETTEN_GLIEDER);
+
+    document.getElementById("operation").textContent =
+        "ZAHLENKETTE · " + ["LEICHT", "MITTEL", "SCHWER"][currentLevel - 1];
+
+    document.getElementById("question").innerHTML =
+        '<div class="kette">' + sichtbar.join(", ") +
+        ', <span class="kette-frage">?</span></div>';
+}
+
+// Regel fuer die Rueckmeldung: "immer + 2" oder "+ 1, dann × 2"
+
+function schrittName(schritt) {
+
+    const art = schritt.slice(0, 1);
+    const wert = schritt.slice(1);
+
+    if (art === "+") return "+ " + wert;
+    if (art === "−") return "− " + wert;
+    if (art === "×") return "× " + wert;
+
+    return "÷ " + wert;
+}
+
+function regelText(schritte) {
+
+    const erster = schritte[0];
+    const andere = schritte.filter(s => s !== erster);
+
+    if (!andere.length) return "Regel: immer " + schrittName(erster);
+
+    return "Regel: " + schrittName(erster) + ", dann " + schrittName(andere[0]);
+}
+
+// ========================================
+// GRUNDRECHENARTEN
+// ========================================
+
+function createArithmeticQuestion() {
+
+    // + und − wachsen bis 10 / 100 / 1000,
+    // × und ÷ bleiben bei 5×5 / 10×10 / 20×20.
+    const settings = [
+        { maxAdd: 10, maxMul: 5 },
+        { maxAdd: 100, maxMul: 10 },
+        { maxAdd: 1000, maxMul: 20 }
+    ];
+
+    const limit = settings[currentLevel - 1];
+
+    const operation = randomNumber(1, 4);
+
+    let a, b, symbol, name;
+
+    if (operation === 1) {
+
+        a = randomNumber(1, limit.maxAdd - 1);
+        b = randomNumber(1, limit.maxAdd - a);
+
+        correctAnswer = a + b;
+        symbol = "+";
+        name = "ADDIEREN";
+
+    } else if (operation === 2) {
+
+        a = randomNumber(2, limit.maxAdd);
+        b = randomNumber(1, a - 1);
+
+        correctAnswer = a - b;
+        symbol = "−";
+        name = "SUBTRAHIEREN";
+
+    } else if (operation === 3) {
+
+        a = randomNumber(1, limit.maxMul);
+        b = randomNumber(1, limit.maxMul);
+
+        correctAnswer = a * b;
+        symbol = "×";
+        name = "MULTIPLIZIEREN";
+
+    } else {
+
+        b = randomNumber(1, limit.maxMul);
+
+        const result = randomNumber(1, limit.maxMul);
+
+        a = b * result;
+
+        correctAnswer = result;
+        symbol = "÷";
+        name = "DIVIDIEREN";
+    }
+
+    document.getElementById("operation").textContent =
+        name + " · STUFE " + currentLevel;
+
+    document.getElementById("question").innerHTML =
+        `<div>${a} ${symbol} ${b}</div>`;
+}
+
+// ========================================
+// GLEICHUNGEN
+// ========================================
+
+function createEquationQuestion() {
+
+    if (currentLevel === 1) {
+        createEasyEquation();
+    } else if (currentLevel === 2) {
+        createMediumEquation();
+    } else {
+        createHardEquation();
+    }
+}
+
+// STUFE 1: EINE VARIABLE
+
+function createEasyEquation() {
+
+    const type = randomNumber(1, 4);
+
+    let x, y, z, result, expression;
+
+    if (type === 1) {
+
+        // a = x + y - z
+
+        x = randomNumber(1, 5);
+        y = randomNumber(1, 5);
+        z = randomNumber(0, x + y - 1);
+
+        result = x + y - z;
+
+        expression = `${x} + ${y} − ${z}`;
+
+    } else if (type === 2) {
+
+        // a = x * y (Ergebnis bis 10)
+
+        x = randomNumber(1, 5);
+        y = randomNumber(1, Math.max(1, Math.floor(10 / x)));
+
+        result = x * y;
+
+        expression = `${x} × ${y}`;
+
+    } else if (type === 3) {
+
+        // a = x / y (Teiler bis 10, Ergebnis bis 10)
+
+        y = randomNumber(1, 5);
+        z = randomNumber(1, 10);
+
+        x = y * z;
+
+        result = z;
+
+        expression = `${x} ÷ ${y}`;
+
+    } else {
+
+        // a = x + y + z (Ergebnis bis 10)
+
+        x = randomNumber(1, 3);
+        y = randomNumber(1, 3);
+        z = randomNumber(1, 3);
+
+        result = x + y + z;
+
+        expression = `${x} + ${y} + ${z}`;
+    }
+
+    correctAnswer = result;
+
+    document.getElementById("operation").textContent =
+        "GLEICHUNG · STUFE 1";
+
+    document.getElementById("question").innerHTML = `
+        <div class="equation-line">a = ${expression}</div>
+        <div class="equation-line target">a = ?</div>
+    `;
+}
+
+// STUFE 2: ZWEI VARIABLEN
+
+function createMediumEquation() {
+
+    let a, b, expression;
+
+    const type = randomNumber(1, 4);
+
+    if (type === 1) {
+
+        a = randomNumber(1, 10);
+
+        const factor = randomNumber(2, 10);
+
+        b = factor * a;
+        expression = `${factor} × a`;
+
+    } else if (type === 2) {
+
+        a = randomNumber(1, 90);
+
+        const addition = randomNumber(1, 100 - a);
+
+        b = a + addition;
+        expression = `a + ${addition}`;
+
+    } else if (type === 3) {
+
+        const subtraction = randomNumber(1, 20);
+
+        a = randomNumber(subtraction + 1, 100);
+
+        b = a - subtraction;
+        expression = `a − ${subtraction}`;
+
+    } else {
+
+        const divisor = randomNumber(2, 10);
+
+        b = randomNumber(1, Math.floor(100 / divisor));
+
+        a = divisor * b;
+        expression = `a ÷ ${divisor}`;
+    }
+
+    correctAnswer = b;
+
+    document.getElementById("operation").textContent =
+        "GLEICHUNG · STUFE 2";
+
+    document.getElementById("question").innerHTML = `
+        <div class="equation-line">a = ${a}</div>
+        <div class="equation-line">b = ${expression}</div>
+        <div class="equation-line target">b = ?</div>
+    `;
+}
+
+// STUFE 3: DREI VARIABLEN
+
+function createHardEquation() {
+
+    const a = randomNumber(1, 10);
+    const factor = randomNumber(2, 10);
+    const b = factor * a;
+
+    let c, expression;
+
+    const type = randomNumber(1, 3);
+
+    if (type === 1) {
+
+        const multiplier = randomNumber(2, 10);
+
+        c = b + multiplier * a;
+        expression = `b + ${multiplier} × a`;
+
+    } else if (type === 2) {
+
+        const extra = randomNumber(5, 300);
+
+        c = b + a + extra;
+        expression = `a + b + ${extra}`;
+
+    } else {
+
+        const extra = randomNumber(5, 200);
+
+        c = b - a + extra;
+        expression = `b − a + ${extra}`;
+    }
+
+    correctAnswer = c;
+
+    document.getElementById("operation").textContent =
+        "GLEICHUNG · STUFE 3";
+
+    document.getElementById("question").innerHTML = `
+        <div class="equation-line">a = ${a}</div>
+        <div class="equation-line">b = ${factor} × a</div>
+        <div class="equation-line">c = ${expression}</div>
+        <div class="equation-line target">c = ?</div>
+    `;
+}
+
+// ========================================
+// TASTATUR
+// ========================================
+
+function updateDisplay() {
+
+    document.getElementById("display").textContent =
+        answer === "" ? "?" : answer;
+}
+
+function addNumber(number) {
+
+    if (!playing || answered || merkenPhase) return;
+
+    const maxZiffern = (currentMode === "numbers" || currentMode === "memory") ? zahlenLaenge : 4;
+
+    if (answer.length >= maxZiffern) return;
+
+    if (answer === "0") {
+        answer = number;
+    } else {
+        answer += number;
+    }
+
+    updateDisplay();
+}
+
+function clearAnswer() {
+
+    if (!playing || answered) return;
+
+    answer = "";
+    updateDisplay();
+}
+
+function deleteNumber() {
+
+    if (!playing || answered) return;
+
+    answer = answer.slice(0, -1);
+    updateDisplay();
+}
+
+// ========================================
+// ANTWORT PRÜFEN
+// ========================================
+
+function submitAnswer() {
+
+    if (merkenPhase) {
+        merkenFertig();
+        return;
+    }
+
+    checkAnswer();
+}
+
+function merkenFertig() {
+
+    if (!playing || !merkenPhase) return;
+
+    merkenPhase = false;
+    answer = "";
+
+    updateDisplay();
+
+    document.getElementById("display").style.display = "";
+    document.querySelector(".answer-label").style.display = "";
+
+    document.getElementById("question").innerHTML =
+        '<div class="merken-frage">?</div>';
+
+    document.getElementById("feedback").textContent =
+        "Und? Wie lautete die Zahl?";
+
+    document.getElementById("submitButton").textContent = "ANTWORT";
+
+    document.querySelectorAll(".key").forEach(button => {
+        button.disabled = false;
+    });
+}
+
+function checkAnswer() {
+
+    if (!playing || answered) return;
+
+    if (answer === "") {
+
+        document.getElementById("feedback").textContent =
+            "Bitte gib zuerst eine Zahl ein.";
+
+        return;
+    }
+
+    if (ONLINE) {
+        sendAnswer();
+        return;
+    }
+
+    answered = true;
+
+    const userAnswer = Number(answer);
+
+    const display = document.getElementById("display");
+    const feedback = document.getElementById("feedback");
+
+    const richtig = currentMode === "numbers"
+        ? answer === String(correctAnswer)
+        : userAnswer === correctAnswer;
+
+    if (richtig) {
+
+        score++;
+
+        display.className = "display correct";
+        feedback.className = "feedback good";
+        // Gemeinsames Lob (allgemeine Sprüche ohne Mahjong-Anspielungen).
+        feedback.textContent = "✓ " + (typeof lobSpruch === "function"
+            ? lobSpruch()
+            : "RICHTIG! Sehr gut!");
+
+    } else {
+
+        display.className = "display wrong";
+        feedback.className = "feedback bad";
+
+        feedback.textContent = currentMode === "sequences"
+            ? "✗ Falsch! Richtig ist: " + correctAnswer + " · " + ketteRegel
+            : "✗ Falsch! Richtig ist: " + correctAnswer;
+    }
+
+    document.getElementById("score").textContent = score;
+
+    document.getElementById("submitButton").disabled = true;
+
+    document.querySelectorAll(".key").forEach(button => {
+        button.disabled = true;
+    });
+
+    setTimeout(() => {
+
+        if (!playing) return;
+
+        questionNumber++;
+
+        if (questionNumber >= totalQuestions) {
+            finishGame();
+        } else {
+            createQuestion();
+        }
+
+    }, 1200);
+}
+
+// ========================================
+// SPIELENDE
+// ========================================
+
+function finishGame() {
+
+    playing = false;
+
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("endScreen").style.display = "block";
+
+    document.getElementById("finalScore").textContent =
+        score + " / " + totalQuestions;
+
+    let message;
+
+    const anteil = totalQuestions ? score / totalQuestions : 0;
+
+    if (score === totalQuestions) {
+        message = "Fantastisch! " + score + " von " + totalQuestions + " richtig!";
+    } else if (anteil >= 0.75) {
+        message = "Super gemacht! Das war eine starke Runde.";
+    } else if (anteil >= 0.5) {
+        message = "Gut gemacht! Du bist auf einem guten Weg.";
+    } else if (anteil >= 0.25) {
+        message = "Da geht noch was! Versuch es gleich noch einmal.";
+    } else {
+        message = "Übung macht den Meister. Gib nicht auf!";
+    }
+
+    let modusText;
+
+    if (currentMode === "numbers") {
+
+        modusText = "Zahlen merken · " + zahlenLaenge + " Ziffern";
+
+    } else if (currentMode === "sequences") {
+
+        modusText = "Zahlenketten · " +
+            ["Leicht", "Mittel", "Schwer"][currentLevel - 1];
+
+    } else {
+
+        modusText = (currentMode === "arithmetic" ? "Grundrechenarten" : "Gleichungen") +
+            " · Schwierigkeitsstufe " + currentLevel;
+    }
+
+    document.getElementById("finalText").textContent =
+        message + "\n\n" + modusText;
+
+    document.getElementById("stufeButton").textContent =
+        currentMode === "numbers" ? "ZIFFERN ÄNDERN"
+            : currentMode === "sequences" ? "STUFE ÄNDERN"
+            : "SCHWIERIGKEIT ÄNDERN";
+}
+
+// NOCH EINE RUNDE / STUFE ÄNDERN
+
+function nochEineRunde() {
+
+    if (currentMode === "numbers") {
+        startNumbersGame(zahlenLaenge);
+    } else if (currentMode === "sequences") {
+        startSequenceGame(currentLevel);
+    } else {
+        startGame(currentLevel);
+    }
+}
+
+function aendereStufe() {
+
+    if (currentMode === "numbers") {
+        selectNumbers();
+    } else if (currentMode === "sequences") {
+        selectSequences();
+    } else {
+        showLevelScreen();
+    }
+}
+
+// PC-TASTATUR
+
+document.addEventListener("keydown", function(event) {
+
+    if (!playing) return;
+
+    if (event.key >= "0" && event.key <= "9") {
+        addNumber(event.key);
+    }
+
+    else if (event.key === "Backspace") {
+        deleteNumber();
+    }
+
+    else if (event.key === "Escape") {
+        clearAnswer();
+    }
+
+    else if (event.key === "Enter") {
+        submitAnswer();
+    }
+});
+
+// ========================================
+// ONLINE: 1×1-RENNEN IM CONNECTOR
+// Alle bekommen dieselben acht Aufgaben. Wer mehr richtig hat, gewinnt;
+// bei Gleichstand entscheidet die Zeit.
+// ========================================
+
+const urlParams = new URLSearchParams(location.search);
+const ROOM = urlParams.get("room") || "";
+const PLAYER_ID = urlParams.get("id") || "";
+const ONLINE = !!(ROOM && PLAYER_ID);
+
+let onlineGame = null;
+let onlineBusy = false;
+let onlineAnswering = false;
+let onlineFehlerZeit = 0;
+let raceStart = 0;
+let raceRound = -1;
+let raceClock = null;
+let raceSignatur = "";
+
+function zeitText(ms) {
+    if (!ms || ms <= 0) return "0,0 s";
+    const sek = ms / 1000;
+    if (sek < 60) return sek.toFixed(1).replace(".", ",") + " s";
+    const min = Math.floor(sek / 60);
+    const rest = (sek - min * 60).toFixed(1).replace(".", ",");
+    return min + ":" + (rest.length < 4 ? "0" + rest : rest);
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function screens(ids) {
+    ["startScreen", "levelScreen", "zahlenScreen", "kettenScreen", "gameScreen", "endScreen", "onlineLobby"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = ids.indexOf(id) >= 0 ? "block" : "none";
+    });
+}
+
+async function onlineRejoin() {
+    try {
+        await fetch("/api/presence", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ room: ROOM, id: PLAYER_ID, name: urlParams.get("name") || "Spieler" })
+        });
+    } catch (e) {}
+}
+
+async function onlineFetch(url, options) {
+    let res = await fetch(url, options);
+    if (res.status === 403) {
+        await onlineRejoin();
+        res = await fetch(url, options);
+    }
+    if (!res.ok) throw new Error((await res.text()).trim() || "Das hat nicht geklappt.");
+    return res.json();
+}
+
+async function onlineAction(action, extra) {
+    if (onlineBusy) return null;
+    onlineBusy = true;
+    try {
+        const data = await onlineFetch("/api/einsxeins?room=" + encodeURIComponent(ROOM) + "&action=" + action, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.assign({ id: PLAYER_ID }, extra || {}))
+        });
+        if (data && data.game !== undefined) applyOnline(data.game);
+        return data;
+    } catch (e) {
+        const note = document.getElementById("onlineNote");
+        if (note) {
+            note.textContent = e.message;
+            onlineFehlerZeit = Date.now();
+        }
+        return null;
+    } finally {
+        onlineBusy = false;
+    }
+}
+
+function onlineSettings() {
+    onlineAction("settings", {
+        mode: document.getElementById("onlineMode").value,
+        level: Number(document.getElementById("onlineLevel").value)
+    });
+}
+
+async function refreshOnline() {
+    if (!ONLINE || onlineBusy) return;
+    try {
+        const data = await onlineFetch("/api/einsxeins?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(PLAYER_ID));
+        applyOnline(data.game);
+    } catch (e) {
+        // Verbindung wackelt – der nächste Takt versucht es wieder.
+    }
+}
+
+function applyOnline(view) {
+    onlineGame = view;
+    if (!view) { showOnlineLobby(null); return; }
+    if (view.status === "invited") { showOnlineLobby(view); return; }
+    if (view.status === "active") {
+        if (view.you < 0) { showOnlineLobby(view); return; }
+        if (view.done) { renderWaiting(view); return; }
+        // Nur bei einer neuen Aufgabe neu zeichnen – sonst würde der Takt alle
+        // 1,5 Sekunden die schon getippte Antwort wegwischen.
+        const signatur = [view.round, view.index, view.count, view.mode, view.level].join("|");
+        if (signatur !== raceSignatur) {
+            raceSignatur = signatur;
+            renderRace(view);
+        } else {
+            document.getElementById("score").textContent = view.correct;
+            renderStand(view);
+        }
+        return;
+    }
+    renderResult(view);
+}
+
+function showOnlineLobby(view) {
+    screens(["onlineLobby"]);
+    playing = false;
+    raceSignatur = "";
+
+    const note = document.getElementById("onlineNote");
+    const stand = document.getElementById("onlineSeats");
+    const join = document.getElementById("onlineJoin");
+    const ready = document.getElementById("onlineReady");
+    const start = document.getElementById("onlineStart");
+    const settings = document.getElementById("onlineSettings");
+    const meta = document.getElementById("onlineMeta");
+
+    if (!view) {
+        meta.textContent = "KEINE RUNDE";
+        note.textContent = "Im Connector bei einer Spielkarte „1×1-Rennen“ einsteigen.";
+        stand.innerHTML = "";
+        join.hidden = true;
+        ready.hidden = true;
+        start.hidden = true;
+        settings.style.display = "none";
+        return;
+    }
+
+    meta.textContent =
+        onlineModusText(view.mode) + " · " +
+        onlineStufeText(view.mode, view.level) + " · " +
+        view.seats.length + " von 7 Plätzen · " + view.count + " Aufgaben";
+
+    // Eine Fehlermeldung soll nicht im nächsten Takt verschwinden.
+    if (Date.now() - onlineFehlerZeit > 4000) {
+        note.textContent = view.note || "";
+    }
+
+    stand.innerHTML = view.seats.map(s =>
+        '<div class="online-seat' + (s.ready ? " bereit" : "") + '">' +
+        "<span>" + escapeHtml(s.name) + (s.id === PLAYER_ID ? " (du)" : "") + "</span>" +
+        "<strong>" + (s.ready ? "BEREIT" : "wartet") + "</strong></div>"
+    ).join("");
+
+    const me = view.seats.find(s => s.id === PLAYER_ID);
+    join.hidden = !!me;
+    ready.hidden = !me;
+    ready.textContent = me && me.ready ? "DOCH NICHT BEREIT" : "BEREIT";
+    start.hidden = !view.isHost;
+    const alleBereit = view.seats.length >= 2 && view.seats.every(s => s.ready);
+    start.disabled = !alleBereit;
+    start.title = view.seats.length < 2
+        ? "Für ein Rennen braucht es mindestens zwei Spieler."
+        : (alleBereit ? "Los geht's" : "Erst müssen alle Spieler BEREIT drücken.");
+
+    settings.style.display = view.isHost ? "flex" : "none";
+    document.getElementById("onlineMode").value = view.mode;
+    onlineStufenFuellen(view.mode, view.level);
+}
+
+// Namen für Modus und Stufe im Rennen
+
+function onlineModusText(mode) {
+    if (mode === "equations") return "GLEICHUNGEN";
+    if (mode === "memory") return "ZAHLEN MERKEN";
+    if (mode === "sequences") return "ZAHLENKETTEN";
+    return "GRUNDRECHENARTEN";
+}
+
+function onlineStufeText(mode, level) {
+    if (mode === "memory") return level + " Ziffern";
+    return ["LEICHT", "MITTEL", "SCHWER"][level - 1] || "LEICHT";
+}
+
+// Ziffern 5..10 statt Stufen, sobald "Zahlen merken" gewählt ist.
+
+function onlineStufenFuellen(mode, level) {
+
+    const select = document.getElementById("onlineLevel");
+    if (!select) return;
+
+    const werte = mode === "memory"
+        ? [5, 6, 7, 8, 9, 10].map(z => [String(z), z + " Ziffern"])
+        : [["1", "Leicht"], ["2", "Mittel"], ["3", "Schwer"]];
+
+    const aktuell = level === undefined ? select.value : String(level);
+
+    select.innerHTML = "";
+
+    werte.forEach(([wert, text]) => {
+        const opt = document.createElement("option");
+        opt.value = wert;
+        opt.textContent = text;
+        select.appendChild(opt);
+    });
+
+    select.value = werte.some(([wert]) => wert === aktuell) ? aktuell : werte[0][0];
+}
+
+function renderRace(view) {
+    screens(["gameScreen"]);
+    playing = true;
+    answered = false;
+    answer = "";
+    onlineAnswering = false;
+
+    if (view.round !== raceRound) {
+        raceRound = view.round;
+        raceStart = Date.now() - (view.elapsedMs || 0);
+    }
+    startClock();
+
+    document.getElementById("operation").textContent =
+        "AUFGABE " + (view.index + 1) + " VON " + view.count + " · " +
+        onlineModusText(view.mode) + " · " + onlineStufeText(view.mode, view.level);
+
+    const zeilen = view.lines || [];
+    const erinnerung = view.mode === "memory";
+
+    currentMode = erinnerung ? "memory" : "online";
+    zahlenLaenge = erinnerung ? String(zeilen[0] || "").length : 5;
+
+    if (erinnerung) {
+        document.getElementById("question").innerHTML =
+            '<div class="merken-zahl">' + escapeHtml(zeilen[0] || "") + "</div>";
+    } else {
+        document.getElementById("question").innerHTML = zeilen.map((zeile, i) =>
+            '<div class="equation-line' + (i === zeilen.length - 1 ? " target" : "") + '">' + escapeHtml(zeile) + "</div>"
+        ).join("");
+    }
+
+    document.getElementById("questionCount").textContent = (view.index + 1) + " / " + view.count;
+    document.getElementById("progressBar").style.width = (view.index / view.count * 100) + "%";
+    document.getElementById("score").textContent = view.correct;
+
+    updateDisplay();
+    document.getElementById("display").className = "display";
+    document.getElementById("feedback").className = "feedback";
+    document.getElementById("submitButton").disabled = false;
+    document.querySelectorAll(".key").forEach(button => { button.disabled = false; });
+
+    merkenPhase = erinnerung;
+
+    if (erinnerung) {
+
+        document.getElementById("display").style.display = "none";
+        document.querySelector(".answer-label").style.display = "none";
+        document.getElementById("feedback").textContent =
+            "Merke dir die Zahl und tippe dann auf FERTIG.";
+        document.getElementById("submitButton").textContent = "FERTIG";
+        document.querySelectorAll(".key").forEach(button => { button.disabled = true; });
+
+    } else {
+
+        document.getElementById("display").style.display = "";
+        document.querySelector(".answer-label").style.display = "";
+        document.getElementById("feedback").textContent = "Tippe unten deine Antwort ein.";
+        document.getElementById("submitButton").textContent = "ANTWORT";
+    }
+
+    renderStand(view);
+}
+
+function renderStand(view) {
+    const box = document.getElementById("onlineStand");
+    if (!box) return;
+    box.innerHTML = view.seats.map(s =>
+        '<span class="' + (s.done ? "fertig" : "") + '">' +
+        escapeHtml(s.name) + ": " + s.answered + "/" + view.count + (s.done ? " ✓" : "") + "</span>"
+    ).join(" · ");
+}
+
+function startClock() {
+    if (raceClock) return;
+    raceClock = setInterval(() => {
+        if (!onlineGame || onlineGame.status !== "active" || onlineGame.done || !raceStart) return;
+        const el = document.getElementById("onlineClock");
+        if (el) el.textContent = zeitText(Date.now() - raceStart);
+    }, 200);
+}
+
+function sendAnswer() {
+    if (!onlineGame || onlineAnswering) return;
+    if (answer === "") {
+        document.getElementById("feedback").textContent = "Bitte gib zuerst eine Zahl ein.";
+        return;
+    }
+
+    onlineAnswering = true;
+    answered = true;
+    const index = onlineGame.index;
+    const wert = Number(answer);
+
+    document.getElementById("submitButton").disabled = true;
+    document.querySelectorAll(".key").forEach(button => { button.disabled = true; });
+
+    onlineAction("answer", { index: index, value: wert }).then(data => {
+        if (!data || !data.game) {
+            answered = false;
+            onlineAnswering = false;
+            return;
+        }
+        const display = document.getElementById("display");
+        const feedback = document.getElementById("feedback");
+        display.className = "display " + (data.correct ? "correct" : "wrong");
+        feedback.className = "feedback " + (data.correct ? "good" : "bad");
+        feedback.textContent = data.correct
+            ? "✓ RICHTIG!"
+            : "✗ Falsch! Richtig ist: " + data.answer + (data.rule ? " · " + data.rule : "");
+        setTimeout(() => {
+            onlineAnswering = false;
+            applyOnline(data.game);
+        }, 1100);
+    });
+}
+
+function renderWaiting(view) {
+    screens(["endScreen"]);
+    playing = false;
+    const me = view.seats.find(s => s.id === PLAYER_ID) || { correct: view.correct, timeMs: 0 };
+    document.querySelector("#endScreen h2").textContent = "DU BIST DURCH!";
+    document.getElementById("finalScore").textContent =
+        view.correct + " / " + view.count + " · " + zeitText(me.timeMs);
+    document.getElementById("finalText").innerHTML = '<div class="online-rank">' +
+        "Warte auf die anderen …<br><br>" +
+        view.seats.map(s => escapeHtml(s.name) + ": " + s.answered + "/" + view.count +
+            (s.done ? " ✓ " + zeitText(s.timeMs) : "")).join("<br>") +
+        "</div>";
+    endButtons(view, false);
+}
+
+function renderResult(view) {
+    screens(["endScreen"]);
+    playing = false;
+    const me = view.seats.find(s => s.id === PLAYER_ID) || { correct: 0, timeMs: 0 };
+    document.querySelector("#endScreen h2").textContent = "RENNEN BEENDET!";
+    document.getElementById("finalScore").textContent =
+        me.correct + " / " + view.count + (me.timeMs ? " · " + zeitText(me.timeMs) : "");
+    document.getElementById("finalText").innerHTML = '<div class="online-rank">' +
+        (view.result || []).map((zeile, i) =>
+            '<div class="' + (i === 0 ? "sieger" : "") + '">' + escapeHtml(zeile) + "</div>"
+        ).join("") + "</div>";
+    endButtons(view, true);
+}
+
+function endButtons(view, fertig) {
+    document.getElementById("onlineEndButtons").style.display = "block";
+    document.getElementById("onlineAgain").hidden = !(fertig && view.isHost);
+}
+
+function leaveOnline() {
+    if (typeof tgVerlassen === "function") {
+        tgVerlassen();
+        return;
+    }
+    location.href = "/connector?room=" + encodeURIComponent(ROOM);
+}
+
+if (ONLINE) {
+    document.body.classList.add("online");
+    screens(["onlineLobby"]);
+
+    document.getElementById("onlineJoin").onclick = () => { onlineAction("join"); };
+    document.getElementById("onlineReady").onclick = () => { onlineAction("ready"); };
+    document.getElementById("onlineStart").onclick = () => { onlineAction("start"); };
+    document.getElementById("onlineMode").onchange = () => {
+        onlineStufenFuellen(document.getElementById("onlineMode").value);
+        onlineSettings();
+    };
+    document.getElementById("onlineLevel").onchange = onlineSettings;
+    document.getElementById("onlineLeave").onclick = leaveOnline;
+    document.getElementById("onlineBack").onclick = leaveOnline;
+    document.getElementById("onlineAgain").onclick = () => { onlineAction("reset"); };
+
+    refreshOnline();
+    setInterval(refreshOnline, 1500);
+}
+
+</script>
+
+<script src="../zurueck.js" data-ziel="div.game" data-anfang="1" data-auf="karte"></script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
+</body>
+</html>

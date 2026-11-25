@@ -22,6 +22,7 @@
 
   var stand = null;      // letzte Antwort des Servers
   var sendet = false;    // ein Zug ist unterwegs – kein zweiter Klick
+  var endeGemeldet = null; // Kennung der Runde, deren Ende schon gemeldet ist
   var gefragt = false;   // läuft gerade ein Ruf?
   var ersterRuf = true;  // der erste Abruf geht auch im Hintergrund-Tab raus
   var kasten = null;
@@ -186,6 +187,7 @@
       zustandZeile.textContent = "Warte auf Mitspieler (" + stand.spieler.length + "/" + stand.max + ")";
     } else if (stand.status === "finished") {
       zustandZeile.textContent = stand.ende || "Die Runde ist zu Ende.";
+      eigeneWertung();
     } else if (dran) {
       zustandZeile.textContent = "Du bist am Zug";
     } else {
@@ -218,6 +220,27 @@
     if (ich >= 0) {
       tastenZeile.appendChild(knopf("Verlassen", "verlassen", {}, false));
     }
+  }
+
+  /* Sieg oder Pech für genau diesen Platz: verglichen wird der eigene Wert
+     aus der Sicht des Regelmoduls mit dem höchsten am Tisch. Ist der Stand
+     unklar (keine Zahlen), bleibt es ruhig – lieber nichts als falsch. */
+  function eigeneWertung() {
+    if (!window.TGErgebnis || !stand) return;
+    var kennung = stand.id || "ende";
+    if (endeGemeldet === kennung) return;
+    endeGemeldet = kennung;
+    var sicht = stand.sicht || {};
+    var werte = (sicht.spieler || []).map(function (e) {
+      return e && typeof e.wert === "number" ? e.wert : null;
+    });
+    var ich = typeof stand.du === "number" ? stand.du : -1;
+    if (ich < 0 || werte[ich] == null) return;
+    var hoechster = null;
+    werte.forEach(function (w) { if (w != null && (hoechster === null || w > hoechster)) hoechster = w; });
+    if (hoechster === null) return;
+    if (werte[ich] === hoechster) TGErgebnis.gewonnen();
+    else TGErgebnis.verloren();
   }
 
   /* --- Aufbau ---------------------------------------------------------- */

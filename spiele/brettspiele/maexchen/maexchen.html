@@ -964,6 +964,13 @@ function zeigeEnde() {
   $("endeSchleier").hidden = false;
   $("startSchleier").hidden = true;
   $("endeTitel").textContent = (G.winner || "?") + " gewinnt";
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen: Wer am Tisch sitzt und
+     nicht gewonnen hat, bekommt den Pechspruch. */
+  if (window.TGErgebnis) {
+    const eigen = (G.players || []).find((p) => p.id === ICH);
+    if (eigen && G.winner && eigen.name !== G.winner) TGErgebnis.verloren();
+    else TGErgebnis.gewonnen();
+  }
   const rang = [...G.players].sort((a, b) => b.euro - a.euro);
   $("endeUnter").textContent = rang[0].euro + " € übrig – alle anderen sind pleite.";
   const liste = $("rangListe");
@@ -1207,5 +1214,7 @@ window.TGMX = {
   ichDran: ichDran
 };
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

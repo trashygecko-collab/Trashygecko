@@ -586,6 +586,7 @@ let passes = 0;
 let finalTurns = -1;
 let roundOver = false;
 let gameOver = false;
+let ergebnisGemeldet = false;   // Partieende schon mit Spruch gemeldet
 let resultLines = [];
 let message = "";
 
@@ -978,7 +979,7 @@ function stand(){
     status: gameOver?"finished":"active",
     note: message,
     result: resultLines,
-    winner: gameOver&&players[current]?players[current].name:"",
+    winner: gameOver?(players.filter(p=>!p.out)[0]||{}).name||"":"",
     score: handPoints(mine.hand),
     finalTurns,
     deckCount: deck.length,
@@ -989,6 +990,20 @@ function stand(){
 function render(){
   const s=stand();
   if (!s) return;
+
+  // Partieende: einmal den zentralen Spruch zeigen. Online zählt der eigene
+  // Platz, lokal sitzen alle Menschen am selben Gerät.
+  if (s.status==="finished") {
+    if (!ergebnisGemeldet) {
+      ergebnisGemeldet = true;
+      if (window.TGErgebnis) {
+        const ichName = ONLINE && s.seats[s.mySeat] ? s.seats[s.mySeat].name : "";
+        if (!s.winner || (ONLINE && !ichName)) TGErgebnis.lob();
+        else if (ichName && s.winner !== ichName) TGErgebnis.verloren();
+        else TGErgebnis.gewonnen();
+      }
+    }
+  } else ergebnisGemeldet = false;
 
   // Spielerleiste
   $("players").innerHTML="";
@@ -1363,5 +1378,7 @@ if (ONLINE) {
   makeNames();
 }
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

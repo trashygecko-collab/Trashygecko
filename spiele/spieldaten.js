@@ -1,8 +1,10 @@
 /* Spieldaten – die eine Quelle für Spielhalle (spiele.html) und Connector.
 
-   Kategorien, Spiele, Kurztexte und Highlights stehen nur noch hier. Beide
-   Seiten laden diese Datei, damit Namen, Pfade und Spielarten nicht mehr
-   auseinanderlaufen können.
+   Kategorien, Spiele, Kurztexte und Highlights stehen nur noch hier. Der
+   Connector laedt diese Datei; die Spielhalle (spiele.html) ist eine fertige
+   Seite, deren Karten aus dieser Liste entstanden sind. Nach einer Aenderung
+   hier muss spiele.html nachgezogen werden (der Android-Bau erzeugt seine
+   Fassung dagegen selbst aus dieser Datei).
 
    Merkmale (an den Spielseiten geprüft, Stand 24.11.2026):
      solo     allein spielbar (Solo-Modus oder Gegner-KI)
@@ -11,8 +13,9 @@
      computer, highscore, controller   wie bisher
 
    „online“ steht bewusst nicht in den Merkmalen: online ist nur, was im
-   multiplayer-register.js steht (echte Connector-Anbindung). Beide Seiten
-   leiten das daraus ab.
+   multiplayer-register.js steht (echte Connector-Anbindung). Connector und
+   Spielhalle leiten das daraus ab; in spiele.html stehen die Merkmale fest
+   in den Karten und muessen dort nachgezogen werden.
 
    Nicht in dieser Liste: malen/malen.html. Das ist ein gemeinsames
    Kritzelbrett ohne Ziel, Punkte und Sieger; es steht als Werkzeug-Kachel in

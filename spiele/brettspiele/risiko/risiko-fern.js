@@ -325,6 +325,7 @@
   var schnittstelle = {
     sende: function (aktion, daten) { sende(aktion, daten); },
     dran: function () { return !!spiel && spiel.status === "active" && meinPlatz === spiel.amZug; },
+    platz: function () { return meinPlatz; },
     bereit: function () {}
   };
 

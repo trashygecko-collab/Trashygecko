@@ -403,6 +403,16 @@ function zeichne(){
 
 function zeichneWertung(){
  const ende=game.status==="ende";
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen, einmal je Partie. */
+  if (ende && window.TGErgebnis) {
+    const merker = document.body.dataset;
+    if (!merker.tgEnde) {
+      merker.tgEnde = "1";
+      TGErgebnis.nachName(game.sieger || game.winner || "", typeof ich === "function" && ich() ? ich().name : "");
+    }
+  } else if (!ende) {
+    document.body.dataset.tgEnde = "";
+  }
  $("wertungTitel").textContent=ende?"Partie gewonnen":"Runde "+game.runde;
  const e=game.ergebnis;
  let html="";
@@ -451,5 +461,7 @@ if(!ONLINE){
  if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

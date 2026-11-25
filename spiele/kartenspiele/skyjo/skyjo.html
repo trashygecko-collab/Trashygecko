@@ -714,6 +714,7 @@ let history=[];
 let message="";
 let info="";
 let pendingAction=null;
+let ergebnisGemeldet=false;   // Partieende schon mit Spruch gemeldet
 
 const $=id=>document.getElementById(id);
 
@@ -1218,6 +1219,16 @@ function finishRound(){
   const over=totals[0]>=100||totals[1]>=100;
   gameFinished=over;
 
+  // Partieende: einmal den zentralen Spruch zeigen. Lokal sitzen beide
+  // Spieler am selben Gerät, online zählt der eigene Platz.
+  if(over&&!ergebnisGemeldet){
+    ergebnisGemeldet=true;
+    if(window.TGErgebnis){
+      if(totals[0]===totals[1])TGErgebnis.lob();
+      else TGErgebnis.gewonnen();
+    }
+  }else if(!over)ergebnisGemeldet=false;
+
   message=over?"SPIEL BEENDET!":"RUNDE "+roundNumber+" BEENDET!";
   info="Rundensieger: "+winnerRound;
 
@@ -1313,6 +1324,17 @@ function applyOnlineState(game){
   roundScores=[game.roundScores[0],game.roundScores[1]];
   roundNumber=game.round;
   gameFinished=game.status==="finished";
+
+  // Partieende aus dem Serverstand: einmal je Partie melden.
+  if(gameFinished&&!ergebnisGemeldet){
+    ergebnisGemeldet=true;
+    if(window.TGErgebnis){
+      const eigener=game.redId===PLAYER_ID?0:(game.blueId===PLAYER_ID?1:-1);
+      if(eigener<0||game.winner==="draw")TGErgebnis.lob();
+      else if((game.winner==="red"?0:1)===eigener)TGErgebnis.gewonnen();
+      else TGErgebnis.verloren();
+    }
+  }else if(!gameFinished)ergebnisGemeldet=false;
   history=[];
   pendingAction=null;
 
@@ -1470,5 +1492,7 @@ if(ONLINE){
 }
 
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

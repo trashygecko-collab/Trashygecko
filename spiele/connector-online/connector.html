@@ -361,8 +361,24 @@ html:fullscreen body{padding:18px 1px}
 .zr-privat{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:10px 12px;border:1px solid var(--c-rahmen);border-radius:10px;background:var(--c-flaeche-3);font-size:13px}
 .zr-privat[hidden]{display:none}
 .zr-spieler{display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}
-.zr-spieler-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;border:1px solid var(--c-rahmen);border-radius:9px;background:var(--c-flaeche-2)}
+.zr-spieler-zeile{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:2px 10px;border:1px solid var(--c-rahmen);border-radius:9px;background:var(--c-flaeche-2)}
 .zr-spieler-zeile b{font-size:14px}
+/* Der Name selbst öffnet das Menü – keine eigene Knopfzeile mehr. */
+#zr-spieler .zr-name-knopf{font:inherit;font-size:14px;font-weight:bold;display:inline-flex;align-items:center;gap:6px;
+ padding:9px 10px;margin:0 -7px;min-height:40px;border:0;border-radius:8px;background:transparent;color:var(--c-text);
+ cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+#zr-spieler .zr-name-knopf::after{content:"▾";font-size:10px;line-height:1;color:var(--c-leise);opacity:.8}
+#zr-spieler .zr-name-knopf:hover,#zr-spieler .zr-name-knopf:focus-visible{background:var(--c-flaeche-3);color:var(--c-akzent);outline:none}
+#zr-spieler .zr-name-knopf:hover::after,#zr-spieler .zr-name-knopf:focus-visible::after{color:var(--c-akzent);opacity:1}
+#zr-spieler .zr-name-knopf[aria-expanded="true"]{background:var(--c-flaeche-3);color:var(--c-akzent)}
+#zr-spieler .zr-name-knopf[aria-expanded="true"]::after{color:var(--c-akzent);opacity:1}
+.zr-menue{position:fixed;z-index:45;min-width:186px;padding:6px;border:1px solid var(--c-akzent);border-radius:10px;
+ background:var(--c-flaeche-2);box-shadow:0 10px 26px #000a}
+.zr-menue[hidden]{display:none}
+.zr-menue-kopf{padding:4px 10px 6px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--c-leise)}
+#zrSpielerMenue button{display:block;width:100%;padding:11px 12px;border:0;border-radius:7px;background:transparent;
+ color:var(--c-text);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}
+#zrSpielerMenue button:hover,#zrSpielerMenue button:focus-visible{background:var(--c-flaeche-3);color:var(--c-akzent);outline:none}
 .zr-knopf{font:inherit;font-size:13px;padding:8px 11px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
 .zr-knopf:hover{border-color:var(--c-akzent);color:var(--c-akzent)}
 .zr-hinweis{margin:4px 0 8px;font-size:12.5px;line-height:1.4;color:var(--c-leise)}
@@ -705,9 +721,9 @@ body.spiel-offen #uebersicht{display:none}
  #linkeSpalte #zr-titel,#linkeSpalte #zr-hinweis{display:none}
  #linkeSpalte #zentrale .multi-titel{margin:2px 0 4px;font-size:10px;letter-spacing:.08em}
  #linkeSpalte .zr-spieler{max-height:none;margin:0 0 4px;gap:4px}
- #linkeSpalte .zr-spieler-zeile{padding:4px 8px;border-radius:7px}
- #linkeSpalte .zr-spieler-zeile b{font-size:13px}
- #linkeSpalte .zr-spieler-zeile .zr-knopf{padding:4px 8px;font-size:11.5px}
+ #linkeSpalte .zr-spieler-zeile{padding:0 8px;border-radius:7px}
+ #linkeSpalte .zr-spieler-zeile .zr-name-knopf{font-size:13px;padding:10px 8px;margin:0;min-height:40px}
+ #linkeSpalte .zr-menue{min-width:168px}
  #linkeSpalte .zr-partien{max-height:none;margin:0}
  #linkeSpalte #einstellungen{flex:0 0 auto}
  #linkeSpalte .stil-zeile{margin:0}
@@ -761,6 +777,7 @@ body.spiel-offen #uebersicht{display:none}
 </div>
 <h3 class="multi-titel">Anwesende Spieler</h3>
 <div class="zr-spieler" id="zr-spieler"><p class="empty">Niemand sonst da.</p></div>
+<div id="zrSpielerMenue" class="zr-menue" role="menu" aria-label="Spieler-Aktionen" hidden></div>
 <div class="zr-partien-block" id="zr-partienBlock">
 <h3 class="multi-titel">Laufende Partien</h3>
 <div class="zr-partien" id="zr-partien"><p class="empty">Keine Partie läuft.</p></div>
@@ -1405,12 +1422,18 @@ function zentraleZeichnen(){
  zentralePartienZeichnen();
 }
 
-// Wer da ist – mit einem Knopf zum privaten Einladen. Im privaten Raum gibt
-// es nichts einzuladen: dort sind schon alle.
+// Wer da ist. Der Name ist der Knopf: er öffnet ein kleines Menü mit der
+// privaten Einladung. Im privaten Raum gibt es nichts einzuladen – dort sind
+// schon alle. Neu gebaut wird die Liste nur, wenn sich etwas ändert; sonst
+// würde der Fünf-Sekunden-Takt ein offenes Menü gleich wieder schließen.
 function zentraleSpielerZeichnen(){
  const box=document.getElementById("zr-spieler");
  if(!box)return;
  const da=(currentPlayersList||[]).filter(p=>p&&p.id!==sessionID&&p.anwesend!==false);
+ const signatur=(privatRaum?"p|":"f|")+da.map(p=>p.id+"|"+(p.name||"")).join(",");
+ if(box.dataset.signatur===signatur)return;
+ box.dataset.signatur=signatur;
+ spielerMenueZu();
  box.textContent="";
  if(!da.length){
   const leer=document.createElement("p");
@@ -1422,20 +1445,86 @@ function zentraleSpielerZeichnen(){
  da.forEach(p=>{
   const zeile=document.createElement("div");
   zeile.className="zr-spieler-zeile";
-  const name=document.createElement("b");
-  name.textContent=p.name||"Spieler";
-  zeile.appendChild(name);
-  if(!privatRaum){
-   const knopf=document.createElement("button");
-   knopf.type="button";
-   knopf.className="zr-knopf";
-   knopf.textContent="Privat einladen";
-   knopf.onclick=()=>privatEinladen(p.id, p.name||"Spieler");
-   zeile.appendChild(knopf);
+  const anzeige=p.name||"Spieler";
+  if(privatRaum){
+   const name=document.createElement("b");
+   name.textContent=anzeige;
+   zeile.appendChild(name);
+  }else{
+   const name=document.createElement("button");
+   name.type="button";
+   name.className="zr-name-knopf";
+   name.textContent=anzeige;
+   name.title="Menü für "+anzeige;
+   name.setAttribute("aria-haspopup","menu");
+   name.setAttribute("aria-expanded","false");
+   name.onclick=()=>spielerMenueOeffnen(name,p.id,anzeige);
+   zeile.appendChild(name);
   }
   box.appendChild(zeile);
  });
 }
+
+// Kleines Menü am angeklickten Namen. Kennung und Name werden beim Öffnen
+// festgehalten – die Einladung geht damit immer an genau diesen Spieler.
+let spielerMenueZiel=null;
+function spielerMenueOeffnen(knopf,id,name){
+ const menue=document.getElementById("zrSpielerMenue");
+ if(!menue||!knopf)return;
+ if(!id||id===sessionID||privatRaum)return; // nie an sich selbst
+ if(spielerMenueZiel&&spielerMenueZiel.knopf===knopf&&!menue.hidden){
+  spielerMenueZu();
+  return;
+ }
+ spielerMenueZiel={id:id,name:name,knopf:knopf};
+ menue.textContent="";
+ const kopf=document.createElement("div");
+ kopf.className="zr-menue-kopf";
+ kopf.textContent=name;
+ const eintrag=document.createElement("button");
+ eintrag.type="button";
+ eintrag.setAttribute("role","menuitem");
+ eintrag.textContent="Privat einladen";
+ eintrag.onclick=()=>{
+  const ziel=spielerMenueZiel?{id:spielerMenueZiel.id,name:spielerMenueZiel.name}:null;
+  spielerMenueZu();
+  if(ziel)privatEinladen(ziel.id,ziel.name);
+ };
+ menue.append(kopf,eintrag);
+ menue.hidden=false;
+ knopf.setAttribute("aria-expanded","true");
+ // Unter dem Namen, aber immer im Bild – am Handy sonst halb außerhalb.
+ const r=knopf.getBoundingClientRect();
+ const m=menue.getBoundingClientRect();
+ let links=r.left;
+ if(links+m.width>window.innerWidth-8)links=window.innerWidth-8-m.width;
+ if(links<8)links=8;
+ let oben=r.bottom+6;
+ if(oben+m.height>window.innerHeight-8)oben=Math.max(8,r.top-6-m.height);
+ menue.style.left=Math.round(links)+"px";
+ menue.style.top=Math.round(oben)+"px";
+ eintrag.focus({preventScroll:true});
+}
+function spielerMenueZu(){
+ const menue=document.getElementById("zrSpielerMenue");
+ if(!menue||menue.hidden)return;
+ const knopf=spielerMenueZiel&&spielerMenueZiel.knopf;
+ menue.hidden=true;
+ menue.textContent="";
+ if(knopf&&knopf.isConnected)knopf.setAttribute("aria-expanded","false");
+ spielerMenueZiel=null;
+}
+// Klick daneben, Escape, Scrollen oder Größenwechsel schließen es.
+document.addEventListener("pointerdown",e=>{
+ const menue=document.getElementById("zrSpielerMenue");
+ if(!menue||menue.hidden)return;
+ if(menue.contains(e.target))return;
+ if(spielerMenueZiel&&spielerMenueZiel.knopf&&spielerMenueZiel.knopf.contains(e.target))return;
+ spielerMenueZu();
+},true);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape")spielerMenueZu(); });
+window.addEventListener("resize",spielerMenueZu);
+window.addEventListener("scroll",spielerMenueZu,true);
 
 // ?spiel=<kennung> kommt von der Spieleübersicht: dort schickt ein Online-Spiel
 // den Spieler hierher, statt eine eigene zweite Halle aufzubauen.

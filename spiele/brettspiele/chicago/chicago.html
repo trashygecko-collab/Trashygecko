@@ -1079,6 +1079,13 @@ function zeigeEnde() {
   $("endeSchleier").hidden = false;
   const verlierer = G.verlierer || "";
   $("endeTitel").textContent = verlierer ? verlierer + " verliert" : "Partie beendet";
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen: Der Verlierer bekommt
+     den Pechspruch, alle anderen den Gewinnspruch. */
+  if (window.TGErgebnis) {
+    const eigen = (G.players || []).find((p) => p.id === ICH);
+    if (eigen && verlierer && verlierer === eigen.name) TGErgebnis.verloren();
+    else TGErgebnis.gewonnen();
+  }
   $("endeUnter").textContent = verlierer
     ? verlierer + " hat als letzter noch einen Bierfilz – die Runde ist fällig."
     : "Alle Filze sind weg.";
@@ -1258,5 +1265,7 @@ window.TGCH = {
   filze: () => (G ? (G.players || []).map((p) => p.name + ":" + (p.deckel || 0)) : [])
 };
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

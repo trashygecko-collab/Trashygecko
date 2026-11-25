@@ -660,6 +660,14 @@ function stufeName(stufe){
 function zeichneWertung(){
  const ende=game.status==="ende";
  $("wertungTitel").textContent=ende?"Spiel beendet":"Wertung – Runde "+game.runde;
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen, einmal je Partie. */
+  if (ende && window.TGErgebnis && !$("wertungTitel").dataset.endeGemeldet) {
+    $("wertungTitel").dataset.endeGemeldet = "1";
+    const ichGewinne = meinSitz() >= 0 && game.spieler[meinSitz()] && game.spieler[meinSitz()].name === game.sieger;
+    if (ichGewinne) TGErgebnis.gewonnen(); else TGErgebnis.verloren();
+  } else if (!ende) {
+    $("wertungTitel").dataset.endeGemeldet = "";
+  }
  const sieg=$("siegZeile");
  if(ende&&game.sieger){
   const gegner=game.spieler.filter(p=>p.bot);
@@ -737,5 +745,7 @@ if(!ONLINE){
  if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
 })();
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

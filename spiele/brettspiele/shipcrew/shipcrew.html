@@ -1121,6 +1121,12 @@ function zeigeEnde() {
   $("endeTitel").textContent = sieger.length > 1
     ? "Geteilte Sieger"
     : (sieger[0] ? sieger[0] + " gewinnt" : "Partie beendet");
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen. */
+  if (window.TGErgebnis) {
+    const eigen = (G.players || []).find((p) => p.id === ICH);
+    if (eigen && sieger.length && sieger.indexOf(eigen.name) < 0) TGErgebnis.verloren();
+    else TGErgebnis.gewonnen();
+  }
   const best = G.players.reduce((m, p) => Math.max(m, p.siege), 0);
   $("endeUnter").textContent = G.runden + (G.runden === 1 ? " Runde" : " Runden") +
     " gespielt – " + best + (best === 1 ? " Siegpunkt" : " Siegpunkte") + " für Platz 1.";
@@ -1331,5 +1337,7 @@ window.TGSC = {
   erwartet: () => erwartet(meinSpieler())
 };
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

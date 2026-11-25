@@ -418,7 +418,7 @@ function lokalStarten(modus) {
   const runde = alt ? alt.runde + 1 : 1;
   const sp = neuerStand(2);
   if (alt) { sp.punkte = alt.sp.punkte.slice(); sp.runden = alt.sp.runden.slice(); }
-  lokal = { sp, modus, handOffen: true, runde };
+  lokal = { sp, modus, handOffen: true, runde, ergebnisRunde: 0 };
   wahl = null;
   melde("");
   lokal.sp.note = modus === "computer" ? "Du fängst an." : "Spieler 1 fängt an.";
@@ -432,6 +432,15 @@ function endePruefen() {
   const wer = lokalNamen();
   if (sp.gewinner >= 0) sp.note = wer[sp.gewinner] + " gewinnt die Runde mit " + sp.punkte[sp.gewinner] + " Punkten.";
   else sp.note = "Runde ohne Sieger.";
+  // Ein Spruch je Runde; im Spiel gegen den Computer ist dessen Sieg Pech.
+  if (lokal.ergebnisRunde !== lokal.runde) {
+    lokal.ergebnisRunde = lokal.runde;
+    if (window.TGErgebnis) {
+      if (sp.gewinner < 0) TGErgebnis.lob();
+      else if (lokal.modus === "computer" && sp.gewinner === 1) TGErgebnis.verloren();
+      else TGErgebnis.gewonnen();
+    }
+  }
 }
 
 function lokalSpielen(stein, seite) {
@@ -500,7 +509,7 @@ function computerZug() {
 }
 
 /* -------------------------------- online ------------------------------- */
-let onlineGame = null, onlineBusy = false;
+let onlineGame = null, onlineBusy = false, onlineErgebnisRunde = -1;
 
 async function api(aktion, koerper) {
   const url = "/api/domino?room=" + encodeURIComponent(ROOM) +
@@ -756,6 +765,19 @@ function zeichneOnline() {
   btnPassen.disabled = !(keinStein && g.talon === 0);
   btnZiehen.textContent = "Ziehen (" + g.talon + ")";
   elEnde.classList.toggle("versteckt", g.status !== "ende");
+  // Rundenende aus dem Serverstand: einmal je Runde melden.
+  if (g.status === "ende" && onlineErgebnisRunde !== g.runde) {
+    onlineErgebnisRunde = g.runde;
+    if (window.TGErgebnis) {
+      const gewinner = g.spieler && g.spieler[g.gewinner];
+      const dabei = (g.spieler || []).some((s) => s.id === MYID);
+      if (!(g.gewinner >= 0) || !gewinner || !dabei) TGErgebnis.lob();
+      else if (gewinner.id === MYID) TGErgebnis.gewonnen();
+      else TGErgebnis.verloren();
+    }
+  } else if (g.status !== "ende") {
+    onlineErgebnisRunde = -1;
+  }
   if (g.status === "ende" && g.gewinner >= 0) {
     ergebnisZeigen(g.spieler[g.gewinner].name + " gewinnt", g.spieler[g.gewinner].id === MYID);
   } else ergebnisZeigen("");
@@ -853,5 +875,7 @@ if (ONLINE) {
 }
 })();
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

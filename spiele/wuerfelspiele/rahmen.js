@@ -226,6 +226,8 @@
   var ergebnisTimer = null;
   var gesperrt = false;   // Tasten während der Ergebnisanzeige
   var ERGEBNIS_DAUER = 2000;
+  // Sieg-/Trostspruch aus den zentralen Connector-Listen nur einmal je Partie.
+  var endeGemeldet = false;
 
   function neuerZustand(namen, varianten, saat) {
     var zustand = {
@@ -263,6 +265,7 @@
     var namen = namenAusFeld();
     try { localStorage.setItem("tg-wuerfel-namen", JSON.stringify(namen)); } catch (e) { /* egal */ }
     ergebnisText = null;
+    endeGemeldet = false;
     gesperrt = false;
     if (ergebnisTimer) { clearTimeout(ergebnisTimer); ergebnisTimer = null; }
     var altBand = document.getElementById("tg-ergebnis");
@@ -442,6 +445,12 @@
       p.textContent = z.ende.text || "";
       kasten.append(b, p);
       el.sieg.appendChild(kasten);
+      if (!endeGemeldet && window.TGErgebnis) {
+        endeGemeldet = true;
+        TGErgebnis.gewonnen();
+      }
+    } else if (endeGemeldet) {
+      endeGemeldet = false;
     }
 
     /* Verlauf */

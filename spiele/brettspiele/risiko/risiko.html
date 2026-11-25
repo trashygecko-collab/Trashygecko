@@ -537,6 +537,7 @@ input[type="text"]{width:132px}
   };
 
   function neuesSpiel(einst) {
+    ergebnisGemeldet = -1;
     S.modus = einst.modus || "welt";
     S.vorbei = false;
     S.amZug = 0;
@@ -1959,12 +1960,45 @@ input[type="text"]{width:132px}
     vorschau();
   }
 
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen – einmal je Partie.
+     Lokal gewinnt ein Mensch am Gerät, online zählt der eigene Platz. */
+  var ergebnisGemeldet = -1;
+  function eigenerPlatz() {
+    if (!FERN) return -1;
+    if (typeof FERN.platz === "function") return FERN.platz();
+    var id = new URLSearchParams(location.search).get("id") || "";
+    for (var i = 0; i < S.spieler.length; i++) {
+      if (S.spieler[i].kennung === id) return i;
+    }
+    return -1;
+  }
+  function ergebnisMelden(sieger) {
+    if (ergebnisGemeldet === sieger) return;
+    ergebnisGemeldet = sieger;
+    if (!window.TGErgebnis) return;
+    if (sieger < 0 || !S.spieler[sieger]) { TGErgebnis.lob(); return; }
+    if (!FERN) {
+      if (S.spieler[sieger].ki) TGErgebnis.verloren(); else TGErgebnis.gewonnen();
+      return;
+    }
+    var ich = eigenerPlatz();
+    if (ich < 0) { TGErgebnis.lob(); return; }
+    var gewinner = S.spieler[sieger], meiner = S.spieler[ich];
+    if (gewinner.id === meiner.id ||
+        (S.modus === "team" && meiner.team >= 0 && gewinner.team === meiner.team)) {
+      TGErgebnis.gewonnen();
+    } else {
+      TGErgebnis.verloren();
+    }
+  }
+
   function zeigeSieg(text, sieger) {
     var box = document.getElementById("sieg");
     if (!box) return;
     document.getElementById("siegTitel").textContent = S.spieler[sieger].name + " gewinnt!";
     document.getElementById("siegText").textContent = text;
     box.hidden = false;
+    ergebnisMelden(sieger);
   }
 
   document.getElementById("wahlModus").addEventListener("click", function (ev) {
@@ -2071,6 +2105,9 @@ input[type="text"]{width:132px}
                team: p.team, startPool: p.startPool || 0 };
     });
     S.nachruecken = d.nachruecken ? { von: d.nachruecken.von, nach: d.nachruecken.nach, max: d.nachruecken.max } : null;
+    /* Ergebnis nur beim Partieende melden – und nur einmal. */
+    if (S.vorbei && S.sieger >= 0) ergebnisMelden(S.sieger);
+    else if (!S.vorbei) ergebnisGemeldet = -1;
     /* Der Server protokolliert chronologisch; die Anzeige will das Neueste oben. */
     S.log = (d.log || []).map(function (e) { return { text: e.text, runde: e.runde || S.runde }; }).reverse();
     S.auswahl = S.auswahl && S.gebiete[S.auswahl] ? S.auswahl : null;
@@ -2195,5 +2232,7 @@ input[type="text"]{width:132px}
 <script src="../../zurueck.js"></script>
 <script src="../../token.js"></script>
 <script src="risiko-fern.js"></script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

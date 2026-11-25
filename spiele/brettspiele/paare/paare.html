@@ -544,7 +544,7 @@ function checkPair(){
     selected=[];
     // Gemeinsame Lob-Sprüche (ohne Mahjong-Anspielungen).
     $("feedback").textContent = typeof lobSpruch==="function"
-      ? lobSpruch()
+      ? lobSpruch(false)
       : "Richtig! Paar gefunden.";
     $("feedback").className="feedback good";
     renderBoard();
@@ -578,7 +578,7 @@ async function finishRound(){
   if(timerInterval){clearInterval(timerInterval);timerInterval=null}
   myDone={time:elapsed(),mistakes};
   // Auch für die geschaffte Runde gibt es ein Lob, nicht nur für einzelne Paare.
-  lobText = typeof lobSpruch==="function" ? lobSpruch() : "Geschafft!";
+  lobText = typeof lobSpruch==="function" ? lobSpruch(false) : "Geschafft!";
   $("feedback").textContent="Alle Paare gefunden – "+lobText;
   $("feedback").className="feedback good";
   renderBoard();
@@ -615,6 +615,11 @@ function showOnlineResult(){
   }else{
     title=theirName.toUpperCase()+" GEWINNT!";
     text="Deine Zeit: "+formatTime(mine.time)+"\n"+theirName+": "+formatTime(theirs.time);
+  }
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen (einmal je Partie). */
+  if (window.TGErgebnis && !resultShown) {
+    if (theirs && onlineGame.winner !== "draw" && (onlineGame.winner === "red") !== iAmRed) TGErgebnis.verloren();
+    else TGErgebnis.gewonnen();
   }
   resultShown=true;
   $("resultTitle").textContent=title;
@@ -709,5 +714,7 @@ if(ONLINE){
 }
 </script>
 <script src="../../zurueck.js" data-ziel="div.app" data-anfang="1" data-auf="karte" data-nur="ohne-room"></script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

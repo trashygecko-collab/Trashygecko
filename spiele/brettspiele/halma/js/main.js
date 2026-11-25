@@ -688,6 +688,12 @@
 
   function sieg(platz) {
     S.sieger = platz;
+    /* Ergebnis-Spruch aus den zentralen Connector-Listen. Am selben Gerät
+       gewinnt ein Mensch; nur ein Computer-Sieg ist Pech. */
+    if (window.TGErgebnis) {
+      if (S.spieler[platz] && S.spieler[platz].art === "computer") TGErgebnis.verloren();
+      else TGErgebnis.gewonnen();
+    }
     zeichne();
     var imZiel = HB.Regeln.imZiel(S.brett, S.belegung, S.plaetze[platz]);
     dialog("Partie beendet",
@@ -930,6 +936,12 @@
     zeichne();
     if (game.status === "finished" && !S.endeGezeigt) {
       S.endeGezeigt = true;
+      if (window.TGErgebnis) {
+        var eigener = serverPlatz();
+        if (game.sieger < 0 || eigener < 0) TGErgebnis.lob();
+        else if (game.sieger === eigener) TGErgebnis.gewonnen();
+        else TGErgebnis.verloren();
+      }
       dialog("Partie beendet",
         "<p>" + (game.sieger >= 0 ? "<b>" + nameVon(game.sieger) + "</b> hat gewonnen." : "Kein Sieger.") + "</p>",
         [["Nochmal", function () { dialogZu(); S.endeGezeigt = false; aktion("reset"); }],

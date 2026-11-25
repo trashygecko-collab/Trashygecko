@@ -5,11 +5,11 @@
    mehreren gespielt werden. Sie wird geladen von:
 
      - spiele/connector/connector.html   (Spielauswahl im Multiplayer-Tab)
-     - spiele/spiele.html                (Merkmale „Multi“/„Online“)
 
-   Der Connector baut seine Auswahl daraus, die Übersicht setzt ihre
-   Online-Merkmale daraus – es gibt also keine zweite, auseinanderlaufende
-   Liste mehr. Die Go-Seite (spiele/connector/angebot.go: spielApi,
+   Der Connector baut seine Auswahl daraus. Die Uebersicht (spiele.html) ist
+   eine fertige Seite; ihre Merkmale „Multi“/„Online“ wurden aus dieser
+   Liste abgeleitet und stehen fest in den Karten. Neue Eintraege hier also
+   dort nachziehen (der Android-Bau liest beide Dateien). Die Go-Seite (spiele/connector/angebot.go: spielApi,
    spielAnzeige, tischspiel) wird von register_test.go gegen diese Datei
    geprüft: fehlt hier ein Spiel oder heißt anders, schlägt der Test fehl.
 

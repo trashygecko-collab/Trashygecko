@@ -78,17 +78,36 @@ function variantenText(satz = FORMEN_SATZ, stufe = laufendeStufe) {
     return `${geraeteName(satz)} · ${STUFEN_WORTE[stufenWert(stufe)]}`;
 }
 
+// Dieselbe Variante in Kurzform: die Anfangsbuchstaben von Geraet und Stufe,
+// also "HS" fuer Handy · Schwer, "PL" fuer PC · Leicht.  Sie steht fuer
+// schmale Kopfzeilen bereit; welche Fassung zu sehen ist, entscheidet das CSS
+// anhand der tatsaechlichen Breite, nicht das Geraet.
+function variantenKurz(satz = FORMEN_SATZ, stufe = laufendeStufe) {
+    const geraet = geraeteName(satz).charAt(0);
+
+    return geraet + (stufenWert(stufe) === "schwer" ? "S" : "L");
+}
+
 // Text, Farbe und Vorlesetext der Varianten-Anzeige in einem Zug.  Sie nennt
 // das laufende Brett: wer die Schwierigkeit mitten in der Partie umstellt,
 // sieht das alte Brett bis zum naechsten Start richtig beschriftet.
 function setzeVariantenAnzeige() {
     const marke = getElement("levelSatz");
+    const kurz = getElement("levelSatzKurz");
     const knopf = getElement("levelButton");
     const text = variantenText();
+    const stufe = stufenWert(laufendeStufe);
 
     if (marke) {
         marke.textContent = text;
-        marke.dataset.stufe = stufenWert(laufendeStufe);
+        marke.dataset.stufe = stufe;
+    }
+
+    // Kurzform fuer schmale Kopfzeilen; der Vorlesetext am Knopf bleibt die
+    // vollstaendige Fassung.
+    if (kurz) {
+        kurz.textContent = variantenKurz();
+        kurz.dataset.stufe = stufe;
     }
 
     if (knopf) {

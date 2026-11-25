@@ -1097,6 +1097,16 @@ function render(){
 
   if (s.status === "finished") {
     $("message").textContent = s.winner ? s.winner + " hat gewonnen!" : "Spiel beendet.";
+    /* Ergebnis-Spruch aus den zentralen Connector-Listen, einmal je Partie. */
+    const feld = $("message");
+    if (window.TGErgebnis && !feld.dataset.endeGemeldet) {
+      feld.dataset.endeGemeldet = "1";
+      const meiner = Array.isArray(s.players) && typeof s.mySeat === "number" && s.mySeat >= 0 ? s.players[s.mySeat] : null;
+      if (meiner && s.winner && meiner.name !== s.winner) TGErgebnis.verloren();
+      else TGErgebnis.gewonnen();
+    }
+  } else {
+    $("message").dataset.endeGemeldet = "";
   }
   // Online startet „Neues Spiel“ erst nach dem Spielende eine neue Lobby.
   $("newGameButton").classList.toggle("hidden", ONLINE && s.status !== "finished");
@@ -1312,5 +1322,7 @@ if (ONLINE) {
   TGStil.beiWechsel(anwenden);
 }());
 </script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
 </body>
 </html>

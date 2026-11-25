@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="../../token.js"></script>
+<script src="../../stil.js"></script>
+<script src="../../brettspiele/wuerfel-common.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Domino</title>
+<link rel="stylesheet" href="../../schrift.css">
+<style>
+:root{
+  --bg:#081d18; --panel:#0f2b23; --panel2:#0b241d; --line:#1d4a3a; --gold:#e8cd8e;
+  --ink:#f6edda; --muted:#a9c3b6; --gruen:#4fbf72; --rot:#e04b3f;
+  --elfenbein:#f7efdb; --elfenbein2:#e6d9ba; --elfenbein-rand:#b9a273; --punkt:#241c14;
+  --k:clamp(26px,6.2vh,54px); --kh:clamp(30px,8.4vh,60px);
+}
+*{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  margin:0;padding:8px;background:radial-gradient(ellipse at 18% -10%,#16443a 0%,transparent 52%),var(--bg);
+  color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
+}
+.app{width:min(1180px,100%);height:100%;display:flex;flex-direction:column;gap:8px;min-height:0}
+
+/* ---------- Kopf ---------- */
+.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between}
+.marke{display:flex;align-items:baseline;gap:8px}
+.marke b{font-size:clamp(16px,2.2vw,24px);color:var(--gold);letter-spacing:4px}
+.marke small{color:var(--muted);font-size:12px}
+.lage{color:var(--muted);font-size:13px}
+.lage.lauft{color:var(--gruen)}
+.stand{font-size:14px;color:var(--gold);border:1px solid var(--line);border-radius:9px;
+  padding:5px 10px;background:var(--panel2);letter-spacing:1px}
+.stand.aus{display:none}
+
+/* ---------- Mitte ---------- */
+.mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,270px);gap:8px;flex:1 1 auto;min-height:0}
+@media(max-width:880px){.mitte{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(90px,1fr) auto}}
+
+.brett{background:linear-gradient(165deg,#12402f,#0a2a20 62%,#082019);border:1px solid var(--line);
+  border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:hidden;
+  position:relative;box-shadow:inset 0 1px 0 #2c6b52}
+.brett::before{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 120%,#1c5c4599,transparent 60%)}
+.kappen{flex:1 1 auto;min-height:0;display:flex;align-items:center;gap:6px}
+.kette{flex:1 1 auto;min-height:0;align-self:stretch;display:flex;flex-wrap:wrap;
+  align-content:center;justify-content:center;gap:5px;overflow:auto;padding:4px}
+.leer{color:var(--muted);font-size:13px;align-self:center}
+
+/* Endkappen: die offenen Enden als anklickbare Marken */
+.kappe{flex:0 0 auto;font-family:inherit;background:linear-gradient(180deg,#123a2c,#0b241d);
+  color:var(--muted);border:1px dashed #2b5f49;border-radius:12px;padding:6px 8px;cursor:default;
+  display:flex;flex-direction:column;align-items:center;gap:1px;min-width:46px;transition:.15s}
+.kappe small{font-size:9px;letter-spacing:1px;color:#6f9384;text-transform:uppercase}
+.kappe b{font-size:20px;color:var(--ink);line-height:1}
+.kappe:not(:disabled){color:var(--gold);border:1px solid var(--gold);background:linear-gradient(180deg,#3d3320,#241d0f);
+  box-shadow:0 0 14px #e8cd8e55;cursor:pointer;animation:locken 1.3s ease-in-out infinite}
+.kappe:not(:disabled) b{color:var(--gold)}
+.kappe:not(:disabled):hover{transform:translateY(-1px) scale(1.04)}
+@keyframes locken{0%,100%{box-shadow:0 0 0 0 #e8cd8e44}50%{box-shadow:0 0 0 6px #e8cd8e00}}
+
+/* ---------- Steine ---------- */
+.stein{display:inline-flex;background:linear-gradient(160deg,var(--elfenbein),var(--elfenbein2));
+  border:1px solid var(--elfenbein-rand);border-radius:7px;cursor:default;
+  box-shadow:0 3px 0 rgba(0,0,0,.45),0 4px 10px rgba(0,0,0,.35),inset 0 1px 0 #fff;
+  width:calc(var(--k)*2);height:var(--k);flex:0 0 auto;padding:2px;position:relative;overflow:hidden}
+.stein::after{content:"";position:absolute;inset:0;border-radius:6px;pointer-events:none;
+  background:linear-gradient(200deg,#ffffff55,transparent 45%)}
+.haelfte{flex:1 1 0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:7%}
+.haelfte:first-child{border-right:1px solid #8d7a5299}
+.punkt{display:block;width:100%;height:100%;border-radius:50%}
+.punkt.an{background:radial-gradient(circle at 35% 30%,#5a4736,var(--punkt) 62%);transform:scale(.8)}
+/* Rückseite: verdeckte Steine des Gegners */
+.stein.rueck{background:linear-gradient(160deg,#1b4a3a,#0f2b23);border-color:#2b5f49;
+  box-shadow:0 3px 0 rgba(0,0,0,.45),inset 0 1px 0 #3c7a60}
+.stein.rueck .haelfte:first-child{border-right-color:#2b5f49}
+.stein.rueck .punkt{background:#35705a66;transform:scale(.5)}
+
+/* ---------- Seite ---------- */
+.karte{background:linear-gradient(165deg,#123328,#0a211b);border:1px solid var(--line);border-radius:16px;
+  padding:10px;display:flex;flex-direction:column;gap:7px;min-height:0;overflow:hidden}
+.karte h3{margin:0;font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:normal}
+.leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button.aktion{font-family:inherit;background:#14382d;color:var(--ink);border:1px solid var(--line);
+  border-radius:9px;padding:8px 11px;cursor:pointer;font-size:13px}
+button.aktion:disabled{opacity:.4;cursor:default}
+button.aktion.haupt{background:var(--gold);color:#0a211b;border-color:#d9bc7c;font-weight:bold}
+.spieler{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:auto}
+.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 9px;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:13px}
+.sp.dran{border-color:var(--gold);background:#1b3a2c;box-shadow:0 0 12px #e8cd8e33}
+.sp b{color:var(--gold);font-weight:normal;font-size:12px}
+.notiz{color:var(--muted);font-size:12px;min-height:16px;overflow:hidden}
+.hinweis{color:var(--rot);font-size:12px;min-height:16px}
+.versteckt{display:none!important}
+
+/* Ergebnisbanner auf dem Brett */
+.ergebnis{position:absolute;left:50%;top:10px;transform:translateX(-50%);pointer-events:none;
+  background:#0a211bee;border:1px solid var(--gold);border-radius:11px;padding:7px 14px;color:var(--gold);
+  font-size:14px;letter-spacing:1px;box-shadow:0 8px 24px #00000066;animation:auf 2.4s ease forwards}
+@keyframes auf{0%{opacity:0;transform:translate(-50%,-8px)}15%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:.85}}
+
+/* ---------- Hand ---------- */
+.hand-fach{flex:0 0 auto;background:linear-gradient(165deg,#123328,#0a211b);border:1px solid var(--line);
+  border-radius:16px;padding:7px 9px;display:flex;flex-direction:column;gap:5px;min-height:0;
+  box-shadow:inset 0 1px 0 #2c6b52}
+.hand-kopf{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.hand{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:center;min-height:calc(var(--kh) + 4px)}
+.hand .stein{width:calc(var(--kh)*2);height:var(--kh);cursor:pointer;transition:transform .12s,box-shadow .15s}
+.hand .stein:hover:not(.gesperrt){transform:translateY(-3px)}
+.hand .stein.passt{box-shadow:0 0 0 2px var(--gruen),0 3px 0 rgba(0,0,0,.45),0 0 14px #4fbf7255}
+.hand .stein.wahl{box-shadow:0 0 0 3px var(--gold),0 3px 0 rgba(0,0,0,.45),0 0 16px #e8cd8e55;
+  transform:translateY(-4px)}
+.hand .stein.gesperrt{opacity:.45;cursor:default;filter:saturate(.6)}
+.hand .stein .tipp{position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:9px;
+  color:#3b2c1a;letter-spacing:1px}
+
+/* Geräteübergabe (zu zweit) */
+.gabe{position:fixed;inset:0;background:rgba(6,24,19,.95);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;z-index:30;text-align:center;padding:20px}
+.gabe b{color:var(--gold);font-size:clamp(20px,3vw,30px);letter-spacing:1px}
+.gabe span{color:var(--muted);font-size:14px;max-width:34ch}
+@media(max-height:520px){
+  :root{--k:clamp(22px,5.4vh,42px);--kh:clamp(26px,6.8vh,46px)}
+  .karte{padding:7px}
+  .notiz,.hinweis{font-size:11px}
+  .kappe b{font-size:16px}
+}
+
+/* ---- Grafikstil (zentral): Klassisch bleibt unverändert ---- */
+html[data-stil="maedchen"]{--bg:#eb7bc0;--panel:#fff6fa;--panel2:#ffeaf3;--line:#ef7aa8;--gold:#8f2450;--ink:#3a0f24;--muted:#8f2450;--gruen:#2a8f6a;--rot:#b0286a;--elfenbein:#ffffff;--elfenbein2:#ffeaf3;--elfenbein-rand:#ef7aa8;--punkt:#b0286a}
+html[data-stil="maedchen"] body{background:radial-gradient(circle 900px at 50% -6%,#ffe0ef 0%,#f7a6d4 42%,#eb7bc0 100%) fixed;color:#3a0f24}
+html[data-stil="maedchen"] .brett{background:linear-gradient(165deg,#fff6fa,#ffeaf3 62%,#ffd9ec);border-color:#ef7aa8;box-shadow:inset 0 1px 0 #ffffff}
+html[data-stil="maedchen"] .brett::before{background:radial-gradient(ellipse at 50% 120%,#ffb8d466,transparent 60%)}
+html[data-stil="maedchen"] .stand{background:#ffeaf3;border-color:#ef7aa8}
+html[data-stil="maedchen"] .kappe{background:linear-gradient(180deg,#ffe3ef,#ffd9ec);border-color:#ef7aa8}
+html[data-stil="maedchen"] .kappe small{color:#8f2450}
+html[data-stil="maedchen"] .kappe:not(:disabled){background:linear-gradient(180deg,#ffd0e4,#ffb8d4);border-color:#b06bff;color:#7a2fbf;box-shadow:none}
+html[data-stil="maedchen"] .kappe:not(:disabled) b{color:#7a2fbf}
+html[data-stil="maedchen"] .haelfte:first-child{border-right-color:#ef7aa899}
+html[data-stil="maedchen"] .punkt.an{background:radial-gradient(circle at 35% 30%,#ff9ec4,#b0286a 62%)}
+html[data-stil="maedchen"] .stein.rueck{background:linear-gradient(160deg,#ffb8d4,#ef7aa8);border-color:#b06bff}
+html[data-stil="maedchen"] .stein.rueck .haelfte:first-child{border-right-color:#b06bff}
+html[data-stil="maedchen"] .stein.rueck .punkt{background:#ffffffcc}
+html[data-stil="maedchen"] .karte{background:linear-gradient(165deg,#fff6fa,#ffeaf3);border-color:#ef7aa8}
+html[data-stil="maedchen"] .karte h3{color:#8f2450}
+html[data-stil="maedchen"] button.aktion{background:#fff6fa;border-color:#ef7aa8;color:#5b2340}
+html[data-stil="maedchen"] button.aktion.haupt{background:linear-gradient(100deg,#ff9ec4,#eb7bc0);border-color:#ef7aa8;color:#3a0f24}
+html[data-stil="maedchen"] .sp{background:#fff6fa;border-color:#ef7aa8;color:#3a0f24}
+html[data-stil="maedchen"] .sp.dran{border-color:#b06bff;background:#ffe3ef;box-shadow:none}
+html[data-stil="maedchen"] .ergebnis{background:#fff6faee;border-color:#b06bff;color:#7a2fbf;box-shadow:0 8px 24px #b52a6340}
+html[data-stil="maedchen"] .hand-fach{background:linear-gradient(165deg,#fff6fa,#ffeaf3);border-color:#ef7aa8;box-shadow:inset 0 1px 0 #ffffff}
+html[data-stil="maedchen"] .hand-kopf{color:#8f2450}
+html[data-stil="maedchen"] .hand .stein.passt{box-shadow:0 0 0 2px #b06bff,0 3px 0 rgba(181,42,99,.25),0 0 14px #b06bff55}
+html[data-stil="maedchen"] .hand .stein.wahl{box-shadow:0 0 0 3px #b06bff,0 3px 0 rgba(181,42,99,.25),0 0 16px #b06bff55}
+html[data-stil="maedchen"] .gabe{background:rgba(255,246,250,.96)}
+html[data-stil="maedchen"] .gabe b{color:#8f2450}
+html[data-stil="maedchen"] .gabe span{color:#8f2450}
+html[data-stil="maedchen"] .hinweis{color:#b0286a}
+html[data-stil="buben"]{--bg:#04070b;--panel:#111316;--panel2:#16181c;--line:#2b3540;--gold:#c8ff3d;--ink:#e6e9ec;--muted:#adb4bc;--gruen:#6dff4a;--rot:#ff5560;--elfenbein:#1b2128;--elfenbein2:#12171d;--elfenbein-rand:#3a424b;--punkt:#c9d1d9}
+html[data-stil="buben"] body{background:radial-gradient(circle 900px at 50% -6%,#1c2a3d 0%,#0c1219 46%,#04070b 100%) fixed;color:#e6e9ec}
+html[data-stil="buben"] .brett{background:linear-gradient(165deg,#141a21,#0a0d10 62%,#070a0d);border-color:#23262c;box-shadow:inset 0 1px 0 #e0242f22}
+html[data-stil="buben"] .brett::before{background:radial-gradient(ellipse at 50% 120%,#e0242f33,transparent 60%)}
+html[data-stil="buben"] .stand{background:#16181c;border-color:#23262c}
+html[data-stil="buben"] .lage.lauft{color:#6dff4a}
+html[data-stil="buben"] .kappe{background:linear-gradient(180deg,#1b1e23,#12161a);border-color:#2b3540}
+html[data-stil="buben"] .kappe small{color:#7e8892}
+html[data-stil="buben"] .kappe:not(:disabled){background:linear-gradient(180deg,#2a1418,#1b0e11);border-color:#e0242f;color:#ff8a90;box-shadow:none}
+html[data-stil="buben"] .kappe:not(:disabled) b{color:#ff8a90}
+html[data-stil="buben"] .haelfte:first-child{border-right-color:#3a424b}
+html[data-stil="buben"] .punkt.an{background:radial-gradient(circle at 35% 30%,#ffffff,#c9d1d9 62%)}
+html[data-stil="buben"] .stein.rueck{background:linear-gradient(160deg,#1b2128,#0d1116);border-color:#2b3540}
+html[data-stil="buben"] .stein.rueck .haelfte:first-child{border-right-color:#2b3540}
+html[data-stil="buben"] .stein.rueck .punkt{background:#e0242f88}
+html[data-stil="buben"] .karte{background:linear-gradient(165deg,#141a21,#0a0d10);border-color:#23262c}
+html[data-stil="buben"] .karte h3{color:#adb4bc}
+html[data-stil="buben"] button.aktion{background:#12161a;border-color:#2b3540;color:#e6e9ec}
+html[data-stil="buben"] button.aktion.haupt{background:#c8ff3d;border-color:#6dff4a;color:#0b241d}
+html[data-stil="buben"] .sp{background:#16181c;border-color:#23262c;color:#e6e9ec}
+html[data-stil="buben"] .sp.dran{border-color:#6dff4a;background:#12200f;box-shadow:none}
+html[data-stil="buben"] .ergebnis{background:#0a0d10ee;border-color:#6dff4a;color:#b6ff9e;box-shadow:0 8px 24px #000000aa}
+html[data-stil="buben"] .hand-fach{background:linear-gradient(165deg,#141a21,#0a0d10);border-color:#23262c;box-shadow:inset 0 1px 0 #e0242f22}
+html[data-stil="buben"] .hand-kopf{color:#adb4bc}
+html[data-stil="buben"] .hand .stein.passt{box-shadow:0 0 0 2px #6dff4a,0 3px 0 rgba(0,0,0,.45),0 0 14px #6dff4a55}
+html[data-stil="buben"] .hand .stein.wahl{box-shadow:0 0 0 3px #c8ff3d,0 3px 0 rgba(0,0,0,.45),0 0 16px #c8ff3d55}
+html[data-stil="buben"] .gabe{background:rgba(4,7,11,.96)}
+html[data-stil="buben"] .gabe b{color:#ff8a90}
+html[data-stil="buben"] .gabe span{color:#adb4bc}
+html[data-stil="buben"] .hinweis{color:#ff5560}
+
+/* Lesbarkeit 3: geprüft 21.11.2026 */
+body[data-stil="maedchen"] .marke small,body[data-stil="maedchen"] #lage,body[data-stil="maedchen"] .kopf small,body[data-stil="maedchen"] .kopf span,body[data-stil="maedchen"] #status,body[data-stil="maedchen"] .vs,body[data-stil="maedchen"] p.schmuck,body[data-stil="maedchen"] #message{color:#5b0f2e}
+
+/* Lesbarkeit 4: geprüft 21.11.2026 */
+html[data-stil="maedchen"] header.kopf .marke small,html[data-stil="maedchen"] header.kopf .marke b,html[data-stil="maedchen"] header.kopf #lage{color:#5b0f2e}
+html[data-stil="klassisch"] .ende-knopf small{color:#9dbba9}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="kopf">
+    <div class="marke"><small>Doppelsechs · 2 Spieler</small></div>
+    <span class="lage" id="lage">Bereit</span>
+    <div class="leiste" id="startLeiste">
+      <button class="aktion haupt" id="btnComputer">Gegen Computer</button>
+      <button class="aktion" id="btnZweit">Zu zweit</button>
+    </div>
+    <div class="leiste versteckt" id="onlineLeiste">
+      <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="aktion" id="btnBereit">Bereit</button>
+      <button class="aktion" id="btnLos">Los</button>
+    </div>
+    <div class="stand aus" id="stand"></div>
+  </header>
+
+  <section class="mitte">
+    <div class="brett">
+      <div class="ergebnis versteckt" id="ergebnis"></div>
+      <div class="kappen" id="enden">
+        <button class="kappe ende-knopf" type="button" data-seite="links" disabled>
+          <small>links</small><b>–</b>
+        </button>
+        <div class="kette" id="kette"><span class="leer">Noch kein Stein auf dem Tisch.</span></div>
+        <button class="kappe ende-knopf" type="button" data-seite="rechts" disabled>
+          <small>rechts</small><b>–</b>
+        </button>
+      </div>
+    </div>
+
+    <aside class="karte">
+      <div class="leiste"><b id="rundenTitel">Runde 1</b><span class="notiz" id="zugText"></span></div>
+      <div>
+        <h3>SPIELER</h3>
+        <div class="spieler" id="spieler"></div>
+      </div>
+      <div class="hinweis" id="hinweis"></div>
+      <div class="notiz" id="notiz"></div>
+      <div class="leiste">
+        <button class="aktion" id="btnZiehen" disabled>Ziehen</button>
+        <button class="aktion" id="btnPassen" disabled>Passen</button>
+      </div>
+      <div class="notiz" style="font-size:11px">Tipp: passenden Stein anklicken · Z ziehen · P passen</div>
+      <div class="leiste versteckt" id="ende">
+        <button class="aktion haupt" id="btnNochmal">Nächste Runde</button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="hand-fach">
+    <div class="hand-kopf"><span id="handTitel">Meine Steine</span><span id="talonText"></span></div>
+    <div class="hand" id="hand"></div>
+  </section>
+</main>
+
+<div class="gabe versteckt" id="gabe">
+  <b id="gabeText">Spieler 2 ist dran</b>
+  <span>Gib das Gerät weiter – die Hand bleibt bis dahin verdeckt.</span>
+  <button class="aktion haupt" id="btnGabe">Hand zeigen</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+/* Domino für zwei: lokal gegen den Computer oder zu zweit an einem Gerät,
+   online über den Connector. Die Regeln sind in beiden Fällen dieselben:
+   sieben Steine, an die offenen Enden anlegen, sonst ziehen, sonst passen.
+   Wer zuerst alle Steine weg hat, bekommt die Augen des Gegners als Punkte;
+   können beide nicht mehr legen, gewinnt die kleinere Augensumme. */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const HAND = 7, AUGEN = 6;
+const PUNKTE = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
+
+const $ = (id) => document.getElementById(id);
+const elKette = $("kette"), elHand = $("hand"), elSpieler = $("spieler"),
+      elHinweis = $("hinweis"), elNotiz = $("notiz"), elLage = $("lage"),
+      elZug = $("zugText"), elRunde = $("rundenTitel"), elEnde = $("ende"),
+      elEnden = $("enden"), elHandTitel = $("handTitel"), elTalon = $("talonText"),
+      elGabe = $("gabe"), elGabeText = $("gabeText"), elStand = $("stand"),
+      elErgebnis = $("ergebnis"),
+      btnZiehen = $("btnZiehen"), btnPassen = $("btnPassen");
+const melde = (text) => { elHinweis.textContent = text || ""; };
+const notiz = (text) => { elNotiz.textContent = text || ""; };
+
+const gleich = (a, b) => (a[0] === b[0] && a[1] === b[1]) || (a[0] === b[1] && a[1] === b[0]);
+const augenSumme = (hand) => hand.reduce((s, k) => s + k[0] + k[1], 0);
+const sortiert = (hand) => hand.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+function satz() {
+  const alle = [];
+  for (let a = 0; a <= AUGEN; a++) for (let b = a; b <= AUGEN; b++) alle.push([a, b]);
+  return alle;
+}
+function mischen(liste) {
+  const a = liste.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* --------------------------- gemeinsame Regeln -------------------------- */
+function neuerStand(spielerZahl) {
+  const st = mischen(satz());
+  const sp = {
+    kette: [], enden: [-1, -1], vorrat: st.slice(spielerZahl * HAND), haende: [],
+    zug: 0, punkte: new Array(spielerZahl).fill(0), runden: new Array(spielerZahl).fill(0),
+    status: "spiel", gewinner: -1, note: ""
+  };
+  for (let i = 0; i < spielerZahl; i++) sp.haende.push(sortiert(st.slice(i * HAND, (i + 1) * HAND)));
+  return sp;
+}
+
+function passtAn(sp, stein) {
+  if (!sp.kette.length) return true;
+  return sp.enden.some((e) => stein[0] === e || stein[1] === e);
+}
+function kannLegen(sp, sitz) {
+  return sp.haende[sitz].some((k) => passtAn(sp, k));
+}
+function seiten(sp, stein) {
+  if (!sp.kette.length) return ["rechts"];
+  const aus = [];
+  if (stein[0] === sp.enden[0] || stein[1] === sp.enden[0]) aus.push("links");
+  if (stein[0] === sp.enden[1] || stein[1] === sp.enden[1]) aus.push("rechts");
+  return aus;
+}
+function naechster(sp) {
+  sp.zug = (sp.zug + 1) % sp.haende.length;
+}
+function beenden(sp, gewinner, text) {
+  sp.status = "ende";
+  if (gewinner < 0) {
+    let best = -1, bestAugen = 0, gleichstand = false;
+    sp.haende.forEach((hand, i) => {
+      const a = augenSumme(hand);
+      if (best < 0 || a < bestAugen) { best = i; bestAugen = a; gleichstand = false; }
+      else if (a === bestAugen) gleichstand = true;
+    });
+    if (gleichstand) { sp.gewinner = -1; sp.note = text + " Es bleibt unentschieden."; return; }
+    gewinner = best;
+  }
+  const punkte = sp.haende.reduce((s, hand, i) => (i === gewinner ? s : s + augenSumme(hand)), 0);
+  sp.punkte[gewinner] += punkte;
+  sp.runden[gewinner] += 1;
+  sp.gewinner = gewinner;
+  sp.note = text + " " + punkte + " Punkte.";
+}
+
+// Stein anlegen; liefert einen Fehlertext oder "".
+function legenRegel(sp, sitz, stein, seite) {
+  if (sp.status !== "spiel") return "Gerade läuft keine Runde.";
+  if (sitz !== sp.zug) return "Du bist nicht an der Reihe.";
+  const i = sp.haende[sitz].findIndex((k) => gleich(k, stein));
+  if (i < 0) return "Dieser Stein ist nicht auf deiner Hand.";
+  const moeglich = seiten(sp, stein);
+  if (!moeglich.length) return "Dieser Stein passt an keine Seite.";
+  if (seite && !moeglich.includes(seite)) return "Diese Seite passt nicht.";
+  if (!seite) seite = moeglich.includes("rechts") ? "rechts" : "links";
+  const hand = sp.haende[sitz];
+  hand.splice(i, 1);
+  if (!sp.kette.length) {
+    sp.kette.push([stein[0], stein[1]]);
+    sp.enden = [stein[0], stein[1]];
+  } else if (seite === "links") {
+    const neu = stein[1] === sp.enden[0] ? [stein[0], stein[1]] : [stein[1], stein[0]];
+    sp.kette.unshift(neu);
+    sp.enden[0] = neu[0];
+  } else {
+    const neu = stein[0] === sp.enden[1] ? [stein[0], stein[1]] : [stein[1], stein[0]];
+    sp.kette.push(neu);
+    sp.enden[1] = neu[1];
+  }
+  if (!hand.length) { beenden(sp, sitz, "Alle Steine weg –"); return ""; }
+  naechster(sp);
+  return "";
+}
+
+function ziehenRegel(sp, sitz) {
+  if (sp.status !== "spiel") return "Gerade läuft keine Runde.";
+  if (sitz !== sp.zug) return "Du bist nicht an der Reihe.";
+  if (kannLegen(sp, sitz)) return "Du kannst noch legen.";
+  if (!sp.vorrat.length) return "Der Vorrat ist leer – bitte passen.";
+  const stein = sp.vorrat.shift();
+  sp.haende[sitz] = sortiert(sp.haende[sitz].concat([stein]));
+  if (!passtAn(sp, stein)) { sp.note = "Der Stein passt nicht – der Zug geht weiter."; naechster(sp); }
+  else sp.note = "Der Stein passt.";
+  return "";
+}
+
+function passenRegel(sp, sitz) {
+  if (sp.status !== "spiel") return "Gerade läuft keine Runde.";
+  if (sitz !== sp.zug) return "Du bist nicht an der Reihe.";
+  if (kannLegen(sp, sitz)) return "Du kannst noch legen.";
+  if (sp.vorrat.length) return "Du musst erst ziehen.";
+  sp.note = "Gepasst.";
+  naechster(sp);
+  if (!sp.haende.some((_, i) => kannLegen(sp, i))) beenden(sp, -1, "Niemand kann mehr legen.");
+  return "";
+}
+
+/* -------------------------------- lokal -------------------------------- */
+let lokal = null;   // { sp, modus, handOffen, runde }
+let wahl = null;    // gewählter Stein, wenn beide Seiten passen
+
+const lokalNamen = () => lokal.modus === "computer" ? ["Du", "Computer"] : ["Spieler 1", "Spieler 2"];
+
+function lokalStarten(modus) {
+  // Punkte und Rundensiege bleiben beim Weiterspielen im selben Modus stehen.
+  const alt = lokal && lokal.modus === modus ? lokal : null;
+  const runde = alt ? alt.runde + 1 : 1;
+  const sp = neuerStand(2);
+  if (alt) { sp.punkte = alt.sp.punkte.slice(); sp.runden = alt.sp.runden.slice(); }
+  lokal = { sp, modus, handOffen: true, runde, ergebnisRunde: 0 };
+  wahl = null;
+  melde("");
+  lokal.sp.note = modus === "computer" ? "Du fängst an." : "Spieler 1 fängt an.";
+  zeichne();
+  if (modus === "computer") computerZug();
+}
+
+function endePruefen() {
+  const sp = lokal && lokal.sp;
+  if (!sp || sp.status !== "ende") return;
+  const wer = lokalNamen();
+  if (sp.gewinner >= 0) sp.note = wer[sp.gewinner] + " gewinnt die Runde mit " + sp.punkte[sp.gewinner] + " Punkten.";
+  else sp.note = "Runde ohne Sieger.";
+  // Ein Spruch je Runde; im Spiel gegen den Computer ist dessen Sieg Pech.
+  if (lokal.ergebnisRunde !== lokal.runde) {
+    lokal.ergebnisRunde = lokal.runde;
+    if (window.TGErgebnis) {
+      if (sp.gewinner < 0) TGErgebnis.lob();
+      else if (lokal.modus === "computer" && sp.gewinner === 1) TGErgebnis.verloren();
+      else TGErgebnis.gewonnen();
+    }
+  }
+}
+
+function lokalSpielen(stein, seite) {
+  const sp = lokal.sp;
+  const fehler = legenRegel(sp, sp.zug, stein, seite);
+  if (fehler) { melde(fehler); return; }
+  wahl = null;
+  melde("");
+  endePruefen();
+  if (lokal.modus === "zweit" && sp.status === "spiel") lokal.handOffen = false;
+  zeichne();
+  if (lokal.modus === "computer") computerZug();
+}
+
+function lokalZiehen() {
+  const fehler = ziehenRegel(lokal.sp, lokal.sp.zug);
+  if (fehler) { melde(fehler); return; }
+  melde("");
+  endePruefen();
+  zeichne();
+  if (lokal.modus === "computer") computerZug();
+}
+
+function lokalPassen() {
+  const fehler = passenRegel(lokal.sp, lokal.sp.zug);
+  if (fehler) { melde(fehler); return; }
+  melde("");
+  endePruefen();
+  zeichne();
+  if (lokal.modus === "computer" && lokal.sp.status === "spiel") computerZug();
+}
+
+// Der Computer legt den stärksten passenden Stein, sonst zieht oder passt er.
+function computerZug() {
+  if (!lokal || lokal.modus !== "computer") return;
+  const sp = lokal.sp;
+  if (sp.status !== "spiel" || sp.zug !== 1) return;
+  const moeglich = sp.haende[1].filter((k) => passtAn(sp, k));
+  if (moeglich.length) {
+    setTimeout(() => {
+      if (!lokal || lokal.sp !== sp || sp.status !== "spiel" || sp.zug !== 1) return;
+      const stein = moeglich.sort((a, b) => (b[0] + b[1]) - (a[0] + a[1]))[0];
+      const da = seiten(sp, stein);
+      lokalSpielen(stein, da.length === 1 ? da[0] : "");
+    }, 520);
+    return;
+  }
+  if (sp.vorrat.length) {
+    setTimeout(() => {
+      if (!lokal || lokal.sp !== sp || sp.status !== "spiel" || sp.zug !== 1) return;
+      const fehler = ziehenRegel(sp, 1);
+      if (fehler) { melde(fehler); return; }
+      endePruefen();
+      zeichne();
+      computerZug();
+    }, 480);
+    return;
+  }
+  setTimeout(() => {
+    if (!lokal || lokal.sp !== sp || sp.status !== "spiel" || sp.zug !== 1) return;
+    const fehler = passenRegel(sp, 1);
+    if (fehler) { melde(fehler); return; }
+    endePruefen();
+    zeichne();
+  }, 480);
+}
+
+/* -------------------------------- online ------------------------------- */
+let onlineGame = null, onlineBusy = false, onlineErgebnisRunde = -1;
+
+async function api(aktion, koerper) {
+  const url = "/api/domino?room=" + encodeURIComponent(ROOM) +
+    (aktion ? "&action=" + encodeURIComponent(aktion) : "&id=" + encodeURIComponent(MYID));
+  const r = await fetch(url, aktion ? {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ id: MYID }, koerper || {}))
+  } : { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.text()).trim() || "Aktion fehlgeschlagen.");
+  return r.json();
+}
+
+async function hole() {
+  if (!ONLINE || onlineBusy) return;
+  onlineBusy = true;
+  try {
+    onlineGame = (await api(null)).game || null;
+    zeichne();
+  } catch (e) {
+    elLage.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+async function schicke(aktion, koerper) {
+  // Läuft gerade eine Abfrage, wird der Klick nicht verworfen, sondern
+  // nachgeholt, sobald der Platz frei ist.
+  for (let i = 0; i < 60 && onlineBusy; i++) await new Promise((r) => setTimeout(r, 50));
+  if (onlineBusy) { melde("Der Server antwortet nicht – bitte noch einmal tippen."); return false; }
+  onlineBusy = true;
+  try {
+    onlineGame = (await api(aktion, koerper)).game || null;
+    wahl = null;
+    melde("");
+    zeichne();
+    return true;
+  } catch (e) {
+    melde(e.message);
+    return false;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+/* ------------------------------ Zeichnen ------------------------------- */
+function halbHTML(n) {
+  let s = "<span class=\"haelfte\">";
+  for (let i = 0; i < 9; i++) s += "<i class=\"punkt" + (PUNKTE[n].includes(i) ? " an" : "") + "\"></i>";
+  return s + "</span>";
+}
+function steinEl(stein, klasse) {
+  const d = document.createElement("span");
+  d.className = "stein" + (klasse ? " " + klasse : "");
+  d.innerHTML = halbHTML(stein[0]) + halbHTML(stein[1]);
+  d.dataset.stein = stein[0] + "-" + stein[1];
+  return d;
+}
+// Verdeckter Stein für die Gegnerhand
+function rueckEl() {
+  return steinEl([0, 0], "rueck");
+}
+
+function zeichneKette(kette) {
+  elKette.innerHTML = "";
+  if (!kette || !kette.length) {
+    const l = document.createElement("span");
+    l.className = "leer";
+    l.textContent = "Noch kein Stein auf dem Tisch.";
+    elKette.appendChild(l);
+    return;
+  }
+  for (const stein of kette) elKette.appendChild(steinEl(stein));
+}
+
+/* Bedienung über die beiden Endkappen: sie zeigen den offenen Wert und werden
+   nur dann anklickbar, wenn der gewählte Stein an dieses Ende passt. */
+function kappenSetzen(enden, moeglich) {
+  elEnden.querySelectorAll(".ende-knopf").forEach((b) => {
+    const seite = b.dataset.seite;
+    const wert = enden && enden[0] >= 0 ? (seite === "links" ? enden[0] : enden[1]) : -1;
+    b.querySelector("b").textContent = wert >= 0 ? String(wert) : "–";
+    b.disabled = !(wahl && moeglich && moeglich.includes(seite));
+  });
+}
+
+function zeichneHand(hand, darf, passt, text) {
+  elHand.innerHTML = "";
+  if (!hand || !hand.length) {
+    const hinweis = document.createElement("span");
+    hinweis.className = "leer";
+    hinweis.textContent = text || "Keine Steine auf der Hand.";
+    elHand.appendChild(hinweis);
+    return;
+  }
+  for (const stein of hand) {
+    const klasse = !darf ? "gesperrt" : (wahl && gleich(wahl, stein) ? "wahl" : (passt(stein) ? "passt" : ""));
+    const d = steinEl(stein, klasse);
+    if (klasse === "wahl") {
+      const t = document.createElement("span");
+      t.className = "tipp";
+      t.textContent = "◀ oder ▶";
+      d.appendChild(t);
+    }
+    elHand.appendChild(d);
+  }
+}
+
+function spielerZeile(name, punkte, steine, dran, ich, hand) {
+  const p = document.createElement("p");
+  p.className = "sp" + (dran ? " dran" : "");
+  const n = document.createElement("span");
+  n.textContent = name + (ich ? " (du)" : "");
+  const b = document.createElement("b");
+  b.textContent = punkte + " Punkte · " + steine + (steine === 1 ? " Stein" : " Steine");
+  p.append(n, b);
+  if (hand && hand.length && !ich) {
+    // Verdeckte Steine des Gegners als kleine Rückseiten andeuten
+    const rueck = document.createElement("span");
+    rueck.style.cssText = "display:flex;gap:2px";
+    for (let i = 0; i < Math.min(hand.length, 7); i++) {
+      const r = document.createElement("i");
+      r.style.cssText = "width:7px;height:12px;border-radius:2px;background:#2b5f49;display:block";
+      rueck.appendChild(r);
+    }
+    p.appendChild(rueck);
+  }
+  return p;
+}
+
+function standZeigen(wer, punkte, runden) {
+  if (!punkte || !punkte.length) { elStand.classList.add("aus"); return; }
+  elStand.classList.remove("aus");
+  elStand.textContent = wer.map((n, i) => n + " " + punkte[i] + (runden ? " (" + runden[i] + " Siege)" : ""))
+    .join("  ·  ");
+}
+
+function ergebnisZeigen(text, gut) {
+  if (!text) { elErgebnis.classList.add("versteckt"); elErgebnis.textContent = ""; return; }
+  elErgebnis.textContent = text;
+  elErgebnis.style.borderColor = gut ? "var(--gold)" : "#a8382e";
+  elErgebnis.style.color = gut ? "var(--gold)" : "#ffd9d2";
+  elErgebnis.classList.remove("versteckt");
+}
+
+function zeichneLokal() {
+  const sp = lokal.sp, wer = lokalNamen();
+  const sichtbar = lokal.modus === "computer" || lokal.handOffen;
+  const sitz = lokal.modus === "computer" ? 0 : sp.zug;
+  const darf = sp.status === "spiel" && sichtbar && sp.zug === sitz;
+  elRunde.textContent = "Runde " + lokal.runde;
+  elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
+  elLage.className = "lage" + (sp.status === "spiel" ? " lauft" : "");
+  elZug.textContent = sp.status === "spiel"
+    ? (lokal.modus === "computer" && sp.zug === 0 ? "· du bist dran" : "· " + wer[sp.zug] + " ist dran")
+    : "";
+  zeichneKette(sp.kette);
+  kappenSetzen(sp.enden, wahl ? seiten(sp, wahl) : null);
+  elSpieler.innerHTML = "";
+  wer.forEach((name, i) => {
+    elSpieler.appendChild(spielerZeile(name, sp.punkte[i], sp.haende[i].length,
+      sp.status === "spiel" && sp.zug === i, lokal.modus === "computer" && i === 0, sp.haende[i]));
+  });
+  standZeigen(wer, sp.punkte, sp.runden);
+  notiz(sp.note);
+  elTalon.textContent = "Vorrat: " + sp.vorrat.length;
+  elHandTitel.textContent = lokal.modus === "computer"
+    ? "Deine Steine" + (sp.zug === 1 && sp.status === "spiel" ? " – der Computer ist dran" : "")
+    : "Steine von " + wer[sp.zug];
+  zeichneHand(sichtbar ? sp.haende[lokal.modus === "computer" ? 0 : sp.zug] : [], darf, (k) => passtAn(sp, k),
+    "Hand verdeckt – Gerät weitergeben.");
+  const keinStein = darf && !kannLegen(sp, sitz);
+  btnZiehen.disabled = !(keinStein && sp.vorrat.length > 0);
+  btnPassen.disabled = !(keinStein && sp.vorrat.length === 0);
+  btnZiehen.textContent = "Ziehen (" + sp.vorrat.length + ")";
+  elEnde.classList.toggle("versteckt", sp.status !== "ende");
+  if (sp.status === "ende") {
+    const gut = sp.gewinner === sitz;
+    ergebnisZeigen(sp.gewinner >= 0 ? wer[sp.gewinner] + " gewinnt" : "Unentschieden", gut);
+  } else ergebnisZeigen("");
+  if (lokal.modus === "zweit" && sp.status === "spiel" && !lokal.handOffen) {
+    elGabeText.textContent = wer[sp.zug] + " ist dran";
+    elGabe.classList.remove("versteckt");
+  } else {
+    elGabe.classList.add("versteckt");
+  }
+}
+
+// Darf ich online gerade legen?
+function onlinePasst(stein) {
+  const g = onlineGame;
+  if (!g || !g.kette.length) return true;
+  return g.enden.some((e) => stein[0] === e || stein[1] === e);
+}
+function onlineSeiten(stein) {
+  const g = onlineGame;
+  if (!g) return [];
+  if (!g.kette.length) return ["rechts"];
+  const aus = [];
+  if (stein[0] === g.enden[0] || stein[1] === g.enden[0]) aus.push("links");
+  if (stein[0] === g.enden[1] || stein[1] === g.enden[1]) aus.push("rechts");
+  return aus;
+}
+
+function zeichneOnline() {
+  const g = onlineGame;
+  $("startLeiste").classList.add("versteckt");
+  $("onlineLeiste").classList.remove("versteckt");
+  if (!g) {
+    elLage.textContent = "Keine Runde";
+    elRunde.textContent = "—";
+    zeichneKette([]);
+    elHand.innerHTML = "";
+    elSpieler.innerHTML = "";
+    notiz("Eröffne eine Runde – Mitspieler treten im Raum bei.");
+    elEnde.classList.add("versteckt");
+    kappenSetzen(null, null);
+    elTalon.textContent = "";
+    elStand.classList.add("aus");
+    ergebnisZeigen("");
+    btnZiehen.disabled = true;
+    btnPassen.disabled = true;
+    $("btnErstellen").classList.remove("versteckt");
+    $("btnBereit").classList.add("versteckt");
+    $("btnLos").classList.add("versteckt");
+    return;
+  }
+  const ich = (g.spieler || []).find((s) => s.id === MYID) || null;
+  const dran = g.status === "spiel" ? g.spieler[g.zug] : null;
+  const meinZug = !!(dran && dran.id === MYID && g.status === "spiel");
+  const hand = (ich && ich.hand) || [];
+  elRunde.textContent = "Runde " + g.runde;
+  elLage.textContent = g.status === "invited" ? "Warte auf Mitspieler"
+    : g.status === "spiel" ? "Läuft" : "Runde vorbei";
+  elLage.className = "lage" + (g.status === "spiel" ? " lauft" : "");
+  elZug.textContent = dran ? "· " + (dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
+  zeichneKette(g.kette);
+  kappenSetzen(g.enden, wahl ? onlineSeiten(wahl) : null);
+  elSpieler.innerHTML = "";
+  for (const s of g.spieler || []) {
+    elSpieler.appendChild(spielerZeile(s.name, s.punkte, s.anzahl, !!(dran && dran.id === s.id),
+      s.id === MYID, null));
+  }
+  standZeigen((g.spieler || []).map((s) => s.name), (g.spieler || []).map((s) => s.punkte),
+    (g.spieler || []).map((s) => s.runden || 0));
+  notiz(g.note);
+  elTalon.textContent = "Vorrat: " + g.talon;
+  elHandTitel.textContent = "Deine Steine";
+  zeichneHand(hand, meinZug, onlinePasst,
+    g.status === "invited" ? "Die Steine kommen, sobald es losgeht." : "Keine Steine auf der Hand.");
+  const keinStein = meinZug && !hand.some(onlinePasst);
+  btnZiehen.disabled = !(keinStein && g.talon > 0);
+  btnPassen.disabled = !(keinStein && g.talon === 0);
+  btnZiehen.textContent = "Ziehen (" + g.talon + ")";
+  elEnde.classList.toggle("versteckt", g.status !== "ende");
+  // Rundenende aus dem Serverstand: einmal je Runde melden.
+  if (g.status === "ende" && onlineErgebnisRunde !== g.runde) {
+    onlineErgebnisRunde = g.runde;
+    if (window.TGErgebnis) {
+      if (!(g.gewinner >= 0)) TGErgebnis.lob();
+      else if (g.spieler[g.gewinner] && g.spieler[g.gewinner].id === MYID) TGErgebnis.gewonnen();
+      else TGErgebnis.verloren();
+    }
+  }
+  if (g.status === "ende" && g.gewinner >= 0) {
+    ergebnisZeigen(g.spieler[g.gewinner].name + " gewinnt", g.spieler[g.gewinner].id === MYID);
+  } else ergebnisZeigen("");
+  $("btnErstellen").classList.toggle("versteckt", true);
+  $("btnBereit").classList.toggle("versteckt", g.status !== "invited");
+  $("btnLos").classList.toggle("versteckt", g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+function zeichne() {
+  if (ONLINE) zeichneOnline();
+  else if (lokal) zeichneLokal();
+  else {
+    zeichneKette([]);
+    elHand.innerHTML = "";
+    kappenSetzen(null, null);
+  }
+}
+
+/* ------------------------------ Bedienung ------------------------------ */
+function spielen(stein, seite) {
+  if (ONLINE) {
+    wahl = null;
+    schicke("legen", { stein, seite: seite || "" });
+    return;
+  }
+  lokalSpielen(stein, seite);
+}
+
+elHand.addEventListener("click", (e) => {
+  const d = e.target.closest(".stein");
+  if (!d || d.classList.contains("gesperrt")) return;
+  const [a, b] = d.dataset.stein.split("-").map(Number);
+  const stein = [a, b];
+  const moeglich = ONLINE ? onlineSeiten(stein) : seiten(lokal.sp, stein);
+  if (!moeglich.length) { melde("Dieser Stein passt an keine Seite."); return; }
+  if (moeglich.length > 1) {
+    wahl = gleich(wahl || [-1, -1], stein) ? null : stein;
+    melde(wahl ? "Beide Enden passen – links oder rechts wählen." : "");
+    zeichne();
+    return;
+  }
+  spielen(stein, moeglich[0]);
+});
+
+elEnden.addEventListener("click", (e) => {
+  const b = e.target.closest(".ende-knopf");
+  if (!b || b.disabled || !wahl) return;
+  const stein = wahl;
+  spielen(stein, b.dataset.seite);
+});
+
+btnZiehen.addEventListener("click", () => {
+  if (ONLINE) schicke("ziehen"); else lokalZiehen();
+});
+btnPassen.addEventListener("click", () => {
+  if (ONLINE) schicke("passen"); else lokalPassen();
+});
+$("btnComputer").addEventListener("click", () => lokalStarten("computer"));
+$("btnZweit").addEventListener("click", () => lokalStarten("zweit"));
+$("btnNochmal").addEventListener("click", () => {
+  if (ONLINE) schicke("naechste");
+  else if (lokal) lokalStarten(lokal.modus);
+});
+$("btnGabe").addEventListener("click", () => {
+  if (!lokal) return;
+  lokal.handOffen = true;
+  elGabe.classList.add("versteckt");
+  zeichne();
+});
+$("btnErstellen").addEventListener("click", () => schicke("create"));
+$("btnBereit").addEventListener("click", () => schicke("ready"));
+$("btnLos").addEventListener("click", () => schicke("start"));
+
+// Tastatur: Z ziehen, P passen, Escape hebt die Seitenwahl auf.
+window.addEventListener("keydown", (e) => {
+  if (e.key === "z" || e.key === "Z") { if (!btnZiehen.disabled) btnZiehen.click(); }
+  if (e.key === "p" || e.key === "P") { if (!btnPassen.disabled) btnPassen.click(); }
+  if (e.key === "Escape" && wahl) { wahl = null; melde(""); zeichne(); }
+});
+
+if (ONLINE) {
+  // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+  // Hintergrund und meldet sich nur als "nicht aktiv".
+  WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
+  setInterval(hole, 1200);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
+} else {
+  zeichne();
+  notiz("Wähle oben: gegen den Computer oder zu zweit an diesem Gerät.");
+}
+})();
+</script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
+</body>
+</html>
