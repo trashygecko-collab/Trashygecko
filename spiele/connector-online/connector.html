@@ -4650,7 +4650,7 @@ async function botStarten(spiel,stufe){
  try{
   const r=await fetch("/api/"+api+"?room="+encodeURIComponent(activeRoom)+"&action=bot",{
    method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({id:sessionID,stufe,spiel})
+   body:JSON.stringify(Object.assign({id:sessionID,stufe,spiel}, spielParameter(spiel,true)))
   });
   if(!r.ok){tttStatus((await r.text()).trim()||"Der Bot konnte nicht Platz nehmen.");return;}
   const def=SUPPORTED_GAMES.find(g=>g.id===spiel);
@@ -4673,6 +4673,18 @@ async function ladeAngebote(daten){
  }catch(e){}
 }
 
+// Die Spielparameter, die der Connector beim Start mitschickt: eine Stelle für
+// Angebot und Bot-Partie. Die Bot-Schwierigkeit (stufe) kommt getrennt dazu.
+// Die Sitzzahl gilt nur für Einladungen; gegen den Computer ist es ein Duell.
+function spielParameter(spielId,fuerBot){
+ const p={};
+ if(spielId==="paare")Object.assign(p,{pairs:selectedPairs,kind:selectedKind});
+ if(spielId==="menschaerger"&&!fuerBot)Object.assign(p,{maxPlayers:selectedSeats});
+ if(spielId==="halma")Object.assign(p,{variante:selectedHalmaVariante,anzahl:selectedHalmaAnzahl});
+ if(spielId==="shipcrew")Object.assign(p,{runden:selectedRunden});
+ return p;
+}
+
 // Bieten, beitreten, ablehnen oder zurückziehen. tischId nennt den Tisch;
 // zielId macht aus dem Bieten eine direkte Einladung an genau diesen Spieler.
 async function angebotAktion(action,spiel,tischId,zielId){
@@ -4684,10 +4696,7 @@ async function angebotAktion(action,spiel,tischId,zielId){
    body:JSON.stringify(Object.assign({id:sessionID,action,game:spielId},
     tischId?{angebotId:tischId}:{},
     zielId?{zielId}:{},
-    spielId==="paare"?{pairs:selectedPairs,kind:selectedKind}:{},
-    spielId==="menschaerger"?{maxPlayers:selectedSeats}:{},
-    spielId==="halma"?{variante:selectedHalmaVariante,anzahl:selectedHalmaAnzahl}:{},
-    spielId==="shipcrew"?{runden:selectedRunden}:{}))
+    spielParameter(spielId)))
   });
   if(!r.ok){
    tttStatus((await r.text()).trim()||"Das hat nicht geklappt.");

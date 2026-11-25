@@ -162,7 +162,8 @@ func paareHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		kind := strings.ToLower(strings.TrimSpace(input.Kind))
 		if !paareKindValid(kind) {
-			kind = paareKinds[int(time.Now().UnixNano())%len(paareKinds)]
+			// Ohne Angabe gilt der festgelegte Standard: Zahlen.
+			kind = "numbers"
 		}
 		stufe := botStufe(input.Stufe)
 		game := &PaareGame{

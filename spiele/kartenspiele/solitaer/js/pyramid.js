@@ -298,6 +298,26 @@
       pruefeEnde();
     },
 
+    autoMoeglich: function () { return autoPlan() !== null; },
+    autoVollenden: function () {
+      var plan = autoPlan();
+      if (!plan) return;
+      plan.forEach(function (zug) {
+        if (zug.typ === "koenig") raeumen(zug.i, null);
+        else MOD.ablegen({ art: "pyr", i: zug.i }, zug.partner === "waste" ? "waste" : "karte:" + zug.partner);
+      });
+    },
+
+    doppelklick: function (was) {
+      if (!z || !was) return false;
+      var karte = was.art === "pyr" ? z.pyr[was.i] : (was.art === "waste" ? z.waste[z.waste.length - 1] : null);
+      if (!karte || karte.id !== was.id) return false;
+      if (was.art === "pyr" && karte.r === 13 && istFrei(was.i)) { raeumen(was.i, null); return true; }
+      var ziele = MOD.zieleFuer(was);
+      if (ziele.length !== 1) return false;
+      return MOD.ablegen(was, ziele[0]);
+    },
+
     tipp: function () {
       if (!z) return "";
       var frei = [];
@@ -329,6 +349,50 @@
       return "Kein Paar mehr möglich – nimm einen Zug zurück.";
     }
   };
+
+  function autoPlan() {
+    if (!z || z.sieg || z.stock.length) return null;
+    var rest = z.pyr.reduce(function (n, k) { return n + (k ? 1 : 0); }, 0);
+    if (rest > 20) return null;
+    var mask = 0;
+    z.pyr.forEach(function (k, i) { if (k) mask |= (1 << i); });
+    var memo = new Map(), visited = 0, limit = 60000;
+    function suche(m, wi) {
+      if (!m) return [];
+      var key = m + ":" + wi;
+      if (memo.has(key)) return null;
+      if (++visited > limit) return null;
+      var frei = [];
+      for (var i = 0; i < 28; i++) {
+        if (!(m & (1 << i))) continue;
+        var r = 0, p = i;
+        while (p >= r + 1) { p -= r + 1; r++; }
+        if (r === 6) frei.push(i);
+        else {
+          var unten = zeileIndex(r + 1) + p;
+          if (!(m & (1 << unten)) && !(m & (1 << (unten + 1)))) frei.push(i);
+        }
+      }
+      var wk = wi ? z.waste[wi - 1] : null;
+      for (var a = 0; a < frei.length; a++) {
+        var ia = frei[a], ka = z.pyr[ia], next;
+        if (ka.r === 13) { next = suche(m & ~(1 << ia), wi); if (next) return [{ typ: "koenig", i: ia }].concat(next); }
+        if (wk && ka.r + wk.r === 13) {
+          next = suche(m & ~(1 << ia), wi - 1);
+          if (next) return [{ typ: "paar", i: ia, partner: "waste" }].concat(next);
+        }
+        for (var b = a + 1; b < frei.length; b++) {
+          var ib = frei[b];
+          if (ka.r + z.pyr[ib].r !== 13) continue;
+          next = suche(m & ~(1 << ia) & ~(1 << ib), wi);
+          if (next) return [{ typ: "paar", i: ia, partner: ib }].concat(next);
+        }
+      }
+      memo.set(key, true);
+      return null;
+    }
+    return suche(mask, z.waste.length);
+  }
 
   /* Reihen: 1, 2, 3 … 7 Karten; Karte r/p wird von r+1/p und r+1/p+1 bedeckt. */
   function zeileIndex(r) { return r * (r + 1) / 2; }

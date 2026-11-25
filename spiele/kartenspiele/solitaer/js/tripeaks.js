@@ -268,6 +268,17 @@
       pruefeEnde();
     },
 
+    autoMoeglich: function () { return autoPlan() !== null; },
+    autoVollenden: function () {
+      var plan = autoPlan();
+      if (plan) plan.forEach(function (i) { MOD.spielen(i); });
+    },
+
+    doppelklick: function (was) {
+      if (!z || !was || was.art !== "tp" || !z.t[was.i] || z.t[was.i].id !== was.id) return false;
+      return MOD.spielen(was.i);
+    },
+
     tipp: function () {
       if (!z) return "";
       var w = ablage();
@@ -283,6 +294,38 @@
       return "Kein Zug mehr möglich – nimm einen Zug zurück.";
     }
   };
+
+  function autoPlan() {
+    if (!z || z.sieg || z.stock.length || z.t.some(function (k) { return k && !k.offen; })) return null;
+    var rest = z.t.reduce(function (n, k) { return n + (k ? 1 : 0); }, 0);
+    if (rest > 20) return null;
+    var mask = 0;
+    z.t.forEach(function (k, i) { if (k) mask |= (1 << i); });
+    var memo = new Map(), visited = 0, limit = 80000;
+    function suche(m, rang) {
+      if (!m) return [];
+      var key = m + ":" + rang;
+      if (memo.has(key)) return null;
+      if (++visited > limit) return null;
+      for (var i = 0; i < GESAMT; i++) {
+        if (!(m & (1 << i))) continue;
+        var r = reihe(i), frei = r.r === 3;
+        if (!frei) {
+          var unten = start(r.r + 1), paar = UEBER[r.r][r.p];
+          frei = !(m & (1 << (unten + paar[0]))) && !(m & (1 << (unten + paar[1])));
+        }
+        if (!frei) continue;
+        var k = z.t[i];
+        if (Math.abs(k.r - rang) !== 1 && !((k.r === 1 && rang === 13) || (k.r === 13 && rang === 1))) continue;
+        var next = suche(m & ~(1 << i), k.r);
+        if (next) return [i].concat(next);
+      }
+      memo.set(key, true);
+      return null;
+    }
+    var top = ablage();
+    return top ? suche(mask, top.r) : null;
+  }
 
   function ablage() { return z.waste[z.waste.length - 1]; }
 

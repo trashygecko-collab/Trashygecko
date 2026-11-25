@@ -234,6 +234,30 @@
       TG.Shell.auswahl = null; ziele = []; MOD.zeichne();
     },
 
+    doppelklick: function (was) {
+      var ks = quelle(was);
+      if (!ks || ks.length !== 1 || ks[0].id !== was.id || !ablagePasst(ks[0])) return false;
+      return MOD.ablegen(was, "f:" + ks[0].f);
+    },
+
+    autoMoeglich: function () { return autoPlan() !== null; },
+    autoVollenden: function () {
+      if (!autoPlan()) return;
+      var weiter = true;
+      while (weiter) {
+        weiter = false;
+        for (var i = 0; i < 4 && !weiter; i++) {
+          var c = z.zellen[i];
+          if (c && ablagePasst(c)) weiter = MOD.ablegen({ art: "zelle", i: i, index: 0 }, "f:" + c.f);
+        }
+        for (var j = 0; j < 8 && !weiter; j++) {
+          var s = z.t[j]; if (!s.length) continue;
+          var k = s[s.length - 1];
+          if (ablagePasst(k)) weiter = MOD.ablegen({ art: "t", i: j, index: s.length - 1 }, "f:" + k.f);
+        }
+      }
+    },
+
     tipp: function () {
       if (!z) return "";
       var i, j;
@@ -274,6 +298,35 @@
       return "Kein Zug möglich – nimm einen Zug zurück.";
     }
   };
+
+  function autoPlan() {
+    if (!z) return null;
+    var spalten = z.t.map(function (s) { return s.slice(); });
+    var zellen = z.zellen.slice();
+    var rang = z.f.map(function (s) { return s.length; });
+    var plan = [], fortschritt = true;
+    while (fortschritt) {
+      fortschritt = false;
+      for (var i = 0; i < zellen.length; i++) {
+        var c = zellen[i];
+        if (c && c.r === rang[c.f] + 1) {
+          plan.push({ was: { art: "zelle", i: i, index: 0 }, f: c.f });
+          zellen[i] = null; rang[c.f]++; fortschritt = true;
+        }
+      }
+      for (var j = 0; j < spalten.length; j++) {
+        var s = spalten[j]; if (!s.length) continue;
+        var k = s[s.length - 1];
+        if (k.r === rang[k.f] + 1) {
+          plan.push({ was: { art: "t", i: j, index: s.length - 1 }, f: k.f });
+          s.pop(); rang[k.f]++; fortschritt = true;
+        }
+      }
+    }
+    return zellen.every(function (c) { return !c; }) && spalten.every(function (s) { return !s.length; }) ? plan : null;
+  }
+
+
 
   /* Höchstzahl gleichzeitig bewegbarer Karten für Zielspalte zielIndex.
      Eine leere Zielspalte zählt nicht als Zwischenlager. */

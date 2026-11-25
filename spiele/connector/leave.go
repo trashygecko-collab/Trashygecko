@@ -324,7 +324,7 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Chicago = nil }),
-		sitz("Schiffe versenken · Ship Captain Crew",
+		sitz("Ship Captain Crew",
 			func(id, n string) (bool, bool, int) {
 				if g := r.ShipCrew; g != nil {
 					return scRaus(g, id, n)

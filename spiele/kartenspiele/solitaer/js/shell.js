@@ -23,7 +23,8 @@
     sekunden: 0,
     uhr: null,
     laeuft: false,
-    auswahl: null
+    auswahl: null,
+    autoInProgress: false
   };
 
   var MAX_VERLAUF = 200;
@@ -220,6 +221,7 @@
     $("hudExtra").textContent = info.extra || "";
     $("hudExtraBox").hidden = !info.extra;
     $("btnUndo").disabled = !Shell.verlauf.length;
+    $("btnAuto").disabled = Shell.autoInProgress || !(Shell.spiel && Shell.spiel.autoMoeglich && Shell.spiel.autoMoeglich());
   };
 
   Shell.hinweis = function (text, warnung) {
@@ -251,6 +253,14 @@
     var r = Shell.spiel.tipp();
     Shell.hinweis(r || "");
     Shell.stand(Shell.spiel.info());
+  };
+
+  Shell.autoBeenden = function () {
+    if (!Shell.spiel || !Shell.spiel.autoMoeglich || !Shell.spiel.autoMoeglich() || !Shell.spiel.autoVollenden) return;
+    Shell.autoInProgress = true;
+    Shell.stand(Shell.spiel.info());
+    try { Shell.spiel.autoVollenden(); }
+    finally { Shell.autoInProgress = false; Shell.stand(Shell.spiel.info()); }
   };
 
   /* ------------------------------------------------------------ Auswahl */
@@ -509,8 +519,41 @@
       if (ev.target === $("dialogSchleier")) dialogZu();
     });
 
+    $("btnAuto").addEventListener("click", Shell.autoBeenden);
     var brett = $("brett");
-    brett.addEventListener("click", brettKlick);
+    var einzelklickTimer = null;
+    var doppelklickSchonAusgefuehrt = false;
+    function doppelklick(ev) {
+      var karte = ev.target.closest("[data-art]");
+      if (!karte || !Shell.spiel || !Shell.spiel.doppelklick) return;
+      ev.preventDefault();
+      var ok = Shell.spiel.doppelklick(wasVon(karte));
+      if (ok) { Shell.auswahl = null; Shell.hinweis(""); Shell.stand(Shell.spiel.info()); }
+    }
+    brett.addEventListener("click", function (ev) {
+      if (Shell.gezogen) { Shell.gezogen = false; return; }
+      if (ev.detail === 0) { brettKlick(ev); return; }
+      if (ev.detail >= 2) {
+        if (einzelklickTimer) clearTimeout(einzelklickTimer);
+        einzelklickTimer = null;
+        doppelklickSchonAusgefuehrt = true;
+        doppelklick(ev);
+        return;
+      }
+      if (einzelklickTimer) clearTimeout(einzelklickTimer);
+      var ziel = ev.target;
+      einzelklickTimer = setTimeout(function () {
+        einzelklickTimer = null;
+        brettKlick({ target: ziel });
+      }, 240);
+    });
+    brett.addEventListener("dblclick", function (ev) {
+      ev.preventDefault();
+      if (doppelklickSchonAusgefuehrt) { doppelklickSchonAusgefuehrt = false; return; }
+      if (einzelklickTimer) clearTimeout(einzelklickTimer);
+      einzelklickTimer = null;
+      doppelklick(ev);
+    });
     brett.addEventListener("pointerdown", ziehenStart);
     document.addEventListener("pointermove", ziehenBewegen);
     document.addEventListener("pointerup", ziehenEnde);

@@ -280,6 +280,26 @@
       pruefeSieg();
     },
 
+    doppelklick: function (was) {
+      var ks = quelle(was);
+      if (!ks || ks.length !== 1 || ks[0].id !== was.id || !ablagePasst(ks[0])) return false;
+      return MOD.ablegen(was, "f:" + ks[0].f);
+    },
+
+    autoMoeglich: function () { return autoPlan() !== null; },
+    autoVollenden: function () {
+      if (!autoPlan()) return;
+      var weiter = true;
+      while (weiter) {
+        weiter = false;
+        for (var i = 0; i < 7 && !weiter; i++) {
+          var s = z.t[i]; if (!s.length) continue;
+          var k = s[s.length - 1];
+          if (ablagePasst(k)) weiter = MOD.ablegen({ art: "t", i: i, index: s.length - 1 }, "f:" + k.f);
+        }
+      }
+    },
+
     tipp: function () {
       if (!z) return "";
       var i, j, k;
@@ -325,6 +345,27 @@
       MOD.zeichne();
     }
   };
+
+  function autoPlan() {
+    if (!z || z.stock.length || z.waste.length || z.t.some(function (s) { return s.some(function (k) { return !k.offen; }); })) return null;
+    var spalten = z.t.map(function (s) { return s.slice(); });
+    var rang = z.f.map(function (s) { return s.length; });
+    var plan = [], fortschritt = true;
+    while (fortschritt) {
+      fortschritt = false;
+      for (var i = 0; i < spalten.length; i++) {
+        var s = spalten[i]; if (!s.length) continue;
+        var k = s[s.length - 1];
+        if (k.r === rang[k.f] + 1) {
+          plan.push({ was: { art: "t", i: i, index: s.length - 1 }, f: k.f });
+          s.pop(); rang[k.f]++; fortschritt = true;
+        }
+      }
+    }
+    return spalten.every(function (s) { return !s.length; }) ? plan : null;
+  }
+
+
 
   function ShellAuswahl() { return TG.Shell.auswahl; }
   function zielZone(i) { return ziele.indexOf("t:" + i) >= 0; }

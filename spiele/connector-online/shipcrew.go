@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Schiffe versenken (Ship Captain Crew): fünf Würfel, höchstens drei Würfe.
+// Ship Captain Crew (Würfelspiel): fünf Würfel, höchstens drei Würfe.
 // Gesucht wird in dieser Reihenfolge 6 (Schiff), 5 (Kapitän), 4 (Maat).
 // Erst wenn alle drei gesichert sind, zählen die beiden übrigen Würfel als
 // Ladung. Der Spieler sichert selbst; der Server würfelt und führt den Stand.
@@ -426,7 +426,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "create":
 		if room.ShipCrew != nil && room.ShipCrew.Status != "finished" {
-			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Runde Schiffe versenken.")
+			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine Runde Ship Captain Crew.")
 			return
 		}
 		if input.Runden != 1 && input.Runden != 3 && input.Runden != 5 && input.Runden != 10 {
@@ -439,11 +439,11 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		if input.Runden == 1 {
 			wort = " Runde"
 		}
-		game.Note = player.Name + " eröffnet Schiffe versenken – " + strconv.Itoa(input.Runden) + wort + "."
+		game.Note = player.Name + " eröffnet Ship Captain Crew – " + strconv.Itoa(input.Runden) + wort + "."
 		room.ShipCrew = game
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "eröffnet Schiffe versenken – fünf Würfel, drei Würfe.",
+			Text:     "eröffnet Ship Captain Crew – fünf Würfel, drei Würfe.",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})
@@ -473,7 +473,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 	case "join":
 		game := room.ShipCrew
 		if game == nil || game.Status != "invited" {
-			fehler(http.StatusConflict, "Es läuft gerade keine offene Runde Schiffe versenken.")
+			fehler(http.StatusConflict, "Es läuft gerade keine offene Runde Ship Captain Crew.")
 			return
 		}
 		if scFind(game, input.ID) >= 0 {
@@ -487,7 +487,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		game.Note = player.Name + " spielt mit."
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "setzt sich zu Schiffe versenken.",
+			Text:     "setzt sich zu Ship Captain Crew.",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})
@@ -496,7 +496,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		// Zurück an den Tisch, wenn die Verbindung mitten in der Partie abriss.
 		game := room.ShipCrew
 		if game == nil {
-			fehler(http.StatusConflict, "Hier läuft keine Partie Schiffe versenken.")
+			fehler(http.StatusConflict, "Hier läuft keine Partie Ship Captain Crew.")
 			return
 		}
 		if scFind(game, input.ID) >= 0 {
@@ -530,13 +530,16 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 	case "bot":
 		room.botNamenNeu()
 		if room.ShipCrew != nil && room.ShipCrew.Status != "finished" {
-			fehler(http.StatusConflict, "In diesem Spielraum laeuft bereits eine Runde Schiffe versenken.")
+			fehler(http.StatusConflict, "In diesem Spielraum laeuft bereits eine Runde Ship Captain Crew.")
 			return
 		}
 		stufe := botStufe(input.Stufe)
-		runden := 3
-		if room.ShipCrew != nil && room.ShipCrew.Runden > 0 {
-			runden = room.ShipCrew.Runden
+		// Standard sind fünf Runden. Der Connector schickt seine Wahl mit;
+		// ohne Angabe bleibt es bei fünf.
+		runden := 5
+		switch input.Runden {
+		case 1, 3, 5, 10:
+			runden = input.Runden
 		}
 		game := &ShipCrewGame{
 			ID: randomCode(), HostID: input.ID, Status: "invited",
@@ -557,7 +560,7 @@ func shipcrewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.addMessage(Message{
 			Name:     player.Name,
-			Text:     "spielt Schiffe versenken gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
+			Text:     "spielt Ship Captain Crew gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 			Time:     time.Now().Format("15:04:05"),
 			SenderID: input.ID,
 		})
@@ -604,7 +607,7 @@ func shipcrewAktion(room *Room, id, aktion string, index int) (int, string) {
 			return http.StatusForbidden, "Nur der Gastgeber kann die Runde starten."
 		}
 		if len(game.Players) < 2 {
-			return http.StatusConflict, "Schiffe versenken braucht mindestens zwei Spieler."
+			return http.StatusConflict, "Ship Captain Crew braucht mindestens zwei Spieler."
 		}
 		for _, p := range game.Players {
 			if !p.Ready {
@@ -721,7 +724,7 @@ func shipcrewAktion(room *Room, id, aktion string, index int) (int, string) {
 		room.ShipCrew = fresh
 
 	default:
-		return http.StatusBadRequest, "Unbekannte Aktion für Schiffe versenken."
+		return http.StatusBadRequest, "Unbekannte Aktion für Ship Captain Crew."
 	}
 	return 0, ""
 }

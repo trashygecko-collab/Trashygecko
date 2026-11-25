@@ -234,6 +234,14 @@
       pruefeSieg();
     },
 
+    doppelklick: function (was) {
+      var folge = quelle(was);
+      if (!folge || folge[0].id !== was.id) return false;
+      var ziele = MOD.zieleFuer(was);
+      if (ziele.length !== 1) return false;
+      return MOD.ablegen(was, ziele[0]);
+    },
+
     tipp: function () {
       if (!z) return "";
       var bester = null, von, i, nach;
