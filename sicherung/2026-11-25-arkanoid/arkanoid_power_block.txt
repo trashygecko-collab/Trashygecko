@@ -1,0 +1,160 @@
+let letztePowerAnzeige="";
+let hinweisTimer=null;
+const STANDARD_HINWEIS="Finger über das Feld ziehen – der Schläger folgt.";
+
+function powerZeigen(){
+ const teile=aktivePower.map(p=>{
+  const def=POWER[p.art];
+  const rest=Math.ceil(p.rest);
+  return '<span style="color:'+powerFarbe(p.art)+'" title="'+def.name+'">'+def.text+'</span> '+rest+"s";
+ });
+ const text=teile.join(" · ");
+ if(text!==letztePowerAnzeige){
+  letztePowerAnzeige=text;
+  $("power").innerHTML=text;
+ }
+ $("btnLaser").hidden=!aktivePower.some(p=>p.art==="L");
+}
+
+function hinweisZeigen(text,dauer){
+ $("hinweis").textContent=text;
+ clearTimeout(hinweisTimer);
+ hinweisTimer=setTimeout(()=>{ $("hinweis").textContent=STANDARD_HINWEIS; },dauer||1900);
+}
+
+/* Breite ergibt sich aus allen laufenden Effekten: E breit, K schmal, beide
+   zusammen neutral. So überschreibt ein Extra das andere nicht. */
+function schlaegerBreiteSetzen(){
+ let w=84;
+ if(aktivePower.some(p=>p.art==="E"))w=126;
+ if(aktivePower.some(p=>p.art==="K"))w=(w===126)?84:58;
+ if(w===schlaeger.w)return;
+ const n=w/2;
+ schlaeger.x=Math.max(n,Math.min(W-n,schlaeger.x));
+ schlaeger.w=w;
+}
+
+/* Ebenso das Tempo: S und F wirken als Faktor auf die laufende Kugel. */
+function tempoFaktor(){
+ let f=1;
+ if(aktivePower.some(p=>p.art==="S"))f*=0.72;
+ if(aktivePower.some(p=>p.art==="F"))f*=1.28;
+ return f;
+}
+function tempoAnpassen(){
+ const f=tempoFaktor();
+ if(Math.abs(f-letzterTempoFaktor)>0.001){
+  const q=f/letzterTempoFaktor;
+  bälle.forEach(b=>{ b.vx*=q; b.vy*=q; });
+  letzterTempoFaktor=f;
+ }
+}
+
+function powerGeben(art,x,y){
+ const def=POWER[art];
+ if(x!=null){
+  funkenStoss(x,y,powerFarbe(art),12,150);
+  ring(x,y,powerFarbe(art),30);
+ }
+ if(art==="P"){
+  ton("extra");
+  if(leben<5){ leben++; lebenZeigen(); hinweisZeigen("Extraleben – "+leben+" Leben"); }
+  else{ punkte+=500; punkteZeigen(); hinweisZeigen("Extraleben – schon voll, +500 Punkte"); }
+  return;
+ }
+ if(art==="B"){
+  const bonus=250+level*50;
+  punkte+=bonus;
+  punkteZeigen();
+  ton("extra");
+  hinweisZeigen("Bonus +"+bonus+" Punkte");
+  return;
+ }
+ if(art==="D"){
+  ton("power");
+  if(bälle.length){
+   const b=bälle[0];
+   const tempo=Math.hypot(b.vx,b.vy)||ballTempo()*tempoFaktor();
+   for(let i=0;i<2;i++){
+    const winkel=(-0.5+i)*(Math.PI/3);
+    bälle.push({x:b.x,y:b.y,vx:Math.cos(winkel)*tempo*(i?1:-1),
+     vy:-Math.abs(Math.sin(winkel))*tempo-120,r:BALL_R,fest:false,geschnitten:0});
+   }
+   hinweisZeigen("Drei Bälle");
+  }
+  return;
+ }
+ ton("power");
+ const vorhanden=aktivePower.find(p=>p.art===art);
+ if(vorhanden)vorhanden.rest=Math.max(vorhanden.rest,def.dauer);
+ else aktivePower.push({art:art,rest:def.dauer});
+ schlaegerBreiteSetzen();
+ tempoAnpassen();
+ hinweisZeigen(def.name+" – "+def.dauer+" s");
+ powerZeigen();
+}
+
+function powerAbgelaufen(art){
+ if(art==="C"&&fangBall){ // klebenden Ball wieder ins Spiel schicken
+  const b=fangBall;
+  fangBall=null;
+  b.fest=false;
+  const tempo=ballTempo()*tempoFaktor();
+  b.vx=tempo*0.3*(rnd()<0.5?-1:1);
+  b.vy=-tempo*0.95;
+ }
+ schlaegerBreiteSetzen();
+ tempoAnpassen();
+ powerZeigen();
+}
+
+/* ---------------------------------------------------------------- Effekte */
+
+function funkenStoss(x,y,farbe,anzahl,kraft){
+ for(let i=0;i<anzahl&&funken.length<140;i++){
+  const a=rnd()*Math.PI*2, v=(0.35+rnd()*0.65)*kraft;
+  funken.push({x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-35,
+   leben:0.32+rnd()*0.26,max:0.58,farbe:farbe,r:1.1+rnd()*1.7});
+ }
+}
+function ring(x,y,farbe,max){
+ ringe.push({x:x,y:y,r:3,max:max||30,leben:0.34,farbe:farbe});
+}
+function funkenUpdate(dt){
+ for(let i=funken.length-1;i>=0;i--){
+  const f=funken[i];
+  f.leben-=dt;
+  if(f.leben<=0){ funken.splice(i,1); continue; }
+  f.x+=f.vx*dt;
+  f.y+=f.vy*dt;
+  f.vy+=270*dt;
+  f.vx*=0.985;
+ }
+ for(let i=ringe.length-1;i>=0;i--){
+  const r=ringe[i];
+  r.leben-=dt;
+  r.r+=(r.max-r.r)*Math.min(1,dt*10);
+  if(r.leben<=0)ringe.splice(i,1);
+ }
+}
+function funkenZeichnen(g){
+ for(const f of funken){
+  g.globalAlpha=Math.max(0,f.leben/f.max);
+  g.fillStyle=f.farbe;
+  g.beginPath();
+  g.arc(f.x,f.y,f.r,0,Math.PI*2);
+  g.fill();
+ }
+ g.globalAlpha=1;
+}
+function ringeZeichnen(g){
+ for(const r of ringe){
+  g.globalAlpha=Math.max(0,r.leben/0.34)*0.75;
+  g.strokeStyle=r.farbe;
+  g.lineWidth=2;
+  g.beginPath();
+  g.arc(r.x,r.y,r.r,0,Math.PI*2);
+  g.stroke();
+ }
+ g.globalAlpha=1;
+}
