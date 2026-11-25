@@ -132,6 +132,20 @@
     return geraeteMerker;
   }
 
+  /* Diese Endpunkte brauchen die Gerätekennung: Sie holt eine bestehende
+     Sitzung zurück, wenn das Token verloren ging (/api/ich), und sie gehört
+     zur Anmeldung (/api/sitzung). Das Geheimnis bleibt im Browser. */
+  function brauchtGeraet(adresse) {
+    return (
+      adresse.indexOf("/api/presence") >= 0 ||
+      adresse.indexOf("/api/ich") >= 0 ||
+      adresse.indexOf("/api/sitzung") >= 0 ||
+      // Der zentrale Statusruf ist zugleich das Lebenszeichen – er braucht
+      // dasselbe Token und dieselbe Gerätekennung wie /api/presence.
+      adresse.indexOf("/api/zustand") >= 0
+    );
+  }
+
   function mitToken(adresse, optionen) {
     var teile = ausAnfrage(adresse, optionen);
     var token = tokenFuer(teile.raum, teile.id);
@@ -146,9 +160,10 @@
     if (token && !/[?&]token=/.test(ziel)) {
       ziel += (ziel.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(token);
     }
-    if (adresse.indexOf("/api/presence") >= 0 && teile.raum && teile.id) {
-      // Nur der Beitritt kennt die Gerätekennung – sie holt einen Platz
-      // zurück, dessen Token verloren ging.
+    if (brauchtGeraet(adresse)) {
+      // Der Beitritt, die Identitätsabfrage und die Sitzungsverwaltung kennen
+      // die Gerätekennung – sie holt eine Sitzung zurück, deren Token
+      // verloren ging, ohne eine neue Identität anzulegen.
       ziel += (ziel.indexOf("?") >= 0 ? "&" : "?") + "geraet=" + encodeURIComponent(geraetekennung());
     }
     return { ziel: ziel, frisch: frisch };

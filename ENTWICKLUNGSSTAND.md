@@ -5,6 +5,38 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 24.11.2026 · Schritt 7: Cache- und Ausfallverhalten geprüft
+
+Geprüft auf Emulator B (Android 14) mit dem Debug-Bau 1.17/18, Flugmodus
+(`Active default network: none`), echte Tipps über `uiautomator`, WebView-Inhalt über
+DevTools. Kein Quellcode geändert – nur Messungen; Testkatalog und Testseite danach
+zurückgebaut (Katalog `fa50d261…`, Mahjong-Seite `1eaab258…`).
+
+- **Ohne Netz:** Start 722 ms (`am start -W`, COLD), Spielhalle 94 Spiele / 6 Kategorien
+  in 54 ms, lokales Spiel (Mahjong) 3,52 s nach dem Tipp geladen, 144 Bilder / 0 kaputt,
+  `readyState complete`. Einziges Log: `www/favicon.ico` fehlt (404). Ein Online-Spiel
+  ohne Netz zeigt die englische Chromium-Seite „Webpage not available“
+  (`net::ERR_INTERNET_DISCONNECTED` −2); die App schreibt danach trotzdem
+  „Spielseite geladen“.
+- **Veralteter Katalog:** 95 Einträge – einer auf eine fehlende Seite, einer mit
+  unbekannter Kategorie – werden ungeprüft gelistet. Fehlende Seite → 404 aus
+  `HomepageAssets`, Chromium-Seite `net::ERR_HTTP_RESPONSE_CODE_FAILURE`, keine
+  App-Meldung und kein Weg außer „Zurück“. Unbekannte Kategorie → Kopf „Weitere · 1“.
+  Unlesbares JSON → „Der Spielekatalog fehlt im App-Paket. Bitte die App neu
+  installieren.“, kein Absturz.
+- **Liegengebliebene Seiten:** 303 HTML-Seiten im Paket, 105 unter `spiele/`, 94 im
+  Katalog; die 11 übrigen sind Werkzeuge/Infoseiten und alle verlinkt (0 verwaist). Eine
+  künstlich abgelegte Alt-Seite (60 B) verschwindet beim nächsten `homepageKopieren`.
+  Nach einem App-Update erscheint ein geänderter Seitentitel sofort – kein alter
+  Cache-Stand.
+- **Cache:** nach dem Leeren und einem Spiel + Halle 324 KB in 22 Dateien, davon 216 KB
+  V8-Code-Cache; keine Seitenkopien im HTTP-Cache.
+
+Offen (nur festgestellt, nicht geändert): Für Online-Spiele ohne Netz und für
+Katalogeinträge ohne Seite gibt es keine deutsche Meldung in der App.
+
+---
+
 ## 24.11.2026 · Schritt 2: Alte Zahlen und Bauskripte bereinigt
 
 - **Spielzahlen:** Die App-Kachel in `spiele.html` sagte „91 Spiele offline“ →

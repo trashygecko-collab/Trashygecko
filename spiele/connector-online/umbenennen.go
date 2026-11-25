@@ -314,9 +314,17 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 	if g := r.Sechsundsechzig; g != nil {
 		benenne(g.Spieler, id, neu, func(p *SechsundsechzigSpieler) string { return p.ID }, func(p *SechsundsechzigSpieler) *string { return &p.Name })
 	}
-	// Ein offenes Angebot nennt den Ersteller beim Namen.
-	if r.Angebot != nil && r.Angebot.VonID == id {
-		r.Angebot.VonName = neu
+	// Offene Tische nennen Ersteller und Eingeladenen beim Namen.
+	for _, a := range r.Angebote {
+		if a == nil {
+			continue
+		}
+		if a.VonID == id {
+			a.VonName = neu
+		}
+		if a.ZielID == id {
+			a.ZielName = neu
+		}
 	}
 }
 

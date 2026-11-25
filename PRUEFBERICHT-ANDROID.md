@@ -3,7 +3,7 @@
 Grundregel: Hier steht nur, was **tatsächlich ausgeführt** wurde. Was nicht lief, steht als
 „nicht getestet“ – ein erfolgreicher Build ist **kein** Funktionsnachweis.
 
-Letzte Aktualisierung: 23.11.2026 (Etappe 3, Schritt 11: Homepage-Seiten im APK).
+Letzte Aktualisierung: 24.11.2026 (Etappe 4, Schritt 7: Cache- und Ausfallverhalten).
 
 ---
 
@@ -21,6 +21,35 @@ Achtung für alle künftigen Tests: Eine **Debug**-APK lässt sich nicht über d
 release-signierte 1.15 legen (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). Entweder mit
 `keystore.properties` release bauen oder auf dem Emulator testen. Ein Deinstallieren auf
 Gerät A löscht alle lokalen Spielstände.
+
+---
+
+## 1m. Etappe 4, Schritt 7 · Cache- und Ausfallverhalten (24.11.2026, 23:00–23:12)
+
+Geänderter Code: keiner. Geprüft wurde der Debug-Bau 1.17/18 auf Emulator B; für die
+beiden Ausfallfälle entstanden kurzzeitig ein Testkatalog und eine geänderte
+Mahjong-Seite in `assets/` (danach über `katalogBauen`/`homepageKopieren` zurückgebaut).
+
+| Prüfung | Ergebnis | Beleg |
+|---|---|---|
+| **Flugmodus** | `Active default network: none` während aller Offline-Läufe | `dumpsys connectivity` |
+| Start ohne Netz | **722 ms** (COLD, `am start -W`), Statuszeile „offline spielbar“ | `am start -W`, `uiautomator` |
+| Spielhalle ohne Netz | **94 Spiele**, 6 Kategorien, 6 Highlights; „Liste: 8 Ansichten in **54 ms**“ | `logcat` `TrashyGeckoSpiele`, `uiautomator` |
+| Lokales Spiel (Mahjong) ohne Netz | Seite **3,52 s** nach dem Tipp geladen; **144** Bilder, **0** kaputt, `readyState complete` | `logcat`, DevTools `Runtime.evaluate` |
+| Fehlendes favicon | 1 Warnung `www/favicon.ico` (404), sonst 0 Seitenfehler | `logcat` |
+| Online-Spiel ohne Netz | Chromium-Seite **„Webpage not available“**, `net::ERR_INTERNET_DISCONNECTED` (−2); App loggt trotzdem „Spielseite geladen“ | DevTools, `logcat` |
+| Veralteter Katalog (95 Einträge) | alle **95** gelistet, keine Existenzprüfung | `logcat` „Katalog: 95 Spiele“, `uiautomator` |
+| Katalogeintrag ohne Seite | 404 aus `HomepageAssets` → Chromium `net::ERR_HTTP_RESPONSE_CODE_FAILURE`, **0** App-Hinweise | `logcat`, DevTools |
+| Unbekannte Kategorie | Spiel erscheint unter **„Weitere · 1“** | `uiautomator` |
+| Unlesbares `katalog.json` | Meldung **„Der Spielekatalog fehlt im App-Paket. Bitte die App neu installieren.“**, kein `FATAL` | `uiautomator`, `logcat` |
+| Seiten im Paket | **303** HTML-Seiten, **105** unter `spiele/`, **94** im Katalog, 11 Werkzeuge/Infos – **0 verwaist** (alle verlinkt) | Python-Prüfung der Verweise |
+| Alt-Seite im Asset-Baum | künstlich abgelegte Seite (60 B) nach `homepageKopieren` **weg** | `ls` vor/nach |
+| App-Update bei gefülltem Cache | neuer Seitentitel sofort sichtbar (`… NEU24`), nach Rückbau wieder Original | DevTools `document.title` |
+| Cache-Größe | nach `rm -rf cache` + Halle + 1 Spiel **324 KB / 22 Dateien**, davon 216 KB V8-Code-Cache, 0 Seitenkopien | `run-as … du -sk` |
+
+**Nicht getestet:** echtes Gerät A (release-signiert, Debug-APK nicht installierbar);
+keine Sichtprüfung des Spielbildes (nur DOM/DevTools/Log); kein echter Netzabbau mitten
+im Spiel (nur Flugmodus vor dem Start).
 
 ---
 

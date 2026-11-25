@@ -27,6 +27,11 @@
 
    Neues Spiel: einen Eintrag ergänzen, in Go spielApi/spielAnzeige/tischspiel
    nachziehen, fertig. Kein weiterer Ort muss angefasst werden.
+
+   Ausnahme „malen“: kein Spiel der Spielhalle, sondern ein gemeinsames
+   Kritzelbrett (eigene Kachel bei den Werkzeugen in spiele.html). Der Eintrag
+   hier öffnet nur den Raum im Connector – deshalb steht malen/malen.html
+   bewusst nicht in spieldaten.js.
    ========================================================================= */
 window.TGMultiplayer = {
   "stand": "2026-11-22",

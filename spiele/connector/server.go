@@ -106,7 +106,10 @@ func withIdentity(next http.Handler) http.Handler {
 					if geraet == "" {
 						geraet = strings.TrimSpace(probe.Geraet)
 					}
-					if r.URL.Path != "/api/presence" && id != "" {
+					// Lebenszeichen und der zentrale Statusruf melden selbst, ob
+					// der Spieler etwas getan hat (Feld active). Würden sie hier
+					// als Aktion zählen, bliebe die „eingeschlafen“-Meldung aus.
+					if r.URL.Path != "/api/presence" && r.URL.Path != "/api/zustand" && id != "" {
 						noteActivity(code, id)
 					}
 				}
@@ -124,10 +127,14 @@ func withIdentity(next http.Handler) http.Handler {
 					bekannt = true
 				}
 			}
+			// Eine gültige Sitzung dieses Spielers gilt auch dann, wenn der
+			// Platz noch ein älteres Token trägt (zweiter Tab, ein anderes
+			// Gerät desselben Spielers).
+			sitzungGilt := sitzungPasst(id, token)
 			mu.Unlock()
 			// Nur ein bereits bekannter Platz mit Token kann abgewiesen werden;
 			// ein neuer Spieler entsteht im Beitritt.
-			if bekannt && gespeichert != "" && gespeichert != token {
+			if bekannt && !sitzungGilt && gespeichert != "" && gespeichert != token {
 				// Ein verlorenes Token erneuert allein der Beitritt: Dort wird
 				// die Gerätekennung geprüft und das neue Token gesetzt. Alle
 				// anderen Endpunkte bleiben streng.
@@ -175,6 +182,18 @@ func routes() http.Handler {
 	// allein an die beiden Beteiligten weiter.
 	mux.HandleFunc("/api/einladung", einladungHandler)
 	mux.HandleFunc("/api/presence", presence)
+	// Ein Ruf, alle Zustände: Chat, Spieler, Einladungen, Angebot,
+	// Stummschaltungen, laufende Partie und Lebenszeichen in einem. Die
+	// Connector-Seite fragt damit im Takt statt mit sieben Timern.
+	mux.HandleFunc("/api/zustand", zustandHandler)
+	// Eine Tür für die Bereitschaft: Sie schaltet über die Aktion des Spiels
+	// und antwortet mit dem frischen Stand (Etappe 5).
+	mux.HandleFunc("/api/bereit", bereitHandler)
+	// Identität und Sitzung: /api/ich sagt, wer man ist und wo man sitzt,
+	// /api/sitzung meldet an, stellt eine Sitzung wieder her oder meldet ein
+	// Gerät ab. Eine neue Identität entsteht nur bei "anmelden".
+	mux.HandleFunc("/api/ich", ichHandler)
+	mux.HandleFunc("/api/sitzung", sitzungHandler)
 	mux.HandleFunc("/api/players", playersHandler)
 	mux.HandleFunc("/api/qr", qrCode)
 	mux.HandleFunc("/api/messages", messages)
@@ -240,6 +259,7 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/angebot", angebotHandler)
 	mux.HandleFunc("/api/malen", malenHandler)
 	mux.HandleFunc("/api/leave", leaveGameHandler)
+	mux.HandleFunc("/api/raum/verlassen", wegHandler)
 	mux.HandleFunc("/api/imspiel", imSpielHandler)
 	// Spielseiten und Skripte ändern sich zwischen den Runden. Seiten werden
 	// gar nicht zwischengespeichert, Skripte müssen vor jedem Öffnen

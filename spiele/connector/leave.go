@@ -536,10 +536,8 @@ func (r *Room) abgangBeenden(id, name, grund string) (bool, string) {
 			namen = append(namen, p.name)
 		}
 	}
-	// Ein offenes Angebot, dessen Ersteller weg ist, kann niemand mehr annehmen.
-	if r.Angebot != nil && r.Angebot.VonID == id {
-		r.Angebot = nil
-	}
+	// Offene Tische dieses Spielers kann niemand mehr annehmen.
+	angeboteVonSpieler(r, id)
 	if len(namen) == 0 {
 		return false, ""
 	}
@@ -576,11 +574,102 @@ func (r *Room) abgangBeenden(id, name, grund string) (bool, string) {
 	return true, text
 }
 
-// allePartienLoeschen räumt einen Raum ohne Spieler vollständig auf.
+// spielerGeht nimmt einen Spieler aus dem Raum. Es ist die einzige Stelle, an
+// der ein Platz verschwindet – gleich ob er den Tab geschlossen hat (grund
+// "verlassen") oder ob seine Lebenszeichen ausgeblieben sind ("verbindung").
+// Partien, offene Tische, Chatzeile, Besitzerrolle und der leere Raum werden
+// hier gemeinsam aufgeräumt. Muss unter mu laufen.
+func (r *Room) spielerGeht(id, grund string) bool {
+	if id == "" {
+		return false
+	}
+	p, ok := r.Players[id]
+	if !ok {
+		return false
+	}
+	// Partien dieses Spielers enden (mit Meldung im Chat), seine offenen
+	// Tische verschwinden – beides in abgangBeenden, der einen Liste aller
+	// Partien. Sitzt er in keiner, bleibt es bei der Chatzeile unten.
+	r.abgangBeenden(id, p.Name, grund)
+	delete(r.Players, id)
+	jetzt := time.Now()
+	// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.
+	r.addMessage(Message{
+		Name:     p.Name,
+		Text:     "verlässt den Raum.",
+		Time:     jetzt.Format("15:04:05"),
+		SenderID: id,
+		Gone:     true,
+	})
+	r.LastActive = jetzt
+	// Die Besitzerrolle bleibt nicht an einem leeren Platz hängen: Sie geht an
+	// den verbleibenden Spieler, der zuletzt etwas geschickt hat.
+	if r.OwnerID == id {
+		neuID, neuName := "", ""
+		for pid := range r.Players {
+			if neuID == "" || r.Players[pid].Last.After(r.Players[neuID].Last) {
+				neuID, neuName = pid, r.Players[pid].Name
+			}
+		}
+		r.OwnerID, r.OwnerName = neuID, neuName
+		r.Name = roomTitle(neuName)
+	}
+	if len(r.Players) == 0 {
+		if r.EmptySince.IsZero() {
+			r.EmptySince = jetzt
+		}
+		// Wer den Tab schließt, lässt keine Partie zurück: Sie enden sofort, ein
+		// eigener Raum verschwindet gleich mit. Nach einem Verbindungsabbruch
+		// gilt weiter die Schonfrist (EmptySince), damit ein gesperrtes Handy
+		// zurückkommen kann.
+		if grund == "verlassen" {
+			r.allePartienLoeschen()
+			if r.Code != mainRoomCode {
+				delete(rooms, r.Code)
+			}
+		}
+		return true
+	}
+	r.EmptySince = time.Time{}
+	return true
+}
+
+// allePartienLoeschen räumt einen Raum ohne Spieler vollständig auf – Partien
+// und offene Tische. Eine leere Tischliste gehört dazu, sonst stünde danach
+// noch ein Angebot, das niemand mehr annehmen kann.
 func (r *Room) allePartienLoeschen() {
 	for _, p := range r.partien() {
 		p.ende()
 	}
+	r.Angebote = nil
+}
+
+// wegHandler nimmt die Meldung "mein Tab wird geschlossen" entgegen. Der
+// Platz bleibt noch abgangFrist stehen, damit ein Neuladen nicht als Gehen
+// gilt; danach räumt cleanPlayers ihn auf (gleicher Weg wie beim Timeout).
+// Antwortet immer mit 200, damit ein geschlossener Tab nicht auf Fehlern hängt.
+func wegHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST erforderlich", http.StatusMethodNotAllowed)
+		return
+	}
+	code, id := raumAusKontext(r), kennung(r)
+	if code == "" || id == "" {
+		http.Error(w, "Spielraum oder Spieler fehlt", http.StatusBadRequest)
+		return
+	}
+	gemerkt := false
+	mu.Lock()
+	if room := rooms[code]; room != nil {
+		if p, ok := room.Players[id]; ok {
+			p.WegSeit = time.Now()
+			room.Players[id] = p
+			room.LastActive = p.WegSeit
+			gemerkt = true
+		}
+	}
+	mu.Unlock()
+	jsonResponse(w, map[string]any{"ok": true, "gemerkt": gemerkt})
 }
 
 // enthaelt meldet, ob die Kennung in der Liste steht.
@@ -624,17 +713,20 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 			// ja, Spielseite nein – so bleibt eine eingefrorene Partie stehen.
 			if p, ok := room.Players[id]; ok {
 				seite := strings.TrimSpace(r.URL.Query().Get("seite"))
-				p.Last = time.Now()
-				if seite == "versteckt" {
-					// Nur der erste Ruf beginnt die Phase; weitere versteckte Rufe
-					// halten sie am Leben, ohne die Pause-Meldung zu verschieben.
-					if p.Versteckt.IsZero() {
-						p.VerstecktSeit = p.Last
+				jetzt := time.Now()
+				merken := func(p *Player) {
+					p.Last = jetzt
+					if seite == "versteckt" {
+						// Nur der erste Ruf beginnt die Phase; weitere versteckte Rufe
+						// halten sie am Leben, ohne die Pause-Meldung zu verschieben.
+						if p.Versteckt.IsZero() {
+							p.VerstecktSeit = jetzt
+						}
+						p.Versteckt = jetzt
+						return
 					}
-					p.Versteckt = p.Last
-				} else {
 					if seite != "raum" {
-						p.ImSpiel = p.Last
+						p.ImSpiel = jetzt
 					}
 					// Wieder sichtbar (oder zurück im Raum): die Pause ist vorbei.
 					if !p.Versteckt.IsZero() {
@@ -643,7 +735,19 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 						p.PauseGemeldet = false
 					}
 				}
+				merken(&p)
 				room.Players[id] = p
+				// Ein Tab ist in allen Räumen derselbe: Wer aus einer privaten Runde
+				// in die Halle wechselt (oder umgekehrt), darf seine Partie dort
+				// nicht verlieren, nur weil die Spielseite den anderen Raum meldet.
+				// Deshalb gilt das Lebenszeichen der Spielseite auch für die
+				// übrigen Mitgliedschaften.
+				fuerAllePlaetze(id, func(andere *Room, platz *Player) {
+					if andere.Code == room.Code {
+						return
+					}
+					merken(platz)
+				})
 			}
 			room.cleanPlayers()
 			imSpiel = room.playerInGame(id)
@@ -660,6 +764,13 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 // sobald eine Einladung angenommen oder ein Tisch gestartet wurde.
 func (r *Room) aktivesSpiel(id string) string {
 	if wuerfelAktiv(r.Wuerfel, id) {
+		// Die Würfelsammlung ist eine Partie, aber 18 Spiele: Die Seite sucht
+		// das Spiel über seine Kennung (beelzebub, fenster, …) und öffnet
+		// dessen eigene Seite. "wuerfel" fände sie nicht – die Partie bliebe
+		// unsichtbar (keine Zeile unter „Laufende Partien“, kein Fortsetzen).
+		if r.Wuerfel != nil && r.Wuerfel.Spiel != "" {
+			return r.Wuerfel.Spiel
+		}
 		return "wuerfel"
 	}
 	if g := r.Risiko; g != nil && g.Status == "active" {

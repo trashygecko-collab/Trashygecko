@@ -26,8 +26,8 @@ android {
         applicationId "de.trashygecko.tmahjong"
         minSdk 21
         targetSdk 34
-        versionCode 17
-        versionName "1.16"
+        versionCode 18
+        versionName "1.17"
     }
 
     signingConfigs {
@@ -255,12 +255,12 @@ tasks.register("katalogBauen") {
             if (relative.split('/').any { it == '..' }) throw new GradleException("Unsicherer Spielepfad: ${relative}")
             File seite = new File(new File(wwwZiel, "spiele"), relative)
             if (!seite.isFile()) throw new GradleException("Spiel fehlt in den Android-Assets: ${relative}")
-            List<String> merkmale = (matcher.group(4) ?: "").trim().split(/\s+/).findAll { it && it != "zwei" } as List<String>
+            List<String> merkmale = (matcher.group(4) ?: "").trim().split(/\s+/).findAll { it } as List<String>
             if (registerText.contains("/spiele/${relative}")) {
                 if (!merkmale.contains("multi")) merkmale << "multi"
                 if (!merkmale.contains("online")) merkmale << "online"
             }
-            // Die App kennt kein „zwei“: lokal ist Mehrspieler am Gerät.
+            // „Zu zweit“ bleibt im Katalog: lokal ist Mehrspieler am Gerät.
             if (merkmale.contains("lokal") && !merkmale.contains("multi")) merkmale << "multi"
             String symbol = null
             for (def regel : symbolRegeln) {

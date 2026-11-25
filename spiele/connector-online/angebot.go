@@ -10,19 +10,43 @@ import (
 	"time"
 )
 
-// Angebot ist eine offene Runde: Der Ersteller bietet ein Spiel für den ganzen
-// Raum an. Jeder sieht die Karte im Chat und tritt mit einem Klick bei – es
-// braucht keine Einladung an einzelne Spieler mehr.
+// Angebot ist ein offener Spieltisch: Jemand bietet eine Runde an, andere
+// nehmen Platz. Ein Raum kann mehrere Tische gleichzeitig haben – einen je
+// Spiel, denn je Spiel gibt es einen Spielstand im Raum.
+//
+// ZielID/ZielName machen daraus eine direkte Einladung: Dann darf nur dieser
+// eine Spieler annehmen oder ablehnen, und die Einladung verfällt nach
+// angebotFrist – sonst blockierte eine unbeantwortete Einladung das Spiel.
 type Angebot struct {
-	ID         string `json:"id"`
-	Game       string `json:"game"`
-	GameName   string `json:"gameName"`
-	VonID      string `json:"vonId"`
-	VonName    string `json:"vonName"`
-	Pairs      int    `json:"pairs,omitempty"`
-	Kind       string `json:"kind,omitempty"`
-	MaxPlayers int    `json:"maxPlayers,omitempty"`
+	ID         string    `json:"id"`
+	Game       string    `json:"game"`
+	GameName   string    `json:"gameName"`
+	VonID      string    `json:"vonId"`
+	VonName    string    `json:"vonName"`
+	ZielID     string    `json:"zielId,omitempty"`
+	ZielName   string    `json:"zielName,omitempty"`
+	Pairs      int       `json:"pairs,omitempty"`
+	Kind       string    `json:"kind,omitempty"`
+	MaxPlayers int       `json:"maxPlayers,omitempty"`
+	Zeit       time.Time `json:"-"`
+	// Bereit ist abgeleitet: Das Spiel kennt einen Bereit-Knopf. Gesetzt wird
+	// der Wert beim Kopieren (bereitSpiele), gespeichert nicht – so weiß die
+	// Tischkarte vor dem Klick, ob sie überhaupt einen Knopf zeigen soll.
+	Bereit bool `json:"bereit"`
+	// Beigetreten sind die Spieler, die diesen Tisch angenommen haben. Der
+	// Ersteller sitzt immer mit; die Liste wächst nur, solange der Tisch offen
+	// ist. Wer den Raum verlässt, verschwindet daraus (angeboteVonSpieler).
+	Beigetreten []string `json:"-"`
+	// Sitze ist abgeleitet: Ersteller und Beigetretene in ihrer Reihenfolge.
+	// Damit zeigt die Tischkarte, wer schon sitzt, ohne den Spielstand zu
+	// lesen – und ein Beigetretener bekommt kein zweites "Mitspielen".
+	Sitze []string `json:"sitze"`
 }
+
+// angebotFrist: So lange wartet eine direkte Einladung auf Antwort. Danach
+// fällt der Tisch weg; sonst bliebe das Spiel besetzt, ohne dass jemand
+// antworten kann.
+const angebotFrist = 5 * time.Minute
 
 // spielApi ordnet der Kennung aus der Spieleliste den API-Pfad zu.
 var spielApi = map[string]string{
@@ -396,6 +420,126 @@ func (r *Room) spielStatus(spiel string) (string, bool) {
 // Spieler nimmt allein die Lobby auf (Status "invited"); sobald die Runde
 // läuft – auch wenn sie erst auf der Spielseite gestartet wurde – oder zu Ende
 // ist, ist das Angebot erledigt. Die Halle muss dafür nichts aufräumen.
+
+// angeboteKopie liefert alle offenen Tische als Kopien und räumt erledigte
+// weg: gestartete Runden, verfallene Einladungen und Tische ohne Spiel.
+// Muss unter mu laufen.
+func angeboteKopie(room *Room) []Angebot {
+	offen := []Angebot{}
+	if room == nil {
+		return offen
+	}
+	jetzt := time.Now()
+	behalten := room.Angebote[:0]
+	for _, a := range room.Angebote {
+		if a == nil {
+			continue
+		}
+		// Eine direkte Einladung, die niemand beantwortet, verfällt: Sonst
+		// bliebe ihr Spiel besetzt, obwohl niemand mehr antworten kann.
+		if a.ZielID != "" && jetzt.Sub(a.Zeit) > angebotFrist {
+			continue
+		}
+		if !room.angebotNochOffen(a) {
+			continue
+		}
+		behalten = append(behalten, a)
+		kopie := *a
+		kopie.Bereit = bereitSpiele[a.Game]
+		kopie.Sitze = sitzeVon(a)
+		offen = append(offen, kopie)
+	}
+	room.Angebote = behalten
+	return offen
+}
+
+// sitzeVon nennt Ersteller und Beigetretene eines Tisches – ohne Doppelte,
+// auch wenn ein alter Tisch die Kennung zweimal trägt. Muss unter mu laufen.
+func sitzeVon(a *Angebot) []string {
+	sitze := []string{}
+	if a == nil {
+		return sitze
+	}
+	if a.VonID != "" {
+		sitze = append(sitze, a.VonID)
+	}
+	for _, id := range a.Beigetreten {
+		if id != "" && !enthaelt(sitze, id) {
+			sitze = append(sitze, id)
+		}
+	}
+	return sitze
+}
+
+// angebotMitID sucht einen offenen Tisch. Muss unter mu laufen.
+func angebotMitID(room *Room, id string) *Angebot {
+	if room == nil || id == "" {
+		return nil
+	}
+	for _, a := range room.Angebote {
+		if a != nil && a.ID == id {
+			return a
+		}
+	}
+	return nil
+}
+
+// angebotFuerSpiel sucht den offenen Tisch dieses Spiels. Je Spiel gibt es
+// einen Spielstand im Raum, also auch höchstens einen Tisch. Muss unter mu
+// laufen.
+func angebotFuerSpiel(room *Room, spiel string) *Angebot {
+	if room == nil || spiel == "" {
+		return nil
+	}
+	for _, a := range room.Angebote {
+		if a != nil && a.Game == spiel {
+			return a
+		}
+	}
+	return nil
+}
+
+// angebotEntfernen nimmt genau diesen Tisch aus dem Raum. Muss unter mu laufen.
+func angebotEntfernen(room *Room, id string) {
+	if room == nil || id == "" {
+		return
+	}
+	rest := room.Angebote[:0]
+	for _, a := range room.Angebote {
+		if a != nil && a.ID != id {
+			rest = append(rest, a)
+		}
+	}
+	room.Angebote = rest
+}
+
+// angeboteVonSpieler entfernt alle Tische eines Spielers – beim Gehen kann
+// niemand mehr annehmen – und streicht ihn aus den Sitzen fremder Tische.
+// Sonst stünde auf einer Tischkarte noch jemand, der längst weg ist.
+// Muss unter mu laufen.
+func angeboteVonSpieler(room *Room, id string) {
+	if room == nil || id == "" {
+		return
+	}
+	rest := room.Angebote[:0]
+	for _, a := range room.Angebote {
+		if a == nil || a.VonID == id {
+			continue
+		}
+		if enthaelt(a.Beigetreten, id) {
+			bleibt := a.Beigetreten[:0]
+			for _, x := range a.Beigetreten {
+				if x != id {
+					bleibt = append(bleibt, x)
+				}
+			}
+			a.Beigetreten = bleibt
+		}
+		rest = append(rest, a)
+	}
+	room.Angebote = rest
+}
+
 func (r *Room) angebotNochOffen(a *Angebot) bool {
 	if a == nil {
 		return false
@@ -448,21 +592,13 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
+		// Eine Antwort für alle: die Liste der offenen Tische (leer, wenn keiner
+		// steht). Wer einen bestimmten sucht, nimmt ihn aus der Liste – über die
+		// Kennung oder das Spiel.
 		mu.Lock()
-		var angebot *Angebot
-		if room := rooms[code]; room != nil && room.Angebot != nil {
-			// Läuft die Runde schon, ist das Angebot erledigt – egal, wer sie
-			// gestartet hat. Bisher räumte nur die Halle ihr eigenes Angebot auf;
-			// ein Start aus der Spielseite heraus ließ es stehen.
-			if room.angebotNochOffen(room.Angebot) {
-				kopie := *room.Angebot
-				angebot = &kopie
-			} else {
-				room.Angebot = nil
-			}
-		}
+		offen := angeboteKopie(rooms[code])
 		mu.Unlock()
-		jsonResponse(w, angebot)
+		jsonResponse(w, offen)
 		return
 	}
 
@@ -472,9 +608,16 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		ID         string `json:"id"`
-		Action     string `json:"action"`
-		Game       string `json:"game"`
+		ID     string `json:"id"`
+		Action string `json:"action"`
+		Game   string `json:"game"`
+		// AngebotID nennt den Tisch. Ohne sie gilt der Tisch zum Spiel – das
+		// reicht, solange je Spiel nur einer offen ist, und hält alte Aufrufer
+		// am Leben.
+		AngebotID string `json:"angebotId"`
+		// ZielID macht aus dem Angebot eine direkte Einladung an genau diesen
+		// Spieler.
+		ZielID     string `json:"zielId"`
 		Pairs      int    `json:"pairs"`
 		Kind       string `json:"kind"`
 		MaxPlayers int    `json:"maxPlayers"`
@@ -514,16 +657,53 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		room.Angebot = &Angebot{
+		// Je Spiel ein Tisch: Wer denselben Tisch noch einmal anbietet, ersetzt
+		// seinen eigenen; ein fremder Tisch bleibt stehen (sonst würde ein
+		// zweiter Spieler den ersten still verdrängen).
+		if alt := angebotFuerSpiel(room, spiel); alt != nil {
+			if alt.VonID != input.ID {
+				mu.Unlock()
+				http.Error(w, "Für dieses Spiel steht schon ein Tisch offen.", http.StatusConflict)
+				return
+			}
+			angebotEntfernen(room, alt.ID)
+		}
+		// Direkte Einladung: Der Eingeladene muss da sein, sonst kommt sie nie an.
+		ziel := strings.TrimSpace(input.ZielID)
+		zielName := ""
+		if ziel != "" {
+			if ziel == input.ID {
+				mu.Unlock()
+				http.Error(w, "Bitte einen anderen Spieler auswählen.", http.StatusBadRequest)
+				return
+			}
+			zielSpieler, da := room.Players[ziel]
+			if !da {
+				mu.Unlock()
+				http.Error(w, "Der Spieler ist nicht mehr im Spielraum.", http.StatusNotFound)
+				return
+			}
+			if !zielSpieler.anwesend(time.Now()) {
+				mu.Unlock()
+				http.Error(w, "Der Spieler ist gerade nicht da.", http.StatusConflict)
+				return
+			}
+			zielName = zielSpieler.Name
+		}
+		room.Angebote = append(room.Angebote, &Angebot{
 			ID:         randomCode(),
 			Game:       spiel,
 			GameName:   spielName(spiel),
 			VonID:      input.ID,
 			VonName:    player.Name,
+			ZielID:     ziel,
+			ZielName:   zielName,
 			Pairs:      input.Pairs,
 			Kind:       input.Kind,
 			MaxPlayers: input.MaxPlayers,
-		}
+			Zeit:       time.Now(),
+		})
+		tischID := room.Angebote[len(room.Angebote)-1].ID
 		room.LastActive = time.Now()
 		mu.Unlock()
 
@@ -562,8 +742,8 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if nr, text := spielAufruf(api, code, "create", felder); nr >= 300 {
 				mu.Lock()
-				if room := rooms[code]; room != nil && room.Angebot != nil && room.Angebot.VonID == input.ID {
-					room.Angebot = nil
+				if room := rooms[code]; room != nil {
+					angebotEntfernen(room, tischID)
 				}
 				mu.Unlock()
 				http.Error(w, "Das Spiel lässt sich gerade nicht öffnen: "+text, http.StatusConflict)
@@ -572,16 +752,24 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		mu.Lock()
-		if room := rooms[code]; room != nil && room.Angebot != nil {
-			room.addMessage(Message{
+		if room := rooms[code]; room != nil && angebotMitID(room, tischID) != nil {
+			msg := Message{
 				Name:       player.Name,
 				Text:       "bietet " + spielName(spiel) + " an.",
 				Time:       time.Now().Format("15:04:05"),
 				SenderID:   input.ID,
 				GameInvite: true,
+				Angebot:    true,
 				Game:       spiel,
-				GameID:     room.Angebot.ID,
-			})
+				GameID:     tischID,
+			}
+			// Eine direkte Einladung ist ein Flüstern an genau diesen Spieler –
+			// sie steht damit nur in seinem Chat und nur er kann sie annehmen.
+			if ziel != "" {
+				msg.Text = "lädt dich zu " + spielName(spiel) + " ein."
+				msg.ToID, msg.ToName, msg.Whisper = ziel, zielName, true
+			}
+			room.addMessage(msg)
 		}
 		mu.Unlock()
 		w.WriteHeader(http.StatusNoContent)
@@ -602,23 +790,33 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		if room.Angebot == nil {
+		tisch := angebotMitID(room, input.AngebotID)
+		if tisch == nil {
+			tisch = angebotFuerSpiel(room, strings.ToLower(strings.TrimSpace(input.Game)))
+		}
+		if tisch == nil {
 			mu.Unlock()
 			http.Error(w, "Es steht gerade kein Angebot offen.", http.StatusConflict)
 			return
 		}
-		if room.Angebot.VonID == input.ID {
+		if tisch.VonID == input.ID {
 			mu.Unlock()
 			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
 			return
 		}
-		if !room.angebotNochOffen(room.Angebot) {
-			room.Angebot = nil
+		// Eine direkte Einladung gilt genau einem Spieler.
+		if tisch.ZielID != "" && tisch.ZielID != input.ID {
+			mu.Unlock()
+			http.Error(w, "Dieser Tisch ist für "+tisch.ZielName+" reserviert.", http.StatusForbidden)
+			return
+		}
+		if !room.angebotNochOffen(tisch) {
+			angebotEntfernen(room, tisch.ID)
 			mu.Unlock()
 			http.Error(w, "Die Runde ist schon gestartet – hier ist nichts mehr offen.", http.StatusConflict)
 			return
 		}
-		angebot := *room.Angebot
+		angebot := *tisch
 		mu.Unlock()
 
 		api := spielApi[angebot.Game]
@@ -653,6 +851,11 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 
 		mu.Lock()
 		if room := rooms[code]; room != nil {
+			// Der Platz am Tisch gehört jetzt ihm: Die Karte zeigt ihn als
+			// sitzend und bietet kein zweites Mitspielen mehr an.
+			if tisch := angebotMitID(room, angebot.ID); tisch != nil && !enthaelt(tisch.Beigetreten, input.ID) {
+				tisch.Beigetreten = append(tisch.Beigetreten, input.ID)
+			}
 			text := player.Name + " spielt jetzt " + angebot.GameName + " mit."
 			if gemeinsam[angebot.Game] {
 				text = player.Name + " malt jetzt mit."
@@ -662,10 +865,10 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 				Time:   time.Now().Format("15:04:05"),
 				System: true,
 			})
-			// Spiele für zwei sind damit besetzt – das Angebot ist erledigt.
-			// An Tischen bleiben freie Plätze offen.
-			if !tischspiel[angebot.Game] && !gemeinsam[angebot.Game] && room.Angebot != nil && room.Angebot.ID == angebot.ID {
-				room.Angebot = nil
+			// Spiele für zwei sind damit besetzt – der Tisch ist erledigt.
+			// An Tischen mit mehreren Plätzen bleiben freie Plätze offen.
+			if !tischspiel[angebot.Game] && !gemeinsam[angebot.Game] {
+				angebotEntfernen(room, angebot.ID)
 			}
 		}
 		mu.Unlock()
@@ -689,19 +892,31 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		if room.Angebot == nil {
+		tisch := angebotMitID(room, input.AngebotID)
+		if tisch == nil {
+			tisch = angebotFuerSpiel(room, strings.ToLower(strings.TrimSpace(input.Game)))
+		}
+		if tisch == nil {
 			http.Error(w, "Es steht gerade kein Angebot offen.", http.StatusConflict)
 			return
 		}
-		if room.Angebot.VonID == input.ID {
+		if tisch.VonID == input.ID {
 			http.Error(w, "Du hast die Runde selbst angeboten.", http.StatusBadRequest)
 			return
 		}
-		if room.anwesend() > 2 {
+		// Eine direkte Einladung darf nur der Eingeladene ablehnen – und sie ist
+		// damit erledigt, egal wie viele sonst im Raum sind. Ein offenes Angebot
+		// bleibt stehen, solange noch jemand anderes mitspielen könnte.
+		if tisch.ZielID != "" {
+			if tisch.ZielID != input.ID {
+				http.Error(w, "Diese Einladung gilt "+tisch.ZielName+".", http.StatusForbidden)
+				return
+			}
+		} else if room.anwesend() > 2 {
 			http.Error(w, "Es sind noch andere im Raum – das Angebot bleibt offen.", http.StatusConflict)
 			return
 		}
-		room.Angebot = nil
+		angebotEntfernen(room, tisch.ID)
 		room.LastActive = time.Now()
 		room.addMessage(Message{
 			Text:   player.Name + " lehnt ab.",
@@ -724,11 +939,15 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
-		if room.Angebot == nil || room.Angebot.VonID != input.ID {
+		tisch := angebotMitID(room, input.AngebotID)
+		if tisch == nil {
+			tisch = angebotFuerSpiel(room, strings.ToLower(strings.TrimSpace(input.Game)))
+		}
+		if tisch == nil || tisch.VonID != input.ID {
 			http.Error(w, "Es steht kein eigenes Angebot offen.", http.StatusConflict)
 			return
 		}
-		room.Angebot = nil
+		angebotEntfernen(room, tisch.ID)
 		room.addMessage(Message{
 			Text:   player.Name + " zieht das Angebot zurück.",
 			Time:   time.Now().Format("15:04:05"),

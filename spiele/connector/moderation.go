@@ -11,6 +11,25 @@ import (
 // moderationHandler allows room owners to mute players and view mute status.
 // POST with {room, ownerId, targetId, minutes} to set mute (minutes 1-3).
 // GET with ?room=CODE returns list of muted players and remaining seconds.
+// mutesListe liefert die laufenden Stummschaltungen mit Restsekunden und wirft
+// abgelaufene weg. Muss unter mu laufen.
+func mutesListe(room *Room, jetzt time.Time) []map[string]string {
+	list := []map[string]string{}
+	for id, bis := range room.Mutes {
+		if jetzt.After(bis) {
+			delete(room.Mutes, id)
+			continue
+		}
+		name := ""
+		if p, ok := room.Players[id]; ok {
+			name = p.Name
+		}
+		list = append(list, map[string]string{"id": id, "name": name,
+			"seconds": strconv.Itoa(int(bis.Sub(jetzt).Seconds()))})
+	}
+	return list
+}
+
 func moderationHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var input struct {
@@ -66,22 +85,7 @@ func moderationHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
 			return
 		}
-		// Build list of muted players with remaining seconds
-		now := time.Now()
-		list := []map[string]string{}
-		for id, until := range room.Mutes {
-			if now.After(until) {
-				// purge expired mute
-				delete(room.Mutes, id)
-				continue
-			}
-			remaining := int(until.Sub(now).Seconds())
-			name := ""
-			if p, ok := room.Players[id]; ok {
-				name = p.Name
-			}
-			list = append(list, map[string]string{"id": id, "name": name, "seconds": strconv.Itoa(remaining)})
-		}
+		list := mutesListe(room, time.Now())
 		mu.Unlock()
 		jsonResponse(w, list)
 		return

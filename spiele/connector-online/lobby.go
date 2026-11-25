@@ -268,44 +268,34 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)
 		return
 	}
-	// Ein Spieler gehört immer nur zu genau einem Spielraum.
-	for otherCode, other := range rooms {
-		if otherCode == input.Room {
-			continue
-		}
-		if gewechselt, ok := other.Players[input.ID]; ok {
-			// Wer den Raum wechselt, löst hier seine Partien auf – sonst bliebe
-			// eine laufende Partie ohne Mitspieler zurück.
-			other.abgangBeenden(input.ID, gewechselt.Name, "verlassen")
-			delete(other.Players, input.ID)
-			// Wer in einen anderen Raum wechselt, verlässt diesen hier.
-			other.addMessage(Message{
-				Name:     gewechselt.Name,
-				Text:     "verlässt den Raum.",
-				Time:     time.Now().Format("15:04:05"),
-				SenderID: input.ID,
-				Gone:     true,
-			})
-			other.cleanPlayers()
-			other.LastActive = time.Now()
-		}
-	}
+	// Ein Spieler kann in mehreren Räumen Mitglied sein: Die Halle bleibt, wer
+	// eine private Runde betritt, sitzt dort zusätzlich. Ein Lebenszeichen
+	// löscht deshalb hier keinen Platz in einem anderen Raum und beendet dort
+	// auch keine Partie. Aufgeräumt wird erst beim ausdrücklichen Verlassen
+	// (/api/leave, /api/einladung "zurueck") oder wenn eine Frist abläuft.
 	room.cleanPlayers()
 	amServer := bossErkennen(r, room)
 	player, known := room.Players[input.ID]
 	// Ein bekannter Platz gehört dem Gerät, das ihn angelegt hat: Wer die
 	// Kennung errät oder aus /api/players abschreibt, kommt hier nicht weiter.
+	// Eine gültige Sitzung desselben Spielers zählt als Ausweis – so darf ein
+	// zweiter Tab oder ein zweites Gerät denselben Platz benutzen, ohne ihn zu
+	// übernehmen.
 	if known && (player.Token == "" || player.Token != strings.TrimSpace(input.Token)) {
 		// Das Token kann verloren gehen (Speicher geleert, alter Tab, neues
 		// Browserfenster). Dann holt die Gerätekennung denselben Platz zurück:
 		// gleiche Kennung, gleicher Name, kein Nummernanhang. Ohne passende
-		// Gerätekennung bleibt es bei der Abweisung.
-		if !geraetPasst(player, input.Geraet, time.Now()) || !tokenBrauchbar(strings.TrimSpace(input.Token)) {
+		// Gerätekennung bleibt es bei der Abweisung – und es entsteht dabei
+		// keine neue Identität.
+		if !sitzungPasst(input.ID, strings.TrimSpace(input.Token)) &&
+			(!geraetPasst(player, input.Geraet, time.Now()) || !tokenBrauchbar(strings.TrimSpace(input.Token))) {
 			mu.Unlock()
 			http.Error(w, "Diese Spielerkennung gehört zu einem anderen Gerät.", http.StatusForbidden)
 			return
 		}
-		player.Token = strings.TrimSpace(input.Token)
+		if player.Token != strings.TrimSpace(input.Token) {
+			player.Token = strings.TrimSpace(input.Token)
+		}
 	}
 
 	// Ein unbekannter Platz entsteht nur auf ausdrücklichen Wunsch (neu).
@@ -395,6 +385,28 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		player.AfkWarned = false
 	}
 	room.Players[input.ID] = player
+	// Ein Lebenszeichen hält den Spieler in jedem Raum frisch, in dem er
+	// Mitglied ist. Wer eine private Runde spielt, bleibt damit in der Halle
+	// anwesend, und ein einziger Ruf hält alle seine Tische am Leben – ohne
+	// das fiel er nach presenceTimeout aus der Halle, sobald er den Raum
+	// wechselte, mitten aus Chat und Partie.
+	jetzt := time.Now()
+	fuerAllePlaetze(input.ID, func(andere *Room, platz *Player) {
+		if andere.Code == room.Code {
+			return
+		}
+		platz.Last = jetzt
+		if input.Active {
+			platz.LastAction = jetzt
+			platz.AfkWarned = false
+		}
+		andere.LastActive = jetzt
+	})
+	// Identität und Sitzung getrennt vom Platz führen: Der Platz kann verfallen
+	// (Raum voll, Tab zu), das Profil und die Sitzung bleiben. Damit ist ein
+	// zweiter Tab derselbe Spieler und kein Fremder.
+	spielerMerken(input.ID, player.Name)
+	sitzungMerken(input.ID, player.Geraet, player.Token)
 	room.LastActive = time.Now()
 	code := room.Code
 	mu.Unlock()

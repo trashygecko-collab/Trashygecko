@@ -12,7 +12,11 @@
 
    „online“ steht bewusst nicht in den Merkmalen: online ist nur, was im
    multiplayer-register.js steht (echte Connector-Anbindung). Beide Seiten
-   leiten das daraus ab. */
+   leiten das daraus ab.
+
+   Nicht in dieser Liste: malen/malen.html. Das ist ein gemeinsames
+   Kritzelbrett ohne Ziel, Punkte und Sieger; es steht als Werkzeug-Kachel in
+   spiele.html und nur für den gemeinsamen Raum im Register. */
 window.TGSpieldaten = (function () {
  var KATEGORIEN = [
     { id: "wuerfel", name: "Würfelspiele", akzent: "#8fd0a8",
@@ -32,7 +36,7 @@ window.TGSpieldaten = (function () {
     /* --- Kartenspiele -------------------------------------------------- */
     ["Arschloch", "kartenspiele/arschloch/arschloch.html", "karten", "lokal"],
     ["Baccara", "kartenspiele/baccara/baccara.html", "karten", "", "baccarat"],
-    ["Cabo", "kartenspiele/cabo/cabo.html", "karten", "solo"],
+    ["Cabo", "kartenspiele/cabo/cabo.html", "karten", ""],
     ["Mau Mau", "kartenspiele/maumau/maumau.html", "karten", "lokal zwei", "maumau"],
     ["Poker", "kartenspiele/poker/poker.html", "karten", "", "texas holdem"],
     ["Sechsundsechzig", "kartenspiele/sechsundsechzig/sechsundsechzig.html", "karten", "", "66"],
@@ -75,8 +79,8 @@ window.TGSpieldaten = (function () {
     ["Backgammon", "brettspiele/backgammon/backgammon.html", "brett", "lokal zwei"],
     ["Bingo", "brettspiele/bingo/bingo.html", "brett", "solo"],
     ["Dame", "brettspiele/dame/dame.html", "brett", "lokal zwei", "checkers"],
-    ["Das verrückte Labyrinth", "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", "brett", "solo lokal zwei computer", "gaenge schieben schaetze labyrinth"],
-    ["Domino", "brettspiele/domino/domino.html", "brett", "solo lokal zwei computer"],
+    ["Das verrückte Labyrinth", "brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html", "brett", "lokal zwei computer", "gaenge schieben schaetze labyrinth"],
+    ["Domino", "brettspiele/domino/domino.html", "brett", "lokal zwei computer"],
     ["Gänsespiel", "brettspiele/gaensespiel/gaensespiel.html", "brett", "lokal zwei", "ganzespiel"],
     ["Go", "brettspiele/go/go.html", "brett", "lokal zwei", "goban baduk"],
     ["Halma", "brettspiele/halma/halma.html", "brett", "solo lokal zwei computer", "sternhalma sprunghalma"],
@@ -87,7 +91,7 @@ window.TGSpieldaten = (function () {
     ["Mensch ärgere dich nicht", "brettspiele/menschaerger/menschaerger.html", "brett", "lokal zwei", "ludo"],
     ["Mühle", "brettspiele/muehle/muehle.html", "brett", "lokal zwei", "muehle"],
     ["Reversi", "brettspiele/reversi/reversi.html", "brett", "lokal zwei", "othello"],
-    ["Risiko – Welt erobern", "brettspiele/risiko/risiko.html", "brett", "solo lokal zwei computer", "erobern weltkarte strategie armeen wuerfel"],
+    ["Risiko – Welt erobern", "brettspiele/risiko/risiko.html", "brett", "lokal zwei computer", "erobern weltkarte strategie armeen wuerfel"],
     ["Schach", "brettspiele/schach/schach.html", "brett", "lokal zwei", "chess"],
     ["Schiffe versenken", "brettspiele/schiffe/schiffe.html", "brett", "", "battleship flotte"],
     ["Schlangen und Leitern", "brettspiele/schlangen/schlangen.html", "brett", "lokal zwei", "leiterlispiel"],
@@ -123,7 +127,7 @@ window.TGSpieldaten = (function () {
     ["Frogger", "frogger/frogger.html", "arcade", "solo highscore", "frosch"],
     ["Gold Miner", "goldminer/goldminer.html", "arcade", "solo", "goldgraeber haken"],
     ["Pac-Man", "pacman/pacman.html", "arcade", "solo highscore", "pacman geister"],
-    ["Pong", "pong/pong.html", "arcade", "solo lokal zwei computer highscore"],
+    ["Pong", "pong/pong.html", "arcade", "lokal zwei computer highscore"],
     ["Snake", "snake/snake.html", "arcade", "solo highscore", "nokia schlange"],
     ["Space Invaders", "invaders/invaders.html", "arcade", "solo highscore", "invaders alien"],
     ["Super Pimmelchen", "pimmel/spimmel.html", "arcade", "solo highscore", "spimmel retro"],

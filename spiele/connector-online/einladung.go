@@ -70,6 +70,26 @@ func privaterRaum(vonVon, vonBis string) *Room {
 	return rooms[code]
 }
 
+// einladungenFuer liefert die Einladungen dieses Spielers: die eine offene an
+// ihn und alle, die er selbst verschickt hat. Muss unter mu laufen, nachdem
+// einladungAufraeumen gelaufen ist.
+func einladungenFuer(ich string) ([]Einladung, []Einladung) {
+	eingehend := []Einladung{}
+	ausgehend := []Einladung{}
+	if ich == "" {
+		return eingehend, ausgehend
+	}
+	if e := einladungen[ich]; e != nil && e.Stand == "offen" {
+		eingehend = append(eingehend, *e)
+	}
+	for _, e := range einladungen {
+		if e.VonID == ich {
+			ausgehend = append(ausgehend, *e)
+		}
+	}
+	return eingehend, ausgehend
+}
+
 // einladungHandler: GET liefert meine Einladungen (eingehend und ausgehend),
 // POST sendet, nimmt an, lehnt ab oder führt zurück in den Hauptraum.
 func einladungHandler(w http.ResponseWriter, r *http.Request) {
@@ -82,16 +102,7 @@ func einladungHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		mu.Lock()
 		einladungAufraeumen(time.Now())
-		eingehend := []Einladung{}
-		ausgehend := []Einladung{}
-		if e := einladungen[ich]; e != nil && e.Stand == "offen" {
-			eingehend = append(eingehend, *e)
-		}
-		for _, e := range einladungen {
-			if e.VonID == ich {
-				ausgehend = append(ausgehend, *e)
-			}
-		}
+		eingehend, ausgehend := einladungenFuer(ich)
 		mu.Unlock()
 		jsonResponse(w, map[string]any{"eingehend": eingehend, "ausgehend": ausgehend})
 		return

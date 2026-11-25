@@ -19,6 +19,12 @@ const maxNameLen = 24
 // Raum und ihre Partie wurde weggeworfen.
 const presenceTimeout = 150 * time.Second
 
+// abgangFrist: So lange nach der Meldung "mein Tab geht zu" bleibt der Platz
+// noch stehen. Ein Neuladen ist in dieser Zeit zurück und meldet sich mit
+// einem Lebenszeichen – die Marke fällt dann weg. Bleibt es still, ist der
+// Platz sofort weg, statt die volle presenceTimeout abzuwarten.
+const abgangFrist = 10 * time.Second
+
 // emptyRoomGameGrace: Sind alle Geräte weg, bleiben Einladungen und Partien
 // noch so lange liegen und gehen erst danach verloren.
 const emptyRoomGameGrace = 5 * time.Minute
@@ -85,6 +91,10 @@ type Message struct {
 	ToName     string `json:"toName,omitempty"`
 	Whisper    bool   `json:"whisper"`
 	GameInvite bool   `json:"gameInvite,omitempty"`
+	// Angebot markiert die Chatzeile eines Spieltischs (offen oder als direkte
+	// Einladung). Ihre GameID ist die des Tischs, nicht die der Partie – daran
+	// erkennt die Seite, ob sie Mitspielen/Ablehnen anbieten soll.
+	Angebot bool `json:"angebot,omitempty"`
 	// Tone färbt eine Nachricht ein: love (rosa), joke (grün), evil (rot).
 	Tone   string `json:"tone,omitempty"`
 	Game   string `json:"game,omitempty"`
@@ -130,6 +140,11 @@ type Player struct {
 	// gehört haben – die Meldung kommt je Hintergrundphase genau einmal.
 	PauseGemeldet bool `json:"-"`
 	AfkWarned     bool `json:"-"`
+	// WegSeit setzt die Seite, wenn ihr Tab geschlossen wird
+	// (/api/raum/verlassen). Kommt danach noch ein Lebenszeichen, war es ein
+	// Neuladen – dann fällt die Marke weg. Sonst ist der Platz nach
+	// abgangFrist weg (siehe cleanPlayers).
+	WegSeit time.Time `json:"-"`
 }
 
 // verstecktAktiv meldet, ob dieser Spieler gerade mit einem Tab im Hintergrund
@@ -257,7 +272,7 @@ type Room struct {
 	Risiko          *RisikoSpiel           // Risiko (servergeprüfter Stand)
 	Labyrinth       *SyncGame              // Das verrückte Labyrinth (Online)
 	Wuerfel         *wuerfelPartie         // Würfelspiele der Sammlung (18 Regelmodule, Server würfelt)
-	Angebot         *Angebot               // offene Runde für den ganzen Raum
+	Angebote        []*Angebot             // offene Spieltische (einer je Spiel)
 	Mutes           map[string]time.Time   // playerID -> unmute time
 	MsgTimes        map[string][]time.Time // for spam protection
 	// Hinweise sind einmalige Nachrichten an einzelne Spieler (Abgang eines
@@ -293,6 +308,25 @@ func limitName(s string) string {
 
 func (r *Room) cleanPlayers() {
 	now := time.Now()
+	// Wer die Seite geschlossen hat, sagt es selbst: Sein Platz bleibt nur
+	// noch abgangFrist stehen, damit ein Neuladen nicht als Gehen gilt.
+	for id, p := range r.Players {
+		if p.WegSeit.IsZero() {
+			continue
+		}
+		// Achtung, Gleichstand: Die Uhr auf Windows tickt in halben
+		// Millisekunden – Marke und Lebenszeichen können dieselbe Zeit tragen.
+		// "nicht davor" heißt deshalb: Es kam ein Lebenszeichen.
+		if !p.Last.Before(p.WegSeit) {
+			// Danach kam ein Lebenszeichen: Es war ein Neuladen.
+			p.WegSeit = time.Time{}
+			r.Players[id] = p
+			continue
+		}
+		if now.Sub(p.WegSeit) > abgangFrist {
+			r.spielerGeht(id, "verlassen")
+		}
+	}
 	for id, p := range r.Players {
 		if now.Sub(p.Last) > presenceTimeout {
 			// Ein Tab im Hintergrund darf einfrieren, ohne den Raum zu
@@ -301,24 +335,23 @@ func (r *Room) cleanPlayers() {
 			if p.verstecktAktiv(now) {
 				continue
 			}
-			// Wer den Raum verlässt, darf keine Partie offen lassen.
-			r.abgangBeenden(id, p.Name, "verbindung")
-			delete(r.Players, id)
-			// Mit Absender, damit der Name im Chat steht und angeklickt werden kann.
-			r.addMessage(Message{
-				Name:     p.Name,
-				Text:     "verlässt den Raum.",
-				Time:     now.Format("15:04:05"),
-				SenderID: id,
-				Gone:     true,
-			})
+			// Wer den Raum verlässt, darf keine Partie offen lassen. Der Weg
+			// ist derselbe wie beim Schließen des Tabs (spielerGeht).
+			r.spielerGeht(id, "verbindung")
 		}
 	}
-	// Ein Angebot, dessen Ersteller weg ist, kann niemand mehr annehmen.
-	if r.Angebot != nil {
-		if _, da := r.Players[r.Angebot.VonID]; !da {
-			r.Angebot = nil
+	// Ein Tisch, dessen Ersteller weg ist, kann niemand mehr annehmen.
+	weg := []string{}
+	for _, a := range r.Angebote {
+		if a == nil {
+			continue
 		}
+		if _, da := r.Players[a.VonID]; !da {
+			weg = append(weg, a.ID)
+		}
+	}
+	for _, id := range weg {
+		angebotEntfernen(r, id)
 	}
 	// Laufende Partien: Wer 60 s nichts mehr von sich hören lässt, ist weg.
 	// Die Partie wird beendet, damit der Mitspieler nicht endlos wartet.
@@ -738,9 +771,10 @@ func startRoomJanitor() {
 		defer ticker.Stop()
 		for range ticker.C {
 			mu.Lock()
+			jetzt := time.Now()
 			for code, room := range rooms {
 				room.cleanPlayers()
-				room.warnIdle(time.Now())
+				room.warnIdle(jetzt)
 				// Der eine Hauptraum bleibt immer bestehen – auch wenn der Host vom
 				// Handy spielt und sein Rechner gerade keinen Tab offen hat.
 				if code == mainRoomCode {
@@ -750,6 +784,8 @@ func startRoomJanitor() {
 					delete(rooms, code)
 				}
 			}
+			// Abgelaufene Sitzungen und verwaiste Profile mit aufräumen.
+			sitzungenAufraeumen(jetzt)
 			mu.Unlock()
 		}
 	}()

@@ -79,6 +79,7 @@ public final class SpieleActivity extends Activity {
     static {
         MERKMAL_TEXT.put("solo", "Einzelspieler");
         MERKMAL_TEXT.put("lokal", "Lokal");
+        MERKMAL_TEXT.put("zwei", "Zu zweit");
         MERKMAL_TEXT.put("multi", "Mehrspieler");
         MERKMAL_TEXT.put("online", "Online");
         MERKMAL_TEXT.put("computer", "Gegen Bots");
@@ -88,6 +89,7 @@ public final class SpieleActivity extends Activity {
         MERKMAL_FILTER.put("solo", "Einzelspieler");
         MERKMAL_FILTER.put("multi", "Mehrspieler");
         MERKMAL_FILTER.put("lokal", "Lokal am Gerät");
+        MERKMAL_FILTER.put("zwei", "Zu zweit");
         MERKMAL_FILTER.put("online", "Online");
         MERKMAL_FILTER.put("computer", "Gegen Computer");
         MERKMAL_FILTER.put("highscore", "Highscore");
