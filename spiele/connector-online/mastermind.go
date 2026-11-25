@@ -361,7 +361,7 @@ func mastermindHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "spielt Mastermind gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -383,7 +383,7 @@ func mastermindHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:       player.Name,
 			Text:       "lädt dich zu Mastermind ein.",
-			Time:       time.Now().Format("15:04:05"),
+			Time:       uhrzeit(time.Now()),
 			SenderID:   input.ID,
 			ToID:       input.ToID,
 			ToName:     target.Name,

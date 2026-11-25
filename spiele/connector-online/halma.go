@@ -672,7 +672,7 @@ func halmaHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "spielt Halma gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -697,7 +697,7 @@ func halmaHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name: player.Name,
 			Text: "eröffnet " + halmaName(variante) + " für " + strconv.Itoa(anzahl) + " Spieler.",
-			Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Time: uhrzeit(time.Now()), SenderID: input.ID,
 		})
 
 	// join und rejoin tun dasselbe: Platz nehmen, solange einer frei ist.

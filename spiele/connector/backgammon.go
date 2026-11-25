@@ -369,7 +369,7 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:       player.Name,
 			Text:       "lädt dich zu Backgammon ein.",
-			Time:       time.Now().Format("15:04:05"),
+			Time:       uhrzeit(time.Now()),
 			SenderID:   input.ID,
 			ToID:       input.ToID,
 			ToName:     target.Name,
@@ -412,7 +412,7 @@ func backgammonHandler(w http.ResponseWriter, r *http.Request) {
 		room.Backgammon.BotStufe = stufe
 		room.Backgammon.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
-			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Name: player.Name, Time: uhrzeit(time.Now()), SenderID: input.ID,
 			Text: "spielt Backgammon gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 

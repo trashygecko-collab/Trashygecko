@@ -783,7 +783,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "spielt 1×1-Rennen gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -802,7 +802,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "eröffnet ein 1×1-Rennen – bis zu 7 Spieler, mitspielen über die Spielkarte.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -823,7 +823,7 @@ func einsxeinsHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "setzt sich zum 1×1-Rennen.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -1003,7 +1003,7 @@ func rechenStart(room *Room, game *RechenGame, id string) (int, string) {
 	room.addMessage(Message{
 		Name:     name,
 		Text:     "startet das 1×1-Rennen – " + rechenModeName(game.Mode) + " · " + rechenLevelName(game.Mode, game.Level) + ".",
-		Time:     time.Now().Format("15:04:05"),
+		Time:     uhrzeit(time.Now()),
 		SenderID: id,
 	})
 	return 0, ""

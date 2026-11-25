@@ -674,7 +674,7 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "eröffnet eine UNO-Runde – bis zu 4 Spieler, mitspielen über die Spielkarte.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -695,7 +695,7 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "setzt sich zur UNO-Runde.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -739,7 +739,7 @@ func unoHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "startet die UNO-Runde.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 

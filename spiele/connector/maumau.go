@@ -615,7 +615,7 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "eröffnet eine Mau-Mau-Runde – bis zu 7 Spieler, mitspielen über die Spielkarte.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -636,7 +636,7 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "setzt sich zur Mau-Mau-Runde.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 
@@ -680,7 +680,7 @@ func maumauHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "startet die Mau-Mau-Runde.",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 

@@ -405,7 +405,7 @@ func toneHandler(w http.ResponseWriter, r *http.Request) {
 	room.addMessage(Message{
 		Name:     sender.Name,
 		Text:     text,
-		Time:     now.Format("15:04:05"),
+		Time:     uhrzeit(now),
 		SenderID: input.ID,
 		Tone:     kind,
 	})

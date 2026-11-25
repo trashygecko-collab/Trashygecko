@@ -597,7 +597,7 @@ func (r *Room) spielerGeht(id, grund string) bool {
 	r.addMessage(Message{
 		Name:     p.Name,
 		Text:     "verlässt den Raum.",
-		Time:     jetzt.Format("15:04:05"),
+		Time:     uhrzeit(jetzt),
 		SenderID: id,
 		Gone:     true,
 	})

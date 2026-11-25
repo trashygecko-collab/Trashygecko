@@ -89,7 +89,7 @@ func umbenennenHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     alt,
 			Text:     "heißt jetzt " + neu + ".",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.TargetID,
 		})
 		room.LastActive = time.Now()

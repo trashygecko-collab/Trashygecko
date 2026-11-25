@@ -379,7 +379,7 @@ func (r *Room) cleanPlayers() {
 		r.Players[id] = p
 		r.addMessage(Message{
 			Text:   p.Name + " pausiert – das Gerät ist im Hintergrund. Die Partie bleibt stehen, bis " + p.Name + " zurück ist.",
-			Time:   now.Format("15:04:05"),
+			Time:   uhrzeit(now),
 			System: true,
 		})
 	}
@@ -529,7 +529,7 @@ func (r *Room) warnIdle(now time.Time) {
 		r.Players[id] = p
 		r.addMessage(Message{
 			Text:   p.Name + " ist wohl gerade auf dem Klo oder eingeschlafen.",
-			Time:   now.Format("15:04:05"),
+			Time:   uhrzeit(now),
 			System: true,
 		})
 	}

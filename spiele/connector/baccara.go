@@ -529,7 +529,7 @@ func baccaraHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	zeit := time.Now().Format("15:04:05")
+	zeit := uhrzeit(time.Now())
 
 	switch action {
 	case "create":

@@ -140,7 +140,7 @@ func messages(w http.ResponseWriter, r *http.Request) {
 				room.addMessage(Message{
 					Name:     sender.Name,
 					Text:     "ist jetzt Admin.",
-					Time:     jetzt.Format("15:04:05"),
+					Time:     uhrzeit(jetzt),
 					SenderID: input.ID,
 				})
 				room.LastActive = jetzt
@@ -191,12 +191,12 @@ func messages(w http.ResponseWriter, r *http.Request) {
 			recipientName = recipient.Name
 		}
 		// Append message
-		uhrzeit := now.Format("15:04:05")
+		zeitstempel := uhrzeit(now)
 		room.addMessage(Message{
 			Name:     sender.Name,
 			Text:     input.Text,
 			Bild:     input.Bild,
-			Time:     uhrzeit,
+			Time:     zeitstempel,
 			SenderID: input.ID,
 			ToID:     input.ToID,
 			ToName:   recipientName,
@@ -206,7 +206,7 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		room.LastActive = now
 		mu.Unlock()
 		// Empfangsbestätigung: die Seite hängt ihre Zeile erst daran ab.
-		jsonResponse(w, map[string]string{"msgId": input.MsgID, "time": uhrzeit})
+		jsonResponse(w, map[string]string{"msgId": input.MsgID, "time": zeitstempel})
 		return
 	}
 

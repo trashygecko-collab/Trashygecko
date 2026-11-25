@@ -480,15 +480,21 @@ button.mini{padding:6px 10px;font-size:12px}
     } catch (e){ melde(e.message, "schlecht"); }
   }
 
+  /* Tagesdatum in deutscher Ortszeit – toISOString() liefert UTC und wäre
+     zwischen 00:00 und 01:00 (Sommer 02:00) noch der Vortag. */
+  function heute() {
+    return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
+  }
+
   function exportieren(){
     const daten = JSON.stringify({
-      stand: new Date().toISOString().slice(0,10),
+      stand: heute(),
       kategorien: bank.kategorien, fragen: bank.fragen
     }, null, 2);
     const blob = new Blob([daten + "\n"], { type:"application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "quizfragen-" + new Date().toISOString().slice(0,10) + ".json";
+    a.download = "quizfragen-" + heute() + ".json";
     document.body.appendChild(a);
     a.click();
     a.remove();

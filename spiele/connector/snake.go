@@ -478,7 +478,7 @@ func snakeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bitte erneut dem Spielraum beitreten.", http.StatusForbidden)
 		return
 	}
-	zeit := time.Now().Format("15:04:05")
+	zeit := uhrzeit(time.Now())
 
 	switch action {
 	// Gegen den Server-Bot: Mensch links, Computer rechts, beide bereit.

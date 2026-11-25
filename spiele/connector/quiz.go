@@ -44,9 +44,9 @@ const (
 	// Maximale Antwortzeit je Frage – in beiden Modi 30 s. Früher Schluss ist
 	// Absicht: Haben alle Spieler geantwortet, wertet quizAntwort sofort aus
 	// (quizAlleDran), statt die Restzeit abzuwarten.
-	quizZeitTempo   = 30 * time.Second
-	quizZeitPunkte  = 30 * time.Second
-	quizPauseZeit   = 7 * time.Second
+	quizZeitTempo  = 30 * time.Second
+	quizZeitPunkte = 30 * time.Second
+	quizPauseZeit  = 7 * time.Second
 )
 
 // QuizPunkte sind je Partie einstellbar (die Spielseite reicht Werte aus dem

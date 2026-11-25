@@ -161,7 +161,7 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 			} else if room.Sechsundsechzig != nil && (room.Sechsundsechzig.Status == "spiel" || room.Sechsundsechzig.Status == "invited") {
 				game = "Sechsundsechzig"
 			}
-			list = append(list, RoomInfo{Code: code, Players: len(room.Players), Created: room.Created.Format("15:04"), CreatedAt: room.Created, Owner: room.OwnerName, Status: status, Game: game, Name: room.Name})
+			list = append(list, RoomInfo{Code: code, Players: len(room.Players), Created: uhrzeitKurz(room.Created), CreatedAt: room.Created, Owner: room.OwnerName, Status: status, Game: game, Name: room.Name})
 		}
 		mu.Unlock()
 		sort.Slice(list, func(i, j int) bool { return list[i].CreatedAt.Before(list[j].CreatedAt) })
@@ -346,7 +346,7 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     name,
 			Text:     text,
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 		// Begrüßung nur für den Neuen – der Raum flüstert ihn an, die anderen
@@ -354,7 +354,7 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:    "Der Raum",
 			Text:    "Hallo und herzlich willkommen! Spieler anflüstern mit /f Name",
-			Time:    time.Now().Format("15:04:05"),
+			Time:    uhrzeit(time.Now()),
 			ToID:    input.ID,
 			ToName:  name,
 			Whisper: true,
@@ -365,7 +365,7 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:     player.Name,
 			Text:     "heißt jetzt " + name + ".",
-			Time:     time.Now().Format("15:04:05"),
+			Time:     uhrzeit(time.Now()),
 			SenderID: input.ID,
 		})
 	}

@@ -352,7 +352,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:       player.Name,
 			Text:       "lädt dich zu Mensch ärgere dich nicht ein.",
-			Time:       time.Now().Format("15:04:05"),
+			Time:       uhrzeit(time.Now()),
 			SenderID:   input.ID,
 			ToID:       input.ToID,
 			ToName:     target.Name,
@@ -398,7 +398,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.addMessage(Message{
 			Text:   text,
-			Time:   time.Now().Format("15:04:05"),
+			Time:   uhrzeit(time.Now()),
 			System: true,
 		})
 
@@ -541,7 +541,7 @@ func menschaergerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		room.Menschaerger.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
-			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Name: player.Name, Time: uhrzeit(time.Now()), SenderID: input.ID,
 			Text: "spielt Mensch ärgere dich nicht gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 

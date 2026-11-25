@@ -293,7 +293,7 @@ func quizBankSpeichern(bank QuizBank) error {
 		return err
 	}
 	if bank.Stand == "" {
-		bank.Stand = time.Now().Format("2006-01-02")
+		bank.Stand = datum(time.Now())
 	}
 	if bank.Fragen == nil {
 		bank.Fragen = []QuizFrage{}

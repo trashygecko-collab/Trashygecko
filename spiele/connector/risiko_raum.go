@@ -220,7 +220,7 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 		room.Risiko = lobby
 		room.addMessage(Message{Name: player.Name,
 			Text: "spielt Risiko gegen " + strconv.Itoa(anzahl-1) + " Computer (" + risikoBotStufeText(stufe) + ").",
-			Time: jetzt.Format("15:04:05"), SenderID: input.ID})
+			Time: uhrzeit(jetzt), SenderID: input.ID})
 
 	case "create":
 		if g != nil && g.Status != risikoStatusBeendet {
@@ -238,7 +238,7 @@ func risikoSpielHandler(w http.ResponseWriter, r *http.Request) {
 		room.Risiko = lobby
 		room.botNamenNeu()
 		room.addMessage(Message{Name: player.Name, Text: "eröffnet Risiko.",
-			Time: jetzt.Format("15:04:05"), SenderID: input.ID})
+			Time: uhrzeit(jetzt), SenderID: input.ID})
 
 	case "join", "rejoin":
 		if g == nil {

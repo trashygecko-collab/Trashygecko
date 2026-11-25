@@ -346,7 +346,7 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:       player.Name,
 			Text:       "lädt dich zu Dame ein.",
-			Time:       time.Now().Format("15:04:05"),
+			Time:       uhrzeit(time.Now()),
 			SenderID:   input.ID,
 			ToID:       input.ToID,
 			ToName:     target.Name,
@@ -455,7 +455,7 @@ func dameHandler(w http.ResponseWriter, r *http.Request) {
 			BotID: botID(1), BotStufe: stufe,
 		}
 		room.addMessage(Message{
-			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Name: player.Name, Time: uhrzeit(time.Now()), SenderID: input.ID,
 			Text: "spielt Dame gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 

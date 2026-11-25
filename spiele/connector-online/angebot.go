@@ -756,7 +756,7 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			msg := Message{
 				Name:       player.Name,
 				Text:       "bietet " + spielName(spiel) + " an.",
-				Time:       time.Now().Format("15:04:05"),
+				Time:       uhrzeit(time.Now()),
 				SenderID:   input.ID,
 				GameInvite: true,
 				Angebot:    true,
@@ -862,7 +862,7 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			room.addMessage(Message{
 				Text:   text,
-				Time:   time.Now().Format("15:04:05"),
+				Time:   uhrzeit(time.Now()),
 				System: true,
 			})
 			// Spiele für zwei sind damit besetzt – der Tisch ist erledigt.
@@ -920,7 +920,7 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		room.LastActive = time.Now()
 		room.addMessage(Message{
 			Text:   player.Name + " lehnt ab.",
-			Time:   time.Now().Format("15:04:05"),
+			Time:   uhrzeit(time.Now()),
 			System: true,
 		})
 		w.WriteHeader(http.StatusNoContent)
@@ -950,7 +950,7 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 		angebotEntfernen(room, tisch.ID)
 		room.addMessage(Message{
 			Text:   player.Name + " zieht das Angebot zurück.",
-			Time:   time.Now().Format("15:04:05"),
+			Time:   uhrzeit(time.Now()),
 			System: true,
 		})
 		w.WriteHeader(http.StatusNoContent)

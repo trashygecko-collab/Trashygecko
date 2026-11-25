@@ -238,7 +238,7 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 		room.addMessage(Message{
 			Name:       player.Name,
 			Text:       "lädt dich zu Reversi ein.",
-			Time:       time.Now().Format("15:04:05"),
+			Time:       uhrzeit(time.Now()),
 			SenderID:   input.ID,
 			ToID:       input.ToID,
 			ToName:     target.Name,
@@ -360,7 +360,7 @@ func reversiHandler(w http.ResponseWriter, r *http.Request) {
 		room.Reversi.BotStufe = stufe
 		room.Reversi.Note = player.Name + " beginnt gegen " + room.botName(1) + " (" + botStufeText(stufe) + ")."
 		room.addMessage(Message{
-			Name: player.Name, Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Name: player.Name, Time: uhrzeit(time.Now()), SenderID: input.ID,
 			Text: "spielt Reversi gegen " + room.botName(1) + " (" + botStufeText(stufe) + ").",
 		})
 

@@ -223,7 +223,7 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 		neu := &SyncGame{
 			ID: randomCode(), Status: "active", Anzahl: anzahl, Current: 0,
 			Sieger: -1, ZugNr: 1, Version: 1, HostID: input.ID,
-			Spieler: []SyncSpieler{{ID: input.ID, Name: player.Name, Platz: 0}},
+			Spieler:  []SyncSpieler{{ID: input.ID, Name: player.Name, Platz: 0}},
 			BotStufe: stufe,
 		}
 		var namen []string
@@ -240,7 +240,7 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 			Name: player.Name,
 			Text: "spielt " + regeln.Name + " gegen " + strings.Join(namen, " und ") +
 				" (" + botStufeText(stufe) + ").",
-			Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Time: uhrzeit(time.Now()), SenderID: input.ID,
 		})
 
 	// botadd setzt einen Computer auf einen freien Platz, solange die Partie
@@ -306,7 +306,7 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 		*feld = neu
 		room.addMessage(Message{
 			Name: player.Name, Text: "eröffnet " + regeln.Name + ".",
-			Time: time.Now().Format("15:04:05"), SenderID: input.ID,
+			Time: uhrzeit(time.Now()), SenderID: input.ID,
 		})
 
 	// join und rejoin tun dasselbe: Platz nehmen, solange einer frei ist –
