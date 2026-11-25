@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="../../token.js"></script>
+<script src="../../brettspiele/wuerfel-common.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a211b">
+<title>Wortsuche</title>
+<link rel="stylesheet" href="../../schrift.css">
+<style>
+:root{
+  --bg:#0a211b; --panel:#0f2b23; --line:#1d4a3a; --gold:#e8cd8e; --ink:#f6edda;
+  --muted:#a9c3b6; --gruen:#4fbf72; --rot:#e04b3f;
+  --glanz:#12332a; --taste:#14382d; --chip:#0b241d;
+  --zelle-bg:#14382d; --zelle-rand:#1d4a3a; --zelle-ink:#f6edda; --zelle-hover:#1b4a3a;
+  --wahl-bg:#3b3221; --wahl-rand:#e8cd8e; --wahl-ink:#e8cd8e;
+  --linie-bg:#2f5340; --linie-rand:#e8cd8e; --linie-ink:#f4e6c2;
+  --gef-bg:#1f5d43; --gef-rand:#4fbf72; --gef-ink:#dff7e6; --gef-glow:#00000000;
+}
+/* Mädchen: Zuckerwatte – creme-rosa Seite, helle Bonbonzellen, rosa Treffer. */
+body[data-stil="maedchen"]{
+  --bg:#eb7bc0; --panel:#fffafd; --line:#ffd0e6; --gold:#6b0d3b; --ink:#3a0f24;
+  --muted:#5b2340; --gruen:#1f6b45; --rot:#7a1145;
+  --glanz:#f7a6d4; --taste:#fff0f7; --chip:#fff4f9;
+  --zelle-bg:#ffffff; --zelle-rand:#f7d5e3; --zelle-ink:#6b3a52; --zelle-hover:#ffeaf3;
+  --wahl-bg:#efe2ff; --wahl-rand:#a97bff; --wahl-ink:#5a2a86;
+  --linie-bg:#ffe6f0; --linie-rand:#d84a86; --linie-ink:#8d2a55;
+  --gef-bg:#ffd4e4; --gef-rand:#ef7aa8; --gef-ink:#8d2a55; --gef-glow:#ef7aa855;
+  color-scheme:light;
+}
+/* Buben: Neon – fast schwarze Seite, dunkle Zellen, Acid-Treffer mit Leuchten. */
+body[data-stil="buben"]{
+  --bg:#090808; --panel:#14161a; --line:#24272d; --gold:#e0242f; --ink:#ebeae9;
+  --muted:#7f868f; --gruen:#ff4a55; --rot:#ff5a3d;
+  --glanz:#14161a; --taste:#191c21; --chip:#181b1f;
+  --zelle-bg:#191c21; --zelle-rand:#2b3038; --zelle-ink:#dad7d6; --zelle-hover:#202329;
+  --wahl-bg:#1d1a08; --wahl-rand:#e0242f; --wahl-ink:#f47b89;
+  --linie-bg:#1b1e23; --linie-rand:#d3d0cf; --linie-ink:#e8e6e5;
+  --gef-bg:#1c0c0e; --gef-rand:#ff4a55; --gef-ink:#f47b89; --gef-glow:#ff4a5566;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;padding:10px;background:radial-gradient(ellipse at 20% 0%,var(--glanz) 0%,transparent 45%),var(--bg);
+  color:var(--ink);font-family:var(--tg-schrift);display:flex;justify-content:center;
+  transition:background .2s,color .2s;
+}
+.app{width:min(1120px,100%);display:flex;flex-direction:column;gap:10px;height:100%;min-height:0}
+.kopf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
+.titel{font-size:clamp(17px,2.4vw,24px);color:var(--gold);letter-spacing:2px}
+.kopf small{color:var(--muted)}
+.mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.62fr);gap:10px;flex:1 1 auto;min-height:0}
+@media(max-width:820px){.mitte{grid-template-columns:minmax(0,1fr)}}
+/* Eine Regel für das Gitter: die Kante folgt dem kleineren Maß aus Breite und
+   Höhe, damit Gitter und Bedienleisten ohne Scrollbalken zusammenpassen. */
+.gitter{
+  --rand:min(230px, 32vh);
+  min-width:0;
+  width:min(100%, calc(100dvh - var(--rand)));
+  margin:0 auto;aspect-ratio:1;display:grid;
+  grid-template-columns:repeat(10,minmax(0,1fr));grid-template-rows:repeat(10,minmax(0,1fr));
+  gap:clamp(2px,.5vh,4px);
+  touch-action:none;container-type:inline-size;
+}
+/* Die Buchstaben wachsen mit der Zelle (Container-Abfrage): auf dem Handy
+   sind sie damit groß genug, ohne dass das Feld breiter wird. */
+.zelle{border:1px solid var(--zelle-rand);border-radius:6px;background:var(--zelle-bg);
+  color:var(--zelle-ink);
+  font-family:inherit;font-weight:bold;font-size:clamp(11px,4.6cqw,26px);
+  display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;min-height:0;
+  transition:background .12s,transform .08s,color .12s}
+.zelle:hover:not(:disabled){background:var(--zelle-hover)}
+.zelle:active{transform:scale(.95)}
+.zelle.wahl{background:var(--wahl-bg);border-color:var(--wahl-rand);color:var(--wahl-ink)}
+.zelle.linie{background:var(--linie-bg);border-color:var(--linie-rand);color:var(--linie-ink);
+  box-shadow:inset 0 0 0 1px var(--linie-rand);transform:none}
+.zelle.gef{background:var(--gef-bg);border-color:var(--gef-rand);color:var(--gef-ink);
+  box-shadow:0 0 0 1px var(--gef-glow),inset 0 0 8px var(--gef-glow)}
+.zelle:disabled{cursor:default}
+.karte{background:linear-gradient(160deg,var(--panel),var(--bg));border:1px solid var(--line);border-radius:14px;
+  padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.seite{overflow:hidden}
+.leiste{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+select,button.aktion{font-family:inherit;background:var(--taste);color:var(--ink);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;cursor:pointer}
+button.aktion:disabled{opacity:.45;cursor:default}
+button.aktion.haupt{background:var(--gold);color:var(--taste);border-color:var(--gold);font-weight:bold}
+body[data-stil="maedchen"] button.aktion.haupt{background:linear-gradient(#ff9ec4,#ff77ad);color:#3a0f24;
+  border-color:#e2537f}
+.worte{display:flex;flex-wrap:wrap;gap:5px;overflow:auto;min-height:0;align-content:flex-start}
+.wort{border:1px solid var(--line);border-radius:7px;padding:4px 8px;font-size:clamp(11px,1.7vh,14px);
+  letter-spacing:1px;background:var(--chip)}
+.wort.gef{color:var(--gruen);border-color:var(--gruen);text-decoration:line-through}
+.wort b{color:var(--muted);font-weight:normal;font-size:.85em;margin-left:6px}
+.spieler{display:flex;flex-direction:column;gap:5px;overflow:auto;min-height:0}
+.sp{margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 8px;
+  border:1px solid var(--line);border-radius:8px;background:var(--chip);font-size:13px}
+.sp b{color:var(--gold)}
+.notiz{color:var(--muted);font-size:13px;min-height:18px}
+.log{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px;max-height:70px;overflow:auto}
+.versteckt{display:none!important}
+/* Handy: Das Feld bleibt so groß wie bisher, die Karte darunter bekommt ihre
+   natürliche Höhe. Vorher saß sie in der festen Resthöhe (overflow:hidden), und
+   die Suchwörter wurden zusammengedrückt, bis fast nichts mehr zu sehen war.
+   Dafür darf die Seite jetzt scrollen. Steht bewusst am Ende des Stylesheets,
+   damit es die Grundregeln weiter oben überschreibt. */
+@media(max-width:820px){
+  html,body{height:auto;min-height:100%}
+  body{align-items:flex-start}
+  .app{height:auto}
+  .mitte{flex:0 0 auto;gap:8px}
+  .gitter{--rand:0;width:min(100%, calc(100dvh - 240px))}
+  .karte.seite{overflow:visible}
+  .wort{font-size:clamp(12px,1.9vh,15px);padding:6px 10px}
+}
+
+/* ---- Red Reactor: Titel in Silber, Rot bleibt der LED-Akzent ------------- */
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel,
+body[data-stil="buben"] .fenster .titel,
+body[data-stil="buben"] h2,
+body[data-stil="buben"] .meldung h2,
+body[data-stil="buben"] #regeln summary {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] .titel,
+body[data-stil="buben"] .titelleiste .titel {
+  text-shadow: none;
+}
+
+/* Red Reactor: Knopfaufschrift in Silber, Rot nur an Kante und Aktiv-Zustand */
+body[data-stil="buben"] button,
+body[data-stil="buben"] .menueleiste button,
+body[data-stil="buben"] .knopf,
+body[data-stil="buben"] select {
+  color: #e6e9ec;
+}
+body[data-stil="buben"] button:hover:not(:disabled),
+body[data-stil="buben"] .menueleiste button:hover,
+body[data-stil="buben"] .knopf:hover:not(:disabled) {
+  color: #ffffff;
+}
+body[data-stil="buben"] button.aktiv,
+body[data-stil="buben"] .menueleiste button.aktiv,
+body[data-stil="buben"] .knopf.aktiv,
+body[data-stil="buben"] button.haupt,
+body[data-stil="buben"] .aktion.haupt,
+body[data-stil="buben"] .meldung button {
+  color: #ffffff;
+  text-shadow: none;
+}
+</style>
+<script src="../../stil.js"></script>
+</head>
+<body data-stil="klassisch">
+<main class="app">
+  <header class="kopf">
+    <small id="lage">Bereit</small>
+    <div class="leiste" id="startLeiste">
+      <button class="aktion haupt" id="btnStart">Spiel starten</button>
+      <button class="aktion" id="btnNeu">Neue Runde</button>
+    </div>
+    <div class="leiste versteckt" id="onlineLeiste">
+      <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="aktion" id="btnBereit">Bereit</button>
+      <button class="aktion" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="mitte">
+    <div class="gitter" id="gitter"></div>
+
+    <aside class="karte seite">
+      <div class="leiste"><b id="rundenTitel">Runde 1</b><span class="notiz" id="zeitText"></span></div>
+      <div class="worte" id="worte"></div>
+      <div class="spieler" id="spieler"></div>
+      <div class="log" id="log"></div>
+      <div class="notiz" id="hinweis"></div>
+      <div class="notiz" id="notiz"></div>
+      <div class="leiste versteckt" id="ende">
+        <button class="aktion haupt" id="btnNochmal">Nächste Runde</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+(() => {
+"use strict";
+/* Online oder lokal: gleiche Oberfläche, zwei Antriebe. Die lokale Runde
+   erzeugt Gitter und Wörter selbst und prüft die Auswahl nach denselben
+   Regeln wie der Server (gerade Linie, Wort von der Liste, noch offen). */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const DAUER = 180, FAKTOR = 10;
+let KANTE = 10, ANZAHL = 8;
+/* Auf dem Handy ist ein 10×10-Feld zu dicht: dort 8×8 mit sechs Wörtern.
+   Die Buchstaben werden dadurch größer, ohne dass man scrollen muss. */
+function kanteFuerGeraet() {
+  return Math.min(innerWidth, innerHeight) < 700 ? 8 : 10;
+}
+const WORTLISTE = [
+  "garten","fenster","brunnen","schule","hafen","insel","wolke","regen",
+  "schnee","sonne","mond","stern","rakete","planet","galaxie","komet",
+  "apfel","banane","kirsche","zitrone","salat","brot","kaese","milch",
+  "tisch","stuhl","schrank","teppich","spiegel","lampe","vorhang","kissen",
+  "fahrrad","motor","kabel","batterie","schraube","gitarre","trommel","klavier",
+  "geige","floete","konzert","lehrer","arzt","pilot","maler","gaertner",
+  "elefant","katze","hund","pinguin","fuchs","igel","wal","adler",
+  "strand","hotel","koffer","urlaub","berg","tal","fluss","wiese",
+  "blume","stein","sand","meer","bucht","wald","baum","zeitung",
+  "brief","brille","tasche","uhr","schluessel","kuchen","keks","honig",
+  "eimer","schaufel","leiter","haken","seil","laterne","kerze","teller",
+  "messer","gabel","loffel","topf","pfanne","ofen","herd","fensterbank"
+];
+const RICHTUNGEN = [[0,1],[1,0],[1,1],[1,-1]];
+
+const $ = (id) => document.getElementById(id);
+const melde = (text) => { $("hinweis").textContent = text || ""; };
+const elGitter = $("gitter"), elWorte = $("worte"), elSpieler = $("spieler"),
+      elLog = $("log"), elNotiz = $("notiz"), elLage = $("lage"), elZeit = $("zeitText"),
+      elRunde = $("rundenTitel"), elEnde = $("ende");
+
+const mische = (liste) => {
+  const a = liste.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+/* ---------------------------- lokal ------------------------------- */
+let lokal = null;
+let wahl = null;   // erste gewählte Zelle {z,s}
+
+function gitterBauen() {
+  const gitter = Array.from({ length: KANTE }, () => new Array(KANTE).fill(""));
+  const worte = [];
+  for (const kandidat of mische(WORTLISTE)) {
+    if (worte.length >= ANZAHL) break;
+    const wort = kandidat.toUpperCase();
+    if (wort.length > KANTE) continue;
+    for (let versuch = 0; versuch < 60; versuch++) {
+      const [dz, ds] = RICHTUNGEN[Math.floor(Math.random() * RICHTUNGEN.length)];
+      const z = Math.floor(Math.random() * KANTE);
+      const s = Math.floor(Math.random() * KANTE);
+      const ez = z + (wort.length - 1) * dz, es = s + (wort.length - 1) * ds;
+      if (ez < 0 || es < 0 || ez >= KANTE || es >= KANTE) continue;
+      let passt = true;
+      for (let k = 0; k < wort.length; k++) {
+        const feld = gitter[z + k * dz][s + k * ds];
+        if (feld && feld !== wort[k]) { passt = false; break; }
+      }
+      if (!passt) continue;
+      for (let k = 0; k < wort.length; k++) gitter[z + k * dz][s + k * ds] = wort[k];
+      worte.push(wort);
+      break;
+    }
+  }
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (let z = 0; z < KANTE; z++) {
+    for (let s = 0; s < KANTE; s++) {
+      if (!gitter[z][s]) gitter[z][s] = alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+  }
+  return { gitter, worte: worte.sort() };
+}
+
+function lokaleRunde(weiter) {
+  KANTE = kanteFuerGeraet();
+  ANZAHL = KANTE <= 8 ? 6 : 8;
+  const neu = gitterBauen();
+  lokal = {
+    id: MYID || "ich", name: MYNAME,
+    runde: (weiter && lokal ? lokal.runde : 0) + 1,
+    gitter: neu.gitter, worte: neu.worte,
+    funde: [], punkte: 0, treffer: 0, fehlversuch: 0,
+    status: "spiel", rest: DAUER, start: Date.now(),
+    sieger: "", note: "Finde die " + neu.worte.length + " Wörter – waagerecht, senkrecht oder schräg."
+  };
+  wahl = null;
+  melde("");
+}
+
+function lokalRest() {
+  if (!lokal || lokal.status !== "spiel") return lokal ? lokal.rest : 0;
+  const rest = DAUER - Math.floor((Date.now() - lokal.start) / 1000);
+  if (rest <= 0) {
+    lokal.status = "ende";
+    lokal.rest = 0;
+    lokal.note = "Die Zeit ist um – " + lokal.funde.length + " von " + lokal.worte.length + " Wörtern gefunden.";
+    return 0;
+  }
+  lokal.rest = rest;
+  return rest;
+}
+
+// Buchstaben vom Start zum Ziel lesen; liefert Wort und Zellen in Wortrichtung.
+function leseLinie(von, bis) {
+  const dz = bis.z - von.z, ds = bis.s - von.s;
+  if (dz === 0 && ds === 0) return null;
+  if (!(dz === 0 || ds === 0 || dz === ds || dz === -ds)) return null;
+  const sz = Math.sign(dz), ss = Math.sign(ds);
+  const laenge = Math.max(Math.abs(dz), Math.abs(ds)) + 1;
+  const zellen = [], zeichen = [];
+  for (let k = 0; k < laenge; k++) {
+    const z = von.z + k * sz, s = von.s + k * ss;
+    if (z < 0 || s < 0 || z >= KANTE || s >= KANTE) return null;
+    zellen.push({ z, s });
+    zeichen.push(gitterVon().zellen[z][s]);
+  }
+  return { zellen, text: zeichen.join(""), textUm: zeichen.slice().reverse().join("") };
+}
+
+function gitterVon() {
+  if (ONLINE) return { zellen: onlineGitter, worte: onlineWorte };
+  return { zellen: lokal.gitter, worte: lokal.worte };
+}
+
+function lokalFinden(von, bis) {
+  if (!lokal || lokal.status !== "spiel") return;
+  const linie = leseLinie(von, bis);
+  if (!linie) { melde("Wörter liegen nur waagerecht, senkrecht oder schräg."); return; }
+  const wort = lokal.worte.includes(linie.text) ? linie.text
+    : lokal.worte.includes(linie.textUm) ? linie.textUm : "";
+  if (!wort) { melde("Diese Buchstabenfolge steht nicht auf der Liste."); return; }
+  if (lokal.funde.some((f) => f.wort === wort)) { melde("Das Wort wurde schon gefunden."); return; }
+  const punkte = wort.length * FAKTOR;
+  lokal.punkte += punkte;
+  lokal.treffer++;
+  const zellen = (linie.text === wort ? linie.zellen : linie.zellen.slice().reverse())
+    .map((c) => [c.z, c.s]);
+  lokal.funde.push({ wort, vonId: lokal.id, vonName: lokal.name, punkte, zellen });
+  melde("");
+  lokal.note = lokal.name + " findet „" + wort + "“ (+" + punkte + ").";
+  if (lokal.funde.length === lokal.worte.length) {
+    lokal.status = "ende";
+    lokal.sieger = lokal.id;
+    lokal.note = "Alle Wörter gefunden – " + lokal.punkte + " Punkte.";
+  }
+  zeichne();
+}
+
+/* ---------------------------- gemeinsam --------------------------- */
+let onlineGame = null, onlineBusy = false;
+let onlineGitter = [], onlineWorte = [];
+
+async function api(aktion, koerper) {
+  const url = "/api/wortsuche?room=" + encodeURIComponent(ROOM) +
+    (aktion ? "&action=" + encodeURIComponent(aktion) : "&id=" + encodeURIComponent(MYID));
+  const r = await fetch(url, aktion ? {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ id: MYID }, koerper || {}))
+  } : { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.text()).trim() || "Aktion fehlgeschlagen.");
+  return r.json();
+}
+
+async function hole() {
+  if (!ONLINE || onlineBusy) return;
+  onlineBusy = true;
+  try {
+    const d = await api(null);
+    onlineGame = d.game || null;
+    zeichne();
+  } catch (e) {
+    elLage.textContent = e.message;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+async function schicke(aktion, koerper) {
+  // Läuft gerade eine Abfrage, wird der Klick nicht verworfen, sondern
+  // nachgeholt, sobald der Platz frei ist.
+  for (let i = 0; i < 60 && onlineBusy; i++) await new Promise((r) => setTimeout(r, 50));
+  if (onlineBusy) { melde("Der Server antwortet nicht – bitte noch einmal tippen."); return false; }
+  onlineBusy = true;
+  try {
+    const d = await api(aktion, koerper);
+    onlineGame = d.game || null;
+    zeichne();
+    return true;
+  } catch (e) {
+    melde(e.message);
+    return false;
+  } finally {
+    onlineBusy = false;
+  }
+}
+
+function onlineFinden(von, bis) {
+  const linie = leseLinie(von, bis);
+  if (!linie) { melde("Wörter liegen nur waagerecht, senkrecht oder schräg."); return; }
+  const wort = onlineWorte.includes(linie.text) ? linie.text
+    : onlineWorte.includes(linie.textUm) ? linie.textUm : "";
+  if (!wort) { melde("Diese Buchstabenfolge steht nicht auf der Liste."); return; }
+  melde("");
+  const weg = linie.text === wort ? linie.zellen : linie.zellen.slice().reverse();
+  schicke("finden", {
+    wort, von: [weg[0].z, weg[0].s], bis: [weg[weg.length - 1].z, weg[weg.length - 1].s]
+  });
+}
+
+/* ---------------------------- Zeichnen ---------------------------- */
+function zeichne() {
+  if (ONLINE) zeichneOnline();
+  else if (lokal) zeichneLokal();
+}
+
+function zeichneGitter(zellen, funde) {
+  // Die Feldgröße kommt aus dem Stand selbst (online gibt sie der Server vor).
+  if (zellen && zellen.length) KANTE = zellen.length;
+  elGitter.style.gridTemplateColumns = "repeat(" + KANTE + ",minmax(0,1fr))";
+  elGitter.style.gridTemplateRows = elGitter.style.gridTemplateColumns;
+  const gefunden = new Map();
+  for (const f of funde || []) {
+    for (const c of (f.zellen || [])) {
+      const z = Array.isArray(c) ? c[0] : c.z;
+      const s = Array.isArray(c) ? c[1] : c.s;
+      gefunden.set(z + ":" + s, f.wort);
+    }
+  }
+  elGitter.innerHTML = "";
+  const aktiv = (ONLINE ? onlineGame && onlineGame.status === "spiel" : lokal && lokal.status === "spiel");
+  for (let z = 0; z < KANTE; z++) {
+    for (let s = 0; s < KANTE; s++) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "zelle";
+      b.dataset.z = z;
+      b.dataset.s = s;
+      b.textContent = (zellen[z] && zellen[z][s]) || "";
+      if (gefunden.has(z + ":" + s)) {
+        b.classList.add("gef");
+        b.title = gefunden.get(z + ":" + s);
+      }
+      if (wahl && wahl.z === z && wahl.s === s) b.classList.add("wahl");
+      b.disabled = !aktiv;
+      elGitter.appendChild(b);
+    }
+  }
+}
+
+function zeichneWorte(worte, funde) {
+  elWorte.innerHTML = "";
+  const wer = new Map();
+  for (const f of funde || []) wer.set(f.wort, f.vonName);
+  for (const w of worte || []) {
+    const d = document.createElement("span");
+    d.className = "wort" + (wer.has(w) ? " gef" : "");
+    d.textContent = w;
+    if (wer.has(w)) {
+      const b = document.createElement("b");
+      b.textContent = wer.get(w);
+      d.appendChild(b);
+    }
+    elWorte.appendChild(d);
+  }
+}
+
+function zeichneAlles({ status, runde, rest, spieler, funde, note, sieger, worte }) {
+  elRunde.textContent = "Runde " + runde;
+  elLage.textContent = status === "invited" ? "Warte auf Mitspieler"
+    : status === "ende" ? (sieger ? "Gewonnen" : "Runde vorbei") : "Läuft";
+  elZeit.textContent = status === "spiel" ? "· " + rest + " s" : "";
+  elNotiz.textContent = note || "";
+
+  elSpieler.innerHTML = "";
+  for (const s of spieler || []) {
+    const p = document.createElement("p");
+    p.className = "sp";
+    const n = document.createElement("span");
+    n.textContent = s.name + (s.id === MYID || (!ONLINE && s.id === (lokal && lokal.id)) ? " (du)" : "");
+    const b = document.createElement("b");
+    b.textContent = s.punkte + " Punkte · " + s.treffer;
+    p.append(n, b);
+    elSpieler.appendChild(p);
+  }
+
+  elLog.innerHTML = "";
+  for (const f of (funde || []).slice(-6)) {
+    const d = document.createElement("div");
+    d.textContent = f.vonName + ": " + f.wort;
+    elLog.appendChild(d);
+  }
+
+  elEnde.classList.toggle("versteckt", status !== "ende");  if (window.TGErgebnis) TGErgebnis.gewonnen(); // zentrale Connector-Texte
+  zeichneWorte(worte, funde);
+}
+
+function zeichneLokal() {
+  const rest = lokalRest();
+  zeichneAlles({
+    status: lokal.status, runde: lokal.runde, rest, worte: lokal.worte, funde: lokal.funde,
+    note: lokal.note, sieger: lokal.sieger,
+    spieler: [{ id: lokal.id, name: lokal.name, punkte: lokal.punkte, treffer: lokal.treffer }]
+  });
+  zeichneGitter(lokal.gitter, lokal.funde);
+}
+
+function zeichneOnline() {
+  const g = onlineGame;
+  $("startLeiste").classList.add("versteckt");
+  $("onlineLeiste").classList.remove("versteckt");
+  if (!g) {
+    elLage.textContent = "Keine Runde";
+    elRunde.textContent = "—";
+    elZeit.textContent = "";
+    elGitter.innerHTML = "";
+    elWorte.innerHTML = "";
+    elSpieler.innerHTML = "";
+    elLog.innerHTML = "";
+    elNotiz.textContent = "Eröffne eine Runde – Mitspieler treten im Raum bei.";
+    elEnde.classList.add("versteckt");
+    $("btnErstellen").classList.remove("versteckt");
+    $("btnBereit").classList.add("versteckt");
+    $("btnLos").classList.add("versteckt");
+    onlineGitter = [];
+    return;
+  }
+  onlineGitter = g.gitter || [];
+  onlineWorte = g.worte || [];
+  zeichneAlles({
+    status: g.status, runde: g.runde, rest: g.rest, worte: g.worte, funde: g.funde,
+    note: g.note, sieger: g.sieger, spieler: g.spieler
+  });
+  zeichneGitter(onlineGitter, g.funde);
+  const ich = (g.spieler || []).find((s) => s.id === MYID);
+  $("btnErstellen").classList.toggle("versteckt", true);
+  $("btnBereit").classList.toggle("versteckt", g.status !== "invited");
+  $("btnLos").classList.toggle("versteckt", g.status !== "invited");
+  if (g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+/* ---------------------------- Bedienung --------------------------- */
+/* Wortsuche: entweder Anfang und Ende anklicken (wie bisher) oder mit Maus
+   bzw. Finger vom ersten bis zum letzten Buchstaben ziehen. Gezogen wird nur
+   gerade – waagerecht, senkrecht oder diagonal; alles andere wird ignoriert. */
+let ziehStart = null, ziehLinie = [], ziehAktiv = false, klickSperre = 0;
+
+function zelleUnter(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const b = el && el.closest ? el.closest(".zelle") : null;
+  return b && !b.disabled ? b : null;
+}
+
+function geradeLinie(von, bis) {
+  const dz = Math.sign(bis.z - von.z), ds = Math.sign(bis.s - von.s);
+  const gerade = von.z === bis.z || von.s === bis.s ||
+    Math.abs(bis.z - von.z) === Math.abs(bis.s - von.s);
+  if (!gerade) return null;
+  const laenge = Math.max(Math.abs(bis.z - von.z), Math.abs(bis.s - von.s));
+  const linie = [];
+  for (let i = 0; i <= laenge; i++) linie.push({ z: von.z + dz * i, s: von.s + ds * i });
+  return linie;
+}
+
+function linieMalen(linie) {
+  for (const b of elGitter.children) b.classList.remove("linie");
+  for (const c of linie) {
+    const b = elGitter.children[c.z * KANTE + c.s];
+    if (b) b.classList.add("linie");
+  }
+}
+
+elGitter.addEventListener("pointerdown", (e) => {
+  const b = e.target.closest(".zelle");
+  if (!b || b.disabled) return;
+  ziehStart = { z: Number(b.dataset.z), s: Number(b.dataset.s) };
+  ziehLinie = [ziehStart];
+  ziehAktiv = false;
+  try { elGitter.setPointerCapture(e.pointerId); } catch (err) {}
+});
+
+elGitter.addEventListener("pointermove", (e) => {
+  if (!ziehStart) return;
+  const b = zelleUnter(e.clientX, e.clientY);
+  if (!b) return;
+  const bis = { z: Number(b.dataset.z), s: Number(b.dataset.s) };
+  const linie = geradeLinie(ziehStart, bis);
+  if (!linie || linie.length < 2) return;
+  ziehAktiv = true;
+  ziehLinie = linie;
+  linieMalen(linie);
+});
+
+elGitter.addEventListener("pointerup", () => {
+  if (!ziehStart) return;
+  const von = ziehStart;
+  const linie = ziehAktiv ? ziehLinie : null;
+  ziehStart = null;
+  ziehAktiv = false;
+  linieMalen([]);
+  if (!linie || linie.length < 2) return;      // kurzer Tipp: alter Klickweg
+  klickSperre = performance.now();             // der Klick danach zählt nicht mehr
+  wahl = null;
+  const bis = linie[linie.length - 1];
+  if (ONLINE) onlineFinden(von, bis);
+  else lokalFinden(von, bis);
+  zeichne();
+});
+
+elGitter.addEventListener("pointercancel", () => {
+  ziehStart = null;
+  ziehAktiv = false;
+  linieMalen([]);
+});
+
+elGitter.addEventListener("click", (e) => {
+  if (performance.now() - klickSperre < 400) return;
+  const b = e.target.closest(".zelle");
+  if (!b || b.disabled) return;
+  const z = Number(b.dataset.z), s = Number(b.dataset.s);
+  if (!wahl) {
+    wahl = { z, s };
+    zeichne();
+    return;
+  }
+  if (wahl.z === z && wahl.s === s) { wahl = null; zeichne(); return; }
+  const von = wahl;
+  wahl = null;
+  if (ONLINE) onlineFinden(von, { z, s });
+  else lokalFinden(von, { z, s });
+  zeichne();
+});
+
+$("btnStart").addEventListener("click", () => { lokaleRunde(false); zeichne(); });
+$("btnNochmal").addEventListener("click", () => {
+  if (ONLINE) schicke("naechste");
+  else { lokaleRunde(true); zeichne(); }
+});
+$("btnNeu").addEventListener("click", () => {
+  if (ONLINE) schicke("reset");
+  else {
+    lokal = null; wahl = null;
+    elWorte.innerHTML = ""; elSpieler.innerHTML = ""; elLog.innerHTML = ""; elRunde.textContent = "Runde 1";
+    elZeit.textContent = ""; elNotiz.textContent = "Starte eine Runde – das Gitter wird gemischt.";
+    elEnde.classList.add("versteckt");
+    zeichneGitter([], []);
+    $("startLeiste").classList.remove("versteckt");
+  }
+});
+$("btnErstellen").addEventListener("click", () => schicke("create"));
+$("btnBereit").addEventListener("click", () => schicke("ready"));
+$("btnLos").addEventListener("click", () => schicke("start"));
+
+// ------------------------------------------------------------------ Ansicht
+function stilSetzen(name, merken) {
+  const gueltig = (name === "maedchen" || name === "buben") ? name : "klassisch";
+  document.body.dataset.stil = gueltig;
+  document.documentElement.style.colorScheme = gueltig === "maedchen" ? "light" : "dark";
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = gueltig === "maedchen" ? "#fff2f8" : gueltig === "buben" ? "#05080c" : "#0a211b";
+}
+let startStil = TGStil.lokal();
+stilSetzen(startStil);
+TGStil.beiWechsel(() => stilSetzen(TGStil.lokal()));
+
+if (ONLINE) {
+  // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
+  // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
+  // Hintergrund und meldet sich nur als "nicht aktiv".
+  WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
+  setInterval(hole, 1500);
+  // Die Uhr läuft auch ohne Antwort des Servers weiter.
+  setInterval(() => { if (onlineGame && onlineGame.status === "spiel" && onlineGame.rest > 0) { onlineGame.rest--; elZeit.textContent = "· " + onlineGame.rest + " s"; } }, 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
+} else {
+  zeichneGitter([], []);
+  setInterval(() => {
+    if (!lokal || lokal.status !== "spiel") return;
+    const rest = lokalRest();
+    if (rest > 0) elZeit.textContent = "· " + rest + " s";
+    else zeichne();
+  }, 1000);
+  elNotiz.textContent = "Starte eine Runde – das Gitter wird gemischt.";
+}
+})();
+</script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
+</body>
+</html>

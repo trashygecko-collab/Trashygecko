@@ -51,6 +51,9 @@ body{
 .kopf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
 .titel{font-size:clamp(17px,2.4vw,24px);color:var(--gold);letter-spacing:2px}
 .kopf small{color:var(--muted)}
+.kopf-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.modus-chip{font-size:11px;letter-spacing:.04em;padding:2px 8px;border:1px solid var(--line);
+  border-radius:999px;color:var(--muted);background:var(--chip);white-space:nowrap}
 .mitte{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.62fr);gap:10px;flex:1 1 auto;min-height:0}
 @media(max-width:820px){.mitte{grid-template-columns:minmax(0,1fr)}}
 /* Eine Regel für das Gitter: die Kante folgt dem kleineren Maß aus Breite und
@@ -157,15 +160,20 @@ body[data-stil="buben"] .meldung button {
 <body data-stil="klassisch">
 <main class="app">
   <header class="kopf">
-    <small id="lage">Bereit</small>
+    <div class="kopf-links">
+      <small id="lage">Bereit</small>
+      <span class="modus-chip" id="modusChip">Einzelspieler</span>
+    </div>
     <div class="leiste" id="startLeiste">
       <button class="aktion haupt" id="btnStart">Spiel starten</button>
       <button class="aktion" id="btnNeu">Neue Runde</button>
+      <button class="aktion versteckt" id="btnOnline">Zu zweit</button>
     </div>
     <div class="leiste versteckt" id="onlineLeiste">
       <button class="aktion haupt" id="btnErstellen">Runde eröffnen</button>
       <button class="aktion" id="btnBereit">Bereit</button>
       <button class="aktion" id="btnLos">Los</button>
+      <button class="aktion" id="btnSolo">Allein spielen</button>
     </div>
   </header>
 
@@ -194,7 +202,11 @@ body[data-stil="buben"] .meldung button {
    Regeln wie der Server (gerade Linie, Wort von der Liste, noch offen). */
 const P = new URLSearchParams(location.search);
 const ROOM = (P.get("room") || "").trim().toUpperCase();
-const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+/* Ein Raum in der Adresse ist ein Angebot, keine Pflicht: Der Connector öffnet
+   das Spiel so. Wer allein spielen will, schaltet unten jederzeit um – der
+   Einzelspieler braucht weder Raum noch Lobby und schickt keine Anfrage. */
+const IM_RAUM = /^TG-[A-F0-9]{4}$/.test(ROOM);
+let ONLINE = IM_RAUM;
 const MYID = (P.get("id") || "").trim();
 const MYNAME = (P.get("name") || "").trim() || "Spieler";
 
@@ -274,6 +286,7 @@ function gitterBauen() {
 }
 
 function lokaleRunde(weiter) {
+  gemeldetSolo = "";
   KANTE = kanteFuerGeraet();
   ANZAHL = KANTE <= 8 ? 6 : 8;
   const neu = gitterBauen();
@@ -296,6 +309,10 @@ function lokalRest() {
     lokal.status = "ende";
     lokal.rest = 0;
     lokal.note = "Die Zeit ist um – " + lokal.funde.length + " von " + lokal.worte.length + " Wörtern gefunden.";
+    if (gemeldetSolo !== "s" + lokal.runde) {
+      gemeldetSolo = "s" + lokal.runde;
+      ergebnisMelden("verloren");
+    }
     return 0;
   }
   lokal.rest = rest;
@@ -344,6 +361,8 @@ function lokalFinden(von, bis) {
     lokal.status = "ende";
     lokal.sieger = lokal.id;
     lokal.note = "Alle Wörter gefunden – " + lokal.punkte + " Punkte.";
+    gemeldetSolo = "s" + lokal.runde;
+    ergebnisMelden("gewonnen");
   }
   zeichne();
 }
@@ -363,12 +382,24 @@ async function api(aktion, koerper) {
   return r.json();
 }
 
+function onlineErgebnis(g) {
+  if (!g || g.status !== "ende") return;
+  const marke = "o" + g.runde;
+  if (gemeldetOnline === marke) return;
+  gemeldetOnline = marke;
+  const sieger = g.sieger || "";
+  if (sieger && sieger === MYID) ergebnisMelden("gewonnen");
+  else if (sieger) ergebnisMelden("verloren");
+  else ergebnisMelden("lob");
+}
+
 async function hole() {
   if (!ONLINE || onlineBusy) return;
   onlineBusy = true;
   try {
     const d = await api(null);
     onlineGame = d.game || null;
+    onlineErgebnis(onlineGame);
     zeichne();
   } catch (e) {
     elLage.textContent = e.message;
@@ -386,6 +417,7 @@ async function schicke(aktion, koerper) {
   try {
     const d = await api(aktion, koerper);
     onlineGame = d.game || null;
+    onlineErgebnis(onlineGame);
     zeichne();
     return true;
   } catch (e) {
@@ -492,8 +524,18 @@ function zeichneAlles({ status, runde, rest, spieler, funde, note, sieger, worte
     elLog.appendChild(d);
   }
 
-  elEnde.classList.toggle("versteckt", status !== "ende");  if (window.TGErgebnis) TGErgebnis.gewonnen(); // zentrale Connector-Texte
+  elEnde.classList.toggle("versteckt", status !== "ende");
   zeichneWorte(worte, funde);
+}
+
+/* Ein Ergebnis wird genau einmal je Runde gemeldet – nicht bei jedem
+   Neuzeichnen. Die Sprüche kommen aus den zentralen Listen (ergebnis.js). */
+let gemeldetSolo = "", gemeldetOnline = "";
+function ergebnisMelden(art) {
+  if (!window.TGErgebnis) return;
+  if (art === "gewonnen") TGErgebnis.gewonnen();
+  else if (art === "verloren") TGErgebnis.verloren();
+  else TGErgebnis.lob();
 }
 
 function zeichneLokal() {
@@ -642,14 +684,7 @@ $("btnNochmal").addEventListener("click", () => {
 });
 $("btnNeu").addEventListener("click", () => {
   if (ONLINE) schicke("reset");
-  else {
-    lokal = null; wahl = null;
-    elWorte.innerHTML = ""; elSpieler.innerHTML = ""; elLog.innerHTML = ""; elRunde.textContent = "Runde 1";
-    elZeit.textContent = ""; elNotiz.textContent = "Starte eine Runde – das Gitter wird gemischt.";
-    elEnde.classList.add("versteckt");
-    zeichneGitter([], []);
-    $("startLeiste").classList.remove("versteckt");
-  }
+  else { lokaleRunde(Boolean(lokal)); zeichne(); }   // neues Rätsel, kein Warten
 });
 $("btnErstellen").addEventListener("click", () => schicke("create"));
 $("btnBereit").addEventListener("click", () => schicke("ready"));
@@ -667,25 +702,78 @@ let startStil = TGStil.lokal();
 stilSetzen(startStil);
 TGStil.beiWechsel(() => stilSetzen(TGStil.lokal()));
 
-if (ONLINE) {
+/* ------------------------------------------------------- Modusschalter
+   Einzelspieler und Mehrspieler sind zwei getrennte Antriebe:
+     · Einzelspieler: Gitter und Wörter entstehen im Browser, kein Netz,
+       keine Lobby, kein Warten.
+     · Mehrspieler: nur mit Raum (vom Connector eröffnet); erst dann laufen
+       Abfragen, Bereit-Knopf und Lebenszeichen.
+   Umgeschaltet wird ausdrücklich über die Knöpfe – nie von selbst. */
+let onlineTakt = null, onlineUhr = null;
+
+function beiSichtbar() { if (!document.hidden && ONLINE) hole(); }
+
+function onlineStarten() {
+  if (onlineTakt || !IM_RAUM) return;
   // Lebenszeichen: Der Raum beendet eine Partie nach 90 s ohne Meldung. Die
   // Connector-Seite allein reicht am Handy nicht – dort liegt sie im
   // Hintergrund und meldet sich nur als "nicht aktiv".
   WG.leben({ room: ROOM, id: MYID, name: MYNAME }).then(hole);
-  setInterval(hole, 1500);
+  onlineTakt = setInterval(hole, 1500);
   // Die Uhr läuft auch ohne Antwort des Servers weiter.
-  setInterval(() => { if (onlineGame && onlineGame.status === "spiel" && onlineGame.rest > 0) { onlineGame.rest--; elZeit.textContent = "· " + onlineGame.rest + " s"; } }, 1000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) hole(); });
-} else {
-  zeichneGitter([], []);
-  setInterval(() => {
-    if (!lokal || lokal.status !== "spiel") return;
-    const rest = lokalRest();
-    if (rest > 0) elZeit.textContent = "· " + rest + " s";
-    else zeichne();
+  onlineUhr = setInterval(() => {
+    if (onlineGame && onlineGame.status === "spiel" && onlineGame.rest > 0) {
+      onlineGame.rest--;
+      elZeit.textContent = "· " + onlineGame.rest + " s";
+    }
   }, 1000);
-  elNotiz.textContent = "Starte eine Runde – das Gitter wird gemischt.";
+  document.addEventListener("visibilitychange", beiSichtbar);
+  hole();
 }
+
+function onlineBeenden() {
+  if (onlineTakt) { clearInterval(onlineTakt); onlineTakt = null; }
+  if (onlineUhr) { clearInterval(onlineUhr); onlineUhr = null; }
+  document.removeEventListener("visibilitychange", beiSichtbar);
+  onlineGame = null;
+  onlineGitter = [];
+  onlineWorte = [];
+}
+
+function modusSetzen(online, starten) {
+  ONLINE = Boolean(online && IM_RAUM);
+  $("startLeiste").classList.toggle("versteckt", ONLINE);
+  $("onlineLeiste").classList.toggle("versteckt", !ONLINE);
+  $("btnSolo").classList.toggle("versteckt", !ONLINE);
+  $("btnOnline").classList.toggle("versteckt", !IM_RAUM || ONLINE);
+  $("modusChip").textContent = ONLINE ? "Mehrspieler · " + ROOM : "Einzelspieler";
+  if (ONLINE) {
+    onlineStarten();
+    zeichne();
+  } else {
+    onlineBeenden();
+    if (starten) lokaleRunde(Boolean(lokal));
+    zeichneGitter(lokal ? lokal.gitter : [], lokal ? lokal.funde : []);
+    if (lokal) zeichne();
+  }
+}
+
+$("btnSolo").addEventListener("click", () => { melde(""); modusSetzen(false, true); });
+$("btnOnline").addEventListener("click", () => modusSetzen(true, false));
+
+KANTE = kanteFuerGeraet();
+zeichneGitter([], []);
+zeichne();
+modusSetzen(IM_RAUM, false);
+if (!ONLINE) elNotiz.textContent = "Starte eine Runde – das Gitter wird gemischt.";
+
+// Die Uhr des Einzelspielers läuft unabhängig weiter.
+setInterval(() => {
+  if (ONLINE || !lokal || lokal.status !== "spiel") return;
+  const rest = lokalRest();
+  if (rest > 0) elZeit.textContent = "· " + rest + " s";
+  else zeichne();
+}, 1000);
 })();
 </script>
 <!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
