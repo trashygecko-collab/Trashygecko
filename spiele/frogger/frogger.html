@@ -152,6 +152,8 @@ main{max-width:760px;margin:auto}
 .menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
  border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
 .menueleiste button:hover{background:var(--hover)}
+.menueleiste select{font-family:inherit;font-size:13px;padding:7px 8px;border-radius:6px;
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold)}
 
 .statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
  padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
@@ -198,6 +200,8 @@ a{color:var(--gold)}
 
  <div class="menueleiste">
   <button id="btnNeu">Neues Spiel</button>
+  <select id="levelWahl" aria-label="Level wählen"></select>
+  <button id="btnNochmal">Level neu</button>
   <button id="btnPause">Pause</button>
  </div>
 
@@ -206,6 +210,7 @@ a{color:var(--gold)}
   <span>Level <b id="level">1</b></span>
   <span>Leben <b id="leben">●●●</b></span>
   <span>Zeit <b id="zeit">35</b></span>
+  <span>Buchten <b id="buchtenStand">0/5</b></span>
   <span>Rekord <b id="rekord">0</b></span>
  </div>
 
@@ -239,6 +244,9 @@ a{color:var(--gold)}
    <li><b>Straße:</b> Autos und Lastwagen dürfen den Frosch nicht berühren.</li>
    <li><b>Fluss:</b> Der Frosch kann nicht schwimmen – er muss auf Baumstämmen und Schildkröten mitfahren und darf dabei nicht ins Wasser oder an den Rand geraten.</li>
    <li><b>Zeit:</b> Pro Leben laufen 35 Sekunden. Läuft die Zeit ab, ist ein Leben weg. Drei Leben pro Spiel, jedes erreichte Ziel bringt die Zeit zurück.</li>
+   <li><b>Level:</b> Zwölf Level mit eigener Verkehrslage; jedes geschaffte Level wird
+   freigeschaltet und bleibt über die Auswahl in der Leiste spielbar. Nach dem Sieg
+   startet das nächste Level automatisch.</li>
    <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
   </ol>
   <p class="klein mitte"><a href="../spiele.html">Zurück zur Spieleübersicht</a></p>
@@ -262,6 +270,8 @@ const UFER=6;
 const STRASSE=[7,8,9,10,11];
 const START_ZEILE=12;
 const ZEIT_PRO_LEBEN=35;
+// Die fünf Buchten sitzen in diesen Spalten (Mitte = Spalte*Z+Z/2).
+const BUCHT_SPALTEN=[1,3,5,7,9];
 
 let zustand="start";        // start, laeuft, pause, level, ende
 let punkte=0, level=1, leben=3;
@@ -270,6 +280,7 @@ let frosch={x:0,y:0,zielX:0,zielY:0,huepfend:false,t:0};
 let bahnen=[];
 let buchten=[];             // true = besetzt
 let blitz=0;                // kurzer roter Blitz nach einem Treffer
+let weiterTimer=null;       // automatischer Start des nächsten Levels
 let letzteZeit=0;
 
 const rnd=Math.random;
@@ -337,18 +348,52 @@ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(neuZeichnen);
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",neuZeichnen);
 
 
+/* Zwölf Level mit eigener Verkehrslage. Die Grundwerte sind die alten,
+   damit Level 1 genau wie bisher spielbar ist; später kommen andere
+   Richtungen, dichtere Straßen und größere Flöße dazu. Ab Level 1 steigt
+   das Straßentempo um 4 % je Level, das Flusstempo nur um 1,5 % – die
+   Steigerung ist anfangs kaum zu merken und über zehn Level deutlich. */
+const LEVEL_DEFS=[
+ {fluss:[[30,1,96,70],[36,-1,66,52],[44,1,128,84],[32,-1,44,46],[40,1,80,64]],
+  strasse:[[48,-1,52,96],[34,1,96,110],[60,-1,46,120],[42,1,56,84],[56,-1,104,130]]},
+ {fluss:[[32,1,80,68],[38,-1,72,54],[42,1,112,82],[34,-1,50,48],[38,1,96,60]],
+  strasse:[[50,-1,52,92],[36,1,88,104],[58,-1,50,112],[44,1,56,80],[54,-1,96,120]]},
+ {fluss:[[28,1,104,72],[40,-1,60,50],[46,1,120,86],[30,-1,48,52],[42,1,72,66]],
+  strasse:[[46,-1,56,100],[38,1,104,108],[62,-1,44,116],[40,1,60,88],[58,-1,112,126]]},
+ {fluss:[[34,1,88,66],[34,-1,78,56],[40,1,104,80],[36,-1,54,44],[36,1,88,62]],
+  strasse:[[52,-1,48,88],[32,1,80,112],[56,-1,54,108],[46,1,52,76],[52,-1,88,118]]},
+ {fluss:[[30,-1,96,64],[42,1,64,48],[48,-1,132,88],[28,1,40,50],[44,-1,76,58]],
+  strasse:[[44,1,52,94],[40,-1,100,102],[64,1,42,110],[38,-1,60,86],[60,1,120,124]]},
+ {fluss:[[36,1,72,60],[32,-1,84,58],[38,1,96,78],[38,-1,58,42],[34,1,104,68]],
+  strasse:[[54,-1,44,84],[30,1,92,116],[54,-1,58,104],[48,1,48,72],[50,-1,80,114]]},
+ {fluss:[[26,1,112,74],[44,-1,56,46],[50,1,140,90],[26,-1,44,54],[46,1,68,62]],
+  strasse:[[42,1,60,98],[42,-1,108,100],[66,1,40,106],[36,-1,64,90],[62,1,128,128]]},
+ {fluss:[[38,-1,80,62],[30,1,92,60],[36,-1,112,76],[40,1,62,40],[32,-1,96,70]],
+  strasse:[[56,-1,48,80],[28,1,84,120],[52,-1,62,100],[50,1,44,68],[48,-1,72,110]]},
+ {fluss:[[28,1,120,76],[46,-1,52,44],[42,1,96,74],[24,-1,48,56],[48,1,60,56]],
+  strasse:[[40,1,64,102],[44,-1,116,96],[68,1,38,102],[34,-1,68,94],[64,1,136,132]]},
+ {fluss:[[40,-1,72,58],[28,1,100,62],[34,-1,124,74],[42,1,56,38],[30,-1,88,72]],
+  strasse:[[58,-1,52,76],[26,1,76,124],[50,-1,66,96],[52,1,40,64],[46,-1,64,106]]},
+ {fluss:[[32,1,108,70],[48,-1,48,42],[46,1,84,68],[40,-1,64,50],[52,-1,52,54]],
+  strasse:[[38,1,68,106],[46,-1,124,92],[70,1,36,98],[32,-1,72,98],[66,1,144,136]]},
+ {fluss:[[42,-1,64,54],[26,1,108,64],[32,-1,136,76],[44,1,52,36],[28,-1,80,74]],
+  strasse:[[60,-1,56,72],[24,1,68,128],[48,-1,70,92],[54,1,36,60],[44,-1,56,102]]}
+];
+
 function neueBahnen(){
  bahnen=[];
- const faktor=1+(level-1)*0.07;
+ const def=LEVEL_DEFS[(Math.max(1,level)-1)%LEVEL_DEFS.length];
+ // Grundtempo je Level: Straße +2,8 % je Level, Fluss +1,2 %. Die Levelform
+ // bleibt (schnelle und langsame Bahnen), nur das Niveau steigt gleichmäßig.
+ const flussIst=def.fluss.reduce((a,p)=>a+p[0],0)/def.fluss.length;
+ const strasseIst=def.strasse.reduce((a,p)=>a+p[0],0)/def.strasse.length;
+ const flussFaktor=(36.4*(1+(level-1)*0.012))/flussIst;
+ const strassenFaktor=(48*(1+(level-1)*0.028))/strasseIst;
 
- // Fluss: Baumstämme und Schildkröten, abwechselnd beide Richtungen
- const fluss=[
-  {art:"holz",  reihe:1, tempo:30, richtung:1,  breite:96,  abstand:70},
-  {art:"schild",reihe:2, tempo:36, richtung:-1, breite:66,  abstand:52},
-  {art:"holz",  reihe:3, tempo:44, richtung:1,  breite:128, abstand:84},
-  {art:"schild",reihe:4, tempo:32, richtung:-1, breite:44,  abstand:46},
-  {art:"holz",  reihe:5, tempo:40, richtung:1,  breite:80,  abstand:64}
- ];
+ // Fluss: Baumstämme und Schildkröten, Lage je Level
+ const arten=["holz","schild","holz","schild","holz"];
+ const fluss=def.fluss.map((p,i)=>({art:arten[i], reihe:i+1,
+  tempo:p[0]*flussFaktor, richtung:p[1], breite:p[2], abstand:p[3]}));
  fluss.forEach(b=>{
   const teile=[];
   const schritt=b.breite+b.abstand;
@@ -357,17 +402,13 @@ function neueBahnen(){
    teile.push({x:x,y:b.reihe*Z+(Z-20)/2,w:b.breite,h:20,nr:nr});
    nr++;
   }
-  bahnen.push({...b,tempo:b.tempo*faktor,teile});
+  bahnen.push({...b,teile});
  });
 
- // Straße: Autos und Lastwagen
- const strasse=[
-  {art:"auto",  reihe:7,  tempo:48, richtung:-1, breite:52, abstand:96},
-  {art:"lkw",   reihe:8,  tempo:34, richtung:1,  breite:96, abstand:110},
-  {art:"auto",  reihe:9,  tempo:60, richtung:-1, breite:46, abstand:120},
-  {art:"auto",  reihe:10, tempo:42, richtung:1,  breite:56, abstand:84},
-  {art:"lkw",   reihe:11, tempo:56, richtung:-1, breite:104, abstand:130}
- ];
+ // Straße: Autos und Lastwagen, Lage je Level
+ const fahrArten=["auto","lkw","auto","auto","lkw"];
+ const strasse=def.strasse.map((p,i)=>({art:fahrArten[i], reihe:i+7,
+  tempo:p[0]*strassenFaktor, richtung:p[1], breite:p[2], abstand:p[3]}));
  strasse.forEach(b=>{
   const teile=[];
   const schritt=b.breite+b.abstand;
@@ -377,7 +418,7 @@ function neueBahnen(){
    teile.push({x:x,y:b.reihe*Z+4,w:b.breite,h:Z-8,farbe:palette[nr%palette.length]});
    nr++;
   }
-  bahnen.push({...b,tempo:b.tempo*faktor,teile});
+  bahnen.push({...b,teile});
  });
 }
 
@@ -387,12 +428,30 @@ function froschZurueck(){
  $("zeit").textContent=Math.ceil(zeit);
 }
 
+function levelStarten(n){
+ if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
+ level=Math.max(1,n);
+ punkte=0; leben=3;
+ buchten=[false,false,false,false,false];
+ neueBahnen();
+ froschZurueck();
+ zahlenZeigen();
+ auswahlFuellen();
+ zustand="laeuft";
+ $("meldung").hidden=true;
+ $("btnPause").textContent="Pause";
+ letzteZeit=performance.now();
+ $("hinweis").textContent="Level "+level+" – wischen oder Pfeile: ein Satz pro Feld.";
+}
+
 function neuesSpiel(){
+ if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
  punkte=0; level=1; leben=3;
  buchten=[false,false,false,false,false];
  neueBahnen();
  froschZurueck();
  zahlenZeigen();
+ auswahlFuellen();
  $("rekord").textContent=rekordLaden();
  zustand="start";
  $("btnPause").textContent="Pause";
@@ -405,9 +464,34 @@ function rekordLaden(){
  try{ return Number(localStorage.getItem("frogger-rekord")||0); }catch(e){ return 0; }
 }
 
+// Höchstes freigeschaltetes Level – bleibt im Browser.
+function erreichtLaden(){
+ try{ return Math.max(1,Number(localStorage.getItem("frogger-erreicht")||1)); }
+ catch(e){ return 1; }
+}
+function erreichtMerken(n){
+ if(n<=erreichtLaden())return;
+ try{ localStorage.setItem("frogger-erreicht",String(n)); }catch(e){}
+ auswahlFuellen();
+}
+function auswahlFuellen(){
+ const wahl=$("levelWahl");
+ if(!wahl)return;
+ const bis=erreichtLaden();
+ wahl.innerHTML="";
+ for(let i=1;i<=bis;i++){
+  const o=document.createElement("option");
+  o.value=String(i);
+  o.textContent="Level "+String(i).padStart(2,"0");
+  wahl.appendChild(o);
+ }
+ wahl.value=String(level<=bis?level:bis);
+}
+
 function zahlenZeigen(){
  $("punkte").textContent=punkte;
  $("level").textContent=level;
+ $("buchtenStand").textContent=buchten.filter(Boolean).length+"/5";
  $("leben").textContent="●".repeat(Math.max(0,leben))+"○".repeat(Math.max(0,3-leben));
  $("zeit").textContent=Math.max(0,Math.ceil(zeit));
 }
@@ -449,9 +533,13 @@ function sprungFertig(){
  const reihe=frosch.zielReihe;
 
  if(reihe===HEIM_ZEILE){
-  const spalte=frosch.zielSpalte;
-  const bucht=spalte%2===1&&spalte<=9?(spalte-1)/2:-1;
-  if(bucht>=0&&!buchten[bucht]){
+  const spalte=Math.round((frosch.x-Z/2)/Z);
+  const bucht=BUCHT_SPALTEN.indexOf(spalte);
+  if(bucht>=0&&buchten[bucht]){
+   sterben("Diese Bucht ist schon besetzt");
+   return;
+  }
+  if(bucht>=0){
    buchten[bucht]=true;
    punkte+=50+Math.floor(zeit)*2;
    zahlenZeigen();
@@ -493,20 +581,28 @@ function rekordPruefen(){
 function levelGeschafft(){
  zustand="level";
  punkte+=200;
+ erreichtMerken(level+1);
  zahlenZeigen();
  rekordPruefen();
  const naechstes=level+1;
- zeigeMeldung("Level "+level+" geschafft","Alle fünf Buchten besetzt · +200 Punkte · Level "+naechstes,"Weiter");
- $("meldungKnopf").onclick=()=>{
+ $("hinweis").textContent="Alle fünf Buchten besetzt – Level "+naechstes+" wartet.";
+ zeigeMeldung("Level "+level+" geschafft","Alle fünf Buchten besetzt · +200 Punkte · Level "+naechstes+" startet gleich automatisch.","Weiter");
+ const starteNaechstes=()=>{
+  if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
   $("meldung").hidden=true;
   level=naechstes;
   buchten=[false,false,false,false,false];
   neueBahnen();
   froschZurueck();
   zahlenZeigen();
+  auswahlFuellen();
   zustand="laeuft";
   letzteZeit=performance.now();
+  $("hinweis").textContent="Level "+level+" – wischen oder Pfeile: ein Satz pro Feld.";
  };
+ $("meldungKnopf").onclick=starteNaechstes;
+ clearTimeout(weiterTimer);
+ weiterTimer=setTimeout(starteNaechstes,4000);
 }
 
 // ---------------------------------------------------------------- Update
@@ -524,21 +620,22 @@ function update(dt){
   });
  });
 
- // Zeit
- zeit-=dt;
- $("zeit").textContent=Math.max(0,Math.ceil(zeit));
- if(zeit<=0){
-  sterben("Zeit abgelaufen");
-  return;
- }
-
- // Sprung
+ // Sprung zuerst: Wer im letzten Sprungbild die Bucht erreicht, hat sie
+ // erreicht – die Uhr darf den Treffer nicht mehr wegnehmen.
  if(frosch.huepfend){
   frosch.t=Math.min(1,frosch.t+dt/0.13);
   const e=frosch.t<0.5?2*frosch.t*frosch.t:1-Math.pow(-2*frosch.t+2,2)/2;
   frosch.x=frosch.startX+(frosch.zielX-frosch.startX)*e;
   frosch.y=frosch.startY+(frosch.zielY-frosch.startY)*e;
   if(frosch.t>=1)sprungFertig();
+  return;
+ }
+
+ // Zeit
+ zeit-=dt;
+ $("zeit").textContent=Math.max(0,Math.ceil(zeit));
+ if(zeit<=0){
+  sterben("Zeit abgelaufen");
   return;
  }
 
@@ -1108,8 +1205,8 @@ function zeichne(){
   });
  });
 
- // Buchten
- for(let i=0;i<5;i++)zeichneBucht(i,((i*2)+1)*Z);
+ // Buchten: Mittelpunkt der Spalten 1, 3, 5, 7, 9
+ for(let i=0;i<5;i++)zeichneBucht(i,BUCHT_SPALTEN[i]*Z+Z/2);
 
  // Frosch
  zeichneFrosch();
@@ -1191,9 +1288,12 @@ window.addEventListener("keydown",e=>{
  else if(k==="ArrowLeft"||k==="a"||k==="A"){ e.preventDefault(); huepfen(-1,0); }
  else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); huepfen(1,0); }
  else if(k===" "){ e.preventDefault(); if(zustand==="start")starten(); }
+ else if(k==="Enter"&&!$("meldung").hidden){ e.preventDefault(); $("meldungKnopf").click(); }
 });
 
 $("btnNeu").onclick=neuesSpiel;
+$("btnNochmal").onclick=()=>levelStarten(level);
+$("levelWahl").onchange=()=>levelStarten(Number($("levelWahl").value));
 $("btnPause").onclick=()=>{
  if(zustand==="laeuft"){
   zustand="pause";
