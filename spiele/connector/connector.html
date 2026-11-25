@@ -677,11 +677,7 @@ body.griff-aktiv iframe{pointer-events:none}
    Jede Aktion gibt es genau einmal; was dieselbe Seite öffnet, steht in einer
    Zeile (Einzelspieler und Mitspieler am Gerät). */
 .u-modi{display:flex;flex-direction:column;gap:4px;margin-top:auto;padding-top:4px}
-.u-modus{display:flex;flex-direction:column;gap:3px;padding-top:5px;border-top:1px solid var(--c-rahmen)}
-.u-modi>.u-modus:first-child{border-top:0;padding-top:0}
-.u-modus-text{display:flex;flex-direction:column;line-height:1.2}
-.u-modus-titel{font-size:11px;font-weight:600;color:var(--c-text)}
-.u-modus-klein{font-size:10px;color:var(--c-leise)}
+.u-modus{display:flex;flex-direction:column}
 .u-knopf{width:100%;font:inherit;font-size:11px;padding:5px 7px;border-radius:7px;
  border:1px solid var(--c-rahmen);background:var(--c-flaeche-3);color:var(--c-text);cursor:pointer}
 .u-knopf.haupt{border-color:var(--c-akzent);color:var(--c-akzent);font-weight:600}
@@ -4357,27 +4353,17 @@ function ueberPasst(e, filter, suche) {
 // rechts genau ein Knopf. Jede Aktion gibt es nur einmal – Einzelspieler und
 // Mitspieler am Gerät beginnen beide in derselben Spielseite und teilen sich
 // deshalb eine Zeile.
-function uModusZeile(titel, erklaerung, knopf, aktion, haupt) {
+// Jede Zeile ist nur ihr Knopf: Die Beschriftung nennt den Modus, eine
+// zweite Textzeile daneben wäre dieselbe Aussage doppelt.
+function uModusZeile(knopf, aktion, haupt) {
   const zeile = document.createElement("div");
   zeile.className = "u-modus";
-  const text = document.createElement("div");
-  text.className = "u-modus-text";
-  const t = document.createElement("span");
-  t.className = "u-modus-titel";
-  t.textContent = titel;
-  text.appendChild(t);
-  if (erklaerung) {
-    const klein = document.createElement("small");
-    klein.className = "u-modus-klein";
-    klein.textContent = erklaerung;
-    text.appendChild(klein);
-  }
   const b = document.createElement("button");
   b.type = "button";
   b.className = "u-knopf" + (haupt ? " haupt" : "");
   b.textContent = knopf;
   b.onclick = aktion;
-  zeile.append(text, b);
+  zeile.append(b);
   return zeile;
 }
 
@@ -4402,30 +4388,22 @@ function ueberKarte(e, akzent) {
   // Einzelspieler und Mitspieler am Gerät öffnen dieselbe Spielseite.
   const amGeraet = e.solo || e.zwei || e.lokal;
   if (amGeraet) {
-    const titel = [
-      e.solo ? "Einzelspieler" : "",
-      e.zwei ? "zu zweit am Gerät" : e.lokal ? "mehrere am Gerät" : ""
-    ].filter(Boolean).join(" · ");
-    const erklaerung = e.solo && !(e.zwei || e.lokal)
-      ? (e.highscore ? "Allein, mit Spielstand und Bestwert" : "Allein spielen")
-      : e.solo ? "Allein oder gemeinsam" : "Gemeinsam an einem Gerät";
-    modi.appendChild(uModusZeile(titel, erklaerung, "Spielen",
+    modi.appendChild(uModusZeile("Spielen",
       function () { openGame("/spiele/" + e.pfad); }, !e.online));
   }
   if (e.bot) {
-    modi.appendChild(uModusZeile("Gegen Computer", "Stufe leicht bis schwer",
-      "Gegen Computer", function () { botStarten(e.bot, botStufeWahl()); }, false));
+    modi.appendChild(uModusZeile("Gegen Computer",
+      function () { botStarten(e.bot, botStufeWahl()); }, false));
   }
   if (e.online) {
     const d = e.online;
-    const spanne = d.min === d.max ? d.min + " Spieler" : d.min + "–" + d.max + " Spieler";
-    modi.appendChild(uModusZeile("Mehrspieler online", spanne + " · Einladung im Chat",
-      "Online spielen", function () { spielAnbieten(d.id); }, true));
+    modi.appendChild(uModusZeile("Online spielen",
+      function () { spielAnbieten(d.id); }, true));
   }
   if (!modi.children.length) {
     // Kein Spiel ohne Einstieg: die Seite bleibt erreichbar, auch wenn weder
     // Merkmale noch Register einen Modus nennen.
-    modi.appendChild(uModusZeile("Spielen", "", "Spielen",
+    modi.appendChild(uModusZeile("Spielen",
       function () { openGame("/spiele/" + e.pfad); }, true));
   }
   karte.appendChild(modi);
