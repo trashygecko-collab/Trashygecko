@@ -132,16 +132,27 @@ tasks.register("homepageKopieren", Sync) {
     }
     into(wwwZiel)
     doLast {
-        // Alte Installationsdateien sind keine Spiele und liegen absichtlich nicht im App-Paket.
+        // Der Katalog ist fertiges HTML (Karten statt Datenzeilen). Zwei Kacheln gehoeren nur
+        // auf die Website: die Installationsdateien (nicht im App-Paket) und die WLAN-
+        // Fernbedienung (in der App nur ueber „Extras“; die Kopie liegt unter fernbedienung/).
         File katalog = new File(wwwZiel, "spiele/spiele.html")
         String html = katalog.getText("UTF-8")
-        String bereinigt = html.replaceAll(/(?m)^\s*\["[^"]+",\s*"android\/[^"]*\.apk",[^\r\n]*\r?\n/, "")
-        if (html == bereinigt) throw new GradleException("Android-Installer-Einträge in der lokalen Spieleübersicht nicht gefunden")
-        // In der App ist die Fernbedienung ausschließlich über „Extras“ erreichbar – auf der
-        // Website bleibt die Kachel erhalten.
-        String ohneFernbedienung = bereinigt.replaceAll(/(?m)^\s*\["[^"]+",\s*"\.\.\/WLAN-Fernbedienung\/[^"]*",[^\r\n]*\r?\n/, "")
-        if (ohneFernbedienung == bereinigt) throw new GradleException("Fernbedienungs-Kachel in der lokalen Spieleübersicht nicht gefunden")
-        katalog.setText(ohneFernbedienung, "UTF-8")
+        String ohneWeb = html.replaceAll(
+                /(?s)<a class="karte" href="(?:android\/[^"]*\.apk|\.\.\/WLAN-Fernbedienung\/[^"]*)".*?<\/a>/, "")
+        // Bleibt ein solcher Verweis stehen, zeigt die App ins Leere.
+        if (ohneWeb =~ /href="(?:[^"]*\.apk|\.\.\/WLAN-Fernbedienung\/)/) {
+            throw new GradleException("Kachel, die es nur auf der Website gibt, steckt noch in der App-Spieleübersicht")
+        }
+        // Die Zahl im Abschnittskopf zaehlt die verbliebenen Kacheln.
+        def werkzeuge = (ohneWeb =~ /(?s)<section class="kat-abschnitt" id="werkzeuge".*?<\/section>/)
+        if (!werkzeuge.find()) throw new GradleException("Werkzeug-Abschnitt in der Spieleübersicht nicht gefunden")
+        String abschnitt = werkzeuge.group(0)
+        if (!(abschnitt =~ /<span class="zahl">\d+<\/span>/)) {
+            throw new GradleException("Kachelzahl im Werkzeug-Kopf nicht gefunden")
+        }
+        String kopf = abschnitt.replaceFirst(/<span class="zahl">\d+<\/span>/,
+                '<span class="zahl">' + (abschnitt =~ /<a class="karte"/).count + '</span>')
+        katalog.setText(ohneWeb.replace(abschnitt, kopf), "UTF-8")
     }
 }
 
@@ -194,29 +205,17 @@ tasks.register("katalogBauen") {
         String html = quelle.getText("UTF-8")
         String katalogInhalt = datenDatei.getText("UTF-8")
 
-        // Spielzeichen: dieselben Symbole wie in der Web-Halle. Die Regeln greifen auf
-        // den Spielpfad zu, der Rückfall ist die Kategorie (spielSymbol in spiele.html).
+        // Spielzeichen: die Karten tragen ihr SVG selbst (<span class="symbol"><svg …></span>);
+        // die Abschnittskoepfe liefern das Kategorie-Zeichen, das zugleich Rueckfall ist.
         def symbole = [:]
-        def symbolBlock = (html =~ /(?s)var SPIELSYMBOLE\s*=\s*\{(.*?)\n\s*\};/)
-        if (symbolBlock.find()) {
-            def eintrag = (symbolBlock.group(1) =~ /(?m)^\s*([A-Za-z0-9_]+):\s*symbolSvg\('(.*)'\),?\s*$/)
-            while (eintrag.find()) symbole[eintrag.group(1)] = eintrag.group(2)
+        def kartenBlock = (html =~ /(?s)<a class="karte"[^>]*?href="([^"]+)"[^>]*>(.*?)<\/a>/)
+        while (kartenBlock.find()) {
+            def zeichen = (kartenBlock.group(2) =~ /(?s)<span class="symbol"[^>]*>\s*(<svg.*?<\/svg>)/)
+            if (zeichen.find()) symbole[kartenBlock.group(1)] = zeichen.group(1)
         }
-        if (symbole.isEmpty()) throw new GradleException("Keine Spielsymbole im Spielekatalog erkannt")
-
-        def ikonen = [:]
-        def ikonenBlock = (html =~ /(?s)var IKONEN\s*=\s*\{(.*?)\n\s*\};/)
-        if (ikonenBlock.find()) {
-            def eintrag = (ikonenBlock.group(1) =~ /(?m)^\s*([A-Za-z0-9_]+):\s*'(<svg.*?<\/svg>)',?\s*$/)
-            while (eintrag.find()) ikonen[eintrag.group(1)] = eintrag.group(2)
-        }
-
-        def symbolRegeln = []
-        def regelnBlock = (html =~ /(?s)var SYMBOLREGELN\s*=\s*\[(.*?)\n\s*\];/)
-        if (regelnBlock.find()) {
-            def regel = (regelnBlock.group(1) =~ /\[\/(.+?)\/,\s*"([^"]+)"\]/)
-            while (regel.find()) symbolRegeln << [regel.group(1), regel.group(2)]
-        }
+        def abschnitte = (html =~ /(?s)<section class="kat-abschnitt" id="kat-([a-z0-9-]+)"[^>]*>.*?<span class="ikon">\s*(<svg.*?<\/svg>)/)
+        while (abschnitte.find()) symbole["kat-" + abschnitte.group(1)] = abschnitte.group(2)
+        if (symbole.isEmpty()) throw new GradleException("Keine Spielzeichen im Spielekatalog erkannt")
 
         def kategorien = []
         def katMatcher = (katalogInhalt =~ /(?s)\{\s*id:\s*"([^"]+)",\s*name:\s*"([^"]+)",(.*?)\}/)
@@ -229,7 +228,7 @@ tasks.register("katalogBauen") {
                 name: katMatcher.group(2),
                 akzent: akzentTreffer.find() ? akzentTreffer.group(1) : "#e8cd8e",
                 text: textTreffer.find() ? textTreffer.group(1) : "",
-                ikon: ikonen[katMatcher.group(1)] ?: ""
+                ikon: symbole["kat-" + katMatcher.group(1)] ?: ""
             ]
         }
         if (kategorien.isEmpty()) throw new GradleException("Keine Kategorien im Spielekatalog erkannt")
@@ -245,8 +244,6 @@ tasks.register("katalogBauen") {
         while (hlMatcher.find()) highlights << [pfad: hlMatcher.group(1), bild: hlMatcher.group(2)]
 
         String registerText = register.isFile() ? register.getText("UTF-8") : ""
-        String spieleBaum = new File(wwwZiel, "spiele").getPath().replace('\\', '/')
-
         def spiele = []
         def matcher = (katalogInhalt =~ /(?m)^\s*\["([^"]+)",\s*"([^"]+\.html)",\s*"([^"]+)",\s*"([^"]*)"(?:,\s*"([^"]*)")?\]/)
         while (matcher.find()) {
@@ -262,16 +259,7 @@ tasks.register("katalogBauen") {
             }
             // „Zu zweit“ bleibt im Katalog: lokal ist Mehrspieler am Gerät.
             if (merkmale.contains("lokal") && !merkmale.contains("multi")) merkmale << "multi"
-            String symbol = null
-            for (def regel : symbolRegeln) {
-                if (java.util.regex.Pattern.compile(regel[0]).matcher(relative).find()) {
-                    symbol = regel[1]
-                    break
-                }
-            }
-            if (symbol == null || !symbole.containsKey(symbol)) {
-                symbol = symbole.containsKey(matcher.group(3)) ? matcher.group(3) : "denk"
-            }
+            String symbol = [relative, "kat-" + matcher.group(3)].find { symbole.containsKey(it) } ?: ""
             spiele << [
                 name: name,
                 pfad: "spiele/${relative}",
