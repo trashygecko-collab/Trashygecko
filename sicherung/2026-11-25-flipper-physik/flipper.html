@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b241d">
+<title>TrashyGecko – Arcade Flipper</title>
+<style>
+:root{
+/* Token-Ebene. Klassisch sind genau die alten Farben. */
+--text:#efe6d2;--bg-1:#1d4b3e;--bg-2:#123329;--bg-3:#0a211b;
+--gold-hell:#f1dca8;--gold:#e8cd8e;--leiste:#0b241d;
+--panel:#0f2b23;--kopf:#1e5645;--kopf-2:#144238;--hover:#184536;
+--schleier:#04100ccc;--tief:#08120f;--grund:#04100c;--fluegel:#123a2e;
+--fenster-rand:#9b8150;--kante:#ffffff0b;--punkte:#fff3d2;
+--hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;
+--rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
+--schatten:#00000077;--schatten-tief:#00000077;
+/* Feld: der Zeichencode liest genau diese. */
+--fl-glanz:#ffffff;--fl-schatten-1:#00000033;--fl-schatten-2:#00000044;
+--fl-schatten-3:#00000055;--fl-schatten-4:#00000066;--fl-stange-1:#6f7a76;
+--fl-stange-2:#d5ded8;--fl-stange-3:#59625f;--fl-fahne-1:#f9ffff;
+--fl-fahne-2:#82928d;--fl-fahne-3:#303b3b;--fl-fahne-rand:#e9f0e8;
+--fl-spinner:#252f30;--fl-spinner-rand:#dbe5dd;--fl-scoop-aussen:#101719;
+--fl-scoop-innen:#020706;--fl-rampe:#aab8b5;--fl-rampe-rand:#090e12;
+--fl-zinne:#f2e5c4;--fl-bumper-ring:#303b3a;
+--fl-bumper-kante:#d8d8c8;--fl-bumper-kappe:#f8f0d6;--fl-arm-1:#fffdf0;
+--fl-arm-2:#a77b38;--fl-arm-3:#423321;--fl-arm-rand:#f8e8b7;
+--fl-arm-linie:#ffffff99;--fl-lager:#4a514d;--fl-lager-rand:#d7d5c7;
+--fl-lager-schlitz:#39413d;--fl-schraube:#aeb8ae;--fl-schraub-schlitz:#39443e;
+--fl-zierrand:#ffffff18;
+--fl-kugel-rand:#00000055;--fl-kugel-ende:#8d8b80;
+--fl-lade-warn:#ff6b5f;--fl-licht-text:#0b241d;
+--fl-t1-grund-1:#123a2c;--fl-t1-grund-2:#06150f;--fl-t1-wand:#d9bc7c;
+--fl-t1-licht:#e8cd8e;--fl-t1-bumper-1:#2f8a66;--fl-t1-bumper-2:#123a2c;
+--fl-t1-ziel:#c8a96a;--fl-t1-kugel:#fff4d6;--fl-t2-grund-1:#241a3d;
+--fl-t2-grund-2:#0a0614;--fl-t2-wand:#6ee7ff;--fl-t2-licht:#ff5fd2;
+--fl-t2-bumper-1:#ff5fd2;--fl-t2-bumper-2:#2a0f38;--fl-t2-ziel:#6ee7ff;
+--fl-t2-kugel:#f2faff;--fl-t3-grund-1:#0e3340;--fl-t3-grund-2:#041014;
+--fl-t3-wand:#d9a05a;--fl-t3-licht:#f0c98a;--fl-t3-bumper-1:#2b8a92;
+--fl-t3-bumper-2:#08262c;--fl-t3-ziel:#d9a05a;--fl-t3-kugel:#fff1d8;
+--fl-t4-grund-1:#2a1a45;--fl-t4-grund-2:#08040f;--fl-t4-wand:#cfc0ff;
+--fl-t4-licht:#ffffff;--fl-t4-bumper-1:#8f6bff;--fl-t4-bumper-2:#1b1030;
+--fl-t4-ziel:#cfc0ff;--fl-t4-kugel:#ffffff;
+}
+html[data-stil="maedchen"]{
+--text:#3a0f24;--bg-1:#ffe0ef;--bg-2:#f7a6d4;--bg-3:#eb7bc0;
+--gold-hell:#5b2340;--gold:#85204a;--leiste:#ffeaf3;
+--panel:#ffe3ef;--kopf:#ffd0e4;--kopf-2:#ffb8d4;--hover:#ffd0e4;
+--schleier:#fff6fae0;--tief:#ffd8e7;--grund:#fff6fa;--fluegel:#ffeaf3;
+--fenster-rand:#c9588f;--kante:#ffffffcc;--punkte:#5b2340;
+--hell:#8f2450;--muted:#7a2b52;--regeln:#5b2340;--meldung-text:#5b2340;
+--rand:#ef7aa8;--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
+--schatten:#8f245033;--schatten-tief:#8f245055;
+--fl-glanz:#ffffff;--fl-schatten-1:#8f245033;--fl-schatten-2:#8f245044;
+--fl-schatten-3:#8f245055;--fl-schatten-4:#8f245066;--fl-stange-1:#f3c6d8;
+--fl-stange-2:#fff2f7;--fl-stange-3:#c99ab1;--fl-fahne-1:#fff6fa;
+--fl-fahne-2:#e9b6cc;--fl-fahne-3:#b57e97;--fl-fahne-rand:#ffe3ef;
+--fl-spinner:#7a2b52;--fl-spinner-rand:#ffe3ef;--fl-scoop-aussen:#7a2b52;
+--fl-scoop-innen:#2a0a1b;--fl-rampe:#e9b6cc;--fl-rampe-rand:#8f2450;
+--fl-zinne:#ffe3ef;--fl-bumper-ring:#b57e97;
+--fl-bumper-kante:#fff2f7;--fl-bumper-kappe:#fff6fa;--fl-arm-1:#fff2f7;
+--fl-arm-2:#c9588f;--fl-arm-3:#8f2450;--fl-arm-rand:#ffe3ef;
+--fl-arm-linie:#ffffffcc;--fl-lager:#b57e97;--fl-lager-rand:#ffe3ef;
+--fl-lager-schlitz:#5b2340;--fl-schraube:#ffd0e4;--fl-schraub-schlitz:#8f2450;
+--fl-zierrand:#8f24501a;
+--fl-kugel-rand:#8f245055;--fl-kugel-ende:#a06a7d;
+--fl-lade-warn:#e0245e;--fl-licht-text:#ffeaf3;
+--fl-t1-grund-1:#fff0f7;--fl-t1-grund-2:#ffd8e7;--fl-t1-wand:#c9588f;
+--fl-t1-licht:#8f2450;--fl-t1-bumper-1:#e0245e;--fl-t1-bumper-2:#8f2450;
+--fl-t1-ziel:#e0559a;--fl-t1-kugel:#e0245e;--fl-t2-grund-1:#ffe6f2;
+--fl-t2-grund-2:#ffc9e0;--fl-t2-wand:#b06bff;--fl-t2-licht:#8f2450;
+--fl-t2-bumper-1:#b06bff;--fl-t2-bumper-2:#5b2340;--fl-t2-ziel:#b06bff;
+--fl-t2-kugel:#b06bff;--fl-t3-grund-1:#e8f7ff;--fl-t3-grund-2:#cfe9f7;
+--fl-t3-wand:#b06b00;--fl-t3-licht:#5b2340;--fl-t3-bumper-1:#1f7f9e;
+--fl-t3-bumper-2:#12495e;--fl-t3-ziel:#b06b00;--fl-t3-kugel:#1f7f9e;
+--fl-t4-grund-1:#f3e8ff;--fl-t4-grund-2:#ded0f5;--fl-t4-wand:#7b3fe4;
+--fl-t4-licht:#5b2340;--fl-t4-bumper-1:#7b3fe4;--fl-t4-bumper-2:#3a0f24;
+--fl-t4-ziel:#7b3fe4;--fl-t4-kugel:#7b3fe4;
+}
+html[data-stil="buben"]{
+--text:#e6e9ec;--bg-1:#1c2a3d;--bg-2:#0c1219;--bg-3:#04070b;
+--gold-hell:#e6e9ec;--gold:#c8ff3d;--leiste:#0a0d10;
+--panel:#111316;--kopf:#1c2530;--kopf-2:#111820;--hover:#20262e;
+--schleier:#04070bcc;--tief:#080b0e;--grund:#04070b;--fluegel:#151b22;
+--fenster-rand:#2a4050;--kante:#c8ff3d1a;--punkte:#c8ff3d;
+--hell:#c8ff3d;--muted:#adb4bc;--regeln:#c2c8cf;--meldung-text:#c9d4dc;
+--rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
+--schatten:#00000088;--schatten-tief:#000000cc;
+--fl-glanz:#f2fbff;--fl-schatten-1:#00000066;--fl-schatten-2:#00000077;
+--fl-schatten-3:#00000099;--fl-schatten-4:#000000aa;--fl-stange-1:#2a3a46;
+--fl-stange-2:#9fb3bd;--fl-stange-3:#16202a;--fl-fahne-1:#d7e6ee;
+--fl-fahne-2:#6b7f8a;--fl-fahne-3:#3a4a55;--fl-fahne-rand:#4de0ff;
+--fl-spinner:#12202b;--fl-spinner-rand:#aab4bc;--fl-scoop-aussen:#0a1219;
+--fl-scoop-innen:#04070b;--fl-rampe:#4de0ff;--fl-rampe-rand:#04070b;
+--fl-zinne:#c8ff3d55;--fl-bumper-ring:#2a3a46;
+--fl-bumper-kante:#9fb3bd;--fl-bumper-kappe:#e6f7ff;--fl-arm-1:#f2ffd0;
+--fl-arm-2:#6b8f00;--fl-arm-3:#2b3a00;--fl-arm-rand:#c8ff3d;
+--fl-arm-linie:#c8ff3daa;--fl-lager:#2a3a44;--fl-lager-rand:#c8ff3d;
+--fl-lager-schlitz:#04070b;--fl-schraube:#7e8892;--fl-schraub-schlitz:#04070b;
+--fl-zierrand:#c8ff3d1a;
+--fl-kugel-rand:#00000099;--fl-kugel-ende:#7e8892;
+--fl-lade-warn:#ff5a6a;--fl-licht-text:#04070b;
+--fl-t1-grund-1:#0c1a22;--fl-t1-grund-2:#04070b;--fl-t1-wand:#4de0ff;
+--fl-t1-licht:#c8ff3d;--fl-t1-bumper-1:#1b8fa0;--fl-t1-bumper-2:#0a141c;
+--fl-t1-ziel:#4de0ff;--fl-t1-kugel:#e6f7ff;--fl-t2-grund-1:#1a0f2a;
+--fl-t2-grund-2:#05030b;--fl-t2-wand:#ff5a6a;--fl-t2-licht:#c8ff3d;
+--fl-t2-bumper-1:#ff5a6a;--fl-t2-bumper-2:#1b1030;--fl-t2-ziel:#ff5a6a;
+--fl-t2-kugel:#f2fbff;--fl-t3-grund-1:#08222a;--fl-t3-grund-2:#03090d;
+--fl-t3-wand:#ffd24d;--fl-t3-licht:#c8ff3d;--fl-t3-bumper-1:#2fd07a;
+--fl-t3-bumper-2:#0a1f26;--fl-t3-ziel:#ffd24d;--fl-t3-kugel:#eafaff;
+--fl-t4-grund-1:#101a2b;--fl-t4-grund-2:#04070b;--fl-t4-wand:#b070ff;
+--fl-t4-licht:#c8ff3d;--fl-t4-bumper-1:#4de0ff;--fl-t4-bumper-2:#12182a;
+--fl-t4-ziel:#b070ff;--fl-t4-kugel:#ffffff;
+}
+
+.extras{flex:0 0 auto;padding:5px 10px;font-size:11.5px;color:var(--muted);
+ background:var(--tief);border-bottom:1px solid var(--rand-4);white-space:normal;line-height:1.45}
+.extras.bonus{color:var(--gold);font-weight:bold}
+*{box-sizing:border-box}
+html,body{height:100%}
+[hidden]{display:none !important}
+body{margin:0;padding:6px 6px 10px;
+ background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px var(--tg-schrift);
+ -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden;overscroll-behavior:none}
+main{max-width:820px;width:100%;margin:auto;display:flex;flex-direction:column;min-height:0;height:100%}
+.titelleiste,.menueleiste,.statuszeile,.fluegel,.fuss,#regeln{flex:0 0 auto}
+
+.fenster{border:2px solid var(--fenster-rand);border-radius:10px;overflow:hidden;background:var(--panel);
+ box-shadow:0 8px 24px var(--schatten),inset 0 0 0 2px var(--kante)}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:6px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
+.titelleiste .titel{color:var(--hell);font-size:13.5px;letter-spacing:.06em}
+.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
+ width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
+.titelleiste .ton{border:1px solid var(--rand-1);border-radius:4px;background:var(--leiste);color:var(--gold);
+ font-family:inherit;font-size:11px;padding:3px 6px;cursor:pointer}
+
+.menueleiste{display:flex;gap:5px;flex-wrap:wrap;padding:6px 8px;background:var(--leiste);
+ border-bottom:1px solid var(--rand-3)}
+.menueleiste button{font-family:inherit;font-size:12px;padding:6px 8px;border-radius:6px;
+ border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
+.menueleiste button:hover{background:var(--hover)}
+.menueleiste button.aktiv{background:var(--gold);color:var(--leiste);border-color:var(--gold);font-weight:bold}
+
+.statuszeile{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;
+ padding:5px 10px;font-size:12.5px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
+.statuszeile b{color:var(--gold);font-weight:normal}
+#punkte{font-size:17px;color:var(--punkte);letter-spacing:.04em}
+.kugelbild{display:inline-flex;gap:3px;vertical-align:-1px;margin-left:2px}
+.kugelbild i{width:7px;height:7px;border-radius:50%;border:1px solid var(--gold);display:block}
+.kugelbild i.weg{background:none;border-color:var(--muted);opacity:.45}
+.kugelbild i.da{background:var(--gold)}
+
+/* Der Tisch nimmt genau den Platz, der zwischen Kopf, Knöpfen und Fuß übrig
+   ist – passeTisch() setzt die Maße der Leinwand danach (Höhe und Breite). */
+.tisch{display:flex;gap:10px;padding:6px;background:var(--tief);align-items:center;justify-content:center;
+ flex:1 1 auto;min-height:0;overflow:hidden}
+.leinwand{position:relative;flex:0 0 auto;width:300px;height:420px;max-width:100%}
+canvas{display:block;width:100%;height:100%;border-radius:10px;
+ border:1px solid var(--rand-3);background:var(--grund);touch-action:none}
+
+.meldung{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:var(--schleier);border-radius:10px;padding:12px;text-align:center}
+.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:14px 16px;max-width:300px;
+ box-shadow:0 6px 20px var(--schatten-tief)}
+.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:17px}
+.meldung p{margin:0 0 10px;color:var(--meldung-text);font-size:13.5px;line-height:1.45;white-space:pre-line}
+.meldung .zahl{font-size:24px;color:var(--gold);letter-spacing:.06em;margin:2px 0 8px}
+.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
+ border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
+
+/* Bedienfeld: zwei große Flippertasten nebeneinander, darunter der
+   Abschussknopf über die volle Breite. Getrennte Flächen, keine Überlappung,
+   große Treffer für Daumen; der Balken zeigt die Federspannung. */
+.fluegel{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 6px 6px;background:var(--tief)}
+.fluegel button{position:relative;overflow:hidden;min-height:58px;font-family:inherit;font-size:15px;
+ padding:16px 6px;border-radius:10px;border:1px solid var(--rand-1);background:var(--fluegel);
+ color:var(--gold);cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;
+ -webkit-touch-callout:none}
+.fluegel button:active,.fluegel button.drueckt{background:var(--gold);color:var(--leiste);
+ box-shadow:inset 0 0 0 2px var(--hell)}
+.fluegel button.stift{grid-column:1 / -1;min-height:48px;font-size:13px;letter-spacing:.04em;
+ background:var(--panel);border-color:var(--rand-2);display:flex;align-items:center;
+ justify-content:center;gap:10px}
+.fluegel button.stift .wort{font-weight:bold}
+.fluegel button.stift .kraft{font-size:12px;color:var(--muted);min-width:42px;text-align:right;
+ font-variant-numeric:tabular-nums}
+.fluegel button.stift .balken{position:absolute;left:0;bottom:0;height:5px;width:var(--lade,0%);
+ background:linear-gradient(90deg,var(--gold),var(--hell));transition:width .05s linear}
+.fluegel button.stift.drueckt{background:var(--panel);color:var(--gold);
+ box-shadow:inset 0 0 0 2px var(--gold)}
+.fluegel button.stift.drueckt .balken{background:linear-gradient(90deg,var(--gold),var(--hell))}
+.fluegel button.stift.drueckt .kraft{color:var(--gold)}
+
+.fuss{padding:5px 10px 8px;font-size:12.5px;color:var(--muted);min-height:24px}
+#regeln{margin-top:8px;padding:0 10px 10px}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:13.5px;padding:5px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.5;font-size:12.5px;color:var(--regeln)}
+#regeln li{margin-bottom:4px}
+#regeln b{color:var(--gold-hell);font-weight:normal}
+.klein{color:var(--muted);font-size:12.5px}
+a{color:var(--gold)}
+.mitte{text-align:center}
+/* Ab 900 px: großer Tisch links, Bedienung rechts – der Tisch nutzt die Höhe */
+@media (min-width:900px){
+ main{max-width:1120px;display:grid;grid-template-columns:minmax(0,1fr) 330px;
+  grid-template-rows:auto auto minmax(0,1fr) auto auto;
+  grid-template-areas:"titel titel" "menu menu" "tisch status" "tisch extras" "tisch fluegel" "fuss fuss" "regeln regeln";
+  column-gap:10px}
+ .titelleiste{grid-area:titel}
+ .menueleiste{grid-area:menu}
+ .statuszeile{grid-area:status;flex-direction:column;align-items:flex-start;gap:4px}
+ .extras{grid-area:extras}
+ .tisch{grid-area:tisch;min-height:0}
+ .fluegel{grid-area:fluegel;display:flex;flex-direction:column;padding:6px 0 0}
+ .fluegel button{padding:14px 6px;min-height:0}
+ .fluegel button.stift{flex:1 1 auto;min-height:52px}
+ .fuss{grid-area:fuss}
+ #regeln{grid-area:regeln}
+}
+/* Handy hoch: kein Seitenrollen, Bedienung bleibt erreichbar */
+@media (max-width:899px){
+ body{padding:4px 4px 6px;overflow:hidden}
+ main{height:100%}
+ .menueleiste{padding:4px 6px;gap:4px}
+ .menueleiste button{font-size:11px;padding:5px 6px}
+ .statuszeile{font-size:11.5px;padding:4px 8px;gap:6px}
+ #punkte{font-size:15px}
+ .extras{font-size:10.5px;padding:4px 8px}
+ .tisch{padding:4px;gap:6px}
+ .fuss{font-size:11px;padding:3px 8px 4px;min-height:0}
+ #regeln{margin-top:4px;max-height:32vh;overflow:auto}
+}
+/* Quer auf dem Handy: Tisch links, Bedienung rechts – kein Scrollen */
+@media (max-height:620px) and (orientation:landscape){
+ body{padding:4px}
+ main{max-width:none;height:100%;display:grid;column-gap:8px;
+  grid-template-columns:minmax(0,1fr) 200px;
+  grid-template-rows:auto auto auto auto minmax(0,1fr);
+  grid-template-areas:"titel titel" "tisch menu" "tisch status" "tisch extras" "tisch fluegel"}
+ .titelleiste{grid-area:titel;padding:3px 8px}
+ .titelleiste .titel{font-size:11.5px}
+ .menueleiste{grid-area:menu;padding:4px 6px;gap:4px}
+ .menueleiste button{font-size:10.5px;padding:4px 6px}
+ .statuszeile{grid-area:status;display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;font-size:11px;padding:3px 6px}
+ #punkte{font-size:14px}
+ .extras{grid-area:extras;font-size:10px;padding:3px 6px;max-height:44px;overflow:hidden}
+ .tisch{grid-area:tisch;padding:3px;min-height:0}
+ .fluegel{grid-area:fluegel;display:flex;flex-direction:column;gap:4px;padding:4px 0 0;background:transparent}
+ .fluegel button{padding:10px 4px;font-size:12px;min-height:44px}
+ .fluegel button.stift{flex:1 1 auto;min-height:44px;font-size:11px}
+ .fluegel button.stift .kraft{font-size:10.5px;min-width:34px}
+ .fuss,#regeln{display:none}
+}
+</style>
+<script src="../stil.js"></script>
+<link rel="stylesheet" href="../schrift.css">
+</head>
+<body>
+<main class="fenster">
+ <div class="titelleiste">
+  <span style="display:flex;gap:6px;align-items:center">
+   <button class="ton" id="tonKnopf" type="button" aria-pressed="true">Ton an</button>
+   
+  </span>
+ </div>
+
+ <div class="menueleiste" id="automatLeiste"></div>
+
+ <div class="statuszeile">
+  <span id="automatName">–</span>
+  <span>Punkte <b id="punkte">0</b></span>
+  <span>×<b id="multi">1</b></span>
+  <span><span id="kugelnText">0</span> <span class="kugelbild" id="kugelbild"></span></span>
+  <span>Rekord <b id="rekord">–</b></span>
+ </div>
+ <div class="extras" id="extras">–</div>
+
+ <div class="tisch">
+  <div class="leinwand">
+   <canvas id="leinwand" width="440" height="820"></canvas>
+   <div class="meldung" id="meldung">
+    <div class="kasten">
+     <h2 id="meldungTitel">FLIPPER</h2>
+     <div class="zahl" id="meldungZahl" hidden></div>
+     <p id="meldungText"></p>
+     <button id="meldungKnopf">Start</button>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div class="fluegel">
+  <button id="links">◀ Flipper</button>
+  <button id="rechts">Flipper ▶</button>
+  <button id="stift" class="stift" aria-label="Abschussfeder spannen: halten und loslassen"><span class="balken"></span><span class="wort">Abschuss halten</span><span class="kraft" id="stiftKraft"></span></button>
+ </div>
+
+ <div class="fuss">
+  <span id="hinweis">Enter startet. <b>Abschuss halten</b> (Leertaste, Knopf oder Kanal) – je länger, desto stärker; loslassen schießt.</span>
+ </div>
+
+ <details id="regeln">
+  <summary>Regeln &amp; Steuerung</summary>
+  <ol>
+   <li><b>Ziel:</b> Drei Kugeln, zwei Flipper und ein eigenes <b>Oberdeck</b> – die Kugel im Spiel halten und Punkte sammeln.</li>
+   <li><b>Abschuss:</b> Die Kugel liegt rechts im Kanal auf dem Stift. <b>Leertaste</b> (oder den Knopf <b>Abschuss halten</b>, die Maus im Kanal oder die Abschussfläche am Handy) <b>halten</b> – je länger, desto kräftiger. Beim Loslassen fliegt sie oben ins Feld.</li>
+   <li><b>Flipper:</b> <b>←</b> oder <b>A</b> links, <b>→</b> oder <b>D</b> rechts. Am Handy die beiden großen Flächen unter dem Tisch (mehrere Finger gleichzeitig), mit der Maus die Knöpfe.</li>
+   <li><b>Oberdeck:</b> Die rechte Rampe <b>Aufzug</b> bringt die Kugel hinauf. Oben läuft sie durch die <b>Umlaufbahn</b> mit eigenem Spinner, darunter warten vier große Bumper, ein bewegliches Gleitziel, drei Aufrechtziele an der linken Bande, eine <b>Halteklammer</b> und das <b>Jackpot-Loch</b>. Zwei Ausgänge führen zurück: der Auslass in der Mitte und das Seitenloch rechts in die Inlane.</li>
+   <li><b>Weiche:</b> Die linke Rampe <b>Schleife</b> schaltet die Weiche um und läuft dann entweder oben ins Feld oder in die rechte Inlane aus.</li>
+   <li><b>Kugelschloss:</b> Missionen öffnen das Schloss rechts über der Inlane. Zwei eingeschlossene Kugeln starten den <b>Multiball</b> – mehrere Kugeln gleichzeitig, jede mit eigener Physik.</li>
+   <li><b>Missionen:</b> Die fünf Aufrechtziele links und rechts müssen in der Reihenfolge getroffen werden, die als leuchtendes <b>!</b> markiert ist. Drei erfüllte Missionen geben eine <b>Extrakugel</b>, zwei davon schalten den <b>Jackpot</b> frei.</li>
+   <li><b>Fallziele:</b> Vier Fallziele in der Mitte. Alle unten → <b>Bonusphase</b> (15 s, alle Punkte ×2, der Magnet zieht die Kugel an). Die Ziele kommen nach ein paar Sekunden zurück.</li>
+   <li><b>Bumper &amp; Schleudern:</b> Fünf bis sechs Pop-Bumper und zwei Slingshots über den Flippern katapultieren die Kugel zurück.</li>
+   <li><b>Inlane &amp; Outlane:</b> Kommt die Kugel am Seitenband herunter, teilt ein Pfosten den Weg: innen führt die <b>Inlane</b> über eine Schräge direkt auf den Flipper, außen geht es in die schmale <b>Outlane</b> und damit ins Aus. Zwischen den Flippern liegt der Mittelabgang.</li>
+   <li><b>Spinner, Kugelfang, Magnet:</b> Die drehende Fahne zählt jeden Durchlauf; der <b>KICK</b>-Fang wirft die Kugel schräg zurück; der <b>Magnet</b> stößt sie ab und zieht sie in der Bonusphase an.</li>
+   <li><b>Kickback:</b> Im linken Outlane sitzt ein Kickback, der die Kugel einmal rettet (leuchtet unten in der Statuszeile).</li>
+   <li><b>Lichter:</b> Drei Rollover oben (A/B/C). Alle drei an → Multiplikator +1 (bis ×9) und 1200 Punkte.</li>
+   <li><b>Aus:</b> Zwischen den Flippern und in den Outlanes geht die Kugel verloren; die nächste kommt auf den Stift. Nach der dritten ist die Partie vorbei.</li>
+   <li><b>Rekord:</b> Der höchste Punktestand wird je Tisch im Browser gemerkt.</li>
+  </ol>
+  <p class="klein mitte"><a href="../spiele.html">Zurück zur Spieleübersicht</a></p>
+ </details>
+</main>
+
+<script src="flipper-kern.js"></script>
+<script src="flipper-zeichnen.js"></script>
+<script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
+</body>
+</html>

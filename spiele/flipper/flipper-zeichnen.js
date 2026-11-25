@@ -108,6 +108,7 @@
   var klaenge = {
     flipper: function () { ton(520, 0.05, "square", 0.05); },
     stups: function () { ton(300, 0.04, "square", 0.03); },
+    rettung: function () { ton(520, 0.18, "sine", 0.07); },
     bumper: function () { ton(880, 0.09, "square", 0.075); },
     schleuder: function () { ton(660, 0.08, "sawtooth", 0.06); },
     ziel: function () { ton(1040, 0.1, "triangle", 0.07); },

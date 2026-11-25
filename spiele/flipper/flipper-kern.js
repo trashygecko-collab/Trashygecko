@@ -13,7 +13,9 @@
   var GRAV = 1160;
 
   /* ------------------------------------------------------------- Abschusskanal */
-  var KANAL = { x1: 372, x2: 420, mitte: 396, boden: 770, stift: 748, oben: 322 };
+  /* tor = Oberkante der Auslauföffnung in der Kanalwand. Darüber ist der Kanal
+     mit der Decke dicht; die Kugel verlässt ihn nur durch diese Öffnung. */
+  var KANAL = { x1: 372, x2: 420, mitte: 396, boden: 770, stift: 748, oben: 322, tor: 352 };
 
   /* --------------------------------------------------------------- Oberdeck
      Eigene Spielebene über dem Hauptfeld. Sie hat einen eigenen Rahmen, eigene
@@ -25,8 +27,8 @@
     ein: { x: 338, y: 116 },            // hier kommt die Kugel aus dem Aufzug an
     rinne: { x1: 150, x2: 214 },        // Auslass in der Decke (Mitte unten)
     /* Umlaufschiene: Mittellinie der Bahn, auf der die Kugel aus dem Aufzug
-       einmal quer über das Deck läuft. Kollision und Zeichner nehmen dieselben
-       Punkte – gezeichnete und echte Schiene können nicht auseinanderlaufen. */
+       einmal quer über das Deck läuft. Sie ist nur gezeichnet: als Wand wäre
+       ihr gerades Mittelstück ein Blech, auf dem die Kugel liegen bliebe. */
     schiene: [{ x: 100, y: 156 }, { x: 132, y: 136 }, { x: 288, y: 136 }, { x: 320, y: 156 }],
     loch: { x: 330, y: 300, r: 17 },    // Seitenausgang rechts unten
     ausRinne: { x: 182, y: 386, vx: 0, vy: 130 },
@@ -35,45 +37,57 @@
   };
 
   /* ---------------------------------------------------------------- Rahmen
-     Hauptfeld: y 300 (Decke, Lücke 340–372 für den Abschuss) bis 778.
-     Unten wie am echten Automaten: je eine Inlane innen (Trennstab, dann eine
-     Schräge, die die Kugel auf den Flipper legt) und außen eine schmale
-     Outlane an der Bande. Der Trennstab endet oben in einem Pfosten, an dem
-     sich der Weg teilt – bisher war hier eine 50–60 px breite offene Rinne. */
+     Hauptfeld: oben dicht bei y 322, unten wie am echten Automaten je eine
+     Inlane innen (Trennstab, dann eine Schräge, die die Kugel auf den Flipper
+     legt) und außen eine schmale Outlane an der Bande. Der Trennstab endet
+     oben in einem Pfosten, an dem sich der Weg teilt.
+     Der Abschusskanal ist ein geschlossener Schacht: oben mit der Decke dicht,
+     unten liegt die Kugel auf dem Kolbenkopf (KANAL.stift). Einziger Ausgang
+     ist die Öffnung in der Kanalwand zwischen Decke und KANAL.tor. */
   var LANES = {
-    links:  { wand: [56, 556],  knie: [56, 652],  ende: [110, 690], sling: [92, 600, 92, 645] },
-    rechts: { wand: [340, 556], knie: [340, 652], ende: [282, 690], sling: [310, 600, 310, 645] }
+    links:  { wand: [56, 556],  knie: [56, 652],  ende: [110, 690],     sling: [92, 600, 92, 640], sohle: [92, 640, 158, 640] },
+    rechts: { wand: [340, 556], knie: [340, 652], ende: [282, 690],     sling: [310, 600, 310, 640], sohle: [310, 640, 244, 640] }
   };
 
   function laneStrecken(l) {
     return [
       [l.wand[0], l.wand[1], l.knie[0], l.knie[1]],
       [l.knie[0], l.knie[1], l.ende[0], l.ende[1]],
-      [l.sling[0], l.sling[1], l.sling[2], l.sling[3]]
+      [l.sling[0], l.sling[1], l.sling[2], l.sling[3]],
+      [l.sohle[0], l.sohle[1], l.sohle[2], l.sohle[3]]   // Sohle: der Schleuderkoerper ist massiv
     ];
   }
 
   var RAHMEN = [
-    [30, 322, 340, 322],          // Decke des Hauptfelds
+    [30, 322, 372, 322],          // Decke des Hauptfelds bis an den Kanal
     [30, 322, 30, 772],           // linke Bande
-    [372, 322, 372, 806],         // Kanalwand
+    [372, KANAL.tor, 372, 806],   // Kanalwand, oben die Auslauföffnung
     [420, 120, 420, 806],         // rechte Außenwand
-    [372, 806, 420, 806]          // Kanalboden
+    [372, 322, 420, 322]          // Kanal oben dicht
   ].concat(
     laneStrecken(LANES.links),    // Inlane/Outlane links
     laneStrecken(LANES.rechts)    // Inlane/Outlane rechts
   );
 
-  /* Der Weg aus dem Kanal ins Feld: oben rechts hinein und nach links weg. */
+  /* Einbahnklappe an der Auslauföffnung des Kanals: von innen offen, von außen
+     dicht. Sie wird nicht gezeichnet, die Öffnung bleibt sichtbar. */
+  var KANAL_TOR = { x1: KANAL.x1, y1: KANAL.oben, x2: KANAL.x1, y2: KANAL.tor, tor: true };
+
+  /* Der Weg aus dem Kanal ins Feld: oben aus der Öffnung in der Kanalwand
+     heraus und unter der Decke nach links. Die Bahn bleibt unter der Decke,
+     damit die Kugel nicht über dem Spielfeld gezeichnet wird. */
   var AUSLAUF = {
     name: "Auslauf", tempo: 900, punkte: 0,
-    ein: { x: 396, y: 326, r: 30 },
-    bahn: [{ x: 396, y: 324 }, { x: 366, y: 322 }, { x: 336, y: 326 }, { x: 312, y: 338 }],
-    aus: { x: 300, y: 344, vx: -330, vy: 50 }
+    ein: { x: 396, y: 336, r: 30 },
+    bahn: [{ x: 396, y: 344 }, { x: 392, y: 336 }, { x: 372, y: 334 }, { x: 344, y: 332 }, { x: 316, y: 338 }],
+    aus: { x: 300, y: 346, vx: -330, vy: 50 }
   };
 
-  var SLING_L = { x1: 92, y1: 600, x2: 158, y2: 655, nx: 0.7071, ny: -0.7071 };
-  var SLING_R = { x1: 310, y1: 600, x2: 244, y2: 655, nx: -0.7071, ny: -0.7071 };
+  /* Schleudern: die Unterkante liegt bei y 640, nicht 655. Sonst bleibt
+     zwischen ihrer Außenecke und der Inlane nur ein 14 px breiter Durchlass –
+     zu wenig für eine 17 px große Kugel, die dort festklemmt. */
+  var SLING_L = { x1: 92, y1: 600, x2: 158, y2: 640, nx: 0.519, ny: -0.855 };
+  var SLING_R = { x1: 310, y1: 600, x2: 244, y2: 640, nx: -0.519, ny: -0.855 };
 
   /* Zielbank auf dem Oberdeck – auf allen vier Tischen dieselbe (linke Bande). */
   var DECK_ZIELE = [[84, 176, 16, 30], [84, 210, 16, 30], [84, 244, 16, 30]];
@@ -228,14 +242,21 @@
     [DECK.x1 + DECK.ecke.x, DECK.y1, DECK.x2 - DECK.ecke.x, DECK.y1],
     [DECK.x2 - DECK.ecke.x, DECK.y1, DECK.x2, DECK.y1 + DECK.ecke.y],
     [DECK.x2, DECK.y1 + DECK.ecke.y, DECK.x2, DECK.y2],
-    [DECK.x1, DECK.y2, DECK.rinne.x1, DECK.y2],
-    [DECK.rinne.x2, DECK.y2, DECK.x2, DECK.y2]
-  ].concat(strecken(DECK.schiene)).map(strecke);
+    /* Der Boden fällt zu beiden Seiten zur Rinne ab: eine Kugel rollt aus jeder
+       Ecke in den Auslass, statt in der Ecke liegen zu bleiben. Die Rinne
+       selbst bleibt offen, dort geht es zurück ins Hauptfeld. */
+    [DECK.x1, DECK.y2 - 20, DECK.rinne.x1, DECK.y2],
+    [DECK.rinne.x2, DECK.y2, DECK.x2, DECK.y2 - 20]
+  ].map(strecke);
+
+  /* Die Umlaufschiene (DECK.schiene) ist reine Zeichnung: als Wand wäre ihr
+     gerades Mittelstück ein Blech, auf dem die Kugel liegen bleiben könnte. */
 
   function tischKopie(def) {
     var t = {
       id: def.id, name: def.name, satz: def.satz, grav: def.grav, tipp: def.tipp, bonus: def.bonus,
       waende: RAHMEN.concat(def.waende || []).map(strecke),
+      tore: [KANAL_TOR],
       bumper: def.bumper.map(function (b) {
         return { x: b[0], y: b[1], r: b[2], punkte: b[3], kick: b[4], blitz: 0, cooldown: 0 };
       }),
@@ -294,7 +315,8 @@
       x: x, y: y, vx: vx || 0, vy: vy || 0,
       ebene: ebene || "haupt", zustand: "feld",
       bahn: null, sperre: 0,
-      anker: null, still: 0, stups: 0
+      anker: null, rettStufe: 0, rettFrei: 0,   // Kugelrettung
+      vorX: x, vorY: y                           // Lage vor dem Mikroschritt
     };
   }
 
@@ -342,33 +364,86 @@
     return echt;
   }
 
-  /* ------------------------------------------------------------- Kollision */
-  function stoss(k, c, nx, ny, e, reibung, extra) {
-    k.x = c.x + nx * (RK + 0.35);
-    k.y = c.y + ny * (RK + 0.35);
+  /* ------------------------------------------------------------- Kollision
+     Ein Stoß setzt die Kugel auf die Fläche zurück und spiegelt nur die
+     Normalkomponente; die Bewegung längs der Fläche bleibt erhalten (bis auf
+     Reibung). Die Kugel sackt dadurch an keiner Wand auf null ab, und der
+     Abprallwinkel folgt der Fläche. */
+  function abprall(k, cx, cy, nx, ny, e, reibung, tief) {
     var vn = k.vx * nx + k.vy * ny;
-    if (vn < 0) {
-      var j = (1 + e) * vn;
-      k.vx -= j * nx;
-      k.vy -= j * ny;
-      if (reibung) {
-        var tx = -ny, ty = nx;
-        var vt = k.vx * tx + k.vy * ty;
-        k.vx -= vt * reibung * tx;
-        k.vy -= vt * reibung * ty;
-      }
+    /* Nur eingreifen, wenn die Kugel in die Fläche hineinläuft (oder tief
+       darin steckt). Sonst würde sie an einer gemeinsamen Ecke zweier
+       Flächen in jedem Mikroschritt neu festgesetzt und käme nie wieder los. */
+    if (vn >= 0 && !tief) return 0;
+    k.x = cx + nx * (RK + 0.4);
+    k.y = cy + ny * (RK + 0.4);
+    if (vn >= 0) return 0;
+    var j = -(1 + e) * vn;
+    k.vx += j * nx;
+    k.vy += j * ny;
+    if (reibung) {
+      var tx = -ny, ty = nx;
+      var vt = k.vx * tx + k.vy * ty;
+      var dmp = Math.min(1, reibung);
+      k.vx -= vt * dmp * tx;
+      k.vy -= vt * dmp * ty;
     }
+    return -vn;
+  }
+
+  function stoss(k, c, nx, ny, e, reibung, extra) {
+    abprall(k, c.x, c.y, nx, ny, e, reibung);
     if (extra) { k.vx += nx * extra; k.vy += ny * extra; }
   }
 
+  /* Wand als Linie. Die Kugel wird auf die Seite zurückgeschoben, von der sie
+     kam: so kann sie bei einem großen Schritt nicht hinter die Wand rutschen
+     und auf der falschen Seite kleben bleiben. Ein "tor" wirkt nur von der
+     Feldseite aus – die Einbahnklappe am Abschusskanal. */
   function wand(k, a, e) {
+    if (a.tor && k.x >= a.x1) return false;
     var c = naechsterPunkt(k.x, k.y, a.x1, a.y1, a.x2, a.y2);
     var dx = k.x - c.x, dy = k.y - c.y;
     var d = Math.hypot(dx, dy);
     if (d >= RK) return false;
-    if (d < 0.0001) { dx = 0; dy = -1; }
-    var l = Math.hypot(dx, dy) || 1;
-    stoss(k, c, dx / l, dy / l, e, 0.03, 0);
+    var nx, ny;
+    if (d > 0.0001) { nx = dx / d; ny = dy / d; }
+    else {
+      /* Genau auf der Linie: die Seite von vor dem Schritt entscheidet. */
+      var px = k.vorX - c.x, py = k.vorY - c.y, pl = Math.hypot(px, py);
+      if (pl > 0.0001) { nx = px / pl; ny = py / pl; }
+      else { var l = Math.hypot(k.vx, k.vy) || 1; nx = -k.vx / l; ny = -k.vy / l; }
+    }
+    if (k.vorX !== undefined && (k.vorX - c.x) * nx + (k.vorY - c.y) * ny < 0) {
+      nx = -nx; ny = -ny;
+    }
+    abprall(k, c.x, c.y, nx, ny, e, 0.02, d < RK * 0.7);
+    return true;
+  }
+
+  /* Liegt die Kugel im massiven Schleuderkoerper, wird sie zur naechsten
+     Kante hinausgesetzt. Sonst pendelte sie zwischen Sohle und Gummiband hin
+     und her, ohne je wieder ins Feld zu kommen. */
+  function slingRaus(k, s) {
+    var ax = s.x1, ay = s.y1, bx = s.x2, by = s.y2, cx = s.x1, cy = s.y2;
+    var d1 = (bx - ax) * (k.y - ay) - (by - ay) * (k.x - ax);
+    var d2 = (cx - bx) * (k.y - by) - (cy - by) * (k.x - bx);
+    var d3 = (ax - cx) * (k.y - cy) - (ay - cy) * (k.x - cx);
+    if (!((d1 >= 0 && d2 >= 0 && d3 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0))) return false;
+    var kanten = [[ax, ay, bx, by], [bx, by, cx, cy], [cx, cy, ax, ay]];
+    var best = null, bd = 1e9;
+    for (var i = 0; i < kanten.length; i++) {
+      var e = kanten[i];
+      var c = naechsterPunkt(k.x, k.y, e[0], e[1], e[2], e[3]);
+      var dd = Math.hypot(k.x - c.x, k.y - c.y);
+      if (dd < bd) { bd = dd; best = { c: c, dx: e[2] - e[0], dy: e[3] - e[1] }; }
+    }
+    var nl = Math.hypot(best.dx, best.dy) || 1;
+    var nx = best.dy / nl, ny = -best.dx / nl;      // nach außen
+    k.x = best.c.x + nx * (RK + 0.5);
+    k.y = best.c.y + ny * (RK + 0.5);
+    k.vx = nx * 90 + k.vx * 0.2;
+    k.vy = ny * 90 + k.vy * 0.2;
     return true;
   }
 
@@ -376,27 +451,43 @@
     var dx = k.x - o.x, dy = k.y - o.y;
     var d = Math.hypot(dx, dy);
     if (d >= r + RK) return false;
-    if (d < 0.0001) { dx = 0; dy = -1; d = 1; }
-    var nx = dx / d, ny = dy / d;
-    stoss(k, { x: o.x + nx * r, y: o.y + ny * r }, nx, ny, 0.55, 0.02, 0);
+    var nx, ny;
+    if (d > 0.0001) { nx = dx / d; ny = dy / d; }
+    else { nx = 0; ny = -1; }
+    abprall(k, o.x + nx * r, o.y + ny * r, nx, ny, 0.55, 0.02);
+    if (o.cooldown !== undefined && o.cooldown > 0) return true;
+    /* Der Kick kommt einmal je Treffer, nicht in jedem Mikroschritt – sonst
+       beschleunigt ein einziger Kontakt die Kugel schlagartig auf das Maximum. */
     if (kick) { k.vx += nx * kick; k.vy += ny * kick; }
-    if (o.cooldown !== undefined) {
-      if (o.cooldown > 0) return true;
-      o.cooldown = 0.11;
-      if (o.blitz !== undefined) o.blitz = 1;
-    }
+    if (o.cooldown !== undefined) o.cooldown = 0.11;
+    if (o.blitz !== undefined) o.blitz = 1;
     if (punkte) addiere(sp, punkte, o.x, o.y - r * 0.4, art || "bumper");
     return true;
   }
 
+  /* Ziele, Fallziele und der Gleiter sind Kapseln entlang ihrer langen Achse:
+     oben und unten rund, damit die Kugel nicht auf einem geraden Blech liegen
+     bleibt. Die Außenmaße entsprechen genau dem gezeichneten Rechteck. */
   function rechteck(sp, k, z, punkte, art) {
     if (z.runter) return false;
-    var c = naechsterPunkt(k.x, k.y, z.x, z.y, z.x + z.w, z.y + z.h);
+    var rr = Math.min(z.w, z.h) / 2;
+    var ax, ay, bx, by;
+    if (z.h >= z.w) { ax = bx = z.x + z.w / 2; ay = z.y + rr; by = z.y + z.h - rr; }
+    else { ay = by = z.y + z.h / 2; ax = z.x + rr; bx = z.x + z.w - rr; }
+    var c = naechsterPunkt(k.x, k.y, ax, ay, bx, by);
     var dx = k.x - c.x, dy = k.y - c.y;
     var d = Math.hypot(dx, dy);
-    if (d >= RK) return false;
-    if (d < 0.0001) { dx = 0; dy = -1; d = 1; }
-    stoss(k, c, dx / d, dy / d, 0.45, 0.02, 0);
+    if (d >= RK + rr) return false;
+    var nx, ny;
+    if (d > 0.0001) { nx = dx / d; ny = dy / d; }
+    else {
+      var l = Math.hypot(k.vx, k.vy) || 1;
+      nx = -k.vx / l; ny = -k.vy / l;
+    }
+    if (k.vorX !== undefined && (k.vorX - c.x) * nx + (k.vorY - c.y) * ny < 0) {
+      nx = -nx; ny = -ny;
+    }
+    abprall(k, c.x + nx * rr, c.y + ny * rr, nx, ny, 0.45, 0.02, d < RK * 0.7);
     if (z.sperre > 0) return false;
     if (z.sperre !== undefined) z.sperre = 0.45;
     if (punkte) addiere(sp, punkte, z.x + z.w / 2, z.y - 4, art || "ziel");
@@ -546,21 +637,29 @@
       var s = sp.tisch.schleudern[i];
       if (s.cooldown > 0) s.cooldown -= dt;
       if (s.blitz > 0) s.blitz -= dt * 3;
+      if (slingRaus(k, s)) continue;
       var d = abstandSegment(k.x, k.y, s.x1, s.y1, s.x2, s.y2);
       if (d >= RK + 4) continue;
       var l2 = (s.x2 - s.x1) * (s.x2 - s.x1) + (s.y2 - s.y1) * (s.y2 - s.y1);
       var t = l2 > 0 ? ((k.x - s.x1) * (s.x2 - s.x1) + (k.y - s.y1) * (s.y2 - s.y1)) / l2 : 0.5;
-      if (t < 0.1 || t > 0.9) continue;
       var c = naechsterPunkt(k.x, k.y, s.x1, s.y1, s.x2, s.y2);
       var dx = k.x - c.x, dy = k.y - c.y, dl = Math.hypot(dx, dy);
+      /* Für Position und Abprall gilt der radiale Abstand zur Fläche. Ein
+         fester Normalenvektor würde die Kugel an der Schleuderecke jeden
+         Schritt auf denselben Punkt zurücksetzen. */
       var nx = dl > 0.001 ? dx / dl : s.nx, ny = dl > 0.001 ? dy / dl : s.ny;
-      if (Math.hypot(c.x - s.x1, c.y - s.y1) < 1.2 || Math.hypot(c.x - s.x2, c.y - s.y2) < 1.2) { nx = s.nx; ny = s.ny; }
+      /* Auch an den Enden abprallen: sonst rutscht die Kugel dort durch die
+         Schleuder in den Winkel dahinter. Gekickt und gezählt wird nur auf dem
+         mittleren Stück und in Richtung der Schleuderfläche. */
       stoss(k, c, nx, ny, 0.45, 0, 0);
       if (nx * s.nx + ny * s.ny < 0.2) { nx = s.nx; ny = s.ny; }
-      if (s.cooldown <= 0) {
+      if (t >= 0.1 && t <= 0.9 && s.cooldown <= 0) {
         s.cooldown = 0.13; s.blitz = 1;
-        k.vx = nx * (Math.abs(k.vx) * 0.25 + s.kick);
-        k.vy = ny * (Math.abs(k.vy) * 0.25 + s.kick);
+        /* Normalanteil neu, Seitenanteil zu 55 % behalten – kein Absacken. */
+        var vt = k.vx * -ny + k.vy * nx;
+        var vn = Math.max(s.kick, Math.abs(k.vx * nx + k.vy * ny) * 0.3 + s.kick);
+        k.vx = nx * vn - ny * vt * 0.55;
+        k.vy = ny * vn + nx * vt * 0.55;
         addiere(sp, s.punkte, c.x, c.y - 6, "schleuder");
       }
     }
@@ -658,10 +757,11 @@
     los.forEach(function (s, i) {
       s.zustand = "feld";
       s.ebene = "haupt";
-      s.x = 200 + (i ? 60 : -60);
-      s.y = 392;
+      /* Frei zwischen Decke und Bumpern einsetzen, nicht in einem Bumper. */
+      s.x = 182 + i * 40;
+      s.y = 386;
       s.vx = (i ? 220 : -220);
-      s.vy = 180;
+      s.vy = 140;
     });
     sp.kugeln = sp.kugeln.concat(los);
     if (grund !== "extra") {
@@ -779,11 +879,34 @@
   /* ------------------------------------------------------------ Mikroschritt */
   function mikroschrittHaupt(sp, k, dt) {
     var i;
+    k.vorX = k.x; k.vorY = k.y;
     k.vy += sp.tisch.grav * dt;
     k.x += k.vx * dt;
     k.y += k.vy * dt;
 
+    /* Abschusskanal: geschlossener Schacht. Die Kugel liegt auf dem Kolbenkopf
+       auf (KANAL.stift) und bleibt in der Spur. Hinter den Kolben oder über
+       die Decke hinaus kann sie nicht geraten; liegt sie auf dem Kolben, wird
+       sie von dort gleich wieder abgeschossen. */
+    if (k.x > KANAL.x1) {
+      k.vx *= 0.97;
+      if (k.x < KANAL.x1 + RK) { k.x = KANAL.x1 + RK; k.vx = Math.abs(k.vx) * 0.4; }
+      if (k.x > KANAL.x2 - RK) { k.x = KANAL.x2 - RK; k.vx = -Math.abs(k.vx) * 0.4; }
+      if (k.y > KANAL.stift) {
+        k.y = KANAL.stift;
+        if (k.vy > 0) k.vy = -k.vy * 0.22;
+      }
+      if (k.y >= KANAL.stift - 0.5 && Math.abs(k.vy) < 26) {
+        k.vy = -1200;
+        k.vx = (zufall() - 0.5) * 8;
+        sp.ereignisse.push({ art: "abschuss", x: k.x, y: k.y, wert: 0.5 });
+      }
+    }
+
     for (i = 0; i < sp.tisch.waende.length; i++) wand(k, sp.tisch.waende[i], 0.55);
+    /* Einbahnklappe an der Auslauföffnung: die Kugel kommt heraus, aber von
+       draußen nicht wieder hinein. */
+    for (i = 0; i < sp.tisch.tore.length; i++) wand(k, sp.tisch.tore[i], 0.4);
 
     /* Rücklaufklappe am Kopf der Outlanes: was nach oben geschossen wird (Kick-
        back, Flipper), fällt ins Feld statt in dieselbe Gasse zurück. */
@@ -794,9 +917,12 @@
 
     schleudern(sp, k, dt);
 
-    /* Kanalauslauf: nur wenn die Kugel im Kanal nach oben schießt */
+    /* Kanalauslauf: die Kugel schießt im Kanal nach oben und verlässt ihn durch
+       die Öffnung in der Wand, knapp unter der Decke. Der Fangbereich liegt
+       unter dem Kanaldach, damit die Kugel nicht erst dagegen stößt. */
     if (sp.auslaufSperre > 0) sp.auslaufSperre -= dt;
-    if (sp.auslaufSperre <= 0 && k.vy < -120 && k.x > KANAL.x1 + 2 && k.y < AUSLAUF.ein.y + 16 && k.y > AUSLAUF.ein.y - 40) {
+    if (sp.auslaufSperre <= 0 && k.ebene === "haupt" && k.vy < -120 &&
+        k.x > KANAL.x1 + 4 && k.y < KANAL.tor && k.y > KANAL.tor - 52) {
       sp.auslaufSperre = 1.1;
       bahnStarten(sp, k, AUSLAUF);
       return;
@@ -904,6 +1030,13 @@
 
     for (i = 0; i < sp.flipper.length; i++) flipperStoss(sp, k, sp.flipper[i], 0.55);
 
+    /* Letzte Sicherung gegen jeden Rechen- oder Geometrieausreißer: im Feld
+       bleibt die Kugel im Feld. (Der Kanal wird oben schon eigens geführt.) */
+    if (k.x < KANAL.x1) {
+      if (k.x < 30 + RK) { k.x = 30 + RK; if (k.vx < 0) k.vx = -k.vx * 0.45; }
+      if (k.y < 322 + RK) { k.y = 322 + RK; if (k.vy < 0) k.vy = -k.vy * 0.45; }
+    }
+
     var v = Math.hypot(k.vx, k.vy);
     if (v > MAXV) { k.vx *= MAXV / v; k.vy *= MAXV / v; }
 
@@ -913,6 +1046,7 @@
 
   function mikroschrittDeck(sp, k, dt) {
     var i;
+    k.vorX = k.x; k.vorY = k.y;
     k.vy += sp.tisch.grav * dt;
     k.x += k.vx * dt;
     k.y += k.vy * dt;
@@ -1000,6 +1134,112 @@
     if (k.blitz > 0) k.blitz -= dt * 2;
   }
 
+  /* --------------------------------------------------------- Kugelrettung
+     Eine frei im Feld liegende Kugel, die zwei Sekunden lang praktisch
+     unbeweglich war, bekommt zuerst einen kontrollierten Impuls. Bleibt sie
+     danach wieder liegen, wird sie an eine freie Stelle im Feld gesetzt.
+     Punktestand, Kugeln und Spielzustand bleiben unverändert. Ein Ball auf
+     einer Bahn, im Schloss, im Kanal oder auf einem gedrückten Flipper ist ein
+     vorgesehener Ruhezustand und wird nicht angefasst. */
+  var RETTUNG_STILL = 2.0;
+  var RETTUNG_IMPULS = 1.2;
+  var rettungAktiv = true;                 // nur für Prüfläufe abschaltbar
+
+  function flipperHaelt(sp, k) {
+    for (var i = 0; i < sp.flipper.length; i++) {
+      var f = sp.flipper[i];
+      if (!f.an) continue;
+      var ex = f.x + Math.cos(f.winkel) * f.len;
+      var ey = f.y + Math.sin(f.winkel) * f.len;
+      if (abstandSegment(k.x, k.y, f.x, f.y, ex, ey) < RK + FLIPPER_R + 3) return true;
+    }
+    return false;
+  }
+
+  /* Kleinster Abstand zu allen festen Bauteilen – negativ heißt: überlappt. */
+  function freiheit(t, x, y) {
+    var i, d = 9999;
+    function naeher(w) { if (w < d) d = w; }
+    for (i = 0; i < t.waende.length; i++) {
+      var w = t.waende[i];
+      naeher(abstandSegment(x, y, w.x1, w.y1, w.x2, w.y2) - RK);
+    }
+    for (i = 0; i < t.bumper.length; i++) {
+      var b = t.bumper[i];
+      naeher(Math.hypot(x - b.x, y - b.y) - (b.r + RK));
+    }
+    for (i = 0; i < t.zieleOben.length; i++) {
+      var z = t.zieleOben[i];
+      naeher(Math.hypot(x - (z.x + z.w / 2), y - (z.y + z.h / 2)) - (Math.max(z.w, z.h) / 2 + RK));
+    }
+    for (i = 0; i < t.fallen.length; i++) {
+      var f = t.fallen[i];
+      naeher(Math.hypot(x - (f.x + f.w / 2), y - (f.y + f.h / 2)) - (Math.max(f.w, f.h) / 2 + RK));
+    }
+    for (i = 0; i < t.schleudern.length; i++) {
+      var s = t.schleudern[i];
+      naeher(abstandSegment(x, y, s.x1, s.y1, s.x2, s.y2) - (RK + 6));
+    }
+    naeher(Math.hypot(x - t.spinner.x, y - t.spinner.y) - (RK + 16));
+    naeher(Math.hypot(x - t.scoop.x, y - t.scoop.y) - (t.scoop.r + RK));
+    naeher(Math.hypot(x - t.schloss.x, y - t.schloss.y) - (t.schloss.r + RK));
+    naeher(Math.hypot(x - t.magnet.x, y - t.magnet.y) - (t.magnet.r + RK));
+    return d;
+  }
+
+  /* Freiesten Platz im Feld einmal je Tisch bestimmen; weiter unten ist es
+     günstiger, dort wartet der Flipper statt eines Bumpers. */
+  function sichererPunkt(t) {
+    if (t.rettungspunkt) return t.rettungspunkt;
+    var best = { x: 202, y: 560 }, wert = -999;
+    for (var y = 360; y <= 660; y += 20) {
+      for (var x = 60; x <= 340; x += 20) {
+        var w = freiheit(t, x, y) + (y - 360) * 0.06;
+        if (w > wert) { wert = w; best = { x: x, y: y }; }
+      }
+    }
+    t.rettungspunkt = best;
+    return best;
+  }
+
+  function rettung(sp, k, h) {
+    if (!rettungAktiv) { k.anker = null; return; }
+    if (k.zustand !== "feld") { k.anker = null; return; }
+    if (k.sperre > 0) { k.anker = null; return; }
+    if (k.ebene === "haupt" && k.x > KANAL.x1) { k.anker = null; return; }
+    if (flipperHaelt(sp, k)) { k.anker = null; k.rettFrei = 0; return; }
+    if (!k.anker) { k.anker = { x: k.x, y: k.y, t: 0 }; return; }
+    if (Math.hypot(k.x - k.anker.x, k.y - k.anker.y) > 7) {
+      k.anker.x = k.x; k.anker.y = k.y; k.anker.t = 0;
+      k.rettFrei += h;
+      if (k.rettFrei > 3) k.rettStufe = 0;
+      return;
+    }
+    k.anker.t += h;
+    var grenze = k.rettStufe === 0 ? RETTUNG_STILL : RETTUNG_IMPULS;
+    if (k.anker.t < grenze) return;
+    if (k.rettStufe === 0) {
+      /* Erster Versuch: ein kontrollierter Impuls schräg nach oben. */
+      k.rettStufe = 1;
+      k.rettFrei = 0;
+      k.anker.t = 0; k.anker.x = k.x; k.anker.y = k.y;
+      k.vx = (k.x < W / 2 ? 1 : -1) * (300 + zufall() * 120);
+      k.vy = -(500 + zufall() * 140);
+      sp.ereignisse.push({ art: "stups", x: k.x, y: k.y, wert: 1 });
+      sp.meldung = "Kugel befreit.";
+      return;
+    }
+    /* Zweiter Versuch: an eine freie Stelle setzen. Kein Leben, keine Punkte. */
+    var p = sichererPunkt(sp.tisch);
+    k.x = p.x; k.y = p.y;
+    k.vx = 0; k.vy = 110;
+    k.ebene = "haupt"; k.bahn = null;
+    k.sperre = 0.4; k.rettStufe = 0; k.rettFrei = 0;
+    k.anker = { x: k.x, y: k.y, t: 0 };
+    sp.ereignisse.push({ art: "rettung", x: k.x, y: k.y, wert: 0 });
+    sp.meldung = "Kugel zurückgesetzt.";
+  }
+
   function schritt(sp, dt) {
     if (!(dt > 0)) return;
     if (dt > 1 / 30) dt = 1 / 30;
@@ -1015,7 +1255,9 @@
     }
     if (sp.zustand !== "spiel") return;
 
-    var i, k, n = Math.max(1, Math.min(12, Math.ceil(dt / (1 / 480))));
+    /* Schrittweite so klein, dass die Kugel auch bei Höchsttempo (1500 px/s)
+       keine Wand überspringen kann: höchstens 4 px je Mikroschritt. */
+    var i, k, n = Math.max(1, Math.min(40, Math.ceil(dt * MAXV / 4)));
     var h = dt / n;
     for (var s = 0; s < n; s++) {
       for (i = sp.kugeln.length - 1; i >= 0; i--) {
@@ -1023,34 +1265,7 @@
         if (!k || k.zustand === "weg" || k.zustand === "schloss") continue;
         if (k.sperre > 0) k.sperre -= h;
         mikroschritt(sp, k, h);
-        /* Ballsuche wie am Automaten: bleibt die Kugel auf der Stelle (auch
-           wenn sie nur auf einem Blechrand zittert), wird sie angestupst und
-           nach dem dritten Versuch oben im Feld neu eingesetzt. */
-        if (k.zustand === "feld") {
-          if (!k.anker) k.anker = { x: k.x, y: k.y };
-          if (Math.hypot(k.x - k.anker.x, k.y - k.anker.y) > 4) {
-            k.anker.x = k.x; k.anker.y = k.y; k.still = 0; k.stups = 0;
-          } else {
-            k.still += h;
-          }
-          if (k.still > 6) {
-            k.still = 0;
-            k.stups++;
-            k.anker.x = k.x; k.anker.y = k.y;
-            if (k.stups >= 3) {
-              k.x = 200 + (zufall() - 0.5) * 50;
-              k.y = 400;
-              k.vx = (zufall() - 0.5) * 160;
-              k.vy = -140;
-              k.stups = 0;
-            } else {
-              /* zur Feldmitte anstoßen – dort liegt der Flipper */
-              k.vx += (k.x < W / 2 ? 1 : -1) * (140 + zufall() * 120);
-              k.vy -= 220;
-            }
-            sp.ereignisse.push({ art: "stups", x: k.x, y: k.y, wert: k.stups });
-          }
-        }
+        rettung(sp, k, h);
       }
       if (sp.zustand !== "spiel") return;
     }
@@ -1070,7 +1285,9 @@
     abschuss: abschuss, abschussLaden: abschussLaden, fluegel: fluegel,
     ereignisseHolen: ereignisseHolen, naechsterPunkt: naechsterPunkt,
     abstandSegment: abstandSegment, bahnPunkt: bahnPunkt,
-    imSpiel: imSpiel, multiWert: multiWert, neuerBall: neueKugel, partieStarten: partieStarten
+    imSpiel: imSpiel, multiWert: multiWert, neuerBall: neueKugel, partieStarten: partieStarten,
+    rettungAn: function (an) { rettungAktiv = !!an; }, sichererPunkt: sichererPunkt,
+    freiheit: function (t, x, y) { return freiheit(t, x, y); }
   };
   root.FL = FL;
   if (typeof module === "object" && module.exports) module.exports = FL;
