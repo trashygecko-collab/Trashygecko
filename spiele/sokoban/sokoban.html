@@ -66,7 +66,7 @@ main{max-width:760px;margin:auto}
 .statuszeile b{color:var(--gold);font-weight:normal}
 
 .buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
-canvas{display:block;width:100%;max-width:480px;height:auto;border-radius:8px;touch-action:none;
+canvas{display:block;max-width:100%;height:auto;border-radius:8px;touch-action:none;
  box-shadow:var(--leinwand)}
 
 .meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
@@ -156,6 +156,8 @@ html[data-stil="buben"] #regeln b,body[data-stil="buben"] #regeln b,html[data-st
   <span>Züge <b id="zuege">0</b></span>
   <span>Schieben <b id="schieben">0</b></span>
   <span>Kisten <b id="kisten">0/0</b></span>
+  <span>Level <b id="levelAnzeige">01 / 100</b></span>
+  <span>Geschafft <b id="fortschritt">0/100</b></span>
   <span>Bestwert <b id="bestwert">–</b></span>
  </div>
 
@@ -195,13 +197,15 @@ html[data-stil="buben"] #regeln b,body[data-stil="buben"] #regeln b,html[data-st
  </details>
 </main>
 
+<script src="level.js"></script>
 <script>
 (() => {
 const canvas=document.getElementById("feld");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
 
-const LEVEL=[
+// level.js liefert 100 Level; die alten zehn bleiben als Notnagel stehen.
+const LEVEL_ALT=[
  ["#######","#  .  #","#     #","#  $  #","#  @  #","#######"],
  ["########","#   .  #","#      #","#  $   #","#  @   #","########"],
  ["########","#      #","# $  . #","#  @   #","#      #","########"],
@@ -213,6 +217,20 @@ const LEVEL=[
  ["#########","#       #","# $   . #","#   @   #","# $   . #","#       #","#########"],
  ["##########","#   #    #","# $ # .  #","#   #    #","#   @    #","#  .  $  #","##########"]
 ];
+const LEVEL=(window.SOKOBAN_LEVEL&&window.SOKOBAN_LEVEL.length)
+ ?window.SOKOBAN_LEVEL.map(e=>Array.isArray(e)?e:e.karte)
+ :LEVEL_ALT;
+
+// Fortschritt: welche Level schon geschafft sind (bleibt im Browser).
+const FERTIG="sokoban-fertig";
+function geschafftLaden(){
+ try{ return new Set(JSON.parse(localStorage.getItem(FERTIG)||"[]")); }catch(e){ return new Set(); }
+}
+function geschafftMerken(nr){
+ const s=geschafftLaden();
+ s.add(nr);
+ try{ localStorage.setItem(FERTIG,JSON.stringify([...s].sort((a,b)=>a-b))); }catch(e){}
+}
 
 let levelNr=0;
 let waende=[];        // Set-artige Liste "x,y"
@@ -224,7 +242,15 @@ let zuege=0, schieben=0;
 let verlauf=[];
 let geloest=false;
 
-const Z=40;
+let Z=40;
+// So viele Pixel wie möglich, aber nie mehr, als auf den Bildschirm passen –
+// hochkant wie quer, Handy wie Rechner.
+function feldGroesse(){
+ const buehne=canvas.parentElement;
+ const platzB=Math.max(240,(buehne.clientWidth||360)-18);
+ const platzH=Math.max(200,Math.min(window.innerHeight*0.6,720));
+ Z=Math.max(14,Math.min(64,Math.floor(Math.min(platzB/spalten,platzH/zeilen))));
+}
 
 /* ---------------------------------------------------------------- Ansichten */
 /* Jede Ansicht malt Boden, Wand, Ziel, Kiste und Figur selbst. Maße, Level und
@@ -652,14 +678,27 @@ function levelLaden(nummer){
   }
  }
  zuege=0; schieben=0; verlauf=[]; geloest=false;
+ feldGroesse();
  canvas.width=spalten*Z;
  canvas.height=zeilen*Z;
  $("meldung").hidden=true;
  $("levelWahl").value=String(nummer);
  zahlenZeigen();
  bestwertZeigen();
+ levelAnzeige();
  $("hinweis").textContent="Wischen oder Pfeile: Der Arbeiter geht einen Schritt.";
  zeichne();
+}
+
+function levelAnzeige(){
+ const fertig=geschafftLaden();
+ $("levelAnzeige").textContent=String(levelNr+1).padStart(2,"0")+" / "+LEVEL.length;
+ $("fortschritt").textContent=fertig.size+"/"+LEVEL.length;
+ const wahl=$("levelWahl");
+ for(let i=0;i<wahl.options.length&&i<LEVEL.length;i++){
+  const nr=String(i+1).padStart(2,"0");
+  wahl.options[i].textContent="Level "+nr+(fertig.has(i)?" ✓":"");
+ }
 }
 
 function zahlenZeigen(){
@@ -718,6 +757,8 @@ function pruefen(){
   try{ localStorage.setItem("sokoban-best-"+levelNr,String(zuege)); }catch(e){}
   bestwertZeigen();
  }
+ geschafftMerken(levelNr);
+ levelAnzeige();
  const letztes=levelNr>=LEVEL.length-1;
  $("meldungTitel").textContent=letztes?"Alle Level geschafft":"Level "+(levelNr+1)+" geschafft";
  $("meldungText").textContent="Züge: "+zuege+" · Schieben: "+schieben+
@@ -791,6 +832,7 @@ window.addEventListener("keydown",e=>{
  else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); bewegen(1,0); }
  else if(k==="z"||k==="Z"||k==="Backspace"){ e.preventDefault(); zurueck(); }
  else if(k==="r"||k==="R"){ e.preventDefault(); levelLaden(levelNr); }
+ else if((k==="Enter"||k===" ")&&!$("meldung").hidden){ e.preventDefault(); $("meldungKnopf").click(); }
 });
 
 $("btnNeu").onclick=()=>levelLaden(0);
@@ -802,8 +844,15 @@ $("levelWahl").onchange=()=>levelLaden(Number($("levelWahl").value));
 LEVEL.forEach((_,i)=>{
  const o=document.createElement("option");
  o.value=String(i);
- o.textContent="Level "+(i+1);
+ o.textContent="Level "+String(i+1).padStart(2,"0");
  $("levelWahl").appendChild(o);
+});
+levelAnzeige();
+window.addEventListener("resize",()=>{
+ feldGroesse();
+ canvas.width=spalten*Z;
+ canvas.height=zeilen*Z;
+ zeichne();
 });
 
 // ------------------------------------------------------------------ Ansicht
