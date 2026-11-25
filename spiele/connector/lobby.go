@@ -37,9 +37,11 @@ func ensureMainRoom() {
 }
 
 // roomTitle bildet den Raumnamen aus dem Spielernamen: "Anna" -> "Annas Abenteuerland".
+// Namenlose Spieler ("Namenloser 1", …) heißen dort nur "Abenteuerland" –
+// aus der Anzeigenummer soll kein Besitzername werden.
 func roomTitle(name string) string {
 	name = strings.TrimSpace(name)
-	if name == "" {
+	if name == "" || istNamenlosBezeichnung(name) {
 		return "Abenteuerland"
 	}
 	// Bei Namen auf s, x, z oder ß klingt ein zweites s falsch: "Klaus' Abenteuerland".
@@ -255,7 +257,8 @@ func presence(w http.ResponseWriter, r *http.Request) {
 	input.Name = limitName(input.Name)
 	// Alte Automatiknamen ("Boss", "Spieler1", "Spieler2" …) zählen wie ein
 	// leerer Name: damit hat sich niemand vorgestellt. Solche Plätze heißen
-	// jetzt "Namenloser" – auch wenn der Name schon gespeichert ist.
+	// jetzt "Namenloser 1", "Namenloser 2" … – auch wenn der Name schon
+	// gespeichert ist.
 	if istStandardname(input.Name) {
 		input.Name = ""
 		input.Umbenennen = true
@@ -307,21 +310,25 @@ func presence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Diese Spielerkennung ist hier nicht bekannt – bitte neu beitreten.", http.StatusConflict)
 		return
 	}
-	// Wer ohne eigenen Namen hereinkommt, heißt "Namenloser"; weitere
-	// Namenlose bekommen eine Nummer. Umbenennen geht jederzeit.
+	// Wer ohne eigenen Namen hereinkommt, heißt "Namenloser 1"; der nächste
+	// Namenlose bekommt "Namenloser 2" und so fort. Umbenennen geht jederzeit.
 	// Ein bekannter Spieler behält seinen Namen; geändert wird er nur, wenn
 	// er es selbst verlangt (umbenennen) oder der Admin ihn umbenannt hat.
 	name := player.Name
 	if !known || input.Umbenennen {
-		wunsch := input.Name
-		if wunsch == "" {
-			// Kein Name angegeben: nicht mehr "Boss" bzw. "Spieler1", sondern
-			// einheitlich "Namenloser".
-			wunsch = "Namenloser"
+		if input.Name == "" || istNamenlosBezeichnung(input.Name) {
+			// Kein eigener Name – auch nicht die Bezeichnung, die der Server
+			// selbst vergeben hat und die die Seite im Feld anzeigt. Ein
+			// bekannter Namenloser behält seine Nummer, solange er online ist;
+			// sonst nummerierte jeder Ruf ihn neu durch.
+			if !known || !istNamenlosBezeichnung(player.Name) {
+				name = room.namenlosName(input.ID)
+			}
+		} else {
+			// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder
+			// als der Admin ausgeben.
+			name = room.uniqueName(input.Name, input.ID)
 		}
-		// Doppelte Namen bekommen eine Nummer – sonst könnte sich jeder als
-		// der Admin ausgeben.
-		name = room.uniqueName(wunsch, input.ID)
 	}
 	// Admin ist der Spieler am Server-PC. Seine Anfrage kommt von einer lokalen
 	// Adresse, egal ob über localhost oder die LAN-IP aufgerufen wird.

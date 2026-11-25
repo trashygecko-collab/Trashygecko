@@ -447,6 +447,56 @@ func (r *Room) uniqueName(name, id string) string {
 	}
 }
 
+// namenlosBasis ist die Anzeigebezeichnung für Spieler ohne eigenen Namen.
+// Gleichzeitig im Raum stehende Namenlose werden durchgezählt: „Namenloser 1“,
+// „Namenloser 2“, …
+const namenlosBasis = "Namenloser"
+
+// istNamenlosBezeichnung erkennt die vom Server selbst vergebene Bezeichnung
+// eines namenlosen Spielers: „Namenloser“ sowie „Namenloser 1“, „Namenloser 2“,
+// … Die Seite zeigt diese Bezeichnung im Namensfeld an und schickt sie beim
+// nächsten Ruf zurück – sie ist trotzdem kein eigener Name.
+func istNamenlosBezeichnung(name string) bool {
+	name = strings.TrimSpace(name)
+	if strings.EqualFold(name, namenlosBasis) {
+		return true
+	}
+	if len(name) < len(namenlosBasis)+2 || !strings.EqualFold(name[:len(namenlosBasis)], namenlosBasis) {
+		return false
+	}
+	rest := name[len(namenlosBasis):]
+	if rest[0] != ' ' {
+		return false
+	}
+	for _, z := range rest[1:] {
+		if z < '0' || z > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// namenlosName vergibt die kleinste Nummer, die unter den gerade im Raum
+// stehenden Spielern frei ist. Die Nummer ist reine Anzeige: Kennung und Platz
+// bleiben unverändert. Geht ein Namenloser aus dem Raum (nach Ablauf der
+// Fristen), wird seine Nummer wieder vergeben. Muss unter mu laufen – dadurch
+// bekommen auch gleichzeitig eintreffende Verbindungen nie dieselbe Nummer.
+func (r *Room) namenlosName(id string) string {
+	belegt := func(kandidat string) bool {
+		for otherID, p := range r.Players {
+			if otherID != id && strings.EqualFold(p.Name, kandidat) {
+				return true
+			}
+		}
+		return false
+	}
+	for i := 1; ; i++ {
+		if kandidat := limitName(namenlosBasis + " " + strconv.Itoa(i)); !belegt(kandidat) {
+			return kandidat
+		}
+	}
+}
+
 // freierName findet den ersten freien Namen der Form "Spieler1", "Spieler2", …
 func (r *Room) freierName(basis string) string {
 	belegt := func(kandidat string) bool {
