@@ -29,6 +29,13 @@
 
   var MAX_VERLAUF = 200;
 
+  /* Der Titel in der Kopfleiste. Fehlt das Element (etwa nach einem Umbau der
+     Seite), darf das Spiel daran nicht scheitern. */
+  function kopfTitelSetzen(text) {
+    var el = $("kopfTitel");
+    if (el) el.textContent = text;
+  }
+
   /* ------------------------------------------------------------- Statistik */
   function statLaden() {
     try { return JSON.parse(localStorage.getItem("solitaer-stat") || "{}"); } catch (e) { return {}; }
@@ -129,7 +136,7 @@
 
     $("modusAuswahl").hidden = true;
     $("spielbereich").hidden = false;
-    $("kopfTitel").textContent = m.name;
+    kopfTitelSetzen(m.name);
     document.body.classList.add("spielt");
     document.title = m.name + " – Solitär";
     optionenZeigen();
@@ -356,7 +363,7 @@
     dialogZu();
     $("spielbereich").hidden = true;
     $("modusAuswahl").hidden = false;
-    $("kopfTitel").textContent = "Solitär";
+    kopfTitelSetzen("Solitär");
     document.body.classList.remove("spielt");
     document.title = "Solitär – fünf Varianten";
     menueBauen();
