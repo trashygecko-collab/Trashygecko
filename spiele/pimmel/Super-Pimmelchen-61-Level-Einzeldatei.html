@@ -506,10 +506,7 @@ canvas {
   object-fit: contain;   /* ← changed from 'fill' */
 }
 
-/* Picker im Vollbild ausblenden – Spielfeld bekommt die volle Fläche */
-.cabinet:fullscreen #level-picker {
-  display: none;
-}
+/* Der Startbildschirm darf auch im Vollbild da sein (Regel weiter unten). */
 
 /* Touch-Steuerung schwebt über dem Spielfeld */
 .touch-device .cabinet:fullscreen #touch-controls {
@@ -611,9 +608,84 @@ html[data-stil="buben"] #level-picker select{background:#12161a;color:#e6e9ec;bo
 
 /* Lesbarkeit 3: geprüft 21.11.2026 */
 html[data-stil="maedchen"] #level-picker label{color:#b0286a}
+
+/* ---- Startbildschirm (26.11.2026, wie in spimmel.html) ---- */
+/* Er liegt im Kabinett über dem Spiel: HUD, Spielfeld und Touch-Pad sind so
+   lange ausgeblendet – nichts blinkt, kein Timer läuft. */
+#start-bildschirm { display: none; }
+body.start-aktiv #start-bildschirm { display: block; }
+body.start-aktiv .cabinet > section,
+body.start-aktiv .game-area { display: none; }
+
+.start-blatt {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 14px 18px;
+  border: 1px solid #d9bc7c66;
+  border-radius: 8px;
+  background: radial-gradient(120% 80% at 50% 0, #123a30 0, #0a211b 58%, #07180f 100%);
+  text-align: center;
+}
+.start-kicker { margin: 0 0 8px; color: var(--pink); font-size: 10px; font-weight: 900; letter-spacing: .24em; }
+.start-titel {
+  margin: 0;
+  color: var(--cyan);
+  font-family: 'Press Start 2P', var(--tg-schrift);
+  font-size: clamp(19px, 6.4vw, 32px);
+  line-height: 1.3;
+  letter-spacing: .02em;
+  text-shadow: 0 0 18px #e8cd8e4d, 0 3px 0 #061a14;
+}
+.start-unterzeile { margin: 8px 0 14px; color: var(--pink); font-size: 11px; letter-spacing: .06em; }
+
+#start-bildschirm #level-picker { display: flex; flex-direction: column; align-items: stretch; gap: 9px; margin: 0; }
+#start-bildschirm #level-picker label { display: block; margin-bottom: 6px; color: var(--cyan); font-size: 10px; font-weight: 900; letter-spacing: .16em; text-align: left; }
+#start-bildschirm #level-picker select { width: 100%; min-height: 44px; padding: 8px 10px; font-size: 15px; }
+
+.start-block { padding: 8px 9px 10px; border: 1px solid #d9bc7c33; border-radius: 6px; background: #0a211b; text-align: left; }
+.start-block h2 { margin: 0 0 7px; color: var(--cyan); font-size: 10px; letter-spacing: .16em; }
+#start-bildschirm #stufe-wahl { display: flex; gap: 6px; }
+#start-bildschirm #stufe-wahl button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 4px 6px; font-size: 12px; letter-spacing: .04em; }
+.start-hinweis { margin: 7px 0 0; color: var(--pink); font-size: 11px; }
+
+.start-einstellungen ul { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+.start-einstellungen li { display: contents; }
+.start-einstellungen li span { color: var(--pink); }
+.start-einstellungen li b { color: var(--text); font-weight: 700; }
+
+#start-bildschirm #start-game { min-height: 52px; font-size: 16px; letter-spacing: .08em; color: #0b241d; background: linear-gradient(#f2dda6, #e8cd8e 60%, #d9bc7c); border-color: #d9bc7c; box-shadow: 0 4px 0 #7d6a3b; }
+#start-bildschirm #start-game:active { transform: translateY(2px); box-shadow: 0 2px 0 #7d6a3b; }
+.start-neben { display: flex; gap: 8px; }
+.start-neben button { flex: 1 1 0; min-width: 0; min-height: 42px; font-size: 11px; }
+.start-letzte { margin: 2px 0 0; color: var(--cyan); font-size: 11px; }
+
+/* Vollbild: nur der sichtbare Startbildschirm füllt das Kabinett. */
+body.start-aktiv .cabinet:fullscreen #start-bildschirm { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px; display: flex; align-items: center; justify-content: center; }
+
+/* Querformat am Handy: zwei Spalten, damit alles ohne Scrollen passt. */
+@media (orientation: landscape) and (max-height: 620px) {
+  #start-bildschirm { padding: 4px; }
+  .start-blatt { max-width: 720px; padding: 8px 10px 10px; }
+  .start-kicker { margin: 0 0 3px; font-size: 9px; }
+  .start-titel { font-size: 17px; line-height: 1.2; }
+  .start-unterzeile { margin: 4px 0 8px; font-size: 10px; }
+  #start-bildschirm #level-picker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: min-content; gap: 6px 8px; align-items: start; }
+  #start-bildschirm #level-picker > .start-block:nth-of-type(1) { grid-column: 1; grid-row: 1; }
+  #start-bildschirm #level-picker > .start-block:nth-of-type(2) { grid-column: 1; grid-row: 2; }
+  #start-bildschirm #level-picker > .start-einstellungen { grid-column: 2; grid-row: 1 / span 2; }
+  #start-bildschirm #level-picker > .start-knopf,
+  #start-bildschirm #level-picker > .start-neben,
+  #start-bildschirm #level-picker > .start-letzte { grid-column: 1 / -1; }
+  .start-block { padding: 6px 7px 7px; }
+  .start-einstellungen ul { font-size: 11px; gap: 2px 8px; }
+  #start-bildschirm #stufe-wahl button { min-height: 38px; font-size: 11px; }
+  #start-bildschirm #level-picker select { min-height: 38px; font-size: 13px; }
+  #start-bildschirm #start-game { min-height: 40px; font-size: 13px; }
+  .start-neben button { min-height: 34px; }
+}
 </style>
 </head>
-<body>
+<body class="start-aktiv">
 
   <main class="cabinet">
     <section>
@@ -657,14 +729,50 @@ html[data-stil="maedchen"] #level-picker label{color:#b0286a}
       </div>
     </div>
 
-    <div id="level-picker">
-      <label for="start-level">START-LEVEL:</label>
-      <select id="start-level">
-        <option value="0">Level 1</option>
-      </select>
-      <button id="start-game"      class="arcade-btn" type="button">SPIEL STARTEN</button>
-      <button id="show-highscore"  class="arcade-btn" type="button">🏆 HIGHSCORE</button>
-      <button id="fullscreen-button" class="arcade-btn" type="button">⛶ VOLLBILD</button>
+    <div id="start-bildschirm" aria-label="Startbildschirm">
+      <div class="start-blatt">
+        <p class="start-kicker">RETRO ARCADE · 20 × 11</p>
+        <h1 class="start-titel">SUPER PIMMELCHEN</h1>
+        <p class="start-unterzeile">61 Level · Specials sammeln · Highscore jagen</p>
+
+        <div id="level-picker">
+          <div class="start-block">
+            <h2>SCHWIERIGKEIT</h2>
+            <div id="stufe-wahl" role="group" aria-label="Schwierigkeit">
+              <button class="arcade-btn" type="button" data-stufe="leicht" aria-pressed="false">LEICHT</button>
+              <button class="arcade-btn" type="button" data-stufe="mittel" aria-pressed="true">MITTEL</button>
+              <button class="arcade-btn" type="button" data-stufe="schwer" aria-pressed="false">SCHWER</button>
+            </div>
+            <p class="start-hinweis" id="start-stufe-info">Specials alle 15 s</p>
+          </div>
+
+          <div class="start-block">
+            <label for="start-level">START-LEVEL</label>
+            <select id="start-level">
+              <option value="0">Level 1</option>
+            </select>
+          </div>
+
+          <div class="start-block start-einstellungen">
+            <h2>EINSTELLUNGEN</h2>
+            <ul>
+              <li><span>Leben</span><b>3</b></li>
+              <li><span>Zeit je Leben</span><b>120 s</b></li>
+              <li><span>Feld</span><b>20 × 11</b></li>
+              <li><span>Specials</span><b id="start-takt">alle 15 s</b></li>
+              <li><span>Triebwerk</span><b>1 Takt je 200 ms</b></li>
+            </ul>
+          </div>
+
+          <button id="start-game" class="arcade-btn start-knopf" type="button">▶ SPIEL STARTEN</button>
+
+          <div class="start-neben">
+            <button id="show-highscore" class="arcade-btn" type="button">🏆 HIGHSCORE</button>
+            <button id="fullscreen-button" class="arcade-btn" type="button">⛶ VOLLBILD</button>
+          </div>
+          <p class="start-letzte" id="start-letzte" hidden></p>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -685,6 +793,16 @@ html[data-stil="maedchen"] #level-picker label{color:#b0286a}
     const GAME_WIDTH = W * T;
     const GAME_HEIGHT = H * T;
     const LEVEL_COUNT = 61;
+
+    /* Schwierigkeitsstufen: sie ändern nur den Takt, in dem ein Special
+       erscheint (wie in spimmel.html). */
+    const STUFEN = { leicht: 5000, mittel: 15000, schwer: 20000 };
+    const STUFE_SCHLUESSEL = 'superPimmelchenStufe';
+    let stufe = 'mittel';
+    try {
+      const gespeichert = localStorage.getItem(STUFE_SCHLUESSEL);
+      if (gespeichert && STUFEN[gespeichert]) stufe = gespeichert;
+    } catch (_) { /* ohne Speicher gilt MITTEL */ }
 
     const canvas = document.querySelector('#game');
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
@@ -778,7 +896,10 @@ html[data-stil="maedchen"] #level-picker label{color:#b0286a}
       stage:  document.querySelector('#stage-display'),
       picker: document.querySelector('#level-picker'),
       levelSelect: document.querySelector('#start-level'),
-      startButton: document.querySelector('#start-game')
+      startButton: document.querySelector('#start-game'),
+      stufeInfo: document.querySelector('#start-stufe-info'),
+      taktAnzeige: document.querySelector('#start-takt'),
+      letzteZeile: document.querySelector('#start-letzte')
     };
 
     // ---- Highscore ----
@@ -865,7 +986,36 @@ html[data-stil="maedchen"] #level-picker label{color:#b0286a}
       updateHud();
       resetStage();
     });
-    ui.startButton.addEventListener('click', () => start());
+    ui.startButton.addEventListener('click', () => starteSpiel({}));
+
+    // ---- Stufe: nur der Special-Takt hängt daran ----
+    const stufeKnoepfe = [...document.querySelectorAll('#stufe-wahl [data-stufe]')];
+    function zeigeStufe() {
+      stufeKnoepfe.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.stufe === stufe)));
+      const taktSekunden = Math.round(STUFEN[stufe] / 1000);
+      if (ui.stufeInfo) ui.stufeInfo.textContent = `Specials alle ${taktSekunden} s`;
+      if (ui.taktAnzeige) ui.taktAnzeige.textContent = `alle ${taktSekunden} s`;
+    }
+    stufeKnoepfe.forEach(b => b.addEventListener('click', () => {
+      if (!STUFEN[b.dataset.stufe]) return;
+      stufe = b.dataset.stufe;
+      try { localStorage.setItem(STUFE_SCHLUESSEL, stufe); } catch (_) { /* egal */ }
+      zeigeStufe();
+      if (state === 'playing' && !isPaused) scheduleNextExtra();
+      draw();
+    }));
+    zeigeStufe();
+
+    /* Startbildschirm: einzige Stelle, die ihn ein- und ausblendet (siehe draw()). */
+    function aktualisiereStartInfo() {
+      zeigeStufe();
+      if (!ui.letzteZeile) return;
+      const zeigen = state === 'gameover' || state === 'won';
+      ui.letzteZeile.hidden = !zeigen;
+      if (zeigen) {
+        ui.letzteZeile.textContent = `Letzte Runde: ${score} Punkte · Level ${Math.min(stage + 1, LEVEL_COUNT)}`;
+      }
+    }
 
     // ---- Level-Daten ----
     /* Drei Farbwelten für dieselbe Spielfläche. Klassisch ist die alte
@@ -1940,12 +2090,16 @@ function getLevelMap(levelIndex) {
       }, 1000);
     }
 
+    function taktLaenge() {
+      return STUFEN[stufe] || STUFEN.mittel;
+    }
+
     function scheduleNextExtra() {
       clearTimeout(extraTimer);
       extraTimer = setTimeout(() => {
         if (state === 'playing' && !isPaused) placeExtra();
         if (state !== 'gameover' && state !== 'won') scheduleNextExtra();
-      }, Math.floor(5000 + Math.random() * 15001));
+      }, taktLaenge());
     }
 
     function pauseGame() {
@@ -1963,6 +2117,47 @@ function getLevelMap(levelIndex) {
         startClock();
         scheduleNextExtra();
       }
+    }
+
+    /* Einziger Weg in eine Partie – Startknopf, Tastatur und Schnittstelle
+       laufen hier zusammen, damit nichts doppelt initialisiert wird. */
+    function starteSpiel(konfiguration) {
+      if (state === 'playing' || state === 'lost') {
+        return { gestartet: false, stufe, level: stage + 1 };
+      }
+      const ziel = konfiguration || {};
+      if (STUFEN[ziel.stufe]) stufe = ziel.stufe;
+      try { localStorage.setItem(STUFE_SCHLUESSEL, stufe); } catch (_) { /* ohne Speicher egal */ }
+      if (Number.isInteger(ziel.level)) {
+        selectedStartLevel = Math.min(Math.max(ziel.level - 1, 0), LEVEL_COUNT - 1);
+      }
+      if (ui.levelSelect) ui.levelSelect.value = String(selectedStartLevel);
+      zeigeStufe();
+      start();
+      return { gestartet: true, stufe, level: stage + 1 };
+    }
+
+    /* Alles anhalten, was tickt – für Rückkehr und Neustart. */
+    function stoppeAlles() {
+      stopMove();
+      clearInterval(clockTimer); clockTimer = null;
+      clearTimeout(extraTimer); extraTimer = null;
+      clearTimeout(extraExpireTimer); extraExpireTimer = null;
+      clearInterval(projectileTimer); projectileTimer = null;
+      clearTimeout(speedTimer); speedTimer = null;
+      clearTimeout(sunEffectTimer); sunEffectTimer = null;
+      clearTimeout(respawnTimer); respawnTimer = null;
+      if (animationFrame) { cancelAnimationFrame(animationFrame); animationFrame = 0; }
+    }
+
+    /* Zurück zum Startbildschirm: Timer aus, Level neu aufbauen, Werte der
+       letzten Runde stehen im Startblatt. Highscore und Einstellungen bleiben. */
+    function zurueckZumStart() {
+      isPaused = false;
+      stoppeAlles();
+      state = 'title';
+      stage = selectedStartLevel;
+      resetStage();
     }
 
     // ---- Spielablauf ----
@@ -1993,7 +2188,7 @@ function getLevelMap(levelIndex) {
 
     function setDirection(d) {
       if (state === 'title' || state === 'gameover' || state === 'won') {
-        start();
+        starteSpiel({});
       }
       if (state !== 'playing' || isPaused) return;
       if (snake.length > 1 && d.x === -dir.x && d.y === -dir.y) return;
@@ -2104,7 +2299,7 @@ function getLevelMap(levelIndex) {
 
     function fire() {
       if (state === 'title' || state === 'gameover' || state === 'won') {
-        start();
+        starteSpiel({});
         return;
       }
       if (state !== 'playing' || isPaused || pucks < 1 || projectile) return;
@@ -2574,7 +2769,14 @@ function getLevelMap(levelIndex) {
 
       if (projectile) drawPuckShot(projectile);
 
-      if (ui.picker) ui.picker.hidden = state === 'playing' || state === 'lost';
+      if (ui.picker) {
+        const spielt = state === 'playing' || state === 'lost';
+        if (ui.picker.hidden !== spielt) {
+          ui.picker.hidden = spielt;
+          document.body.classList.toggle('start-aktiv', !spielt);
+          if (!spielt) aktualisiereStartInfo();
+        }
+      }
 
       if (state === 'title' || state === 'gameover' || state === 'won' || message) {
         ctx.fillStyle = 'rgba(10,33,27,0.88)';
@@ -2610,7 +2812,7 @@ function getLevelMap(levelIndex) {
         return;
       }
       if (e.code === 'Space') { e.preventDefault(); fire(); return; }
-      if (e.key === 'Enter') { e.preventDefault(); start(); }
+      if (e.key === 'Enter') { e.preventDefault(); starteSpiel({}); }
     }
 
     function handleKeyUp(e) {
@@ -2728,10 +2930,88 @@ function getLevelMap(levelIndex) {
       fireBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
     }
 
+    /* ---- Öffentliche Startschnittstelle (wie in spimmel.html) ----
+       window.SuperPimmelchen.start({ stufe, level }): stufe ist
+       'leicht' | 'mittel' | 'schwer', level 1–61. Fehlende Felder bleiben auf
+       der aktuellen Auswahl, ungültige Werte brechen ab, ohne das Spiel
+       anzufassen. bereit = true, sobald das Spiel initialisiert ist (dazu das
+       Ereignis 'superpimmelchen:bereit'). Unbekannte Felder werden ignoriert. */
+    const SCHNITTSTELLE_VERSION = '1.0.0';
+
+    function pruefeStartKonfiguration(konfiguration) {
+      if (konfiguration === undefined || konfiguration === null) {
+        return { ok: true, wert: { stufe, level: selectedStartLevel + 1 } };
+      }
+      if (typeof konfiguration !== 'object' || Array.isArray(konfiguration)) {
+        return { ok: false, fehler: 'konfiguration-muss-objekt-sein' };
+      }
+      const wert = { stufe, level: selectedStartLevel + 1 };
+      if ('stufe' in konfiguration) {
+        const gewuenscht = String(konfiguration.stufe).toLowerCase();
+        if (!STUFEN[gewuenscht]) return { ok: false, fehler: 'unbekannte-stufe' };
+        wert.stufe = gewuenscht;
+      }
+      if ('level' in konfiguration) {
+        const zahl = Number(konfiguration.level);
+        if (!Number.isInteger(zahl) || zahl < 1 || zahl > LEVEL_COUNT) {
+          return { ok: false, fehler: `level-muss-1-bis-${LEVEL_COUNT}-sein` };
+        }
+        wert.level = zahl;
+      }
+      return { ok: true, wert };
+    }
+
+    const schnittstelle = {
+      version: SCHNITTSTELLE_VERSION,
+      bereit: false,
+      start(konfiguration) {
+        if (!schnittstelle.bereit) return { ok: false, fehler: 'spiel-nicht-bereit' };
+        const pruefung = pruefeStartKonfiguration(konfiguration);
+        if (!pruefung.ok) return { ok: false, fehler: pruefung.fehler };
+        const lauf = starteSpiel(pruefung.wert);
+        if (!lauf.gestartet) return { ok: false, fehler: 'spiel-laeuft' };
+        return { ok: true, stufe: lauf.stufe, level: lauf.level, levelAnzahl: LEVEL_COUNT };
+      },
+      einstellungen() {
+        return {
+          bereit: schnittstelle.bereit,
+          stufe,
+          level: selectedStartLevel + 1,
+          levelAnzahl: LEVEL_COUNT,
+          specialsTaktMs: STUFEN[stufe]
+        };
+      },
+      zustand() {
+        return {
+          laeuft: state === 'playing' || state === 'lost',
+          pausiert: isPaused,
+          stufe,
+          level: stage + 1,
+          punkte: score,
+          leben: lives,
+          sekunden: seconds,
+          specials: extra ? 1 : 0,
+          laenge: snake.length,
+          kopf: snake.length ? { x: snake[0].x, y: snake[0].y } : null,
+          startbildschirm: document.body.classList.contains('start-aktiv')
+        };
+      },
+      startbildschirm() {
+        zurueckZumStart();
+        return { ok: true };
+      }
+    };
+    window.SuperPimmelchen = schnittstelle;
+
     // ---- Init ----
     resetStage();
     state = 'title';
     draw();
+    aktualisiereStartInfo();
+    schnittstelle.bereit = true;
+    window.dispatchEvent(new CustomEvent('superpimmelchen:bereit', {
+      detail: { version: SCHNITTSTELLE_VERSION }
+    }));
   })();
   </script>
 <script data-ziel="main.cabinet > section">

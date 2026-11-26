@@ -44,6 +44,20 @@ keine Timer. Kein Grafikstil-Knopf (KLASSISCH/MÄDCHEN-BOOM bleiben zurückgeste
   Startknopf 52/40 px, Stufen 44/38 px; Vollbild aus dem Startmenü und im Spiel
   (Feld 1272×699, 382×210, 628×345) ohne Verschiebung; Tastatur 9,9→13,9,
   Touch 13,9→17,9. Leveldaten (36 221 Zeichen) byte-gleich.
+- **Einzeldatei nachgezogen:** `Super-Pimmelchen-61-Level-Einzeldatei.html`
+  zeigt denselben Startbildschirm (gleiches Blatt, gleiche Blöcke) und hat
+  dieselbe Schnittstelle (`window.SuperPimmelchen` 1.0.0 mit `bereit`,
+  `start`, `einstellungen`, `zustand`, `startbildschirm`). Ihre Eigenheiten
+  bleiben: `:fullscreen` statt `bildschirm-voll`, ein einzelnes Special
+  (`extra`) statt Liste, kein Pause-Blatt. Ihr bisheriger Zufallstakt
+  (5–20 s) folgt jetzt der Stufe (5/15/20 s, gespeichert in
+  `superPimmelchenStufe`). Leveldaten ebenfalls byte-gleich (36 221 Zeichen);
+  20 Prüfungen grün (Startbildschirm, 61 Level, MITTEL vor, Takt echt gemessen
+  4 s→0/6,2 s→1, 13 s→0/16 s→1, 18 s→0/21 s→1, Level 30/61, Schnittstelle
+  gültig/ungültig, Highscore, 0 Konsolenfehler) und Layout 575/565/336/575 px
+  ohne Scrollen. Ohne Pause-Blatt gibt es dort keinen Weg zurück mitten in der
+  Partie – nur nach Spielende (automatisch) und über
+  `SuperPimmelchen.startbildschirm()`.
 
 ## 26.11.2026 · Smilie-Auswahl: Kategorien beim ersten Einblenden zusammengedrückt
 
