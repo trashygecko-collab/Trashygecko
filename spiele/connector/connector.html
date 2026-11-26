@@ -2423,9 +2423,9 @@ function spielDef(path){
 // einen eigenen Tab, damit der Connector dort stehen bleibt. Blockiert der
 // Browser den Tab, geht es wie bisher im selben Tab weiter.
 // PC: rechts neben dem Chat. Handy: unter dem Chat, in derselben Seite.
-function openGame(path, art){
+function openGame(path, art, modus){
  const def=spielDef(path);
- spielOeffnen(spielAnzeigename(path),spielAdresse(path, art),{mehrspieler:true,gameId:def?def.id:"",pfad:path});
+ spielOeffnen(spielAnzeigename(path),spielAdresse(path, art),{mehrspieler:true,gameId:def?def.id:"",pfad:path,modus:modus||""});
 }
 
 // Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
@@ -2447,10 +2447,6 @@ async function gameApiAction(gameId, action, data={}){
   return false;
  }
  return true;
-}
-
-async function tttAction(action,data={}){
- return gameApiAction("tictactoe", action, data);
 }
 
 async function vgAction(action,data={}){
@@ -2586,7 +2582,8 @@ function gameStateFor(gameId){
  if(gameId==="pig")return currentPigGame;
  if(gameId==="gaensespiel")return currentGaenseGame;
  if(gameId==="quizshow")return currentQuizGame;
- return currentTTTGame;
+ if(gameId==="tictactoe")return currentTTTGame;
+ return null;
 }
 
 async function refreshDame(players){
@@ -2984,6 +2981,10 @@ async function refreshSchiffe(players){
   return;
  }
  currentSchiffeGame=game;
+ if(framePartie&&framePartie.gameId==="schiffe"){
+  if(game)schiffeSpielstand(game,"");
+  else schiffeWarten();
+ }
  if(!game)return;
 
  const namen=game.spieler.map(p=>p.name).join(" gegen ");
@@ -4261,14 +4262,22 @@ async function refreshKaese(players){
 // Mensch ärgere dich nicht spielt mit 2-4 Sitzen. Der Gastgeber lädt nacheinander
 // weitere Spieler ein und startet, sobald genug bereit sind.
 async function refreshMaen(players){
- let game=null;
+ let roh=null;
  try{
-  const response=await fetch("/api/menschaerger?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  const response=await fetch("/api/maensync?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
   if(!response.ok)throw Error();
-  game=(await response.json()).game;
+  roh=(await response.json()).game;
  }catch(e){
   return;
  }
+ /* Der Server führt nur den Stand (brettsync.go). Für die Chat-Einladungen
+    bleibt die gewohnte Form mit players/hostId/winner erhalten. */
+ const game=roh?{
+  status:roh.status, current:roh.current, maxPlayers:roh.anzahl,
+  winner:roh.sieger>=0&&roh.spieler[roh.sieger]?roh.spieler[roh.sieger].id:"",
+  hostId:roh.spieler&&roh.spieler[0]?roh.spieler[0].id:"",
+  players:(roh.spieler||[]).map(p=>({id:p.id,name:p.name,ready:p.bereit,color:"",pieces:[]}))
+ }:null;
  currentMaenGame=game;
  if(!game)return;
 
@@ -4506,7 +4515,7 @@ function spielAnbieten(id) {
   angebotAktion("bieten", id).then(function (ok) {
     if (!ok) return;
     if (id === "malen") openMalen();
-    else openGame(def.path);
+    else openGame(def.path, null, "online");
   });
 }
 
@@ -4813,7 +4822,7 @@ function renderGamePicker(players){
 const BOTS_SPIELE={
  tictactoe:"tictactoe",viergewinnt:"viergewinnt",streichholzspiel:"streichholz",
  muehle:"muehle",reversi:"reversi",dame:"dame",kalaha:"kalaha",
- kaesekaestche:"kaesekaestche",menschaerger:"menschaerger",schach:"schach",backgammon:"backgammon",
+ kaesekaestche:"kaesekaestche",schach:"schach",backgammon:"backgammon",
  pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",uno:"uno",maumau:"maumau",skyjo:"skyjo",schwimmen:"schwimmen",pong:"pong",tron:"tron",galgen:"galgen",arschloch:"arschloch",maexchen:"maexchen",sim:"sim",siebzehn:"siebzehn",sechsundsechzig:"sechsundsechzig",baccara:"baccara",poker:"poker",boston:"boston",chicago:"chicago",shipcrew:"shipcrew",einsxeins:"einsxeins",bomberman:"bomberman",go:"go",paare:"paare",hold:"hold",memory:"memory",mastermind:"mastermind",cabo:"cabo",wortsuche:"wortsuche",domino:"domino",halma:"halma",risiko:"risiko",labyrinth:"labyrinth",bubble:"bubble",snake:"snake",tetris:"tetris",
  // Die 18 Würfelspiele laufen alle über dieselbe Regelmaschine (/api/wuerfel).
  beelzebub:"wuerfel","boese-drei":"wuerfel","boese-eins":"wuerfel","der-turm":"wuerfel",
@@ -5164,7 +5173,10 @@ async function refreshTicTacToe(players){
    tttStatus("Einladung abgelehnt.");
   }
  }else if(game && game.status==="finished"){
-  tttStatus("Die letzte Tic-Tac-Toe-Runde ist beendet. Du kannst eine neue Partie starten.");
+  // Wer mitgespielt hat, kommt über „Spiel öffnen“ zurück aufs Brett – dort
+  // steht das Ergebnis und der Knopf für die nächste Runde.
+  const dabei=game.xId===sessionID||game.oId===sessionID;
+  tttStatus("Die letzte Tic-Tac-Toe-Runde ist beendet. Du kannst eine neue Partie starten.",dabei?"tictactoe":"");
  }else{
   zeigeLeerenStatus();
  }
@@ -5974,18 +5986,305 @@ function spielOeffnen(name,url,info){
  document.getElementById("spielName").textContent=name;
  const rechtsTitel=document.getElementById("rechtsTitel");
  if(rechtsTitel)rechtsTitel.textContent=name;
- framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||"",pfad:info.pfad||""}:null;
+ framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||"",pfad:info.pfad||"",modus:(info&&info.modus)||""}:null;
  if(rahmen.getAttribute("src")!==url)rahmen.src=url;
  document.body.classList.add("spiel-offen");
+ tttTaktStarten();   // 1-s-Takt nur fuer das Tic-Tac-Toe-Brett im Rahmen
+ schiffeTaktStarten();
  soloAuswahl(false);   // Handy: Liste zuklappen, auch beim Wechsel des Spiels
  // Am Handy meldet sich die zentrale Bedienung an: Knopf, Zähler und
  // der Sprung zum Spielfenster stecken in /spiele/mobil.js.
  if(!istPc()&&window.TGMobil)TGMobil.spielGeoeffnet(url);
 }
 
+/* Der Connector ist allein für die Stilwahl zuständig. Beim Öffnen eines
+   Spiels bekommt die Spiel-API 2.0 den gewählten Stil über die bestehende
+   Spielkonfiguration: start({ stil }). Das Spiel setzt ihn auf alle Flächen
+   um; ein unbekannter Stil fällt dort auf "normal" zurück. Spiele ohne
+   Schnittstelle 2.0 merken nichts – sie werden nicht angefasst. */
+function stilFuerSpiel(){
+ if(!window.TGStil||typeof TGStil.lokal!=="function")return "normal";
+ return TGStil.lokal({klassisch:"normal",maedchen:"maedchen",buben:"buben"});
+}
+
+// Spiele mit Schnittstelle 2.0 nennen ihren Namensraum selbst. Nur diese
+// Namen werden angefasst; aeltere Spiele merken von all dem nichts.
+const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","VoigtZone","MenschAergereDichNicht","GoldMiner"];
+
+function apiImRahmen(){
+ const rahmen=document.getElementById("spielRahmen");
+ if(!rahmen)return null;
+ let innen=null;
+ try{ innen=rahmen.contentWindow; }catch(e){ return null; }   // fremde Seite: nicht anfassen
+ for(const name of SPIEL_API_NAMEN){
+  const api=innen&&innen[name];
+  if(api&&typeof api.start==="function"&&api.bereit)return {api:api,fenster:innen,name:name};
+ }
+ return null;
+}
+
+function stilAnSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer)return false;
+ try{ treffer.api.start({stil:stilFuerSpiel()}); }catch(e){ return false; }
+ return true;
+}
+
+/* --- Tic Tac Toe im Raum --------------------------------------------------
+   Der Connector besitzt Raum, Kennung, Einladungen und die Abfrage beim
+   Server; das Spiel kennt nur Brett und Regeln. Deshalb schiebt der Connector
+   den Spielstand hinein (aktion("stand")) und horcht auf die Absichten des
+   Spiels (tictactoe:zug / tictactoe:neu). Das Spiel ruft selbst kein /api/
+   auf: Ohne Antwort des Servers bleibt das Brett stehen, wie es war - ein
+   Verbindungsabriss kann so keinen falschen Spielstand erzeugen. */
+const TTT_TAKT=1000;          // Abfrage, solange das Brett offen ist
+let tttTakt=0;
+let tttZugLaeuft=false;
+const tttGehoert=new WeakSet();   // je Fenster nur ein Zuhörer
+
+function tttSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer||treffer.name!=="TicTacToe")return null;
+ return treffer;
+}
+
+function tttZuhören(spiel){
+ if(!spiel||tttGehoert.has(spiel.fenster))return;
+ tttGehoert.add(spiel.fenster);
+ spiel.fenster.addEventListener("tictactoe:zug",ev=>{
+  tttZug(ev&&ev.detail?ev.detail.feld:null);
+ });
+ spiel.fenster.addEventListener("tictactoe:neu",()=>{ tttNeueRunde(); });
+ spiel.fenster.addEventListener("tictactoe:ende",ev=>{
+  const d=ev&&ev.detail?ev.detail:{};
+  if(d.grund==="gewonnen")tttStatus("Tic Tac Toe gewonnen.");
+  else if(d.grund==="verloren")tttStatus("Tic Tac Toe verloren.");
+  else tttStatus("Tic Tac Toe: unentschieden.");
+ });
+}
+
+// Spielstand in das Spiel: Marke, Gegner, Brett, wer dran ist, Ergebnis.
+function tttSpielstand(game,hinweis){
+ const spiel=tttSpiel();
+ if(!spiel||!game||!activeRoom||!sessionID)return false;
+ const mark=game.xId===sessionID?"X":game.oId===sessionID?"O":"";
+ if(!mark)return false;                    // Zuschauer bekommen kein Brett
+ const gegner=mark==="X"?game.oName:game.xName;
+ try{
+  spiel.api.start({stil:stilFuerSpiel(),online:{mark:mark,gegner:gegner,marke:game.id||""}});
+ }catch(e){}
+ try{
+  spiel.api.aktion("stand",{
+   mark:mark,gegner:gegner,marke:game.id||"",
+   brett:Array.isArray(game.board)?game.board.slice():[],
+   amZug:game.current||"X",status:game.status||"",
+   sieger:game.winner||"",hinweis:hinweis||""
+  });
+ }catch(e){ return false; }
+ return true;
+}
+
+// Noch keine Partie: Der Tisch steht, das Brett wartet.
+function tttWarten(){
+ const spiel=tttSpiel();
+ if(!spiel)return false;
+ try{ spiel.api.start({stil:stilFuerSpiel(),online:{}}); }catch(e){ return false; }
+ return true;
+}
+
+function tttZug(feld){
+ const index=Number(feld);
+ if(!Number.isInteger(index)||index<0||index>8)return;
+ if(tttZugLaeuft||!activeRoom||!sessionID)return;
+ tttZugLaeuft=true;
+ fetch("/api/tictactoe?room="+encodeURIComponent(activeRoom)+"&action=move",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({id:sessionID,index:index})
+ }).then(async r=>{
+  const text=r.ok?"":(await r.text()).trim();
+  await refreshTicTacToe();
+  tttSpielstand(currentTTTGame,text);
+ }).catch(()=>{
+  tttSpielstand(currentTTTGame,"Verbindung unterbrochen – der Zug wurde nicht gesendet.");
+ }).finally(()=>{ tttZugLaeuft=false; });
+}
+
+function tttNeueRunde(){
+ if(!activeRoom||!sessionID)return;
+ fetch("/api/tictactoe?room="+encodeURIComponent(activeRoom)+"&action=reset",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({id:sessionID})
+ }).then(async r=>{
+  const text=r.ok?"":(await r.text()).trim();
+  await refreshTicTacToe();
+  tttSpielstand(currentTTTGame,text);
+ }).catch(()=>{
+  tttSpielstand(currentTTTGame,"Verbindung unterbrochen – die neue Runde wurde nicht angefragt.");
+ });
+}
+
+// Nach jedem Laden des Rahmens: Stil setzen, Zuhörer anmelden, Stand schieben.
+function tttBrueckeAn(){
+ const spiel=tttSpiel();
+ if(!spiel)return false;
+ tttZuhören(spiel);
+ if(!activeRoom||!sessionID)return false;
+ const meins=currentTTTGame&&(currentTTTGame.xId===sessionID||currentTTTGame.oId===sessionID);
+ if(meins){ tttSpielstand(currentTTTGame,""); return true; }
+ if(framePartie&&framePartie.modus==="online"){ tttWarten(); return true; }
+ // Wer gerade angenommen hat, sitzt schon in einer Partie, die der Connector
+ // noch nicht abgefragt hat: einmal nachsehen statt solo zu beginnen.
+ refreshTicTacToe().then(()=>{
+  const g=currentTTTGame;
+  if(g&&(g.xId===sessionID||g.oId===sessionID))tttSpielstand(g,"");
+ }).catch(()=>{});
+ return false;
+}
+
+function tttTaktStarten(){
+ if(tttTakt)return;
+ tttTakt=window.setInterval(()=>{
+  if(document.hidden)return;
+  if(!framePartie||framePartie.gameId!=="tictactoe")return;
+  refreshTicTacToe().then(()=>{
+   if(!tttZugLaeuft)tttSpielstand(currentTTTGame,"");
+  }).catch(()=>{});
+ },TTT_TAKT);
+}
+
+function tttTaktStoppen(){
+ if(!tttTakt)return;
+ clearInterval(tttTakt);
+ tttTakt=0;
+}
+/* --- Schiffe versenken im Raum --------------------------------------------
+   Wie beim Tic-Tac-Toe: Der Connector kennt Raum, Kennung und Abfrage, das
+   Spiel Aufstellung, Treffer und Anzeige. Der Stand kommt mit aktion("stand")
+   hinein; das Spiel meldet Absichten über schiffe:zug (Schuss), schiffe:setzen
+   (Flotte) und schiffe:neu. Das Spiel ruft selbst kein /api/ auf. */
+const SCHIFFE_TAKT=1000;      // Abfrage, solange das Brett offen ist
+let schiffeTakt=0;
+let schiffeLaeuft=false;
+const schiffeGehoert=new WeakSet();   // je Fenster nur eine Zuhörerschaft
+
+function schiffeSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer||treffer.name!=="SchiffeVersenken")return null;
+ return treffer;
+}
+
+function schiffeZuhören(spiel){
+ if(!spiel||schiffeGehoert.has(spiel.fenster))return;
+ schiffeGehoert.add(spiel.fenster);
+ spiel.fenster.addEventListener("schiffe:zug",ev=>{
+  const d=ev&&ev.detail?ev.detail:{};
+  schiffeSchuss(d.x,d.y);
+ });
+ spiel.fenster.addEventListener("schiffe:setzen",ev=>{
+  const d=ev&&ev.detail?ev.detail:{};
+  schiffeFlotte(d.schiffe);
+ });
+ spiel.fenster.addEventListener("schiffe:neu",()=>{ schiffeNeuePartie(); });
+}
+
+// Spielstand in das Spiel: Kennung, Name, Gegner und der Stand des Servers.
+function schiffeSpielstand(game,hinweis){
+ const spiel=schiffeSpiel();
+ if(!spiel||!activeRoom||!sessionID)return false;
+ if(!game)return schiffeWarten();
+ const meiner=Array.isArray(game.spieler)&&game.spieler.some(p=>p.id===sessionID);
+ if(!meiner)return false;                  // Zuschauer bekommen kein Brett
+ try{
+  spiel.api.start({stil:stilFuerSpiel(),online:{id:sessionID,marke:game.id||""}});
+ }catch(e){}
+ try{
+  spiel.api.aktion("stand",Object.assign({},game,{hinweis:hinweis||""}));
+ }catch(e){ return false; }
+ return true;
+}
+
+// Noch keine Partie: Das Brett wartet.
+function schiffeWarten(){
+ const spiel=schiffeSpiel();
+ if(!spiel)return false;
+ try{ spiel.api.start({stil:stilFuerSpiel(),online:{id:sessionID,name:"",gegner:"",marke:""}}); }catch(e){ return false; }
+ return true;
+}
+
+// Eine Absicht des Spiels an den Server geben und den neuen Stand zurückschieben.
+async function schiffeAktion(aktion,daten,fehlertext){
+ if(schiffeLaeuft||!activeRoom||!sessionID)return;
+ schiffeLaeuft=true;
+ let text="";
+ try{
+  const r=await fetch("/api/schiffe?room="+encodeURIComponent(activeRoom)+"&action="+aktion,{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:sessionID},daten||{}))
+  });
+  if(!r.ok)text=(await r.text()).trim();
+ }catch(e){
+  text=fehlertext||"Verbindung unterbrochen – die Aktion wurde nicht gesendet.";
+ }
+ try{ await refreshSchiffe(); }catch(e){}
+ schiffeSpielstand(currentSchiffeGame,text);
+ schiffeLaeuft=false;
+}
+
+function schiffeSchuss(x,y){
+ const px=Number(x),py=Number(y);
+ if(!Number.isInteger(px)||!Number.isInteger(py)||px<0||py<0||px>9||py>9)return;
+ schiffeAktion("schiessen",{x:px,y:py},"Verbindung unterbrochen – der Schuss wurde nicht gesendet.");
+}
+
+function schiffeFlotte(schiffe){
+ if(!Array.isArray(schiffe)||!schiffe.length)return;
+ const sauber=schiffe.map(s=>({x:Number(s.x),y:Number(s.y),laenge:Number(s.laenge),waagerecht:!!s.waagerecht}));
+ schiffeAktion("setzen",{schiffe:sauber},"Verbindung unterbrochen – die Flotte wurde nicht gesendet.");
+}
+
+function schiffeNeuePartie(){
+ schiffeAktion("reset",{},"Verbindung unterbrochen – die neue Partie wurde nicht angefragt.");
+}
+
+// Nach jedem Laden des Rahmens: Zuhörer anmelden, Stand schieben.
+function schiffeBrueckeAn(){
+ const spiel=schiffeSpiel();
+ if(!spiel)return false;
+ schiffeZuhören(spiel);
+ if(!activeRoom||!sessionID)return false;
+ const meiner=currentSchiffeGame&&Array.isArray(currentSchiffeGame.spieler)
+  &&currentSchiffeGame.spieler.some(p=>p.id===sessionID);
+ if(meiner){ schiffeSpielstand(currentSchiffeGame,""); return true; }
+ if(framePartie&&framePartie.modus==="online"){ schiffeWarten(); return true; }
+ // Wer gerade angenommen hat, sitzt schon in einer Partie, die der Connector
+ // noch nicht abgefragt hat: einmal nachsehen statt auf ein leeres Brett zu warten.
+ refreshSchiffe().then(()=>{
+  const g=currentSchiffeGame;
+  if(g&&g.spieler.some(p=>p.id===sessionID))schiffeSpielstand(g,"");
+ }).catch(()=>{});
+ return false;
+}
+
+function schiffeTaktStarten(){
+ if(schiffeTakt)return;
+ schiffeTakt=window.setInterval(()=>{
+  if(document.hidden)return;
+  if(!framePartie||framePartie.gameId!=="schiffe")return;
+  refreshSchiffe().catch(()=>{});
+ },SCHIFFE_TAKT);
+}
+
+function schiffeTaktStoppen(){
+ if(!schiffeTakt)return;
+ clearInterval(schiffeTakt);
+ schiffeTakt=0;
+}
+
 // Rahmen leeren, ohne den Server zu fragen – die Partie ist schon vorbei oder
 // der Spieler hat sie selbst verlassen.
 function rahmenLeeren(){
+ tttTaktStoppen();
+ schiffeTaktStoppen();
  document.body.classList.remove("spiel-offen");
  if(window.TGMobil)TGMobil.spielZu();
  const rahmen=document.getElementById("spielRahmen");
@@ -6053,6 +6352,13 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
  const p=new URLSearchParams(suche);
  rahmenLeeren();
  zeigeSpielHinweis(p.get("hinweis"));
+});
+
+// Der Stil geht an jedes geladene Spiel und an jedes offene Spiel, sobald die
+// Wahl im Connector wechselt. Reine Übergabe, keine Spielsteuerung.
+document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); });
+window.addEventListener("tg-stil", () => {
+ if(document.body.classList.contains("spiel-offen"))stilAnSpiel();
 });
 
 // Vollbild gehört nur zur Ansicht: Esc verlässt das Vollbild, nicht die Partie.

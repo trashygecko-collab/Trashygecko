@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a1209">
 <meta name="color-scheme" content="dark">
 <title>Gold Miner</title>
 <link rel="stylesheet" href="../schrift.css">
+<link rel="stylesheet" href="../spiel-start.css">
 <style>
 :root{
   --bg:#1a1209; --panel:#241a0e; --line:#4a3a1f; --gold:#e8cd8e; --ink:#f6edda;
@@ -118,27 +120,120 @@ body[data-stil="maenner"] .meldung button {
 
 /* Lesbarkeit 3: geprüft 21.11.2026 */
 html[data-stil="buben"] .werte b{color:#ff7b84}
+
+/* ---- Startbildschirm-Gerüst (spiel-start.css) ------------------------- */
+/* Farben je Welt; fehlt ein Token, greift der Rückfall im Gerüst. */
+:root{
+  --bg-1:#3a2a12; --bg-2:#241a0e; --bg-3:#140d05;
+  --hell:#f6edda; --text:#efe2c6; --rand:#b99a5c; --rand-1:#d9bc7c66; --rand-3:#d9bc7c33;
+  --gold-hell:#f7e4b4; --gold-2:#c9a862; --leiste:#2c2011; --hover:#3a2a12;
+  --schatten:#00000055; --schatten-tief:#00000088;
+}
+body[data-stil="maedchen"]{
+  --bg-1:#f7a6d4; --bg-2:#eb7bc0; --bg-3:#c94f92;
+  --hell:#fff6fa; --text:#3a1428; --rand:#c2477f; --rand-1:#c2477f66; --rand-3:#c2477f33;
+  --gold-hell:#fff0f7; --gold-2:#ff9ec4; --leiste:#f7cfe4; --hover:#fbd9ea;
+  --schatten:#7a184355; --schatten-tief:#7a184388;
+}
+body[data-stil="jungs"],body[data-stil="buben"]{
+  --bg-1:#1c1d1f; --bg-2:#0f1011; --bg-3:#050506;
+  --hell:#e8e9ea; --text:#d6d8db; --rand:#e0242f; --rand-1:#e0242f66; --rand-3:#e0242f33;
+  --gold-hell:#e8e9ea; --gold-2:#8d1018; --leiste:#141517; --hover:#1f2124;
+  --schatten:#00000077; --schatten-tief:#000000aa;
+}
+
+/* Der Startbildschirm ist ein eigener Rasterbereich, kein Feld-Overlay. */
+#startBildschirm{position:relative;inset:auto;flex:1 1 auto;min-height:0}
+body.zeigt-start .spiel,body.zeigt-start .fuss{display:none}
+body.zeigt-start .kopf .werte{display:none}
+body:not(.zeigt-start) #startBildschirm{display:none}
+.start-szene{display:block;width:min(100%,380px);aspect-ratio:3/2;height:auto;margin:0 auto;
+  border:1px solid var(--line);border-radius:9px;background:var(--buehne)}
+html[data-stil="maedchen"] .start-szene{border-color:#ffffffaa}
+.kopf-titel{display:flex;align-items:center}
+.kopf-ende{display:flex;align-items:center;gap:6px}
+button.aktion.klein{padding:6px 10px;font-size:12px}
+.knopf-reihe{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.wahl-block{display:flex;flex-direction:column;gap:4px;align-items:center;grid-column:1/-1}
+.wahl-reihe{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.wahl{font-family:inherit;font-size:12.5px;font-weight:bold;padding:7px 13px;border-radius:8px;cursor:pointer;
+  background:var(--taste);color:var(--ink);border:1px solid var(--line)}
+.wahl[aria-pressed="true"]{background:var(--gold);color:var(--knopf-text);border-color:var(--knopf-rand);
+  box-shadow:inset 0 1px 0 #ffffff44}
+.wahl:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+html[data-stil="maedchen"] .wahl[aria-pressed="true"]{background:#e8467f;color:#fff;border-color:#c2477f}
+html[data-stil="jungs"] .wahl[aria-pressed="true"],html[data-stil="buben"] .wahl[aria-pressed="true"]{
+  background:linear-gradient(180deg,#8d1018,#5d0a11 72%,#3d060b);color:#ffe1e3;border-color:#e0242f}
+@media (max-height:680px){ .start-szene{display:none} }
+
+/* Lesbarkeit der Startkarten: helle Flächen brauchen dunkle Schrift. */
+body[data-stil="maedchen"] .arcade-start__infos li{border-color:#c2477f44}
+body[data-stil="maedchen"] .arcade-start__infos .wert{color:#3a1428}
+body[data-stil="maedchen"] .arcade-start__infos .was{color:#8f2450}
+body[data-stil="maedchen"] .arcade-start__steuerung .taste{color:#6b0d3b}
+body[data-stil="maedchen"] .arcade-knopf--haupt{
+  background:linear-gradient(180deg,#ef7aa8,#e8467f 55%,#c2477f);color:#fff;border-color:#ffb3d4}
+body[data-stil="maedchen"] .arcade-knopf{color:#3a1428}
+body[data-stil="jungs"] .arcade-knopf--haupt,body[data-stil="buben"] .arcade-knopf--haupt{
+  background:linear-gradient(180deg,#e0242f,#b3121a 55%,#8d1018);color:#fff;border-color:#ff8a90;
+  box-shadow:0 4px 0 #00000088,0 0 22px #e0242f44,inset 0 1px 0 #ffffff44}
+@media (orientation:landscape) and (max-height:620px){ .start-szene{display:none} }
 </style>
 <script src="../stil.js"></script>
 </head>
-<body data-stil="klassisch">
-<main class="app">
+<body data-stil="klassisch" class="zeigt-start">
+
+<main class="app" id="app">
   <header class="kopf">
+    <div class="kopf-titel"><span class="titel">GOLD MINER</span></div>
     <div class="werte">
       <span>Level <b id="level">1</b>/<b id="levelGesamt">50</b></span>
       <span>Geld <b id="geld">0</b> / Ziel <b id="ziel">—</b></span>
       <span>Zeit <b id="zeit">120</b> s</span>
     </div>
-    <div class="hinweis" id="hinweis">Leertaste oder Klick: Haken auswerfen</div>
+    <div class="kopf-ende">
+      <button class="aktion klein arcade-vollbild" id="knopfVollbild" type="button">
+        <span class="vb-symbol" aria-hidden="true">⛶</span><span class="vb-text">Vollbild</span>
+      </button>
+    </div>
   </header>
+
+  <!-- Startbildschirm: eigener Bereich; das Spielfeld ist darunter verborgen. -->
+  <section class="arcade-start" id="startBildschirm" aria-labelledby="startTitel">
+    <div class="arcade-start__kopf">
+      <p class="arcade-start__marke" id="startMarke">Arcade · ein Spieler</p>
+      <h1 class="arcade-start__titel" id="startTitel">GOLD MINER</h1>
+      <p class="arcade-start__unterzeile" id="startUnter">Haken auswerfen, Gold nach oben holen.</p>
+    </div>
+    <canvas class="start-szene" id="startSzene" width="360" height="240" aria-hidden="true"></canvas>
+    <div class="arcade-start__inhalt">
+      <div class="wahl-block" id="stilBlock">
+        <p class="arcade-start__abschnitt">Grafikstil</p>
+        <div class="wahl-reihe" id="stilKnoepfe" role="group" aria-label="Grafikstil">
+          <button type="button" class="wahl wahl--klein" data-stil="normal" aria-pressed="true">Normal</button>
+          <button type="button" class="wahl wahl--klein" data-stil="maedchen" aria-pressed="false">Mädchen</button>
+          <button type="button" class="wahl wahl--klein" data-stil="buben" aria-pressed="false">Buben</button>
+        </div>
+      </div>
+      <p class="arcade-start__text" id="startText">Der Haken schwingt am Seil: im richtigen Moment auswerfen und Gold, Diamanten und Säcke nach oben ziehen. Steine sind schwer – sie kommen langsam.</p>
+      <ul class="arcade-start__steuerung">
+        <li><span class="taste">Leertaste</span> Haken auswerfen</li>
+        <li><span class="taste">Klick</span> ins Feld tippen</li>
+        <li><span class="taste">P</span> Pause</li>
+      </ul>
+      <ul class="arcade-start__infos">
+        <li><span class="wert">50</span><span class="was">Level</span></li>
+        <li><span class="wert">120 s</span><span class="was">je Level</span></li>
+        <li><span class="wert">1</span><span class="was">Spieler</span></li>
+      </ul>
+    </div>
+    <div class="arcade-start__knoepfe">
+      <button type="button" class="arcade-knopf arcade-knopf--haupt" id="knopfStarten">Graben beginnen</button>
+    </div>
+  </section>
 
   <div class="spiel" id="spiel">
     <canvas id="leinwand" width="900" height="600" aria-label="Goldgräbermine"></canvas>
-    <div class="schirm" id="schirmStart">
-      <h2>Gold Miner</h2>
-      <p>Wirf den Haken aus, bevor die Zeit abläuft, und hol genug Gold aus der Mine. Steine sind schwer – sie ziehen langsam.</p>
-      <button class="aktion haupt" id="btnStart">Graben beginnen</button>
-    </div>
     <div class="schirm versteckt" id="schirmInfo">
       <h2 id="infoTitel">Level 1</h2>
       <p id="infoText">Ziel: 400 Geld</p>
@@ -146,19 +241,67 @@ html[data-stil="buben"] .werte b{color:#ff7b84}
     <div class="schirm versteckt" id="schirmEnde">
       <h2 id="endeTitel">Zeit abgelaufen</h2>
       <p id="endeText">Das Ziel war höher.</p>
-      <button class="aktion haupt" id="btnNochmal">Nochmal graben</button>
+      <div class="knopf-reihe">
+        <button class="aktion haupt" id="btnNochmal">Nochmal graben</button>
+        <button class="aktion" id="btnZumStartEnde">Zum Start</button>
+      </div>
+    </div>
+    <div class="schirm versteckt" id="schirmPause">
+      <h2>Pause</h2>
+      <p>Der Haken ruht. Weiter geht es auf Knopfdruck.</p>
+      <div class="knopf-reihe">
+        <button class="aktion haupt" id="knopfWeiter">Weiter</button>
+        <button class="aktion" id="knopfPauseStart">Zum Start</button>
+      </div>
     </div>
   </div>
 
   <div class="fuss">
-    <button class="aktion" id="btnGraben">Haken auswerfen</button>
-    <span class="hinweis">Tasten: Leertaste / Pfeil unten · am Handy: Bildschirm antippen</span>
+    <button class="aktion haupt" id="btnGraben">Haken auswerfen</button>
+    <button class="aktion" id="btnPause">Pause</button>
+    <button class="aktion" id="btnNeu">Neu</button>
+    <button class="aktion" id="btnStart">Zum Start</button>
+    <span class="hinweis">Leertaste / Pfeil unten · am Handy: Bildschirm antippen</span>
   </div>
 </main>
+
+<script src="../spiel-start.js"></script>
+<script src="../zurueck.js" data-ziel=".kopf-ende"></script>
 
 <script>
 (() => {
 "use strict";
+
+/* ===========================================================================
+   GOLD MINER – Schnittstelle 2.0.0 (SPIELE-SCHNITTSTELLE.md)
+   ---------------------------------------------------------------------------
+   Ein globaler Namensraum: window.GoldMiner.
+     version, bereit, whenReady(), start(konfiguration), einstellungen(),
+     zustand(), startbildschirm(), stop(), pause(), resume(), aktion(name, daten)
+
+   START
+     start()                 neue Partie ab Level 1 mit der aktuellen Welt
+     start({level:1…50})     Partie ab diesem Level
+     start({stil})           nur die Welt einstellen (Connector beim Öffnen und
+                             beim Wechsel); eine laufende Partie läuft weiter
+     start({stil, level})    beides zusammen
+   Stil: normal | maedchen | buben; unbekannt oder fehlend heißt normal.
+
+   AKTIONEN
+     werfen      Haken auswerfen (nur im Spiel, nicht in der Pause)
+     start, pause, weiter, neu
+
+   EREIGNISSE (CustomEvent auf window)
+     goldminer:bereit {version}
+     goldminer:ende {grund:'gewonnen'|'verloren', punkte, level, levelAnzahl, tick}
+     goldminer:pausiert {tick} · goldminer:weiter {tick}
+
+   SPEICHER
+     goldminerStil   eigene Stilwahl beim direkten Start (normal|maedchen|buben)
+
+   Das Spiel ruft selbst kein /api/ auf, öffnet keine WebSockets und liest
+   weder Raum noch Kennung aus der Adresse. Grafik, Regeln und Level liegen hier.
+   =========================================================================== */
 
 // Feldmaße in CSS-Pixeln: sie folgen der sichtbaren Fläche, damit hochkant
 // die ganze Höhe genutzt wird und nichts verzerrt.
@@ -242,7 +385,7 @@ const ARTEN = {
 };
 
 const canvas = document.getElementById("leinwand");
-const ctx = canvas.getContext("2d");
+let ctx = canvas.getContext("2d");
 
 // Die Leinwand bekommt die Maße der Fläche (in CSS-Pixeln, scharf über die
 // Gerätepixel). Ändert sich Fenster oder Lage, wird neu gemessen.
@@ -270,6 +413,7 @@ function passeAn() {
     }
   }
   zeichne();
+  zeichneSzene();
 }
 window.addEventListener("resize", passeAn);
 window.addEventListener("orientationchange", () => setTimeout(passeAn, 150));
@@ -286,6 +430,37 @@ let letzte = 0;            // Zeitstempel des letzten Bildes
 let bildAus = null;
 let jetzt = 0;             // Sekunden für Sonne, Gras, Schmetterling, Augen
 let stil = "klassisch";    // Ansicht: klassisch, maedchen, jungs
+
+/* Schnittstelle 2.0: die öffentliche Welt heißt normal|maedchen|buben,
+   gezeichnet wird weiter mit den bestehenden Ansichten klassisch|maedchen|jungs. */
+const VERSION = "2.0.0";
+const WELTEN = ["normal", "maedchen", "buben"];
+const WELT_ZU_STIL = { normal: "klassisch", maedchen: "maedchen", buben: "jungs" };
+const STIL_SCHLUESSEL = "goldminerStil";
+let welt = "normal";        // Stil aus Sicht der Schnittstelle
+let weltVorgabe = false;    // von außen (Connector) → keine eigene Wahl zeigen
+
+const S = {
+  laeuft: false, pausiert: false, startbildschirm: true,
+  tick: 0, startLevel: 1, endeGemeldet: false
+};
+
+function ereignis(name, detail) {
+  try { window.dispatchEvent(new CustomEvent(name, { detail: detail })); }
+  catch (e) { /* ein Hörer darf das Spiel nicht aufhalten */ }
+}
+
+function meldeEnde(grund) {
+  if (S.endeGemeldet || !spiel) return;
+  S.endeGemeldet = true;
+  ereignis("goldminer:ende", {
+    grund: grund,
+    punkte: spiel.geld,
+    level: spiel.level,
+    levelAnzahl: LEVEL.length,
+    tick: S.tick
+  });
+}
 
 function zufall(min, max) {
   return min + Math.random() * (max - min);
@@ -375,11 +550,12 @@ function maxLaenge() {
 }
 
 function auswerfen() {
-  if (!spiel) return false;
+  if (!spiel || S.pausiert || S.startbildschirm) return false;
   if (spiel.zustand !== "schwingt") return false;
   spiel.zustand = "ausfahren";
   spiel.laenge = 0;
   spiel.zieht = null;
+  S.tick++;
   return true;
 }
 
@@ -401,6 +577,7 @@ function sammle(obj) {
     spiel.zustand = "levelEnde";
     spiel.rest = 1.4;
     if (spiel.level >= LEVEL.length) {
+      meldeEnde("gewonnen");
       zeigeEnde("Spiel gewonnen", "Alle " + LEVEL.length + " Level geschafft – " + spiel.geld + " Geld aus der Mine geholt.", false);
     } else {
       zeigeInfo("Level " + spiel.level + " geschafft", "Weiter mit Level " + (spiel.level + 1) + " – neue Mine, neues Ziel.");
@@ -421,6 +598,7 @@ function naechstesLevel() {
 
 function zeitAbgelaufen() {
   spiel.zustand = "ende";
+  meldeEnde("verloren");
   zeigeEnde("Zeit abgelaufen", "Levelziel verfehlt: " + spiel.geld + " von " + spiel.ziel + " Geld.", true);
 }
 
@@ -1055,9 +1233,14 @@ function bild(zeit) {
   const dt = Math.min(0.05, (zeit - letzte) / 1000 || 0);
   letzte = zeit;
   jetzt = zeit / 1000;
-  schritt(dt);
-  zeichne();
-  aktualisiereKopf();
+  // Pause friert den Spielfluss ein; Sonne, Wolken und Augen laufen weiter.
+  if (S.laeuft && !S.pausiert) schritt(dt);
+  if (S.startbildschirm) {
+    zeichneSzene();
+  } else {
+    zeichne();
+    aktualisiereKopf();
+  }
   bildAus = requestAnimationFrame(bild);
 }
 
@@ -1071,9 +1254,10 @@ function aktualisiereKopf() {
 
 /* ---------------------------- Schirme ------------------------------ */
 function versteckeSchirme() {
-  $("schirmStart").classList.add("versteckt");
-  $("schirmInfo").classList.add("versteckt");
-  $("schirmEnde").classList.add("versteckt");
+  ["schirmInfo", "schirmEnde", "schirmPause"].forEach((id) => {
+    const s = $(id);
+    if (s) s.classList.add("versteckt");
+  });
 }
 function zeigeInfo(titel, text) {
   $("infoTitel").textContent = titel;
@@ -1090,56 +1274,363 @@ function zeigeEnde(titel, text, nochmal) {
 }
 
 /* ---------------------------- Bedienung ---------------------------- */
-function starteSpiel() {
-  spiel = neuesLevel(1, 0);
+function starteSpiel(level) {
+  const lv = Math.max(1, Math.min(LEVEL.length, Math.round(Number(level) || 1)));
+  S.startLevel = lv;
+  spiel = neuesLevel(lv, 0);
+  S.laeuft = true;
+  S.pausiert = false;
+  S.startbildschirm = false;
+  S.tick = 0;
+  S.endeGemeldet = false;
+  document.body.classList.remove("zeigt-start");
   versteckeSchirme();
-  zeigeInfo("Level 1", "Ziel: " + spiel.ziel + " Geld in " + ZEIT_JE_LEVEL + " Sekunden.");
+  zeigeInfo("Level " + spiel.level, "Ziel: " + spiel.ziel + " Geld in " + ZEIT_JE_LEVEL + " Sekunden.");
   aktualisiereKopf();
+  letzte = performance.now();
+  zeichne();
+  return { ok: true, gestartet: true };
 }
 
-// Die Kopfzeile zeigt „Level 1/50“ – die Zahl kommt aus der Tabelle.
+function zumStart() {
+  spiel = null;
+  S.laeuft = false;
+  S.pausiert = false;
+  S.startbildschirm = true;
+  S.tick = 0;
+  S.endeGemeldet = false;
+  clearTimeout(zeigeInfo.timer);
+  versteckeSchirme();
+  document.body.classList.add("zeigt-start");
+  elLevel.textContent = "1";
+  elGeld.textContent = "0";
+  elZiel.textContent = "—";
+  elZeit.textContent = ZEIT_JE_LEVEL;
+  wahlZeichnen();
+  zeichne();
+  zeichneSzene();
+  return { ok: true };
+}
+
+function pause() {
+  if (!S.laeuft) return { ok: false, fehler: "spiel-laeuft-nicht" };
+  if (S.pausiert) return { ok: true, pausiert: true };
+  S.pausiert = true;
+  $("schirmPause").classList.remove("versteckt");
+  ereignis("goldminer:pausiert", { tick: S.tick });
+  return { ok: true, pausiert: true };
+}
+
+function weiter() {
+  if (!S.laeuft) return { ok: false, fehler: "spiel-laeuft-nicht" };
+  if (!S.pausiert) return { ok: true, pausiert: false };
+  S.pausiert = false;
+  $("schirmPause").classList.add("versteckt");
+  letzte = performance.now();   // kein Zeitsprung nach der Pause
+  ereignis("goldminer:weiter", { tick: S.tick });
+  return { ok: true, pausiert: false };
+}
+
+/* ---------------------------- Ansicht ------------------------------ */
+function stilLesen() {
+  try {
+    const roh = localStorage.getItem(STIL_SCHLUESSEL);
+    return WELTEN.indexOf(roh) >= 0 ? roh : "";
+  } catch (e) { return ""; }
+}
+
+function stilMerken(wert) {
+  try { localStorage.setItem(STIL_SCHLUESSEL, wert); } catch (e) { /* egal */ }
+}
+
+/* Im Connector-Rahmen gehört die Wahl dem Spieler: sie steht im Elterndokument
+   (TGStil bzw. data-stil) und wird hier nur übernommen. */
+function stilAusUmgebung() {
+  if (window.parent === window) return "";
+  try {
+    const p = window.parent;
+    if (p.TGStil && typeof p.TGStil.lokal === "function") {
+      const wert = p.TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
+      if (WELTEN.indexOf(wert) >= 0) return wert;
+    }
+    const attr = p.document && p.document.documentElement.getAttribute("data-stil");
+    if (attr === "klassisch") return "normal";
+    if (WELTEN.indexOf(attr) >= 0) return attr;
+  } catch (e) { /* fremder Rahmen: dann ohne */ }
+  return "";
+}
+
+function stilAusTGStil() {
+  try {
+    if (typeof TGStil === "undefined" || typeof TGStil.lokal !== "function") return "";
+    const wert = TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
+    return WELTEN.indexOf(wert) >= 0 ? wert : "";
+  } catch (e) { return ""; }
+}
+
+function stilAnwenden(neu, merken) {
+  welt = WELTEN.indexOf(neu) >= 0 ? neu : "normal";
+  stil = WELT_ZU_STIL[welt];
+  document.body.dataset.stil = stil;
+  document.documentElement.setAttribute("data-stil", stil);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute("content",
+      welt === "maedchen" ? "#eb7bc0" : welt === "buben" ? "#0a0a0b" : "#1a1209");
+  }
+  wahlZeichnen();
+  zeichne();
+  zeichneSzene();
+  if (merken) stilMerken(welt);
+  return welt;
+}
+
+function wahlZeichnen() {
+  const reihe = $("stilKnoepfe");
+  if (reihe) {
+    [].forEach.call(reihe.children, (b) => {
+      b.setAttribute("aria-pressed", b.dataset.stil === welt ? "true" : "false");
+    });
+  }
+  const block = $("stilBlock");
+  if (block) block.hidden = weltVorgabe;
+}
+
+/* Vorschau auf dem Startbildschirm: dieselben Ansichtsfunktionen wie im Feld,
+   nur in eine kleine Leinwand gezeichnet. Regeln und Fundstücke bleiben außen vor. */
+function zeichneSzene() {
+  const c = $("startSzene");
+  if (!c || !S.startbildschirm) return;
+  const box = c.getBoundingClientRect();
+  if (box.width < 40 || box.height < 20) return;
+  const pr = Math.min(2, window.devicePixelRatio || 1);
+  const bw = Math.round(box.width), bh = Math.round(box.height);
+  if (c.width !== Math.round(bw * pr) || c.height !== Math.round(bh * pr)) {
+    c.width = Math.round(bw * pr);
+    c.height = Math.round(bh * pr);
+  }
+  const echt = ctx, eW = W, eH = H, eD = DREH;
+  ctx = c.getContext("2d");
+  ctx.setTransform(pr, 0, 0, pr, 0, 0);
+  W = bw; H = bh;
+  DREH = { x: W / 2, y: Math.round(obenMine() * 0.64) };
+  ctx.clearRect(0, 0, W, H);
+  const oben = obenMine();
+  const ans = ANSICHT[stil] || ANSICHT.klassisch;
+  ans.himmel(oben);
+  ans.erde(oben);
+  ans.vorn(oben);
+  ans.winde(oben);
+  ctx = echt; W = eW; H = eH; DREH = eD;
+}
+
+/* ---------------------------- Schnittstelle 2.0 -------------------- */
+const FELDER_ERLAUBT = ["stil", "level"];
+
+function istObjekt(wert) {
+  return wert !== null && typeof wert === "object" && !Array.isArray(wert);
+}
+
+function start(konfiguration) {
+  let k = konfiguration;
+  if (k === undefined || k === null) k = {};
+  if (!istObjekt(k)) return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+
+  const schluessel = Object.keys(k);
+  for (let i = 0; i < schluessel.length; i++) {
+    if (FELDER_ERLAUBT.indexOf(schluessel[i]) < 0) {
+      return { ok: false, fehler: "unbekanntes-feld", feld: schluessel[i] };
+    }
+  }
+
+  let neuerStil = welt;
+  if (Object.prototype.hasOwnProperty.call(k, "stil")) {
+    if (typeof k.stil !== "string") return { ok: false, fehler: "unbekanntes-feld", feld: "stil" };
+    neuerStil = WELTEN.indexOf(k.stil) >= 0 ? k.stil : "normal";
+  }
+
+  let level = S.startLevel;
+  if (Object.prototype.hasOwnProperty.call(k, "level")) {
+    if (typeof k.level !== "number" || !isFinite(k.level) || Math.floor(k.level) !== k.level ||
+        k.level < 1 || k.level > LEVEL.length) {
+      return { ok: false, fehler: "level-muss-1-bis-" + LEVEL.length + "-sein" };
+    }
+    level = k.level;
+  }
+
+  /* Eine Konfiguration mit ausschließlich "stil" stellt nur die Welt ein – so
+     übergibt der Connector die Wahl beim Öffnen und beim Wechsel, ohne eine
+     laufende Partie neu zu beginnen. */
+  if (schluessel.length === 1 && schluessel[0] === "stil") {
+    weltVorgabe = true;
+    stilAnwenden(neuerStil, false);
+    return {
+      ok: true, gestartet: false, stil: welt, level: S.startLevel,
+      levelAnzahl: LEVEL.length, laeuft: S.laeuft
+    };
+  }
+
+  if (S.laeuft) return { ok: false, fehler: "spiel-laeuft" };
+
+  if (Object.prototype.hasOwnProperty.call(k, "stil")) weltVorgabe = true;
+  stilAnwenden(neuerStil, false);
+  starteSpiel(level);
+
+  return {
+    ok: true, gestartet: true, stil: welt, level: spiel.level,
+    levelAnzahl: LEVEL.length, punkte: spiel.geld, tick: S.tick
+  };
+}
+
+function einstellungen() {
+  return {
+    stil: welt,
+    stile: WELTEN.slice(),
+    stilWahl: !weltVorgabe,
+    level: S.startLevel,
+    levelAnzahl: LEVEL.length,
+    stufen: []
+  };
+}
+
+function zustand() {
+  return {
+    laeuft: S.laeuft,
+    pausiert: S.pausiert,
+    tick: S.tick,
+    richtung: { x: 0, y: 0 },
+    level: spiel ? spiel.level : S.startLevel,
+    punkte: spiel ? spiel.geld : 0,
+    extras: spiel ? spiel.objekte.map((o) => ({ x: Math.round(o.x), y: Math.round(o.y), type: o.art })) : [],
+    startbildschirm: S.startbildschirm,
+    stil: welt,
+    stilWahl: !weltVorgabe,
+    levelAnzahl: LEVEL.length,
+    ziel: spiel ? spiel.ziel : 0,
+    zeit: spiel ? Math.max(0, Math.round(spiel.zeit * 10) / 10) : ZEIT_JE_LEVEL,
+    phase: spiel ? spiel.zustand : "start",
+    zieht: spiel && spiel.zieht ? spiel.zieht.art : ""
+  };
+}
+
+function aktion(name, daten) {
+  if (typeof name !== "string") return { ok: false, fehler: "unbekannte-aktion" };
+  if (daten !== undefined && daten !== null && !istObjekt(daten)) {
+    return { ok: false, fehler: "daten-muessen-objekt-sein" };
+  }
+  switch (name) {
+    case "werfen":
+      return auswerfen() ? { ok: true, tick: S.tick } : { ok: false, fehler: "aktion-nicht-erlaubt" };
+    case "start":
+      return start({});
+    case "pause":
+      return pause();
+    case "weiter":
+      return weiter();
+    case "neu":
+      if (!S.laeuft) return { ok: false, fehler: "spiel-laeuft-nicht" };
+      return starteSpiel(S.startLevel);
+    default:
+      return { ok: false, fehler: "unbekannte-aktion" };
+  }
+}
+
+/* ---------------------------- Anschlüsse --------------------------- */
 $("levelGesamt").textContent = LEVEL.length;
-$("btnStart").addEventListener("click", starteSpiel);
-$("btnNochmal").addEventListener("click", starteSpiel);
+
+$("knopfStarten").addEventListener("click", () => start({}));
+$("btnNochmal").addEventListener("click", () => starteSpiel(S.startLevel));
+$("btnZumStartEnde").addEventListener("click", () => zumStart());
+$("knopfWeiter").addEventListener("click", () => weiter());
+$("knopfPauseStart").addEventListener("click", () => zumStart());
 $("btnGraben").addEventListener("click", () => auswerfen());
+$("btnPause").addEventListener("click", () => { if (S.pausiert) weiter(); else pause(); });
+$("btnNeu").addEventListener("click", () => starteSpiel(S.startLevel));
+$("btnStart").addEventListener("click", () => zumStart());
+
+[].forEach.call($("stilKnoepfe").children, (b) => {
+  b.addEventListener("click", () => {
+    const w = b.dataset.stil;
+    if (WELTEN.indexOf(w) < 0) return;
+    stilAnwenden(w, true);   // eigene Wahl: für den nächsten direkten Start merken
+  });
+});
+
 canvas.addEventListener("pointerdown", (e) => {
   e.preventDefault();
   auswerfen();
 });
+
 document.addEventListener("keydown", (e) => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const ziel = e.target;
+  const bedien = ziel && (
+    ziel.tagName === "BUTTON" || ziel.tagName === "SELECT" || ziel.tagName === "INPUT" ||
+    ziel.tagName === "TEXTAREA" || ziel.tagName === "A" || ziel.isContentEditable
+  );
+
+  if (e.key === "p" || e.key === "P") {
+    if (S.startbildschirm) return;
+    e.preventDefault();
+    if (S.pausiert) weiter(); else pause();
+    return;
+  }
+  if (e.key === "Escape") {
+    if (window.TGSpiel && TGSpiel.vollbild.ist()) return;   // Vollbild zuerst
+    if (S.pausiert) { e.preventDefault(); weiter(); }
+    return;
+  }
   if (e.code === "Space" || e.code === "ArrowDown" || e.code === "Enter") {
+    if (bedien) return;                       // Knopf löst selbst aus
+    if (S.startbildschirm || S.pausiert) return;
     if (!spiel || spiel.zustand !== "schwingt") return;
     e.preventDefault();
     auswerfen();
   }
 });
 
-// Für die Prüfläufe: nur lesen, nichts steuern.
-window.goldMinerStand = () => {
-  if (!spiel) return { zustand: "start" };
-  return {
-    zustand: spiel.zustand, level: spiel.level, geld: spiel.geld, ziel: spiel.ziel,
-    zeit: spiel.zeit, winkel: spiel.winkel, richtung: spiel.richtung, laenge: spiel.laenge,
-    dreh: { x: DREH.x, y: DREH.y }, feld: { breite: W, hoehe: H },
-    objekte: spiel.objekte.map((o) => ({ id: o.id, art: o.art, x: Math.round(o.x), y: Math.round(o.y), r: o.r, wert: o.wert })),
-    zieht: spiel.zieht ? spiel.zieht.art : null,
-    levelZahl: LEVEL.length
-  };
-};
-
-/* ---------------------------- Ansicht ------------------------------ */
-function stilSetzen(name, merken) {
-  if (!["klassisch", "maedchen", "jungs"].includes(name)) name = "klassisch";
-  stil = name;
-  document.body.dataset.stil = name;
-  zeichne();
+if (window.TGSpiel && TGSpiel.vollbild) {
+  TGSpiel.vollbild.knopf($("knopfVollbild"), { textAn: "Vollbild aus", textAus: "Vollbild" });
+  TGSpiel.vollbild.beiWechsel(() => { passeAn(); });
 }
-let startStil = TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" });
-stilSetzen(startStil);
-TGStil.beiWechsel(() => stilSetzen(TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" })));
+
+/* ---------------------------- Anlauf ------------------------------- */
+const aussen = stilAusUmgebung();
+const gemerkt = stilLesen();
+if (aussen) {
+  weltVorgabe = true;
+  stilAnwenden(aussen, false);
+} else if (gemerkt) {
+  stilAnwenden(gemerkt, false);
+} else {
+  stilAnwenden(stilAusTGStil() || "normal", false);
+}
+
+if (!weltVorgabe && typeof TGStil !== "undefined" && typeof TGStil.beiWechsel === "function") {
+  TGStil.beiWechsel(() => { if (!weltVorgabe) stilAnwenden(stilAusTGStil() || welt, false); });
+}
 
 passeAn();
+zeichneSzene();
 bildAus = requestAnimationFrame(bild);
+
+const schnittstelle = {
+  version: VERSION,
+  bereit: true,
+  whenReady: () => Promise.resolve({ ok: true, version: VERSION }),
+  start: start,
+  einstellungen: einstellungen,
+  zustand: zustand,
+  startbildschirm: zumStart,
+  stop: zumStart,
+  pause: pause,
+  resume: weiter,
+  aktion: aktion
+};
+if (Object.freeze) Object.freeze(schnittstelle);
+window.GoldMiner = schnittstelle;
+
+setTimeout(() => ereignis("goldminer:bereit", { version: VERSION }), 0);
 })();
 </script>
 </body>

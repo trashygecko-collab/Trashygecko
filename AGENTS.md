@@ -79,6 +79,12 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
 
 ### Spielschnittstelle (`SPIELE-SCHNITTSTELLE.md`)
 
+**Vor jeder Arbeit an einem Spiel ist
+[`SPIELE-SCHNITTSTELLE.md`](SPIELE-SCHNITTSTELLE.md) zu beachten** (Standard
+2.0). Neue Spiele erfüllen den Standard von Anfang an. Bestehende Spiele
+werden nur im Rahmen ausdrücklich beauftragter Arbeiten schrittweise
+angepasst – nicht pauschal und nicht „nebenbei“.
+
 - **Jedes Spiel** bietet `window.<SpielName>` mit `version`, `bereit`, `start()`,
   `stop()`, `pause()`, `resume()`, `einstellungen()`, `zustand()`,
   `startbildschirm()`.
@@ -90,11 +96,19 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
   dabei unverändert.
 - **Ereignisse statt Pollen:** `…:bereit` und `…:ende` (mit Ergebnis) sind
   Pflicht, `zustand()` liefert nur Kopien.
+- **Zum Standard 2.0 gehören zusätzlich** `whenReady()` und
+  `aktion(name, daten)` sowie die Ereignisse `…:pausiert` und `…:weiter`;
+  Pimmel 2.0.0 hat sie (Migrationsstand: Abschnitt 11 der Datei).
 - **Leertaste und Enter starten nur ohne fokussiertes Bedienelement**; steht der
   Fokus auf Knopf, Auswahl oder Feld, löst der Browser selbst aus.
-- **Vorbild:** `spiele/pimmel/spimmel.html` (Schnittstelle 1.1.0);
-  `Super-Pimmelchen-61-Level-Einzeldatei.html` bleibt eingefrorene
-  Sonderfassung 1.0.0 und wird nicht nachgezogen.
+- **Goldminer** erfüllt seit 26.11.2026 den Standard 2.0.0
+  (`start({stil})` stellt nur die Welt ein, `start()`/`start({level})`
+  beginnt, Aktion `werfen`). Die drei Ansichten sind unverändert und stehen
+  unter Bestandsschutz.
+- **Vorbild:** `spiele/pimmel/spimmel.html` (Schnittstelle 2.0.0). Die
+  `Super-Pimmelchen-61-Level-Einzeldatei.html` ist dieselbe Version mit
+  eingebetteten Grafiken und Schriften (kein Server, kein CDN); sie wird aus
+  `spimmel.html` gebaut und nicht getrennt gepflegt, damit beide gleich bleiben.
 
 ## 5. Fallen, die schon zugeschlagen haben
 

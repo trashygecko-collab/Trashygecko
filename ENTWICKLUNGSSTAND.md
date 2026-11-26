@@ -5,6 +5,459 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Goldminer auf Schnittstelle 2.0 – Grafik unangetastet
+
+`spiele/goldminer/goldminer.html` (beide Ablagen und die Android-Assets
+byte-gleich, md5 `e06b155c…`): Das Spiel hat jetzt den Standard 2.0.0 –
+`window.GoldMiner` mit `version`, `bereit`, `whenReady()`, `start()`,
+`einstellungen()`, `zustand()`, `startbildschirm()`, `stop()`, `pause()`,
+`resume()`, `aktion()` und den Ereignissen
+`goldminer:bereit|ende|pausiert|weiter`.
+
+- **Grafik unverändert:** Himmel, Erde, Vordergrund, Winde und Fundstücke sind
+  Canvas-Funktionen in der Datei (kein CDN, keine Bilddateien). Der Vergleich
+  mit der Sicherung `sicherung/goldminer-2.0-2026-11-26/` ergibt für den
+  gesamten Zeichenblock (17.648 Zeichen) **0 Unterschiede**; `LEVEL` und
+  `ARTEN` sind ebenfalls gleich. Mädchen- und Bubenansicht sind damit
+  nachweislich nicht angefasst (Pixelprobe der Seitenfläche und des Himmels
+  vor/nach dem Umbau gleich: Mädchen `247,228,236` / `243,236,248`, Buben
+  `10,10,11` / `4,4,5`).
+- **Regeln unverändert:** Der Regelblock unterscheidet sich nur um drei
+  Stellen – Pausen-/Startbildschirmsperre in `auswerfen()`, `tick++` und zwei
+  `meldeEnde()`-Aufrufe. Physik, Tempo, Werte, Zielrechnung, Zeit und
+  Levelaufbau sind gleich.
+- **Startbildschirm:** eigener Bereich (`spiel-start.css`/`-js`) mit Titel,
+  echter Minenvorschau (dieselben Ansichtsfunktionen, `#startSzene`),
+  Steuerung, Infos und „Graben beginnen“. Gemessen 0 px innerer Überlauf und
+  STARTEN im Bild bei 360×640, 390×844, 844×390, 1024×600 und 1280×800, Seite
+  jeweils 0 px Quer- und Hochscrollen; auf Höhen ≤ 680 entfällt die Vorschau.
+- **Stil:** `start({stil})` stellt nur die Welt ein (Connector beim Öffnen und
+  Wechseln), `start()`/`start({level})` beginnt. Direkt wählt der Spieler über
+  `#stilKnoepfe` (gemerkt in `goldminerStil`); kommt der Stil von außen, ist
+  die Wahl verborgen. `buben` zeichnet weiter die Ansicht `jungs`, `normal`
+  die Ansicht `klassisch`.
+- **Geprüft (Playwright, Chromium, 1280×800 und 390×844):** 16 Fehlerfälle mit
+  den Codes aus Abschnitt 3.2, Zustand nach jedem Fehler unverändert; Kopien
+  von `zustand()` und `einstellungen()` unabhängig; `:bereit` genau einmal;
+  `:pausiert`/`:weiter` je einmal pro Wechsel (zweites `pause()` löst nichts
+  aus); `:ende` mit vorgespulter Uhr: `{grund:"verloren", punkte:0, level:1,
+  levelAnzahl:50, tick:0}` samt Ergebniskarte; Leertaste wirft (Takt 0→1),
+  `P` pausiert, `Escape` setzt fort, Klick auf die Leinwand wirft (1→2);
+  Fang: 17 → 16 Fundstücke, +50 Geld. 0 Konsolen- und Seitenfehler.
+- **Connector (echt, Port 8779):** `GoldMiner` steht jetzt in
+  `SPIEL_API_NAMEN`. Im Rahmen kam „Mädchen“ an (`stilWahl false`, Kachel
+  verborgen), `start()` lief; Umschalten auf „Buben“ wechselte die Welt bei
+  **laufender** Partie (Level 1, Takt 0 unverändert). 0 Fehler.
+- **Speicher:** neu `goldminerStil`; `tg-stil` wird weiter gelesen, aber nicht
+  geschrieben. Der Prüf-Global `window.goldMinerStand` ist entfallen (jetzt
+  `GoldMiner.zustand()`).
+
+---
+
+## 26.11.2026 · Super Pimmelchen: Pause/Weiter nachgesehen und den Takt an eine Stelle gezogen
+
+`spiele/pimmel/spimmel.html` und die daraus gebaute
+`Super-Pimmelchen-61-Level-Einzeldatei.html` (beide Ablagen byte-gleich):
+Regeln, Level, Stufen und die Schnittstelle **2.0.0** unverändert; nur der
+Code um Pause und Fortsetzen ist aufgeräumt.
+
+- **Die Abfrage stand richtig:** `resumeGame()` prüft im Zweig
+  `state === 'playing'` nach dem Neustart von Uhr und Special-Takt, ob eine
+  Richtung gehalten wird – genau dort, wo auch vorher der Takt gesetzt wurde.
+  Am Verhalten ändert sich nichts: gehaltene Taste läuft weiter (tick 1 → 3),
+  ein unter dem Pausenblatt losgelassener Finger nicht mehr (2 → 2), ohne
+  gehaltene Richtung keine Eigenbewegung (1 → 1).
+- **Überflüssig war das `!moveTimer`:** In der Pause kann kein Takt entstehen
+  (`setDirection` und `schrittFuerRichtung` steigen vorher aus), der Zusatz
+  prüfte also etwas, das nie eintritt. Dasselbe `clearInterval`+`setInterval`
+  stand an vier Stellen (`setDirection`, `resumeGame`, `activateSpeed` zwei
+  Mal) – jetzt einmal in `starteMove()` neben `stopMove()`.
+- **`heldDirections` bleibt, wo es ist:** Die Zuordnung steht bei den
+  Tastaturzuständen, weil `haeltRichtung()` beides liest; `pauseGame()` leert
+  sie weiterhin (ein Finger bekommt unter dem Pausenblatt kein `pointerup`).
+  `pressedDirs` wird bewusst **nicht** geleert – eine Taste, die über die Pause
+  gehalten wird, soll danach weiterlaufen; `blur` räumt beide Wege ab.
+- **Kommentar gekürzt:** Der lange Absatz mit der Vorgeschichte („vorher
+  startete hier immer ein Takt …“) steht jetzt in zwei Zeilen als Regel; die
+  Historie gehört in dieses Dokument.
+- **Geprüft:** eigenes Prüfskript Pause/Weiter **13 grün, 0 rot** in beiden
+  Fassungen (Taste gehalten, Steuerkreuz losgelassen, nichts gehalten),
+  `pimmel_richtung_pruefung.js` **43 grün, 0 rot**,
+  `pimmel_2_0_pruefen.js` **119 grün, 0 rot**, Skript-Syntax (`node --check`)
+  grün.
+
+## 26.11.2026 · Super Pimmelchen: `aktion('richtung')` macht einen Schritt statt eines Dauerlaufs
+
+`spiele/pimmel/spimmel.html` und die daraus gebaute
+`Super-Pimmelchen-61-Level-Einzeldatei.html` (beide Ablagen byte-gleich):
+Regeln, Level, Stufen und die Schnittstelle **2.0.0** unverändert.
+
+- **Fehler:** `aktion('richtung', {x,y})` rief `setDirection()`, und das setzt
+  neben dem Schritt auch den Bewegungstakt – ein einzelner Aufruf startete
+  damit denselben Dauerlauf, der beim Fortsetzen (`resume`) schon entfernt
+  wurde. Die Doku verspricht „ein Schritt“.
+- **Jetzt:** neue Funktion `schrittFuerRichtung()` – dieselben Prüfungen wie
+  Tastatur und Steuerkreuz (nur im Spiel, nicht in der Pause, keine
+  Kehrtwende bei Länge > 1), aber ohne Takt. Ein Aufruf dreht und geht genau
+  einen Takt; die Antwort lautet `{ok: true, schritt: true|false}`, wobei
+  `false` eine gesperrte Richtung meldet (Wand/Brücke) – dort bleibt auch die
+  Taste stehen.
+- **Gemessen** (Level 1, mittel, beide Fassungen): rechts und links je
+  **tick +1** und ein Feld weiter, danach 900 ms ohne weitere Bewegung
+  (vorher wären es ~4 Schritte gewesen); hoch und runter **tick +0** an der
+  Startposition – genau wie ein kurzer Tastendruck dort; gedrückte Taste läuft
+  weiter (tick 1 → 5) und hält nach dem Loslassen an (5 → 5).
+- **Geprüft:** neues Prüfskript **43 grün, 0 rot** über beide Fassungen
+  (vier Richtungen gegen die Tastatur, kein Dauerlauf, Sperre in der Pause,
+  Fortsetzen ohne Eigenbewegung, keine Konsolenfehler).
+
+## 26.11.2026 · Super Pimmelchen: Startbildschirm aufgeräumt
+
+`spiele/pimmel/spimmel.html` und die daraus gebaute
+`Super-Pimmelchen-61-Level-Einzeldatei.html` (beide Ablagen byte-gleich,
+`05647b1cee9126156a51ad78d94cd0dd` / `d4465f7e3979896f1e73c67866ce3cbf`):
+Regeln, die 61 Level, Stufen, Punkte, Highscore und die Connector-Schnittstelle
+**2.0.0** sind unverändert – geändert ist nur der Startbildschirm.
+
+- **Weg:** der Hinweis „Gilt beim nächsten Start ohne Connector.“ unter der
+  Stilwahl und der ganze Platzhalterbereich „EINSTELLUNGEN“ (Leben 3, Zeit je
+  Leben 120 s, Feld 20 × 11, Specials, Triebwerk). Dazu die zugehörigen
+  CSS-Regeln (Liste, Farben in Mädchen/Buben, Querformat-Sonderfälle) und der
+  tote Verweis auf `#start-takt` im Skript. Die drei Grafikstile Normal,
+  Mädchen und Buben bleiben samt Wahl.
+- **Neu ausgerichtet:** Im Querformat (zwei Spalten) deckt die Stilwahl jetzt
+  beide Zeilen der zweiten Spalte ab und trägt ihre Überschrift wieder – vorher
+  saß dort der Einstellungsblock, darunter blieb eine Lücke von **24 px**.
+  Gemessen bei 640 × 360 und 844 × 390: Stilblock **169 px** hoch über beide
+  Zeilen, Unterkante bündig (Lücke 0 px), kein Scrollen.
+- **Kürzer:** Der Startbildschirm passt bei 360 × 640 jetzt in ein Fenster
+  (Dokument **640 px** statt vorher 738 px); 390 × 844, 640 × 360, 844 × 390
+  und 1280 × 800 bleiben ohne Hoch- und Querscrollen.
+- **Geprüft:** eigenes Prüfskript in beiden Fassungen **39 grün, 0 rot**
+  (Texte weg, drei Stile vorhanden und umschaltbar, Spiel startet, fünf
+  Fenstergrößen ohne Scrollen, Spalte im Querformat geschlossen, Stil vom
+  Connector blendet die Wahl in jeder Größe aus, keine 404 und keine
+  Konsolenfehler); `pimmel_2_0_pruefen.js` **119 grün, 0 rot**;
+  `pimmel_datei_pruefen.js` lädt die Einzeldatei über `file://` fehlerfrei.
+  Die vier verbleibenden Meldungen in `pimmel_einzel_pruefen.js`
+  (`specialsTaktMs`, Highscore) treten mit dem Stand **vor** dem Aufräumen
+  genauso auf – ältere Prüferwartung, kein Rückschritt.
+
+## 26.11.2026 · Tic Tac Toe: Spielfeldsymbole je Grafikstil (SVG)
+
+`spiele/brettspiele/tictac/tictactoe.html` (beide Ablagen byte-gleich,
+`34196dad3be54508fad6a1fe273d513d`): Regeln, Gewinnprüfung, Bot, Online-Synchronisierung und
+Schnittstelle unverändert; Sicherung davor unter
+`sicherung/tictac-symbole-2026-11-26/tictactoe-vor-symbolen.html`
+(`28cd70eda2e5ba119364db952b04ac81`).
+
+- **Paare je Stil:** `normal` Kreuz (X) und Kreis (O) wie bisher, `maedchen`
+  Herz (X) und Teddy (O), `buben` Pentagramm (X, durchgezogene Linien) und
+  Totenkopf (O) – alle als gezeichnetes SVG, keine Schriftzeichen, keine
+  Emojis.
+- **Gleiche Maße:** jedes Symbol sitzt in `viewBox="0 0 100 100"` und füllt
+  62 % der Zelle, mittig; gemessen 103 px in 167-px-Zellen (1280 × 800),
+  66 px in 110 px (390 × 844), 45 px in 77 px (640 × 360). Kein Symbol
+  berührt den Zellrand, X und O sind gleich groß.
+- **Wechsel:** `stilSetzen()` zeichnet neu, also tauscht auch der
+  Connector-Stil (`start({stil})`) mitten in der Partie die Symbole, ohne
+  Brett oder Züge anzufassen (geprüft: Brett „XO“, Züge 2 unverändert,
+  alle drei Fassungen nacheinander).
+- **Online:** jeder Rahmen zeichnet seine eigene Fassung – geprüft mit zwei
+  Sitzungen: A Mädchen (Herz/Teddy), B Buben (Pentagramm/Totenkopf), gleiches
+  Brett, keine Vermischung.
+- **Texte:** Statuszeile und Ergebniskarte nennen das Symbol des eigenen Stils
+  („Herz ist dran.“, „Totenkopf hat drei in einer Reihe.“), die Startzeile bei
+  Mädchen heißt „Herz und Teddy, ganz lieb – drei in einer Reihe.“, das
+  `aria-label` der Felder ebenso („Feld 5: Teddy“).
+- **Geprüft:** `pruefung_symbole.js` **57** grün (drei Stile, Größe und Mitte,
+  Wechsel mitten in der Partie, Sieg mit Linie und Ergebniskarte, Remis,
+  neue Runde, Bot, 1280 × 800 / 390 × 844 / 640 × 360), `pruefung_start.js`
+  **73**, `pruefung_solo.js` **78**, `pruefung_multi.js` **35** und
+  `pruefung_umgebung.js` **16** grün (vier neue Symbolprüfungen über den
+  echten Connector).
+
+- **Nachtrag 320 px und Kontrast (26.11.2026):** Bei **320 px** Breite
+  (320 × 568 und 320 × 640) schob das Brett die Seite um 25 px auseinander
+  (Brett 326 px im 320-px-Fenster, rechte Spalte angeschnitten). Ursache war
+  das Seitenraster: ohne `grid-template-columns` bestimmte das größte Kind die
+  Spaltenbreite. Mit `grid-template-columns:minmax(0,1fr)` misst die Seite
+  jetzt 320 × 568 bzw. 320 × 640 **ohne Scrollen**, das Brett **274–280 px**,
+  Zellen 87–93 px, Symbole **51–57 px** (62 %), Rand 17–18 px; die drei
+  Leistenknöpfe sind 34 px hoch. Alle sechs Symbole sitzen mittig in der
+  Zelle, kein Randkontakt.
+- **Kontrast an gerenderten Zellbildern gemessen** (Zelle 2× und 3×
+  aufgenommen, Hintergrund je Bildzeile aus den Seitenrändern, Symbolfläche
+  gegen diesen Grund, WCAG-Verhältnis): Kreuz **4,35 : 1**, Kreis
+  **7,82 : 1**, Herz **4,66 : 1**, Teddy **4,90 : 1**, Pentagramm
+  **4,56 : 1**, Totenkopf **12,47 : 1** – bei 320 px und 1280 px gleich
+  (Abweichung ≤ 0,04). Zwei Farben wurden dafür nachgezogen: Herz `#e8407e`
+  → `#de2f6c` (3,9 → 4,7 : 1) und Teddys Augen/Nase/Mund `#3b2216` →
+  `#241209` (2,3 → 4,1 : 1 auf dem Fell). Innere Details: Augen des Totenkopfs
+  8,08 : 1, Kreuzungen des Pentagramms 3,3–3,6 : 1, Teddy-Kontur 2,29 : 1
+  (nur eine Linie). Werkzeuge: `arbeit/tmp/tictac/symbole_320.js`
+  (30 Prüfungen, 18 Zellbilder) und `kontrast_messen.py` (Schwelle 3 : 1 für
+  die Hauptfläche, alle grün).
+- **Nach dem Eingriff erneut geprüft:** `pruefung_symbole.js` **57**,
+  `pruefung_start.js` **73**, `pruefung_solo.js` **78**, `mess_layout.js`
+  **24/24**, `pruefung_multi.js` **35** und `pruefung_umgebung.js` **16**
+  grün; 1280 × 800 unverändert (Zellen 167 px, Brett 502 px).
+- **Offen bei 320 px:** Die Knöpfe der Kopfzeile („Vollbild“, „Zurück zum
+  Connector“) überlappen den Titel „TIC TAC TOE“. Nicht angefasst – betrifft
+  die Spielfeldsymbole nicht.
+
+## 26.11.2026 · Tic Tac Toe: Startbildschirm auf zwei Modi vereinfacht
+
+`spiele/brettspiele/tictac/tictactoe.html` (beide Ablagen byte-gleich,
+`28cd70eda2e5ba119364db952b04ac81`): Regeln, Gewinnprüfung, Bot und
+Online-Weg unverändert; Sicherung des Stands davor unter
+`sicherung/tictac-startbildschirm-2026-11-26/tictactoe-vor-vereinfachung.html`
+(`01e1c3fc24180bb429d1850aba741aec`). Der Abschnitt darunter beschreibt die
+Moduswahl davor.
+
+- **Zwei Modi** statt drei: „Zwei am Gerät“ und „Gegen den Bot“. Entfernt sind
+  die Schaltfläche „Online zu zweit im Connector“, ihre Erklärung, der Block
+  „Deine Wahl“ (Modus/Feld/Bilanz samt Tipp) und der Hinweis unter dem
+  Startknopf zur Stilwahl – dazu die zugehörigen CSS-Regeln und die toten
+  JS-Zweige für einen gewählten Modus `online`; `einstellungen().modi` nennt
+  jetzt `["lokal","bot"]`.
+- **Online unverändert:** `start({online:{…}})` des Connectors setzt weiter
+  Marke, Gegner und Stil, zeigt den Wartetext ohne Wahl und blendet den
+  Starten-Knopf aus; die Partie startet wie bisher, sobald die eigene Marke
+  kommt. Geprüft mit zwei Sitzungen über Port 8778.
+- **Stil und Bot bleiben:** drei Stile beim direkten Start (gespeichert in
+  `ticTacToeStil`), im Connector-Rahmen vom Rahmen; drei Bot-Stufen wie zuvor.
+  Die Bilanz wird weiter gebucht (`ticTacToeBilanz`), nur nicht mehr im
+  Startbildschirm angezeigt.
+- **Layout (24 Messungen: 1280 × 800, 640 × 360, 390 × 844, 360 × 640, je drei
+  Stile und zwei Modi):** überall ohne Hoch- und Querscrollen, Startknopf im
+  Bild; Startbildschirm bei 390 × 844 **796 px** und damit genau ein Fenster,
+  bei 640 × 360 **327 px** (Knopf unten 311/360), bei 360 × 640 592 px,
+  bei 1280 × 800 Knopf unten 592/800. Im Querformat stehen die drei Wahlzeilen
+  einspaltig untereinander, damit im Modus „Zwei am Gerät“ keine leere Spalte
+  bleibt.
+- **Geprüft:** `pruefung_start.js` **73** grün (neu geprüft: keine
+  Online-Wahl, kein Block „Deine Wahl“, kein Tipp, keine Fußnote im DOM; der
+  Connector-Start übernimmt Stil und Marke und zeigt nur den Wartetext),
+  `pruefung_solo.js` **78**, `pruefung_multi.js` **35** und
+  `pruefung_umgebung.js` **12** grün.
+
+## 26.11.2026 · Tic Tac Toe: Startbildschirm, drei Spielmodi, Bot in drei Stufen
+
+`spiele/brettspiele/tictac/tictactoe.html` (beide Ablagen byte-gleich,
+`01e1c3fc24180bb429d1850aba741aec`): Regeln, Gewinnprüfung, Online-Weg und
+Schnittstelle **2.0.0** unverändert; Sicherung des Ausgangsstands liegt unter
+`sicherung/tictac-start-2026-11-26/tictactoe-vor-start.html`
+(`840a6c65a2b65978d29a2ed0ea0ef7a2`).
+
+- **Drei Modi** auf einem neuen Startbildschirm: „Zwei Spieler an einem Gerät“
+  (`lokal`), „Gegen den Bot“ (`bot`), „Online über den Connector“ (`online`).
+  `start()` ohne Daten startet den gewählten Modus (Vorgabe `lokal`);
+  `start({stil, online})` verhält sich wie bisher. Die Stufenleiste erscheint
+  nur bei `bot`, die Stilwahl nur beim direkten Start ohne Connector; eine
+  Zeile unter den Knöpfen nennt die Wahl in Worten. Kein `alert`/`prompt`.
+- **Bot vollständig im Spiel** (kein Go-Code angefasst, `tictactoe.go` und
+  `bot_tictactoe.go` unverändert): Der Bot spielt Kreis, der Mensch Kreuz und
+  beginnt, und zieht nach 320 ms über dieselbe Prüfung wie ein Mensch.
+  `leicht` nimmt einen Sieg in etwa drei von vier Fällen und blockt nie;
+  `mittel` spielt Sieg → Block → Mitte → Ecke; `schwer` rechnet vollständiges
+  Minimax mit Zufall unter gleich guten Zügen.
+- **Gemessen (je 60 Partien, Zufallsspieler als Mensch):** `leicht` blockt
+  31 %, nutzt 89 % der Siege, Mensch 25 / Bot 26 / Remis 9; `mittel` und
+  `schwer` blocken und siegen 100 % (mittel 1 / 50 / 9, schwer 0 / 47 / 13).
+  Jäger-Test (Drohung erzwingt Doppeldrohung): gegen `mittel` gewinnt der
+  Mensch **40 von 40**, gegen `schwer` **0 von 40** (alle Remis) – der
+  Unterschied ist damit nicht nur eine Zahl, sondern spielbar.
+- **Drei Stile** unverändert in den Farben, jetzt auch wählbar: `normal`
+  (dunkelgrün/gold), `maedchen` (rosa, Herzen), `buben` (düster, blutig).
+  Eigene Wahl beim Direktstart liegt in `ticTacToeStil`; im Connector-Rahmen
+  kommt der Stil von außen (`TGStil`/`data-stil` des Rahmens), dann ist die
+  Wahl im Spiel verborgen (`stilWahl: false`). X und O bleiben überall
+  erkennbar – Kontrast zum Feld: normal 3,99 : 1 / 6,96 : 1,
+  Mädchen 5,04 : 1 / 7,81 : 1, Buben 4,80 : 1 / 12,55 : 1.
+- **Layout:** 1280 × 800, 640 × 360, 390 × 844 und 360 × 640, je drei Stile und
+  zwei Modi – überall ohne Hoch- und Querscrollen, Startknopf und Fußnote im
+  Bild; Startbildschirm bei 390 × 844 **844 px** hoch (genau ein Fenster).
+- **Geprüft:** `pruefung_solo.js` **78** grün, `pruefung_start.js` **73** grün
+  (Startbildschirm, Modus-/Stufenwechsel, drei Stile in beiden Modi,
+  Bot-Statistik, Tastatur/Maus/Touch, vier Fenstergrößen, keine
+  Konsolenfehler), `pruefung_multi.js` **35** grün und `pruefung_umgebung.js`
+  **12** grün über den echten Connector (Port 8778, zwei getrennte Sitzungen:
+  Einladung, Annahme, Züge in beide Richtungen, gleiches Brett, A Mädchen /
+  B Buben ohne Überschwappen, keine Stil- und Moduswahl im Rahmen).
+- **Fallstrick beim Prüfen:** Der Connector merkt sich Räume und Angebote; nach
+  mehreren Läufen lagen alte Karten im selben Raum und die Testannahme traf
+  ein altes Angebot. Jede Online-Prüfung braucht einen **frisch gestarteten**
+  Connector, sonst sind die Ergebnisse nicht eindeutig.
+- **Offen:** nicht auf zwei echten Handys geprüft (nur zwei Browser-Sitzungen
+  auf einem Rechner); nichts committet.
+
+## 26.11.2026 · Super Pimmelchen: „WEITERSPIELEN“ setzt die Schlange nicht mehr in Bewegung
+
+`spiele/pimmel/spimmel.html` und die daraus gebaute
+`Super-Pimmelchen-61-Level-Einzeldatei.html` (beide Ablagen byte-gleich):
+Nach einer Pause lief die Schlange ohne jede Eingabe in ihrer letzten Richtung
+weiter, bis sie an die Wand stieß.
+
+**Ursache:** `resumeGame()` stellte beim Fortsetzen immer
+`moveTimer = setInterval(step, moveDelay)` und damit einen eigenen Takt auf,
+obwohl das Spiel sonst nur fährt, solange eine Richtung gehalten wird
+(`keydown`/`pointerdown` startet, `keyup`/`pointerup` beendet über
+`stopMove()`). Mit der Startrichtung `{x:1,y:0}` wurde daraus „läuft von
+selbst nach rechts“; mit einer zuletzt gehaltenen Richtung links war es
+genauso (4 statt 5 Takte, weil die Wand näher lag), und oben/unten war der
+erste Schritt am Startplatz ohnehin Wand – deshalb fiel der Fehler nur rechts
+auf. Kein Sonderfall im Code, sondern ein zusätzlicher Taktgeber.
+
+**Korrektur:** `resumeGame()` startet den Takt nur noch bei gehaltener
+Richtung (`haeltRichtung()` prüft `pressedDirs` und `heldDirections`);
+`pauseGame()` leert zusätzlich `heldDirections`, damit ein unter dem
+Pausenblatt losgelassener Finger nicht als gehalten gilt. `heldDirections`
+steht jetzt bei `pressedDirs`. `dir`, `facing`, `step()`, Leveldaten und
+Spielregeln sind unverändert – die Rechtsbewegung ist kein Sonderfall.
+
+**Vorher gemessen** (Chromium; Sicherung `sicherung/pimmel-pause-2026-11-26/`
+mit den md5 `bc5b1e63…` und `330385ab…`, also exakt der Stand vor der
+Korrektur, gegengeprüft): Pause bei Fahrt nach rechts → nach „WEITERSPIELEN“
+5 Takte in 1,2 s ohne Eingabe, nach links 4 Takte, oben/unten 0 (Wand am
+Startplatz).
+
+**Nachher** (140 Prüfungen grün, `arbeit/tmp/pruefung_pimmel_pause.js`, je
+Fassung 70): oben, unten, links, rechts je 0 Takte in 1,4 s nach dem Weiter,
+Richtung und Kopf unverändert; fünf Pausen hintereinander 0 Takte; Weiter per
+Mausklick, per Tipp, per `P`, nach Fensterverlust und nach Tabwechsel jeweils
+0 Takte; danach zählt die erste Taste genau einen Takt in derselben Richtung,
+Querrichtungen greifen weiter; 6 Schritte je Sekunde vor und nach der Pause
+(kein doppelter Timer). Die bestehenden 69 Prüfungen (Stilwahl/Direktstart)
+bleiben grün. Schnittstelle weiter **2.0.0**.
+
+## 26.11.2026 · Super Pimmelchen: Stilwahl beim direkten Start
+
+`spiele/pimmel/spimmel.html` und die daraus gebaute
+`Super-Pimmelchen-61-Level-Einzeldatei.html` (beide Ablagen byte-gleich):
+Leveldaten, 61 Level, Regeln, Aktionen und Schnittstelle 2.0.0 unverändert.
+
+- **Neue Kachel „GRAFIKSTIL“** auf dem Startbildschirm mit `NORMAL`,
+  `MÄDCHEN`, `BUBEN` – nur ohne Connector. Ein Klick stellt die Welt sofort
+  um (Startbildschirm und Leinwand ziehen mit) und merkt sie in
+  `localStorage` unter `superPimmelchenStil`; der nächste direkte Start öffnet
+  mit dieser Welt.
+- **Connector hat Vorrang:** `start({ stil })` setzt die Welt und blendet die
+  Kachel aus (`#stil-block` verborgen, auch nach `startbildschirm()`); die
+  gemerkte Lokalwahl wird dabei weder gelesen noch überschrieben. Eine
+  Konfiguration ohne `stil` (z. B. nur `stufe`) lässt die Kachel ebenfalls weg.
+- **Feldmaß:** Die Kachel kostet auf dem Startbildschirm eine Zeile. Gemessen:
+  844 × 390 → Seite 390 px (kein Scrollen), 740 × 360 und 640 × 360 → 360 px
+  (dort weicht die reine Einstellungsliste), 390 × 844 → 844 px; überall kein
+  Querscrollen, Startknopf und Stilwahl im Bild.
+- **Geprüft** (Chromium, Port 8311): **69 Prüfungen** an beiden Fassungen grün
+  – Direktstart mit leerem Speicher (`normal`), Umschalten auf Mädchen und
+  Buben (Leinwand 5,18,12 → 248,223,234 → 7,6,6), gespeicherte Wahl nach
+  Neuladen, Partie im gewählten Stil, alle drei Connector-Stile über
+  `start({ stil })` (Kachel weg, Lokalwahl `buben` unberührt), Handy und
+  Querformat ohne Hoch- oder Querscrollen, keine Konsolenfehler. Dazu **16
+  Prüfungen über den echten Connector** (Port 8778): Rahmen öffnet Pimmel,
+  Stilwechsel klassisch/Mädchen/Buben kommt im Rahmen an, keine Stilwahl im
+  Spiel, Lokalwahl unberührt, Partie läuft im Connector-Stil, Stilwechsel
+  während der Partie, und ein Direktstart danach zeigt wieder die eigene Wahl.
+- **Nebenbei behoben:** Die Initialisierung setzte die Welt, bevor das Feld
+  aufgebaut war – bei einer gemerkten Welt lief `draw()` ins Leere und die
+  Initialisierung brach ab (Seite blieb auf „nicht bereit“). Jetzt erst
+  `resetStage()`, dann `setzeStil()`.
+
+## 26.11.2026 · Neon-Tic-Tac-Toe: Schnittstelle 2.0, drei Welten, Connector-Mehrspieler
+
+`spiele/brettspiele/tictac/tictactoe.html` (beide Ablagen byte-gleich) ist von
+der eigenen Abfrage auf die Schnittstelle **2.0.0** umgestellt; Regeln (drei in
+einer Reihe, Kreuz beginnt, Remis) unverändert.
+
+- **Kein eigenes Netz mehr:** Das Spiel ruft kein `/api/tictactoe` und liest
+  `room`/`id` nicht aus der Adresse. Der Connector schiebt den Stand mit
+  `aktion("stand", …)` hinein (1-s-Takt, solange das Brett im Rahmen offen ist)
+  und horcht auf `tictactoe:zug` / `tictactoe:neu`; Einladung und Tisch laufen
+  über den bestehenden Weg `angebotAktion("bieten")` → `invite`/`accept` am
+  Server. Server, `tictactoe.go` und `bot_tictactoe.go` sind unverändert.
+- **Drei Welten:** `normal` (Kasino-Grün/Gold, kupfernes X, goldenes O),
+  `maedchen` (rosa, weiße Bonbonzellen, Herzen) und `buben` (fast schwarz,
+  blutrote Fugen, Tropfen unter dem Rahmen). Wahl ausschließlich im Connector;
+  keine Stil-Leiste im Spiel, `start({stil})` richtet nur die Welt ein.
+- **Startbildschirm, Ergebnis, Pause** als Karten über `spiel-start.css` und
+  `spiel-start.js`; kein `alert`/`prompt`/`confirm`. Ergebnis nennt Sieger und
+  Züge, „Neue Runde“ im Online-Spiel fragt die Runde beim Connector an.
+- **Feldmaß:** `passeBrett()` rechnet Rahmenbreite, Fensterhöhe und Fußleiste
+  ein; Brett 502 px (1280 × 800), 350 px (390 × 844), 320 px (360 × 640),
+  281 px (844 × 390) – überall quadratisch, ohne Scrollen.
+- **Geprüft:** 78 Einzelprüfungen ohne Connector grün (Schnittstelle,
+  Fehlercodes, Ereignisse, Sieg/Remis, Tastatur/Klick, drei Stile, vier
+  Fenstergrößen, keine Konsolenfehler) und **35 Prüfungen mit zwei getrennten
+  Browsersitzungen** über den echten Connector (Port 8778, Raum TG-HALLE):
+  Einladung annehmen, abwechselnde Züge beidseitig synchron, fremder und
+  doppelter Zug abgewiesen (Spiel `aktion-nicht-erlaubt`, Server 409), Sieg →
+  „Sieg“/„Niederlage“, Remis → „Unentschieden“ auf beiden Seiten, neue Runde,
+  Neuladen mitten in der Partie und nach dem Ende (Brett und Ergebnis wieder
+  da), eigener Stil je Spieler, keine Konsolenfehler.
+- **Offen:** nicht auf zwei echten Handys geprüft (nur zwei Browser-Sitzungen
+  auf einem Rechner).
+- **Nachtrag (26.11.2026):** Der Stil ist nicht mehr nur im Connector wählbar –
+  beim direkten Start gibt es eine eigene Stilwahl, dazu drei Spielmodi und
+  einen Bot mit drei Stufen (Abschnitt „Tic Tac Toe: Startbildschirm, drei
+  Spielmodi, Bot in drei Stufen“).
+
+## 26.11.2026 · Super Pimmelchen: drei Spielwelten, Highscore-Karte, Feldmaß
+
+`spiele/pimmel/spimmel.html` und die daraus gebaute
+`Super-Pimmelchen-61-Level-Einzeldatei.html` (beide Ablagen byte-gleich):
+Leveldaten, 61 Level, Stufen und Spielregeln unverändert.
+
+- **Drei Spielwelten** statt reiner Farbvarianten: `normal` (dunkles
+  Grün, Gold, Marmor, Zierlinien – der grün-goldene Kasino-Look),
+  `maedchen` (Rosa, Herzen, Bögen, weiche Formen) und `buben` (Schwarz,
+  Blut, Risse, harte Kanten). Geändert sind
+  Boden- und Wandmuster, Brücken, Figurenleuchten, Rahmen, Anzeigen, Knöpfe,
+  Startbildschirm, Pause, Spielende und Deko – pro Welt im CSS und auf der
+  Leinwand. Keine neuen Bilddateien: die Verzierungen werden gezeichnet, die
+  Einzeldatei bleibt ohne Asset-Ordner lauffähig.
+- **Stil von außen:** `start({ stil })`; unbekannt oder fehlend heißt `normal`.
+  Nur `stil` in der Konfiguration richtet die Welt ein, ohne eine Partie zu
+  beginnen – der Connector übergibt so die Wahl aus `stil.js` beim Öffnen und
+  bei jedem Wechsel. Das Spiel liest `tg-stil` nicht mehr und hat keine eigene
+  Stilwahl; `stil.js` bleibt bei seinen drei Werten.
+- **Highscore ohne `prompt`/`alert`:** Karte in der Seite mit Rangliste,
+  Namensfeld, „Speichern“ und „Ohne Namen“, per Tastatur (Escape) und Finger
+  bedienbar; sie liegt fest über der Seite und bleibt auch nach dem Spielende
+  sichtbar, wenn das Spielfeld ausgeblendet ist.
+- **Feldmaß:** `passeBuehne()` misst nach und zieht das Feld nach, bis es
+  vollständig im Bild liegt; bei 844 × 390 ragt nichts mehr über den Rand.
+- **Geprüft** (Chromium, Prüfkopien in `arbeit/tmp/stil/pruefung`,
+  131 Prüfungen grün): drei Welten je Fassung (Startbildschirm, laufendes
+  Spiel, Pause/Weiter, Highscore, Spielende mit Namenseingabe), 844 × 390
+  ohne Überlauf, Touch-Bedienung sichtbar, Connector-Übergabe über
+  `start({ stil })` samt Rückfall auf `normal`, Einzeldatei ohne jede
+  Fremdanfrage. Die Welten unterscheiden sich messbar in Schriftfarbe,
+  Rahmen, Radius und Knopfverlauf sowie im Leinwandbild; angesehen wurden sie
+  nicht am Bildschirm, nur gemessen.
+
+- **Korrektur (26.11.2026):** TrashyGecko hat genau drei Spielstile. Der
+  zwischenzeitlich eingeführte vierte Stil ist wieder entfernt – aus dem
+  Spiel, aus `stil.js`, aus der Connector-Zuordnung, aus Doku und Prüfungen.
+  Sein edler Grün-Gold-Look ist jetzt der Stil `normal`; `maedchen` und
+  `buben` sind unverändert. Gesichert vorher unter
+  `sicherung/pimmel-drei-stile-2026-11-26/`.
+
+- **Visuelle Kontrolle (26.11.2026):** beide Fassungen in Chromium bei 1280 × 800,
+  844 × 390, 390 × 844 und 1600 × 900 durchgesehen (Start, Spielfeld, Pause,
+  Highscore-Karte samt Formular, Spielende). Behoben: im Mädchen-Stil waren
+  Einstellungs-Labels, Werte, Hinweis und „Letzte Runde“ in den dunklen
+  Grundfarben auf fast weißem Papier (1,1:1) — jetzt Rosa-Töne; gewählte
+  Schwierigkeit dunkler für weiße Schrift; Titel bricht wie in den anderen
+  Welten. Hochformat: Anzeige-Labels stießen zusammen und der Connector-Knopf
+  lag darüber — Knopf jetzt eigene Zeile, Labels enger. Der Highscore-Schleier
+  war neutral und färbte Mädchen grau — jetzt je Welt getönt; Buben-Karte
+  hebt sich mit roter Kante ab, Ränge und Formular-Label sind heller. Buben:
+  Wände und Risse eine Stufe heller, der Irrgarten ist wieder lesbar; das
+  Feld passt in jeder Größe ohne Seitenlauf, auch mit geladenen Schriften.
+  Keine Leveldaten, keine Stilarchitektur geändert; Einzeldatei neu gebaut.
+
 ## 26.11.2026 · Frogger: Vollbild, Feldmaß und eigener Startbildschirm
 
 `spiele/frogger/frogger.html` neu aufgebaut; Spielregeln, Leveldaten, Tempi,
@@ -1769,3 +2222,81 @@ werden, was tatsächlich existiert, was fehlt und warum.
   letztes Element ist die Hallen-Auswahl, Seite 1647 px bzw. 1030 px hoch, kein
   Querscrollen, keine Konsolenfehler, 10 Karten wie zuvor.
 - Beide Ablagen und die Android-Assets byte-gleich; APK neu 14.676.443 B.
+
+## Super Pimmelchen auf Schnittstelle 2.0 (26.11.2026)
+
+- **`spiele/pimmel/spimmel.html` erfüllt jetzt `SPIELE-SCHNITTSTELLE.md` 2.0**
+  (`version` 2.0.0, Schnittstellenobjekt eingefroren): `whenReady()` löst auch
+  dann auf, wenn es erst nach dem Laden gefragt wird; `aktion(name, daten)`
+  führt `richtung`, `feuer`, `start`, `pause`, `weiter` und `neu` über
+  dieselben internen Funktionen wie Tastatur und Touch aus; `:bereit`, `:ende`,
+  `:pausiert` und `:weiter` kommen nur bei echter Zustandsänderung und tragen
+  die Details aus dem Standard als Kopie.
+- **`einstellungen()` ohne Bedeutung:** `specialsTaktMs` ist entfernt, geliefert
+  werden `stufe`, `stufen` (nur die Namen), `level` und `levelAnzahl`.
+  `zustand().startbildschirm` folgt jetzt dem Spielzustand statt der
+  Body-Klasse.
+- **Fehlercodes bleiben in der Tabelle des Standards:** ungültige `daten` bei
+  `richtung` (diagonal, `0/0`, Text) → `aktion-nicht-erlaubt`, fremde Felder →
+  `unbekanntes-feld`. Ein eigener Code wäre eine Änderung am Standard.
+- **Behoben:** Pfeiltasten im fokussierten Level-Feld starteten die Partie
+  (Fokusregel gilt jetzt auch für Pfeile, unsichtbare Bedienelemente zählen
+  nicht); das automatische Fortsetzen bei `focus` hob eine manuelle Pause beim
+  Tabwechsel auf (`blur → pause` bleibt); der Respawn nach verlorenem Leben
+  pausiert mit; Totenkopf-Entferner-Timer werden verfolgt und beim Stoppen
+  gelöscht; Escape verlässt im Vollbild zuerst das Vollbild, ohne zu pausieren.
+- **Unverändert:** alle 61 Level samt Leveldaten, Mechanik, Stufen 5/15/20 s,
+  Startbildschirm, Touch-Steuerung, Pause, Vollbild, Highscore und gespeicherte
+  Stufe, Einzeldatei-Fassung (1.0.0, gemeinsame Speicherschlüssel bleiben).
+- **Offen:** der Highscore nutzt weiter `prompt`/`alert` (Abschnitt 10 verbietet
+  das; der Auftrag nahm den Highscore ausdrücklich aus). Für fehlerhafte
+  Aktionsdaten fehlt in Abschnitt 3.2 ein eigener Code – im Standard vermerkt,
+  nicht eigenmächtig ergänzt.
+- **Geprüft** (Chromium, lokaler HTTP-Server, Sicherung vorher): 119 Prüfungen
+  grün – Laden, `whenReady()` vor und nach der Bereitschaft, alle drei Stufen,
+  Level 1/30/61, alle 61 Level, Kopien von `zustand()`/`einstellungen()`, zehn
+  ungültige Konfigurationen und alle Aktionsfehler ohne Zustandsänderung,
+  Tastatur/Touch/`aktion()` auf demselben Weg, Pause/Weiter/Stopp/Ende
+  inklusive Detailfeldern, 50-fache Wiederholungen ohne Doppel-Timer, Specials
+  nach dem Stoppen, Vollbild mit Escape, 1280×800, 390×844, 844×390, 360×640,
+  0 Konsolenfehler; dazu die beiden älteren Prüfläufe (41 und 15 Prüfungen) auf
+  2.0.0 gezogen, beide grün. Bei 844×390 endet das Feld 2 px unter der
+  Fensterhöhe (bestehende Rundung der Bühnenberechnung, nicht angefasst).
+  Sicherung: `Homepage/sicherung/pimmel-2.0-2026-11-26/`.
+
+## Einzeldatei auf Schnittstelle 2.0 (26.11.2026)
+
+- **Beide Pimmel-Fassungen sind jetzt eine Version:**
+  `Super-Pimmelchen-61-Level-Einzeldatei.html` wird aus `spimmel.html` gebaut
+  (Bauskript `Documentsrbeit	mp\pimmel_einzel_bauen.py`) und hat damit
+  Schnittstelle 2.0.0, dieselbe Spiellogik, dieselben 61 Level, dieselben
+  Stufen 5/15/20 s, dieselben Aktionen und dieselben Fehlercodes. Diff der
+  beiden Hauptskripte: nur der Asset-Lader unterscheidet sich.
+- **Eingebettet statt geladen:** 19 Spielgrafiken als Data-URI, Fredoka und
+  Press Start 2P als Data-URI, dazu die vier Atkinson-Schnitte; `/spiele/stil.js`,
+  `/spiele/schrift.css` und `/spiele/zurueck.js` stehen jetzt als Text in der
+  Datei. Kein `<link>`, keine Anfrage nach außen – auch `file://` läuft
+  (gemessen: Version 2.0.0, Start, 314 Farben auf der Leinwand, 0 Fehler).
+- **Vorher (Schnittstelle 1.0.0):** kein `whenReady`, kein `aktion()`, kein
+  `pause`/`resume`/`stop`, `specialsTaktMs` in `einstellungen()`, weiche
+  Validierung (`'7'` als Level erlaubt). Außerdem war `var(--tg-schrift)`
+  nirgends definiert (die Datei band `schrift.css` nicht ein), der Text fiel
+  also auf die Browser-Schrift zurück; jetzt stehen die Regeln samt Schriften
+  in der Datei, `getComputedStyle(body).fontFamily` ist in beiden Fassungen
+  gleich.
+- **Entfallen:** der alte Querformat-Helfer der Einzeldatei (eigenes
+  `.game-area`-Flex-Layout unter 560 px Höhe) und das Vorladen der Schriften.
+  Beides war an das ältere Gerüst gebunden; die Einzeldatei nutzt jetzt
+  dasselbe responsive Layout wie die Referenz, damit sich die Fassungen nicht
+  unterschiedlich verhalten.
+- **Unverändert:** gemeinsame Speicherschlüssel `superPimmelchenStufe` und
+  `superPimmelchenHighscore` (bekannte Ausnahme), Startbildschirm, Touch,
+  Vollbild, Highscore, Dateiname und Katalogeintrag.
+- **Geprüft:** beide Fassungen einzeln mit demselben 2.0-Prüfsatz –
+  `spimmel.html` 120 Prüfungen grün, Einzeldatei 125 grün (5 zusätzliche zur
+  Eigenständigkeit), je 0 rot; die Einzeldatei dabei aus einem leeren Ordner
+  ausgeliefert (keine Anfrage außer der Seite selbst). Direktvergleich über
+  21 Punkte (Schnittstellenflächen, `whenReady`, `einstellungen()`, `zustand()`,
+  21 Fehlerfälle, `start`, `pause`, `resume`, alle Aktionen, `stop`,
+  Ereignisabfolge, Speicherschlüssel, Konsolenfehler): alle gleich.
+  Sicherung vorher: `Homepage/sicherung/pimmel-einzeldatei-2026-11-26/`.
