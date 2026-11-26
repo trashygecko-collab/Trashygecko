@@ -5,6 +5,57 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Alter Endpunkt /api/menschaerger entfernt
+
+**Auftrag:** Der alte Endpunkt `/api/menschaerger` lief live noch neben
+`/api/maensync`, obwohl ihn keine Seite mehr aufrief. Prüfen, wer ihn noch
+braucht, und ihn samt Handler entfernen, wenn er wirklich tot ist – Labyrinth
+und die übrigen Spiele bleiben unberührt.
+
+**Wer rief ihn noch auf?** Keine ausgelieferte Seite: `connector.html` spricht
+seit dem Standweg-Umbau ausschließlich `/api/maensync` an. Aufrufer waren nur
+`bot_steuerung_test.go` (beide Fassungen) und die **veraltete** Android-Kopie
+`spiele/android/app/src/main/assets/www/spiele/brettspiele/menschaerger/menschaerger.html`
+(40.359 B vom 25.11., während die echte Seite 110.037 B vom 26.11. hat) – der
+Asset-Spiegel ist ohnehin breit veraltet (84 Dateien gleich, 97 anders,
+412 Seiten fehlen) und wurde deshalb nicht als „braucht den Endpunkt“ gewertet.
+
+**Beweis am laufenden Router** (`httptest` um `routes()`, beide Fassungen):
+
+| Anfrage | Antwort |
+| --- | --- |
+| `GET /api/menschaerger?room=ABC123` | 404 `404 page not found` (ServeMux – Route weg) |
+| `GET /api/maensync?room=ABC123` | 404 `Spielraum nicht gefunden` (Handler antwortet) |
+| `GET /api/maensync` | 400 `Spielraum-Code fehlt` |
+
+**Entfernt (in `connector/` und `connector-online/`, je identisch):**
+
+- Route in `server.go` und der Handler samt Altspiel in `menschaerger.go`
+  (`MenschaergerGame`, `MaenPlayer`, Regeln, `maenSync`-fremde Sitzlogik).
+- `bot_mensch.go` (`maenBotTreiben`, `maenBotSitz`, `maenRoll`, `maenBotFigur`,
+  `maenBotWert`) – der alte Bot hing allein am alten Handler.
+- `types.go`: Feld `Room.Menschaerger`, der Statustext-Zweig und
+  `cloneMenschaerger`.
+- `leave.go`: der Sitz-Block „Mensch ärgere dich nicht“, die Zweige in
+  `aktivesSpiel` und `playerInGame` sowie `maenRemoveSeat`.
+- `lobby.go`: Raumliste zeigte für den alten Stand „Mensch ärgere dich nicht“.
+- `umbenennen.go`: Umbenennen im alten Spielstand.
+- Tests: Menschaerger-Block in `bot_steuerung_test.go`,
+  `TestBotMenschGanzePartien` in `bot_brett2_test.go`; `tabellen_test.go`
+  prüft das Spiel jetzt über das neue Feld `Room.Maen` (das trägt die
+  Sitz-/Umbenenn-Pflege weiter).
+
+**Unberührt:** `/api/maensync` (Handler `maenSyncHandler`, `Room.Maen`,
+`syncArten`, `angebot.go`-Zuordnung), `/api/labyrinth` und alle übrigen Spiele.
+
+**Geprüft:** `gofmt` sauber (außer der lokalen, nicht getrackten
+`bot_steuerung_test.go` mit CRLF), `go vet ./...` und `go build` in beiden
+Fassungen; volle Suiten `go test -count=1 ./...` in `connector` (221 s) und
+`connector-online` (232 s), beide **exit 0**; die Routen-Probe oben lief in
+beiden Fassungen grün und wurde danach gelöscht. Beide Ablagen
+(`Documents\Homepage` und `Documents\GitHub\Homepage`) sind für diese Dateien
+byte-gleich.
+
 ## 26.11.2026 · Acht Spiele nach der Grafik-Überarbeitung technisch geprüft
 
 **Auftrag:** Arkanoid, Flappy Bird, Frogger, Pac-Man, Snake, Space Invaders,

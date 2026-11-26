@@ -205,7 +205,6 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/viergewinnt", vierGewinntHandler)
 	mux.HandleFunc("/api/dame", dameHandler)
 	mux.HandleFunc("/api/paare", paareHandler)
-	mux.HandleFunc("/api/menschaerger", menschaergerHandler)
 	mux.HandleFunc("/api/maensync", maenSyncHandler)
 	mux.HandleFunc("/api/kaesekaestche", kaesekaestcheHandler)
 	mux.HandleFunc("/api/sim", simHandler)

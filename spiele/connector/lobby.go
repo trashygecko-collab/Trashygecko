@@ -163,8 +163,6 @@ func roomsHandler(w http.ResponseWriter, r *http.Request) {
 				game = "Go"
 			} else if room.Backgammon != nil && (room.Backgammon.Status == "active" || room.Backgammon.Status == "invited") {
 				game = "Backgammon"
-			} else if room.Menschaerger != nil && (room.Menschaerger.Status == "active" || room.Menschaerger.Status == "invited") {
-				game = "Mensch ärgere dich nicht"
 			} else if room.Sechsundsechzig != nil && (room.Sechsundsechzig.Status == "spiel" || room.Sechsundsechzig.Status == "invited") {
 				game = "Sechsundsechzig"
 			}

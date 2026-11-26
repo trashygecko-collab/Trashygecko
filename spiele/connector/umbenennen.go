@@ -258,9 +258,6 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 			g.TiefName = neu
 		}
 	}
-	if g := r.Menschaerger; g != nil {
-		benenne(g.Players, id, neu, func(p *MaenPlayer) string { return p.ID }, func(p *MaenPlayer) *string { return &p.Name })
-	}
 	if g := r.Rechen; g != nil {
 		benenneZeiger(g.Players, id, neu, func(p *RechenPlayer) string { return p.ID }, func(p *RechenPlayer) *string { return &p.Name })
 	}
