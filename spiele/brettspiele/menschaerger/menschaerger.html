@@ -2208,6 +2208,17 @@ function platz(n){
   S.meinPlatz = Number.isInteger(n) ? n : null;
   return {ok:true, platz:S.meinPlatz};
 }
+/* Vor dem Start steht noch keine Figur auf dem Brett: Die Sitzzahl kennt
+   dann nur die Lobby. Ohne sie meldet zustand() die Standardzahl (2),
+   obwohl am Tisch 3 oder 4 Sitze stehen. Nach dem Start gilt die
+   Aufstellung – dann bleibt dieser Wert unberuehrt. */
+function anzahlSetzen(n){
+  const zahl = Number(n);
+  if (![2, 3, 4].includes(zahl) || S.spieler.length) return {ok:false};
+  S.anzahl = zahl;
+  knoepfeMarkieren();
+  return {ok:true, anzahl:S.anzahl};
+}
 function zeige(){
   S.startbildschirm = false;
   el.start.classList.remove("offen");
@@ -2413,7 +2424,8 @@ window.MenschAergereDichNicht = Object.freeze({
   laden: laden,
   neu: neu,
   zeige: zeige,
-  platz: platz
+  platz: platz,
+  anzahlSetzen: anzahlSetzen
 });
 })();
 </script>

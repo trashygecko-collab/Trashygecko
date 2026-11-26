@@ -195,6 +195,11 @@
     // Das Spiel prüft selbst, wer ziehen darf: dafür bekommt es seinen Platz.
     if (MAEN && SP.platz) { try { SP.platz(meinPlatz >= 0 ? meinPlatz : null); } catch (e) {} }
     zeichneLeiste();
+    // Vor dem Start kennt nur die Lobby die Sitzzahl; das Spiel bekommt
+    // sie sonst erst mit der Aufstellung und meldet bis dahin 2.
+    if (MAEN && SP.anzahlSetzen && spiel.status === "invited") {
+      try { SP.anzahlSetzen(spiel.anzahl); } catch (e) {}
+    }
     if (spiel.status !== "active") { gestartet = false; return; }
 
     if (!spiel.stand) {
