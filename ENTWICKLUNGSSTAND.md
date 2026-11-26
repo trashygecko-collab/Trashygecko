@@ -5,6 +5,19 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Super Pimmelchen: Pausenzeile im Hochformat unter dem Feld
+
+Die Leiste mit Pause, Neustart und Vollbild lag im Hochformat als schwebender
+Block über den obersten Feldreihen, obwohl unter dem Feld viel Platz frei war.
+Jetzt steht sie dort im Textfluss **unter dem Spielfeld** (gemessen 390 × 844:
+Feld endet bei 258 px, Leiste beginnt bei 264 px, 30 px hoch, rechtsbündig,
+Steuerung darunter ab 306 px) und `passeBuehne()` zieht ihre Höhe von der freien
+Fläche ab. Im Querformat bleibt sie die schwebende Leiste (844 × 390: Leiste
+`absolute` bei x 699/y 33), im Vollbild ebenfalls. Geprüft: Hochformat,
+Drehung hin und zurück, Pause an/aus, keine Konsolenfehler.
+
+---
+
 ## 26.11.2026 · Super Pimmelchen fertiggestellt: drei Stufen, Querformat, Vollbild, Pause
 
 **Nur `spiele/pimmel/spimmel.html` angefasst** (beide Ablagen byte-gleich), Sicherung

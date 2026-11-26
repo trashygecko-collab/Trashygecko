@@ -464,11 +464,12 @@ html[data-stil="buben"] #stufe-wahl button[aria-pressed="true"] { background: #c
 
 /* Kleine Leiste im Spiel: Pause, Neustart, Vollbild */
 #spiel-leiste { display: none; }
-body.spiel-laeuft #spiel-leiste { display: flex; position: absolute; z-index: 16; top: 4px; right: 4px; gap: 4px; }
+/* Hochformat: die Leiste steht unter dem Spielfeld und verdeckt nichts. */
+body.spiel-laeuft #spiel-leiste { display: flex; justify-content: flex-end; gap: 6px; margin: 6px 4px 2px; }
 #spiel-leiste button { padding: 3px 7px; min-height: 30px; font-size: 10px; font-weight: 900; background: rgba(10,33,27,.62); border-color: #d9bc7c80; color: #e8cd8e; }
 html[data-stil="maedchen"] #spiel-leiste button { background: rgba(255,246,250,.75); border-color: #b0286a; color: #8f2450; }
 html[data-stil="buben"] #spiel-leiste button { background: rgba(17,19,22,.68); border-color: #ff8a90; color: #ff8a90; }
-.cabinet.bildschirm-voll #spiel-leiste { top: 6px; left: 6px; right: auto; }
+.cabinet.bildschirm-voll #spiel-leiste { position: absolute; z-index: 16; top: 6px; left: 6px; right: auto; margin: 0; }
 
 /* Pause-Blatt */
 #pause-blatt { display: none; }
@@ -492,7 +493,8 @@ body.pseudo-vollbild .cabinet { position: fixed; inset: 0; width: 100vw; height:
   html.touch-device .game-area { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; width: 100%; max-width: none; min-height: 0; margin: 0; overflow: hidden; }
   html.touch-device .screen-wrapper { border: 0; margin: 0 auto; }
   html.touch-device body.spiel-laeuft .tg-zurueck { display: none; }
-  html.touch-device body.spiel-laeuft #spiel-leiste { top: 2px; right: 2px; }
+  /* Querformat: Leiste schwebt über dem Feld, wie bisher. */
+  body.spiel-laeuft #spiel-leiste { position: absolute; z-index: 16; top: 2px; right: 2px; margin: 0; }
   html.touch-device #touch-controls {
     position: absolute; z-index: 14; left: auto;
     right: max(6px, env(safe-area-inset-right)); bottom: max(6px, env(safe-area-inset-bottom));
@@ -542,6 +544,12 @@ body.pseudo-vollbild .cabinet { position: fixed; inset: 0; width: 100vw; height:
 
       <button id="exit-fullscreen-button" type="button">✕ VOLLBILD</button>
 
+      <div id="spiel-leiste">
+        <button id="pause-button" class="arcade-btn" type="button">⏸ PAUSE</button>
+        <button id="schnell-neustart" class="arcade-btn" type="button">↻ NEU</button>
+        <button id="spiel-vollbild" class="arcade-btn" type="button">⛶</button>
+      </div>
+
       <div id="touch-controls">
         <button class="arcade-btn" id="btn-fire" type="button">SPERM SCHIESSEN</button>
         <div id="touch-dpad">
@@ -550,12 +558,6 @@ body.pseudo-vollbild .cabinet { position: fixed; inset: 0; width: 100vw; height:
           <button class="arcade-btn" data-dir="right" type="button" aria-label="rechts">▶</button>
           <button class="arcade-btn" data-dir="down"  type="button" aria-label="runter">▼</button>
         </div>
-      </div>
-
-      <div id="spiel-leiste">
-        <button id="pause-button" class="arcade-btn" type="button">⏸ PAUSE</button>
-        <button id="schnell-neustart" class="arcade-btn" type="button">↻ NEU</button>
-        <button id="spiel-vollbild" class="arcade-btn" type="button">⛶</button>
       </div>
 
       <div id="pause-blatt">
@@ -2628,7 +2630,10 @@ function getLevelMap(levelIndex) {
       const pickerH = (ui.picker && !ui.picker.hidden) ? ui.picker.getBoundingClientRect().height + 14 : 0;
       const quer = window.innerWidth > window.innerHeight && window.innerHeight <= 620;
       const steuerung = (isTouch && !quer) ? 58 : 0;
-      platzH = window.innerHeight - kopfH - pickerH - steuerung - 12;
+      const leiste = document.querySelector('#spiel-leiste');
+      const leisteH = (leiste && getComputedStyle(leiste).position !== 'absolute')
+        ? leiste.getBoundingClientRect().height + 8 : 0;
+      platzH = window.innerHeight - kopfH - pickerH - steuerung - leisteH - 12;
       platzW = Math.min(window.innerWidth, 960) - 12;
       setzeFeld(platzW, Math.max(120, platzH));
     }
