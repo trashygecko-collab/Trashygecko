@@ -1,0 +1,202 @@
+/* TRASHYGECKO – gemeinsames Arcade-Gerüst für Spiel-Startbildschirme
+ *
+ * Wird von Spielen eingebunden, die den neuen Startbildschirm nutzen.
+ * Das Gerüst liefert nur Aufbau, Abstände, Knöpfe und Overlays; Farben und
+ * Bilder kommen aus der Palette der Seite (--gold, --panel, --text, --rand,
+ * --hell, --muted, --buehne, --schatten). Fehlt ein Token, greift der
+ * Rückfallwert – das Gerüst funktioniert also auch in älteren Spielen.
+ *
+ * Aufbau eines Startbildschirms (Markup im Spiel):
+ *   <section class="arcade-start">
+ *     <div class="arcade-start__kopf">
+ *       <p class="arcade-start__marke">Arcade · 1 Spieler</p>
+ *       <h1 class="arcade-start__titel">FROGGER</h1>
+ *       <p class="arcade-start__unterzeile">…</p>
+ *     </div>
+ *     <div class="arcade-start__inhalt">
+ *       <p class="arcade-start__text">…</p>
+ *       <ul class="arcade-start__steuerung">…</ul>
+ *       <ul class="arcade-start__infos">…</ul>
+ *     </div>
+ *     <div class="arcade-start__knoepfe">
+ *       <button class="arcade-knopf arcade-knopf--haupt">Starten</button>
+ *     </div>
+ *     <p class="arcade-start__fussnote">…</p>
+ *   </section>
+ *
+ * Overlay (Pause, Level, Game Over):
+ *   <section class="arcade-blatt"><h2 class="arcade-blatt__titel">…</h2>
+ *     <p class="arcade-blatt__text">…</p>
+ *     <ul class="arcade-blatt__werte">…</ul>
+ *     <div class="arcade-blatt__knoepfe">…</div></section>
+ */
+
+[hidden]{display:none !important}
+
+/* ---------------------------------------------------------------- Knöpfe */
+
+.arcade-knopf{
+  font:inherit;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 16px;border-radius:9px;cursor:pointer;white-space:nowrap;
+  color:var(--hell,#f4e6c2);
+  background:var(--panel,#0f2b23);
+  border:1px solid var(--rand,#d9bc7c);
+  box-shadow:0 3px 0 var(--schatten-tief,#00000088),inset 0 1px 0 #ffffff1f;
+  transition:transform .08s ease,box-shadow .08s ease,background .15s ease}
+.arcade-knopf:hover{background:var(--hover,#184536)}
+.arcade-knopf:active{transform:translateY(2px);box-shadow:0 1px 0 var(--schatten-tief,#00000088),inset 0 2px 6px #00000055}
+.arcade-knopf:focus-visible{outline:2px solid var(--gold,#e8cd8e);outline-offset:2px}
+
+.arcade-knopf--haupt{
+  color:var(--knopf-text,#0b241d);
+  background:linear-gradient(180deg,var(--gold-hell,#f1dca8),var(--gold,#e8cd8e) 55%,var(--gold-2,#c9a95f));
+  border-color:var(--gold-hell,#f1dca8);
+  font-size:clamp(15px,2.4vh,19px);letter-spacing:.12em;padding:14px 26px;border-radius:11px;
+  box-shadow:0 4px 0 var(--schatten-tief,#00000088),0 0 22px #e8cd8e33,inset 0 1px 0 #ffffff88}
+.arcade-knopf--haupt:hover{filter:brightness(1.06)}
+
+.arcade-knopf--zweit{
+  background:transparent;border-color:var(--rand-1,#d9bc7c66);color:var(--hell,#f4e6c2);
+  box-shadow:none;font-weight:400;letter-spacing:.04em;text-transform:none}
+
+/* ---------------------------------------------------------------- Vollbild */
+
+.arcade-vollbild[aria-pressed="true"]{
+  color:var(--knopf-text,#0b241d);
+  background:linear-gradient(180deg,var(--gold-hell,#f1dca8),var(--gold,#e8cd8e));
+  border-color:var(--gold-hell,#f1dca8)}
+
+/* ---------------------------------------------------------------- Startbildschirm */
+
+.arcade-start{
+  position:absolute;inset:0;z-index:4;overflow:auto;
+  display:flex;flex-direction:column;gap:clamp(6px,1.6vh,14px);
+  padding:clamp(10px,2.2vh,22px) clamp(12px,2.6vw,26px);
+  background:
+    radial-gradient(120% 90% at 50% -20%,var(--bg-1,#1d4b3e) 0%,var(--bg-2,#123329) 55%,var(--bg-3,#0a211b) 100%);
+  border-radius:10px}
+.arcade-start::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:10px;
+  background:repeating-linear-gradient(180deg,#00000000 0 3px,#00000022 3px 4px);
+  opacity:.5}
+.arcade-start>*{position:relative}
+
+.arcade-start__kopf{text-align:center}
+.arcade-start__marke{
+  margin:0 0 4px;font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--muted,#a9c3b6)}
+.arcade-start__titel{
+  margin:0;font-size:clamp(34px,8.4vh,74px);line-height:.98;letter-spacing:.06em;
+  font-weight:700;color:var(--gold-hell,#f1dca8);
+  text-shadow:0 2px 0 var(--schatten-tief,#00000088),0 0 26px var(--gold,#e8cd8e)55}
+.arcade-start__unterzeile{
+  margin:4px 0 0;font-size:clamp(12px,1.9vh,15px);color:var(--gold,#e8cd8e);
+  letter-spacing:.06em}
+
+.arcade-start__inhalt{
+  display:grid;gap:clamp(8px,1.8vh,16px);
+  grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}
+.arcade-start__text{
+  margin:0;grid-column:1/-1;color:var(--text,#efe6d2);font-size:clamp(13px,1.8vh,16px);
+  line-height:1.5;text-align:center;text-wrap:pretty}
+
+.arcade-start__abschnitt{
+  margin:0 0 4px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted,#a9c3b6)}
+
+.arcade-start__steuerung,.arcade-start__infos{margin:0;padding:0;list-style:none}
+.arcade-start__steuerung li{
+  display:flex;align-items:center;gap:8px;padding:3px 0;font-size:clamp(12px,1.7vh,14px);
+  color:var(--text,#efe6d2)}
+.arcade-start__steuerung .taste{
+  display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;
+  padding:0 6px;border-radius:5px;font-size:11px;font-weight:700;
+  background:var(--leiste,#0b241d);border:1px solid var(--rand-1,#d9bc7c66);
+  box-shadow:0 2px 0 var(--schatten,#00000055);color:var(--gold,#e8cd8e)}
+
+.arcade-start__infos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.arcade-start__infos li{
+  padding:6px 8px;border-radius:7px;background:var(--panel,#0f2b23);
+  border:1px solid var(--rand-3,#d9bc7c33);display:flex;flex-direction:column;gap:1px}
+.arcade-start__infos .wert{
+  font-size:clamp(14px,2vh,17px);font-weight:700;color:var(--hell,#f4e6c2);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.arcade-start__infos .was{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#a9c3b6)}
+
+.arcade-start__knoepfe{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+.arcade-start__fussnote{
+  margin:0;text-align:center;font-size:11px;color:var(--muted,#a9c3b6);letter-spacing:.04em}
+
+.arcade-szene{display:block;width:100%;height:auto;max-height:26vh;border-radius:8px}
+
+/* ---------------------------------------------------------------- Overlay-Karte */
+
+.arcade-blatt{
+  margin:auto;max-width:min(440px,94%);max-height:94%;overflow:auto;
+  padding:clamp(12px,2.4vh,22px) clamp(14px,3vw,24px);border-radius:12px;
+  background:linear-gradient(180deg,var(--panel,#0f2b23),var(--leiste,#0b241d));
+  border:1px solid var(--rand,#d9bc7c);
+  box-shadow:0 14px 40px var(--schatten-tief,#00000088),inset 0 1px 0 #ffffff14;
+  text-align:center}
+.arcade-blatt__titel{
+  margin:0 0 6px;font-size:clamp(20px,3.6vh,28px);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold-hell,#f1dca8);font-weight:700}
+.arcade-blatt__text{margin:0 0 10px;color:var(--text,#efe6d2);font-size:clamp(13px,1.9vh,15px);line-height:1.5}
+.arcade-blatt__werte{
+  margin:0 0 12px;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.arcade-blatt__werte li{
+  background:var(--buehne,#08120f);border:1px solid var(--rand-3,#d9bc7c33);border-radius:7px;
+  padding:6px 8px;display:flex;flex-direction:column;gap:1px}
+.arcade-blatt__werte .wert{font-weight:700;color:var(--hell,#f4e6c2);font-variant-numeric:tabular-nums}
+.arcade-blatt__werte .was{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#a9c3b6)}
+.arcade-blatt__knoepfe{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+
+/* ---------------------------------------------------------------- Schmale Geräte */
+
+@media (max-width:640px){
+  .arcade-start__inhalt{grid-template-columns:1fr}
+  .arcade-start__infos{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .arcade-start__infos li{padding:5px 6px}
+  .arcade-start__titel{font-size:clamp(30px,9vh,52px)}
+  .arcade-start__marke{letter-spacing:.2em}
+}
+
+/* Wenig Höhe im Hochformat: gleiche Bausteine, engere Abstände. */
+@media (orientation:portrait) and (max-height:880px){
+  .arcade-start{gap:5px;padding:8px 12px}
+  .arcade-start__titel{font-size:clamp(26px,6.4vh,40px)}
+  .arcade-start__unterzeile{font-size:11px;margin-top:2px}
+  .arcade-start__inhalt{gap:6px}
+  .arcade-start__text{font-size:12px;line-height:1.35}
+  .arcade-start__steuerung li{font-size:12px;padding:1px 0}
+  .arcade-start__infos{gap:4px}
+  .arcade-start__infos li{padding:4px 6px}
+  .arcade-start__infos .wert{font-size:14px}
+  .arcade-knopf--haupt{padding:10px 22px}
+}
+
+/* Querformat mit wenig Höhe: Titel links, Inhalt in der Mitte, STARTEN rechts.
+   So bleibt der Startbildschirm ohne Scrollen bedienbar. */
+@media (orientation:landscape) and (max-height:620px){
+  .arcade-start{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) auto;
+    grid-template-areas:"kopf inhalt knoepfe" "text text text" "fussnote fussnote fussnote";
+    align-items:center;gap:6px 14px;padding:8px 14px}
+  .arcade-start__kopf{grid-area:kopf;text-align:left}
+  .arcade-start__titel{font-size:clamp(24px,7vh,40px)}
+  .arcade-start__unterzeile{font-size:11px}
+  .arcade-start__inhalt{grid-area:inhalt;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:10px}
+  .arcade-start__text{grid-area:text;font-size:11px;line-height:1.3;text-align:left}
+  .arcade-start__knoepfe{grid-area:knoepfe}
+  .arcade-start__fussnote{grid-area:fussnote;text-align:left}
+  .arcade-start__steuerung li{font-size:11px;padding:1px 0}
+  .arcade-start__infos{gap:4px}
+  .arcade-start__infos li{padding:4px 6px}
+  .arcade-start__infos .wert{font-size:14px}
+  .arcade-knopf--haupt{padding:9px 20px;font-size:15px}
+  .arcade-szene{max-height:20vh}
+  .arcade-blatt__titel{font-size:20px}
+  .arcade-blatt__text{font-size:12px;margin-bottom:6px}
+  .arcade-blatt__werte{margin-bottom:8px}
+}
+
+/* Volle Höhe im Vollbild: Rand weg, Startbildschirm darf atmen */
+:fullscreen .arcade-start,.ist-vollbild .arcade-start{border-radius:0}

@@ -5,6 +5,105 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Frogger: Vollbild, Feldmaß und eigener Startbildschirm
+
+`spiele/frogger/frogger.html` neu aufgebaut; Spielregeln, Leveldaten, Tempi,
+Zeit, Punkte und Speicherschlüssel (`frogger-rekord`, `frogger-erreicht`)
+unverändert. Neu daneben: `spiele/spiel-start.css` und `spiele/spiel-start.js`
+als gemeinsames Gerüst für weitere Spiele (siehe
+[`SPIELE-SCHNITTSTELLE.md`](SPIELE-SCHNITTSTELLE.md), Abschnitt 9).
+
+- **Vollbild** lag vorher gar nicht vor. Jetzt übernimmt `TGSpiel.vollbild`
+  echtes Fullscreen auf `#app`, auf iPhone/Safari ersatzweise ein randloses
+  Pseudo-Vollbild mit derselben Bedienung. Der Knopf zeigt Zustand
+  (`aria-pressed`, Beschriftung „Vollbild beenden“, Symbol ⤡), Escape beendet
+  den Modus, ein zweiter Klick ebenso. Nach dem Aussteigen wird die Darstellung
+  über `fullscreenchange` neu berechnet und die Fußzeile wieder eingeblendet.
+- **Feldmaß:** Das Feld war 744 px hoch (quadratisch, aber höher als der
+  Bildschirm) und schob die Bedienleisten aus dem Bild. `TGSpiel.feldPassen`
+  misst jetzt den freien Platz der Bühne (ResizeObserver, `resize`,
+  `orientationchange`, `visualViewport`, Vollbildwechsel) und setzt nur die
+  CSS-Größe; gezeichnet wird weiter in 416×416, scharf über einen
+  DPR-Backing-Store (`ctx.setTransform`). Gemessen: 553 px bei 1280×800,
+  832 px bei 1920×1080, 565 px im Vollbild, 344 px bei 390×844, 314 px bei
+  360×640, 410 px bei 1024×600, 200 px bei 844×390 – überall quadratisch,
+  vollständig sichtbar, ohne Seiten-Scrollen.
+- **Startbildschirm** ist kein Overlay über dem Feld mehr: Er besetzt die
+  Fläche zwischen Kopfleiste und Menü (Rasterbereich `start`), HUD, Feld und
+  D-Pad sind so lange ausgeblendet. Inhalt: großer Titel, SVG-Szene aus Straße,
+  Fluss und Frosch, Kurzbeschreibung, Steuerungshilfen, sechs Spielinfos
+  (Level, Leben, Zeit, Buchten, Levelanzahl, Rekord), hervorgehobener
+  STARTEN-Knopf, Hinweis zur Levelwahl. Passt ohne internes Scrollen: 693/693
+  bei 390×844, 489/489 bei 360×640, 282/282 bei 844×390, 492/492 bei
+  1024×600, 895/895 bei 768×1024.
+- **Gestaltung:** Arcade-Kopfleiste mit LED und Vollbild-Knopf, HUD-Chips mit
+  Ziffern in Tabellenbreite, Rahmen mit Schrauben und Innenlicht, Menüleiste,
+  D-Pad, Raster- und Vignettenebene über der Seite, Pause-/Level-/Game-over-
+  Karten im selben Blattstil. Alle drei Grafstile (klassisch, maedchen, buben)
+  mit eigenen neuen Tokens (`--akzent`, `--hud-*`, `--knopf-*`, `--rahmen-a/b`,
+  `--gefahr`, `--glanz`).
+- **Einbindung unverändert:** Katalogeintrag in `spiel-daten`/`spieldaten.js`,
+  Öffnen über Connector-Rahmen oder eigenen Tab, Rückweg über
+  `zurueck.js` (`data-ziel=".kopf" data-vor=".kopf-rechts"`) mit
+  `postMessage {tg:'spiel', art:'verlassen'}`. Keine zweite Einbindungslogik,
+  keine Änderung an `multiplayer-register.js` oder `halle-online.js`.
+- **Tastatur:** Pfeile/WASD, P für Pause, Leertaste/Enter nur ohne
+  fokussiertes Bedienelement; Escape schließt zuerst Regelblatt oder Pause und
+  beendet erst danach (bzw. im Vollbild zuerst) den Vollbildmodus. Das
+  Regelblatt merkt sich, ob es die Partie angehalten hat, und setzt nur dann
+  fort.
+- **Geprüft** (Chromium, 118 Prüfungen grün, `arbeit/tmp/frogger_pruefen.js`):
+  Startbildschirm und Spielstart, Zeit läuft, Pfeiltaste bewegt den Frosch,
+  Pause über P, Weiter, Escape schließt Pause und Regelblatt, Level neu,
+  Vollbild an/aus per Knopf und per Escape inklusive Knopfzustand und
+  Wiederherstellung, Pseudo-Vollbild auf dem iPhone-Pfad, sechs Bildschirm-
+  größen (Start und Spiel), Game over über eine Testkopie mit 2 s Zeit und
+  einem Leben, Neustart, Connector-Rahmen mit Zurück-Meldung, 0 Konsolenfehler.
+
+## 26.11.2026 · Super Pimmelchen: Schnittstelle 1.1.0 (stop/pause/resume, :ende, feste Fehlercodes)
+
+`spiele/pimmel/spimmel.html` (beide Ablagen byte-gleich): Die Startschnittstelle
+ist auf **1.1.0** gehoben – `stop()`, `pause()`, `resume()` ergänzt, dazu das
+Ereignis `superpimmelchen:ende` mit `{grund, punkte, level, levelAnzahl, tick}`
+und ein übertragbarer `zustand()` (`tick`, `richtung`, `extras`). Der Vertrag
+steht in [`SPIELE-SCHNITTSTELLE.md`](SPIELE-SCHNITTSTELLE.md).
+
+- **Validierung streng:** nur `stufe` und `level`, nur echte Typen,
+  `hasOwnProperty` statt `in`, unbekannte Felder abgelehnt. Feste Codes:
+  `spiel-nicht-bereit`, `konfiguration-muss-objekt-sein`, `unbekanntes-feld`
+  (Antwort nennt `feld`), `stufe-muss-text-sein`, `unbekannte-stufe`,
+  `level-muss-1-bis-61-sein`, `spiel-laeuft`, `spiel-laeuft-nicht`.
+- **Tastatur:** Leertaste und Enter starten nur, wenn **kein Bedienelement**
+  fokussiert ist; auf Knopf, Auswahl oder Feld löst der Browser selbst aus
+  (`button, select, input, textarea, a[href], [contenteditable]`). Gemessen mit
+  echten Tastendrücken (15 Prüfungen, `arbeit/tmp/pimmel_tastatur_pruefen.js`):
+  ohne Fokus starten Enter und Leertaste, im Level-Feld nicht (Fokus bleibt am
+  Feld), HIGHSCORE öffnet mit beiden Tasten den Dialog statt der Partie,
+  VOLLBILD startet nicht, „SPIEL STARTEN“ startet mit beiden, im Spiel feuert
+  die Leertaste weiter, „WEITERSPIELEN“ setzt mit Leertaste fort.
+- **Pause ohne Partie:** `pauseGame()` prüft den Zustand – `zustand().pausiert`
+  steht auf dem Startbildschirm nicht mehr auf `true`.
+- **Gemessen** (Chromium, 41 Prüfungen grün, `arbeit/tmp/pimmel_p1_p5_pruefen.js`):
+  `{level:true}`, `{level:'12'}`, `{level:12.5}`, `{level:null}` →
+  `level-muss-1-bis-61-sein`; `{stufe:3}` und `{stufe:null}` →
+  `stufe-muss-text-sein`; `{farbe:'blau'}` → `unbekanntes-feld` (Feld `farbe`);
+  Zustand danach unverändert. `tick` zählt Züge (0 → 4 nach vier Tasten),
+  `pause()` hält Uhr und tick (120/4 → 120/4), `resume()` läuft weiter
+  (120 → 118), `stop()` setzt `laeuft:false` und `startbildschirm:true`,
+  `pause()`/`resume()` ohne Partie → `spiel-laeuft-nicht`. Enter auf HIGHSCORE
+  öffnet den Dialog (vorher startete die Partie), Leertaste ohne Fokus startet
+  nicht und feuert im Spiel weiter, 50 Startaufrufe → 0 Starts, P-Taste schaltet
+  genau einmal, `blur` auf dem Startbildschirm setzt `pausiert` nicht,
+  `zustand()` bleibt Kopie, 0 Konsolenfehler.
+- **`:ende`** gemessen an einer Testkopie außerhalb des Repos (nur `start()`
+  mit `lives = 1`, sonst unverändert): Selbstkollision nach `tick 56` →
+  `{grund:'verloren', punkte:560, level:1, levelAnzahl:61, tick:56}`, danach
+  `laeuft:false`, `startbildschirm:true`. Der Zweig „gewonnen" ruft dieselbe
+  Funktion (`meldeEnde('gewonnen')`).
+- Leveldaten unverändert (Levelblock 36 221 Zeichen, sha256 `0856654…` vor und
+  nach der Änderung gleich), Spielablauf und Speicherschlüssel unangetastet.
+  Die Einzeldatei bleibt bei Schnittstelle 1.0.0.
+
 ## 26.11.2026 · Super Pimmelchen: eigener Startbildschirm + Startschnittstelle
 
 `spiele/pimmel/spimmel.html` (beide Ablagen byte-gleich): Beim Öffnen erscheint

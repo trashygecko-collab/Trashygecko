@@ -77,6 +77,25 @@ Kein Build. Syntax prüfen: Skript aus der HTML in eine `.js` extrahieren und
 - Nach jeder Arbeit: `ENTWICKLUNGSSTAND.md` fortschreiben, Testergebnisse in
   `PRUEFBERICHT-ANDROID.md` – nur wirklich ausgeführte Tests.
 
+### Spielschnittstelle (`SPIELE-SCHNITTSTELLE.md`)
+
+- **Jedes Spiel** bietet `window.<SpielName>` mit `version`, `bereit`, `start()`,
+  `stop()`, `pause()`, `resume()`, `einstellungen()`, `zustand()`,
+  `startbildschirm()`.
+- **Kein Spiel spricht selbst mit dem Server.** Räume, Namen, Start und Ende
+  koordiniert der Konnektor; Spiele kennen keine Räume, keine Spieler-IDs und
+  keine `/api/`-Rufe.
+- **Nur bekannte Felder, feste Fehlercodes:** falsche Typen und unbekannte
+  Felder werden mit `{ok:false, fehler:'…'}` abgelehnt, der Spielzustand bleibt
+  dabei unverändert.
+- **Ereignisse statt Pollen:** `…:bereit` und `…:ende` (mit Ergebnis) sind
+  Pflicht, `zustand()` liefert nur Kopien.
+- **Leertaste und Enter starten nur ohne fokussiertes Bedienelement**; steht der
+  Fokus auf Knopf, Auswahl oder Feld, löst der Browser selbst aus.
+- **Vorbild:** `spiele/pimmel/spimmel.html` (Schnittstelle 1.1.0);
+  `Super-Pimmelchen-61-Level-Einzeldatei.html` bleibt eingefrorene
+  Sonderfassung 1.0.0 und wird nicht nachgezogen.
+
 ## 5. Fallen, die schon zugeschlagen haben
 
 - **Debug-APK über release-signierte Installation** → `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.

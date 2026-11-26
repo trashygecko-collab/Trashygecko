@@ -2,9 +2,11 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b241d">
 <title>Frogger</title>
+<link rel="stylesheet" href="../schrift.css">
+<link rel="stylesheet" href="../spiel-start.css">
 <style>
 :root{
 /* Token-Ebene. Klassisch sind genau die alten Farben. */
@@ -15,6 +17,11 @@
 --hell:#f4e6c2;--muted:#a9c3b6;--regeln:#d8d2bf;--meldung-text:#d8edd8;
 --rand:#d9bc7c;--rand-1:#d9bc7c66;--rand-2:#d9bc7c44;--rand-3:#d9bc7c33;--rand-4:#d9bc7c22;
 --schatten:#00000055;--schatten-tief:#00000088;
+/* Neu für den Arcade-Rahmen */
+--akzent:#8fe3a8;--akzent-2:#5ecf8b;--gefahr:#ff7a5c;--glanz:#ffffff22;
+--hud-1:#0d2a22;--hud-2:#071a14;--hud-rand:#2f6b5499;
+--knopf-text:#08221b;--knopf-1:#f1dca8;--knopf-2:#c9a95f;
+--rahmen-a:#2f6b54;--rahmen-b:#0a211b;
 /* Feld: der Zeichencode liest genau diese. */
 --fr-hecke-1:#123527;--fr-hecke-2:#1b4a39;--fr-blatt-1:#19432f;
 --fr-blatt-2:#21573c;--fr-hecksch:#0c2a1f88;--fr-ufer-1:#2c6242;
@@ -57,6 +64,10 @@ html[data-stil="maedchen"]{
 --rand:#ef7aa8;--rand-1:#ef7aa866;--rand-2:#ef7aa844;--rand-3:#ef7aa833;--rand-4:#ef7aa822;
 --schatten:#8f245033;--schatten-tief:#8f245055;
 --pad:#ffeaf3;
+--akzent:#b0286a;--akzent-2:#c94f92;--gefahr:#d11d5c;--glanz:#ffffff88;
+--hud-1:#ffeaf3;--hud-2:#ffd0e4;--hud-rand:#ef7aa866;
+--knopf-text:#3a0f24;--knopf-1:#ff9cc4;--knopf-2:#e0559a;
+--rahmen-a:#ffb8d4;--rahmen-b:#a8e6b0;
 --fr-hecke-1:#ffd0e4;--fr-hecke-2:#ffb8d4;--fr-blatt-1:#e0559a;
 --fr-blatt-2:#ef7aa8;--fr-hecksch:#8f245055;--fr-ufer-1:#a8e6b0;
 --fr-ufer-2:#7fd39a;--fr-gras:#2a8f6a66;--fr-streifen:#8f245033;
@@ -98,6 +109,10 @@ html[data-stil="buben"]{
 --rand:#e0242f;--rand-1:#e0242f66;--rand-2:#e0242f44;--rand-3:#e0242f33;--rand-4:#e0242f22;
 --schatten:#00000088;--schatten-tief:#000000cc;
 --pad:#151b22;
+--akzent:#c8ff3d;--akzent-2:#4de0ff;--gefahr:#ff5a6a;--glanz:#c8ff3d33;
+--hud-1:#111316;--hud-2:#0a0d10;--hud-rand:#c8ff3d44;
+--knopf-text:#0a0d10;--knopf-1:#c8ff3d;--knopf-2:#8fd400;
+--rahmen-a:#1c2530;--rahmen-b:#04070b;
 --fr-hecke-1:#08140f;--fr-hecke-2:#0e2418;--fr-blatt-1:#1b3a2a;
 --fr-blatt-2:#24503a;--fr-hecksch:#00000055;--fr-ufer-1:#123024;
 --fr-ufer-2:#0a1f17;--fr-gras:#6dff4a44;--fr-streifen:#00000066;
@@ -132,126 +147,369 @@ html[data-stil="buben"]{
 }
 
 *{box-sizing:border-box}
-[hidden]{display:none !important}
-body{margin:0;padding:6px 6px 18px;
- background:radial-gradient(circle 900px at 50% -6%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
- color:var(--text);font:15px var(--tg-schrift);
- -webkit-tap-highlight-color:transparent;user-select:none;overflow-x:hidden}
-main{max-width:760px;margin:auto}
+html,body{height:100%}
+body{margin:0;height:100dvh;overflow:hidden;
+ background:radial-gradient(circle 1100px at 50% -10%,var(--bg-1) 0%,var(--bg-2) 46%,var(--bg-3) 100%) fixed;
+ color:var(--text);font:15px/1.4 var(--tg-schrift);
+ -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
+ padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* Raster und Vignette: der Automat, nicht die Webseite. */
+body::before{content:"";position:fixed;inset:0;z-index:20;pointer-events:none;
+ background:repeating-linear-gradient(180deg,#00000000 0 3px,#0000001f 3px 4px);opacity:.45}
+body::after{content:"";position:fixed;inset:0;z-index:20;pointer-events:none;
+ background:radial-gradient(115% 85% at 50% 45%,#00000000 45%,#00000099 100%)}
 
-.fenster{border:1px solid var(--rand-1);border-radius:8px;overflow:hidden;background:var(--panel);
- box-shadow:0 6px 18px var(--schatten)}
-.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
- padding:7px 10px;background:linear-gradient(var(--kopf),var(--kopf-2));border-bottom:1px solid var(--rand-2)}
-.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.06em}
-.titelleiste .kreuz{color:var(--gold);border:1px solid var(--rand-1);border-radius:4px;
- width:22px;height:20px;line-height:17px;text-align:center;font-size:12px;background:var(--leiste)}
+.app{position:relative;z-index:1;display:grid;height:100%;max-width:1180px;margin:0 auto;padding:8px;gap:8px;
+ grid-template-columns:minmax(0,1fr);
+ grid-template-rows:auto auto minmax(0,1fr) auto auto auto;
+ grid-template-areas:"kopf" "hud" "buehne" "menu" "pad" "fuss"}
+.kopf{grid-area:kopf}.hud{grid-area:hud}.buehne{grid-area:buehne}
+.menueleiste{grid-area:menu}.pad{grid-area:pad}.fuss{grid-area:fuss}
 
-.menueleiste{display:flex;gap:6px;flex-wrap:wrap;padding:7px 8px;background:var(--leiste);
- border-bottom:1px solid var(--rand-3)}
-.menueleiste button{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:6px;
- border:1px solid var(--rand-1);background:var(--panel);color:var(--gold);cursor:pointer}
-.menueleiste button:hover{background:var(--hover)}
-.menueleiste select{font-family:inherit;font-size:13px;padding:7px 8px;border-radius:6px;
+/* Der Startbildschirm bekommt die ganze Fläche zwischen Kopfleiste und Menü –
+   nicht nur das Spielfeld mit einem Knopf darüber. */
+#startbildschirm{position:relative;inset:auto;grid-area:start}
+body.zeigt-start .app{grid-template-rows:auto minmax(0,1fr) auto;
+ grid-template-areas:"kopf" "start" "menu"}
+body.zeigt-start .hud,body.zeigt-start .buehne,body.zeigt-start .pad,body.zeigt-start .fuss{display:none}
+
+/* ------------------------------------------------------------ Kopfleiste */
+
+.kopf{display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:11px;
+ background:linear-gradient(180deg,var(--kopf),var(--kopf-2) 60%,var(--leiste));
+ border:1px solid var(--rand-1);
+ box-shadow:0 8px 20px var(--schatten),inset 0 1px 0 var(--glanz)}
+.marke{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto}
+.kopf .tg-zurueck{flex:0 0 auto}
+.led{width:8px;height:8px;border-radius:50%;background:var(--akzent);
+ box-shadow:0 0 10px var(--akzent),0 0 2px #fff inset;animation:puls 2.6s ease-in-out infinite}
+@keyframes puls{0%,100%{opacity:1}50%{opacity:.45}}
+.marke-titel{margin:0;font-size:clamp(15px,2.3vh,21px);line-height:1.1;letter-spacing:.24em;
+ text-transform:uppercase;color:var(--hell);font-weight:700;
+ text-shadow:0 2px 0 var(--schatten-tief),0 0 16px var(--gold)44}
+.marke-tag{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
+ border:1px solid var(--rand-1);border-radius:4px;padding:2px 6px;white-space:nowrap}
+.kopf-rechts{display:flex;align-items:center;gap:8px;margin-left:auto}
+
+.knopf{font:inherit;font-size:12px;letter-spacing:.06em;padding:7px 11px;border-radius:8px;cursor:pointer;
+ color:var(--gold);background:linear-gradient(180deg,var(--panel),var(--leiste));
+ border:1px solid var(--rand-1);box-shadow:0 2px 0 var(--schatten-tief),inset 0 1px 0 var(--glanz);
+ transition:background .15s,transform .08s,box-shadow .08s;white-space:nowrap}
+.knopf:hover{background:var(--hover)}
+.knopf:active{transform:translateY(2px);box-shadow:0 0 0 var(--schatten-tief),inset 0 2px 5px #00000055}
+.knopf:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.vollbild{display:inline-flex;align-items:center;gap:6px;min-height:34px;font-weight:700}
+.vollbild .vb-symbol{font-size:14px;line-height:1}
+
+/* ------------------------------------------------------------ Spielstand */
+
+.hud{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:1px}
+.hud::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;min-width:58px;padding:3px 9px 4px;border-radius:8px;
+ background:linear-gradient(180deg,var(--hud-1),var(--hud-2));
+ border:1px solid var(--hud-rand);box-shadow:inset 0 1px 0 var(--glanz)}
+.chip-label{display:block;font-size:9px;letter-spacing:.17em;text-transform:uppercase;color:var(--muted)}
+.chip b{font-size:clamp(14px,2.1vh,18px);line-height:1.15;color:var(--gold-hell);
+ font-variant-numeric:tabular-nums;letter-spacing:.05em}
+.chip--punkte{min-width:92px}
+.chip--punkte b{color:var(--akzent-2)}
+.chip b.knapp{color:var(--gefahr);animation:blinken 1s steps(2,end) infinite}
+@keyframes blinken{50%{opacity:.35}}
+
+/* ------------------------------------------------------------ Bühne */
+
+.buehne{position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
+.rahmen{position:relative;display:inline-flex;padding:10px;border-radius:15px;
+ background:linear-gradient(158deg,var(--rahmen-a),var(--rahmen-b) 72%);
+ border:2px solid var(--rand-2);
+ box-shadow:0 14px 34px var(--schatten-tief),inset 0 0 0 1px var(--glanz)}
+.rahmen::after{content:"";position:absolute;inset:5px;border-radius:11px;pointer-events:none;
+ box-shadow:inset 0 0 24px #00000088}
+canvas{display:block;border-radius:7px;touch-action:none;background:#04100c;
+ box-shadow:0 0 0 1px var(--rand-3),inset 0 0 36px #000000aa}
+.schraube{position:absolute;width:7px;height:7px;border-radius:50%;z-index:2;
+ background:radial-gradient(circle at 35% 30%,var(--hell),var(--rahmen-b));
+ box-shadow:inset 0 0 0 1px #00000077,0 1px 0 #ffffff22}
+.e1{top:5px;left:5px}.e2{top:5px;right:5px}.e3{bottom:5px;left:5px}.e4{bottom:5px;right:5px}
+
+/* ------------------------------------------------------------ Menü und Steuerung */
+
+.menueleiste{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px;border-radius:10px;
+ background:linear-gradient(180deg,var(--leiste),var(--panel));
+ border:1px solid var(--rand-3);box-shadow:inset 0 1px 0 var(--glanz)}
+.wahl{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.12em;
+ text-transform:uppercase;color:var(--muted)}
+.wahl select{font:inherit;font-size:12px;letter-spacing:.04em;padding:6px 8px;border-radius:7px;
  border:1px solid var(--rand-1);background:var(--panel);color:var(--gold)}
+.menueleiste .knopf{flex:0 0 auto}
 
-.statuszeile{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;
- padding:6px 10px;font-size:13px;color:var(--muted);background:var(--leiste);border-bottom:1px solid var(--rand-4)}
-.statuszeile b{color:var(--gold);font-weight:normal}
-
-.buehne{position:relative;padding:8px;display:flex;justify-content:center;background:var(--buehne)}
-canvas{display:block;width:100%;height:auto;border-radius:8px;touch-action:none;
- box-shadow:inset 0 0 40px var(--schatten-tief)}
-
-.meldung{position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
- background:#04100ccc;border-radius:8px;padding:14px;text-align:center}
-.meldung .kasten{background:var(--panel);border:1px solid var(--rand);border-radius:10px;padding:16px 18px;max-width:320px}
-.meldung h2{margin:0 0 6px;color:var(--gold-hell);font-weight:normal;letter-spacing:.14em;font-size:19px}
-.meldung p{margin:0 0 12px;color:var(--meldung-text);font-size:14px;line-height:1.5}
-.meldung button{font-family:inherit;font-size:15px;padding:10px 16px;border-radius:7px;cursor:pointer;
- border:1px solid var(--rand);background:var(--gold);color:var(--leiste);font-weight:bold}
-
-.pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
- gap:6px;justify-content:center;padding:8px 8px 4px;background:var(--buehne)}
-.pad button{font-family:inherit;font-size:20px;border-radius:8px;cursor:pointer;
- border:1px solid var(--rand-1);background:var(--pad);color:var(--gold)}
-.pad button:active{background:var(--kopf)}
+.pad{display:none;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,48px);gap:6px;justify-content:center}
+.pad button{font:inherit;font-size:19px;border-radius:9px;cursor:pointer;color:var(--gold);
+ border:1px solid var(--rand-1);background:linear-gradient(180deg,var(--pad),var(--leiste));
+ box-shadow:0 3px 0 var(--schatten-tief),inset 0 1px 0 var(--glanz);touch-action:none}
+.pad button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--schatten-tief),inset 0 2px 6px #00000044}
 .pad .oben{grid-column:2;grid-row:1}
 .pad .links{grid-column:1;grid-row:2}
 .pad .runter{grid-column:2;grid-row:2}
 .pad .rechts{grid-column:3;grid-row:2}
+@media (any-pointer:coarse){.pad{display:grid}}
 
-.fuss{padding:6px 10px;font-size:13px;color:var(--muted);min-height:28px}
+.fuss{display:flex;align-items:center;justify-content:space-between;gap:10px;
+ font-size:11px;color:var(--muted);padding:0 3px;min-height:15px}
+.fuss a{color:var(--gold);text-decoration:none}
+.fuss a:hover{text-decoration:underline}
+body.vollbild-an .fuss{display:none}
 
-#regeln{margin-top:12px;padding:0 10px 10px}
-#regeln summary{cursor:pointer;color:var(--gold);font-size:14px;padding:6px 0}
-#regeln ol{margin:0;padding-left:18px;line-height:1.55;font-size:13px;color:var(--regeln)}
-#regeln li{margin-bottom:5px}
-#regeln b{color:var(--gold-hell);font-weight:normal}
-.klein{color:var(--muted);font-size:13px}
-a{color:var(--gold)}
-.mitte{text-align:center}
+/* ------------------------------------------------------------ Startbildschirm (Frogger-Teile) */
+
+.startbildschirm{border-radius:12px}
+.start-szene{display:block;width:min(100%,420px);height:auto;margin:0 auto;border-radius:8px;
+ box-shadow:0 6px 18px var(--schatten)}
+.start-bild{margin:0;align-self:center}
+/* Auf flachen Geräten bleibt die Szene als Streifen erhalten, statt Platz zu kosten. */
+@media (max-height:760px){
+ .start-szene{max-height:78px;width:auto;max-width:100%}
+ .start-bild{justify-self:center}
+}
+@media (max-height:600px){.start-szene{display:none}}
+/* Ganz flach (Telefon quer): die Szene weicht, Titel und Infos bleiben. */
+@media (orientation:landscape) and (max-height:460px){.start-bild{display:none}}
+
+/* ------------------------------------------------------------ Overlays */
+
+.meldung{position:absolute;inset:0;z-index:5;display:flex;padding:8px;
+ background:var(--schleier);backdrop-filter:blur(3px);border-radius:10px}
+.regeln-blatt{position:absolute;inset:0;z-index:6;display:flex;padding:8px;
+ background:var(--schleier);backdrop-filter:blur(3px);border-radius:10px}
+.regeln-blatt .arcade-blatt{text-align:left;max-width:min(520px,96%)}
+.regeln-blatt h2{text-align:center}
+.regeln-blatt ol{margin:0 0 12px;padding-left:20px;line-height:1.5;font-size:13px;color:var(--regeln)}
+.regeln-blatt li{margin-bottom:6px}
+.regeln-blatt b{color:var(--gold-hell);font-weight:700}
+.regeln-blatt .arcade-blatt__knoepfe{justify-content:center}
+
+/* ------------------------------------------------------------ Vollbild */
+
+.app:fullscreen{height:100%;max-width:none;padding:10px;border-radius:0;background:var(--bg-3)}
+body.ist-vollbild .app{position:fixed;inset:0;height:100dvh;max-width:none;z-index:30;padding:8px}
+body.ist-vollbild .fuss{display:none}
+
+/* ------------------------------------------------------------ Querformat flach */
+
+@media (orientation:landscape) and (max-height:620px){
+ .app{grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"kopf kopf" "hud hud" "buehne pad" "menu menu";
+  gap:6px;padding:6px}
+ body.zeigt-start .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"kopf" "start" "menu"}
+ .kopf{padding:4px 9px}
+ .pad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(2,42px);align-content:center}
+ .menueleiste{padding:4px}
+ .fuss{display:none}
+ .marke-titel{letter-spacing:.18em}
+ .marke-tag{display:none}
+ .chip{padding:2px 7px}
+ .chip b{font-size:13px}
+ .knopf{padding:5px 8px;font-size:11px}
+ .menueleiste .knopf{padding:5px 8px}
+}
+
+/* ------------------------------------------------------------ Sehr schmal */
+
+@media (max-width:420px){
+ .app{padding:6px;gap:6px}
+ .chip{min-width:52px;padding:2px 7px}
+ .chip-label{font-size:8px}
+ .menueleiste .knopf{font-size:11px;padding:6px 7px}
+ .marke-titel{font-size:14px;letter-spacing:.14em}
+ .marke-tag{display:none}
+ .kopf{gap:6px;padding:6px 8px}
+ .kopf .tg-zurueck{font-size:10px;padding:3px 6px}
+}
 </style>
 <script src="../stil.js"></script>
-<link rel="stylesheet" href="../schrift.css">
+<script src="../spiel-start.js"></script>
 </head>
 <body>
-<main class="fenster">
 
- <div class="menueleiste">
-  <button id="btnNeu">Neues Spiel</button>
-  <select id="levelWahl" aria-label="Level wählen"></select>
-  <button id="btnNochmal">Level neu</button>
-  <button id="btnPause">Pause</button>
- </div>
+<div class="app" id="app">
 
- <div class="statuszeile">
-  <span>Punkte <b id="punkte">0</b></span>
-  <span>Level <b id="level">1</b></span>
-  <span>Leben <b id="leben">●●●</b></span>
-  <span>Zeit <b id="zeit">35</b></span>
-  <span>Buchten <b id="buchtenStand">0/5</b></span>
-  <span>Rekord <b id="rekord">0</b></span>
- </div>
+ <header class="kopf">
+  <div class="marke">
+   <span class="led" aria-hidden="true"></span>
+   <h1 class="marke-titel">Frogger</h1>
+   <span class="marke-tag">Arcade</span>
+  </div>
+  <div class="kopf-rechts">
+   <button type="button" class="knopf vollbild" id="btnVollbild" aria-pressed="false" title="Vollbild einschalten">
+    <span class="vb-symbol" aria-hidden="true">⛶</span><span class="vb-text">Vollbild</span>
+   </button>
+  </div>
+ </header>
 
- <div class="buehne">
-  <canvas id="feld" width="416" height="416"></canvas>
-  <div class="meldung" id="meldung">
-   <div class="kasten">
-    <h2 id="meldungTitel">FROGGER</h2>
-    <p id="meldungText">Bring den Frosch über Straße und Fluss in eine der fünf Buchten oben.</p>
-    <button id="meldungKnopf">Starten</button>
-   </div>
+ <section class="hud" aria-label="Spielstand">
+  <div class="chip chip--punkte"><span class="chip-label">Punkte</span><b id="punkte">0</b></div>
+  <div class="chip"><span class="chip-label">Level</span><b id="level">1</b></div>
+  <div class="chip"><span class="chip-label">Leben</span><b id="leben">●●●</b></div>
+  <div class="chip"><span class="chip-label">Zeit</span><b id="zeit">35</b></div>
+  <div class="chip"><span class="chip-label">Buchten</span><b id="buchtenStand">0/5</b></div>
+  <div class="chip"><span class="chip-label">Rekord</span><b id="rekord">0</b></div>
+ </section>
+
+ <div class="buehne" id="buehne">
+  <div class="rahmen" id="rahmen">
+   <span class="schraube e1" aria-hidden="true"></span>
+   <span class="schraube e2" aria-hidden="true"></span>
+   <span class="schraube e3" aria-hidden="true"></span>
+   <span class="schraube e4" aria-hidden="true"></span>
+   <canvas id="feld" width="416" height="416" role="img"
+    aria-label="Frogger-Spielfeld: oben fünf Buchten, darunter Fluss mit Baumstämmen und Schildkröten, dann Straße mit Autos und Lastwagen, unten die Startwiese"></canvas>
+  </div>
+
+  <div class="meldung" id="meldung" hidden>
+   <section class="arcade-blatt" role="dialog" aria-modal="true" aria-labelledby="meldungTitel" data-esc-sperre>
+    <h2 class="arcade-blatt__titel" id="meldungTitel">Game over</h2>
+    <p class="arcade-blatt__text" id="meldungText"></p>
+    <ul class="arcade-blatt__werte" id="meldungWerte"></ul>
+    <div class="arcade-blatt__knoepfe" id="meldungKnoepfe"></div>
+   </section>
+  </div>
+
+  <div class="regeln-blatt" id="regelnBlatt" hidden>
+   <section class="arcade-blatt" role="dialog" aria-modal="true" aria-labelledby="regelnTitel" data-esc-sperre>
+    <h2 class="arcade-blatt__titel" id="regelnTitel">Regeln</h2>
+    <ol>
+     <li><b>Ziel:</b> Den Frosch von unten nach oben bringen und in eine der fünf Buchten setzen. Jede Bucht gibt 50 Punkte plus Zeitbonus, alle fünf zusammen bringen das nächste Level.</li>
+     <li><b>Steuern:</b> Mit dem Finger über das Feld wischen oder das Pfeilfeld unter dem Brett benutzen, am PC auch die Pfeiltasten oder WASD. Jeder Satz geht genau ein Feld.</li>
+     <li><b>Straße:</b> Autos und Lastwagen dürfen den Frosch nicht berühren.</li>
+     <li><b>Fluss:</b> Der Frosch kann nicht schwimmen – er muss auf Baumstämmen und Schildkröten mitfahren und darf dabei nicht ins Wasser oder an den Rand geraten.</li>
+     <li><b>Zeit:</b> Pro Leben laufen 35 Sekunden. Läuft die Zeit ab, ist ein Leben weg. Drei Leben pro Spiel, jedes erreichte Ziel bringt die Zeit zurück.</li>
+     <li><b>Level:</b> Zwölf Level mit eigener Verkehrslage; jedes geschaffte Level wird freigeschaltet und bleibt über die Auswahl in der Leiste spielbar. Nach dem Sieg startet das nächste Level automatisch.</li>
+     <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+    </ol>
+    <div class="arcade-blatt__knoepfe">
+     <button type="button" class="arcade-knopf arcade-knopf--haupt" id="regelnKnopf">Weiterspielen</button>
+    </div>
+   </section>
   </div>
  </div>
 
- <div class="pad">
-  <button class="oben" data-dir="hoch">▲</button>
-  <button class="links" data-dir="links">◀</button>
-  <button class="runter" data-dir="runter">▼</button>
-  <button class="rechts" data-dir="rechts">▶</button>
+  <section class="startbildschirm arcade-start" id="startbildschirm" aria-label="Startbildschirm">
+   <div class="arcade-start__kopf">
+    <p class="arcade-start__marke">Arcade · 1 Spieler · Highscore</p>
+    <h1 class="arcade-start__titel">Frogger</h1>
+    <p class="arcade-start__unterzeile">Bring den Frosch nach Hause</p>
+   </div>
+
+   <div class="arcade-start__inhalt">
+    <figure class="start-bild">
+     <svg class="start-szene" viewBox="0 0 420 84" role="img" aria-label="Straße, Fluss und ein Frosch auf einem Baumstamm">
+      <defs>
+       <linearGradient id="fs-wasser" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#155a72"/><stop offset="1" stop-color="#0a2f40"/>
+       </linearGradient>
+       <linearGradient id="fs-strasse" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2a2e31"/><stop offset="1" stop-color="#121416"/>
+       </linearGradient>
+       <linearGradient id="fs-holz" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#a87a49"/><stop offset="1" stop-color="#5f4023"/>
+       </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="420" height="34" rx="6" fill="url(#fs-wasser)"/>
+      <g fill="#a6e8ff" opacity=".35">
+       <rect x="18" y="9" width="42" height="2" rx="1"/>
+       <rect x="96" y="22" width="58" height="2" rx="1"/>
+       <rect x="214" y="11" width="52" height="2" rx="1"/>
+       <rect x="330" y="24" width="46" height="2" rx="1"/>
+      </g>
+      <g fill="url(#fs-holz)" stroke="#33200f" stroke-opacity=".55">
+       <rect x="44" y="14" width="96" height="15" rx="7"/>
+       <rect x="236" y="17" width="120" height="15" rx="7"/>
+      </g>
+      <g fill="#1b4a39">
+       <ellipse cx="58" cy="21.5" rx="7" ry="5"/><ellipse cx="72" cy="21.5" rx="7" ry="5"/>
+       <ellipse cx="86" cy="21.5" rx="7" ry="5"/><ellipse cx="100" cy="21.5" rx="7" ry="5"/>
+      </g>
+      <rect x="0" y="38" width="420" height="30" fill="url(#fs-strasse)"/>
+      <g stroke="#efe6c8" stroke-opacity=".55" stroke-width="2" stroke-dasharray="18 14">
+       <path d="M0 53h420"/>
+      </g>
+      <g stroke="#efe6c8" stroke-opacity=".25" stroke-width="2">
+       <path d="M0 39h420M0 67h420"/>
+      </g>
+      <g>
+       <rect x="26" y="42" width="58" height="20" rx="5" fill="#d9806a" stroke="#000" stroke-opacity=".4"/>
+       <rect x="34" y="45" width="18" height="6" rx="2" fill="#123140"/>
+       <rect x="120" y="44" width="86" height="18" rx="4" fill="#b9c2bd" stroke="#000" stroke-opacity=".4"/>
+       <rect x="218" y="42" width="52" height="20" rx="5" fill="#7fb3a0" stroke="#000" stroke-opacity=".4"/>
+       <rect x="330" y="44" width="74" height="18" rx="4" fill="#e0a06f" stroke="#000" stroke-opacity=".4"/>
+      </g>
+      <rect x="0" y="70" width="420" height="14" rx="6" fill="#2c6242"/>
+      <g transform="translate(196 46)">
+       <ellipse cx="0" cy="20" rx="11" ry="3.4" fill="#000" opacity=".35"/>
+       <ellipse cx="0" cy="10" rx="11" ry="9" fill="#6cb47a" stroke="#0e2f22" stroke-width="1.6"/>
+       <ellipse cx="-4.6" cy="-2" rx="4" ry="3.8" fill="#f7f2d8" stroke="#0e2f22" stroke-width="1.2"/>
+       <ellipse cx="4.6" cy="-2" rx="4" ry="3.8" fill="#f7f2d8" stroke="#0e2f22" stroke-width="1.2"/>
+       <circle cx="-4.4" cy="-2" r="1.6" fill="#0b241d"/><circle cx="4.8" cy="-2" r="1.6" fill="#0b241d"/>
+      </g>
+     </svg>
+    </figure>
+
+    <div>
+     <h2 class="arcade-start__abschnitt">So wird gespielt</h2>
+     <ul class="arcade-start__steuerung">
+      <li><span class="taste">↑</span><span class="taste">↓</span><span class="taste">←</span><span class="taste">→</span> ein Satz pro Feld</span></li>
+      <li><span class="taste">W</span><span class="taste">A</span><span class="taste">S</span><span class="taste">D</span> dieselben Sätze am PC</li>
+      <li><span class="taste">☝</span> am Handy über das Feld wischen</li>
+      <li><span class="taste">Leer</span> Start · <span class="taste">P</span> Pause · <span class="taste">Esc</span> Vollbild aus</li>
+     </ul>
+    </div>
+
+    <div>
+     <h2 class="arcade-start__abschnitt">Auf einen Blick</h2>
+     <ul class="arcade-start__infos">
+      <li><span class="wert" id="startLevel">Level 1</span><span class="was">Startlevel</span></li>
+      <li><span class="wert">3</span><span class="was">Leben</span></li>
+      <li><span class="wert">35 s</span><span class="was">pro Versuch</span></li>
+      <li><span class="wert">5</span><span class="was">Buchten je Level</span></li>
+      <li><span class="wert">12</span><span class="was">Level</span></li>
+      <li><span class="wert" id="startRekord">0</span><span class="was">Rekord</span></li>
+     </ul>
+    </div>
+   </div>
+
+   <p class="arcade-start__text">
+    Über die Straße, über den Fluss, in eine der fünf Buchten: Jede Bucht gibt
+    50 Punkte plus Zeitbonus, alle fünf zusammen bringen das nächste Level.
+    Autos und Wasser kosten ein Leben – und die Zeit läuft.
+   </p>
+
+   <div class="arcade-start__knoepfe">
+    <button type="button" class="arcade-knopf arcade-knopf--haupt" id="btnStart">Starten</button>
+   </div>
+   <p class="arcade-start__fussnote" id="startFussnote">Level wählst du in der Leiste unter dem Feld.</p>
+  </section>
+
+ <nav class="menueleiste" aria-label="Spielmenü">
+  <button type="button" class="knopf" id="btnNeu">Neues Spiel</button>
+  <label class="wahl">Level <select id="levelWahl" aria-label="Level wählen"></select></label>
+  <button type="button" class="knopf" id="btnNochmal">Level neu</button>
+  <button type="button" class="knopf" id="btnPause">Pause</button>
+  <button type="button" class="knopf" id="btnRegeln" aria-expanded="false" aria-controls="regelnBlatt">Regeln</button>
+ </nav>
+
+ <div class="pad" aria-label="Steuerung">
+  <button type="button" class="oben" data-dir="hoch" aria-label="nach oben">▲</button>
+  <button type="button" class="links" data-dir="links" aria-label="nach links">◀</button>
+  <button type="button" class="runter" data-dir="runter" aria-label="nach unten">▼</button>
+  <button type="button" class="rechts" data-dir="rechts" aria-label="nach rechts">▶</button>
  </div>
 
  <div class="fuss">
-  <span id="hinweis">Wischen oder Pfeile: ein Satz pro Feld.</span>
+  <span id="hinweis">Wischen, Pfeile oder WASD: ein Satz pro Feld.</span>
+  <a href="../spiele.html">Spieleübersicht</a>
  </div>
-
- <details id="regeln">
-  <summary>Regeln</summary>
-  <ol>
-   <li><b>Ziel:</b> Den Frosch von unten nach oben bringen und in eine der fünf Buchten setzen. Jede Bucht gibt 50 Punkte plus Zeitbonus, alle fünf zusammen bringen das nächste Level.</li>
-   <li><b>Steuern:</b> Mit dem Finger über das Feld wischen oder das Pfeilfeld unter dem Brett benutzen, am PC auch die Pfeiltasten. Jeder Satz geht genau ein Feld.</li>
-   <li><b>Straße:</b> Autos und Lastwagen dürfen den Frosch nicht berühren.</li>
-   <li><b>Fluss:</b> Der Frosch kann nicht schwimmen – er muss auf Baumstämmen und Schildkröten mitfahren und darf dabei nicht ins Wasser oder an den Rand geraten.</li>
-   <li><b>Zeit:</b> Pro Leben laufen 35 Sekunden. Läuft die Zeit ab, ist ein Leben weg. Drei Leben pro Spiel, jedes erreichte Ziel bringt die Zeit zurück.</li>
-   <li><b>Level:</b> Zwölf Level mit eigener Verkehrslage; jedes geschaffte Level wird
-   freigeschaltet und bleibt über die Auswahl in der Leiste spielbar. Nach dem Sieg
-   startet das nächste Level automatisch.</li>
-   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
-  </ol>
-  <p class="klein mitte"><a href="../spiele.html">Zurück zur Spieleübersicht</a></p>
- </details>
-</main>
+</div>
 
 <script>
 (() => {
@@ -261,8 +519,6 @@ const $=id=>document.getElementById(id);
 
 const SPALTEN=13, ZEILEN=13, Z=32;
 const W=SPALTEN*Z, H=ZEILEN*Z;
-canvas.width=W;
-canvas.height=H;
 
 const HEIM_ZEILE=0;
 const WASSER=[1,2,3,4,5];
@@ -270,27 +526,32 @@ const UFER=6;
 const STRASSE=[7,8,9,10,11];
 const START_ZEILE=12;
 const ZEIT_PRO_LEBEN=35;
-// Die fünf Buchten sitzen in diesen Spalten (Mitte = Spalte*Z+Z/2).
 const BUCHT_SPALTEN=[1,3,5,7,9];
+const STANDARD_HINWEIS="Wischen, Pfeile oder WASD: ein Satz pro Feld.";
 
 let zustand="start";        // start, laeuft, pause, level, ende
 let punkte=0, level=1, leben=3;
 let zeit=ZEIT_PRO_LEBEN;
 let frosch={x:0,y:0,zielX:0,zielY:0,huepfend:false,t:0};
 let bahnen=[];
-let buchten=[];             // true = besetzt
-let blitz=0;                // kurzer roter Blitz nach einem Treffer
-let weiterTimer=null;       // automatischer Start des nächsten Levels
+let buchten=[];
+let blitz=0;
+let weiterTimer=null;
+let naechstesLevel=0;
 let letzteZeit=0;
+let feldAnpassung=null;
 
 const rnd=Math.random;
 
+const startbildschirm=$("startbildschirm");
+const rahmen=$("rahmen");
+const buehne=$("buehne");
+const meldung=$("meldung");
+const regelnBlatt=$("regelnBlatt");
+
 // ---------------------------------------------------------------- Aufbau
 
-// Farben der Fahrzeuge, der Reihe nach vergeben (nur Optik)
 let AUTO_FARBEN=[], LKW_FARBEN=[];
-/* Die Feld-Farben stehen als Tokens im Stylesheet. Einmal lesen, bei
-   Stilwechsel neu lesen - alles Gezeichnete faerbt mit. */
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 let F={};
 function paletteLaden(){
@@ -336,23 +597,30 @@ function paletteLaden(){
  };
  AUTO_FARBEN=F.autoFarben; LKW_FARBEN=F.lkwFarben;
 }
+
+/* Zeichenfläche in Gerätepixeln: scharf auch im Vollbild, ohne die
+   Spielmaße (W×H) zu verändern. */
+function leinwandSetzen(breiteCss, hoeheCss){
+ const dpr=Math.min(2.5, window.devicePixelRatio||1);
+ const bw=Math.max(1,Math.round(breiteCss*dpr));
+ const bh=Math.max(1,Math.round(hoeheCss*dpr));
+ if(canvas.width!==bw||canvas.height!==bh){ canvas.width=bw; canvas.height=bh; }
+ ctx.setTransform(bw/W,0,0,bh/H,0,0);
+ zeichne();
+}
+
 function neuZeichnen(){
  paletteLaden();
- const c=document.querySelector("canvas");
- if(c){const x=c.getContext("2d");if(x)x.clearRect(0,0,c.width,c.height);}
+ ctx.save();
+ ctx.setTransform(1,0,0,1,0,0);
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ ctx.restore();
  zeichne();
 }
 paletteLaden();
 if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(neuZeichnen);
-/* stil.js setzt den Stil erst nach dem Parsen - danach einmal frisch zeichnen. */
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",neuZeichnen);
 
-
-/* Zwölf Level mit eigener Verkehrslage. Die Grundwerte sind die alten,
-   damit Level 1 genau wie bisher spielbar ist; später kommen andere
-   Richtungen, dichtere Straßen und größere Flöße dazu. Ab Level 1 steigt
-   das Straßentempo um 4 % je Level, das Flusstempo nur um 1,5 % – die
-   Steigerung ist anfangs kaum zu merken und über zehn Level deutlich. */
+/* Zwölf Level mit eigener Verkehrslage – unverändert. */
 const LEVEL_DEFS=[
  {fluss:[[30,1,96,70],[36,-1,66,52],[44,1,128,84],[32,-1,44,46],[40,1,80,64]],
   strasse:[[48,-1,52,96],[34,1,96,110],[60,-1,46,120],[42,1,56,84],[56,-1,104,130]]},
@@ -383,14 +651,11 @@ const LEVEL_DEFS=[
 function neueBahnen(){
  bahnen=[];
  const def=LEVEL_DEFS[(Math.max(1,level)-1)%LEVEL_DEFS.length];
- // Grundtempo je Level: Straße +2,8 % je Level, Fluss +1,2 %. Die Levelform
- // bleibt (schnelle und langsame Bahnen), nur das Niveau steigt gleichmäßig.
  const flussIst=def.fluss.reduce((a,p)=>a+p[0],0)/def.fluss.length;
  const strasseIst=def.strasse.reduce((a,p)=>a+p[0],0)/def.strasse.length;
  const flussFaktor=(36.4*(1+(level-1)*0.012))/flussIst;
  const strassenFaktor=(48*(1+(level-1)*0.028))/strasseIst;
 
- // Fluss: Baumstämme und Schildkröten, Lage je Level
  const arten=["holz","schild","holz","schild","holz"];
  const fluss=def.fluss.map((p,i)=>({art:arten[i], reihe:i+1,
   tempo:p[0]*flussFaktor, richtung:p[1], breite:p[2], abstand:p[3]}));
@@ -405,7 +670,6 @@ function neueBahnen(){
   bahnen.push({...b,teile});
  });
 
- // Straße: Autos und Lastwagen, Lage je Level
  const fahrArten=["auto","lkw","auto","auto","lkw"];
  const strasse=def.strasse.map((p,i)=>({art:fahrArten[i], reihe:i+7,
   tempo:p[0]*strassenFaktor, richtung:p[1], breite:p[2], abstand:p[3]}));
@@ -426,25 +690,55 @@ function froschZurueck(){
  frosch={x:6*Z+Z/2,y:START_ZEILE*Z+Z/2,zielX:6*Z+Z/2,zielY:START_ZEILE*Z+Z/2,huepfend:false,t:0};
  zeit=ZEIT_PRO_LEBEN;
  $("zeit").textContent=Math.ceil(zeit);
+ $("zeit").classList.remove("knapp");
+}
+
+// ---------------------------------------------------------------- Ablauf
+
+function hinweis(text){ $("hinweis").textContent=text; }
+
+function startbildschirmZeigen(an){
+ /* Erst das Raster umschalten, dann messen: sonst würde das Feld noch in
+    einem ausgeblendeten Bereich berechnet. */
+ document.body.classList.toggle("zeigt-start",an);
+ if(an){
+  TGSpiel.zeige(startbildschirm,true);
+  TGSpiel.zeige(rahmen,false);
+  TGSpiel.zeige(meldung,false);
+  startbildschirmAktualisieren();
+ }else{
+  TGSpiel.zeige(startbildschirm,false);
+  TGSpiel.zeige(rahmen,true);
+  if(feldAnpassung)feldAnpassung.messen();
+ }
+}
+
+function startbildschirmAktualisieren(){
+ $("startLevel").textContent="Level "+level;
+ $("startRekord").textContent=String(rekordLaden());
+ $("startFussnote").textContent=erreichtLaden()>1
+  ? "Freigespielt bis Level "+erreichtLaden()+" – wählbar in der Leiste unter dem Feld."
+  : "Level wählst du in der Leiste unter dem Feld.";
 }
 
 function levelStarten(n){
  if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
- level=Math.max(1,n);
+ level=Math.min(LEVEL_DEFS.length,Math.max(1,n));
  punkte=0; leben=3;
  buchten=[false,false,false,false,false];
  neueBahnen();
  froschZurueck();
  zahlenZeigen();
  auswahlFuellen();
+ startbildschirmZeigen(false);
+ meldungAus();
  zustand="laeuft";
- $("meldung").hidden=true;
  $("btnPause").textContent="Pause";
  letzteZeit=performance.now();
- $("hinweis").textContent="Level "+level+" – wischen oder Pfeile: ein Satz pro Feld.";
+ hinweis("Level "+level+" – wischen, Pfeile oder WASD.");
 }
 
-function neuesSpiel(){
+function neuesSpiel(sofort){
  if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
  punkte=0; level=1; leben=3;
  buchten=[false,false,false,false,false];
@@ -453,18 +747,51 @@ function neuesSpiel(){
  zahlenZeigen();
  auswahlFuellen();
  $("rekord").textContent=rekordLaden();
+ meldungAus();
  zustand="start";
  $("btnPause").textContent="Pause";
- zeigeMeldung("FROGGER","Bring den Frosch über Straße und Fluss in eine der fünf Buchten oben.","Starten");
- $("meldungKnopf").onclick=starten;
+ hinweis(STANDARD_HINWEIS);
+ startbildschirmZeigen(true);
  zeichne();
+ if(sofort)starten();
+}
+
+function starten(){
+ if(zustand!=="start")return;
+ zustand="laeuft";
+ letzteZeit=performance.now();
+ meldungAus();
+ startbildschirmZeigen(false);
+ hinweis("Level "+level+" – wischen, Pfeile oder WASD.");
+}
+
+function pausieren(){
+ if(zustand!=="laeuft")return;
+ zustand="pause";
+ $("btnPause").textContent="Weiter";
+ hinweis("Pause – „Weiter“ setzt fort.");
+ meldungZeigen("Pause","Die Partie steht. Das Feld bleibt, wo es ist.",[
+  ["Punkte",punkte],["Level",level],["Leben",Math.max(0,leben)],["Zeit",Math.ceil(zeit)]
+ ],[
+  {text:"Weiter",art:"haupt",tun:weiter},
+  {text:"Neustart",art:"zweit",tun:()=>levelStarten(level)},
+  {text:"Startbildschirm",art:"zweit",tun:()=>neuesSpiel()}
+ ]);
+}
+
+function weiter(){
+ if(zustand!=="pause")return;
+ zustand="laeuft";
+ $("btnPause").textContent="Pause";
+ letzteZeit=performance.now();
+ meldungAus();
+ hinweis("Level "+level+" – wischen, Pfeile oder WASD.");
 }
 
 function rekordLaden(){
  try{ return Number(localStorage.getItem("frogger-rekord")||0); }catch(e){ return 0; }
 }
 
-// Höchstes freigeschaltetes Level – bleibt im Browser.
 function erreichtLaden(){
  try{ return Math.max(1,Number(localStorage.getItem("frogger-erreicht")||1)); }
  catch(e){ return 1; }
@@ -477,7 +804,7 @@ function erreichtMerken(n){
 function auswahlFuellen(){
  const wahl=$("levelWahl");
  if(!wahl)return;
- const bis=erreichtLaden();
+ const bis=Math.min(LEVEL_DEFS.length,Math.max(erreichtLaden(),level));
  wahl.innerHTML="";
  for(let i=1;i<=bis;i++){
   const o=document.createElement("option");
@@ -486,28 +813,24 @@ function auswahlFuellen(){
   wahl.appendChild(o);
  }
  wahl.value=String(level<=bis?level:bis);
+ $("startLevel").textContent="Level "+level;
 }
 
 function zahlenZeigen(){
  $("punkte").textContent=punkte;
  $("level").textContent=level;
+ $("rekord").textContent=rekordLaden();
  $("buchtenStand").textContent=buchten.filter(Boolean).length+"/5";
  $("leben").textContent="●".repeat(Math.max(0,leben))+"○".repeat(Math.max(0,3-leben));
- $("zeit").textContent=Math.max(0,Math.ceil(zeit));
-}
-
-function starten(){
- zustand="laeuft";
- $("meldung").hidden=true;
- letzteZeit=performance.now();
- $("hinweis").textContent="Wischen oder Pfeile: ein Satz pro Feld.";
+ const s=Math.max(0,Math.ceil(zeit));
+ $("zeit").textContent=s;
+ $("zeit").classList.toggle("knapp",s<=10&&zustand==="laeuft");
 }
 
 // ---------------------------------------------------------------- Bewegung
 
 function huepfen(dx,dy){
  if(zustand!=="laeuft"||frosch.huepfend)return;
- // Auf Baumstämmen steht der Frosch zwischen den Feldern: erst einrasten
  const spalte=Math.max(0,Math.min(SPALTEN-1,Math.round((frosch.x-Z/2)/Z)));
  const reihe=Math.round((frosch.y-Z/2)/Z);
  const zielSpalte=spalte+dx;
@@ -560,21 +883,32 @@ function sterben(grund){
  blitz=0.35;
  leben--;
  zahlenZeigen();
- $("hinweis").textContent=grund+" – noch "+Math.max(0,leben)+" Leben.";
+ hinweis(grund+" – noch "+Math.max(0,leben)+" Leben.");
  if(leben<=0){
-  zustand="ende";
-  rekordPruefen();
-  zeigeMeldung("GAME OVER","Punkte: "+punkte+" · Level "+level,"Nochmal");
-  $("meldungKnopf").onclick=neuesSpiel;
+  gameOver();
   return;
  }
  froschZurueck();
+}
+
+function gameOver(){
+ zustand="ende";
+ rekordPruefen();
+ $("btnPause").textContent="Pause";
+ hinweis("Spiel vorbei – Rekord "+rekordLaden()+".");
+ meldungZeigen("Game over","Der Frosch hat kein Leben mehr. Neuer Versuch?",[
+  ["Punkte",punkte],["Level",level],["Buchten",buchten.filter(Boolean).length+"/5"],["Rekord",rekordLaden()]
+ ],[
+  {text:"Nochmal spielen",art:"haupt",tun:()=>neuesSpiel(true)},
+  {text:"Startbildschirm",art:"zweit",tun:()=>neuesSpiel()}
+ ]);
 }
 
 function rekordPruefen(){
  if(punkte>rekordLaden()){
   try{ localStorage.setItem("frogger-rekord",String(punkte)); }catch(e){}
   $("rekord").textContent=punkte;
+  $("startRekord").textContent=punkte;
  }
 }
 
@@ -584,25 +918,33 @@ function levelGeschafft(){
  erreichtMerken(level+1);
  zahlenZeigen();
  rekordPruefen();
- const naechstes=level+1;
- $("hinweis").textContent="Alle fünf Buchten besetzt – Level "+naechstes+" wartet.";
- zeigeMeldung("Level "+level+" geschafft","Alle fünf Buchten besetzt · +200 Punkte · Level "+naechstes+" startet gleich automatisch.","Weiter");
- const starteNaechstes=()=>{
-  if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
-  $("meldung").hidden=true;
-  level=naechstes;
-  buchten=[false,false,false,false,false];
-  neueBahnen();
-  froschZurueck();
-  zahlenZeigen();
-  auswahlFuellen();
-  zustand="laeuft";
-  letzteZeit=performance.now();
-  $("hinweis").textContent="Level "+level+" – wischen oder Pfeile: ein Satz pro Feld.";
- };
- $("meldungKnopf").onclick=starteNaechstes;
+ naechstesLevel=level+1;
+ $("btnPause").textContent="Pause";
+ hinweis("Alle fünf Buchten besetzt – Level "+naechstesLevel+" wartet.");
+ meldungZeigen("Level "+level+" geschafft",
+  "Alle fünf Buchten besetzt · +200 Punkte · Level "+naechstesLevel+" startet gleich automatisch.",
+  [["Punkte",punkte],["Buchten","5/5"],["Nächstes Level",naechstesLevel],["Rekord",rekordLaden()]],
+  [
+   {text:"Weiter",art:"haupt",tun:weiterLevel},
+   {text:"Startbildschirm",art:"zweit",tun:()=>neuesSpiel()}
+  ]);
  clearTimeout(weiterTimer);
- weiterTimer=setTimeout(starteNaechstes,4000);
+ weiterTimer=setTimeout(weiterLevel,4000);
+}
+
+function weiterLevel(){
+ if(zustand!=="level")return;
+ if(weiterTimer){clearTimeout(weiterTimer);weiterTimer=null;}
+ meldungAus();
+ level=Math.min(LEVEL_DEFS.length,naechstesLevel||level+1);
+ buchten=[false,false,false,false,false];
+ neueBahnen();
+ froschZurueck();
+ zahlenZeigen();
+ auswahlFuellen();
+ zustand="laeuft";
+ letzteZeit=performance.now();
+ hinweis("Level "+level+" – wischen, Pfeile oder WASD.");
 }
 
 // ---------------------------------------------------------------- Update
@@ -611,7 +953,6 @@ function update(dt){
  if(zustand!=="laeuft")return;
  if(blitz>0)blitz=Math.max(0,blitz-dt);
 
- // Bahnen bewegen
  bahnen.forEach(b=>{
   b.teile.forEach(t=>{
    t.x+=b.tempo*b.richtung*dt;
@@ -620,8 +961,6 @@ function update(dt){
   });
  });
 
- // Sprung zuerst: Wer im letzten Sprungbild die Bucht erreicht, hat sie
- // erreicht – die Uhr darf den Treffer nicht mehr wegnehmen.
  if(frosch.huepfend){
   frosch.t=Math.min(1,frosch.t+dt/0.13);
   const e=frosch.t<0.5?2*frosch.t*frosch.t:1-Math.pow(-2*frosch.t+2,2)/2;
@@ -631,9 +970,12 @@ function update(dt){
   return;
  }
 
- // Zeit
  zeit-=dt;
- $("zeit").textContent=Math.max(0,Math.ceil(zeit));
+ const s=Math.max(0,Math.ceil(zeit));
+ if($("zeit").textContent!==String(s)){
+  $("zeit").textContent=s;
+  $("zeit").classList.toggle("knapp",s<=10);
+ }
  if(zeit<=0){
   sterben("Zeit abgelaufen");
   return;
@@ -641,7 +983,6 @@ function update(dt){
 
  const reihe=Math.round((frosch.y-Z/2)/Z);
 
- // Fluss: mitfahren oder untergehen
  if(WASSER.includes(reihe)){
   const bahn=bahnen.find(b=>b.reihe===reihe);
   const treffer=bahn&&bahn.teile.find(t=>frosch.x+9>t.x&&frosch.x-9<t.x+t.w);
@@ -654,7 +995,6 @@ function update(dt){
   return;
  }
 
- // Straße: Autos prüfen
  if(STRASSE.includes(reihe)){
   const bahn=bahnen.find(b=>b.reihe===reihe);
   const getroffen=bahn&&bahn.teile.find(t=>frosch.x+10>t.x&&frosch.x-10<t.x+t.w);
@@ -664,7 +1004,6 @@ function update(dt){
 
 // ---------------------------------------------------------------- Zeichnen
 
-// Kleiner fester Zufall für Texturen (immer dasselbe Bild, kein Flackern).
 function startZufall(seed){
  let s=seed>>>0;
  return ()=>{ s=(Math.imul(s,1664525)+1013904223)>>>0; return s/4294967296; };
@@ -703,14 +1042,12 @@ const KOERNUNG=(()=>{
 })();
 
 function zeichneWiese(){
- // Hecke hinter den Buchten
  const hg=ctx.createLinearGradient(0,0,0,Z);
  hg.addColorStop(0,F.hecke1);
  hg.addColorStop(1,F.hecke2);
  ctx.fillStyle=hg;
  ctx.fillRect(0,HEIM_ZEILE*Z,W,Z);
 
- // Blattreihe der Hecke
  for(let x=0;x<W;x+=11){
   ctx.fillStyle=(x/11)%2?F.blatt1:F.blatt2;
   ctx.beginPath();
@@ -720,7 +1057,6 @@ function zeichneWiese(){
  ctx.fillStyle=F.hecksch;
  ctx.fillRect(0,Z-4,W,3);
 
- // Ufer und Startreihe
  [UFER,START_ZEILE].forEach(r=>{
   const g=ctx.createLinearGradient(0,r*Z,0,r*Z+Z);
   g.addColorStop(0,F.ufer1);
@@ -729,7 +1065,6 @@ function zeichneWiese(){
   ctx.fillRect(0,r*Z,W,Z);
  });
 
- // Grasbueschel
  ctx.strokeStyle=F.gras;
  ctx.lineWidth=1;
  GRAS.forEach(b=>{
@@ -753,7 +1088,6 @@ function zeichneWasser(){
  ctx.fillStyle=g;
  ctx.fillRect(0,oben,W,unten-oben);
 
- // Schimmerlinien
  ctx.strokeStyle=F.schimmer;
  ctx.lineWidth=1.3;
  SCHIMMER.forEach(w=>{
@@ -766,7 +1100,6 @@ function zeichneWasser(){
   ctx.stroke();
  });
 
- // Uferkanten abdunkeln
  const o=ctx.createLinearGradient(0,oben,0,oben+8);
  o.addColorStop(0,F.uferkante);
  o.addColorStop(1,F.uferkante0);
@@ -791,7 +1124,6 @@ function zeichneStrasse(){
  ctx.fillStyle=F.koernung;
  KOERNUNG.forEach(k=>ctx.fillRect(k.x,k.y,1,1));
 
- // Kantenlinien
  ctx.strokeStyle=F.kante;
  ctx.lineWidth=2;
  ctx.beginPath();
@@ -801,7 +1133,6 @@ function zeichneStrasse(){
  ctx.lineTo(W,unten-1);
  ctx.stroke();
 
- // Mittelstriche
  ctx.strokeStyle=F.mittel;
  ctx.setLineDash([16,12]);
  for(let i=1;i<STRASSE.length;i++){
@@ -834,7 +1165,6 @@ function zeichneHolz(t){
  ctx.lineWidth=1.2;
  ctx.stroke();
 
- // Jahresringe an den Enden
  ctx.strokeStyle=F.holzRing;
  ctx.lineWidth=1;
  [x+2.5,x+w-2.5].forEach(cx=>{
@@ -843,7 +1173,6 @@ function zeichneHolz(t){
   ctx.stroke();
  });
 
- // Rindenrisse
  ctx.strokeStyle=F.holzRiss;
  [0.32,0.68].forEach(k=>{
   ctx.beginPath();
@@ -852,7 +1181,6 @@ function zeichneHolz(t){
   ctx.stroke();
  });
 
- // Lichtkante oben
  ctx.fillStyle=F.holzLicht;
  ctx.beginPath();
  ctx.roundRect(x+4,y+2,w-8,3,2);
@@ -870,14 +1198,12 @@ function zeichneSchild(t,richtung){
 
  for(let i=0;i<anzahl;i++){
   const cx=x+r+i*r*2, cy=y+h/2;
-  // Flossen
   ctx.fillStyle=F.flosse;
   [[-1,-0.8],[-1,0.8],[1,-0.8],[1,0.8]].forEach(([dx,dy])=>{
    ctx.beginPath();
    ctx.ellipse(cx+dx*r*0.78,cy+dy*r*0.78,r*0.24,r*0.15,0,0,Math.PI*2);
    ctx.fill();
   });
-  // Kopf in Fahrtrichtung, vor dem Panzer
   ctx.fillStyle=F.kopf;
   ctx.beginPath();
   ctx.ellipse(cx+richtung*(r-0.6),cy,r*0.44,r*0.34,0,0,Math.PI*2);
@@ -891,7 +1217,6 @@ function zeichneSchild(t,richtung){
    ctx.arc(cx+richtung*(r+0.6),cy+dy*r,0.85,0,Math.PI*2);
    ctx.fill();
   });
-  // Panzer
   const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.35,r*0.2,cx,cy,r);
   g.addColorStop(0,F.panzer1);
   g.addColorStop(.6,F.panzer2);
@@ -908,7 +1233,6 @@ function zeichneSchild(t,richtung){
   ctx.beginPath();
   ctx.ellipse(cx-0.6,cy-0.9,r-3.8,r-3.8,0,Math.PI*1.05,Math.PI*1.95);
   ctx.stroke();
-  // Panzermuster
   ctx.strokeStyle=F.muster;
   ctx.lineWidth=0.9;
   ctx.beginPath();
@@ -944,7 +1268,6 @@ function zeichneAuto(t,richtung){
  ctx.lineWidth=1.2;
  ctx.stroke();
 
- // Dach
  const dachW=Math.max(9,w-22);
  const dachX=richtung>0?x+10:x+12;
  ctx.fillStyle=dunkel(farbe,.3);
@@ -952,7 +1275,6 @@ function zeichneAuto(t,richtung){
  ctx.roundRect(dachX,y+3.5,dachW,h-7,4);
  ctx.fill();
 
- // Windschutz und Heckscheibe
  ctx.fillStyle=F.scheibe;
  ctx.beginPath();
  ctx.roundRect(richtung>0?dachX+dachW-5:dachX,y+4.5,5,h-9,2);
@@ -962,7 +1284,6 @@ function zeichneAuto(t,richtung){
  ctx.roundRect(richtung>0?dachX:dachX+dachW-4,y+5,4,h-10,2);
  ctx.fill();
 
- // Scheinwerfer und Ruecklicht
  const vorne=richtung>0?x+w-4:x+1;
  const hinten=richtung>0?x+1:x+w-4;
  ctx.fillStyle=F.schein;
@@ -972,7 +1293,6 @@ function zeichneAuto(t,richtung){
  ctx.fillRect(hinten,y+4,3,4);
  ctx.fillRect(hinten,y+h-8,3,4);
 
- // Raeder
  ctx.fillStyle=F.rad;
  [[x+5,y-1],[x+w-11,y-1],[x+5,y+h-3],[x+w-11,y+h-3]].forEach(([wx,wy])=>{
   ctx.beginPath();
@@ -994,7 +1314,6 @@ function zeichneLkw(t,richtung){
  const ax=richtung>0?x:x+kab;
  const aw=w-kab;
 
- // Anhaenger
  const ag=ctx.createLinearGradient(0,y,0,y+h);
  ag.addColorStop(0,F.lkwA[0]);
  ag.addColorStop(.5,F.lkwA[1]);
@@ -1007,7 +1326,6 @@ function zeichneLkw(t,richtung){
  ctx.lineWidth=1.1;
  ctx.stroke();
 
- // Streben
  ctx.strokeStyle=F.strebe;
  ctx.lineWidth=1;
  for(let sx=ax+12;sx<ax+aw-6;sx+=14){
@@ -1017,7 +1335,6 @@ function zeichneLkw(t,richtung){
   ctx.stroke();
  }
 
- // Fahrerhaus
  const kg=ctx.createLinearGradient(0,y,0,y+h);
  kg.addColorStop(0,hell(farbe,.35));
  kg.addColorStop(1,dunkel(farbe,.32));
@@ -1028,7 +1345,6 @@ function zeichneLkw(t,richtung){
  ctx.strokeStyle=F.autoRand;
  ctx.stroke();
 
- // Fenster
  ctx.fillStyle=F.scheibe;
  ctx.beginPath();
  ctx.roundRect(kx+4,y+4,kab-8,5,2);
@@ -1037,7 +1353,6 @@ function zeichneLkw(t,richtung){
  ctx.roundRect(kx+4,y+h-9,kab-8,5,2);
  ctx.fill();
 
- // Raeder
  ctx.fillStyle=F.rad;
  [[x+4,y-1],[x+w-12,y-1],[x+4,y+h-3],[x+w-12,y+h-3],
   [ax+aw*0.42,y-1],[ax+aw*0.42,y+h-3]].forEach(([wx,wy])=>{
@@ -1059,7 +1374,6 @@ function zeichneBucht(i,x){
  ctx.roundRect(x-wB/2,y,wB,hB,7);
  ctx.fill();
 
- // Seerosenblatt
  ctx.fillStyle=besetzt?F.blattBesetzt:F.blattFrei;
  ctx.beginPath();
  ctx.ellipse(x,y+hB*0.62,wB*0.42,wB*0.28,0,0.4,Math.PI*2-0.4);
@@ -1095,7 +1409,6 @@ function zeichneBucht(i,x){
    ctx.fill();
   });
  }else{
-  // leere Bucht: kleiner Wasserring
   ctx.fillStyle=F.wasserring;
   ctx.beginPath();
   ctx.arc(x,y+hB*0.32,4.2,0,Math.PI*2);
@@ -1122,7 +1435,6 @@ function zeichneFrosch(){
  ctx.translate(fx,fy);
  ctx.scale(sx,sy);
 
- // Hinterbeine
  ctx.fillStyle=F.bein;
  [-1,1].forEach(s=>{
   ctx.beginPath();
@@ -1133,7 +1445,6 @@ function zeichneFrosch(){
   ctx.fill();
  });
 
- // Koerper
  const g=ctx.createRadialGradient(-4,-5,2,0,0,14);
  g.addColorStop(0,F.frosch1);
  g.addColorStop(.55,F.frosch2);
@@ -1146,7 +1457,6 @@ function zeichneFrosch(){
  ctx.lineWidth=1.8;
  ctx.stroke();
 
- // Bauch und Rueckenstreifen
  ctx.fillStyle=F.bauch;
  ctx.beginPath();
  ctx.ellipse(0,3,6,4.6,0,0,Math.PI*2);
@@ -1160,7 +1470,6 @@ function zeichneFrosch(){
  ctx.lineTo(5,4);
  ctx.stroke();
 
- // Augen
  [-4.6,4.6].forEach(dx=>{
   ctx.fillStyle=F.augenring;
   ctx.beginPath();
@@ -1180,7 +1489,6 @@ function zeichneFrosch(){
   ctx.fill();
  });
 
- // Mund
  ctx.strokeStyle=F.mund;
  ctx.lineWidth=1.1;
  ctx.beginPath();
@@ -1195,7 +1503,6 @@ function zeichne(){
  zeichneWasser();
  zeichneStrasse();
 
- // Fahrzeuge und Flöße
  bahnen.forEach(b=>{
   b.teile.forEach(t=>{
    if(b.art==="holz")zeichneHolz(t);
@@ -1205,13 +1512,10 @@ function zeichne(){
   });
  });
 
- // Buchten: Mittelpunkt der Spalten 1, 3, 5, 7, 9
  for(let i=0;i<5;i++)zeichneBucht(i,BUCHT_SPALTEN[i]*Z+Z/2);
 
- // Frosch
  zeichneFrosch();
 
- // Trefferblitz
  if(blitz>0){
   ctx.globalAlpha=Math.min(1,blitz*0.9);
   ctx.fillStyle=F.blitz;
@@ -1219,31 +1523,84 @@ function zeichne(){
   ctx.globalAlpha=1;
  }
 
- // Rand
  ctx.strokeStyle=F.rahmen;
  ctx.lineWidth=3;
  ctx.strokeRect(1.5,1.5,W-3,H-3);
 }
 
-// ---------------------------------------------------------------- Meldung
+// ---------------------------------------------------------------- Overlays
 
-function zeigeMeldung(titel,text,knopf){
+function meldungAus(){
+ TGSpiel.zeige(meldung,false);
+ $("meldungKnoepfe").innerHTML="";
+}
+
+function meldungZeigen(titel,text,werte,knoepfe){
  $("meldungTitel").textContent=titel;
  $("meldungText").textContent=text;
- $("meldungKnopf").textContent=knopf;
- $("meldung").hidden=false;
+
+ const liste=$("meldungWerte");
+ liste.innerHTML="";
+ (werte||[]).forEach(([was,wert])=>{
+  const li=document.createElement("li");
+  const w=document.createElement("span");
+  w.className="wert";
+  w.textContent=String(wert);
+  const l=document.createElement("span");
+  l.className="was";
+  l.textContent=was;
+  li.appendChild(w);
+  li.appendChild(l);
+  liste.appendChild(li);
+ });
+ liste.hidden=!(werte&&werte.length);
+
+ const kasten=$("meldungKnoepfe");
+ kasten.innerHTML="";
+ (knoepfe||[]).forEach((k,index)=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="arcade-knopf"+(k.art==="haupt"?" arcade-knopf--haupt":" arcade-knopf--zweit");
+  b.textContent=k.text;
+  b.addEventListener("click",()=>{ k.tun(); });
+  kasten.appendChild(b);
+  if(index===0)setTimeout(()=>{ try{ b.focus({preventScroll:true}); }catch(e){} },30);
+ });
+
+ TGSpiel.zeige(meldung,true);
 }
+
+let regelnPausiert=false;
+
+function regelnZeigen(an){
+ if(an&&!regelnBlatt.hidden)return;
+ if(an){
+  /* Beim Öffnen während des Spiels anhalten und beim Schließen genau dorthin
+     zurückkehren. War die Partie schon in der Pause, bleibt sie es. */
+  regelnPausiert=false;
+  if(zustand==="laeuft"){ pausieren(); regelnPausiert=true; }
+ }
+ TGSpiel.zeige(regelnBlatt,an);
+ $("btnRegeln").setAttribute("aria-expanded",an?"true":"false");
+ if(an&&!regelnPausiert)setTimeout(()=>{ try{ $("regelnKnopf").focus({preventScroll:true}); }catch(e){} },30);
+}
+
+/* Regelblatt schließen – und nur dann weiterspielen, wenn es angehalten hat. */
+function regelnSchliessen(){
+ regelnZeigen(false);
+ if(!regelnPausiert)return;
+ regelnPausiert=false;
+ if(zustand==="pause")weiter();
+}
+
+$("regelnKnopf").addEventListener("click",regelnSchliessen);
 
 // ---------------------------------------------------------------- Schleife
 
 function schleife(zeitJetzt){
  const dt=Math.min(0.05,(zeitJetzt-letzteZeit)/1000||0.016);
  letzteZeit=zeitJetzt;
- if(zustand==="laeuft"){
-  update(dt);
-  // Symbole (Zeit) mitziehen
-  $("zeit").textContent=Math.max(0,Math.ceil(zeit));
- }
+ if(zustand==="laeuft")update(dt);
  zeichne();
  requestAnimationFrame(schleife);
 }
@@ -1260,10 +1617,7 @@ canvas.addEventListener("pointerup",e=>{
  if(!wischStart)return;
  const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
  wischStart=null;
- if(Math.hypot(dx,dy)<14){
-  if(zustand==="start")starten();
-  return;
- }
+ if(Math.hypot(dx,dy)<14)return;
  if(Math.abs(dx)>Math.abs(dy))huepfen(dx>0?1:-1,0);
  else huepfen(0,dy>0?1:-1);
  e.preventDefault();
@@ -1272,7 +1626,6 @@ canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
 
 document.querySelectorAll(".pad button").forEach(knopf=>{
  knopf.addEventListener("click",()=>{
-  if(zustand==="start"){ starten(); return; }
   const d=knopf.dataset.dir;
   if(d==="hoch")huepfen(0,-1);
   else if(d==="runter")huepfen(0,1);
@@ -1281,39 +1634,101 @@ document.querySelectorAll(".pad button").forEach(knopf=>{
  });
 });
 
+/* Tasten gehören dem fokussierten Bedienelement (Knopf, Auswahl, Feld). */
+function bedienelementFokussiert(){
+ const el=document.activeElement;
+ if(!el||el===document.body||el===document.documentElement||el===canvas)return null;
+ return el.closest?el.closest('button,select,input,textarea,a[href],[contenteditable="true"]'):null;
+}
+
 window.addEventListener("keydown",e=>{
  const k=e.key;
- if(k==="ArrowUp"||k==="w"||k==="W"){ e.preventDefault(); huepfen(0,-1); }
- else if(k==="ArrowDown"||k==="s"||k==="S"){ e.preventDefault(); huepfen(0,1); }
- else if(k==="ArrowLeft"||k==="a"||k==="A"){ e.preventDefault(); huepfen(-1,0); }
- else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); huepfen(1,0); }
- else if(k===" "){ e.preventDefault(); if(zustand==="start")starten(); }
- else if(k==="Enter"&&!$("meldung").hidden){ e.preventDefault(); $("meldungKnopf").click(); }
+
+ /* Im Vollbild gehört Escape dem gemeinsamen Modul: es beendet den Modus.
+    Erst danach schließt Escape hier Regelblatt oder Pause. */
+ if(k==="Escape"){
+  if(TGSpiel.vollbild.ist())return;
+  if(!regelnBlatt.hidden){ e.preventDefault(); regelnSchliessen(); return; }
+  if(!meldung.hidden&&zustand==="pause"){ e.preventDefault(); weiter(); return; }
+  return;
+ }
+
+ /* Tasten gehören einem fokussierten Bedienelement – auch Leertaste und Enter. */
+ if(bedienelementFokussiert())return;
+ if(!regelnBlatt.hidden)return;
+
+ if(k===" "||k==="Enter"||k==="Spacebar"){
+  e.preventDefault();
+  if(zustand==="start")starten();
+  else if(zustand==="pause")weiter();
+  else if(zustand==="level")weiterLevel();
+  else if(zustand==="ende")neuesSpiel(true);
+  return;
+ }
+
+ if(k==="p"||k==="P"){
+  if(zustand==="laeuft")pausieren();
+  else if(zustand==="pause")weiter();
+  return;
+ }
+
+ let dx=0, dy=0;
+ if(k==="ArrowUp"||k==="w"||k==="W")dy=-1;
+ else if(k==="ArrowDown"||k==="s"||k==="S")dy=1;
+ else if(k==="ArrowLeft"||k==="a"||k==="A")dx=-1;
+ else if(k==="ArrowRight"||k==="d"||k==="D")dx=1;
+ else return;
+
+ e.preventDefault();
+ if(dx||dy)huepfen(dx,dy);
 });
 
-$("btnNeu").onclick=neuesSpiel;
-$("btnNochmal").onclick=()=>levelStarten(level);
-$("levelWahl").onchange=()=>levelStarten(Number($("levelWahl").value));
-$("btnPause").onclick=()=>{
- if(zustand==="laeuft"){
-  zustand="pause";
-  $("btnPause").textContent="Weiter";
-  $("hinweis").textContent="Pause – tippe auf Weiter.";
- }else if(zustand==="pause"){
-  zustand="laeuft";
-  $("btnPause").textContent="Pause";
-  letzteZeit=performance.now();
-  $("hinweis").textContent="Wischen oder Pfeile: ein Satz pro Feld.";
+// ---------------------------------------------------------------- Verkabelung
+
+$("btnStart").addEventListener("click",()=>{ starten(); });
+
+$("btnNeu").addEventListener("click",()=>{ neuesSpiel(); });
+
+$("btnNochmal").addEventListener("click",()=>{ levelStarten(level); });
+
+$("btnPause").addEventListener("click",()=>{
+ if(zustand==="laeuft")pausieren();
+ else if(zustand==="pause")weiter();
+});
+
+$("btnRegeln").addEventListener("click",()=>{ regelnZeigen(regelnBlatt.hidden); });
+
+$("levelWahl").addEventListener("change",e=>{
+ const n=Number(e.target.value)||1;
+ if(zustand==="start"){
+  level=Math.min(LEVEL_DEFS.length,Math.max(1,n));
+  neueBahnen();
+  froschZurueck();
+  zahlenZeigen();
+  startbildschirmAktualisieren();
+  zeichne();
+ }else{
+  levelStarten(n);
  }
-};
+});
+
+// ---------------------------------------------------------------- Vollbild und Feldmaß
+
+TGSpiel.vollbild.knopf($("btnVollbild"),{textAn:"Vollbild beenden",textAus:"Vollbild"});
+TGSpiel.vollbild.beiWechsel(()=>{ if(feldAnpassung)feldAnpassung.anstossen(); });
+
+/* Das Feld bekommt genau den Platz, der zwischen Kopf, Spielstand, Menü und
+   Steuerung übrig bleibt – quadratisch und ohne Verzerrung. */
+feldAnpassung=TGSpiel.feldPassen(canvas,buehne,{rand:34,verhaeltnis:1,beiGroesse:leinwandSetzen});
+
+// ---------------------------------------------------------------- Start
 
 neuesSpiel();
 requestAnimationFrame(schleife);
 
 })();
 </script>
-<script src="../zurueck.js" data-ziel=".titelleiste" data-vor=".kreuz"></script>
-
+<script src="../zurueck.js" data-ziel=".kopf" data-vor=".kopf-rechts"></script>
 <script>
 /* Fensterfarbe des Browsers je Ansicht */
 (function(){

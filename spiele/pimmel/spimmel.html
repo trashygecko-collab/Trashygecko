@@ -1801,6 +1801,7 @@ body.start-aktiv .cabinet.bildschirm-voll #start-bildschirm { flex: 1 1 auto; mi
     let seconds = 120;
     let state = 'title';
     let isPaused = false;
+    let tick = 0;
 
     let snake = [];
     let visualFrom = [];
@@ -2030,6 +2031,7 @@ function getLevelMap(levelIndex) {
 
     function pauseGame() {
       if (isPaused) return;
+      if (state !== 'playing' && state !== 'lost') return;
       isPaused = true;
       stopMove();
       clearInterval(clockTimer); clockTimer = null;
@@ -2099,6 +2101,7 @@ function getLevelMap(levelIndex) {
       pucks = 0;
       fruitCount = 0;
       moveDelay = 200;
+      tick = 0;
       if (state === 'title' || state === 'gameover' || state === 'won') stage = selectedStartLevel;
       isPaused = false;
       state = 'playing';
@@ -2200,6 +2203,7 @@ function getLevelMap(levelIndex) {
       );
       if (hitBody) { loseLife('KÖRPERKOLLISION'); return false; }
 
+      tick++;
       const before = snake.map(s => ({ ...s }));
       snake.unshift(next);
 
@@ -2272,6 +2276,19 @@ function getLevelMap(levelIndex) {
       draw();
     }
 
+    /* Spielende melden, bevor die Highscore-Dialoge den Faden anhalten. */
+    function meldeEnde(grund) {
+      window.dispatchEvent(new CustomEvent('superpimmelchen:ende', {
+        detail: {
+          grund,
+          punkte: score,
+          level: Math.min(stage + 1, LEVEL_COUNT),
+          levelAnzahl: LEVEL_COUNT,
+          tick
+        }
+      }));
+    }
+
     function advanceLevel() {
       stopMove();
       clearProjectile();
@@ -2282,6 +2299,7 @@ function getLevelMap(levelIndex) {
         stoppeExtraTakt();
         clearTimeout(respawnTimer); respawnTimer = null;
         zeigePause();
+        meldeEnde('gewonnen');
         recordHighscore();
         updateHud();
         draw(`ALLE ${LEVEL_COUNT} LEVEL GESCHAFFT!`);
@@ -2309,6 +2327,7 @@ function getLevelMap(levelIndex) {
           clearInterval(clockTimer); clockTimer = null;
           stoppeExtraTakt();
           zeigePause();
+          meldeEnde('verloren');
           recordHighscore();
           draw('SPIEL VORBEI');
           return;
@@ -2734,6 +2753,13 @@ function getLevelMap(levelIndex) {
     }
 
     // ---- Eingaben: Tastatur ----
+    /* Fokussierte Bedienelemente behalten Leertaste und Enter für sich. */
+    function fokussiertesBedienelement() {
+      const el = document.activeElement;
+      if (!el || el === document.body || el === document.documentElement || el === canvas) return null;
+      return el.closest('button, select, input, textarea, a[href], [contenteditable="true"]');
+    }
+
     function handleKeyDown(e) {
       const d = dirs[e.key];
       if (d) {
@@ -2744,8 +2770,23 @@ function getLevelMap(levelIndex) {
         setDirection(d);
         return;
       }
-      if (e.code === 'Space') { e.preventDefault(); fire(); return; }
-      if (e.key === 'Enter') { e.preventDefault(); starteSpiel({}); return; }
+      /* Leertaste und Enter gehören dem fokussierten Bedienelement: Steht der
+         Fokus auf Knopf, Auswahl oder Feld, löst der Browser selbst aus und
+         das Spiel hält sich heraus. Erst ohne Fokus startet oder feuert es. */
+      const bedienelement = fokussiertesBedienelement();
+      if (e.code === 'Space') {
+        if (bedienelement) return;
+        e.preventDefault();
+        if (state === 'playing' || state === 'lost') fire();
+        else starteSpiel({});
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (bedienelement) return;
+        e.preventDefault();
+        starteSpiel({});
+        return;
+      }
       if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
         e.preventDefault();
         if (state === 'playing' || state === 'lost') {
@@ -2949,13 +2990,23 @@ function getLevelMap(levelIndex) {
     }
 
     /* ---- Öffentliche Startschnittstelle (Vorbereitung Konnektor) ----
-       window.SuperPimmelchen.start({ stufe, level }): stufe ist
-       'leicht' | 'mittel' | 'schwer', level 1–61. Fehlende Felder bleiben auf
-       der aktuellen Auswahl, ungültige Werte brechen ab, ohne das Spiel
-       anzufassen. bereit = true, sobald das Spiel initialisiert ist (dazu das
-       Ereignis 'superpimmelchen:bereit'). Weitere Felder können später
-       ergänzt werden; unbekannte Felder werden ignoriert. */
-    const SCHNITTSTELLE_VERSION = '1.0.0';
+       start({ stufe, level }): stufe ist 'leicht' | 'mittel' | 'schwer',
+       level 1–61. Fehlende Felder bleiben auf der aktuellen Auswahl,
+       ungültige Werte und unbekannte Felder brechen mit festem Fehlercode ab,
+       ohne das Spiel anzufassen. Dazu pause(), resume(), stop(),
+       startbildschirm(), einstellungen(), zustand(). bereit = true, sobald das
+       Spiel initialisiert ist (dazu 'superpimmelchen:bereit'),
+       'superpimmelchen:ende' meldet das Spielende mit Ergebnis.
+       Der Vertrag steht in SPIELE-SCHNITTSTELLE.md. */
+    const SCHNITTSTELLE_VERSION = '1.1.0';
+
+    /* Nur bekannte Felder, nur echte Typen: eine Zahl bleibt eine Zahl, ein
+       Text bleibt ein Text. Die Fehlercodes sind fest und stehen in
+       SPIELE-SCHNITTSTELLE.md. */
+    const START_FELDER = ['stufe', 'level'];
+    function hatFeld(objekt, feld) {
+      return Object.prototype.hasOwnProperty.call(objekt, feld);
+    }
 
     function pruefeStartKonfiguration(konfiguration) {
       if (konfiguration === undefined || konfiguration === null) {
@@ -2964,15 +3015,19 @@ function getLevelMap(levelIndex) {
       if (typeof konfiguration !== 'object' || Array.isArray(konfiguration)) {
         return { ok: false, fehler: 'konfiguration-muss-objekt-sein' };
       }
+      for (const feld of Object.keys(konfiguration)) {
+        if (!START_FELDER.includes(feld)) return { ok: false, fehler: 'unbekanntes-feld', feld };
+      }
       const wert = { stufe, level: selectedStartLevel + 1 };
-      if ('stufe' in konfiguration) {
-        const gewuenscht = String(konfiguration.stufe).toLowerCase();
+      if (hatFeld(konfiguration, 'stufe')) {
+        if (typeof konfiguration.stufe !== 'string') return { ok: false, fehler: 'stufe-muss-text-sein' };
+        const gewuenscht = konfiguration.stufe.toLowerCase();
         if (!STUFEN[gewuenscht]) return { ok: false, fehler: 'unbekannte-stufe' };
         wert.stufe = gewuenscht;
       }
-      if ('level' in konfiguration) {
-        const zahl = Number(konfiguration.level);
-        if (!Number.isInteger(zahl) || zahl < 1 || zahl > LEVEL_COUNT) {
+      if (hatFeld(konfiguration, 'level')) {
+        const zahl = konfiguration.level;
+        if (typeof zahl !== 'number' || !Number.isInteger(zahl) || zahl < 1 || zahl > LEVEL_COUNT) {
           return { ok: false, fehler: `level-muss-1-bis-${LEVEL_COUNT}-sein` };
         }
         wert.level = zahl;
@@ -2986,7 +3041,11 @@ function getLevelMap(levelIndex) {
       start(konfiguration) {
         if (!schnittstelle.bereit) return { ok: false, fehler: 'spiel-nicht-bereit' };
         const pruefung = pruefeStartKonfiguration(konfiguration);
-        if (!pruefung.ok) return { ok: false, fehler: pruefung.fehler };
+        if (!pruefung.ok) {
+          const antwort = { ok: false, fehler: pruefung.fehler };
+          if (pruefung.feld) antwort.feld = pruefung.feld;
+          return antwort;
+        }
         const lauf = starteSpiel(pruefung.wert);
         if (!lauf.gestartet) return { ok: false, fehler: 'spiel-laeuft' };
         return { ok: true, stufe: lauf.stufe, level: lauf.level, levelAnzahl: LEVEL_COUNT };
@@ -3004,12 +3063,15 @@ function getLevelMap(levelIndex) {
         return {
           laeuft: state === 'playing' || state === 'lost',
           pausiert: isPaused,
+          tick,
+          richtung: { x: dir.x, y: dir.y },
           stufe,
           level: stage + 1,
           punkte: score,
           leben: lives,
           sekunden: seconds,
           specials: extras.length,
+          extras: extras.map(e => ({ x: e.x, y: e.y, type: e.type })),
           laenge: snake.length,
           kopf: snake.length ? { x: snake[0].x, y: snake[0].y } : null,
           startbildschirm: document.body.classList.contains('start-aktiv')
@@ -3018,6 +3080,21 @@ function getLevelMap(levelIndex) {
       startbildschirm() {
         zurueckZumStart();
         return { ok: true };
+      },
+      /* stop = Partie abbrechen, dieselbe Rückkehr wie der Startbildschirm. */
+      stop() {
+        zurueckZumStart();
+        return { ok: true };
+      },
+      pause() {
+        if (state !== 'playing' && state !== 'lost') return { ok: false, fehler: 'spiel-laeuft-nicht' };
+        pauseGame();
+        return { ok: true, pausiert: isPaused };
+      },
+      resume() {
+        if (state !== 'playing' && state !== 'lost') return { ok: false, fehler: 'spiel-laeuft-nicht' };
+        resumeGame();
+        return { ok: true, pausiert: isPaused };
       }
     };
     window.SuperPimmelchen = schnittstelle;
