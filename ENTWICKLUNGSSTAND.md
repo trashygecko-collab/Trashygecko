@@ -35,6 +35,26 @@ Geprüft: `go vet`, `go build` und die gezielten Läufe
 Wackelkandidaten (`TestZehnTausendHTTP`, `TestBotDomino` – Zufall bzw. geteilter
 Raumzustand); einzeln laufen sie durch.
 
+### Live-Kontrolle (nach dem Push, 26.11.2026)
+
+Gegen `https://trashygecko.onrender.com` geprüft, nachdem Render das Abbild neu
+gebaut hatte:
+
+- `/api/maensync` antwortet (vorher „404 page not found“, jetzt die Meldung des
+  Standwegs) – der neue Connector läuft.
+- Homepage `200`, `/connector` `200` ohne Konsolenfehler,
+  `spiele/goldminer/goldminer.html` mit `window.GoldMiner` 2.0.0, Startbildschirm
+  und den drei Stilknöpfen; in der Seite umgeschaltet: `normal`, `maedchen`,
+  `buben` (Zustand meldet jeweils den Stil), `start()` läuft (Level 1, Phase
+  „schwingt“), 0 Fehler.
+- Register live: `"api": "maensync", "art": "tisch"`.
+- Mehrspieler mit zwei getrennten Browsersitzungen im Raum `TG-HALLE`:
+  „bieten“ und „annehmen“ je `204`, der Stand steht danach mit zwei Sitzen auf
+  `invited`; beide „bereit“ und „Start“ `200` → `active`; ein Zug von A `200`,
+  B sieht denselben Stand mit beiden Spielern. (Die Prüfpartie hing danach im
+  Speicher, weil die Testsitzung geschlossen war; der Neuaufbau durch diesen
+  Commit räumt sie weg.)
+
 Veröffentlicht mit dem Commit dieser Änderung auf `origin/main`; Render baut
 daraus das Docker-Abbild (Website aus dem Repo, `connector.html` aus
 `connector-online`).
