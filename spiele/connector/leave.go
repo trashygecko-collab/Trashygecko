@@ -107,6 +107,9 @@ func (r *Room) partien() []partie {
 		ohneSitz("Das verrückte Labyrinth",
 			func() []string { return syncIDs(r.Labyrinth) },
 			func() { r.Labyrinth = nil }),
+		ohneSitz("Mensch ärgere dich nicht",
+			func() []string { return syncIDs(r.Maen) },
+			func() { r.Maen = nil }),
 		sitz("Würfelspiel",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Wuerfel; g != nil {
@@ -787,6 +790,13 @@ func (r *Room) aktivesSpiel(id string) string {
 			}
 		}
 	}
+	if g := r.Maen; g != nil && g.Status == "active" {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return "menschaerger"
+			}
+		}
+	}
 	zwei := func(name, status, a, b string) string {
 		if status == "active" && (a == id || b == id) {
 			return name
@@ -1228,6 +1238,13 @@ func (r *Room) playerInGame(id string) bool {
 		}
 	}
 	if g := r.Labyrinth; g != nil {
+		for _, p := range g.Spieler {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Maen; g != nil {
 		for _, p := range g.Spieler {
 			if p.ID == id {
 				return true

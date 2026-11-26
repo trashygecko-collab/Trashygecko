@@ -283,6 +283,7 @@ type Room struct {
 	Gaense          *GaenseGame            // Gänsespiel
 	Risiko          *RisikoSpiel           // Risiko (servergeprüfter Stand)
 	Labyrinth       *SyncGame              // Das verrückte Labyrinth (Online)
+	Maen            *SyncGame              // Mensch ärgere dich nicht (Online, Regeln im Browser)
 	Wuerfel         *wuerfelPartie         // Würfelspiele der Sammlung (18 Regelmodule, Server würfelt)
 	Angebote        []*Angebot             // offene Spieltische (einer je Spiel)
 	Mutes           map[string]time.Time   // playerID -> unmute time

@@ -29,7 +29,10 @@
 
   var API = "/api/" + SPIEL;
   var RISIKO = SPIEL === "risiko";
-  var SP = window[RISIKO ? "Risiko" : "Labyrinth"];
+  // Mensch ärgere dich nicht heißt im Server maensync: dort liegt nur der
+  // Stand, gewürfelt und gezogen wird im Spiel.
+  var MAEN = SPIEL === "maensync";
+  var SP = window[MAEN ? "MenschAergereDichNicht" : (RISIKO ? "Risiko" : "Labyrinth")];
   if (!SP) return;
 
   /* ---------------------------------------------------------- Spiel-Anbindung */
@@ -37,7 +40,9 @@
     stand: function () { return RISIKO ? SP.exportieren() : SP.stand(); },
     lade: function (d) { return RISIKO ? SP.laden(d) : SP.laden(d); },
     neu: function (anzahl, namen) {
-      if (RISIKO) {
+      if (MAEN) {
+        SP.neu({ anzahl: anzahl, namen: namen });
+      } else if (RISIKO) {
         var ki = [];
         for (var i = 0; i < anzahl; i++) ki.push(false);
         SP.neu({ modus: "welt", anzahl: anzahl, namen: namen, ki: ki });
@@ -48,9 +53,9 @@
     /* Risiko braucht den Aufbau der Karte (start); das Labyrinth zeigt das
        Brett schon beim Übernehmen des Stands (laden) – ein zweiter Start
        würde dort ein neues, zufälliges Brett bauen. */
-    zeige: function () { if (RISIKO) SP.start(); },
+    zeige: function () { if (MAEN) SP.zeige(); else if (RISIKO) SP.start(); },
     dran: function (d) { return Number(d && d.amZug) || 0; },
-    vorbei: function (d) { return !!(d && d.vorbei); }
+    vorbei: function (d) { return !!(d && (MAEN ? d.beendet : d.vorbei)); }
   };
 
   /* ------------------------------------------------------------------ Zustand */
@@ -147,7 +152,9 @@
         (meinPlatz < 0 ? " – du sitzt noch nicht" : "");
       if (meinPlatz >= 0) knopf("Bereit", function () { aktion("ready"); });
       if (meinPlatz === 0) {
-        if (spiel.spieler.length < spiel.anzahl) {
+        // Computer am Tisch gibt es nur, wo der Server sie auch spielt. Beim
+        // Mensch-ärgere-dich-nicht sitzt der Bot im Spiel (Einzelpartie).
+        if (!MAEN && spiel.spieler.length < spiel.anzahl) {
           knopf("+ Computer", function () { aktion("botadd", { stufe: "mittel" }); });
         }
         knopf("Start", function () { aktion("start"); });
@@ -181,6 +188,8 @@
     spiel = neu;
     meinPlatz = -1;
     (spiel.spieler || []).forEach(function (p, i) { if (p.id === ICH) meinPlatz = i; });
+    // Das Spiel prüft selbst, wer ziehen darf: dafür bekommt es seinen Platz.
+    if (MAEN && SP.platz) { try { SP.platz(meinPlatz >= 0 ? meinPlatz : null); } catch (e) {} }
     zeichneLeiste();
     if (spiel.status !== "active") { gestartet = false; return; }
 

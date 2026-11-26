@@ -57,14 +57,27 @@ const syncStandMax = 256 * 1024 // ein Stand bleibt weit darunter
 type syncArt struct {
 	Name     string
 	Min, Max int
+	// ServerBot: Der Server spielt Computersitze selbst (nur Labyrinth, dort
+	// steht das Regelwerk in bot_labyrinth.go). Mensch ärgere dich nicht
+	// würfelt und zieht im Browser – dort darf kein Sitz entstehen, den
+	// niemand spielt.
+	ServerBot bool
 }
 
 var syncArten = map[string]syncArt{
-	"labyrinth": {Name: "Das verrückte Labyrinth", Min: 2, Max: 4},
+	"labyrinth": {Name: "Das verrückte Labyrinth", Min: 2, Max: 4, ServerBot: true},
+	// Mensch ärgere dich nicht: 2 bis 4 Sitze. Gewürfelt, gezogen und
+	// geschlagen wird ausschließlich im Browser – der Server hält nur den
+	// zuletzt gemeldeten Stand und die Zugreihenfolge.
+	"menschaerger": {Name: "Mensch ärgere dich nicht", Min: 2, Max: 4},
 }
 
 // syncFeld liefert den Platz im Raum, an dem die Partie dieser Art liegt.
 func syncFeld(room *Room, art string) **SyncGame {
+	switch art {
+	case "menschaerger":
+		return &room.Maen
+	}
 	return &room.Labyrinth
 }
 
@@ -120,6 +133,9 @@ func syncName(art string) string {
 }
 
 func labyrinthHandler(w http.ResponseWriter, r *http.Request) { syncHandler(w, r, "labyrinth") }
+
+// maensync ist der Standweg für Mensch ärgere dich nicht (Regeln im Spiel).
+func maenSyncHandler(w http.ResponseWriter, r *http.Request) { syncHandler(w, r, "menschaerger") }
 
 // syncHandler bedient beide Spiele: ?room=…&action=… (POST) bzw. GET.
 func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
@@ -210,6 +226,10 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 	// Die erste Seite baut die Aufstellung wie bei jeder Partie und schickt
 	// sie als Stand; ab dem zweiten Zug spielt der Bot.
 	case "bot":
+		if !regeln.ServerBot {
+			fehler(http.StatusBadRequest, "In "+regeln.Name+" setzt der Server keine Computer ein – die Züge kommen aus dem Browser.")
+			return
+		}
 		if g != nil && g.Status != "finished" {
 			fehler(http.StatusConflict, "In diesem Spielraum läuft bereits eine "+regeln.Name+"-Partie.")
 			return
@@ -248,6 +268,10 @@ func syncHandler(w http.ResponseWriter, r *http.Request, art string) {
 	// Menschen und zwei Computer): der Computer ist einfach ein Sitz wie jeder
 	// andere, gespielt wird er vom Server (bot_labyrinth.go).
 	case "botadd":
+		if !regeln.ServerBot {
+			fehler(http.StatusBadRequest, "In "+regeln.Name+" setzt der Server keine Computer ein – die Züge kommen aus dem Browser.")
+			return
+		}
 		if g == nil || g.Status != "invited" {
 			fehler(http.StatusConflict, "Computer lassen sich nur vor dem Start setzen.")
 			return

@@ -138,7 +138,7 @@ window.TGMultiplayer = {
       "text": "Dame mit Schlagzwang – wer keine Figur mehr hat, verliert." },
     { "id": "paare", "name": "Paare finden", "kat": "brett", "pfad": "/spiele/brettspiele/paare/paare.html", "api": "paare", "min": 2, "max": 2, "art": "einladung",
       "text": "Paare finden: beide lösen dasselbe Brett – wer schneller ist, gewinnt." },
-    { "id": "menschaerger", "name": "Mensch ärgere dich nicht", "kat": "brett", "pfad": "/spiele/brettspiele/menschaerger/menschaerger.html", "api": "menschaerger", "min": 2, "max": 4, "art": "einladung",
+    { "id": "menschaerger", "name": "Mensch ärgere dich nicht", "kat": "brett", "pfad": "/spiele/brettspiele/menschaerger/menschaerger.html", "api": "maensync", "min": 2, "max": 4, "art": "tisch",
       "text": "Mensch ärgere dich nicht mit zwei bis vier Spielern am Tisch." },
     { "id": "kaesekaestche", "name": "Käsekästchen", "kat": "brett", "pfad": "/spiele/brettspiele/kaesekaestche/kaesekaestche.html", "api": "kaesekaestche", "min": 2, "max": 2, "art": "einladung",
       "text": "Käsekästchen: Linien ziehen und Kästchen schließen." },

@@ -29,8 +29,8 @@ func schiffeBotFlotte() []SchiffeSchiff {
 		{X: 0, Y: 0, Laenge: 5, Waagerecht: true},
 		{X: 0, Y: 2, Laenge: 4, Waagerecht: true},
 		{X: 0, Y: 4, Laenge: 3, Waagerecht: true},
-		{X: 0, Y: 7, Laenge: 3, Waagerecht: true},
-		{X: 0, Y: 9, Laenge: 2, Waagerecht: true},
+		{X: 0, Y: 6, Laenge: 2, Waagerecht: true},
+		{X: 0, Y: 8, Laenge: 1, Waagerecht: true},
 	}
 }
 

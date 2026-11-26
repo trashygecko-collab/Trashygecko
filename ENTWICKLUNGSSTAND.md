@@ -5,6 +5,42 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Live-Stand zusammengeführt: Mensch ärgere dich nicht am Standweg
+
+Vor dem Live-Test im Mehrspieler lief die Go-Suite über den unfertigen Stand.
+Sie fand zwei Lücken zwischen Seite und Server:
+
+- **Mensch ärgere dich nicht:** Die Seite sprach schon den Standweg
+  (`TG_ONLINE_SPIEL = "maensync"`, `online-sync.js`), die Verwaltung sagte
+  `"api": "maensync"`, aber der Server führte das Spiel weiter unter
+  `"menschaerger"`: `spielApi` (Runde anbieten, bereit, Anwesenheit), die
+  Tischart (`tischspiel`) und die Sitzpflege in `leave.go` kannten nur den alten
+  Weg. Jetzt sind beide Seiten auf `maensync`: `spielApi` und `tischspiel` zeigen
+  darauf, `angebot.go` liest den Status aus `room.Maen`, `leave.go` räumt Sitze
+  und „laufende Partie“ auf, `umbenennen.go` benennt mit um, und der
+  Register-Eintrag steht auf `"art": "tisch"` wie das Labyrinth. Damit läuft
+  „bieten → beitreten → bereit → Start → Zug“ im Test durch; der `create`-Aufruf
+  beim Anbieten legt den Stand an, der Beitritt nimmt den Sitz.
+- **Schiffe:** Das Spiel und der Server setzen seit dem Umbau die Flotte
+  5, 4, 3, 2, 1 (Flugzeugträger, Zerstörer, Patrouillenboot, U-Boot, Ente); der
+  Zug-Test schickte noch die alte Flotte 5, 4, 3, 3, 2. Der Test folgt jetzt der
+  Flotte aus `schiffe.go`; die nicht mehr benutzten Schiffsbilder
+  (`ansicht_schlachtschiff.png`, `bilder/kleines-boot.png` u. a.) sind entfallen,
+  die Seite zeichnet die Schiffe selbst.
+
+Geprüft: `go vet`, `go build` und die gezielten Läufe
+(`TestSpieleverwaltungPasstZuGo`, `TestSpieltabellenVollstaendig`,
+`TestJedesAngeboteneSpielZuZweit`, `TestJedesSpielIstImRaumSichtbar`,
+`TestZehnTausendHTTP`) sind grün. Im Gesamtlauf bleiben zwei bekannte
+Wackelkandidaten (`TestZehnTausendHTTP`, `TestBotDomino` – Zufall bzw. geteilter
+Raumzustand); einzeln laufen sie durch.
+
+Veröffentlicht mit dem Commit dieser Änderung auf `origin/main`; Render baut
+daraus das Docker-Abbild (Website aus dem Repo, `connector.html` aus
+`connector-online`).
+
+---
+
 ## 26.11.2026 · Goldminer auf Schnittstelle 2.0 – Grafik unangetastet
 
 `spiele/goldminer/goldminer.html` (beide Ablagen und die Android-Assets

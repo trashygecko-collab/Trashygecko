@@ -1,814 +1,1842 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-stil="normal">
 <head>
-<script src="../../token.js"></script>
-<script src="../../stil.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#12332a">
-<title>TIC TAC TOE</title>
-
-<style>
-:root {
-  --bg: #12332a;
-  --pink: #a9c3b6;
-  --blue: #e8cd8e;
-  --purple: #a9c3b6;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 20px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family:var(--tg-schrift);
-  color: white;
-  background:
-    radial-gradient(ellipse at 50% 10%, #12332a 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 100%, #184536 0%, transparent 50%),
-    var(--bg);
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.game {
-  width: 100%;
-  max-width: 460px;
-  padding: 24px 18px;
-  text-align: center;
-  border: 1px solid #12332a;
-  border-radius: 24px;
-  background: linear-gradient(145deg,#12332a,#184536);
-  box-shadow:
-    0 0 20px #bd36ff33,
-    inset 0 0 25px #a52cff18;
-}
-
-.status {
-  min-height: 55px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 12px 0 20px;
-  font-size: clamp(21px, 5vw, 27px);
-  font-weight: bold;
-}
-
-.status.pink {
-  color: var(--pink);
-  text-shadow: 0 0 10px var(--pink), 0 0 25px var(--pink);
-}
-
-.status.blue {
-  color: var(--blue);
-  text-shadow: 0 0 10px var(--blue), 0 0 25px var(--blue);
-}
-
-.status.neutral {
-  color: white;
-  text-shadow: 0 0 12px white;
-}
-
-.status .mark {
-  font-size: 1.7em;
-}
-
-.board-wrap {
-  position: relative;
-  width: 100%;
-}
-
-.board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  width: 100%;
-  aspect-ratio: 1;
-  border: 2px solid #a9c3b6;
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow:
-    0 0 12px #c33cff88,
-    0 0 28px #a52cff44,
-    inset 0 0 18px #a52cff22;
-}
-
-.cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-right: 2px solid #a9c3b6;
-  border-bottom: 2px solid #a9c3b6;
-  border-radius: 0;
-  background: linear-gradient(145deg,#12332a,#184536);
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: background .15s;
-}
-
-.cell:nth-child(3n) {
-  border-right: 0;
-}
-
-.cell:nth-last-child(-n+3) {
-  border-bottom: 0;
-}
-
-.cell:active:not(:disabled) {
-  background: #12332a;
-}
-
-.cell:disabled {
-  cursor: default;
-}
-
-.symbol {
-  display: block;
-  flex-shrink: 0;
-  font-family:var(--tg-schrift);
-  font-size: clamp(52px, 18vw, 100px);
-  font-weight: 900;
-  line-height: 1;
-  width: 1em;
-  text-align: center;
-}
-
-.cell.x .symbol {
-  color: var(--pink);
-  text-shadow:
-    0 0 5px white,
-    0 0 12px var(--pink),
-    0 0 25px var(--pink),
-    0 0 45px #a9c3b6;
-}
-
-.cell.o .symbol {
-  color: var(--blue);
-  text-shadow:
-    0 0 5px white,
-    0 0 12px var(--blue),
-    0 0 25px var(--blue),
-    0 0 45px #e8cd8e;
-}
-
-.cell.win {
-  background: #12332a;
-}
-
-.win-line {
-  position: absolute;
-  height: 7px;
-  border-radius: 20px;
-  transform-origin: left center;
-  pointer-events: none;
-  display: none;
-  z-index: 5;
-}
-
-.win-line.show {
-  display: block;
-}
-
-.message {
-  min-height: 35px;
-  margin: 18px 0 12px;
-  font-size: 19px;
-  font-weight: bold;
-  color: white;
-  text-shadow: 0 0 10px white;
-}
-
-.reset {
-  width: 100%;
-  min-height: 58px;
-  border: 1px solid #a9c3b6;
-  border-radius: 15px;
-  color: white;
-  background: linear-gradient(100deg,#12332a,#12332a);
-  box-shadow:
-    0 0 15px #ff39d677,
-    inset 0 0 12px #ffffff22;
-  font-size: 19px;
-  font-weight: bold;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.reset:active {
-  transform: scale(.98);
-  filter: brightness(1.3);
-}
-
-.leave-btn {
-  display:inline-block;
-  margin-top:10px;
-  background:transparent;
-  border:1px solid #12332a;
-  border-radius:8px;
-  color:#e8cd8e;
-  padding:8px 14px;
-  font-size:14px;
-  font-weight:bold;
-  cursor:pointer;
-  text-decoration:none;
-}
-.leave-btn:hover {
-  background:#12332a;
-  color:#f6edda;
-  border-color:#a9c3b6;
-}
-
-.hint {
-  margin: 14px 0 0;
-  color: #a9c3b6;
-  font-size: 13px;
-}
-/* Leer = nichts anzeigen (Einzelspiel). Im Online-Spiel steht hier der
-   Raumname, dann bleibt die Zeile sichtbar. */
-.hint:empty {
-  display: none;
-}
-
-@media(max-width:380px) {
-  body {
-    padding: 10px;
-  }
-
-  .game {
-    padding: 19px 12px;
-  }
-
-  .symbol {
-    font-size: clamp(48px, 17vw, 68px);
-  }
-}
-
-/* ---- Farben des Connectors: Grün und Gold ---- */
-body{background:radial-gradient(circle 900px at 50% -6%,#1d4b3e 0%,#123329 46%,#0a211b 100%) fixed;
- color:#efe6d2;font-family:var(--tg-schrift)}
-button{background:#0f2b23;border:1px solid #d9bc7c66;color:#e8cd8e;border-radius:7px;font-family:inherit}
-button:hover:not(:disabled){background:#184536}
-button.primary,.primary{background:#e8cd8e;border-color:#d9bc7c;color:#0b241d;font-weight:bold}
-h1,h2,h3{color:#f1dca8;font-weight:normal}
-small,.muted,.hint{color:#a9c3b6}
-
-/* Brett und Zeichen im Grün-Gold-Look */
-.game{border:1px solid #d9bc7c44;background:linear-gradient(145deg,#12332a,#0b241d);box-shadow:0 8px 20px #00000066}
-.board-wrap{border:2px solid #d9bc7c66;box-shadow:0 6px 16px #00000066;background:#0b241d}
-.board{background:#0f2b23;box-shadow:none;border-radius:12px}
-.cell{border-right:2px solid #2c5a49;border-bottom:2px solid #2c5a49;background:linear-gradient(145deg,#12332a,#0f2b23)}
-.cell:active:not(:disabled){background:#1a4436}
-.cell.win{background:#1d4a3a}
-.cell.x .symbol{color:#c2765c;text-shadow:0 2px 3px #000000aa}
-.cell.o .symbol{color:#e8cd8e;text-shadow:0 2px 3px #000000aa}
-.status.pink,.status.blue{color:#e8cd8e;text-shadow:none}
-.message{color:#a9c3b6}
-.reset{border:1px solid #d9bc7c77;background:#0f2b23;color:#e8cd8e;box-shadow:none}
-
-/* ---- Grafikstil (zentral): Klassisch bleibt unverändert ---- */
-html[data-stil="maedchen"] body{background:radial-gradient(ellipse at 50% 10%,#ffe6f2 0%,transparent 55%),radial-gradient(ellipse at 50% 100%,#ffd0e4 0%,transparent 55%),#f7a6d4;color:#3a0f24}
-html[data-stil="maedchen"] .game{background:linear-gradient(145deg,#fff6fa,#ffe3ef);border-color:#ef7aa8;box-shadow:0 10px 26px #b52a6340}
-html[data-stil="maedchen"] .board-wrap{background:#ffd0e4;border-color:#ef7aa8;box-shadow:0 6px 16px #b52a6340}
-html[data-stil="maedchen"] .board{background:#fff6fa;box-shadow:none;border-color:#ef7aa8}
-html[data-stil="maedchen"] .cell{border-right-color:#ef7aa8;border-bottom-color:#ef7aa8;background:linear-gradient(145deg,#ffffff,#fff0f7)}
-html[data-stil="maedchen"] .cell:active:not(:disabled){background:#ffe3ef}
-html[data-stil="maedchen"] .cell.x .symbol{color:#ef7aa8;text-shadow:0 2px 4px #b52a6340}
-html[data-stil="maedchen"] .cell.o .symbol{color:#b06bff;text-shadow:0 2px 4px #6b2fa040}
-html[data-stil="maedchen"] .cell.win{background:#ffe3ef}
-html[data-stil="maedchen"] .status.pink{color:#b0286a;text-shadow:none}
-html[data-stil="maedchen"] .status.blue{color:#7a2fbf;text-shadow:none}
-html[data-stil="maedchen"] .status.neutral{color:#3a0f24;text-shadow:none}
-html[data-stil="maedchen"] .message{color:#5b2340}
-html[data-stil="maedchen"] .reset{background:linear-gradient(100deg,#ff9ec4,#eb7bc0);border-color:#ef7aa8;color:#3a0f24;box-shadow:0 4px 12px #b52a6340}
-html[data-stil="maedchen"] .hint{color:#8f2450}
-html[data-stil="maedchen"] .leave-btn{border-color:#ef7aa8;color:#8f2450}
-html[data-stil="buben"] body{background:radial-gradient(ellipse at 50% 10%,#17222f 0%,transparent 55%),radial-gradient(ellipse at 50% 100%,#201014 0%,transparent 55%),#04070b;color:#e6e9ec}
-html[data-stil="buben"] .game{background:linear-gradient(145deg,#16181c,#0b0e11);border-color:#23262c;box-shadow:0 10px 26px #000000aa}
-html[data-stil="buben"] .board-wrap{background:#0a0d10;border-color:#2b3540;box-shadow:0 6px 16px #000000aa}
-html[data-stil="buben"] .board{background:#0a0d10;box-shadow:none;border-color:#e0242f}
-html[data-stil="buben"] .cell{border-right-color:#2b3540;border-bottom-color:#2b3540;background:linear-gradient(145deg,#1b1e23,#12161a)}
-html[data-stil="buben"] .cell:active:not(:disabled){background:#23262c}
-html[data-stil="buben"] .cell.x .symbol{color:#ff5560;text-shadow:0 0 12px #e0242f88}
-html[data-stil="buben"] .cell.o .symbol{color:#6dff4a;text-shadow:0 0 12px #6dff4a88}
-html[data-stil="buben"] .cell.win{background:#2a1418}
-html[data-stil="buben"] .status.pink{color:#ff8a90;text-shadow:none}
-html[data-stil="buben"] .status.blue{color:#6dff4a;text-shadow:none}
-html[data-stil="buben"] .status.neutral{color:#e6e9ec;text-shadow:none}
-html[data-stil="buben"] .message{color:#adb4bc}
-html[data-stil="buben"] .reset{background:#1b1e23;border-color:#e0242f;color:#ff8a90;box-shadow:0 0 14px #e0242f44}
-html[data-stil="buben"] .hint{color:#8f9aa5}
-html[data-stil="buben"] .leave-btn{border-color:#3a424b;color:#c9d1d9}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b241d">
+<title>Tic Tac Toe</title>
 <link rel="stylesheet" href="../../schrift.css">
-</head>
+<style>
+/* ===========================================================================
+   TIC TAC TOE – Neon-Brett, drei Spielwelten
+   ---------------------------------------------------------------------------
+   Schnittstelle 2.0.0 (siehe SPIELE-SCHNITTSTELLE.md). Das Spiel kennt keine
+   Räume, keine Kennungen und kein /api/: Der Connector schiebt den Spielstand
+   hinein (aktion("stand")) und hört auf die Absichten des Spiels
+   (tictactoe:zug, tictactoe:neu). Die Stilwahl kommt als start({stil}) und
+   wird nur hier dargestellt – jeder Spieler sieht seinen eigenen Stil.
+   =========================================================================== */
 
+/* ---------------------------------------------------------------- Farben */
+:root,html[data-stil="normal"]{
+  --bg-1:#1d4b3e; --bg-2:#0d2a22; --bg-3:#06170f;
+  --panel:#0f2b23; --leiste:#081d17;
+  --gold:#e8cd8e; --gold-hell:#f1dca8; --gold-2:#c9a95f;
+  --text:#efe6d2; --hell:#f4e6c2; --muted:#a9c3b6;
+  --rand:#d9bc7c; --rand-1:#d9bc7c66; --rand-3:#d9bc7c33;
+  --buehne:#08120f; --hover:#184536; --knopf-text:#0b241d;
+  --zelle-1:#16453a; --zelle-2:#0e2a21; --linie:#3a7561;
+  --x:#d98a63; --o:#e8cd8e;
+  --gewinn-zelle:#1d4a3a; --gewinn-linie:#e8cd8e;
+  --schleier:#03100cd9;
+  --rahmen-radius:14px; --zelle-radius:0px; --brett-luecke:0px;
+}
+html[data-stil="maedchen"]{
+  --bg-1:#fff3f9; --bg-2:#ffd0e4; --bg-3:#f2a3ce;
+  --panel:#fff6fa; --leiste:#ffe3ef;
+  --gold:#b0286a; --gold-hell:#8f2450; --gold-2:#7a1c46;
+  --text:#3a0f24; --hell:#4a1330; --muted:#8f2450;
+  --rand:#ef7aa8; --rand-1:#ef7aa8aa; --rand-3:#ef7aa855;
+  --buehne:#fff0f7; --hover:#ffe9f3; --knopf-text:#3a0f24;
+  --zelle-1:#ffffff; --zelle-2:#fff2f8; --linie:#f3a7c6;
+  --x:#c33a72; --o:#6f2bb5;
+  --gewinn-zelle:#ffdfee; --gewinn-linie:#d1467f;
+  --schleier:#7a1843aa;
+  --rahmen-radius:22px; --zelle-radius:14px; --brett-luecke:7px;
+}
+html[data-stil="buben"]{
+  --bg-1:#1b0a0e; --bg-2:#0a0d11; --bg-3:#03060a;
+  --panel:#0d1014; --leiste:#080b0e;
+  --gold:#e0242f; --gold-hell:#ff8a90; --gold-2:#8d1018;
+  --text:#d8dde3; --hell:#eef1f4; --muted:#8f9aa5;
+  --rand:#7d1017; --rand-1:#7d1017aa; --rand-3:#7d101755;
+  --buehne:#05080b; --hover:#22272e; --knopf-text:#0a0d10;
+  --zelle-1:#191d23; --zelle-2:#12161a; --linie:#2b3540;
+  --x:#ff3b45; --o:#e6ddcc;
+  --gewinn-zelle:#2b1013; --gewinn-linie:#e0242f;
+  --schleier:#000000cc;
+  --rahmen-radius:4px; --zelle-radius:2px; --brett-luecke:4px;
+}
+
+*{box-sizing:border-box}
+
+html,body{margin:0;height:100%}
+
+body{
+  position:relative;
+  height:100dvh;
+  overflow:hidden;
+  color:var(--text);
+  font-family:var(--tg-schrift);
+  background:radial-gradient(circle 900px at 50% -10%,var(--bg-1) 0%,var(--bg-2) 52%,var(--bg-3) 100%) fixed,var(--bg-3);
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color .2s ease,color .2s ease;
+}
+
+/* Das Papier unter dem Brett: Filz, Herzen oder Kratzer. */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(45deg,#ffffff05 0 2px,#00000000 2px 6px);
+}
+html[data-stil="maedchen"] body::before{
+  background-image:radial-gradient(#ffffff9c 2px,#00000000 2.4px);
+  background-size:26px 26px;
+  opacity:.55;
+}
+html[data-stil="maedchen"] body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 120px #ffb6d8aa;
+}
+html[data-stil="buben"] body::before{
+  background:
+    repeating-linear-gradient(112deg,#ffffff09 0 1px,#00000000 1px 11px),
+    repeating-linear-gradient(-18deg,#00000060 0 2px,#00000000 2px 9px);
+}
+html[data-stil="buben"] body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 160px #000000,inset 0 0 60px #3d060b55;
+}
+
+.seite{
+  position:relative;z-index:1;
+  height:100dvh;
+  display:grid;
+  /* Eine Spalte, die nicht über die Seite hinauswachsen kann: Ohne diese Zeile
+     bestimmte das größte Kind (Brett samt Rahmen) die Breite und schob bei
+     320 px die rechte Spalte aus dem Bild. */
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:4px;
+  padding:7px 10px 8px;
+}
+
+/* ---------------------------------------------------------------- Kopfzeile */
+.kopf{display:flex;align-items:center;gap:10px;min-height:30px}
+.kopf-titel{display:flex;flex-direction:column;gap:1px;min-width:0}
+.kopf .marke{
+  font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.kopf h1{
+  margin:0;font-size:clamp(14px,2.2vh,19px);line-height:1.1;font-weight:700;
+  letter-spacing:.2em;color:var(--gold-hell);white-space:nowrap;
+}
+html[data-stil="maedchen"] .kopf h1{letter-spacing:.14em}
+html[data-stil="maedchen"] .kopf h1::after{content:" ♥";color:var(--rand);font-size:.8em}
+html[data-stil="buben"] .kopf h1{letter-spacing:.24em;text-shadow:0 0 14px #e0242f66}
+.kopf-ende{margin-left:auto;display:flex;align-items:center;gap:6px}
+
+.mini{
+  font:inherit;font-size:11px;line-height:1.35;padding:5px 9px;cursor:pointer;
+  color:var(--gold);background:var(--leiste);
+  border:1px solid var(--rand-1);border-radius:6px;
+  min-height:28px;display:inline-flex;align-items:center;gap:6px;
+}
+.mini:hover{background:var(--hover);color:var(--hell);border-color:var(--rand)}
+.mini:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mini[aria-pressed="true"]{background:var(--gold);color:var(--knopf-text);border-color:var(--gold)}
+.vb-symbol{font-size:12px;line-height:1}
+
+/* ---------------------------------------------------------------- Bühne */
+.buehne{
+  position:relative;min-height:0;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ---------------------------------------------------------------- Spielbild */
+.spiel{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;width:100%;height:100%;min-height:0;
+}
+
+.status{
+  margin:0;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:24px;max-width:100%;padding:0 4px;
+  font-size:clamp(12.5px,2vh,17px);letter-spacing:.04em;
+  color:var(--text);text-align:center;
+}
+.status .marke-zeichen{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:1.5em;font-size:1.15em;font-weight:700;line-height:1;
+}
+.status .marke-zeichen svg{display:block;width:1.15em;height:1.15em}
+.status.ist-x .marke-zeichen{color:var(--x);text-shadow:0 0 12px var(--x)}
+.status.ist-o .marke-zeichen{color:var(--o);text-shadow:0 0 12px var(--o)}
+.status.gewonnen{color:var(--gold-hell);font-weight:700;letter-spacing:.1em}
+html[data-stil="maedchen"] .status.gewonnen{color:var(--gold)}
+html[data-stil="buben"] .status.gewonnen{color:var(--x);text-shadow:0 0 16px #e0242f88}
+
+.brettrahmen{
+  position:relative;flex:0 0 auto;
+  padding:8px;border-radius:var(--rahmen-radius);
+  background:linear-gradient(160deg,var(--zelle-1),var(--zelle-2));
+  border:1px solid var(--rand-1);
+  box-shadow:0 10px 26px #00000066,inset 0 0 0 1px #ffffff0d;
+}
+html[data-stil="maedchen"] .brettrahmen{
+  padding:10px;border:2px solid var(--rand);background:linear-gradient(160deg,#fff8fc,#ffe6f2);
+  box-shadow:0 10px 24px #b52a6333,inset 0 0 0 4px #ffffff;
+}
+html[data-stil="buben"] .brettrahmen{
+  padding:7px;border:2px solid var(--rand);background:#0a0d10;
+  box-shadow:0 0 0 1px #000000,0 12px 30px #000000cc,0 0 26px #e0242f22;
+}
+/* Eckzeichen: Kasino-Ecken, Herzen, Blutspritzer. */
+.brettrahmen::before,.brettrahmen::after{
+  position:absolute;font-size:12px;line-height:1;pointer-events:none;
+}
+html[data-stil="normal"] .brettrahmen::before{
+  content:"";left:8px;top:8px;width:10px;height:10px;
+  border-left:2px solid var(--gold);border-top:2px solid var(--gold);
+  border-radius:3px 0 0 0;opacity:.8;
+}
+html[data-stil="normal"] .brettrahmen::after{
+  content:"";right:8px;bottom:8px;width:10px;height:10px;
+  border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);
+  border-radius:0 0 3px 0;opacity:.8;
+}
+html[data-stil="maedchen"] .brettrahmen::before{content:"♥";left:-9px;top:-11px;color:var(--rand);font-size:22px;text-shadow:0 2px 0 #ffffff}
+html[data-stil="maedchen"] .brettrahmen::after{content:"♥";right:-9px;bottom:-11px;color:#b06bff;font-size:22px;text-shadow:0 2px 0 #ffffff}
+html[data-stil="buben"] .brettrahmen::before{
+  content:"";left:6px;right:6px;top:2px;height:2px;background:var(--rand);opacity:.7;
+}
+html[data-stil="buben"] .brettrahmen::after{
+  content:"";left:14px;bottom:-9px;width:7px;height:9px;border-radius:0 0 60% 60%;
+  background:#8d1018;box-shadow:44px -2px 0 -1px #6d0c13,96px 2px 0 -2px #5a0a10,180px -1px 0 -2px #4a080d;
+}
+
+.brett{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:repeat(3,minmax(0,1fr));
+  gap:var(--brett-luecke);
+  /* Keine eigene Fläche: Die Fugen sind Zellränder. contain:paint schneidet
+     alles am Brettrand ab – ohne diese Zeile malte Chromium die Fugen ein
+     paar Pixel in das Polster des Rahmens hinein. */
+  background:transparent;
+  contain:paint;
+}
+
+.zelle{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  min-width:0;min-height:0;padding:0;margin:0;
+  border:0;border-radius:var(--zelle-radius);
+  background:linear-gradient(150deg,var(--zelle-1),var(--zelle-2));
+  color:var(--text);cursor:pointer;touch-action:manipulation;
+  transition:background .12s ease,box-shadow .12s ease;
+}
+html[data-stil="normal"] .zelle{
+  border-right:1px solid var(--linie);border-bottom:1px solid var(--linie);
+}
+html[data-stil="normal"] .zelle:nth-child(3n){border-right:0}
+html[data-stil="normal"] .zelle:nth-last-child(-n+3){border-bottom:0}
+html[data-stil="maedchen"] .zelle{border:2px solid var(--linie);box-shadow:inset 0 0 0 2px #ffffff}
+.zelle:hover:not(:disabled){background:var(--hover)}
+.zelle:active:not(:disabled){filter:brightness(1.12)}
+.zelle:focus-visible{outline:2px solid var(--gold);outline-offset:-4px}
+.zelle:disabled{cursor:default}
+
+/* Spielsteine: je Stil ein eigenes, gezeichnetes Paar (SVG, kein Schriftzeichen).
+   Immer 62 % der Zelle – gleiche Größe und Mitte in allen drei Stilen. */
+.zeichen{display:block;width:62%;height:62%}
+.zeichen svg{display:block;width:100%;height:100%}
+.zelle.x .zeichen{color:var(--x)}
+.zelle.o .zeichen{color:var(--o)}
+.zelle.x .zeichen svg{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--x) 62%,transparent)) drop-shadow(0 2px 1px #00000055)}
+.zelle.o .zeichen svg{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--o) 62%,transparent)) drop-shadow(0 2px 1px #00000055)}
+html[data-stil="maedchen"] .zelle.x .zeichen svg,html[data-stil="maedchen"] .zelle.o .zeichen svg{
+  filter:drop-shadow(0 2px 2px #b52a6333);
+}
+html[data-stil="buben"] .zelle.x .zeichen svg{filter:drop-shadow(0 0 9px #e0242f99) drop-shadow(0 2px 0 #4a080d)}
+html[data-stil="buben"] .zelle.o .zeichen svg{filter:drop-shadow(0 0 7px #cfd6c966) drop-shadow(0 2px 0 #000000)}
+
+.zelle.gewinn{background:var(--gewinn-zelle);box-shadow:inset 0 0 22px color-mix(in srgb,var(--gewinn-linie) 40%,transparent)}
+html[data-stil="buben"] .zelle.gewinn{box-shadow:inset 0 0 22px #e0242f55,inset 0 -8px 0 #4a080d}
+
+/* Ein Zug ist unterwegs: Das Feld atmet, bis der Server bestätigt. */
+.zelle.wartet{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--x) 60%,transparent);animation:warten 1s ease-in-out infinite}
+@keyframes warten{0%,100%{opacity:1}50%{opacity:.55}}
+
+.linie{
+  position:absolute;display:none;height:6px;border-radius:6px;z-index:3;
+  transform-origin:left center;pointer-events:none;
+  background:var(--gewinn-linie);
+  box-shadow:0 0 10px var(--gewinn-linie),0 0 26px color-mix(in srgb,var(--gewinn-linie) 60%,transparent);
+}
+.linie.an{display:block}
+html[data-stil="maedchen"] .linie{height:7px;background:linear-gradient(90deg,#ef7aa8,#b06bff)}
+html[data-stil="buben"] .linie{height:5px;border-radius:2px;background:#e0242f;box-shadow:0 0 12px #e0242fcc,0 6px 10px #4a080d}
+
+.hinweis{
+  margin:0;min-height:1.2em;max-width:100%;padding:0 6px;
+  font-size:clamp(10.5px,1.6vh,12.5px);color:var(--muted);text-align:center;
+}
+
+/* ---------------------------------------------------------------- Fußleiste */
+.leiste{display:flex;align-items:center;justify-content:center;gap:8px;min-height:36px}
+.leiste .arcade-knopf{font-size:11.5px;letter-spacing:.06em;padding:7px 13px;min-height:34px}
+.leiste .arcade-knopf[disabled]{opacity:.45;cursor:default}
+
+/* ---------------------------------------------------------------- Karten */
+.blatt-wrap{
+  position:absolute;inset:0;z-index:6;display:grid;place-items:center;padding:10px;
+  background:var(--schleier);backdrop-filter:blur(2px);
+}
+html[data-stil="maedchen"] .blatt-wrap{background:#7a1843a8;backdrop-filter:blur(1.5px)}
+.blatt-wrap .arcade-blatt{max-width:min(400px,96%)}
+.blatt-wrap .arcade-blatt__titel{letter-spacing:.16em}
+.blatt-wrap .arcade-blatt__knoepfe{margin-top:4px}
+.blatt-wrap .arcade-knopf{font-size:12.5px;padding:9px 16px}
+
+/* ---------------------------------------------------------------- Startbildschirm */
+.buehne .arcade-start{justify-content:center}
+.arcade-start__kopf .arcade-start__titel{
+  letter-spacing:.14em;
+  text-shadow:0 2px 0 #00000066,0 0 26px color-mix(in srgb,var(--gold) 40%,transparent);
+}
+html[data-stil="maedchen"] .arcade-start{
+  background:radial-gradient(120% 90% at 50% -20%,#fff8fc 0%,#ffdcec 55%,#f9b6d6 100%);
+}
+html[data-stil="maedchen"] .arcade-start__titel{color:var(--gold);text-shadow:0 2px 0 #ffffff,0 0 22px #ff9ec466}
+html[data-stil="maedchen"] .arcade-start__marke{color:#a83a65}
+html[data-stil="maedchen"] .arcade-start__unterzeile{color:#8f2450}
+html[data-stil="buben"] .arcade-start{
+  background:radial-gradient(120% 90% at 50% -20%,#1b0a0e 0%,#0a0d11 55%,#03060a 100%);
+}
+html[data-stil="buben"] .arcade-start__titel{color:#ff8a90;text-shadow:0 2px 0 #000000,0 0 26px #e0242f66}
+html[data-stil="buben"] .arcade-start::before{
+  background:repeating-linear-gradient(112deg,#ffffff0a 0 1px,#00000000 1px 13px);opacity:.8;
+}
+
+.start-warten{
+  margin:0;padding:10px 12px;border-radius:9px;text-align:center;
+  border:1px dashed var(--rand-1);background:var(--panel);color:var(--text);
+  font-size:clamp(12px,1.8vh,14px);line-height:1.45;
+}
+html[data-stil="maedchen"] .start-warten{background:#fff6fa;border-color:var(--rand)}
+.start-warten b{color:var(--gold-hell)}
+
+/* ---------------------------------------------------------------- Schmale Geräte */
+@media (max-width:560px){
+  .seite{padding:6px 8px 6px;gap:3px}
+  .kopf .marke{display:none}
+  .kopf h1{font-size:15px;letter-spacing:.16em}
+  .mini{font-size:10.5px;padding:4px 8px}
+  .status{font-size:14px;min-height:22px}
+  .leiste .arcade-knopf{font-size:11px;padding:6px 11px}
+}
+/* Querformat mit wenig Höhe: Kopf und Fuß flach, Platz für das Brett. */
+@media (orientation:landscape) and (max-height:520px){
+  .seite{padding:3px 8px 4px;gap:1px}
+  .kopf{min-height:24px}
+  .kopf .marke{display:none}
+  .kopf h1{font-size:13px}
+  .mini{min-height:24px;padding:3px 7px;font-size:10px}
+  .status{min-height:18px;font-size:12px}
+  .hinweis{display:none}
+  .leiste{min-height:28px}
+  .leiste .arcade-knopf{min-height:26px;padding:4px 10px;font-size:10.5px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+<link rel="stylesheet" href="../../spiel-start.css">
+<style>
+/* Feinschliff am gemeinsamen Gerüst: nur Farben und Maße dieses Spiels.
+   Steht absichtlich nach spiel-start.css, damit die Regeln hier gewinnen. */
+
+/* Mädchen: heller Knopf mit dunkler Schrift, Hauptknopf kräftig mit weißer
+   Schrift (vorher dunkle Schrift auf dunklem Pflaumenverlauf: 1,9 : 1). */
+html[data-stil="maedchen"] .arcade-knopf{
+  background:#fff6fa;color:#8f2450;border-color:#ef7aa8;
+  box-shadow:0 3px 0 #d895b4aa,inset 0 1px 0 #ffffff;
+}
+html[data-stil="maedchen"] .arcade-knopf:hover{background:#ffe9f3}
+html[data-stil="maedchen"] .arcade-knopf--haupt{
+  background:linear-gradient(180deg,#d94d8c,#b0286a 55%,#8f2450);
+  color:#fff7fb;border-color:#e0568f;
+  box-shadow:0 4px 0 #7a1843aa,0 0 18px #ef7aa855,inset 0 1px 0 #ffffff66;
+}
+html[data-stil="maedchen"] .arcade-knopf--haupt:hover{filter:brightness(1.06)}
+html[data-stil="maedchen"] .start-warten{background:#fff6fa;border-color:#ef7aa8}
+
+.start-warten{grid-column:1/-1}
+
+/* Querformat mit wenig Höhe: eigener, enger Aufbau. Das gemeinsame Gerüst
+   verteilt dort drei Spalten; hier steht alles untereinander, damit nichts
+   überlappt. */
+@media (orientation:landscape) and (max-height:560px){
+  .buehne .arcade-start{
+    display:grid;grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"kopf" "text" "inhalt" "knoepfe";
+    align-content:center;gap:3px;padding:6px 14px;
+  }
+  .buehne .arcade-start__kopf{grid-area:kopf;text-align:center}
+  .buehne .arcade-start__marke{margin:0 0 2px}
+  .buehne .arcade-start__titel{font-size:clamp(24px,7.4vh,34px)}
+  .buehne .arcade-start__unterzeile{margin-top:1px;font-size:11px}
+  /* Der gemeinsame Querformat-Block setzt grid-area:text – hier steht der Text
+     aber im Inhalts-Raster, nicht im Start-Raster. Ohne diese Zeile landet er
+     in einer eigenen Spalte und quetscht Steuerung und Infos zusammen. */
+  .buehne .arcade-start__inhalt .arcade-start__text{
+    grid-area:auto;grid-column:1/-1;margin:0;font-size:11px;line-height:1.35;text-align:center;
+  }
+  .buehne .arcade-start__inhalt{grid-area:inhalt;grid-template-columns:minmax(0,1fr);gap:4px}
+  .buehne .arcade-start__abschnitt{margin:0 0 2px}
+  .buehne .arcade-start__steuerung li{font-size:10.5px;padding:0;gap:5px}
+  .buehne .arcade-start__steuerung .taste{min-width:22px;height:19px;font-size:9.5px}
+  .buehne .arcade-start__knoepfe{grid-area:knoepfe;margin-top:1px}
+  .buehne .arcade-knopf--haupt{padding:8px 20px;font-size:13px}
+}
+
+/* ---------------------------------------------------------------- Startwahl */
+/* Eine Spalte: Modus, dann (nur beim Bot) die Stufe, dann der Stil, dann die
+   Zusammenfassung. Die Reihen sind gleich breit, damit die Wahl ruhig wirkt. */
+.start-wahl{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:7px;
+  width:100%;max-width:560px;margin:0 auto;align-items:start;
+}
+.wahl-block{min-width:0}
+.wahl-reihe{display:flex;flex-wrap:wrap;gap:6px}
+.wahl{
+  flex:1 1 0;min-width:0;min-height:42px;padding:6px 8px;cursor:pointer;font:inherit;
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;
+  color:var(--text);background:var(--panel);
+  border:1px solid var(--rand-1);border-radius:9px;
+  box-shadow:0 2px 0 #00000055,inset 0 1px 0 #ffffff0f;
+  transition:background .12s ease,border-color .12s ease,transform .08s ease;
+}
+.wahl:hover{background:var(--hover);border-color:var(--rand)}
+.wahl:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.wahl[aria-pressed="true"]{
+  color:var(--knopf-text);border-color:var(--gold-hell);
+  background:linear-gradient(180deg,var(--gold-hell),var(--gold) 58%,var(--gold-2));
+  box-shadow:0 3px 0 #00000066,inset 0 1px 0 #ffffff88;
+}
+.wahl[aria-pressed="true"] .wahl-text{color:var(--knopf-text);opacity:.82}
+.wahl-titel{font-size:12px;font-weight:700;letter-spacing:.02em;line-height:1.15}
+.wahl-text{font-size:10px;line-height:1.2;color:var(--muted)}
+.wahl--klein{
+  flex-direction:row;align-items:center;justify-content:center;text-align:center;
+  min-height:32px;padding:5px 8px;font-size:11.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+/* Mädchen: gedrückte Wahl in kräftigem Rosa mit weißer Schrift (8,0 : 1). */
+html[data-stil="maedchen"] .wahl[aria-pressed="true"]{
+  color:#fff7fb;border-color:#e0568f;
+  background:linear-gradient(180deg,#e2699f,#c93a7a 58%,#a32259);
+}
+html[data-stil="maedchen"] .wahl[aria-pressed="true"] .wahl-text{color:#fff7fb;opacity:.9}
+/* Buben: gedrückte Wahl dunkelrot mit hellem Text, Kante wie eine Wunde. */
+html[data-stil="buben"] .wahl{
+  background:#0d1014;border-color:#3a1013;border-radius:3px;
+  box-shadow:0 2px 0 #000000,inset 0 0 0 1px #ffffff08;
+}
+html[data-stil="buben"] .wahl[aria-pressed="true"]{
+  color:#ffe1e3;border-color:#e0242f;
+  background:linear-gradient(180deg,#8d1018,#5d0a11 72%,#3d060b);
+  box-shadow:0 2px 0 #000000,0 0 14px #e0242f44,inset 0 1px 0 #ff8a9033;
+}
+html[data-stil="buben"] .wahl[aria-pressed="true"] .wahl-text{color:#ffb9be}
+
+/* Quer mit wenig Höhe: die drei Wahlzeilen nebeneinander, alles enger. */
+@media (orientation:landscape) and (max-height:620px){
+  .buehne .start-wahl{gap:4px;max-width:none}
+  .buehne .wahl-reihe{gap:4px}
+  .buehne .wahl{min-height:34px;padding:4px 6px;border-radius:6px}
+  .buehne .wahl-titel{font-size:11px}
+  .buehne .wahl-text{font-size:9px}
+  .buehne .wahl--klein{min-height:26px;padding:3px 6px;font-size:10.5px}
+}
+@media (max-width:420px){
+  .wahl-text{display:none}
+  .wahl{min-height:36px;align-items:center;text-align:center}
+}
+</style>
+</head>
 <body>
 
-<main class="game">
+<div class="seite">
 
-  <div id="status" class="status pink">
-    <span class="mark">✕</span>
-    <span>Kreuz ist dran!</span>
-  </div>
+  <header class="kopf">
+    <div class="kopf-titel">
+      <span class="marke" id="marke">TrashyGecko · Brettspiel</span>
+      <h1>TIC TAC TOE</h1>
+    </div>
+    <div class="kopf-ende">
+      <button type="button" class="mini arcade-vollbild" id="knopfVollbild">
+        <span class="vb-symbol" aria-hidden="true">⛶</span><span class="vb-text">Vollbild</span>
+      </button>
+    </div>
+  </header>
 
-  <div class="board-wrap">
+  <main class="buehne" id="buehne">
 
-    <div id="board" class="board">
+    <!-- Startbildschirm: Modus, Bot-Stufe und Stil an einer Stelle. -->
+    <section class="arcade-start" id="startBildschirm" aria-labelledby="startTitel">
+      <div class="arcade-start__kopf">
+        <p class="arcade-start__marke" id="startMarke">Brettspiel · zu zweit</p>
+        <h1 class="arcade-start__titel" id="startTitel">TIC TAC TOE</h1>
+        <p class="arcade-start__unterzeile" id="startUnter">Drei in einer Reihe – grün und Gold.</p>
+      </div>
 
-      <button class="cell" data-index="0" aria-label="Feld 1"></button>
-      <button class="cell" data-index="1" aria-label="Feld 2"></button>
-      <button class="cell" data-index="2" aria-label="Feld 3"></button>
+      <div class="arcade-start__inhalt start-wahl">
+        <div class="wahl-block" id="modusBlock">
+          <p class="arcade-start__abschnitt">Spielmodus</p>
+          <div class="wahl-reihe" id="modusKnoepfe" role="group" aria-label="Spielmodus">
+            <button type="button" class="wahl" data-modus="lokal" aria-pressed="true">
+              <span class="wahl-titel">Zwei am Gerät</span>
+              <span class="wahl-text">abwechselnd, ein Bildschirm</span>
+            </button>
+            <button type="button" class="wahl" data-modus="bot" aria-pressed="false">
+              <span class="wahl-titel">Gegen den Bot</span>
+              <span class="wahl-text">du gegen den Computer</span>
+            </button>
+          </div>
+        </div>
 
-      <button class="cell" data-index="3" aria-label="Feld 4"></button>
-      <button class="cell" data-index="4" aria-label="Feld 5"></button>
-      <button class="cell" data-index="5" aria-label="Feld 6"></button>
+        <div class="wahl-block" id="stufeBlock" hidden>
+          <p class="arcade-start__abschnitt">Bot-Schwierigkeit</p>
+          <div class="wahl-reihe" id="stufeKnoepfe" role="group" aria-label="Bot-Schwierigkeit">
+            <button type="button" class="wahl wahl--klein" data-stufe="leicht" aria-pressed="false">Leicht</button>
+            <button type="button" class="wahl wahl--klein" data-stufe="mittel" aria-pressed="true">Mittel</button>
+            <button type="button" class="wahl wahl--klein" data-stufe="schwer" aria-pressed="false">Schwer</button>
+          </div>
+        </div>
 
-      <button class="cell" data-index="6" aria-label="Feld 7"></button>
-      <button class="cell" data-index="7" aria-label="Feld 8"></button>
-      <button class="cell" data-index="8" aria-label="Feld 9"></button>
+        <div class="wahl-block" id="stilBlock" hidden>
+          <p class="arcade-start__abschnitt">Grafikstil</p>
+          <div class="wahl-reihe" id="stilKnoepfe" role="group" aria-label="Grafikstil">
+            <button type="button" class="wahl wahl--klein" data-stil="normal" aria-pressed="true">Kasino</button>
+            <button type="button" class="wahl wahl--klein" data-stil="maedchen" aria-pressed="false">Mädchen</button>
+            <button type="button" class="wahl wahl--klein" data-stil="buben" aria-pressed="false">Buben</button>
+          </div>
+        </div>
+      </div>
 
+      <p class="start-warten" id="startWarten" hidden>
+        <b>Du sitzt am Tisch.</b><br>
+        Sobald jemand mitspielt, geht es hier von selbst los –
+        die Einladung steht im Chat des Connectors.
+      </p>
+
+      <div class="arcade-start__knoepfe">
+        <button type="button" class="arcade-knopf arcade-knopf--haupt" id="knopfStarten">Starten</button>
+      </div>
+
+    </section>
+
+    <!-- Spielfeld -->
+    <section class="spiel" id="spielfeld" hidden aria-label="Spielfeld">
+      <p class="status" id="status" aria-live="polite">
+        <span class="marke-zeichen" id="statusZeichen" aria-hidden="true"></span>
+        <span id="statusText">Kreuz ist dran.</span>
+      </p>
+
+      <div class="brettrahmen" id="brettrahmen">
+        <div class="brett" id="brett" role="group" aria-label="Drei mal drei Felder"></div>
+      </div>
+
+      <p class="hinweis" id="hinweis"></p>
+    </section>
+
+    <!-- Ergebnis- und Pause-Karte -->
+    <div class="blatt-wrap" id="blattWrap" hidden>
+      <section class="arcade-blatt" id="blatt" role="dialog" aria-modal="true" aria-labelledby="blattTitel">
+        <h2 class="arcade-blatt__titel" id="blattTitel">Sieg</h2>
+        <p class="arcade-blatt__text" id="blattText"></p>
+        <ul class="arcade-blatt__werte" id="blattWerte"></ul>
+        <div class="arcade-blatt__knoepfe">
+          <button type="button" class="arcade-knopf arcade-knopf--haupt" id="blattHaupt">Neue Runde</button>
+          <button type="button" class="arcade-knopf arcade-knopf--zweit" id="blattZweit">Zum Start</button>
+        </div>
+      </section>
     </div>
 
-    <div id="winLine" class="win-line"></div>
+  </main>
 
-  </div>
+  <footer class="leiste" id="leiste">
+    <button type="button" class="arcade-knopf" id="knopfNeu">Neue Runde</button>
+    <button type="button" class="arcade-knopf" id="knopfPause">Pause</button>
+    <button type="button" class="arcade-knopf" id="knopfStart">Zum Start</button>
+  </footer>
 
-  <div id="message" class="message">
-    Kreuz beginnt – viel Spaß!
-  </div>
+</div>
 
-  <button id="reset" class="reset">
-    ↻ NEUE RUNDE
-  </button>
-
-  <div>
-    <button class="leave-btn" id="leaveBtn" onclick="leaveGame()" style="display:none;">
-      Spiel verlassen
-    </button>
-  </div>
-
-  <p class="hint"></p>
-
-</main>
-
-<script src="../../lob.js"></script>
-<script src="../../pech.js"></script>
-<script src="../../netz.js"></script>
+<script src="../../spiel-start.js"></script>
+<script src="../../zurueck.js" data-ziel=".kopf-ende"></script>
 <script>
-(() => {
+/* ===========================================================================
+   TIC TAC TOE – Spielmechanik und Schnittstelle 2.0.0
+   ---------------------------------------------------------------------------
+   Ein globaler Namensraum: window.TicTacToe.
 
-const cells = [...document.querySelectorAll('.cell')];
-const status = document.getElementById('status');
-const message = document.getElementById('message');
-const reset = document.getElementById('reset');
-const line = document.getElementById('winLine');
+   START
+     start()                      neue Partie im zuletzt gewählten Modus
+     start({stil})                nur die Welt einstellen (Connector beim Öffnen)
+     start({stil, online:{…}})    Partie im Raum (Connector); mark/gegner/marke
+                                  dürfen fehlen – dann „Warte auf Mitspieler“
 
-const wins = [
-  [0,1,2],
-  [3,4,5],
-  [6,7,8],
-  [0,3,6],
-  [1,4,7],
-  [2,5,8],
-  [0,4,8],
-  [2,4,6]
-];
+   MODI (Startbildschirm)
+     lokal   zwei Spieler abwechselnd an diesem Gerät
+     bot     Mensch (Kreuz) gegen den Bot (Kreis), drei Stufen
+   Online beginnt nur der Connector mit start({online:{…}}); auf dem
+   Startbildschirm gibt es dafür keine Wahl.
+   Bot und Schwierigkeit liegen hier im Spiel – der Connector weiß nichts davon.
 
-// Lob-, Pech- und Gleichstandstext: die gemeinsamen Listen aus lob.js und
-// pech.js, mit einem festen Satz als Ersatz, falls eine Datei fehlt.
-function lobText() {
-  return typeof lobSpruch === 'function'
-    ? lobSpruch(false)
-    : 'Super gemacht! Du bist ein echter Profi!';
-}
+   AKTIONEN (aktion(name, daten))
+     setzen {feld:0…8}   eigenes Zeichen setzen; im Online-Spiel geht nur die
+                         Absicht an den Connector (kein lokales Setzen); gegen
+                         den Bot zieht er danach von selbst
+     neu                 neue Runde (online: fragt beim Connector an)
+     start, pause, weiter
+     stand {brett, amZug, status, sieger, mark?, gegner?, marke?, hinweis?}
+                         Spielstand vom Connector übernehmen (nur online)
 
-function pechText() {
-  return typeof pechSpruch === 'function'
-    ? pechSpruch(true)
-    : 'Schade, das war knapp – die nächste Runde gehört dir!';
-}
+   EREIGNISSE (CustomEvent auf window)
+     tictactoe:bereit {version}
+     tictactoe:ende {grund, sieger, zuege, punkte, level, levelAnzahl, tick}
+     tictactoe:pausiert {tick} · tictactoe:weiter {tick}
+     tictactoe:zug {feld}        Absicht eines Spielers (nur online)
+     tictactoe:neu               Wunsch nach einer neuen Runde (nur online)
 
-const GLEICHSTAND = 'Gleichstand! Ihr seid beide gleich gut!';
+   SPEICHER
+     ticTacToeBilanz  {x,o,remis} – nur Partien am Gerät
+     ticTacToeStil    Stilwahl beim direkten Start (normal|maedchen|buben)
 
-let board = Array(9).fill('');
-let current = 'X';
-let finished = false;
+   Das Spiel ruft selbst kein /api/ auf, öffnet keine WebSockets und liest
+   weder Raum noch Kennung aus der Adresse. Räume, Einladungen und die
+   Synchronisierung gehören dem Connector.
+   =========================================================================== */
+(function () {
+  "use strict";
 
-let winningCombo = null;
+  var VERSION = "2.0.0";
+  var STILE = ["normal", "maedchen", "buben"];
+  var GEWINNREIHEN = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+  ];
+  var BILANZ_SCHLUESSEL = "ticTacToeBilanz";
+  var FELDER_ERLAUBT = ["stil", "level", "online"];
+  var ONLINE_ERLAUBT = ["mark", "gegner", "marke"];
+  var ZUSTAENDE = ["active", "invited", "finished", "declined"];
+  /* Wählbar sind zwei Modi. Online entsteht nur über den Connector
+     (start({online})), deshalb steht es nicht in der Liste. */
+  var MODI = ["lokal", "bot"];
+  var STUFEN = ["leicht", "mittel", "schwer"];
+  var STUFEN_TEXT = { leicht: "Leicht", mittel: "Mittel", schwer: "Schwer" };
+  var STIL_TEXT = { normal: "Kasino", maedchen: "Mädchen", buben: "Buben" };
+  var STIL_SCHLUESSEL = "ticTacToeStil";
+  var BOT_MARK = "O";
+  var BOT_DENKZEIT = 320;
 
-const onlineParams = new URLSearchParams(location.search);
-const onlineRoom = (onlineParams.get('room') || '').trim().toUpperCase();
-let onlineID = '';
-let onlineMark = '';
-let onlineGame = null;
-// Spielende-Sperre: Die Meldung zu Sieg oder Gleichstand gehört genau einmal
-// zu einer Partie. Der Browser fragt den Stand unten alle 700 ms ab – ohne
-// diese Marke würde bei jedem Abruf neu gemeldet (und lobText() zieht dabei
-// jedes Mal einen anderen Satz, also sah es nach lauter neuen Meldungen aus).
-let ergebnisGezeigt = '';
-let onlineOpponent = 'Gegner';
-let onlineName = (onlineParams.get('name') || 'Spieler').trim().slice(0,24);
-if(onlineRoom){
-  // Der Connector schickt die Spieler-ID in der URL mit. Sonst gilt die des
-  // Tabs, sonst wird eine neue erzeugt – ohne ID gäbe es kein Presence und
-  // der Spieler würde nach 20 Sekunden aus dem Raum fallen.
-  onlineID = (onlineParams.get('id') || '').trim();
-  if(!onlineID){
-    try{
-      onlineID = sessionStorage.getItem('tg-player-id') || '';
-      if(!onlineID){
-        onlineID = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
-        sessionStorage.setItem('tg-player-id', onlineID);
+  var TEXTE = {
+    normal: {
+      marke: "Brettspiel · zu zweit",
+      unter: "Drei in einer Reihe – grün und Gold.",
+    },
+    maedchen: {
+      marke: "Brettspiel · zu zweit",
+      unter: "Herz und Teddy, ganz lieb – drei in einer Reihe.",
+    },
+    buben: {
+      marke: "Brettspiel · zu zweit",
+      unter: "Drei in einer Reihe. Nur einer geht raus.",
+    }
+  };
+
+  var el = {
+    marke: document.getElementById("marke"),
+    buehne: document.getElementById("buehne"),
+    start: document.getElementById("startBildschirm"),
+    startMarke: document.getElementById("startMarke"),
+    startUnter: document.getElementById("startUnter"),
+    startText: document.getElementById("startText"),
+    startWarten: document.getElementById("startWarten"),
+    modusBlock: document.getElementById("modusBlock"),
+    modusKnoepfe: document.getElementById("modusKnoepfe"),
+    stufeBlock: document.getElementById("stufeBlock"),
+    stufeKnoepfe: document.getElementById("stufeKnoepfe"),
+    stilBlock: document.getElementById("stilBlock"),
+    stilKnoepfe: document.getElementById("stilKnoepfe"),
+    spiel: document.getElementById("spielfeld"),
+    status: document.getElementById("status"),
+    statusZeichen: document.getElementById("statusZeichen"),
+    statusText: document.getElementById("statusText"),
+    brett: document.getElementById("brett"),
+    brettrahmen: document.getElementById("brettrahmen"),
+    hinweis: document.getElementById("hinweis"),
+    blattWrap: document.getElementById("blattWrap"),
+    blattTitel: document.getElementById("blattTitel"),
+    blattText: document.getElementById("blattText"),
+    blattWerte: document.getElementById("blattWerte"),
+    blattHaupt: document.getElementById("blattHaupt"),
+    blattZweit: document.getElementById("blattZweit"),
+    knopfVollbild: document.getElementById("knopfVollbild"),
+    knopfStarten: document.getElementById("knopfStarten"),
+    knopfNeu: document.getElementById("knopfNeu"),
+    knopfPause: document.getElementById("knopfPause"),
+    knopfStart: document.getElementById("knopfStart"),
+    leiste: document.getElementById("leiste")
+  };
+
+  var zellen = [];
+  var linie = document.createElement("div");
+  linie.className = "linie";
+  linie.setAttribute("aria-hidden", "true");
+  el.brett.appendChild(linie);
+
+  /* -------------------------------------------------------------- Zustand */
+  var S = {
+    stil: "normal",
+    stilVorgabe: false,   // Stil kam von außen (Connector) → keine Wahl zeigen
+    modus: "lokal",       // lokal | bot | online
+    stufe: "mittel",      // Bot-Schwierigkeit
+    laeuft: false,
+    pausiert: false,
+    startbildschirm: true,
+    online: false,
+    mark: "",
+    gegner: "",
+    marke: "",
+    brett: ["", "", "", "", "", "", "", "", ""],
+    amZug: "X",
+    status: "idle",     // idle | warte | active | invited | finished | declined
+    sieger: "",
+    zuege: 0,
+    tick: 0,
+    hinweis: "",
+    gesendet: -1,
+    endeGemeldet: false,
+    blatt: ""
+  };
+  var fertig = { breit: 0 };
+  var botTimer = null;
+
+  /* -------------------------------------------------------------- Kleinkram */
+  function istObjekt(wert) {
+    return wert !== null && typeof wert === "object" && !Array.isArray(wert);
+  }
+
+  function ereignis(name, detail) {
+    try {
+      window.dispatchEvent(new CustomEvent(name, { detail: detail }));
+    } catch (e) {
+      /* Ein Hörer darf das Spiel nicht aufhalten. */
+    }
+  }
+
+  function kopie(wert) {
+    return JSON.parse(JSON.stringify(wert));
+  }
+
+  function zeige(element, an) {
+    if (!element) return;
+    if (an) element.removeAttribute("hidden");
+    else element.setAttribute("hidden", "");
+  }
+
+  function zaehleSteine() {
+    var n = 0;
+    for (var i = 0; i < 9; i++) if (S.brett[i]) n++;
+    return n;
+  }
+
+  /* -------------------------------------------------------------- Aussehen */
+  function stilLesen() {
+    try {
+      var roh = localStorage.getItem(STIL_SCHLUESSEL);
+      return STILE.indexOf(roh) >= 0 ? roh : "";
+    } catch (e) { return ""; }
+  }
+
+  function stilMerken(wert) {
+    try { localStorage.setItem(STIL_SCHLUESSEL, wert); } catch (e) { /* egal */ }
+  }
+
+  /* Im Connector-Rahmen gehört die Wahl dem Spieler: Sie steht im Elterndokument
+     (TGStil) und wird hier nur übernommen – ohne eigene Wahl im Spiel. */
+  function stilAusUmgebung() {
+    if (window.parent === window) return "";
+    try {
+      var p = window.parent;
+      if (p.TGStil && typeof p.TGStil.lokal === "function") {
+        var wert = p.TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
+        if (STILE.indexOf(wert) >= 0) return wert;
       }
-    }catch(e){ onlineID = String(Date.now()) + Math.random(); }
-  }
-}
-
-function updateStatus() {
-
-  if(current === 'X') {
-
-    status.className = 'status pink';
-
-    status.innerHTML =
-      '<span class="mark">✕</span>' +
-      '<span>Kreuz ist dran!</span>';
-
-  } else {
-
-    status.className = 'status blue';
-
-    status.innerHTML =
-      '<span class="mark">○</span>' +
-      '<span>Kreis ist dran!</span>';
-
+      var attr = p.document && p.document.documentElement.getAttribute("data-stil");
+      if (attr === "klassisch") return "normal";
+      if (STILE.indexOf(attr) >= 0) return attr;
+    } catch (e) { /* fremder Rahmen: dann eben ohne */ }
+    return "";
   }
 
-}
-
-function getWinner() {
-
-  for(const combo of wins) {
-
-    if(combo.every(i => board[i] === current)) {
-      return combo;
+  function stilSetzen(wert) {
+    var neu = STILE.indexOf(wert) >= 0 ? wert : "normal";
+    S.stil = neu;
+    document.documentElement.setAttribute("data-stil", neu);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute("content",
+        neu === "maedchen" ? "#ffd0e4" : neu === "buben" ? "#070a0d" : "#0b241d");
     }
-
+    var t = TEXTE[neu];
+    if (el.startMarke) el.startMarke.textContent = t.marke;
+    if (el.startUnter) el.startUnter.textContent = t.unter;
+    wahlZeichnen();
+    zeichne();
   }
 
-  return null;
-
-}
-
-function drawWinLine(combo) {
-
-  const boardRect =
-    document.getElementById('board').getBoundingClientRect();
-
-  const first =
-    cells[combo[0]].getBoundingClientRect();
-
-  const last =
-    cells[combo[2]].getBoundingClientRect();
-
-  const x1 =
-    first.left + first.width / 2 - boardRect.left;
-
-  const y1 =
-    first.top + first.height / 2 - boardRect.top;
-
-  const x2 =
-    last.left + last.width / 2 - boardRect.left;
-
-  const y2 =
-    last.top + last.height / 2 - boardRect.top;
-
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-
-  line.style.left = x1 + 'px';
-  line.style.top = y1 + 'px';
-
-  line.style.width = Math.hypot(dx,dy) + 'px';
-
-  line.style.transform =
-    `rotate(${Math.atan2(dy,dx)}rad)`;
-
-  if(current === 'X') {
-
-    line.style.background = '#a9c3b6';
-
-    line.style.boxShadow =
-      '0 0 7px white,0 0 16px #a9c3b6,0 0 30px #a9c3b6';
-
-  } else {
-
-    line.style.background = '#e8cd8e';
-
-    line.style.boxShadow =
-      '0 0 7px white,0 0 16px #e8cd8e,0 0 30px #e8cd8e';
-
-  }
-
-  line.classList.add('show');
-
-}
-
-function play(index) {
-
-  if(onlineRoom){ multiplayerMove(index); return; }
-
-  if(finished || board[index]) return;
-
-  board[index] = current;
-
-  const cell = cells[index];
-
-  cell.classList.add(current === 'X' ? 'x' : 'o');
-
-  cell.innerHTML =
-    `<span class="symbol">${current === 'X' ? '✕' : '○'}</span>`;
-
-  cell.setAttribute(
-    'aria-label',
-    `Feld ${index + 1}: ${current === 'X' ? 'Kreuz' : 'Kreis'}`
-  );
-
-  cell.disabled = true;
-
-  const combo = getWinner();
-
-  if(combo) {
-
-    finished = true;
-    winningCombo = combo;
-
-    combo.forEach(i => {
-      cells[i].classList.add('win');
+  /* Modus, Stufe und Stil: eine Stelle für Anzeige und Sichtbarkeit. */
+  function wahlZeichnen() {
+    [].forEach.call(el.modusKnoepfe ? el.modusKnoepfe.children : [], function (b) {
+      b.setAttribute("aria-pressed", b.dataset.modus === S.modus ? "true" : "false");
     });
-
-    drawWinLine(combo);
-
-    const winner =
-      current === 'X' ? 'Kreuz' : 'Kreis';
-
-    status.className =
-      `status ${current === 'X' ? 'pink' : 'blue'}`;
-
-    status.innerHTML =
-      `<span>${winner} hat gewonnen!</span>`;
-
-    message.textContent =
-      `🎉 ${lobText()} 🎉`;
-    if (window.TGErgebnis) TGErgebnis.gewonnen(); // zentrale Connector-Texte
-
-    cells.forEach(c => c.disabled = true);
-
-    reset.textContent = '↻ NOCHMAL SPIELEN';
-
-    return;
-
-  }
-
-  if(board.every(Boolean)) {
-
-    finished = true;
-
-    status.className = 'status neutral';
-    status.textContent = 'Gleichstand!';
-
-    message.textContent = GLEICHSTAND;
-
-    reset.textContent = '↻ NOCHMAL SPIELEN';
-
-    return;
-
-  }
-
-  current = current === 'X' ? 'O' : 'X';
-
-  updateStatus();
-
-  message.textContent = 'Du bist dran!';
-
-}
-
-function newGame() {
-
-  if(onlineRoom){ multiplayerReset(); return; }
-
-  board = Array(9).fill('');
-  current = 'X';
-  finished = false;
-  winningCombo = null;
-
-  line.classList.remove('show');
-
-  cells.forEach((cell,index) => {
-
-    cell.disabled = false;
-    cell.className = 'cell';
-    cell.innerHTML = '';
-    cell.setAttribute('aria-label', `Feld ${index + 1}`);
-
-  });
-
-  updateStatus();
-
-  message.textContent =
-    'Kreuz beginnt – viel Spaß!';
-
-  reset.textContent = '↻ NEUE RUNDE';
-
-}
-
-async function multiplayerMove(index){
-  if(!onlineGame || onlineGame.status !== 'active' || onlineMark !== onlineGame.current) return;
-  try{
-    const response = await fetch('/api/tictactoe?room=' + encodeURIComponent(onlineRoom) + '&action=move', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:onlineID,index})
+    [].forEach.call(el.stufeKnoepfe ? el.stufeKnoepfe.children : [], function (b) {
+      b.setAttribute("aria-pressed", b.dataset.stufe === S.stufe ? "true" : "false");
     });
-    if(!response.ok){
-      const detail=(await response.text()).trim();
-      message.textContent=detail || 'Zug konnte nicht übertragen werden.';
-    }
-    await refreshMultiplayer();
-  }catch(e){ message.textContent='Verbindung zum Connector unterbrochen.'; }
-}
-
-async function multiplayerReset(){
-  if(!onlineGame || onlineGame.status !== 'finished') return;
-  try{
-    const response = await fetch('/api/tictactoe?room=' + encodeURIComponent(onlineRoom) + '&action=reset', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:onlineID})
+    [].forEach.call(el.stilKnoepfe ? el.stilKnoepfe.children : [], function (b) {
+      b.setAttribute("aria-pressed", b.dataset.stil === S.stil ? "true" : "false");
     });
-    if(!response.ok){
-      const detail=(await response.text()).trim();
-      message.textContent=detail || 'Neue Runde konnte nicht gestartet werden.';
-    }
-    await refreshMultiplayer();
-  }catch(e){ message.textContent='Verbindung zum Connector unterbrochen.'; }
-}
-
-function renderMultiplayer(game){
-  onlineGame=game;
-  onlineMark = game.xId===onlineID ? 'X' : game.oId===onlineID ? 'O' : '';
-  onlineOpponent = onlineMark==='X' ? game.oName : game.xName;
-  board = Array.isArray(game.board) ? game.board.slice() : Array(9).fill('');
-  current = game.current || 'X';
-  if(game.status==='finished' && game.winner && game.winner!=='draw') current=game.winner;
-  finished = game.status==='finished';
-  winningCombo = game.winner && game.winner!=='draw'
-    ? wins.find(combo=>combo.every(i=>board[i]===game.winner)) || null
-    : null;
-
-  cells.forEach((cell,index)=>{
-    const mark=board[index] || '';
-    cell.className='cell';
-    if(mark){
-      cell.classList.add(mark==='X'?'x':'o');
-      cell.innerHTML=`<span class="symbol">${mark==='X'?'✕':'○'}</span>`;
-      cell.setAttribute('aria-label',`Feld ${index+1}: ${mark==='X'?'Kreuz':'Kreis'}`);
-    }else{
-      cell.innerHTML='';
-      cell.setAttribute('aria-label',`Feld ${index+1}`);
-    }
-    if(winningCombo && winningCombo.includes(index)) cell.classList.add('win');
-    cell.disabled = game.status!=='active' || Boolean(mark) || current!==onlineMark;
-  });
-
-  if(game.status==='finished'){
-    const marke=(game.id||'partie')+'|'+game.winner;
-    if(ergebnisGezeigt!==marke){
-      ergebnisGezeigt=marke;
-      if(game.winner==='draw'){
-        line.classList.remove('show');
-        status.className='status neutral';
-        status.textContent='Gleichstand!';
-        message.textContent=GLEICHSTAND;
-      }else{
-        const wonByX=game.winner==='X';
-        const winnerName=wonByX?game.xName:game.oName;
-        status.className=`status ${wonByX?'pink':'blue'}`;
-        status.innerHTML=`<span>${winnerName} hat gewonnen!</span>`;
-        message.textContent=game.winner===onlineMark
-          ? `🎉 ${lobText()} 🎉`
-          : `😅 ${pechText()}`;
-        if(winningCombo) drawWinLine(winningCombo);
+    if (S.startbildschirm) {
+      var wahl = !el.startWarten || el.startWarten.hasAttribute("hidden");
+      if (wahl) {
+        zeige(el.modusBlock, true);
+        zeige(el.stufeBlock, S.modus === "bot");
+        zeige(el.stilBlock, !S.stilVorgabe);
       }
     }
-    reset.disabled=false;
-    reset.textContent='↻ NOCHMAL SPIELEN';
-    return;
   }
 
-  // Laufende oder neue Partie: das nächste Ergebnis darf wieder einmal gemeldet
-  // werden (nach „Nochmal spielen“ bleibt die Kennung, der Status wechselt).
-  ergebnisGezeigt='';
-
-  line.classList.remove('show');
-  reset.disabled=true;
-  reset.textContent='↻ RUNDE LÄUFT';
-  if(game.status!=='active'){
-    status.className='status neutral';
-    status.textContent=game.status==='declined'?'Einladung abgelehnt':'Warte auf den Spielstart …';
-    message.textContent='Bitte zum Connector zurückkehren.';
-    return;
+  function baueZellen() {
+    for (var i = 0; i < 9; i++) {
+      (function (index) {
+        var z = document.createElement("button");
+        z.type = "button";
+        z.className = "zelle";
+        z.dataset.feld = String(index);
+        z.setAttribute("aria-label", "Feld " + (index + 1));
+        z.addEventListener("click", function () {
+          zugMachen(index);
+        });
+        el.brett.insertBefore(z, linie);
+        zellen.push(z);
+      })(i);
+    }
   }
 
-  const isX=current==='X';
-  status.className=`status ${isX?'pink':'blue'}`;
-  status.innerHTML=`<span class="mark">${isX?'✕':'○'}</span><span>${current===onlineMark?'Du bist dran!':onlineOpponent+' ist dran!'}</span>`;
-  message.textContent=current===onlineMark?'Du bist dran – wähle ein Feld.':'Warte auf den Zug deines Gegners.';
-}
+  function passeBrett() {
+    if (!el.spiel || el.spiel.hasAttribute("hidden")) return;
+    var platz = el.spiel.getBoundingClientRect();
+    if (!platz.width || !platz.height) return;
+    // Der Rahmen (Polster und Rand) gehört zum Platzbedarf des Bretts; die
+    // Abstände der Spalte zählen mit, damit nichts unter die Fußleiste rutscht.
+    var rahmen = 0;
+    if (el.brettrahmen) {
+      var rs = getComputedStyle(el.brettrahmen);
+      rahmen = (parseFloat(rs.paddingLeft) || 0) + (parseFloat(rs.paddingRight) || 0) +
+        (parseFloat(rs.borderLeftWidth) || 0) + (parseFloat(rs.borderRightWidth) || 0);
+    }
+    var statusH = el.status ? el.status.getBoundingClientRect().height : 24;
+    var hinweisH = 0;
+    if (el.hinweis && getComputedStyle(el.hinweis).display !== "none") {
+      hinweisH = el.hinweis.getBoundingClientRect().height;
+    }
+    var luecken = 0;
+    try { luecken = (parseFloat(getComputedStyle(el.spiel).rowGap) || 0) * 2; } catch (e) { luecken = 12; }
+    var hoehe = platz.height - statusH - hinweisH - luecken;
+    var kante = Math.min(platz.width - 6, hoehe, 520) - rahmen;
+    kante = Math.max(120, Math.floor(kante));
+    if (kante === fertig.breit) return;
+    fertig.breit = kante;
+    el.brett.style.width = kante + "px";
+    el.brett.style.height = kante + "px";
+    el.brett.style.setProperty("--kante", kante + "px");
+    zeichneLinie();
+  }
 
-async function multiplayerHeartbeat(){
-  if(!onlineRoom || !onlineID) return;
-  try{
-    await fetch('/api/presence', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({room:onlineRoom,id:onlineID,name:onlineName})
-    });
-  }catch(e){}
-}
-async function refreshMultiplayer(){
-  try{
-    const response=await fetch('/api/tictactoe?room='+encodeURIComponent(onlineRoom)+'&id='+encodeURIComponent(onlineID),{cache:'no-store'});
-    if(!response.ok) throw Error('Spielraum nicht erreichbar.');
-    const data=await response.json();
-    if(!data.game){
-      status.className='status neutral';
-      status.textContent='Keine aktive Partie gefunden';
-      message.textContent='Bitte öffne Tic Tac Toe über eine Einladung im Connector.';
-      cells.forEach(cell=>cell.disabled=true);
-      reset.disabled=true;
+  function findeReihe(marke) {
+    for (var i = 0; i < GEWINNREIHEN.length; i++) {
+      var r = GEWINNREIHEN[i];
+      if (S.brett[r[0]] === marke && S.brett[r[1]] === marke && S.brett[r[2]] === marke) return r;
+    }
+    return null;
+  }
+
+  function siegerReihe() {
+    if (S.sieger === "X" || S.sieger === "O") return findeReihe(S.sieger);
+    return null;
+  }
+
+  function zeichneLinie() {
+    var reihe = siegerReihe();
+    if (!reihe || !zellen.length) {
+      linie.classList.remove("an");
       return;
     }
-    renderMultiplayer(data.game);
-  }catch(e){
-    status.className='status neutral';
-    status.textContent='Verbindung wird gesucht …';
-    message.textContent='Der Connector ist momentan nicht erreichbar.';
+    var b = el.brett.getBoundingClientRect();
+    var a = zellen[reihe[0]].getBoundingClientRect();
+    var z = zellen[reihe[2]].getBoundingClientRect();
+    if (!b.width) return;
+    var x1 = a.left + a.width / 2 - b.left;
+    var y1 = a.top + a.height / 2 - b.top;
+    var x2 = z.left + z.width / 2 - b.left;
+    var y2 = z.top + z.height / 2 - b.top;
+    var dx = x2 - x1, dy = y2 - y1;
+    linie.style.left = x1 + "px";
+    linie.style.top = (y1 - 3) + "px";
+    linie.style.width = Math.hypot(dx, dy) + "px";
+    linie.style.transform = "rotate(" + Math.atan2(dy, dx) + "rad)";
+    linie.classList.add("an");
   }
-}
 
-cells.forEach(cell => {
+  /* -------------------------------------------------------------- Symbole
+     Jeder Stil bringt sein eigenes Paar, gezeichnet als SVG: Herz und Teddy,
+     Pentagramm und Totenkopf – kein Schriftzeichen, kein Emoji, damit alles
+     in jeder Größe scharf bleibt. Die Zuordnung hängt an der Marke (X/O) und
+     am eigenen Stil; im Online-Spiel zeichnet jeder Rahmen seine Fassung. */
+  var SYMBOLE = {
+    normal: {
+      X: {
+        name: "Kreuz", klasse: "sym-kreuz",
+        bild: '<path d="M31 31 69 69M69 31 31 69" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>'
+      },
+      O: {
+        name: "Kreis", klasse: "sym-kreis",
+        bild: '<circle cx="50" cy="50" r="26.5" fill="none" stroke="currentColor" stroke-width="12"/>'
+      }
+    },
+    maedchen: {
+      X: {
+        name: "Herz", klasse: "sym-herz",
+        bild: '<path d="M50 87C27 70 11 54 11 37c0-12 9-21 21-21 8 0 14 4 18 11 4-7 10-11 18-11 12 0 21 9 21 21 0 17-16 33-39 50z" fill="#de2f6c" stroke="#ffffff" stroke-width="4.5" stroke-linejoin="round"/>' +
+          '<ellipse cx="32" cy="33" rx="8.5" ry="5.5" fill="#ffffff" opacity=".55" transform="rotate(-30 32 33)"/>'
+      },
+      O: {
+        name: "Teddy", klasse: "sym-teddy",
+        bild: '<circle cx="26" cy="27" r="13" fill="#96603e" stroke="#5d3721" stroke-width="3"/>' +
+          '<circle cx="74" cy="27" r="13" fill="#96603e" stroke="#5d3721" stroke-width="3"/>' +
+          '<circle cx="26" cy="27" r="6.5" fill="#f0b6cb"/>' +
+          '<circle cx="74" cy="27" r="6.5" fill="#f0b6cb"/>' +
+          '<circle cx="50" cy="56" r="30" fill="#a26a45" stroke="#5d3721" stroke-width="3"/>' +
+          '<ellipse cx="50" cy="65" rx="16" ry="12.5" fill="#f3d9bd"/>' +
+          '<circle cx="39" cy="49" r="4.4" fill="#241209"/>' +
+          '<circle cx="61" cy="49" r="4.4" fill="#241209"/>' +
+          '<ellipse cx="50" cy="60" rx="4.8" ry="3.8" fill="#241209"/>' +
+          '<path d="M50 64v3.5M50 67.5c-1.6 2.6-4.4 2.6-6 .6M50 67.5c1.6 2.6 4.4 2.6 6 .6" fill="none" stroke="#241209" stroke-width="2.2" stroke-linecap="round"/>' +
+          '<circle cx="28" cy="60" r="5" fill="#f183ad" opacity=".7"/>' +
+          '<circle cx="72" cy="60" r="5" fill="#f183ad" opacity=".7"/>' +
+          '<path d="M74 14 65 8v12z" fill="#ff6fa8"/><path d="M74 14 83 8v12z" fill="#ff6fa8"/>' +
+          '<circle cx="74" cy="14" r="3.2" fill="#d61e67"/>'
+      }
+    },
+    buben: {
+      X: {
+        name: "Pentagramm", klasse: "sym-pentagramm",
+        bild: '<path d="M50 13 72.3 82.8 13.9 40.3 86.1 40.3 27.7 82.8Z" fill="none" stroke="#ff2f3b" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/>'
+      },
+      O: {
+        name: "Totenkopf", klasse: "sym-totenkopf",
+        bild: '<path d="M33 64h34v11c0 6.6-4.4 11-11 11H44c-6.6 0-11-4.4-11-11z" fill="#e6ddcc" stroke="#7d1017" stroke-width="3"/>' +
+          '<path d="M50 10C30.7 10 18 23.4 18 40c0 10.4 5 19 13 24h38c8-5 13-13.6 13-24 0-16.6-12.7-30-32-30z" fill="#e6ddcc" stroke="#7d1017" stroke-width="3"/>' +
+          '<circle cx="37" cy="39" r="7.6" fill="#0a0d11"/><circle cx="63" cy="39" r="7.6" fill="#0a0d11"/>' +
+          '<path d="M50 60l-6.6-10.5h13.2z" fill="#0a0d11"/>' +
+          '<path d="M43.5 69v14M50 69v14M56.5 69v14" fill="none" stroke="#7d1017" stroke-width="2.6"/>'
+      }
+    }
+  };
 
-  cell.addEventListener('click', () => {
-    play(Number(cell.dataset.index));
+  function symbolPaar() { return SYMBOLE[S.stil] || SYMBOLE.normal; }
+
+  function symbolName(marke) {
+    var s = symbolPaar()[marke === "O" ? "O" : "X"];
+    return s.name;
+  }
+
+  function symbolBild(marke) {
+    var s = symbolPaar()[marke === "O" ? "O" : "X"];
+    return '<svg class="sym ' + s.klasse + '" viewBox="0 0 100 100" aria-hidden="true" focusable="false">' +
+      s.bild + "</svg>";
+  }
+
+  function zeichne() {
+    if (!zellen.length) return;
+    var reihe = siegerReihe();
+    var offen = S.laeuft && !S.pausiert && S.status === "active" &&
+      (!S.online || S.amZug === S.mark);
+    for (var i = 0; i < 9; i++) {
+      var marke = S.brett[i];
+      var z = zellen[i];
+      z.className = "zelle" + (marke ? " " + marke.toLowerCase() : "");
+      if (reihe && reihe.indexOf(i) >= 0) z.classList.add("gewinn");
+      if (S.gesendet === i) z.classList.add("wartet");
+      z.innerHTML = marke
+        ? '<span class="zeichen" aria-hidden="true">' + symbolBild(marke) + "</span>"
+        : "";
+      z.setAttribute("aria-label", marke
+        ? "Feld " + (i + 1) + ": " + symbolName(marke)
+        : "Feld " + (i + 1) + ", frei");
+      z.disabled = Boolean(marke) || !offen;
+    }
+    zeichneStatus();
+    zeichneLinie();
+    passeBrett();
+    aktualisiereKnoepfe();
+  }
+
+  function zeichneStatus() {
+    var zeichen = symbolBild("X");
+    var text = "";
+    var klasse = "status ist-x";
+    var wer = symbolName;
+
+    if (S.online) {
+      if (S.status === "warte") {
+        zeichen = "…"; klasse = "status"; text = "Warte auf Mitspieler …";
+      } else if (S.status === "invited") {
+        zeichen = ""; klasse = "status"; text = "Einladung an " + (S.gegner || "deinen Mitspieler") + " läuft …";
+      } else if (S.status === "declined") {
+        zeichen = ""; klasse = "status"; text = "Einladung abgelehnt.";
+      } else if (S.status === "finished") {
+        zeichen = "";
+        if (S.sieger === "draw") { klasse = "status"; text = "Unentschieden – keiner gewinnt."; }
+        else if (S.mark && S.sieger === S.mark) { klasse = "status gewonnen"; text = "Du gewinnst!"; }
+        else { klasse = "status"; text = (S.gegner || "Der Gegner") + " gewinnt."; }
+      } else if (!S.mark) {
+        zeichen = "…"; klasse = "status"; text = "Warte auf Mitspieler …";
+      } else if (S.amZug === S.mark) {
+        zeichen = symbolBild(S.mark);
+        klasse = "status " + (S.mark === "X" ? "ist-x" : "ist-o");
+        text = "Du bist dran.";
+      } else {
+        zeichen = symbolBild(S.amZug);
+        klasse = "status " + (S.amZug === "X" ? "ist-x" : "ist-o");
+        text = (S.gegner || "Der Gegner") + " ist dran.";
+      }
+    } else if (S.status === "finished") {
+      zeichen = "";
+      klasse = "status gewonnen";
+      if (S.sieger === "draw") text = "Unentschieden – keiner gewinnt.";
+      else if (S.modus === "bot") text = S.sieger === "X" ? "Du gewinnst!" : "Der Bot gewinnt.";
+      else text = wer(S.sieger) + " gewinnt!";
+    } else if (S.modus === "bot") {
+      if (S.amZug === "X") {
+        zeichen = symbolBild("X"); klasse = "status ist-x"; text = "Du bist dran.";
+      } else {
+        zeichen = symbolBild("O"); klasse = "status ist-o"; text = "Der Bot denkt …";
+      }
+    } else {
+      zeichen = symbolBild(S.amZug);
+      klasse = "status " + (S.amZug === "X" ? "ist-x" : "ist-o");
+      text = wer(S.amZug) + " ist dran.";
+    }
+
+    el.status.className = klasse;
+    el.statusZeichen.innerHTML = zeichen;
+    el.statusZeichen.style.display = zeichen ? "" : "none";
+    el.statusText.textContent = text;
+    el.hinweis.textContent = S.hinweis || "";
+  }
+
+  function aktualisiereKnoepfe() {
+    var imSpiel = !S.startbildschirm;
+    el.knopfPause.textContent = S.pausiert ? "Weiter" : "Pause";
+    el.knopfPause.disabled = !S.laeuft;
+    el.knopfNeu.disabled = !imSpiel && !S.laeuft;
+    el.knopfStart.disabled = S.startbildschirm;
+  }
+
+  function zeigeBildschirm(art) {
+    var start = art === "start";
+    zeige(el.start, start);
+    zeige(el.spiel, !start);
+    zeige(el.leiste, !start);
+    if (!start) {
+      fertig.breit = 0;
+      requestAnimationFrame(passeBrett);
+    }
+    aktualisiereKnoepfe();
+  }
+
+  function zeigeStart(warten) {
+    S.startbildschirm = true;
+    botStoppen();
+    zeigeBildschirm("start");
+    var wahl = !warten;
+    zeige(el.startWarten, Boolean(warten));
+    zeige(el.modusBlock, wahl);
+    zeige(el.stufeBlock, wahl && S.modus === "bot");
+    zeige(el.stilBlock, wahl && !S.stilVorgabe);
+    zeige(el.knopfStarten, wahl);
+    wahlZeichnen();
+  }
+
+  /* -------------------------------------------------------------- Bilanz */
+  function bilanzLesen() {
+    var roh = null;
+    try { roh = JSON.parse(localStorage.getItem(BILANZ_SCHLUESSEL) || "{}"); } catch (e) { roh = {}; }
+    if (!istObjekt(roh)) roh = {};
+    return {
+      x: Number(roh.x) || 0,
+      o: Number(roh.o) || 0,
+      remis: Number(roh.remis) || 0
+    };
+  }
+
+  function bilanzSchreiben(b) {
+    try { localStorage.setItem(BILANZ_SCHLUESSEL, JSON.stringify(b)); } catch (e) { /* egal */ }
+  }
+
+  function bilanzBuchen() {
+    if (S.online) return;
+    var b = bilanzLesen();
+    if (S.sieger === "X") b.x++;
+    else if (S.sieger === "O") b.o++;
+    else if (S.sieger === "draw") b.remis++;
+    bilanzSchreiben(b);
+  }
+
+  /* -------------------------------------------------------------- Bot
+     Der Bot spielt Kreis (BOT_MARK) und sieht nur das Brett. Drei Stufen:
+     leicht rät meist, mittel nimmt Sieg und Block und mag die Mitte, schwer
+     rechnet Minimax und verliert nie. Er zieht durch dieselbe Prüfung wie ein
+     Mensch (zugMachen) und darf nichts, was ein Mensch nicht darf. */
+  function reiheImBrett(brett, marke) {
+    for (var i = 0; i < GEWINNREIHEN.length; i++) {
+      var r = GEWINNREIHEN[i];
+      if (brett[r[0]] === marke && brett[r[1]] === marke && brett[r[2]] === marke) return r;
+    }
+    return null;
+  }
+
+  function botFreieFelder(brett) {
+    var frei = [];
+    for (var i = 0; i < 9; i++) if (!brett[i]) frei.push(i);
+    return frei;
+  }
+
+  function botZufall(liste) {
+    return liste[Math.floor(Math.random() * liste.length)];
+  }
+
+  function botGewinnfeld(brett, marke) {
+    for (var i = 0; i < 9; i++) {
+      if (brett[i]) continue;
+      brett[i] = marke;
+      var trifft = !!reiheImBrett(brett, marke);
+      brett[i] = "";
+      if (trifft) return i;
+    }
+    return -1;
+  }
+
+  function botWert(brett, marke, gegner, tiefe, amZug) {
+    if (reiheImBrett(brett, marke)) return 10 - tiefe;
+    if (reiheImBrett(brett, gegner)) return tiefe - 10;
+    if (botFreieFelder(brett).length === 0) return 0;
+    var wer = amZug ? marke : gegner;
+    var best = amZug ? -99 : 99;
+    for (var i = 0; i < 9; i++) {
+      if (brett[i]) continue;
+      brett[i] = wer;
+      var w = botWert(brett, marke, gegner, tiefe + 1, !amZug);
+      brett[i] = "";
+      if (amZug ? w > best : w < best) best = w;
+    }
+    return best;
+  }
+
+  function botFeld(stufe, brett, marke) {
+    var frei = botFreieFelder(brett);
+    if (!frei.length) return -1;
+    var gegner = marke === "X" ? "O" : "X";
+    var stufeWert = STUFEN.indexOf(stufe) >= 0 ? stufe : "mittel";
+
+    if (stufeWert === "leicht") {
+      /* Meist irgendwohin; liegt ein Sieg direkt vor der Nase, greift er in
+         drei von vier Fällen zu. Blocken kennt diese Stufe nicht. */
+      var sofort = botGewinnfeld(brett, marke);
+      if (sofort >= 0 && Math.random() < 0.75) return sofort;
+      return botZufall(frei);
+    }
+
+    var sieg = botGewinnfeld(brett, marke);
+    if (sieg >= 0) return sieg;
+    var block = botGewinnfeld(brett, gegner);
+    if (block >= 0) return block;
+
+    if (stufeWert === "mittel") {
+      if (!brett[4]) return 4;
+      var ecken = [];
+      [0, 2, 6, 8].forEach(function (i) { if (!brett[i]) ecken.push(i); });
+      if (ecken.length) return botZufall(ecken);
+      return botZufall(frei);
+    }
+
+    /* Schwer: vollständiges Minimax; gleich gute Züge werden gemischt, damit
+       nicht jede Partie gleich aussieht. Schlechter wird dadurch keiner. */
+    var beste = [], besterWert = -99;
+    for (var k = 0; k < frei.length; k++) {
+      var f = frei[k];
+      brett[f] = marke;
+      var wert = botWert(brett, marke, gegner, 1, false);
+      brett[f] = "";
+      if (wert > besterWert) { besterWert = wert; beste = [f]; }
+      else if (wert === besterWert) beste.push(f);
+    }
+    return beste.length ? botZufall(beste) : frei[0];
+  }
+
+  function botStoppen() {
+    if (botTimer) {
+      clearTimeout(botTimer);
+      botTimer = null;
+    }
+  }
+
+  function botDran() {
+    return S.modus === "bot" && !S.online && S.status === "active" &&
+      S.laeuft && !S.pausiert && !S.startbildschirm && S.amZug === BOT_MARK;
+  }
+
+  function botZugPlanen() {
+    botStoppen();
+    if (!botDran()) return;
+    S.hinweis = "Der Bot denkt …";
+    zeichneStatus();
+    botTimer = setTimeout(botZugAusfuehren, BOT_DENKZEIT);
+  }
+
+  function botZugAusfuehren() {
+    botTimer = null;
+    if (!botDran()) return;
+    var feld = botFeld(S.stufe, S.brett.slice(), BOT_MARK);
+    if (feld < 0) return;
+    S.hinweis = "";
+    zugMachen(feld);
+  }
+
+  /* -------------------------------------------------------------- Karten */
+  function blattZeigen(art) {
+    var pause = art === "pause";
+    var bot = !S.online && S.modus === "bot";
+    var sieg = !pause && S.sieger !== "draw" && (bot ? S.sieger === "X" : (!S.online || S.sieger === S.mark));
+    if (pause) {
+      el.blattTitel.textContent = "Pause";
+      el.blattText.textContent = S.online
+        ? "Das Brett steht still. Dein Mitspieler kann inzwischen ziehen – beim Weiter geht es mit dem neuesten Stand."
+        : "Das Brett steht still. Weiter mit dem Knopf oder mit P.";
+      el.blattHaupt.textContent = "Weiterspielen";
+      el.blattZweit.textContent = "Zum Start";
+    } else {
+      el.blattTitel.textContent = S.sieger === "draw" ? "Unentschieden" : sieg ? "Sieg" : "Niederlage";
+      el.blattText.textContent = S.sieger === "draw"
+        ? "Alle neun Felder sind voll – diese Runde gehört niemandem."
+        : S.online
+          ? (sieg ? "Drei in einer Reihe – die Runde ist dein." : (S.gegner || "Der Gegner") + " hat drei in einer Reihe.")
+          : bot
+            ? (sieg ? "Drei in einer Reihe – die Runde ist dein." : "Der Bot hat drei in einer Reihe.")
+            : symbolName(S.sieger) + " hat drei in einer Reihe.";
+      el.blattHaupt.textContent = "Neue Runde";
+      el.blattZweit.textContent = "Zum Start";
+    }
+    var werte = [];
+    if (!pause) {
+      werte.push({ wert: S.sieger === "draw" ? "–" : (S.sieger === "X" ? (bot ? "Du" : "Kreuz") : (bot ? "Bot" : "Kreis")), was: "Sieger" });
+      werte.push({ wert: String(S.zuege), was: "Züge" });
+    }
+    el.blattWerte.innerHTML = "";
+    werte.forEach(function (w) {
+      var li = document.createElement("li");
+      var a = document.createElement("span");
+      a.className = "wert";
+      a.textContent = w.wert;
+      var b = document.createElement("span");
+      b.className = "was";
+      b.textContent = w.was;
+      li.append(a, b);
+      el.blattWerte.appendChild(li);
+    });
+    el.blattWerte.style.display = werte.length ? "" : "none";
+    S.blatt = pause ? "pause" : "ende";
+    zeige(el.blattWrap, true);
+    try { el.blattHaupt.focus({ preventScroll: true }); } catch (e) { }
+  }
+
+  function blattSchliessen() {
+    S.blatt = "";
+    zeige(el.blattWrap, false);
+  }
+
+  /* -------------------------------------------------------------- Partie */
+  function leeresBrett() {
+    return ["", "", "", "", "", "", "", "", ""];
+  }
+
+  function starteLokal() {
+    botStoppen();
+    S.online = false;
+    S.mark = "";
+    S.gegner = "";
+    S.marke = "";
+    S.brett = leeresBrett();
+    S.amZug = "X";
+    S.status = "active";
+    S.sieger = "";
+    S.zuege = 0;
+    S.tick = 0;
+    S.gesendet = -1;
+    S.endeGemeldet = false;
+    S.pausiert = false;
+    S.laeuft = true;
+    S.startbildschirm = false;
+    S.hinweis = S.modus === "bot" ? "Du bist Kreuz und beginnst." : "Kreuz beginnt.";
+    blattSchliessen();
+    zeigeBildschirm("spiel");
+    zeichne();
+  }
+
+  function starteOnline(mark, gegner, marke) {
+    botStoppen();
+    S.online = true;
+    S.mark = mark === "X" || mark === "O" ? mark : "";
+    S.gegner = typeof gegner === "string" ? gegner.slice(0, 24) : "";
+    S.marke = typeof marke === "string" ? marke : "";
+    S.brett = leeresBrett();
+    S.amZug = "X";
+    S.sieger = "";
+    S.zuege = 0;
+    S.tick = 0;
+    S.gesendet = -1;
+    S.endeGemeldet = false;
+    S.pausiert = false;
+    S.laeuft = false;
+    S.hinweis = "";
+    blattSchliessen();
+    if (S.mark) {
+      S.status = "active";
+      S.laeuft = true;
+      S.startbildschirm = false;
+      zeigeBildschirm("spiel");
+      zeichne();
+    } else {
+      S.status = "warte";
+      zeigeStart(true);
+    }
+  }
+
+  function bedienbar(feld) {
+    if (!S.laeuft || S.pausiert || S.status !== "active") return false;
+    if (feld < 0 || feld > 8 || S.brett[feld]) return false;
+    if (S.online) {
+      if (!S.mark) return false;
+      if (S.amZug !== S.mark) return false;
+      if (S.gesendet >= 0) return false;
+    }
+    return true;
+  }
+
+  function zugMachen(feld) {
+    if (!S.laeuft || S.startbildschirm) {
+      return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    }
+    if (S.pausiert || S.status !== "active") {
+      return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    }
+    if (typeof feld !== "number" || !Number.isInteger(feld) || feld < 0 || feld > 8) {
+      return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    }
+    if (S.brett[feld]) {
+      S.hinweis = "Dieses Feld ist schon belegt.";
+      zeichneStatus();
+      return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    }
+    if (S.online) {
+      if (!S.mark) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      if (S.amZug !== S.mark) {
+        S.hinweis = (S.gegner || "Der Gegner") + " ist dran.";
+        zeichneStatus();
+        return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      }
+      if (S.gesendet >= 0) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      /* Kein lokales Setzen: Der Connector fragt den Server; erst dessen
+         Antwort ändert das Brett. So kann ein Abbruch keinen falschen
+         Spielstand erzeugen. */
+      S.gesendet = feld;
+      S.hinweis = "Zug wird gesendet …";
+      zeichne();
+      ereignis("tictactoe:zug", { feld: feld });
+      return { ok: true, feld: feld, gesendet: true };
+    }
+
+    S.brett[feld] = S.amZug;
+    S.zuege++;
+    S.tick++;
+    S.hinweis = "";
+    var reihe = findeReihe(S.amZug);
+    if (reihe) {
+      beende(S.amZug);
+      return { ok: true, feld: feld };
+    }
+    if (zaehleSteine() === 9) {
+      beende("draw");
+      return { ok: true, feld: feld };
+    }
+    S.amZug = S.amZug === "X" ? "O" : "X";
+    zeichne();
+    if (S.amZug === BOT_MARK) botZugPlanen();
+    return { ok: true, feld: feld };
+  }
+
+  function beende(sieger) {
+    S.status = "finished";
+    S.sieger = sieger;
+    S.laeuft = false;
+    S.pausiert = false;
+    S.gesendet = -1;
+    S.zuege = zaehleSteine();
+    S.tick = S.zuege;
+    zeichne();
+    bilanzBuchen();
+    meldeEnde();
+    blattZeigen("ende");
+  }
+
+  function meldeEnde() {
+    if (S.endeGemeldet) return;
+    S.endeGemeldet = true;
+    var grund = "unentschieden";
+    if (S.sieger === "X" || S.sieger === "O") {
+      if (S.online) grund = S.sieger === S.mark ? "gewonnen" : "verloren";
+      else if (S.modus === "bot") grund = S.sieger === "X" ? "gewonnen" : "verloren";
+      else grund = "gewonnen";
+    }
+    ereignis("tictactoe:ende", {
+      grund: grund,
+      sieger: S.sieger,
+      zuege: S.zuege,
+      punkte: 0,
+      level: 1,
+      levelAnzahl: 1,
+      tick: S.tick
+    });
+  }
+
+  function rundeNeu() {
+    if (S.startbildschirm) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    if (S.online) {
+      if (S.status !== "finished" && S.status !== "declined") {
+        return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      }
+      S.hinweis = "Neue Runde wird angefragt …";
+      zeichneStatus();
+      ereignis("tictactoe:neu", {});
+      return { ok: true, angefragt: true };
+    }
+    S.brett = leeresBrett();
+    S.amZug = "X";
+    S.status = "active";
+    S.sieger = "";
+    S.zuege = 0;
+    S.tick = 0;
+    S.gesendet = -1;
+    S.endeGemeldet = false;
+    S.pausiert = false;
+    S.laeuft = true;
+    S.hinweis = S.modus === "bot" ? "Du bist Kreuz und beginnst." : "Kreuz beginnt.";
+    botStoppen();
+    blattSchliessen();
+    zeigeBildschirm("spiel");
+    zeichne();
+    return { ok: true };
+  }
+
+  function pause() {
+    if (!S.laeuft) return { ok: false, fehler: "spiel-laeuft-nicht" };
+    if (S.pausiert) return { ok: true, pausiert: true };
+    S.pausiert = true;
+    botStoppen();
+    zeichne();
+    blattZeigen("pause");
+    ereignis("tictactoe:pausiert", { tick: S.tick });
+    return { ok: true, pausiert: true };
+  }
+
+  function weiter() {
+    if (!S.laeuft) return { ok: false, fehler: "spiel-laeuft-nicht" };
+    if (!S.pausiert) return { ok: true, pausiert: false };
+    S.pausiert = false;
+    blattSchliessen();
+    zeichne();
+    if (S.amZug === BOT_MARK) botZugPlanen();
+    ereignis("tictactoe:weiter", { tick: S.tick });
+    return { ok: true, pausiert: false };
+  }
+
+  function zumStart() {
+    botStoppen();
+    S.laeuft = false;
+    S.pausiert = false;
+    S.startbildschirm = true;
+    S.online = false;
+    S.mark = "";
+    S.gegner = "";
+    S.marke = "";
+    S.brett = leeresBrett();
+    S.amZug = "X";
+    S.status = "idle";
+    S.sieger = "";
+    S.zuege = 0;
+    S.tick = 0;
+    S.gesendet = -1;
+    S.hinweis = "";
+    blattSchliessen();
+    zeigeStart(false);
+    zeichne();
+    return { ok: true };
+  }
+
+  /* -------------------------------------------------------------- Online-Stand */
+  function standUebernehmen(daten) {
+    if (!S.online) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    var brett = daten.brett;
+    if (!Array.isArray(brett) || brett.length !== 9) {
+      return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    }
+    var geprueft = [];
+    for (var i = 0; i < 9; i++) {
+      var f = brett[i];
+      if (f !== "" && f !== "X" && f !== "O") return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      geprueft.push(f);
+    }
+    var status = typeof daten.status === "string" ? daten.status : "active";
+    if (ZUSTAENDE.indexOf(status) < 0) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    var sieger = daten.sieger === "X" || daten.sieger === "O" ? daten.sieger
+      : daten.sieger === "draw" ? "draw" : "";
+    if (status === "finished" && !sieger) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    var marke = typeof daten.marke === "string" ? daten.marke : S.marke;
+    var neuerStand = marke !== S.marke;
+
+    if (daten.mark === "X" || daten.mark === "O") S.mark = daten.mark;
+    if (typeof daten.gegner === "string") S.gegner = daten.gegner.slice(0, 24);
+    S.marke = marke;
+    S.brett = geprueft;
+    S.amZug = daten.amZug === "O" ? "O" : "X";
+    S.status = status;
+    S.sieger = sieger;
+    S.zuege = zaehleSteine();
+    S.tick = S.zuege;
+    S.gesendet = -1;
+    S.hinweis = typeof daten.hinweis === "string" ? daten.hinweis.slice(0, 160) : "";
+    if (status === "active") {
+      S.laeuft = true;
+      S.pausiert = false;
+      S.endeGemeldet = neuerStand ? false : S.endeGemeldet;
+      S.startbildschirm = false;
+      if (S.blatt === "ende") blattSchliessen();
+      zeigeBildschirm("spiel");
+    } else if (status === "finished") {
+      S.laeuft = false;
+      S.pausiert = false;
+      S.startbildschirm = false;
+      zeigeBildschirm("spiel");
+    } else if (status === "invited") {
+      S.laeuft = false;
+      S.startbildschirm = false;
+      zeigeBildschirm("spiel");
+    } else if (status === "declined") {
+      S.laeuft = false;
+      zeigeStart(true);
+    }
+    zeichne();
+    if (status === "finished") {
+      meldeEnde();
+      if (!S.blatt) blattZeigen("ende");
+    }
+    return { ok: true };
+  }
+
+  /* -------------------------------------------------------------- Schnittstelle */
+  function start(konfiguration) {
+    var k = konfiguration;
+    if (k === undefined || k === null) k = {};
+    if (!istObjekt(k)) return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+
+    var schluessel = Object.keys(k);
+    for (var i = 0; i < schluessel.length; i++) {
+      if (FELDER_ERLAUBT.indexOf(schluessel[i]) < 0) {
+        return { ok: false, fehler: "unbekanntes-feld", feld: schluessel[i] };
+      }
+    }
+
+    var stil = S.stil;
+    if (Object.prototype.hasOwnProperty.call(k, "stil")) {
+      if (typeof k.stil !== "string") return { ok: false, fehler: "unbekanntes-feld", feld: "stil" };
+      stil = STILE.indexOf(k.stil) >= 0 ? k.stil : "normal";
+    }
+    if (Object.prototype.hasOwnProperty.call(k, "level")) {
+      if (k.level !== 1) return { ok: false, fehler: "level-muss-1-bis-1-sein" };
+    }
+
+    var online = null;
+    if (Object.prototype.hasOwnProperty.call(k, "online")) {
+      if (!istObjekt(k.online)) return { ok: false, fehler: "unbekanntes-feld", feld: "online" };
+      var o = k.online;
+      var oSchluessel = Object.keys(o);
+      for (var j = 0; j < oSchluessel.length; j++) {
+        if (ONLINE_ERLAUBT.indexOf(oSchluessel[j]) < 0) {
+          return { ok: false, fehler: "unbekanntes-feld", feld: "online." + oSchluessel[j] };
+        }
+      }
+      if (o.mark !== undefined && o.mark !== "" && o.mark !== "X" && o.mark !== "O") {
+        return { ok: false, fehler: "unbekanntes-feld", feld: "online.mark" };
+      }
+      if (o.gegner !== undefined && typeof o.gegner !== "string") {
+        return { ok: false, fehler: "unbekanntes-feld", feld: "online.gegner" };
+      }
+      if (o.marke !== undefined && typeof o.marke !== "string") {
+        return { ok: false, fehler: "unbekanntes-feld", feld: "online.marke" };
+      }
+      online = o;
+    }
+
+    /* Eine Konfiguration mit ausschließlich "stil" stellt nur die Welt ein –
+       so übergibt der Connector die Wahl beim Öffnen, ohne eine Partie zu
+       beginnen. Alles andere startet. */
+    if (schluessel.length === 1 && schluessel[0] === "stil") {
+      S.stilVorgabe = true;
+      stilSetzen(stil);
+      return {
+        ok: true, gestartet: false, stil: S.stil, level: 1, levelAnzahl: 1,
+        online: S.online, mark: S.mark
+      };
+    }
+
+    if (S.laeuft) return { ok: false, fehler: "spiel-laeuft" };
+
+    /* Ein Aufruf mit Stil kommt vom Connector: Dann keine Stilwahl im Spiel. */
+    if (Object.prototype.hasOwnProperty.call(k, "stil")) S.stilVorgabe = true;
+    stilSetzen(stil);
+    if (online) {
+      starteOnline(online.mark, online.gegner, online.marke);
+    } else {
+      starteLokal();
+    }
+
+    return {
+      ok: true, gestartet: S.laeuft, stil: S.stil, level: 1, levelAnzahl: 1,
+      online: S.online, mark: S.mark, modus: S.modus, stufe: S.stufe
+    };
+  }
+
+  function einstellungen() {
+    return {
+      stil: S.stil,
+      stile: STILE.slice(),
+      stilWahl: S.stilVorgabe === false,
+      level: 1,
+      levelAnzahl: 1,
+      stufen: [],
+      modi: MODI.slice(),
+      modus: S.modus,
+      botStufen: STUFEN.slice(),
+      stufe: S.stufe,
+      online: S.online,
+      mark: S.mark
+    };
+  }
+
+  function zustand() {
+    return {
+      laeuft: S.laeuft,
+      pausiert: S.pausiert,
+      tick: S.tick,
+      richtung: { x: 0, y: 0 },
+      level: 1,
+      punkte: 0,
+      extras: [],
+      startbildschirm: S.startbildschirm,
+      stil: S.stil,
+      stilWahl: S.stilVorgabe === false,
+      modus: S.modus,
+      stufe: S.stufe,
+      botMark: BOT_MARK,
+      botDenkt: !!botTimer,
+      brett: S.brett.slice(),
+      amZug: S.amZug,
+      status: S.status,
+      sieger: S.sieger,
+      zuege: S.zuege,
+      online: S.online,
+      mark: S.mark,
+      gegner: S.gegner,
+      marke: S.marke,
+      hinweis: S.hinweis,
+      gesendet: S.gesendet
+    };
+  }
+
+  function aktion(name, daten) {
+    if (typeof name !== "string") return { ok: false, fehler: "unbekannte-aktion" };
+    if (daten !== undefined && daten !== null && !istObjekt(daten)) {
+      return { ok: false, fehler: "daten-muessen-objekt-sein" };
+    }
+    var d = daten || {};
+    switch (name) {
+      case "setzen":
+        if (!Object.prototype.hasOwnProperty.call(d, "feld")) {
+          return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        }
+        return zugMachen(d.feld);
+      case "neu":
+        return rundeNeu();
+      case "start":
+        return start({});
+      case "pause":
+        return pause();
+      case "weiter":
+        return weiter();
+      case "stand":
+        return standUebernehmen(d);
+      default:
+        return { ok: false, fehler: "unbekannte-aktion" };
+    }
+  }
+
+  /* -------------------------------------------------------------- Bedienung */
+  /* Modus, Stufe und Stil: Klick oder Tastatur, sofort sichtbar. */
+  [].forEach.call(el.modusKnoepfe.children, function (b) {
+    b.addEventListener("click", function () {
+      var m = b.dataset.modus;
+      if (MODI.indexOf(m) < 0) return;
+      S.modus = m;
+      wahlZeichnen();
+      if (b.focus) { try { b.focus({ preventScroll: true }); } catch (e) { } }
+    });
+  });
+  [].forEach.call(el.stufeKnoepfe.children, function (b) {
+    b.addEventListener("click", function () {
+      var s = b.dataset.stufe;
+      if (STUFEN.indexOf(s) < 0) return;
+      S.stufe = s;
+      wahlZeichnen();
+    });
+  });
+  [].forEach.call(el.stilKnoepfe.children, function (b) {
+    b.addEventListener("click", function () {
+      var w = b.dataset.stil;
+      if (STILE.indexOf(w) < 0) return;
+      stilMerken(w);
+      stilSetzen(w);
+    });
   });
 
-});
+  el.knopfStarten.addEventListener("click", function () {
+    if (S.online && !S.mark) return;
+    start({});
+  });
+  el.knopfNeu.addEventListener("click", function () { rundeNeu(); });
+  el.knopfPause.addEventListener("click", function () {
+    if (S.pausiert) weiter(); else pause();
+  });
+  el.knopfStart.addEventListener("click", function () { zumStart(); });
+  el.blattHaupt.addEventListener("click", function () {
+    if (S.pausiert) weiter();
+    else rundeNeu();
+  });
+  el.blattZweit.addEventListener("click", function () { zumStart(); });
 
-reset.addEventListener('click', newGame);
-
-window.addEventListener('resize', () => {
-
-  if(finished && winningCombo) {
-    drawWinLine(winningCombo);
+  if (window.TGSpiel && TGSpiel.vollbild) {
+    TGSpiel.vollbild.knopf(el.knopfVollbild, { textAn: "Vollbild aus", textAus: "Vollbild" });
+    TGSpiel.vollbild.beiWechsel(function () {
+      fertig.breit = 0;
+      requestAnimationFrame(passeBrett);
+    });
   }
 
-});
+  document.addEventListener("keydown", function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var ziel = e.target;
+    if (ziel && /^(INPUT|TEXTAREA|SELECT)$/.test(ziel.tagName)) return;
 
-function leaveGame(){ tgVerlassen(); }
-window.leaveGame = leaveGame;
+    if (/^[1-9]$/.test(e.key) && !S.startbildschirm) {
+      e.preventDefault();
+      zugMachen(Number(e.key) - 1);
+      return;
+    }
+    if (e.key === "p" || e.key === "P") {
+      if (S.startbildschirm) return;
+      e.preventDefault();
+      if (S.pausiert) weiter();
+      else if (S.laeuft) pause();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (window.TGSpiel && TGSpiel.vollbild.ist()) return;  /* Vollbild zuerst */
+      if (S.pausiert) {
+        e.preventDefault();
+        weiter();
+      }
+    }
+  });
 
-if(onlineRoom){
-  const lb = document.getElementById("leaveBtn");
-  if (lb) lb.style.display = "inline-block";
-  document.querySelector('.hint').textContent='ONLINE-MULTIPLAYER · '+onlineRoom+' · '+(onlineID?'Verbunden':'Spielerkennung fehlt');
-  setInterval(multiplayerHeartbeat,5000);
-  setInterval(refreshMultiplayer,700);
-  // Erst den Spieler im Raum anmelden, dann den Spielstand holen – sonst
-  // antwortet der erste Abruf mit "nicht im Raum".
-  (async () => {
-    await multiplayerHeartbeat();
-    await refreshMultiplayer();
-  })();
-}
+  var messung = window.requestAnimationFrame || function (fn) { return setTimeout(fn, 16); };
+  var messungLaeuft = false;
+  function messenAnstossen() {
+    if (messungLaeuft) return;
+    messungLaeuft = true;
+    messung(function () {
+      messungLaeuft = false;
+      passeBrett();
+    });
+  }
+  window.addEventListener("resize", messenAnstossen);
+  window.addEventListener("orientationchange", messenAnstossen);
+  document.addEventListener("fullscreenchange", messenAnstossen);
+  if (window.ResizeObserver) {
+    new ResizeObserver(messenAnstossen).observe(el.buehne);
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(messenAnstossen);
 
+  /* -------------------------------------------------------------- Anlauf */
+  baueZellen();
+  /* Stil: Connector zuerst, sonst die eigene Wahl dieses Browsers. */
+  var aussen = stilAusUmgebung();
+  if (aussen) {
+    S.stilVorgabe = true;
+    S.stil = aussen;
+  } else {
+    S.stil = stilLesen() || "normal";
+  }
+  stilSetzen(S.stil);
+  zeigeStart(false);
+  zeichne();
+
+  var schnittstelle = {
+    version: VERSION,
+    bereit: true,
+    whenReady: function () { return Promise.resolve({ ok: true, version: VERSION }); },
+    start: start,
+    einstellungen: einstellungen,
+    zustand: zustand,
+    startbildschirm: zumStart,
+    stop: zumStart,
+    pause: pause,
+    resume: weiter,
+    aktion: aktion
+  };
+  if (Object.freeze) Object.freeze(schnittstelle);
+  window.TicTacToe = schnittstelle;
+
+  setTimeout(function () { ereignis("tictactoe:bereit", { version: VERSION }); }, 0);
 })();
 </script>
-
-<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
-<script src="../../ergebnis.js"></script>
 </body>
 </html>

@@ -18,8 +18,9 @@ const (
 	schiffeMaxSpieler = 2
 )
 
-// schiffeFlotte ist die Flotte: Schlachtschiff, Kreuzer, zwei Zerstörer, U-Boot.
-var schiffeFlotte = []int{5, 4, 3, 3, 2}
+// schiffeFlotte ist die Flotte: Flugzeugträger, Zerstörer, Patrouillenboot,
+// U-Boot, Ente – je ein Schiff mit 5, 4, 3, 2 und 1 Feldern.
+var schiffeFlotte = []int{5, 4, 3, 2, 1}
 
 type SchiffeSchiff struct {
 	X          int  `json:"x"`
@@ -263,13 +264,15 @@ func schiffeSchuss(g *SchiffeGame, sitz, x, y int) string {
 func schiffeSchiffName(laenge int) string {
 	switch laenge {
 	case 5:
-		return "Schlachtschiff"
+		return "Flugzeugträger"
 	case 4:
-		return "Kreuzer"
-	case 3:
 		return "Zerstörer"
+	case 3:
+		return "Patrouillenboot"
 	case 2:
 		return "U-Boot"
+	case 1:
+		return "Ente"
 	}
 	return "Schiff"
 }

@@ -221,7 +221,6 @@ let tempo=TEMPO_START;
 let luecke=LUECKE_START;
 let bodenX=0;
 let wolken=[];
-let sterbeTimer=0;
 let letzteZeit=0;
 let akku=0;
 let rekord=0;
@@ -238,7 +237,6 @@ function neuesSpiel(){
  tempo=TEMPO_START;
  luecke=LUECKE_START;
  bodenX=0;
- sterbeTimer=0;
  akku=0;
  wolken=[];
  wetter={art:"keins",t:0,warten:rnd(7,13),teile:[],bogen:0,blitz:0};
@@ -1201,7 +1199,6 @@ function wetterUpdate(dt){
   }
  }
  if(wetter.art==="bogen"){
-  wetter.bogen=Math.max(0,wetter.bogen-wetter.t*0.0);
   if(wetter.t<=0){ wetter.art="keins"; wetter.bogen=0; wetter.warten=rnd(11,22); }
  }
 }
@@ -1299,7 +1296,7 @@ function wetterZeichnen(g){
   while(yy<H-BODEN-90){ yy+=18+hnr(yy)*14; xx+=hnr(yy*1.7)*18-9; g.lineTo(xx,yy); }
   g.stroke(); g.restore();
  }else if(wetter.art==="wolkenzug"){
-  const a=Math.min(1,wetter.t/1.0,1-wetter.t/5>0?1:1);
+  const a=Math.min(1,wetter.t);
   g.save(); g.globalAlpha=0.5*a; g.fillStyle="rgba(255,80,40,0.12)";
   g.beginPath(); g.ellipse(W*0.7,H-BODEN-40,180,40,0,0,Math.PI*2); g.fill(); g.restore();
  }
@@ -1307,11 +1304,9 @@ function wetterZeichnen(g){
 
 // ---------------------------------------------------------------- Zeichnen
 
-let tZeichnen=0;
 function zeichne(){
  const stil=STILE[stilArt]||STILE.klassisch;
  const t=performance.now();
- tZeichnen=t;
  const v={x:VOGEL_X,y:vogel.y,drall:vogel.drall,fluegel:vogel.fluegel,vy:vogel.vy,tot:zustand==="ende"};
  ctx.clearRect(0,0,W,H);
  stil.himmel(ctx,t);

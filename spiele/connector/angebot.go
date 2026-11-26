@@ -54,7 +54,7 @@ var spielApi = map[string]string{
 	"viergewinnt":        "viergewinnt",
 	"dame":               "dame",
 	"paare":              "paare",
-	"menschaerger":       "menschaerger",
+	"menschaerger":       "maensync", // Standweg mit Regeln im Browser
 	"kaesekaestche":      "kaesekaestche",
 	"sim":                "sim",
 	"kalaha":             "kalaha",
@@ -227,6 +227,7 @@ var tischspiel = map[string]bool{
 	"gaensespiel":        true,
 	"risiko":             true,
 	"labyrinth":          true,
+	"menschaerger":       true,
 	"zehntausend":        true,
 	"maexchen":           true,
 	"boston":             true,
@@ -378,6 +379,10 @@ func (r *Room) spielStatus(spiel string) (string, bool) {
 		}
 	case "labyrinth":
 		if g := r.Labyrinth; g != nil {
+			return g.Status, true
+		}
+	case "menschaerger":
+		if g := r.Maen; g != nil {
 			return g.Status, true
 		}
 	case "zehntausend":
