@@ -5,6 +5,87 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Wiederverbindung: Partie, Chat und Platz überleben den Abbruch
+
+**Fehler (reproduziert, nicht vermutet):** Bei einer laufenden 10.000-Runde zu
+zweit erschien „Verbindung wackelt“, danach war der Chat leer, die Partie weg,
+beide Spieler standen aber weiter im Raum und die Anzeige sagte „Verbunden“.
+Nachgestellt mit einem echten Serverneustart: vorher Raum `TG-F000`, 7
+Chatzeilen, Partie `active`; nachher standen beide in einem **neuen** Raum
+`TG-4C0C` mit 3 Zeilen (nur Beitritt), der Spielrahmen zeigte weiter auf
+`TG-F000` und blieb bei „Verbindung wackelt“ – dauerhaft.
+
+**Ursache (drei Punkte, alle im Code nachweisbar):**
+1. Räume und Partien liegen nur im Speicher; `/api/zustand` antwortet nach einem
+   Neustart mit 404. `join()` hat das als „Raum weg“ gedeutet, `activeRoom`
+   geleert und über `/api/rooms` **still einen neuen Raum** angelegt (dessen
+   Kennung war zufällig). Der Chat war damit leer, die Partie unerreichbar – und
+   der Rahmen fragte weiter den alten Raum, also für immer „wackelt“.
+2. `gameTimeout` stand bei **90 s**, die Platzreservierung bei 150 s: Ein Funkloch
+   über 90 s beendete die Partie, obwohl der Platz noch reserviert war.
+3. Die Verbindungsanzeige meldete „Verbunden“, sobald irgendein Ruf durchging –
+   ohne zu prüfen, ob die Spielsitzung noch existiert. Es gab keinen Weg zurück
+   und keinen Endzustand, nur eine Endlosschleife.
+
+**Geändert:**
+- `spiele/connector/types.go`: `gameTimeout` 90 → **150 s**, `presenceTimeout`
+  150 → **180 s** (erst die Partie, dann der Platz). Nach 60 s Stille meldet der
+  Server **einmal** „X ist gerade nicht erreichbar – die Partie bleibt bis zu
+  zwei Minuten stehen.“ (neues Feld `WegGemeldet`), statt sofort aufzulösen.
+- `spiele/connector/lobby.go`: Der gemeinsame Raum hat die **feste Kennung
+  `TG-HALLE`** und wird bei Bedarf neu angelegt. Nach einem Neustart finden
+  offene Seiten denselben Raum wieder, statt in einem neuen zu landen.
+- `spiele/connector/zustand.go`: `start` (Startzeit des Prozesses) in jeder
+  Antwort – daran erkennt die Seite einen Neustart.
+- `spiele/connector/idempotenz.go` (neu): Doppelte Spielzüge. Jeder POST trägt
+  eine Marke (`X-Aktion`); dieselbe Marke wird innerhalb von 90 s **nicht noch
+  einmal ausgeführt**, sondern liefert die gespeicherte Antwort (nur 2xx, max.
+  128 KB, max. 400 Einträge). Lebenszeichen, Chat, Raumverwaltung und
+  Einladungen sind ausgenommen.
+- `spiele/connector/connector.html` (byte-gleich in `connector-online/`):
+  Zustandsautomat für die Verbindung – „Verbunden“, „Verbindung unterbrochen –
+  Wiederherstellung läuft“, „Wiederverbindung läuft (Versuch n von 6)“,
+  „Wieder verbunden“, „Verbindung verloren“ mit Knopf **„Zurück ins Spiel“**.
+  Sechs Versuche mit 1/2/4/8 s Pause, ohne die alte 30-s-Sperre; kein stiller
+  Raumwechsel mehr (404 → ehrliche Meldung + Knopf). Nach einer Wiederverbindung
+  prüft derselbe Statusruf die Partie: Fehlt sie, wird der tote Rahmen
+  geschlossen und der Grund genannt. Ein Serverneustart (andere `start`-Zeit)
+  wird ausdrücklich gemeldet.
+- `spiele/token.js`: Zentral für **alle** Spielseiten – ein 403 „bitte
+  beitreten“ meldet den Platz einmal neu an (mit eigenem Token und
+  Gerätekennung) und wiederholt dieselbe Anfrage mit derselben Aktionsmarke.
+
+**Geprüft (echter Connector, Chromium, zwei getrennte Browser-Kontexte):**
+- Serverneustart mitten in der Partie: beide bleiben in `TG-HALLE`, Status nach
+  2 s „Verbunden“, toter Rahmen geschlossen, Meldung „Der Spielserver wurde neu
+  gestartet …“; vorher (alter Stand) landeten beide in `TG-4C0C` mit leerem Chat.
+- 12 s weg während eines Zuges, Gegner schreibt: gleiche Kennung, Partie
+  `active`, Würfel `4,2,2,5,3,4` unverändert, Nachricht des Gegners im Chat.
+- 100 s weg: Partie `active`, gleiche Würfel und Punkte, Rahmen offen; der
+  Mitspieler sah nach 60 s die „nicht erreichbar“-Meldung.
+- Beide gleichzeitig 20 s weg: beide wieder `active`, gleiche Würfel, Rahmen
+  offen.
+- 50 s ohne Netz: „Wiederverbindung läuft (Versuch 4/6)“ → „Verbindung
+  unterbrochen – Wiederherstellung läuft“ → nach 6 Versuchen „Verbindung
+  verloren“ **mit Knopf**; Netz zurück → „Verbunden“, gleiche Partie, gleiche
+  Kennung.
+- `go vet ./...` 0; `go test ./...` connector **237,6 s**, grün; connector-online
+  `go vet` + `go build` grün, `connector.html` byte-gleich.
+- Neu: `wiederaufnahme_test.go` (lokal, nicht im Repo) – 100 s Aussetzer beendet
+  die Partie nicht, 160 s beenden sie, der Platz bleibt bis 180 s; fester
+  Hauptraum überlebt einen Neustart; dieselbe Aktionsmarke wird nur einmal
+  ausgeführt (`X-Aktion-Wiederholt: 1`).
+
+**Grenzen:** Ein echter Serverneustart löscht den Speicher – Chat und Partie von
+vorher sind dann wirklich weg (Render hat keine dauerhafte Platte). Das wird
+jetzt gesagt und der Rahmen geschlossen, statt es zu verstecken. Getestet ist
+10.000 durchgespielt; die Wiederverbindung sitzt zentral in `connector.html`,
+`token.js` und `idempotenz.go` und gilt damit für alle Spiele, einzeln
+durchgespielt wurden sie nicht. Zweiter Spieler war ein zweiter Browser-Kontext,
+kein echtes zweites Gerät.
+
+---
+
 ## 26.11.2026 · Favoriten-Kacheln öffnen wieder den Mehrspieler-Weg
 
 **Fehler:** Die sechs Bild-Kacheln über der Spieleübersicht starteten mit

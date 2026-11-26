@@ -17,7 +17,10 @@ const maxNameLen = 24
 // bleibt. Handys sperren den Bildschirm, wechseln kurz die App oder verlieren
 // im WLAN ein paar Pakete – mit zu kurzer Frist flogen Spieler dabei aus dem
 // Raum und ihre Partie wurde weggeworfen.
-const presenceTimeout = 150 * time.Second
+// Sie liegt bewusst über gameTimeout: Erst endet die Partie (150 s), dann
+// verschwindet der Platz (180 s). So steht ein Spieler, dessen Partie gerade
+// aufgelöst wurde, noch im Raum und sieht die Meldung dazu.
+const presenceTimeout = 180 * time.Second
 
 // abgangFrist: So lange nach der Meldung "mein Tab geht zu" bleibt der Platz
 // noch stehen. Ein Neuladen ist in dieser Zeit zurück und meldet sich mit
@@ -33,13 +36,18 @@ const emptyRoomGameGrace = 5 * time.Minute
 // nach dieser Frist als weg. Die Partie wird dann beendet und der verbliebene
 // Spieler erfährt es sofort – er soll nicht auf jemanden warten, der weg ist.
 //
-// Die Frist muss über der Drosselperiode des Browsers liegen: Ein Tab, der
-// lange im Hintergrund liegt, fragt nur noch etwa einmal pro Minute – bei 60 s
-// wurde die Partie gemessen fälschlich beendet. 90 s lässt diesen Takt zu und
-// meldet einen wirklich verschwundenen Spieler nach anderthalb Minuten.
-// Die Mitgliedschaft im Raum bleibt länger bestehen (presenceTimeout), damit
-// ein gesperrtes Handy niemanden aus dem Raum wirft.
-const gameTimeout = 90 * time.Second
+// Die Frist ist bewusst so lang wie presenceTimeout: Ein Funkloch, ein
+// gesperrtes Handy oder ein Neustart des Browsers darf eine laufende Partie
+// nicht beenden. Vorher stand sie bei 90 s – damit endete eine Partie, obwohl
+// der Platz im Raum noch reserviert war; die Spieler sahen „Verbindung
+// wackelt“ und danach eine leere Partie. Jetzt bleibt der Platz zwei Minuten
+// stehen, und solange er steht, steht auch die Partie.
+const gameTimeout = 150 * time.Second
+
+// wegHinweisNach: So lange nach dem letzten Lebenszeichen erfahren die
+// Mitspieler einmal, dass es hakt – lange bevor die Partie nach gameTimeout
+// aufgelöst wird. So wartet niemand ahnungslos auf ein stummes Gerät.
+const wegHinweisNach = 60 * time.Second
 
 // spielSeiteFrist: Wie lange eine laufende Partie stehen bleiben darf, wenn
 // keine Spielseite mehr nach ihr fragt. Wer mit dem Zurück-Knopf in den Raum
@@ -145,6 +153,10 @@ type Player struct {
 	// Neuladen – dann fällt die Marke weg. Sonst ist der Platz nach
 	// abgangFrist weg (siehe cleanPlayers).
 	WegSeit time.Time `json:"-"`
+	// WegGemeldet merkt sich, ob die Mitspieler schon von einer Stille nach
+	// wegHinweisNach gehört haben. Jedes neue Lebenszeichen löscht die Marke,
+	// damit dieselbe Stille nicht jede Minute neu gemeldet wird.
+	WegGemeldet bool `json:"-"`
 }
 
 // verstecktAktiv meldet, ob dieser Spieler gerade mit einem Tab im Hintergrund
@@ -356,13 +368,35 @@ func (r *Room) cleanPlayers() {
 	// Laufende Partien: Wer 60 s nichts mehr von sich hören lässt, ist weg.
 	// Die Partie wird beendet, damit der Mitspieler nicht endlos wartet.
 	for id, p := range r.Players {
+		// Ein frisches Lebenszeichen räumt die Pausenmeldung weg – dieselbe
+		// Stille darf später erneut gemeldet werden.
+		if p.WegGemeldet && now.Sub(p.Last) <= wegHinweisNach {
+			p.WegGemeldet = false
+			r.Players[id] = p
+		}
+		if now.Sub(p.Last) <= wegHinweisNach {
+			continue
+		}
+		// Liegt der Tab im Hintergrund, ist Stille erwartbar: Die Partie
+		// bleibt bis zum Ende der Versteckt-Frist stehen.
+		if p.verstecktAktiv(now) {
+			continue
+		}
+		// Erst nach der vollen Schonfrist endet die Partie. Zwischendurch wird
+		// einmal gesagt, dass es hakt – nicht aufgelöst. Der Platz bleibt bis
+		// presenceTimeout reserviert, und solange er steht, steht die Partie.
 		if now.Sub(p.Last) > gameTimeout {
-			// Liegt der Tab im Hintergrund, ist Stille erwartbar: Die Partie
-			// bleibt bis zum Ende der Versteckt-Frist stehen.
-			if p.verstecktAktiv(now) {
-				continue
-			}
 			r.abgangBeenden(id, p.Name, "verbindung")
+			continue
+		}
+		if !p.WegGemeldet && r.aktivesSpiel(id) != "" {
+			p.WegGemeldet = true
+			r.Players[id] = p
+			r.addMessage(Message{
+				Text:   p.Name + " ist gerade nicht erreichbar – die Partie bleibt bis zu zwei Minuten stehen.",
+				Time:   uhrzeit(now),
+				System: true,
+			})
 		}
 	}
 	// Pause melden: Ein Spieltab im Hintergrund meldet sich eine Weile

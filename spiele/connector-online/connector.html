@@ -129,6 +129,10 @@ small{color:var(--c-leise)}
 #verbindung[data-zustand="neu"]{color:var(--c-akzent)}
 #verbindung[data-zustand="neu"]::before{animation:verbindung-puls 1s ease-in-out infinite}
 #verbindung[data-zustand="weg"]{color:var(--c-weg)}
+#verbindung[data-zustand="zurueck"]{color:var(--c-ok)}
+#verbindung[data-zustand="ende"]{color:var(--c-weg)}
+.verbindung-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+#zurueckInsSpiel{font-size:11.5px;padding:3px 9px;border-radius:999px;margin:0}
 @keyframes verbindung-puls{0%,100%{opacity:.25}50%{opacity:1}}
 #qrwrap{display:flex;align-items:center;justify-content:center;margin-top:14px}
 #qrcode{width:176px;height:176px;max-width:100%;background:white;padding:8px;border-radius:8px;image-rendering:auto}
@@ -780,7 +784,10 @@ body.spiel-offen #uebersicht{display:none}
 <main id="linkeSpalte">
 <header class="links-kopf">
 <h1>TRASHYGECKO</h1>
+<div class="verbindung-zeile">
 <p id="verbindung" data-zustand="start">Verbindung wird hergestellt</p>
+<button type="button" id="zurueckInsSpiel" class="zr-knopf" hidden>Zurück ins Spiel</button>
+</div>
 </header>
 
 <section class="zentrale" id="zentrale" aria-label="Spielzentrale">
@@ -1318,10 +1325,12 @@ async function sitzungWiederherstellen(){
 }
 
 function presenceRufen(code, neu){
+ // Ohne Netz ist jeder Versuch sofort verloren – dann nicht dreimal warten,
+ // sonst dauert es über eine Minute, bis „Verbindung verloren“ dasteht.
  return mitWiederholung(()=>fetch("/api/presence",{
   method:"POST",headers:{"Content-Type":"application/json"},
   body:JSON.stringify({room:code,id:sessionID,name:playerName(),neu:!!neu})
- }));
+ }), navigator.onLine===false?1:3);
 }
 
 // Höchstens ein Neuversuch je 30 Sekunden: Ein Neustart des Servers oder ein
@@ -1334,15 +1343,6 @@ function neuversuchErlaubt(){
  return true;
 }
 
-// Den Platz wiederbekommen: gleiche Kennung, gleiches Token, gleicher Name.
-// Ist der Raum weg (Server neu gestartet), wird der aktuelle Raum geholt.
-async function neuAnmelden(){
- if(!activeRoom)return;
- if(!neuversuchErlaubt())return;
- verbindungZeigen("neu");
- await join(undefined, true);
- if(!activeRoom)await joinSingleRoom();
-}
 
 // --------------------------------------------------------- Spielzentrale ---
 // Raumcode, Einladungslink, Raumwechsel und laufende Partien. Das liest nur
@@ -1699,12 +1699,14 @@ async function zurueckInHauptraum(){
 
 async function join(roomDisplayName, wieder){
  const code=document.getElementById("room").value.trim().toUpperCase();
- if(!code)return;
+ if(!code)return "fehler";
  try{
   let p=await presenceRufen(code, !!wieder);
   // 409: Der Server kennt den Platz nicht mehr (Neustart). Denselben Platz
   // mit derselben Kennung anlegen – kein zweiter Spieler, kein neuer Name.
-  if(p.status===409&&!wieder){
+  // 409: Der Server kennt den Platz nicht mehr (Neustart) – auch bei einer
+  // Wiederverbindung. Denselben Platz mit derselben Kennung anlegen.
+  if(p.status===409){
    p=await presenceRufen(code, true);
   }
   // 403: Dieser Platz hängt an einem anderen Gerät – dem Browser fehlt sein
@@ -1718,7 +1720,7 @@ async function join(roomDisplayName, wieder){
   if(p.status===403){
    if(wieder){
     if(!await sitzungWiederherstellen()){
-     throw Error("Dieser Platz gehört zu einem anderen Gerät. Bitte die Seite neu öffnen oder ausdrücklich neu beitreten.");
+     return "fremdes-geraet";
     }
     p=await presenceRufen(code, false);
    }else{
@@ -1731,11 +1733,9 @@ async function join(roomDisplayName, wieder){
    const text=(await p.text()).trim();
    // Raum weg (Server neu gestartet): den aktuellen Raum holen und dort
    // wieder hinein, statt den Tab auf einem toten Raum stehen zu lassen.
-   if(p.status===404&&activeRoom){
-    activeRoom="";
-    await joinSingleRoom();
-    return;
-   }
+   // Raum weg (Server neu gestartet): NICHT still in einen neuen Raum
+   // springen. Das leerte den Chat und hängte die Partie an einen toten Raum.
+   if(p.status===404)return "raum-weg";
    throw Error(text||(p.status===404?"Spielraum nicht gefunden.":"Beitritt fehlgeschlagen."));
   }
   // Der Server vergibt einen Namen, wenn keiner eingetragen ist
@@ -1768,9 +1768,18 @@ async function join(roomDisplayName, wieder){
   zeigeHinweisAusUrl();
   zentraleZeichnen();
   zentraleDeepLink();
+  return "ok";
  }catch(e){
   try{ sessionStorage.removeItem("tg-room"); }catch(err){}
-  setRoomStatus(e.message);
+  // Während eines Wiederanlaufs nicht jede Runde eine englische Netzfehler-
+  // zeile zeigen – die Verbindungsanzeige sagt bereits, was los ist.
+  const text=String(e&&e.message||"");
+  if(/fetch|network|failed/i.test(text)){
+   if(!wiederLaeuft)setRoomStatus("Der Connector ist gerade nicht erreichbar.");
+  }else if(!wiederLaeuft){
+   setRoomStatus(text);
+  }
+  return "fehler";
  }
 }
 
@@ -1809,44 +1818,188 @@ function eigeneDateiText(pfad,status){
 const VERBINDUNG_TEXT={
  start:"Verbindung wird hergestellt",
  ok:"Verbunden",
- weg:"Verbindung unterbrochen",
+ weg:"Verbindung unterbrochen – Wiederherstellung läuft",
  neu:"Wiederverbindung läuft",
+ zurueck:"Wieder verbunden",
+ ende:"Verbindung verloren",
  dateien:"Connector-Dateien fehlen"
 };
 let verbindungStand="";
 let verbindungFehlschlaege=0;  // Aussetzer hintereinander
 let verbindungHinweis=false;   // Absagegrund schon gezeigt
+let wiederLaeuft=false;        // ein Wiederanlauf zur Zeit
+let wiederAus=false;           // endgültig gescheitert, bis der Spieler neu anläuft
+let wiederVersuche=0;
+let wiederZiel="";             // Raum, dem „Zurück ins Spiel“ beitreten soll
+let zurueckUhr=0;
+let letzteWiederholung=0;
+let wiederFrisch=false;   // Wiederverbindung steht an, Partie noch prüfen
+const WIEDER_VERSUCHE=6;
 
 function verbindungZeigen(zustand){
- if(!VERBINDUNG_TEXT[zustand]||zustand===verbindungStand)return;
- verbindungStand=zustand;
+ if(!VERBINDUNG_TEXT[zustand])return;
  const el=document.getElementById("verbindung");
- if(!el)return;
- el.dataset.zustand=zustand;
- el.textContent=VERBINDUNG_TEXT[zustand];
+ verbindungStand=zustand;
+ if(el){
+  el.dataset.zustand=zustand;
+  el.textContent=VERBINDUNG_TEXT[zustand];
+ }
+ // Der Knopf gehört zum endgültigen Fehlschlag, nicht zum Normalbetrieb.
+ const knopf=document.getElementById("zurueckInsSpiel");
+ if(knopf)knopf.hidden=zustand!=="ende";
+ if(zustand==="zurueck"){
+  clearTimeout(zurueckUhr);
+  zurueckUhr=setTimeout(()=>{ if(verbindungStand==="zurueck")verbindungZeigen("ok"); },4000);
+ }
+}
+
+function verbindungEnde(text){
+ wiederAus=true;
+ verbindungZeigen("ende");
+ if(text)setRoomStatus(text);
 }
 
 // Ein Ergebnis für die Verbindungsanzeige – aus dem Lebenszeichen wie aus dem
 // zentralen Statusruf, damit beide dasselbe sagen.
 function verbindungMelden(ok){
- // Ein erfolgreicher Ruf räumt einen alten Fehler von selbst weg – höchstens
- // eine Sekunde später, damit "Wiederverbindung läuft" überhaupt sichtbar wird.
- const ziel=ok?"ok":(eigeneDateienFehlen()?"dateien":"weg");
  if(ok){
   verbindungFehlschlaege=0;
- }else{
-  verbindungFehlschlaege+=1;
-  // Fehlende eigene Datei ist die Ursache - dann nicht "unterbrochen" sagen.
-  if(eigeneDateienFehlen()){
-   setRoomStatus("Die Seite lädt ihre eigenen Dateien nicht: /spiele/token.js fehlt. Ohne Token weist der Server jede Anfrage ab - das liegt an der Auslieferung, nicht an der Verbindung.");
+  wiederAus=false;
+  if(verbindungStand==="weg"||verbindungStand==="neu"||verbindungStand==="ende"){
+   // Zurück kommt die Seite nur mit einer echten Prüfung: Der zentrale
+   // Statusruf hat gerade geantwortet, die Sitzung ist also wieder da.
+   verbindungZeigen("zurueck");
+   // Die Prüfung der Partie passiert erst in synchronisieren(): Dort ist der
+   // frische Stand (d.aktiv) schon ausgewertet. Vorher wäre aktivesSpielId
+   // womöglich noch der alte Wert von vor der Unterbrechung.
+   wiederFrisch=true;
+  }else if(verbindungStand!=="ok"){
+   verbindungZeigen("ok");
   }
-  // Ein einzelner Aussetzer ist noch keine Unterbrechung: ein kurzes Funkloch
-  // oder ein verschluckter Ruf darf eine laufende Partie nicht als kaputt
-  // anzeigen. Erst zwei Fehlschläge hintereinander (rund 10 s) heißen "weg".
-  if(verbindungFehlschlaege===1)return;
+  return;
  }
- verbindungZeigen(ziel);
+ // Endgültig gescheitert: Der Zustand bleibt stehen (mit Knopf), bis der
+ // Spieler oder ein neues Netz ihn löst – kein Zurückfallen auf „läuft“.
+ if(wiederAus)return;
+ verbindungFehlschlaege+=1;
+ // Fehlende eigene Datei ist die Ursache - dann nicht „unterbrochen“ sagen.
+ if(eigeneDateienFehlen()){
+  setRoomStatus("Die Seite lädt ihre eigenen Dateien nicht: /spiele/token.js fehlt. Ohne Token weist der Server jede Anfrage ab - das liegt an der Auslieferung, nicht an der Verbindung.");
+  verbindungZeigen("dateien");
+  return;
+ }
+ // Ein einzelner Aussetzer ist noch keine Unterbrechung: ein kurzes Funkloch
+ // darf eine laufende Partie nicht als kaputt anzeigen. Ab dem zweiten
+ // Fehlschlag in Folge heißt es „Wiederherstellung läuft“ – und es wird
+ // wirklich versucht, nicht nur angezeigt.
+ if(verbindungFehlschlaege===1&&navigator.onLine!==false)return;
+ verbindungZeigen("weg");
+ wiederAnlaufen();
 }
+
+// Wiederverbindung: dieselbe Kennung, dasselbe Token, derselbe Raum. Die
+// Versuche laufen mit wachsender Pause (1, 2, 4, 8 s), höchstens sechs – danach
+// steht ein ehrlicher Fehler samt Knopf da, statt einer Endlosschleife.
+async function wiederAnlaufen(){
+ if(!activeRoom||wiederLaeuft||wiederAus)return;
+ wiederLaeuft=true;
+ wiederVersuche=0;
+ while(wiederVersuche<WIEDER_VERSUCHE){
+  wiederVersuche+=1;
+  verbindungZeigen("neu");
+  const el=document.getElementById("verbindung");
+  if(el)el.textContent=VERBINDUNG_TEXT.neu+" (Versuch "+wiederVersuche+" von "+WIEDER_VERSUCHE+")";
+  const ergebnis=await join(activeRoom,true);
+  if(ergebnis==="ok"){
+   wiederLaeuft=false;
+   wiederVersuche=0;
+   verbindungFehlschlaege=0;
+   verbindungZeigen("zurueck");
+   // Die Partieprüfung macht synchronisieren() mit dem frischen Stand.
+   wiederFrisch=true;
+   return;
+  }
+  if(ergebnis==="raum-weg"){
+   wiederLaeuft=false;
+   await raumVerlorenMelden();
+   return;
+  }
+  if(ergebnis==="fremdes-geraet"){
+   wiederLaeuft=false;
+   verbindungEnde("Dieser Platz gehört zu einem anderen Gerät. Öffne die Seite neu oder tritt ausdrücklich bei.");
+   return;
+  }
+  await new Promise(fertig=>setTimeout(fertig,Math.min(8000,1000*Math.pow(2,wiederVersuche-1))));
+ }
+ wiederLaeuft=false;
+ verbindungEnde("Die Verbindung ließ sich nicht wiederherstellen. Prüfe dein Netz und tippe auf „Zurück ins Spiel“.");
+}
+
+// Der Raum ist am Server verschwunden (Neustart). Nicht still einen neuen
+// Raum aufmachen: Das leerte den Chat und ließe die Partie im Rahmen an einem
+// toten Raum hängen. Stattdessen sagen, was passiert ist, und den Weg zurück
+// als Knopf anbieten.
+async function raumVerlorenMelden(){
+ let neuerCode="";
+ try{
+  const r=await fetch("/api/rooms",{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({id:sessionID,name:playerName()})});
+  if(r.ok)neuerCode=(await r.json()).code||"";
+ }catch(e){}
+ wiederZiel=neuerCode&&neuerCode!==activeRoom?neuerCode:"";
+ verbindungEnde(wiederZiel
+  ? "Der Spielserver wurde neu gestartet: Der Spielraum heißt jetzt "+wiederZiel+". Chat und laufende Partie von vorher sind verloren – „Zurück ins Spiel“ bringt dich in den neuen Raum."
+  : "Der Spielraum ist am Server nicht mehr vorhanden. Chat und laufende Partie sind verloren.");
+}
+
+// Nach einer erfolgreichen Wiederverbindung: Prüfen, ob die Partie im Rahmen
+// noch existiert. Der Statusruf kennt sie (d.aktiv); fehlt sie, wird das
+// gesagt und der tote Rahmen geschlossen, statt ewig „Verbindung wackelt“.
+function nachWiederverbindung(aktiv){
+ const jetzt=Date.now();
+ if(jetzt-letzteWiederholung<1500)return;
+ letzteWiederholung=jetzt;
+ if(framePartie&&!aktiv){
+  rahmenLeeren();
+  setRoomStatus("Die Partie ist am Server nicht mehr vorhanden – der Spielserver wurde neu gestartet. Chat und Spielstand von vorher sind verloren.");
+ }
+}
+
+// Der Spielserver wurde neu gestartet (andere Startzeit im Statusruf): Der
+// Chat von vorher und eine laufende Partie sind mit dem Speicher weg. Der
+// Rahmen wird geschlossen und der Grund genannt – kein stummes Weiterlaufen.
+let neustartGemeldet=0;
+function serverNeustartGemeldet(){
+ const jetzt=Date.now();
+ if(jetzt-neustartGemeldet<5000)return;
+ neustartGemeldet=jetzt;
+ if(framePartie)rahmenLeeren();
+ verbindungZeigen("zurueck");
+ setRoomStatus("Der Spielserver wurde neu gestartet. Der Chat von vorher und eine laufende Partie sind verloren – du bist wieder im Spielraum.");
+}
+
+// „Zurück ins Spiel“: der ausdrückliche Weg zurück, wenn die Automatik
+// gescheitert ist. Er tritt dem neuen Raum bei oder öffnet die laufende Partie.
+(function(){
+ const knopf=document.getElementById("zurueckInsSpiel");
+ if(!knopf)return;
+ knopf.addEventListener("click",async()=>{
+  knopf.hidden=true;
+  wiederAus=false;
+  if(wiederZiel&&wiederZiel!==activeRoom){
+   const ziel=wiederZiel;
+   wiederZiel="";
+   document.getElementById("room").value=ziel;
+   if(await join(ziel,true)!=="ok")setRoomStatus("Der Beitritt hat nicht geklappt. Bitte die Seite neu öffnen.");
+   return;
+  }
+  if(framePartie&&framePartie.pfad){ openGame(framePartie.pfad); return; }
+  const def=SUPPORTED_GAMES.find(g=>g.id===aktivesSpielId);
+  if(def){ openGame(def.path); return; }
+  wiederLaeuft=false;
+  wiederAnlaufen();
+ });
+})();
 
 // --------------------------------------------------- zentraler Statusruf ---
 // Ein Ruf bringt alles, was die Seite im Takt braucht: Lebenszeichen, Chat,
@@ -1875,7 +2028,14 @@ async function zustandHolen(){
     const text=(await r.text().catch(()=>"")).trim();
     setRoomStatus(text||"Dieser Platz gehört zu einem anderen Gerät.");
    }
-   if(r.status===403||r.status===404||r.status===409)neuAnmelden();
+   // Platz weg (Neustart), Raum weg oder fremdes Gerät: ausdrücklich
+   // wiederherstellen – aber nie still einen neuen Raum aufmachen.
+   if(r.status===403||r.status===404||r.status===409){
+    verbindungFehlschlaege=2;
+    verbindungZeigen("weg");
+    wiederAnlaufen();
+    return null;
+   }
    verbindungMelden(false);
    return null;
   }
@@ -1892,9 +2052,17 @@ async function zustandHolen(){
 
 // Ein Durchlauf: einmal holen, dann alle Anzeigen aus demselben Stand füllen.
 // So zeigt kein Teil der Seite einen anderen Moment als ein anderer.
+let serverStart=0;
 async function synchronisieren(){
  const d=await zustandHolen();
  if(!d)return;
+ // Ein anderer Startzeitpunkt heißt: Der Server wurde neu gestartet. Sein
+ // Speicher ist leer – Chat und Partie von vorher gibt es nicht mehr. Das
+ // wird gesagt, statt einen toten Rahmen weiterlaufen zu lassen.
+ if(d.start){
+  if(serverStart&&d.start!==serverStart)serverNeustartGemeldet();
+  serverStart=d.start;
+ }
  // Der Admin darf mitten in der Partie umbenennen: Der Name vom Server gilt.
  // Nicht dazwischenfunken, solange der Name gerade eingetippt wird.
  const nameOffen=!document.getElementById("nameRow").hidden||document.activeElement===nameField;
@@ -1910,14 +2078,20 @@ async function synchronisieren(){
  // Welche Partie läuft, sagt derselbe Ruf (vorher /api/imspiel alle 2 s).
  const neu=d.aktiv||"";
  if(neu!==aktivesSpielId)aktivesSpielId=neu;
+ // Jetzt steht der frische Stand fest: Nach einer Wiederverbindung wird hier
+ // geprüft, ob die Partie im Rahmen noch existiert.
+ if(wiederFrisch){
+  wiederFrisch=false;
+  nachWiederverbindung(neu);
+ }
  await refreshPlayers(d);
  ladeEinladungen(d);
  loadMutes(d);
 }
 
 // Netz zurück oder App wieder sichtbar: sofort nachsehen statt bis zu 5 s warten.
-window.addEventListener("online",()=>{ if(activeRoom){ verbindungZeigen("neu"); synchronisieren(); } });
-window.addEventListener("offline",()=>{ verbindungZeigen("weg"); });
+window.addEventListener("online",()=>{ if(activeRoom){ wiederAus=false; verbindungZeigen("weg"); wiederAnlaufen(); } });
+window.addEventListener("offline",()=>{ verbindungFehlschlaege=2; verbindungZeigen("weg"); });
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&activeRoom)synchronisieren();
 });
@@ -2246,13 +2420,13 @@ function spielDef(path){
 // PC: rechts neben dem Chat. Handy: unter dem Chat, in derselben Seite.
 function openGame(path, art){
  const def=spielDef(path);
- spielOeffnen(spielAnzeigename(path),spielAdresse(path, art),{mehrspieler:true,gameId:def?def.id:""});
+ spielOeffnen(spielAnzeigename(path),spielAdresse(path, art),{mehrspieler:true,gameId:def?def.id:"",pfad:path});
 }
 
 // Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
 function openMalen(){
  if(!activeRoom||!sessionID)return;
- spielOeffnen("Malen",spielAdresse("/spiele/malen/malen.html"),{mehrspieler:true,gameId:"malen"});
+ spielOeffnen("Malen",spielAdresse("/spiele/malen/malen.html"),{mehrspieler:true,gameId:"malen",pfad:"/spiele/malen/malen.html"});
 }
 
 async function gameApiAction(gameId, action, data={}){
@@ -5356,10 +5530,9 @@ async function refresh(daten){
   letzteChatZeile=neuesteZeile||letzteChatZeile;
   chatSprungBereit=true;
  }catch(e){
-  // Zeitgrenze oder Netzfehler: ohne diesen Hinweis stünde oben weiter
-  // "Verbunden", während der Chat schon steht. Das nächste Lebenszeichen
-  // meldet sich von selbst wieder als verbunden.
-  verbindungZeigen("weg");
+  // Zeitgrenze oder Netzfehler: Ein einzelner Aussetzer zählt noch nicht als
+  // Abbruch; die Wiederverbindung prüft den echten Zustand.
+  verbindungMelden(false);
  }finally{
   chatBusy=false;
  }
@@ -5796,7 +5969,7 @@ function spielOeffnen(name,url,info){
  document.getElementById("spielName").textContent=name;
  const rechtsTitel=document.getElementById("rechtsTitel");
  if(rechtsTitel)rechtsTitel.textContent=name;
- framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||""}:null;
+ framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||"",pfad:info.pfad||""}:null;
  if(rahmen.getAttribute("src")!==url)rahmen.src=url;
  document.body.classList.add("spiel-offen");
  soloAuswahl(false);   // Handy: Liste zuklappen, auch beim Wechsel des Spiels

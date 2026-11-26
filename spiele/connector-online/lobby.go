@@ -9,6 +9,14 @@ import (
 	"time"
 )
 
+// hauptRaumCode ist die feste Kennung des einen Raums, den der Connector
+// anbietet. Sie ist bewusst fest und nicht zufällig: Nach einem Neustart des
+// Servers (Render startet die Instanz neu, der Speicher ist weg) finden die
+// offenen Seiten denselben Raum wieder, statt still in einem neuen Raum zu
+// landen – vorher leerte das den Chat und ließ die Partie im Rahmen an einem
+// toten Raum hängen.
+const hauptRaumCode = "TG-HALLE"
+
 // mainRoomCode ist der eine Raum, den der Connector anbietet.
 var mainRoomCode string
 
@@ -17,14 +25,13 @@ var mainRoomCode string
 func ensureMainRoom() {
 	mu.Lock()
 	defer mu.Unlock()
-	if mainRoomCode != "" && rooms[mainRoomCode] != nil {
+	if mainRoomCode == "" {
+		mainRoomCode = hauptRaumCode
+	}
+	if rooms[mainRoomCode] != nil {
 		return
 	}
-	code := randomCode()
-	for rooms[code] != nil {
-		code = randomCode()
-	}
-	mainRoomCode = code
+	code := mainRoomCode
 	rooms[code] = &Room{
 		Code:       code,
 		Created:    time.Now(),
@@ -266,6 +273,15 @@ func presence(w http.ResponseWriter, r *http.Request) {
 
 	mu.Lock()
 	room := rooms[input.Room]
+	if room == nil && input.Room == mainRoomCode {
+		// Der gemeinsame Raum überlebt einen Neustart des Servers: Er wird
+		// hier neu angelegt, damit die offenen Seiten mit derselben Kennung
+		// wieder hineinkommen (Chat und Partie sind mit dem Speicher weg).
+		mu.Unlock()
+		ensureMainRoom()
+		mu.Lock()
+		room = rooms[input.Room]
+	}
 	if room == nil {
 		mu.Unlock()
 		http.Error(w, "Spielraum nicht gefunden", http.StatusNotFound)

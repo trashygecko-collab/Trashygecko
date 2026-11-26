@@ -278,5 +278,5 @@ func routes() http.Handler {
 	}
 	mux.Handle("/", frisch(http.FileServer(http.Dir(home))))
 
-	return withIdentity(mux)
+	return withIdentity(mitIdempotenz(mux))
 }

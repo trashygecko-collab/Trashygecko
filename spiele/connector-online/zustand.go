@@ -18,6 +18,12 @@ import (
 	"time"
 )
 
+// serverStart ist der Beginn dieses Serverprozesses. Er steht in jeder Antwort
+// des zentralen Statusrufs: Ändert er sich, wurde der Server neu gestartet –
+// dann sind Chat und laufende Partien aus dem Speicher weg. Die Seite sagt das
+// ausdrücklich, statt es stillschweigend hinzunehmen.
+var serverStart = time.Now().Unix()
+
 func zustandHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST erforderlich", http.StatusMethodNotAllowed)
@@ -142,6 +148,7 @@ func zustandHandler(w http.ResponseWriter, r *http.Request) {
 		},
 		"mutes":   mutes,
 		"inGame":  inGame,
+		"start":   serverStart,
 		"aktiv":   aktiv,
 		"hinweis": hinweis,
 	})
