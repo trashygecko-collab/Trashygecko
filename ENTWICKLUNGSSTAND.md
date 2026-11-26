@@ -5,6 +5,118 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Verrücktes Labyrinth: zwei neue Kachelwelten und Schnittstelle 2.0
+
+**Auftrag:** Das Kachelspiel „Das verrückte Labyrinth“ neu gestalten – Mädchen-
+und Bubenstil vollständig eigene Kachelsätze, Normalstil unverändert – und auf
+die Spiele-Schnittstelle 2.0 umstellen, inklusive Connector, Mehrspieler,
+Sicherung, Doku und Commit.
+
+**Wichtig vorab:** `spiele/brettspiele/labyrinth/labyrinth.html` ist das
+Kugel-Labyrinth „Labyrinth Plus!“ und blieb unangetastet. Umgebaut wurde
+`spiele/brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html`.
+
+### Grafik
+
+- **Normalstil unverändert.** Der Zeichenpfad für Klassisch, Schloss, Dungeon,
+  Wald und Eis ist byte-gleich geblieben. Gegenprobe: Brett-Canvas im
+  Sicherungsstand und im neuen Stand mit gleichem Zufallsstart gerendert –
+  beide PNGs sind identisch (271.035 B, `NORMAL-GLEICH: true`).
+- **Mädchen – „Porzellan & Rosengarten“:** eigener Kachelmaler
+  (`kachelMaedchen`). Rosé-Marmor als Mauerwerk mit Adern, Perlmuttpunkten und
+  Porzellankante, Elfenbein-Gang mit Rosenholz-Fassung, Perlenreihe an beiden
+  Gangrändern, Goldrahmen mit Eckherzen auf festen Kacheln, runde
+  Porzellan-Medaillons für die Gegenstände.
+- **Buben – „Werkstatt & Kommandobasis“:** eigener Kachelmaler
+  (`kachelBuben`). Gebürstete Stahlplatten mit Nieten, helle Stahlbahn mit
+  Trittprofil und gestrichelter Leitlinie, sechseckige Stahlplaketten für die
+  Gegenstände; feste Kacheln mit verschraubtem Rahmen.
+- **Neue Motive statt Palettentausch:** Mädchen Herzkrönchen, Seidenschleife,
+  Rosenblüte, Schmetterling, Handspiegel, Teetasse, Perlenkette, Märchenbuch;
+  Buben Kompass, Zahnrad, Anker, Energieblitz, Eiskristall, Signalflagge,
+  Seilrolle, Taschenlampe. Alle als Vektorpfade im Einheitsquadrat, DPR-scharf.
+- **Mechanik unberührt:** Beide Maler benutzen dieselbe `wegUnion`-Geometrie
+  und dieselbe Gangbreite (46 % der Kachel) wie der Normalstil. Wege, Drehungen
+  und Schieben ändern sich dadurch nicht – nur Material und Zierrat.
+- Seitenfarben der beiden Welten (CSS-Variablen) auf Rosé-Gold bzw. Stahl-Cyan
+  abgestimmt.
+
+### Schnittstelle 2.0
+
+- Genau ein Global `window.Labyrinth` mit `version` (`2.0.0`), `bereit`,
+  `whenReady()`, `start()`, `einstellungen()`, `zustand()`, `startbildschirm()`,
+  `stop()`, `pause()`, `resume()`, `aktion()`; alle Aufrufe antworten, werfen
+  nie, Fehlercodes wie im Standard. `zustand()`/`einstellungen()` liefern tiefe
+  Kopien.
+- Ereignisse `labyrinth:bereit`, `:ende` (mit `grund`, `tick`, `sieger`,
+  `aufgaben`), `:pausiert`, `:weiter`.
+- Aktionen: `schiebe`, `ziehe`, `drehen`, `beenden`, `stand`, `neu`, `thema`,
+  `platz`. `start()` prüft Stil, Feldgröße (5/7/9), Aufgaben (3/5/7),
+  Spielerzahl (2–4), Modus, Stufe und Kreuzungen, bevor irgendetwas übernommen
+  wird.
+- **Kein `/api/` mehr im Spiel:** `online-sync.js`, `token.js` und
+  `TG_ONLINE_SPIEL` sind aus der Seite entfernt; sie liest weder `room` noch
+  `id` aus der Adresse. Das Brett bleibt bei fehlender Serverantwort stehen.
+- Vollbild-Knopf in der Titelleiste (echtes Fullscreen, Pseudo-Vollbild als
+  Rückfall, Escape verlässt es).
+- Startbildschirm bleibt der eigene Einrichtungsbereich (Titel, Beschreibung,
+  Spielart, Feld, Aufgaben, STARTEN).
+
+**Bewusste Abweichungen (in der Spieldoku genannt):**
+1. Die Startbildschirm-Vorlage aus Abschnitt 9 (`spiel-start.js`,
+   `TGSpiel.feldPassen`) wurde **nicht** übernommen, weil sie Raster und
+   Feldmaß ändert – das würde den bestandsgeschützten Normalstil verschieben.
+   Der vorhandene Einrichtungsbereich erfüllt „eigener Startbildschirm“.
+2. Für Werte ohne Levelbedeutung (Stil, Feldgröße, Aufgaben, Spielerzahl,
+   Modus) gibt es den zusätzlichen Code `ungueltiger-wert` mit `feld`; die
+   Level-Codes der Vorlage passen hier nicht.
+
+### Connector
+
+`spiele/connector/connector.html` bekam eine Brücke `labBrueckeAn` /
+`labTaktStarten`: Sie sichert den Sitz (`rejoin`, sonst `create`), zeigt die
+Lobby (Bereit, + Computer, Start), baut als Gastgeber die Aufstellung und
+schickt sie als Stand, schiebt Serverstände über `aktion("stand")` hinein und
+meldet eigene Züge als vollständigen Stand zurück. Der gewählte Connector-Stil
+hat Vorrang (`aktion("thema")`, auch bei Stilwechsel). Ein mitlaufender Schutz
+verhindert Senden und Laden mitten in einer Animation – sonst könnte ein
+Serverstand einen laufenden Figurenzug verschlucken.
+
+### Tests (Playwright, Chromium)
+
+- **Vertrag:** alle Pflichtfelder vorhanden; `start(5)` →
+  `konfiguration-muss-objekt-sein`, unbekanntes Feld, ungültiger Stil,
+  Feldgröße 6 und Stufe als Zahl werden abgelehnt; `start()` während einer
+  Partie → `spiel-laeuft`; `pause()/resume()` mit bzw. ohne Partie korrekt;
+  `schiebe` in der Pause → `aktion-nicht-erlaubt`; `zustand()`-Kopien
+  unabhängig; `stop()` setzt den Startbildschirm zurück.
+- **Kacheln und Drehungen:** künstliches 4×4-Brett mit allen 16
+  Seitenkombinationen (Gerade, Kurve, T-Kreuz, Kreuzung, geschlossen) in
+  Klassisch, Mädchen und Buben; je Kachel alle vier Kanten pixelweise gegen
+  `offen` geprüft – **0 Abweichungen**. Freier Stein: vier Drehungen, jede
+  Kante pixelweise gegen `dreheSeiten` – korrekt in allen drei Stilen.
+- **Ganze Partie:** 5×5, zwei Spieler am Gerät, geschieht über `aktion()`;
+  alle Aufgaben eingesammelt, zurück ins Startfeld, `labyrinth:ende` genau
+  einmal mit `grund: "gewonnen"`, Figuren immer im Feld, keine Ablehnung.
+- **Handy 390×844:** STARTEN sichtbar ohne Scrollen, Brett quadratisch und
+  innerhalb der Breite, kein Querscroll, Vollbild-Knopf vorhanden.
+- **Connector live** (Port 8779, echter Go-Server): Labyrinth-Runde im Raum
+  geöffnet, Lobby 1/2, Computer ergänzt, Bereit, Start; Aufstellung wurde vom
+  Gastgeber gebaut, Schieben und Figurenzug kamen über den Server an
+  (Stand-Version 7, Figur auf Feld 1, Bot zog danach), keine Seitenfehler.
+- **Normalstil:** Brett-PNG aus Sicherung und neuem Stand identisch.
+
+### Dateien
+
+- `spiele/brettspiele/verruecktes-labyrinth/verruecktes-labyrinth.html`
+- `spiele/connector/connector.html`
+- `sicherung/labyrinth-2026-11-26/` (beide Dateien vor dem Umbau)
+- `ENTWICKLUNGSSTAND.md`
+
+Keine Go-Dateien, keine anderen Spiele, keine gemeinsamen Helfer geändert.
+
+---
+
 ## 26.11.2026 · Alter Endpunkt /api/menschaerger entfernt
 
 **Auftrag:** Der alte Endpunkt `/api/menschaerger` lief live noch neben

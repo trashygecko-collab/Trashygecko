@@ -5991,6 +5991,7 @@ function spielOeffnen(name,url,info){
  document.body.classList.add("spiel-offen");
  tttTaktStarten();   // 1-s-Takt nur fuer das Tic-Tac-Toe-Brett im Rahmen
  schiffeTaktStarten();
+ labTaktStarten();   // Labyrinth: Stand und Zugreihenfolge laufen ueber den Connector
  soloAuswahl(false);   // Handy: Liste zuklappen, auch beim Wechsel des Spiels
  // Am Handy meldet sich die zentrale Bedienung an: Knopf, Zähler und
  // der Sprung zum Spielfenster stecken in /spiele/mobil.js.
@@ -6028,6 +6029,275 @@ function stilAnSpiel(){
  if(!treffer)return false;
  try{ treffer.api.start({stil:stilFuerSpiel()}); }catch(e){ return false; }
  return true;
+}
+
+/* --- Das verrückte Labyrinth im Raum --------------------------------------
+   Schnittstelle 2.0: Das Spiel kennt weder Raum noch /api/ und liest keine
+   Kennung aus der Adresse. Der Connector hält den Serverstand, schiebt ihn
+   über aktion("stand") hinein und schickt den eigenen, vollständigen Stand
+   als Zug zurück. Ohne Antwort des Servers bleibt das Brett stehen – ein
+   Verbindungsabriss kann so keinen falschen Stand erzeugen. */
+const LAB_TAKT = 1100;
+let labTakt = 0, labZugLaeuft = false, labStandText = "", labGezeigt = -1;
+let labFenster = null, labSchleier = null, labMeldung = "", labKnoepfe = [];
+let labAufbauFuer = "";
+
+function labSpiel() {
+  const rahmen = document.getElementById("spielRahmen");
+  if (!rahmen) return null;
+  if ((rahmen.getAttribute("src") || "").indexOf("/verruecktes-labyrinth/") === -1) return null;
+  let innen = null;
+  try { innen = rahmen.contentWindow; } catch (e) { return null; }
+  const api = innen && innen.Labyrinth;
+  if (!api || !api.bereit) return null;
+  return { api: api, fenster: innen };
+}
+
+function labThema() {
+  const s = stilFuerSpiel();
+  return s === "maedchen" ? "maedchen" : s === "buben" ? "buben" : "klassisch";
+}
+
+async function labRuf(aktion, daten) {
+  const ziel = "/api/labyrinth?room=" + encodeURIComponent(activeRoom) +
+    "&id=" + encodeURIComponent(sessionID) +
+    (aktion ? "&action=" + encodeURIComponent(aktion) : "");
+  const opt = { method: aktion ? "POST" : "GET", headers: { "Content-Type": "application/json" } };
+  if (aktion) opt.body = JSON.stringify(Object.assign({ id: sessionID }, daten || {}));
+  const r = await fetch(ziel, opt);
+  const text = await r.text();
+  let d = null;
+  try { d = JSON.parse(text); } catch (e) {}
+  if (!r.ok) throw new Error((d && (d.fehler || d.error)) || text || ("Fehler " + r.status));
+  return d;
+}
+
+/* Der Stand, den das Spiel über zustand() liefert, in der Form des Servers. */
+function labStandAus(z) {
+  return {
+    groesse: z.groesse, thema: z.thema, modus: "mehrspieler", phase: z.phase,
+    amZug: z.amZug, zuege: z.zuege, vorbei: z.vorbei, drehung: z.drehung,
+    fest: z.fest, feld: z.feld, frei: z.frei, figuren: z.figuren
+  };
+}
+
+function labSchleierBauen() {
+  if (labSchleier) return;
+  labSchleier = document.createElement("div");
+  labSchleier.id = "labSchleier";
+  labSchleier.style.cssText = "position:fixed;z-index:70;display:none;align-items:center;justify-content:center;" +
+    "padding:14px;background:#06131ac9;color:#f2f7fa;text-align:center;" +
+    "font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;border-radius:12px";
+  labSchleier.innerHTML = "<div style=\"max-width:440px\">" +
+    "<div id=\"labText\" style=\"margin-bottom:10px\"></div>" +
+    "<div id=\"labKnoepfe\" style=\"display:flex;gap:8px;flex-wrap:wrap;justify-content:center\"></div></div>";
+  document.body.appendChild(labSchleier);
+}
+
+function labVerstecken() {
+  if (labSchleier) labSchleier.style.display = "none";
+}
+
+function labZeige(text, knoepfe) {
+  const rahmen = document.getElementById("spielRahmen");
+  if (!rahmen) return;
+  const r = rahmen.getBoundingClientRect();
+  if (r.width < 20 || r.height < 20) { labVerstecken(); return; }
+  labSchleierBauen();
+  const gleich = text === labMeldung && JSON.stringify(knoepfe || []) === JSON.stringify(labKnoepfe);
+  labMeldung = text;
+  labKnoepfe = knoepfe || [];
+  labSchleier.style.left = r.left + "px";
+  labSchleier.style.top = r.top + "px";
+  labSchleier.style.width = r.width + "px";
+  labSchleier.style.height = r.height + "px";
+  labSchleier.style.display = "flex";
+  if (gleich) return;
+  document.getElementById("labText").textContent = text;
+  const box = document.getElementById("labKnoepfe");
+  box.textContent = "";
+  labKnoepfe.forEach(function (k) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k[0];
+    b.style.cssText = "font:inherit;padding:8px 16px;border-radius:9px;cursor:pointer;" +
+      "border:1px solid #ffffff33;background:#17362b;color:#e6eef2";
+    b.addEventListener("click", k[1]);
+    box.appendChild(b);
+  });
+}
+
+async function labAktion(name, daten) {
+  try {
+    const d = await labRuf(name, daten);
+    if (d && d.game) labUebernehmen(d.game);
+  } catch (e) {
+    labMeldung = "";
+    labZeige("Labyrinth: " + e.message, labKnoepfe);
+  }
+}
+
+/* Lobby: Sitze, Bereit, Computer und Start liegen beim Connector. */
+function labLobby(game, platz) {
+  const namen = (game.spieler || []).map(function (p) {
+    return p.name + (p.bot ? " (Computer)" : "") + (p.bereit ? " ✓" : "");
+  }).join(" · ");
+  const knoepfe = [];
+  if (platz >= 0) knoepfe.push(["Bereit", function () { labAktion("ready"); }]);
+  if (platz === 0) {
+    if ((game.spieler || []).length < game.anzahl) {
+      knoepfe.push(["+ Computer", function () { labAktion("botadd", { stufe: "mittel" }); }]);
+    }
+    knoepfe.push(["Start", function () { labAktion("start"); }]);
+  }
+  labZeige("Lobby " + (game.spieler || []).length + "/" + game.anzahl + ": " + namen +
+    (platz < 0 ? " – du sitzt noch nicht" : ""), knoepfe);
+}
+
+/* Erste Seite: Aufstellung bauen und als Stand melden. */
+async function labAufbau(game) {
+  const spiel = labSpiel();
+  if (!spiel || labZugLaeuft) return;
+  labZugLaeuft = true;
+  try {
+    const namen = (game.spieler || []).map(function (p) { return p.name; });
+    spiel.api.start({
+      stil: labThema(), online: true, modus: "mehrspieler", spielerzahl: game.anzahl,
+      groesse: 7, kreuze: true, aufgaben: 5, namen: namen
+    });
+    const z = spiel.api.zustand();
+    const stand = labStandAus(z);
+    labStandText = JSON.stringify(stand);
+    labGezeigt = game.version;
+    await labRuf("stand", { stand: stand, weiter: z.amZug, ende: false });
+  } catch (e) {
+    labMeldung = "";
+    labZeige("Labyrinth: " + e.message, []);
+  }
+  labZugLaeuft = false;
+}
+
+/* Eigenen Zug schicken, sobald sich der örtliche Stand geändert hat. */
+async function labSenden(game, platz) {
+  const spiel = labSpiel();
+  if (!spiel || labZugLaeuft) return;
+  if (!game.stand || game.status !== "active") return;
+  if (platz < 0 || game.current !== platz) return;
+  if (labGezeigt !== game.version) return;
+  const z = spiel.api.zustand();
+  if (z.startbildschirm) return;
+  /* Mitten in einer Figur- oder Schiebe-Animation ist der Stand noch nicht
+     fertig – erst danach melden, sonst ginge der Zug verloren. */
+  if (z.animiert) return;
+  const stand = labStandAus(z);
+  const text = JSON.stringify(stand);
+  if (text === labStandText) return;
+  labStandText = text;
+  try {
+    const d = await labRuf("zug", { stand: stand, weiter: z.amZug, ende: z.vorbei });
+    if (d && d.game) { labGezeigt = d.game.version; labUebernehmen(d.game); }
+  } catch (e) {
+    labStandText = "";    // beim nächsten Takt erneut versuchen
+    labMeldung = "";
+    labZeige("Labyrinth: " + e.message, []);
+  }
+}
+
+function labUebernehmen(game) {
+  const spiel = labSpiel();
+  if (!spiel || !game) return;
+  let platz = -1;
+  (game.spieler || []).forEach(function (p, i) { if (p.id === sessionID) platz = i; });
+  try { spiel.api.aktion("platz", { platz: platz >= 0 ? platz : null }); } catch (e) {}
+
+  if (game.status === "invited") { labLobby(game, platz); return; }
+  if (game.status === "finished") {
+    const sieger = game.sieger >= 0 && game.spieler[game.sieger] ? game.spieler[game.sieger].name : "–";
+    labZeige("Partie beendet – " + sieger + " gewinnt.", [["Nochmal", function () { labAktion("neu"); }]]);
+    return;
+  }
+  if (!game.stand) {
+    /* Nur einmal bauen: der nächste Takt sieht den Stand schon unterwegs. */
+    if (platz === 0 && labAufbauFuer !== game.id + ":" + game.version) {
+      labAufbauFuer = game.id + ":" + game.version;
+      labAufbau(game);
+    }
+    labZeige("Aufstellung wird gebaut …", []);
+    return;
+  }
+  if (labGezeigt !== game.version) {
+    /* Nicht in eine laufende Animation hineinladen: der eigene Zug würde
+       sonst abgebrochen, bevor er das Brett erreicht. */
+    if (spiel.api.zustand().animiert) return;
+    const text = JSON.stringify(game.stand);
+    if (text !== labStandText) {
+      try { spiel.api.aktion("stand", { stand: game.stand }); } catch (e) {}
+      labStandText = text;
+    }
+    labGezeigt = game.version;
+  }
+  const dran = game.spieler[game.current];
+  if (platz >= 0 && game.current === platz) {
+    labVerstecken();
+    labSenden(game, platz);
+  } else {
+    labZeige(dran ? dran.name + " ist am Zug …" : "Warte auf den Spielstand …", []);
+  }
+}
+
+async function labAbgleich() {
+  const spiel = labSpiel();
+  if (!spiel) { labVerstecken(); return; }
+  if (!activeRoom || !sessionID) return;
+  try {
+    const d = await labRuf();
+    if (d && d.game) labUebernehmen(d.game);
+  } catch (e) {
+    labMeldung = "";
+    labZeige("Labyrinth: " + e.message, []);
+  }
+}
+
+/* Beim Öffnen: Platz sichern, sonst Partie eröffnen. */
+async function labBrueckeAn() {
+  const spiel = labSpiel();
+  if (!spiel || labFenster === spiel.fenster) return;
+  labFenster = spiel.fenster;
+  labStandText = ""; labGezeigt = -1; labMeldung = ""; labKnoepfe = []; labAufbauFuer = "";
+  try { spiel.api.aktion("thema", { thema: labThema() }); } catch (e) {}
+  try {
+    const d = await labRuf("rejoin");
+    if (d && d.game) labUebernehmen(d.game);
+  } catch (e) {
+    try {
+      const d = await labRuf("create", { anzahl: 2 });
+      if (d && d.game) labUebernehmen(d.game);
+    } catch (e2) {
+      /* Kein Sitz und keine neue Partie: Der Takt zeigt Lobby oder die
+         laufende Partie; ein Fehlertext wäre hier nur Lärm. */
+      labAbgleich();
+    }
+  }
+}
+
+function labTaktStarten() {
+  if (labTakt) return;
+  labTakt = setInterval(function () {
+    if (!labSpiel()) { labVerstecken(); return; }
+    labAbgleich();
+  }, LAB_TAKT);
+}
+
+window.addEventListener("resize", function () {
+  if (!labSpiel()) return;
+  if (labSchleier && labSchleier.style.display === "flex") labZeige(labMeldung, labKnoepfe);
+});
+
+if (window.TGStil && typeof TGStil.beiWechsel === "function") {
+  TGStil.beiWechsel(function () {
+    const spiel = labSpiel();
+    if (spiel) { try { spiel.api.aktion("thema", { thema: labThema() }); } catch (e) {} }
+  });
 }
 
 /* --- Tic Tac Toe im Raum --------------------------------------------------
@@ -6356,7 +6626,7 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
 
 // Der Stil geht an jedes geladene Spiel und an jedes offene Spiel, sobald die
 // Wahl im Connector wechselt. Reine Übergabe, keine Spielsteuerung.
-document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); });
+document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); labBrueckeAn(); });
 window.addEventListener("tg-stil", () => {
  if(document.body.classList.contains("spiel-offen"))stilAnSpiel();
 });

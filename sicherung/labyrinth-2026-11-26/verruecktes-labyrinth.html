@@ -1,0 +1,2565 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="../../stil.js"></script>
+<meta name="theme-color" content="#0d241d">
+<title>Das verrückte Labyrinth – TrashyGecko</title>
+<link rel="stylesheet" href="../../schrift.css">
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+:root{
+ --seite1:#12352b; --seite2:#0b241d; --seite3:#071712;
+ --panel:#143a2f; --panel2:#0d2a22;
+ --text:#e9f1ec; --muted:#9fb4ab;
+ --gold:#e8cd8e; --gold2:#c8a85f;
+ --linie:#ffffff14; --linie2:#ffffff26;
+ --tg-schrift:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+body[data-thema="schloss"]{--seite1:#2c2340;--seite2:#1c1630;--seite3:#120e20;--panel:#2b2144;--panel2:#1d1733;--gold:#dcc7e8;--gold2:#b296c6}
+body[data-thema="dungeon"]{--seite1:#2a231c;--seite2:#191410;--seite3:#0f0b08;--panel:#2b241d;--panel2:#1c1712;--gold:#d9a878;--gold2:#ab7a4f}
+body[data-thema="wald"]{--seite1:#1d3325;--seite2:#102318;--seite3:#08150e;--panel:#1c3628;--panel2:#122519;--gold:#bcd49a;--gold2:#8ea86b}
+body[data-thema="eis"]{--seite1:#20394a;--seite2:#102534;--seite3:#081722;--panel:#1c3444;--panel2:#112633;--gold:#cfe9f5;--gold2:#9cc4d8}
+body[data-thema="maedchen"]{--seite1:#4d1439;--seite2:#360e28;--seite3:#220718;--panel:#521c40;--panel2:#3a112c;--gold:#ffc2e4;--gold2:#e08fc0;--muted:#e3b4d0}
+body[data-thema="buben"]{--seite1:#16222e;--seite2:#0e171f;--seite3:#070c11;--panel:#1b2b3a;--panel2:#101c26;--gold:#9ef7ff;--gold2:#46b8cf;--muted:#a8c4d2}
+
+/* Die Wahl aus spiele/stil.js: dieselben Farben wie in den Spielen. Nur
+   Farben – die Aufgaben und Namen des Themas bleiben, wie sie sind. */
+html[data-stil="maedchen"] body[data-thema="maedchen"]{--seite1:#3c1c44;--seite2:#2b1233;--seite3:#150b19;
+ --panel:#2c1834;--panel2:#22112a;--text:#f0e5ee;--muted:#c0a8bc;--gold:#c68b8f;--gold2:#e8c4c7;
+ --linie:#c68b8f26;--linie2:#c68b8f40}
+html[data-stil="buben"] body[data-thema="buben"]{--seite1:#1c1d1f;--seite2:#141517;--seite3:#0a0a0b;
+ --panel:#141517;--panel2:#0e0f10;--text:#e4e5e6;--muted:#b1b3b8;--gold:#d1242f;--gold2:#8f1019;
+ --linie:#e0242f26;--linie2:#e0242f40}
+
+body{margin:0;padding:10px 8px 26px;
+ background:
+  radial-gradient(900px 520px at 16% -8%,#ffffff10 0%,#00000000 70%),
+  radial-gradient(760px 460px at 92% 0%,#00000055 0%,#00000000 70%),
+  linear-gradient(180deg,var(--seite1),var(--seite2) 58%,var(--seite3)) fixed;
+ color:var(--text);font:15px/1.5 var(--tg-schrift);
+ -webkit-tap-highlight-color:transparent;overflow-x:hidden}
+main{max-width:860px;margin:auto}
+
+.fenster{border:1px solid var(--linie);border-radius:18px;overflow:hidden;
+ background:linear-gradient(180deg,var(--panel),var(--panel2));
+ box-shadow:inset 0 1px 0 #ffffff12,0 26px 60px -30px #000,0 2px 10px #00000055}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:12px 14px;border-bottom:1px solid var(--linie)}
+.titelleiste .titel{color:#e5efe9;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.titelleiste .titel b{color:var(--gold);font-weight:600}
+.kreuz{color:var(--muted);border:1px solid var(--linie2);border-radius:50%;width:28px;height:28px;
+ line-height:26px;text-align:center;font-size:15px;text-decoration:none;background:#ffffff08}
+.kreuz:hover{background:#ffffff16;color:#fff}
+
+.menueleiste{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+ padding:10px 12px;border-bottom:1px solid var(--linie)}
+.knopf{font-family:inherit;font-size:13px;padding:9px 14px;border-radius:10px;cursor:pointer;
+ border:1px solid var(--linie2);background:#ffffff0a;color:#e9f1ec;
+ transition:background .15s,border-color .15s,transform .06s}
+.knopf:hover{background:#ffffff16;border-color:#ffffff33}
+.knopf:active{transform:translateY(1px)}
+.knopf:disabled{opacity:.4;cursor:default}
+.knopf.haupt{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#20180a;
+ border-color:#ffffff40;font-weight:600;box-shadow:0 8px 18px -10px #000}
+.knopf.haupt:hover{filter:brightness(1.06)}
+.knopf.aktiv{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#20180a;border-color:#ffffff40;font-weight:600}
+.menueleiste .gruppe{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.menueleiste .etikett{color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-right:2px}
+select{font-family:inherit;font-size:13px;padding:8px 10px;border-radius:9px;color:#e9f1ec;
+ background:#122a22;border:1px solid var(--linie2)}
+body[data-thema="schloss"] select{background:#241c3a}
+body[data-thema="dungeon"] select{background:#241d16}
+body[data-thema="wald"] select{background:#17301f}
+body[data-thema="eis"] select{background:#152c3a}
+body[data-thema="maedchen"] select{background:#4a1735}
+body[data-thema="buben"] select{background:#17252f}
+
+/* ---------- Einrichtung ---------- */
+.einrichtung{padding:16px 14px 18px;display:flex;flex-direction:column;gap:14px}
+.einrichtung h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.einrichtung .unter{color:var(--muted);font-size:13.5px;margin:-6px 0 0}
+.reihe{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.reihe > .etikett{min-width:104px;color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.08em}
+.auswahl{display:flex;gap:6px;flex-wrap:wrap}
+.wahl{font-family:inherit;font-size:13.5px;padding:8px 13px;border-radius:9px;cursor:pointer;
+ border:1px solid var(--linie2);background:#ffffff08;color:#dfeae4}
+.wahl:hover{background:#ffffff14}
+.wahl[aria-pressed="true"]{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#20180a;
+ border-color:#ffffff45;font-weight:600}
+.hinweiszeile{color:var(--muted);font-size:12.5px}
+.schalter{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;color:#dfeae4}
+.schalter input{width:17px;height:17px;accent-color:var(--gold)}
+
+/* ---------- Spiel ---------- */
+.statuszeile{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;
+ padding:10px 12px;border-bottom:1px solid var(--linie)}
+.statuszeile .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+ padding:5px 12px;border-radius:999px;background:#ffffff0a;border:1px solid var(--linie)}
+.statuszeile b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+.punkt{width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 3px #ffffff12}
+
+.buehne{padding:12px 10px 6px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.brettGitter{display:grid;grid-template-columns:auto auto auto;grid-template-rows:auto auto auto;
+ gap:5px;justify-content:center;flex:0 0 auto}
+.streifen{display:flex;gap:4px;justify-content:center;align-items:stretch}
+.streifen.senkrecht{flex-direction:column}
+#streifenOben{grid-column:2;grid-row:1}
+#streifenUnten{grid-column:2;grid-row:3}
+#streifenLinks{grid-column:1;grid-row:2;align-self:center}
+#streifenRechts{grid-column:3;grid-row:2;align-self:center}
+.pfeil{font-family:inherit;border:1px solid var(--linie2);background:#ffffff10;color:var(--gold);
+ border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+ padding:0;min-width:0;min-height:0;flex:1 1 0;transition:background .12s,transform .08s}
+.pfeilPlatz{flex:1 1 0;min-width:0;min-height:0}
+.pfeil:hover:not(:disabled){background:#ffffff24}
+.pfeil:active:not(:disabled){transform:scale(.94)}
+.pfeil:disabled{opacity:.22;cursor:default}
+.pfeil svg{width:17px;height:17px;display:block;fill:currentColor}
+.brettHuelle{position:relative;grid-column:2;grid-row:2;line-height:0}
+canvas#brett{display:block;border-radius:12px;background:#00000030;
+ box-shadow:inset 0 0 0 1px #ffffff18,0 14px 34px -18px #000}
+
+.freiBox{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;
+ padding:10px;border:1px solid var(--linie);border-radius:14px;background:#ffffff07;transition:border-color .2s,box-shadow .2s}
+.freiBox.gesucht{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 20px -8px var(--gold)}
+.freiBox.gesucht .klein{color:var(--gold)}
+.freiBox .klein{color:var(--muted);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase}
+canvas#frei{display:block;border-radius:10px;cursor:pointer;background:#00000030}
+.freiBox .dreh{width:100%;font-size:13px;padding:8px 10px}
+
+.meldung{margin:2px 12px 0;padding:9px 12px;border-radius:11px;background:#ffffff0a;
+ border:1px solid var(--linie);color:#cfe0d8;font-size:13.5px;min-height:38px;display:flex;align-items:center;gap:8px}
+.meldung b{color:var(--gold)}
+.meldung.wichtig{background:#e8cd8e1f;border-color:#e8cd8e55;color:#f2e6c8}
+
+.spielerleiste{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:12px}
+.spieler{border:1px solid var(--linie);border-radius:13px;background:#ffffff07;padding:9px 10px;
+ display:flex;flex-direction:column;gap:7px;position:relative;overflow:hidden}
+.spieler.amZug{border-color:var(--gold);background:#e8cd8e14}
+.spieler.amZug::after{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--gold)}
+.spieler .kopf{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.spieler .kopf .name{font-weight:600;color:#fff}
+.spieler .kopf .fort{color:var(--muted);font-size:12px;margin-left:auto;font-variant-numeric:tabular-nums}
+.aufgaben{display:flex;flex-wrap:wrap;gap:5px}
+.aufgabe{display:flex;align-items:center;gap:5px;padding:3px 7px 3px 3px;border-radius:8px;
+ background:#ffffff0a;border:1px solid #ffffff12;font-size:11.5px;color:#d6e3dc}
+.aufgabe canvas{display:block;border-radius:5px}
+.aufgabe.erledigt{opacity:.42;text-decoration:line-through}
+.aufgabe.jetzt{border-color:#ffffff45;background:#ffffff1a}
+.heimHinweis{font-size:11.5px;color:var(--gold)}
+
+/* ---------- Regeln ---------- */
+.regeln{border-top:1px solid var(--linie);padding:0 14px 14px}
+.regeln summary{cursor:pointer;padding:12px 0 8px;font-size:13px;letter-spacing:.1em;
+ text-transform:uppercase;color:var(--muted)}
+.regeln summary:hover{color:#dfeae4}
+.regeln .text{font-size:13.5px;color:#cfdcd5;display:grid;gap:8px}
+.regeln .text h3{margin:6px 0 0;font-size:13px;color:var(--gold);letter-spacing:.04em}
+.regeln .text ul{margin:0;padding-left:18px}
+.regeln .text li{margin:2px 0}
+.regeln .text code{font-size:12px;background:#ffffff10;padding:1px 5px;border-radius:4px}
+
+/* ---------- Sieg ---------- */
+.sieg{position:fixed;inset:0;background:#000000b8;display:flex;align-items:center;justify-content:center;
+ padding:18px;z-index:20}
+.sieg .karte{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--gold);
+ border-radius:18px;padding:22px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 70px -24px #000}
+.sieg h2{margin:0 0 6px;font-size:20px;color:var(--gold)}
+.sieg p{margin:0 0 16px;color:#cfdcd5;font-size:14px}
+.sieg .knopf{width:100%}
+
+@media (max-width:620px){
+ body{padding:6px 2px 18px}
+ .buehne{padding:8px 0 4px;gap:8px}
+ .brettGitter{gap:3px}
+ .pfeil svg{width:15px;height:15px}
+ .einrichtung{padding:14px 11px 16px}
+ .einrichtung h1{font-size:19px}
+ .reihe{gap:6px}
+ .reihe > .etikett{min-width:100%}
+ .spielerleiste{padding:9px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}
+ .aufgabe{font-size:11px;padding:2px 6px 2px 2px}
+ .menueleiste{padding:8px}
+ .menueleiste .knopf{font-size:12.5px;padding:8px 11px}
+ /* Am Handy steht der freie Stein als schmale Leiste UNTER dem Brett:
+    das Brett bekommt die volle Breite, nichts liegt auf dem Spielfeld. */
+ .buehne{flex-direction:column;align-items:center}
+ .freiBox{flex-direction:row;width:100%;max-width:430px;padding:6px 8px;gap:10px;align-items:center}
+ .freiBox .klein{font-size:10.5px}
+ .freiBox .dreh{width:auto;flex:1 1 auto;min-width:78px;font-size:12.5px;padding:9px 8px}
+ .freiBox canvas#frei{flex:0 0 auto}
+ .meldung{margin:6px 8px 0;font-size:12.5px;min-height:34px;padding:7px 10px}
+ .titelleiste{gap:6px}
+ .titelleiste .titel{font-size:10.5px;letter-spacing:.1em}
+ /* Der Connector-Knopf wird am Handy zum Pfeil, sonst frisst er die Kopfzeile. */
+ .tg-zurueck{font-size:0 !important;padding:0 !important;width:32px;height:30px;overflow:hidden;
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+ .tg-zurueck::after{content:"‹";font-size:19px;line-height:1}
+ /* Welt-Auswahl bleibt in einer Zeile und scrollt seitwärts. */
+ #themenLeiste{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:3px;scrollbar-width:none}
+ #themenLeiste::-webkit-scrollbar{display:none}
+ #themenLeiste .etikett{display:none}
+ .statuszeile{padding:8px 9px;gap:6px}
+ .statuszeile .pill{font-size:11.5px;padding:4px 9px}
+}
+@media (prefers-reduced-motion:reduce){
+ .knopf,.pfeil,.wahl{transition:none}
+}
+</style>
+</head>
+<body data-thema="klassisch">
+<main>
+ <div class="fenster">
+  <div class="titelleiste">
+   <a class="kreuz" href="../../spiele.html" title="Zurück zur Spieleübersicht" aria-label="Zurück zur Spieleübersicht">×</a>
+  </div>
+
+  <div class="menueleiste">
+   <button class="knopf haupt" id="btnNeu" type="button">Neues Spiel</button>
+   <div class="gruppe" id="themenLeiste" role="group" aria-label="Themenwelt">
+    <span class="etikett">Welt</span>
+   </div>
+   <div class="gruppe" id="stufeGruppe">
+    <span class="etikett">Computer</span>
+    <select id="selStufe" aria-label="Schwierigkeit der Computergegner">
+     <option value="leicht">Leicht</option>
+     <option value="normal" selected>Normal</option>
+     <option value="schwer">Schwer</option>
+    </select>
+   </div>
+  </div>
+
+  <div class="einrichtung" id="einrichtung">
+   <p class="unter">Schiebe Gänge, drehe Wege, sammle deine Schätze und komm zurück ins eigene Eck.</p>
+
+   <div class="reihe">
+    <span class="etikett">Spielart</span>
+    <div class="auswahl" id="wahlModus" role="group" aria-label="Spielart">
+     <button class="wahl" type="button" data-modus="solo" aria-pressed="true">Solo gegen Computer</button>
+     <button class="wahl" type="button" data-modus="lokal" aria-pressed="false">Lokal 2–4 Spieler</button>
+    </div>
+   </div>
+
+   <div class="reihe" id="reiheSpieler">
+    <span class="etikett">Spieler</span>
+    <div class="auswahl" id="wahlSpieler" role="group" aria-label="Anzahl Spieler">
+     <button class="wahl" type="button" data-n="2" aria-pressed="true">2</button>
+     <button class="wahl" type="button" data-n="3" aria-pressed="false">3</button>
+     <button class="wahl" type="button" data-n="4" aria-pressed="false">4</button>
+    </div>
+   </div>
+
+   <div class="reihe">
+    <span class="etikett">Feld</span>
+    <div class="auswahl" id="wahlFeld" role="group" aria-label="Feldgröße">
+     <button class="wahl" type="button" data-n="5" aria-pressed="false">5 × 5</button>
+     <button class="wahl" type="button" data-n="7" aria-pressed="true">7 × 7</button>
+     <button class="wahl" type="button" data-n="9" aria-pressed="false">9 × 9</button>
+    </div>
+   </div>
+
+   <div class="reihe">
+    <span class="etikett">Aufgaben</span>
+    <div class="auswahl" id="wahlAufgaben" role="group" aria-label="Aufgaben pro Spieler">
+     <button class="wahl" type="button" data-n="3" aria-pressed="false">3</button>
+     <button class="wahl" type="button" data-n="5" aria-pressed="true">5</button>
+     <button class="wahl" type="button" data-n="7" aria-pressed="false">7</button>
+    </div>
+   </div>
+
+   <div class="reihe">
+    <label class="schalter"><input type="checkbox" id="chkKreuze" checked> Besondere Wege: Kreuzungen im Feld</label>
+   </div>
+
+   <div class="reihe">
+    <button class="knopf haupt" id="btnStart" type="button">Spiel starten</button>
+    <span class="hinweiszeile">Mehrspieler: im Connector unter „Runde anbieten“ – der Spielraum öffnet dieses Spiel mit euch am Tisch.</span>
+   </div>
+  </div>
+
+  <div id="spielbereich" hidden>
+   <div class="statuszeile">
+    <span class="pill"><span class="punkt" id="punktZug"></span><span id="werZug">–</span></span>
+    <span class="pill">Aufgabe <b id="fortschritt">0/0</b></span>
+    <span class="pill">Züge <b id="zugZahl">0</b></span>
+    <span class="pill" id="phasePill">Schieben</span>
+   </div>
+
+   <div class="buehne">
+    <div class="brettGitter">
+     <div class="streifen" id="streifenOben"></div>
+     <div class="streifen senkrecht" id="streifenLinks"></div>
+     <div class="brettHuelle"><canvas id="brett"></canvas></div>
+     <div class="streifen senkrecht" id="streifenRechts"></div>
+     <div class="streifen" id="streifenUnten"></div>
+    </div>
+    <div class="freiBox">
+     <span class="klein">Freier Gang</span>
+     <canvas id="frei" width="96" height="96" aria-label="Freier Gangstein"></canvas>
+     <button class="knopf dreh" id="btnDrehen" type="button">↻ Drehen</button>
+     <span class="klein">Tippen dreht</span>
+    </div>
+   </div>
+
+   <div class="meldung" id="meldung">Erst schieben, dann ziehen.</div>
+   <div class="spielerleiste" id="spielerleiste"></div>
+   <button class="knopf" id="btnBeenden" type="button" hidden style="margin:0 12px 12px">Zug beenden (nicht ziehen)</button>
+  </div>
+
+  <details class="regeln" id="regeln">
+   <summary>Regeln</summary>
+   <div class="text">
+    <h3>Ziel</h3>
+    <ul>
+     <li>Jeder Spieler hat eine eigene Figur, eine Farbe und eine eigene Aufgabenliste.</li>
+     <li>Wer alle Aufgaben erledigt hat, muss mit seiner Figur zurück auf sein Startfeld ziehen – erst dann ist die Partie gewonnen.</li>
+    </ul>
+    <h3>Ein Zug</h3>
+    <ul>
+     <li><b>Erst schieben:</b> Mit einem Pfeil am Rand wird der freie Gangstein in die Reihe oder Spalte geschoben. Der Gangstein am gegenüberliegenden Ende fällt heraus und ist der neue freie Stein.</li>
+     <li>Geschoben werden nur die Reihen und Spalten, an denen ein Pfeil steht – beim 7 × 7 sind das die drei mittleren Reihen und Spalten (zwölf Pfeile). Die Kacheln dazwischen sind fest im Plan verankert (16 Stück) und bewegen sich nie.</li>
+     <li>Der freie Stein lässt sich vor dem Einschieben beliebig drehen (Knopf „Drehen“ oder direkt auf den Stein tippen).</li>
+     <li><b>Verboten:</b> denselben Einschub sofort rückwärts zu wiederholen – also genau die Reihe oder Spalte, die zuletzt hineingeschoben wurde, von der Gegenseite erneut zu schieben.</li>
+     <li><b>Dann ziehen:</b> Die eigene Figur darf beliebig weit durch offene Gänge laufen – auch um Ecken, aber nie durch eine Wand und nie durch eine andere Figur. Ein Zug darf auch ausgelassen werden („Zug beenden“).</li>
+     <li>Wird eine Figur von einem Einschub über den Rand gedrückt, kommt sie auf der Gegenseite wieder ins Feld – auf den neu eingeschobenen Stein.</li>
+    </ul>
+    <h3>Schätze</h3>
+    <ul>
+     <li>Die eigene Aufgabe steht auf dem Spielfeld: Die Figur muss auf das Feld mit dem gesuchten Gegenstand. Steht sie dort am Ende des eigenen Zuges, wird der Gegenstand eingesammelt – egal ob sie hingezogen oder von einem Einschub dorthin geschoben wurde. Danach rückt die nächste Aufgabe nach.</li>
+     <li>Gegenstände wandern mit ihren Gangsteinen mit – auch hinaus und wieder hinein.</li>
+    </ul>
+    <h3>Varianten</h3>
+    <ul>
+     <li>Feldgrößen 5 × 5, 7 × 7 und 9 × 9, drei bis sieben Aufgaben je Spieler.</li>
+     <li>„Besondere Wege“ mischt Kreuzungen (vier offene Seiten) ins Feld.</li>
+     <li>Sieben Themenwelten mit eigenen Farben und eigenen Gegenständen (Klassisch, Mädchen, Buben, Schloss, Dungeon, Wald, Eiswelt); die Aufgaben gelten in jeder Welt.</li>
+     <li>Solo gegen 1–3 Computer (leicht, normal, schwer) oder lokal mit 2–4 Spielern an einem Gerät.</li>
+    </ul>
+    <h3>Bedienung</h3>
+    <ul>
+     <li>Pfeile schieben, freien Stein antippen oder „Drehen“ drücken, danach ein erreichbares Feld antippen.</li>
+     <li>Erreichbare Felder sind mit einem Ring in der eigenen Farbe markiert, das gesuchte Feld zusätzlich hervorgehoben.</li>
+     <li>Am Handy funktioniert alles per Finger; das Brett passt sich der Bildschirmbreite an.</li>
+    </ul>
+   </div>
+  </details>
+ </div>
+</main>
+
+<div class="sieg" id="sieg" hidden>
+ <div class="karte">
+  <h2 id="siegTitel">Gewonnen!</h2>
+  <p id="siegText"></p>
+  <button class="knopf haupt" id="btnNochmal" type="button">Neue Partie</button>
+ </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =====================================================================
+     1. THEMENWELTEN
+     Jede Welt bringt Brettfarben und acht eigene Gegenstände mit.
+     Ein Gegenstand ist im Spiel nur ein Platz 0–7; die Welt bestimmt,
+     wie er heißt und aussieht. Dadurch wechselt die Welt auch mitten in
+     der Partie, ohne die Aufgaben zu verlieren.
+     ===================================================================== */
+  var THEMEN = {
+    klassisch: {
+      name: "Klassisch",
+      boden: ["#1c453a", "#123129"],
+      weg: ["#f0dfb8", "#d3b986"], wegRand: "#0a1f18",
+      wand: "#e8cd8e",
+      token: ["#fffbf2", "#f4e6c8"], tokenKante: "#7a6231", ink: "#33280f",
+      items: [
+        { n: "Krone", e: "krone" },
+        { n: "Schlüssel", e: "schluessel" },
+        { n: "Edelstein", e: "edelstein" },
+        { n: "Goldmünze", e: "muenze" },
+        { n: "Zauberbuch", e: "buch" },
+        { n: "Ring", e: "ring" },
+        { n: "Glocke", e: "glocke" },
+        { n: "Kelch", e: "kelch" }
+      ]
+    },
+    maedchen: {
+      name: "Mädchen",
+      boden: ["#5b2247", "#3a1330"],
+      weg: ["#fff3fb", "#f3c9e2"], wegRand: "#26091b",
+      wand: "#ffd6ec",
+      token: ["#ffffff", "#ffe4f2"], tokenKante: "#8c2f5e", ink: "#3a0f28",
+      items: [
+        { n: "Herzkrönchen", e: "krone" },
+        { n: "Türschlüssel", e: "schluessel" },
+        { n: "Herzamulett", e: "edelstein" },
+        { n: "Bonbonmünze", e: "muenze" },
+        { n: "Märchenbuch", e: "buch" },
+        { n: "Freundschaftsring", e: "ring" },
+        { n: "Silberglöckchen", e: "glocke" },
+        { n: "Rosenblüte", e: "blume" }
+      ]
+    },
+    buben: {
+      name: "Buben",
+      boden: ["#21323f", "#111d26"],
+      weg: ["#eafaff", "#b4dbea"], wegRand: "#07121a",
+      wand: "#c8f4ff",
+      token: ["#ffffff", "#dceef7"], tokenKante: "#2f5f73", ink: "#0e1d26",
+      items: [
+        { n: "Kurzschwert", e: "schwert" },
+        { n: "Stahlschild", e: "schild" },
+        { n: "Schraubenschlüssel", e: "hammer" },
+        { n: "Kette", e: "kette" },
+        { n: "Chipmünze", e: "muenze" },
+        { n: "Schlüsselkarte", e: "schluessel" },
+        { n: "Taschenlampe", e: "laterne" },
+        { n: "Nordstern", e: "stern" }
+      ]
+    },
+    schloss: {
+      name: "Schloss",
+      boden: ["#33294a", "#221a33"],
+      weg: ["#f2e8fa", "#d6c4e8"], wegRand: "#171122",
+      wand: "#dcc7e8",
+      token: ["#fdf8ff", "#e6d8f4"], tokenKante: "#6d5285", ink: "#2f2340",
+      items: [
+        { n: "Herzogskrone", e: "krone" },
+        { n: "Truhenschlüssel", e: "schluessel" },
+        { n: "Amulett", e: "edelstein" },
+        { n: "Leuchter", e: "laterne" },
+        { n: "Briefrolle", e: "schriftrolle" },
+        { n: "Siegelring", e: "ring" },
+        { n: "Hofglocke", e: "glocke" },
+        { n: "Weinkelch", e: "kelch" }
+      ]
+    },
+    dungeon: {
+      name: "Dungeon",
+      boden: ["#2b241c", "#1a1510"],
+      weg: ["#e0c39a", "#bfa075"], wegRand: "#100c08",
+      wand: "#a89a86",
+      token: ["#f6e8cf", "#dcc39e"], tokenKante: "#6a4f2c", ink: "#2b2114",
+      items: [
+        { n: "Kurzschwert", e: "schwert" },
+        { n: "Rostschild", e: "schild" },
+        { n: "Schmiedehammer", e: "hammer" },
+        { n: "Kette", e: "kette" },
+        { n: "Heiltrank", e: "trank" },
+        { n: "Beutegold", e: "muenze" },
+        { n: "Kerkerchlüssel", e: "schluessel" },
+        { n: "Fackel", e: "laterne" }
+      ]
+    },
+    wald: {
+      name: "Wald",
+      boden: ["#22402c", "#142a1c"],
+      weg: ["#e2f0c4", "#c2d79c"], wegRand: "#0b1a11",
+      wand: "#bcd49a",
+      token: ["#fbffe9", "#e2efc8"], tokenKante: "#4f6b39", ink: "#22351b",
+      items: [
+        { n: "Blatt", e: "blatt" },
+        { n: "Waldpilz", e: "pilz" },
+        { n: "Eichel", e: "eichel" },
+        { n: "Eule", e: "eule" },
+        { n: "Blume", e: "blume" },
+        { n: "Flussfisch", e: "fisch" },
+        { n: "Feder", e: "feder" },
+        { n: "Stern", e: "stern" }
+      ]
+    },
+    eis: {
+      name: "Eiswelt",
+      boden: ["#253c4c", "#162936"],
+      weg: ["#f2fbff", "#cbe6f4"], wegRand: "#0a1720",
+      wand: "#d5ecf7",
+      token: ["#ffffff", "#e0f2fb"], tokenKante: "#3f6d84", ink: "#1d3442",
+      items: [
+        { n: "Schneeflocke", e: "schneeflocke" },
+        { n: "Eiskristall", e: "kristall" },
+        { n: "Frostglocke", e: "glocke" },
+        { n: "Eisfisch", e: "fisch" },
+        { n: "Nordstern", e: "stern" },
+        { n: "Eiskelch", e: "kelch" },
+        { n: "Frostlaterne", e: "laterne" },
+        { n: "Reifring", e: "ring" }
+      ]
+    }
+  };
+
+  var FIGURFARBEN = ["#e8cd8e", "#6fd0b8", "#e59ab0", "#b6a0e8"];
+  var FIGURNAMEN = ["Gold", "Türkis", "Rosé", "Flieder"];
+
+  /* =====================================================================
+     2. GEGENSTÄNDE ZEICHNEN
+     Alle Symbole entstehen aus Pfaden im Einheitsquadrat (0…1) – keine
+     Bilder, keine Schriftzeichen, kein CDN. `papier` ist die Farbe des
+     Plättchens; damit werden Löcher „ausgestanzt“.
+     ===================================================================== */
+  function rr(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.lineTo(x + w - r, y);
+    g.quadraticCurveTo(x + w, y, x + w, y + r);
+    g.lineTo(x + w, y + h - r);
+    g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    g.lineTo(x + r, y + h);
+    g.quadraticCurveTo(x, y + h, x, y + h - r);
+    g.lineTo(x, y + r);
+    g.quadraticCurveTo(x, y, x + r, y);
+    g.closePath();
+  }
+
+  function stern5(g, cx, cy, r) {
+    var i, a;
+    g.beginPath();
+    for (i = 0; i < 10; i++) {
+      a = -Math.PI / 2 + i * Math.PI / 5;
+      var rad = i % 2 ? r * 0.45 : r;
+      var x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.closePath();
+  }
+
+  /* Farben der Gegenstände: kräftig, mit dunkler Kontur. Die Plättchen
+     darunter sind in jeder Welt hell – dieselben Farben funktionieren also
+     überall. Auf dem Feld ist ein Gegenstand nur rund 20–30 px groß: zwei
+     bis drei große Formen mit dicker Kontur, keine feinen Details. */
+  var RAND = "#221a12";
+  var GOLD = "#f7c62c", GOLD_D = "#c98a08", ROT = "#e0383f", ROT_D = "#8f1f28",
+      BLAU = "#2f7bdc", BLAU_D = "#1b4d94", GRUEN = "#3fa93c", GRUEN_D = "#1f6b26",
+      LUFT = "#5cc8ea", LUFT_D = "#1f7c9c", BRAUN = "#a86a24", BRAUN_D = "#6a3d10",
+      CREME = "#f8ebc9", STAHL = "#c3d1dc", STAHL_D = "#77858f", EIS = "#a9e3f4";
+
+  /* Füllen und mit dunkler Kontur umranden. */
+  function fuell(g, c) { g.fillStyle = c; g.fill(); }
+  function umriss(g, w) {
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    g.lineWidth = w || .085;
+    g.strokeStyle = RAND;
+    g.stroke();
+  }
+
+  var EMBLEM = {
+    /* Krone: drei Zacken, Goldband, roter Stein */
+    krone: function (g) {
+      g.beginPath();
+      g.moveTo(.10, .78); g.lineTo(.13, .28); g.lineTo(.31, .52); g.lineTo(.50, .16);
+      g.lineTo(.69, .52); g.lineTo(.87, .28); g.lineTo(.90, .78);
+      g.closePath(); fuell(g, GOLD); umriss(g);
+      rr(g, .09, .74, .82, .16, .04); fuell(g, GOLD_D); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .60, .075, 0, 6.2832); fuell(g, ROT); umriss(g, .045);
+    },
+    /* Schlüssel: Ring links, Schaft rechts, zwei Zähne */
+    schluessel: function (g) {
+      var P = function () {
+        g.beginPath();
+        g.arc(.28, .50, .16, 0, 6.2832);
+        g.moveTo(.42, .50); g.lineTo(.88, .50);
+        g.moveTo(.70, .50); g.lineTo(.70, .72);
+        g.moveTo(.86, .50); g.lineTo(.86, .64);
+      };
+      g.lineCap = "round";
+      P(); g.lineWidth = .21; g.strokeStyle = RAND; g.stroke();
+      P(); g.lineWidth = .105; g.strokeStyle = GOLD; g.stroke();
+    },
+    /* Edelstein: breiter geschliffener Diamant, helle Tafel oben */
+    edelstein: function (g) {
+      g.beginPath(); g.moveTo(.50, .07); g.lineTo(.88, .40); g.lineTo(.50, .93); g.lineTo(.12, .40);
+      g.closePath(); fuell(g, LUFT_D); umriss(g);
+      g.beginPath(); g.moveTo(.50, .07); g.lineTo(.88, .40); g.lineTo(.12, .40);
+      g.closePath(); fuell(g, LUFT); umriss(g, .05);
+    },
+    /* Münze: goldener Teller mit Stern */
+    muenze: function (g) {
+      g.beginPath(); g.arc(.50, .50, .37, 0, 6.2832); fuell(g, GOLD); umriss(g);
+      g.beginPath(); g.arc(.50, .50, .25, 0, 6.2832);
+      g.strokeStyle = GOLD_D; g.lineWidth = .06; g.stroke();
+      stern5(g, .50, .50, .18); fuell(g, GOLD_D);
+    },
+    /* Buch: roter Deckel, heller Seitenblock, zwei Goldbänder */
+    buch: function (g) {
+      rr(g, .72, .22, .16, .56, .03); fuell(g, CREME); umriss(g, .06);
+      rr(g, .12, .14, .62, .72, .05); fuell(g, ROT); umriss(g);
+      rr(g, .18, .14, .08, .72, .03); fuell(g, ROT_D);
+      rr(g, .36, .34, .30, .10, .02); fuell(g, GOLD);
+      rr(g, .36, .56, .30, .10, .02); fuell(g, GOLD);
+    },
+    /* Ring: dicker Goldreifen mit blauem Stein */
+    ring: function (g) {
+      g.beginPath(); g.arc(.50, .62, .26, 0, 6.2832);
+      g.lineWidth = .22; g.strokeStyle = RAND; g.stroke();
+      g.lineWidth = .12; g.strokeStyle = GOLD; g.stroke();
+      g.beginPath(); g.moveTo(.50, .10); g.lineTo(.67, .26); g.lineTo(.50, .42); g.lineTo(.33, .26);
+      g.closePath(); fuell(g, BLAU); umriss(g, .065);
+    },
+    /* Glocke: goldene Glocke, dunkler Saum, Klöppel */
+    glocke: function (g) {
+      g.beginPath();
+      g.moveTo(.14, .70);
+      g.quadraticCurveTo(.18, .26, .50, .10);
+      g.quadraticCurveTo(.82, .26, .86, .70);
+      g.closePath(); fuell(g, GOLD); umriss(g);
+      rr(g, .10, .70, .80, .12, .05); fuell(g, GOLD_D); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .89, .07, 0, 6.2832); fuell(g, BRAUN_D); umriss(g, .045);
+    },
+    /* Kelch: goldener Becher mit Rotwein */
+    kelch: function (g) {
+      g.beginPath(); g.moveTo(.20, .14); g.lineTo(.80, .14); g.lineTo(.70, .54); g.lineTo(.30, .54);
+      g.closePath(); fuell(g, GOLD); umriss(g);
+      g.beginPath(); g.moveTo(.26, .21); g.lineTo(.74, .21); g.lineTo(.67, .47); g.lineTo(.33, .47);
+      g.closePath(); fuell(g, ROT);
+      rr(g, .44, .54, .12, .20, .02); fuell(g, GOLD); umriss(g, .05);
+      rr(g, .26, .74, .48, .12, .05); fuell(g, GOLD); umriss(g);
+    },
+    /* Heiltrank: Korken, Glaschals, grüne Kugel */
+    trank: function (g) {
+      rr(g, .40, .08, .20, .14, .04); fuell(g, BRAUN); umriss(g, .06);
+      rr(g, .40, .20, .20, .18, .03); fuell(g, "#d8eef4"); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .64, .30, 0, 6.2832); fuell(g, GRUEN); umriss(g);
+      g.beginPath(); g.arc(.40, .56, .075, 0, 6.2832); fuell(g, "#a8e86a"); g.fill();
+    },
+    /* Kurzschwert: Stahlklinge, goldene Parierstange, brauner Griff */
+    schwert: function (g) {
+      g.beginPath(); g.moveTo(.50, .06); g.lineTo(.60, .26); g.lineTo(.60, .62); g.lineTo(.40, .62);
+      g.lineTo(.40, .26); g.closePath(); fuell(g, STAHL); umriss(g);
+      g.fillStyle = "#f4f9fc"; g.fillRect(.47, .12, .06, .46);
+      rr(g, .24, .60, .52, .10, .03); fuell(g, GOLD); umriss(g, .06);
+      rr(g, .45, .70, .10, .16, .03); fuell(g, BRAUN); umriss(g, .06);
+      g.beginPath(); g.arc(.50, .90, .065, 0, 6.2832); fuell(g, GOLD); umriss(g, .05);
+    },
+    /* Stahlschild: blaues Schild mit goldenem Kreuz */
+    schild: function (g) {
+      g.beginPath();
+      g.moveTo(.50, .08); g.lineTo(.87, .22); g.lineTo(.83, .56);
+      g.quadraticCurveTo(.71, .82, .50, .92);
+      g.quadraticCurveTo(.29, .82, .17, .56); g.lineTo(.13, .22);
+      g.closePath(); fuell(g, BLAU); umriss(g);
+      g.fillStyle = GOLD;
+      g.fillRect(.455, .24, .09, .46);
+      g.fillRect(.27, .35, .46, .09);
+    },
+    /* Hammer: Stahlkopf, brauner Stiel */
+    hammer: function (g) {
+      rr(g, .44, .34, .12, .54, .03); fuell(g, BRAUN); umriss(g);
+      rr(g, .10, .16, .80, .26, .05); fuell(g, STAHL); umriss(g);
+      g.fillStyle = STAHL_D; g.fillRect(.14, .32, .74, .08);
+    },
+    /* Kette: zwei große verschlungene Glieder */
+    kette: function (g) {
+      var glied = function (x, y, d) {
+        g.beginPath(); g.ellipse(x, y, .235, .155, d, 0, 6.2832);
+        g.lineWidth = .26; g.strokeStyle = RAND; g.stroke();
+        g.lineWidth = .14; g.strokeStyle = STAHL; g.stroke();
+      };
+      glied(.40, .38, -.7); glied(.60, .62, -.7);
+    },
+    /* Laterne: dunkles Gehäuse, warmes Licht, Bügel */
+    laterne: function (g) {
+      g.beginPath(); g.arc(.50, .19, .11, Math.PI, 0);
+      g.lineWidth = .075; g.strokeStyle = RAND; g.stroke();
+      rr(g, .22, .24, .56, .54, .07); fuell(g, "#4b3620"); umriss(g);
+      rr(g, .32, .34, .36, .34, .05); fuell(g, "#ffd45e"); umriss(g, .05);
+      rr(g, .18, .15, .64, .11, .05); fuell(g, "#3a2a18"); umriss(g, .055);
+      rr(g, .18, .76, .64, .13, .05); fuell(g, "#3a2a18"); umriss(g, .055);
+    },
+    /* Schriftrolle: Pergament, zwei gerollte Enden, rotes Siegelband */
+    schriftrolle: function (g) {
+      rr(g, .24, .16, .52, .68, .05); fuell(g, CREME); umriss(g);
+      rr(g, .11, .11, .18, .78, .08); fuell(g, "#e0c89c"); umriss(g, .065);
+      rr(g, .71, .11, .18, .78, .08); fuell(g, "#e0c89c"); umriss(g, .065);
+      rr(g, .38, .16, .24, .15, .03); fuell(g, ROT);
+    },
+    /* Blatt: grüne Blattform mit heller Mittelader */
+    blatt: function (g) {
+      g.beginPath();
+      g.moveTo(.50, .05); g.quadraticCurveTo(.92, .40, .50, .95);
+      g.quadraticCurveTo(.08, .40, .50, .05); g.closePath();
+      fuell(g, GRUEN); umriss(g);
+      g.beginPath(); g.moveTo(.50, .16); g.lineTo(.50, .92);
+      g.strokeStyle = "#e7f7d9"; g.lineWidth = .07; g.stroke();
+    },
+    /* Waldpilz: roter Hut mit Tupfen, heller Stiel */
+    pilz: function (g) {
+      rr(g, .38, .46, .24, .38, .05); fuell(g, CREME); umriss(g);
+      g.beginPath(); g.arc(.50, .50, .36, Math.PI, 0); g.closePath();
+      fuell(g, ROT); umriss(g);
+      g.beginPath(); g.arc(.35, .37, .07, 0, 6.2832); fuell(g, "#fff6e8"); g.fill();
+      g.beginPath(); g.arc(.62, .41, .055, 0, 6.2832); g.fill();
+    },
+    /* Eichel: braune Kappe, helle Nuss, Stiel */
+    eichel: function (g) {
+      g.beginPath(); g.moveTo(.26, .44); g.lineTo(.74, .44);
+      g.quadraticCurveTo(.74, .86, .50, .92); g.quadraticCurveTo(.26, .86, .26, .44);
+      g.closePath(); fuell(g, "#e9bd7c"); umriss(g);
+      rr(g, .46, .10, .08, .16, .03); fuell(g, BRAUN_D); umriss(g, .05);
+      g.beginPath(); g.arc(.50, .44, .29, Math.PI, 0); g.closePath();
+      fuell(g, BRAUN); umriss(g);
+    },
+    /* Eule: brauner Körper, zwei große Augen, Schnabel */
+    eule: function (g) {
+      g.beginPath(); g.ellipse(.50, .62, .27, .30, 0, 0, 6.2832); fuell(g, BRAUN); umriss(g);
+      g.beginPath(); g.arc(.50, .36, .28, 0, 6.2832); fuell(g, BRAUN); umriss(g);
+      g.beginPath(); g.arc(.36, .34, .135, 0, 6.2832); fuell(g, CREME); g.fill();
+      g.beginPath(); g.arc(.64, .34, .135, 0, 6.2832); g.fill();
+      g.beginPath(); g.arc(.36, .34, .07, 0, 6.2832); fuell(g, RAND); g.fill();
+      g.beginPath(); g.arc(.64, .34, .07, 0, 6.2832); g.fill();
+      g.beginPath(); g.moveTo(.50, .45); g.lineTo(.60, .57); g.lineTo(.40, .57);
+      g.closePath(); fuell(g, "#f0a12a"); g.fill();
+    },
+    /* Blume: fünf rosa Blütenblätter, goldene Mitte */
+    blume: function (g) {
+      var i, a;
+      for (i = 0; i < 5; i++) {
+        a = -Math.PI / 2 + i * 1.2566;
+        g.beginPath();
+        g.arc(.50 + Math.cos(a) * .19, .52 + Math.sin(a) * .19, .155, 0, 6.2832);
+        fuell(g, "#ef6fa4"); umriss(g, .055);
+      }
+      g.beginPath(); g.arc(.50, .52, .12, 0, 6.2832); fuell(g, GOLD); umriss(g, .06);
+    },
+    /* Fisch: hellblauer Körper, dunkle Schwanzflosse, Auge */
+    fisch: function (g) {
+      g.beginPath(); g.moveTo(.64, .50); g.lineTo(.93, .24); g.lineTo(.93, .76);
+      g.closePath(); fuell(g, LUFT_D); umriss(g);
+      g.beginPath(); g.ellipse(.40, .50, .30, .20, 0, 0, 6.2832);
+      fuell(g, LUFT); umriss(g);
+      g.beginPath(); g.arc(.27, .44, .055, 0, 6.2832); fuell(g, RAND); g.fill();
+    },
+    /* Feder: türkiser Kiel mit heller Seele */
+    feder: function (g) {
+      g.beginPath();
+      g.moveTo(.74, .07); g.quadraticCurveTo(.88, .42, .52, .68);
+      g.quadraticCurveTo(.36, .80, .24, .93);
+      g.quadraticCurveTo(.40, .56, .50, .38); g.quadraticCurveTo(.60, .24, .74, .07);
+      g.closePath(); fuell(g, "#3fb6c9"); umriss(g);
+      g.beginPath(); g.moveTo(.24, .93); g.lineTo(.70, .16);
+      g.strokeStyle = CREME; g.lineWidth = .055; g.stroke();
+    },
+    /* Stern: goldener fünfzackiger Stern mit Kontur */
+    stern: function (g) { stern5(g, .50, .50, .42); fuell(g, GOLD); umriss(g, .07); },
+    /* Schneeflocke: drei Achsen mit je zwei Ästen, dunkle Kontur */
+    schneeflocke: function (g) {
+      var i, a, P = function () {
+        g.beginPath();
+        for (i = 0; i < 3; i++) {
+          a = i * Math.PI / 3;
+          g.moveTo(.50 - Math.cos(a) * .40, .50 - Math.sin(a) * .40);
+          g.lineTo(.50 + Math.cos(a) * .40, .50 + Math.sin(a) * .40);
+        }
+        for (i = 0; i < 6; i++) {
+          a = i * Math.PI / 3;
+          var x = .50 + Math.cos(a) * .24, y = .50 + Math.sin(a) * .24;
+          g.moveTo(x, y); g.lineTo(x + Math.cos(a + 2.4) * .12, y + Math.sin(a + 2.4) * .12);
+          g.moveTo(x, y); g.lineTo(x + Math.cos(a - 2.4) * .12, y + Math.sin(a - 2.4) * .12);
+        }
+      };
+      g.lineCap = "round";
+      P(); g.lineWidth = .16; g.strokeStyle = RAND; g.stroke();
+      P(); g.lineWidth = .085; g.strokeStyle = "#8ddcf2"; g.stroke();
+    },
+    /* Eiskristall: hoher hellblauer Prismenkörper mit Facetten */
+    kristall: function (g) {
+      g.beginPath(); g.moveTo(.50, .05); g.lineTo(.80, .34); g.lineTo(.68, .93); g.lineTo(.32, .93);
+      g.lineTo(.20, .34); g.closePath(); fuell(g, EIS); umriss(g);
+      g.beginPath(); g.moveTo(.50, .08); g.lineTo(.50, .91);
+      g.moveTo(.20, .34); g.lineTo(.50, .50); g.lineTo(.80, .34);
+      g.lineWidth = .055; g.strokeStyle = "#2f8fb0"; g.stroke();
+    }
+  };
+
+  function zeichneGegenstand(g, id, x, y, s, farbe, papier) {
+    var f = EMBLEM[id];
+    g.save();
+    g.translate(x, y);
+    g.scale(s, s);
+    g.fillStyle = farbe;
+    g.strokeStyle = farbe;
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    if (f) f(g, papier); else { g.beginPath(); g.arc(.5, .5, .24, 0, 6.2832); g.fill(); }
+    g.restore();
+  }
+
+  /* =====================================================================
+     3. SPIELZUSTAND
+     Feld: n×n Kacheln. Jede Kachel ist ein Objekt:
+       { offen:[N,O,S,W] (0/1), g: null | 0…7 }
+     `frei` ist der Stein in der Hand.
+     Figuren stehen auf Feldindizes; `heim` ist das eigene Startfeld.
+     ===================================================================== */
+  var S = {
+    groesse: 7,
+    thema: "klassisch",
+    modus: "solo",
+    spielerzahl: 2,
+    stufe: "normal",
+    kreuze: true,
+    aufgaben: 5,
+    feld: [],
+    fest: [],
+    frei: null,
+    drehung: 0,
+    figuren: [],
+    amZug: 0,
+    phase: "schieben",
+    letzter: null,
+    zuege: 0,
+    laeuft: false,
+    vorbei: false
+  };
+  /* =====================================================================
+     4. REGELN
+     ===================================================================== */
+  var SEITEN = ["N", "O", "S", "W"];
+  var GEGEN = { links: "rechts", rechts: "links", oben: "unten", unten: "oben" };
+
+  function idx(r, c) { return r * S.groesse + c; }
+  function rc(i) { return [Math.floor(i / S.groesse), i % S.groesse]; }
+
+  /* N=0, O=1, S=2, W=3 – Drehung im Uhrzeigersinn. */
+  function dreheSeiten(offen, k) {
+    k = ((k % 4) + 4) % 4;
+    var aus = [0, 0, 0, 0], i;
+    for (i = 0; i < 4; i++) aus[(i + k) % 4] = offen[i];
+    return aus;
+  }
+
+  function mische(a) {
+    var i, j, t;
+    for (i = a.length - 1; i > 0; i--) {
+      j = Math.floor(Math.random() * (i + 1));
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function anzahlOffen(t) { return t.offen[0] + t.offen[1] + t.offen[2] + t.offen[3]; }
+
+  /* Zufälliger zusammenhängender Grundriss (Tiefensuche), danach ein paar
+     Schleifen, damit nicht jede Ecke eine Sackgasse ist. Alle Randseiten
+     bleiben zu. */
+  function baueFeld(n, kreuze) {
+    var offen = [], i;
+    for (i = 0; i < n * n; i++) offen.push([0, 0, 0, 0]);
+
+    var gesehen = [], stapel = [0];
+    for (i = 0; i < n * n; i++) gesehen.push(false);
+    gesehen[0] = true;
+
+    function nachbarn(a) {
+      var r = Math.floor(a / n), c = a % n, aus = [];
+      if (r > 0) aus.push([a - n, 0, 2]);
+      if (c < n - 1) aus.push([a + 1, 1, 3]);
+      if (r < n - 1) aus.push([a + n, 2, 0]);
+      if (c > 0) aus.push([a - 1, 3, 1]);
+      return aus;
+    }
+
+    while (stapel.length) {
+      var a = stapel[stapel.length - 1];
+      var frei = nachbarn(a).filter(function (x) { return !gesehen[x[0]]; });
+      if (!frei.length) { stapel.pop(); continue; }
+      var w = frei[Math.floor(Math.random() * frei.length)];
+      offen[a][w[1]] = 1; offen[w[0]][w[2]] = 1;
+      gesehen[w[0]] = true; stapel.push(w[0]);
+    }
+
+    /* Gangtypen mischen: etwa jede zweite Zweiweg-Kachel bekommt einen
+       dritten Gang. Ohne diesen Schritt sind zu viele Kacheln reine
+       Durchgänge; nach ein paar Einschüben sitzen die Figuren dann in
+       Ein-Zellen-Inseln fest (gemessen: 1–5 erreichbare Felder). */
+    var dr = [-1, 0, 1, 0], dc = [0, 1, 0, -1];
+    /* Groessere Felder brauchen mehr Kreuzungen, sonst zerfallen sie nach
+       wenigen Einschueben in viele winzige Inseln. */
+    var pDritt = n <= 5 ? 0.26 : (n <= 7 ? 0.41 : 0.66);
+    for (i = 0; i < n * n; i++) {
+      if (anzahlOffen({ offen: offen[i] }) >= 3) continue;
+      if (Math.random() > pDritt) continue;
+      var pr = Math.floor(i / n), pc = i % n, moeglich = [];
+      for (var s = 0; s < 4; s++) {
+        if (offen[i][s]) continue;
+        var rr = pr + dr[s], cc = pc + dc[s];
+        if (rr < 0 || cc < 0 || rr >= n || cc >= n) continue;
+        var j = rr * n + cc;
+        if (anzahlOffen({ offen: offen[j] }) >= 3) continue;
+        moeglich.push([s, j, (s + 2) % 4]);
+      }
+      if (!moeglich.length) continue;
+      var wahl = moeglich[Math.floor(Math.random() * moeglich.length)];
+      offen[i][wahl[0]] = 1;
+      offen[wahl[1]][wahl[2]] = 1;
+    }
+
+    /* Ein paar echte Kreuzungen, wenn gewünscht. */
+    if (kreuze) {
+      for (i = 0; i < n * n; i++) {
+        var pKreuz = n >= 9 ? 0.3 : (n >= 7 ? 0.1 : 0.05);
+        if (Math.random() > pKreuz) continue;
+        if (anzahlOffen({ offen: offen[i] }) !== 3) continue;
+        var r4 = Math.floor(i / n), c4 = i % n;
+        for (var s4 = 0; s4 < 4; s4++) {
+          if (offen[i][s4]) continue;
+          var nr = r4 + dr[s4], nc = c4 + dc[s4];
+          if (nr < 0 || nc < 0 || nr >= n || nc >= n) continue;
+          offen[i][s4] = 1;
+          offen[nr * n + nc][(s4 + 2) % 4] = 1;
+          break;
+        }
+      }
+    }
+
+    var feld = [];
+    for (i = 0; i < n * n; i++) feld.push({ offen: offen[i], g: null });
+    return feld;
+  }
+
+  function neuerFreierStein(kreuze) {
+    var formen = [
+      [1, 0, 1, 0],
+      [1, 1, 0, 0],
+      [1, 1, 1, 0]
+    ];
+    if (kreuze) formen.push([1, 1, 1, 1]);
+    var grund = formen[Math.floor(Math.random() * formen.length)];
+    return { offen: dreheSeiten(grund, Math.floor(Math.random() * 4)), g: null };
+  }
+
+  function startFelder(n, k) {
+    var ecken = [0, n * n - 1, n - 1, (n - 1) * n];
+    return ecken.slice(0, k);
+  }
+
+  function neuesSpiel(einst) {
+    if (einst) {
+      if (einst.groesse) S.groesse = einst.groesse;
+      if (einst.modus) S.modus = einst.modus;
+      if (einst.spielerzahl) S.spielerzahl = einst.spielerzahl;
+      if (einst.stufe) S.stufe = einst.stufe;
+      if (typeof einst.kreuze === "boolean") S.kreuze = einst.kreuze;
+      if (einst.aufgaben) S.aufgaben = einst.aufgaben;
+      if (einst.thema) S.thema = einst.thema;
+    }
+    var n = S.groesse;
+    S.feld = baueFeld(n, S.kreuze);
+    S.fest = festMuster(n);
+    S.frei = neuerFreierStein(S.kreuze);
+    S.drehung = 0;
+    S.letzter = null;
+    S.zuege = 0;
+    S.vorbei = false;
+    S.laeuft = false;
+    S.amZug = 0;
+    S.phase = "schieben";
+
+    var starts = startFelder(n, S.spielerzahl);
+    var plaetze = [];
+    var i;
+    for (i = 0; i < n * n; i++) {
+      if (starts.indexOf(i) === -1) plaetze.push(i);
+    }
+    mische(plaetze);
+
+    /* Gegenstände: jeder Auftrag ein eigener Gegenstand, möglichst
+       verschiedene innerhalb einer Partie. */
+    var vorrat = [], k;
+    for (i = 0; i < S.spielerzahl * S.aufgaben; i++) vorrat.push(i % 8);
+    mische(vorrat);
+
+    S.figuren = [];
+    var proSpieler = S.spielerzahl * S.aufgaben;
+    for (k = 0; k < S.spielerzahl; k++) {
+      var auf = [];
+      for (i = 0; i < S.aufgaben; i++) auf.push(vorrat[k * S.aufgaben + i]);
+      S.figuren.push({
+        i: starts[k],
+        heim: starts[k],
+        farbe: FIGURFARBEN[k % 4],
+        name: (einst && einst.namen && einst.namen[k]) ? einst.namen[k]
+          : (S.modus === "solo" ? (k === 0 ? "Du" : "Computer " + k) : "Spieler " + (k + 1)),
+        ki: S.modus === "solo" && k > 0,
+        auf: auf,
+        erledigt: 0
+      });
+    }
+
+    /* Gegenstände aufs Feld legen – ein Auftrag pro Plättchen. */
+    var platz = 0;
+    for (k = 0; k < S.figuren.length; k++) {
+      for (i = 0; i < S.figuren[k].auf.length; i++) {
+        if (platz >= plaetze.length) break;
+        S.feld[plaetze[platz]].g = S.figuren[k].auf[i];
+        platz++;
+      }
+    }
+
+    A.art = null; A.t = 0;
+    return proSpieler;
+  }
+
+  /* Klassisches Brett: Die Kacheln auf geraden Zeilen UND geraden Spalten
+     sind fest im Spielplan verankert (bei 7 × 7 sind das 16). Verschiebbar
+     sind deshalb nur die Reihen und Spalten dazwischen – 0-basiert die
+     ungeraden, bei 7 × 7 also 1, 3 und 5. Von jeder dieser sechs Linien
+     liegt an beiden Enden ein Pfeil: zwölf Pfeile wie im Original. */
+  function festMuster(n) {
+    var f = [], r, c;
+    for (r = 0; r < n; r++) {
+      for (c = 0; c < n; c++) f.push(r % 2 === 0 && c % 2 === 0);
+    }
+    return f;
+  }
+
+  function festZelle(i) { return !!(S.fest && S.fest[i]); }
+
+  /* Darf diese Linie überhaupt geschoben werden? */
+  function schiebeLinie(achse, index) {
+    if (index < 0 || index >= S.groesse) return false;
+    if (index % 2 === 0) return false;   /* feste Kacheln bleiben stehen */
+    return true;
+  }
+
+  function schiebeErlaubt(achse, index, seite) {
+    if (S.vorbei || S.laeuft) return false;
+    if (S.phase !== "schieben") return false;
+    if (!schiebeLinie(achse, index)) return false;
+    if (achse === "r" && seite !== "links" && seite !== "rechts") return false;
+    if (achse === "c" && seite !== "oben" && seite !== "unten") return false;
+    if (S.letzter && S.letzter.achse === achse && S.letzter.index === index && S.letzter.seite === GEGEN[seite]) return false;
+    return true;
+  }
+
+  function figurenVerschieben(achse, index, schritt) {
+    var n = S.groesse;
+    S.figuren.forEach(function (f) {
+      var p = rc(f.i);
+      if (achse === "r" ? p[0] !== index : p[1] !== index) return;
+      var wert = (achse === "r" ? p[1] : p[0]) + schritt;
+      if (wert >= n) wert -= n;
+      if (wert < 0) wert += n;
+      f.i = achse === "r" ? idx(index, wert) : idx(wert, index);
+    });
+  }
+
+  /* Schieben: Stein einsetzen, Linie verschieben, letzten Stein als neuen
+     freien Stein übernehmen. Liefert true, wenn der Zug ausgeführt wurde. */
+  function schiebeAusfuehren(achse, index, seite, drehung) {
+    if (!schiebeErlaubt(achse, index, seite)) return false;
+    var n = S.groesse;
+    var alt = S.feld.map(function (t) { return { offen: t.offen.slice(), g: t.g }; });
+    var altFig = S.figuren.map(function (f) { return f.i; });
+    var neu = { offen: dreheSeiten(S.frei.offen, drehung || 0), g: S.frei.g };
+    var raus;
+
+    if (achse === "r") {
+      if (seite === "links") {
+        raus = S.feld[idx(index, n - 1)];
+        for (var c = n - 1; c > 0; c--) S.feld[idx(index, c)] = S.feld[idx(index, c - 1)];
+        S.feld[idx(index, 0)] = neu;
+        figurenVerschieben(achse, index, 1);
+      } else {
+        raus = S.feld[idx(index, 0)];
+        for (var c2 = 0; c2 < n - 1; c2++) S.feld[idx(index, c2)] = S.feld[idx(index, c2 + 1)];
+        S.feld[idx(index, n - 1)] = neu;
+        figurenVerschieben(achse, index, -1);
+      }
+    } else {
+      if (seite === "oben") {
+        raus = S.feld[idx(n - 1, index)];
+        for (var r = n - 1; r > 0; r--) S.feld[idx(r, index)] = S.feld[idx(r - 1, index)];
+        S.feld[idx(0, index)] = neu;
+        figurenVerschieben(achse, index, 1);
+      } else {
+        raus = S.feld[idx(0, index)];
+        for (var r2 = 0; r2 < n - 1; r2++) S.feld[idx(r2, index)] = S.feld[idx(r2 + 1, index)];
+        S.feld[idx(n - 1, index)] = neu;
+        figurenVerschieben(achse, index, -1);
+      }
+    }
+
+    S.frei = { offen: raus.offen.slice(), g: raus.g };
+    S.drehung = 0;
+    S.letzter = { achse: achse, index: index, seite: seite };
+    S.phase = "ziehen";
+    S.zuege++;
+    animiereSchieben(alt, altFig, achse, index, seite, neu);
+    return true;
+  }
+
+  function offenZu(i, seite) {
+    var t = S.feld[i];
+    if (!t) return false;
+    var p = rc(i);
+    var n = S.groesse;
+    if (seite === 0) return p[0] > 0 && t.offen[0] === 1;
+    if (seite === 1) return p[1] < n - 1 && t.offen[1] === 1;
+    if (seite === 2) return p[0] < n - 1 && t.offen[2] === 1;
+    return p[1] > 0 && t.offen[3] === 1;
+  }
+
+  function figurAuf(i, ausser) {
+    for (var k = 0; k < S.figuren.length; k++) {
+      if (k === ausser) continue;
+      if (S.figuren[k].i === i) return k;
+    }
+    return -1;
+  }
+
+  function erreichbarKarte(von, ausser) {
+    var n = S.groesse, gesehen = [von], dist = {}, eltern = {}, q = [von], kopf = 0;
+    dist[von] = 0; eltern[von] = -1;
+    var dr = [-1, 0, 1, 0], dc = [0, 1, 0, -1];
+    while (kopf < q.length) {
+      var a = q[kopf++];
+      var p = rc(a);
+      for (var s = 0; s < 4; s++) {
+        if (!offenZu(a, s)) continue;
+        var r = p[0] + dr[s], c = p[1] + dc[s];
+        if (r < 0 || c < 0 || r >= n || c >= n) continue;
+        var b = idx(r, c);
+        if (S.feld[b].offen[(s + 2) % 4] !== 1) continue;
+        if (figurAuf(b, ausser) !== -1) continue;
+        if (dist[b] !== undefined) continue;
+        dist[b] = dist[a] + 1;
+        eltern[b] = a;
+        q.push(b);
+      }
+    }
+    return { dist: dist, eltern: eltern };
+  }
+
+  function pfadZu(ziel) {
+    var f = S.figuren[S.amZug];
+    var karte = erreichbarKarte(f.i, S.amZug);
+    if (karte.dist[ziel] === undefined) return null;
+    var pfad = [ziel], s = ziel;
+    while (karte.eltern[s] !== -1) { s = karte.eltern[s]; pfad.unshift(s); }
+    pfad.shift();
+    return pfad;
+  }
+
+  function zielFeld(f) {
+    if (f.erledigt >= f.auf.length) return f.heim;
+    var wunsch = f.auf[f.erledigt];
+    for (var i = 0; i < S.feld.length; i++) {
+      if (S.feld[i].g === wunsch) return i;
+    }
+    return -1;
+  }
+
+  function sammle(f) {
+    var t = S.feld[f.i];
+    if (f.erledigt >= f.auf.length) return false;
+    if (t.g === f.auf[f.erledigt]) {
+      t.g = null;
+      f.erledigt++;
+      return true;
+    }
+    return false;
+  }
+
+  /* Zugabschluss: Der Gegenstand zählt, wenn die Figur am Ende des Zuges auf
+     seinem Feld steht – egal ob hingezogen oder von einem Einschub dorthin
+     geschoben. Sonst bliebe ein Spieler hilflos stehen, wenn er auf sein Ziel
+     geschoben wird und nicht „null Felder“ ziehen darf. */
+  function turnAbschluss(f) {
+    var gefunden = sammle(f);
+    var weiter = function () {
+      if (f.erledigt === f.auf.length && f.i === f.heim) {
+        gewonnen(f);
+        return;
+      }
+      naechsterSpieler();
+    };
+    if (gefunden) {
+      meldung(f.name + " findet " + themaDaten().items[f.auf[f.erledigt - 1]].n + " – Aufgabe " + f.erledigt + " von " + f.auf.length + " erledigt.", true);
+      fundEffekt(f.i, f, weiter);
+    } else {
+      weiter();
+    }
+  }
+
+  function zugAusfuehren(ziel) {
+    if (S.vorbei || S.laeuft || S.phase !== "ziehen") return false;
+    var f = S.figuren[S.amZug];
+    var pfad = pfadZu(ziel);
+    if (!pfad || !pfad.length) return false;
+    animiereZug(f, pfad, function () {
+      f.i = ziel;
+      turnAbschluss(f);
+    });
+    return true;
+  }
+
+  function naechsterSpieler() {
+    if (S.vorbei) return;
+    S.amZug = (S.amZug + 1) % S.figuren.length;
+    S.phase = "schieben";
+    S.drehung = 0;
+    zeichneAlles();
+    meldung(zugText());
+    if (S.figuren[S.amZug].ki) planeKi();
+  }
+
+  /* =====================================================================
+     5. ZEICHNEN
+     ===================================================================== */
+  var A = { art: null, t: 0, alt: null, altFig: null, achse: null, index: 0, seite: null, neu: null, pfad: null, figur: null, ziel: null, start: 0, dauer: 0, beginn: 0 };
+
+  var brett = null, g = null, freiCanvas = null, gFrei = null;
+  var bpx = 0, zelle = 34, dpr = 1;
+
+  function themaDaten() { return THEMEN[S.thema] || THEMEN.klassisch; }
+
+  /* Der Gang entsteht als Vereinigung von Rechtecken: ein Knoten in der Mitte
+     und je ein Arm zu jeder offenen Seite. Die Arme reichen genau bis zur
+     Kachelkante, deshalb läuft der Weg ohne Naht in den Nachbarn über. Gerade,
+     Kurve, T-Stück und Kreuzung sind nur verschiedene Formen derselben Fläche –
+     man sieht den Unterschied sofort an der Silhouette des hellen Gangs. */
+  function wegUnion(ctx, x, y, z, offen, band) {
+    var h = band / 2, mx = x + z * .5, my = y + z * .5;
+    ctx.beginPath();
+    ctx.rect(mx - h, my - h, band, band);
+    if (offen[0]) ctx.rect(mx - h, y, band, my - y + h);
+    if (offen[1]) ctx.rect(mx - h, my - h, x + z - mx + h, band);
+    if (offen[2]) ctx.rect(mx - h, my - h, band, y + z - my + h);
+    if (offen[3]) ctx.rect(x, my - h, mx - x + h, band);
+  }
+
+  function kachelZeichnen(ctx, x, y, z, kachel, fest) {
+    var t = themaDaten();
+    var i, offen = kachel.offen;
+    /* Der Gang ist gut 46 % der Kachel breit (bei 44 Pixeln am Handy rund
+       20 Pixel statt bisher 17). Die Mauer bleibt damit breiter als der Weg:
+       Gerade, Kurve, T-Stück und Kreuzung behalten ihre klare Silhouette,
+       statt zu einer hellen Fläche zu verschmelzen. */
+    var band = z * .46;                        /* Breite des Gangs */
+    var mulde = Math.max(1.6, z * .05);        /* dunkle Rinne am Gangrand */
+    var hatWeg = anzahlOffen(kachel) > 0;
+
+    /* --- 1. Steinmasse: alles, was nicht Gang ist ------------------------ */
+    var grund = ctx.createLinearGradient(x, y, x, y + z);
+    grund.addColorStop(0, t.boden[0]);
+    grund.addColorStop(1, t.boden[1]);
+    ctx.fillStyle = grund;
+    ctx.fillRect(x, y, z, z);
+
+    /* weiches Licht von links oben – schräg, damit am Brett keine
+       waagerechten Streifen entstehen */
+    var licht = ctx.createLinearGradient(x, y, x + z, y + z);
+    licht.addColorStop(0, "#ffffff0d");
+    licht.addColorStop(.55, "#00000000");
+    licht.addColorStop(1, "#0000001c");
+    ctx.fillStyle = licht;
+    ctx.fillRect(x, y, z, z);
+
+    /* Fugen an der Kachelkante; der Gang überdeckt sie später – dadurch bleibt
+       der Übergang zum Nachbarn ohne Bruch. */
+    ctx.strokeStyle = "#00000048";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + z - .5, y); ctx.lineTo(x + z - .5, y + z);
+    ctx.moveTo(x, y + z - .5); ctx.lineTo(x + z, y + z - .5);
+    ctx.stroke();
+
+
+    /* --- 2. Gang: Rinne, Bahn, Licht in der Mitte ------------------------ */
+    if (hatWeg) {
+      /* schmaler heller Saum: die Mauerkannte fängt Licht, der Gang wirkt
+         eingesenkt statt aufgeklebt */
+      wegUnion(ctx, x, y, z, offen, band + mulde * 2 + Math.max(1.5, z * .035));
+      ctx.fillStyle = "#ffffff12";
+      ctx.fill();
+
+      wegUnion(ctx, x, y, z, offen, band + mulde * 2);
+      ctx.fillStyle = t.wegRand;
+      ctx.fill();
+
+      wegUnion(ctx, x, y, z, offen, band);
+      var bahn = ctx.createLinearGradient(x, y, x, y + z);
+      bahn.addColorStop(0, t.weg[0]);
+      bahn.addColorStop(1, t.weg[1]);
+      ctx.fillStyle = bahn;
+      ctx.fill();
+
+      /* leicht ausgetretene Mitte – nur ein Hauch Licht, sonst wirkt der Gang
+         flach und weiß */
+      wegUnion(ctx, x, y, z, offen, band * .62);
+      var glanz = ctx.createLinearGradient(x, y, x, y + z);
+      glanz.addColorStop(0, "#ffffff1f");
+      glanz.addColorStop(1, "#ffffff05");
+      ctx.fillStyle = glanz;
+      ctx.fill();
+    }
+
+    /* --- 2b. Kachelkante: jede Karte bleibt als eigener Stein erkennbar,
+       auch wo zwei Gänge nahtlos ineinanderlaufen. ----------------------- */
+    ctx.strokeStyle = "#0000002b";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + .5, y + .5, z - 1, z - 1);
+
+    /* Feste Kachel: sitzt im Spielplan fest und wird nie geschoben. Der
+       doppelte Rahmen sitzt genau auf der Kartenkante und kostet keinen Weg. */
+    if (fest) {
+      var fr = Math.max(1.5, z * .045);
+      ctx.strokeStyle = "#00000070";
+      ctx.lineWidth = fr;
+      ctx.strokeRect(x + fr / 2, y + fr / 2, z - fr, z - fr);
+      ctx.strokeStyle = t.wand + "9c";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + fr + .5, y + fr + .5, z - fr * 2 - 1, z - fr * 2 - 1);
+    }
+
+    /* --- 3. Mauerwerk: geschlossene Seiten bekommen einen Schattenwurf,
+       damit die Steinmasse zwischen den Gängen Tiefe zeigt --------------- */
+    var wT = Math.max(2, z * .06);
+    var raender = [
+      [x, y, z, wT, 0, wT],             /* oben   */
+      [x + z - wT, y, wT, z, -wT, 0],   /* rechts */
+      [x, y + z - wT, z, wT, 0, -wT],   /* unten  */
+      [x, y, wT, z, wT, 0]              /* links  */
+    ];
+    for (i = 0; i < 4; i++) {
+      if (offen[i]) continue;
+      var sd = raender[i];
+      var sv = ctx.createLinearGradient(sd[0], sd[1], sd[0] + sd[4], sd[1] + sd[5]);
+      sv.addColorStop(0, "#00000042");
+      sv.addColorStop(1, "#00000000");
+      ctx.fillStyle = sv;
+      ctx.fillRect(sd[0], sd[1], sd[2], sd[3]);
+    }
+
+    /* --- 4. Gegenstand: eingelegtes Plättchen -------------------------- */
+    if (kachel.g != null) {
+      var kante = z * .60;
+      var px = x + (z - kante) / 2, py = y + (z - kante) / 2;
+      ctx.save();
+      ctx.shadowColor = "#00000088";
+      ctx.shadowBlur = z * .08;
+      ctx.shadowOffsetY = z * .022;
+      /* dunkler Rand zuerst: das Plättchen hebt sich vom hellen Gang ab */
+      rr(ctx, px - kante * .085, py - kante * .085, kante * 1.17, kante * 1.17, kante * .24);
+      ctx.fillStyle = t.tokenKante;
+      ctx.fill();
+      ctx.shadowColor = "transparent";
+      var pv = ctx.createLinearGradient(px, py, px, py + kante);
+      pv.addColorStop(0, t.token[0]);
+      pv.addColorStop(1, t.token[1]);
+      ctx.fillStyle = pv;
+      rr(ctx, px, py, kante, kante, kante * .17);
+      ctx.fill();
+      zeichneGegenstand(ctx, t.items[kachel.g].e, px + kante * .11, py + kante * .11, kante * .78, t.ink, t.token[0]);
+      ctx.restore();
+    }
+  }
+
+  /* Farbe aufhellen (anteil > 0) oder abdunkeln (anteil < 0). */
+  function figurTon(hex, anteil) {
+    var h = String(hex || "#ffffff").replace("#", "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var r = parseInt(h.substr(0, 2), 16);
+    var gg = parseInt(h.substr(2, 2), 16);
+    var b = parseInt(h.substr(4, 2), 16);
+    var ziel = anteil < 0 ? 0 : 255, a = Math.abs(anteil);
+    r = Math.round(r + (ziel - r) * a);
+    gg = Math.round(gg + (ziel - gg) * a);
+    b = Math.round(b + (ziel - b) * a);
+    return "rgb(" + r + "," + gg + "," + b + ")";
+  }
+
+  /* Spielfigur: eine kleine Kunststoff-Figur von schräg oben. Jeder Spieler
+     trägt neben seiner Farbe eine eigene Kopfbedeckung – Krone, Öhrchen,
+     Spitzhut, Helm –, damit die Figuren auch klein und bei Farbsehschwäche
+     auseinanderzuhalten sind. Die Figur bleibt schmal, damit der Gang
+     ringsum sichtbar bleibt. */
+  function figurZeichnen(ctx, x, y, z, figur, aktiv, idx) {
+    /* Die Figur füllt gut die halbe Kachel: bei 9 × 9 bleiben am Handy nur
+       rund 33 Pixel je Feld, mit dem alten Maß war der Körper keine
+       12 Pixel breit und die Kopfbedeckung nicht mehr zu erkennen. */
+    var s = z / 62;
+    var farbe = figur.farbe || "#e8cd8e";
+    idx = idx || 0;
+    var saum = Math.max(2, 3.4 * s);            /* heller Rand, gegen dunkle Gänge */
+    var rand = Math.max(1.8, 2.6 * s);
+    var dunkel = figurTon(farbe, -.86);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    /* Standschatten */
+    ctx.beginPath();
+    ctx.ellipse(0, 9 * s, 20 * s, 7 * s, 0, 0, 6.2832);
+    ctx.fillStyle = "#0000004a";
+    ctx.fill();
+
+    /* wer dran ist, leuchtet in seiner Farbe */
+    if (aktiv) {
+      var gl = ctx.createRadialGradient(0, 0, 1 * s, 0, 0, 33 * s);
+      gl.addColorStop(0, farbe + "66");
+      gl.addColorStop(.6, farbe + "26");
+      gl.addColorStop(1, farbe + "00");
+      ctx.beginPath();
+      ctx.arc(0, 0, 33 * s, 0, 6.2832);
+      ctx.fillStyle = gl;
+      ctx.fill();
+    }
+
+    /* Körper */
+    ctx.beginPath();
+    ctx.moveTo(-16 * s, 8 * s);
+    ctx.quadraticCurveTo(-18 * s, 1 * s, -11 * s, -5 * s);
+    ctx.lineTo(11 * s, -5 * s);
+    ctx.quadraticCurveTo(18 * s, 1 * s, 16 * s, 8 * s);
+    ctx.quadraticCurveTo(0, 13 * s, -16 * s, 8 * s);
+    ctx.closePath();
+    ctx.lineWidth = saum;
+    ctx.strokeStyle = "#fff6e2b8";
+    ctx.stroke();
+    /* Der Körper liegt deutlich dunkler als der helle Gang – sonst
+       verschwimmt die Figur auf dem Weg, besonders klein am Handy. */
+    var kv = ctx.createLinearGradient(-16 * s, 0, 16 * s, 0);
+    kv.addColorStop(0, figurTon(farbe, -.58));
+    kv.addColorStop(.4, figurTon(farbe, -.14));
+    kv.addColorStop(1, figurTon(farbe, -.4));
+    ctx.fillStyle = kv;
+    ctx.shadowColor = "rgba(18,14,6,.42)";
+    ctx.shadowBlur = 2.6 * s;
+    ctx.shadowOffsetY = 1.4 * s;
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.lineWidth = rand;
+    ctx.strokeStyle = dunkel;
+    ctx.stroke();
+
+    /* Kopf */
+    ctx.beginPath();
+    ctx.arc(0, -13 * s, 9 * s, 0, 6.2832);
+    ctx.lineWidth = saum;
+    ctx.strokeStyle = "#fff6e2b8";
+    ctx.stroke();
+    var hk = ctx.createLinearGradient(-8 * s, -21 * s, 6 * s, -6 * s);
+    hk.addColorStop(0, figurTon(farbe, .22));
+    hk.addColorStop(.55, figurTon(farbe, -.18));
+    hk.addColorStop(1, figurTon(farbe, -.52));
+    ctx.fillStyle = hk;
+    ctx.fill();
+    ctx.lineWidth = rand;
+    ctx.strokeStyle = dunkel;
+    ctx.stroke();
+
+    /* Glanzpunkt am Kopf */
+    ctx.beginPath();
+    ctx.arc(-3.4 * s, -16.4 * s, 2.5 * s, 0, 6.2832);
+    ctx.fillStyle = "#ffffff8c";
+    ctx.fill();
+
+    /* Kopfbedeckung je Spieler */
+    var hell = figurTon(farbe, .62), kante = figurTon(farbe, -.66);
+    var kappe = function () { ctx.fillStyle = hell; ctx.fill(); ctx.stroke(); };
+    ctx.lineWidth = Math.max(.9, 1.8 * s);
+    ctx.strokeStyle = kante;
+    if (idx % 4 === 0) {
+      /* Krone */
+      ctx.beginPath();
+      ctx.moveTo(-8 * s, -19.5 * s);
+      ctx.lineTo(-8 * s, -27 * s);
+      ctx.lineTo(-3.6 * s, -22.6 * s);
+      ctx.lineTo(0, -28.4 * s);
+      ctx.lineTo(3.6 * s, -22.6 * s);
+      ctx.lineTo(8 * s, -27 * s);
+      ctx.lineTo(8 * s, -19.5 * s);
+      ctx.closePath();
+      kappe();
+    } else if (idx % 4 === 1) {
+      /* runde Kappe mit zwei Öhrchen */
+      ctx.beginPath();
+      ctx.arc(0, -18.6 * s, 8.6 * s, Math.PI, 0);
+      ctx.closePath();
+      kappe();
+      [-1, 1].forEach(function (d) {
+        ctx.beginPath();
+        ctx.arc(d * 8.2 * s, -22.6 * s, 3.1 * s, 0, 6.2832);
+        kappe();
+      });
+    } else if (idx % 4 === 2) {
+      /* Spitzhut */
+      ctx.beginPath();
+      ctx.moveTo(-9 * s, -18.6 * s);
+      ctx.quadraticCurveTo(-3 * s, -26 * s, 1.4 * s, -33 * s);
+      ctx.quadraticCurveTo(6 * s, -25 * s, 9 * s, -18.6 * s);
+      ctx.closePath();
+      kappe();
+      ctx.beginPath();
+      ctx.arc(6.4 * s, -30.2 * s, 1.9 * s, 0, 6.2832);
+      ctx.fillStyle = "#ffffffd9";
+      ctx.fill();
+    } else {
+      /* Helm mit Visier */
+      rr(ctx, -8.4 * s, -28 * s, 16.8 * s, 13 * s, 4 * s);
+      kappe();
+      ctx.beginPath();
+      ctx.moveTo(-6 * s, -22 * s);
+      ctx.lineTo(6 * s, -22 * s);
+      ctx.strokeStyle = kante;
+      ctx.lineWidth = Math.max(1, 2 * s);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  /* Mittelpunkt einer Kachel in Brettpixeln – Figuren, Marker und Fund-Effekt
+     rechnen alle damit. */
+  function zellMitte(i) {
+    var p = rc(i);
+    return [p[1] * zelle + zelle / 2, p[0] * zelle + zelle / 2];
+  }
+
+  function zeichneBrett() {
+    if (!g) return;
+    var t = themaDaten(), n = S.groesse, r, c, i, p;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, bpx, bpx);
+
+    g.save();
+    g.beginPath();
+    rr(g, 0, 0, bpx, bpx, 12);
+    g.clip();
+
+    if (A.art === "schieben" && A.alt) {
+      var dx = 0, dy = 0;
+      if (A.achse === "r") dx = A.seite === "links" ? 1 : -1;
+      else dy = A.seite === "oben" ? 1 : -1;
+
+      for (i = 0; i < n * n; i++) {
+        p = rc(i);
+        var inLinie = A.achse === "r" ? p[0] === A.index : p[1] === A.index;
+        if (inLinie) continue;
+        kachelZeichnen(g, p[1] * zelle, p[0] * zelle, zelle, S.feld[i], festZelle(i));
+      }
+      for (var k = 0; k < n; k++) {
+        var rr2 = A.achse === "r" ? A.index : k;
+        var cc2 = A.achse === "r" ? k : A.index;
+        kachelZeichnen(g, (cc2 + dx * A.t) * zelle, (rr2 + dy * A.t) * zelle, zelle, A.alt[idx(rr2, cc2)], false);
+      }
+      var einR = A.achse === "r" ? A.index : (A.seite === "oben" ? -1 : n);
+      var einC = A.achse === "r" ? (A.seite === "links" ? -1 : n) : A.index;
+      kachelZeichnen(g, (einC + dx * A.t) * zelle, (einR + dy * A.t) * zelle, zelle, A.neu, false);
+    } else {
+      for (r = 0; r < n; r++) {
+        for (c = 0; c < n; c++) {
+          kachelZeichnen(g, c * zelle, r * zelle, zelle, S.feld[idx(r, c)], festZelle(idx(r, c)));
+        }
+      }
+    }
+
+    /* Figuren */
+    var figuren = S.figuren;
+    for (i = 0; i < figuren.length; i++) {
+      var f = figuren[i];
+      var pos = f.i;
+      if (A.art === "schieben" && A.altFig) {
+        pos = A.altFig[i];
+        var px2 = rc(pos);
+        var linie = A.achse === "r" ? px2[0] === A.index : px2[1] === A.index;
+        if (linie) {
+          var fx = (px2[1] + (A.achse === "r" ? (A.seite === "links" ? 1 : -1) * A.t : 0)) * zelle + zelle / 2;
+          var fy = (px2[0] + (A.achse === "c" ? (A.seite === "oben" ? 1 : -1) * A.t : 0)) * zelle + zelle / 2;
+          figurZeichnen(g, fx, fy, zelle, f, i === S.amZug, i);
+          continue;
+        }
+      }
+      if (A.art === "ziehen" && A.pfad && i === S.amZug) {
+        var schritte = A.pfad.length;
+        var gesamt = A.t * schritte;
+        var nr = Math.min(schritte, Math.floor(gesamt));
+        var rest = gesamt - nr;
+        var vonI = nr === 0 ? A.start : A.pfad[nr - 1];
+        var nachI = nr >= schritte ? A.pfad[schritte - 1] : A.pfad[nr];
+        var a2 = rc(vonI), b2 = rc(nachI);
+        var mx = a2[1] + (b2[1] - a2[1]) * (nr >= schritte ? 1 : rest);
+        var my = a2[0] + (b2[0] - a2[0]) * (nr >= schritte ? 1 : rest);
+        figurZeichnen(g, mx * zelle + zelle / 2, my * zelle + zelle / 2, zelle, f, true, i);
+        continue;
+      }
+      p = zellMitte(pos);
+      figurZeichnen(g, p[0], p[1], zelle, f, i === S.amZug, i);
+    }
+
+    /* Fund-Effekt */
+    if (A.art === "fund") {
+      var zp = zellMitte(A.ziel);
+      var cx = zp[0], cy = zp[1];
+      g.save();
+      g.globalAlpha = Math.max(0, 1 - A.t);
+      g.strokeStyle = A.farbe;
+      g.lineWidth = Math.max(2, zelle * .06);
+      g.beginPath();
+      g.arc(cx, cy, zelle * (.2 + A.t * .55), 0, 6.2832);
+      g.stroke();
+      g.globalAlpha = Math.max(0, 1 - A.t * 1.4);
+      zeichneGegenstand(g, A.emblem, cx - zelle * .17, cy - zelle * .55 - A.t * zelle * .5, zelle * .34, A.farbe, t.boden[0]);
+      g.restore();
+    }
+
+    /* erreichbare Felder und Ziel */
+    if (!A.art && S.phase === "ziehen" && !S.vorbei && !S.figuren[S.amZug].ki) {
+      var mensch = S.figuren[S.amZug];
+      var karte = erreichbarKarte(mensch.i, S.amZug);
+      g.save();
+      Object.keys(karte.dist).forEach(function (schl) {
+        var zi = parseInt(schl, 10);
+        if (zi === mensch.i) return;
+        var pp = zellMitte(zi);
+        g.beginPath();
+        g.arc(pp[0], pp[1], zelle * .13, 0, 6.2832);
+        g.fillStyle = mensch.farbe + "cc";
+        g.fill();
+        g.strokeStyle = "#00000055";
+        g.lineWidth = 1;
+        g.stroke();
+      });
+      /* eigenes Ziel hervorheben */
+      var zf = zielFeld(mensch);
+      if (zf >= 0) {
+        var zz = rc(zf);
+        g.strokeStyle = mensch.farbe;
+        g.lineWidth = Math.max(2, zelle * .05);
+        g.setLineDash([zelle * .16, zelle * .12]);
+        g.globalAlpha = .85;
+        rr(g, zz[1] * zelle + zelle * .1, zz[0] * zelle + zelle * .1, zelle * .8, zelle * .8, zelle * .12);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    g.restore();
+
+    /* Rahmen */
+    g.save();
+    g.strokeStyle = t.wand + "55";
+    g.lineWidth = 2;
+    rr(g, 1, 1, bpx - 2, bpx - 2, 12);
+    g.stroke();
+    g.restore();
+  }
+
+  function zeichneFrei() {
+    if (!gFrei) return;
+    var groesse = freiCanvas.width;
+    gFrei.setTransform(1, 0, 0, 1, 0, 0);
+    gFrei.clearRect(0, 0, groesse, groesse);
+    var t = themaDaten();
+    gFrei.save();
+    gFrei.beginPath();
+    rr(gFrei, 0, 0, groesse, groesse, 10);
+    gFrei.clip();
+    kachelZeichnen(gFrei, 0, 0, groesse, { offen: dreheSeiten(S.frei.offen, S.drehung), g: S.frei.g });
+    gFrei.restore();
+    gFrei.strokeStyle = t.wand + "66";
+    gFrei.lineWidth = 1.5;
+    rr(gFrei, 1, 1, groesse - 2, groesse - 2, 10);
+    gFrei.stroke();
+  }
+  /* =====================================================================
+     6. ANIMATION
+     ===================================================================== */
+  var ohneAnim = false;
+  var reduzierteBewegung = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var raf = 0;
+
+  function meldung(text, wichtig) {
+    var m = document.getElementById("meldung");
+    if (!m) return;
+    m.textContent = text;
+    m.className = "meldung" + (wichtig ? " wichtig" : "");
+  }
+
+  function starteAnimation(art, dauer, daten, fertig) {
+    A.art = art;
+    A.t = 0;
+    A.dauer = Math.max(1, dauer);
+    A.fertig = fertig || null;
+    if (daten) {
+      for (var k in daten) {
+        if (Object.prototype.hasOwnProperty.call(daten, k)) A[k] = daten[k];
+      }
+    }
+    S.laeuft = true;
+    if (ohneAnim || reduzierteBewegung) {
+      A.t = 1;
+      zeichneBrett();
+      beendeAnimation();
+      return;
+    }
+    A.beginn = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (!raf) raf = requestAnimationFrame(schritt);
+    /* Rückfall: rAF läuft nicht in jedem Hintergrund-Tab. Ohne diesen
+       Zeitgeber bliebe die Bedienung nach einem Tabwechsel gesperrt. */
+    if (A.timer) window.clearTimeout(A.timer);
+    A.timer = window.setTimeout(function () {
+      if (A.art) { A.t = 1; zeichneBrett(); beendeAnimation(); }
+    }, A.dauer + 140);
+    /* Takt für Umgebungen, in denen rAF pausiert (Hintergrund-Tab, energiesparend):
+       dann läuft die Bewegung trotzdem Bild für Bild weiter. */
+    if (A.takt) window.clearInterval(A.takt);
+    A.takt = window.setInterval(function () {
+      if (!A.art) { window.clearInterval(A.takt); A.takt = 0; return; }
+      if (document.hidden) schritt();
+    }, 40);
+  }
+
+  function beendeAnimation() {
+    if (!A.art) return;
+    if (A.timer) { window.clearTimeout(A.timer); A.timer = 0; }
+    if (A.takt) { window.clearInterval(A.takt); A.takt = 0; }
+    var fertig = A.fertig;
+    A.art = null; A.pfad = null; A.fertig = null; S.laeuft = false;
+    zeichneAlles();
+    if (fertig) fertig();
+  }
+
+  function schritt(jetzt) {
+    raf = 0;
+    if (!A.art) { S.laeuft = false; return; }
+    var j = jetzt || ((window.performance && performance.now) ? performance.now() : Date.now());
+    A.t = Math.min(1, (j - A.beginn) / A.dauer);
+    zeichneBrett();
+    if (A.t >= 1) {
+      beendeAnimation();
+      return;
+    }
+    raf = requestAnimationFrame(schritt);
+  }
+
+  function animiereSchieben(alt, altFig, achse, index, seite, neu) {
+    starteAnimation("schieben", 340, { alt: alt, altFig: altFig, achse: achse, index: index, seite: seite, neu: neu }, null);
+  }
+
+  function animiereZug(figur, pfad, fertig) {
+    starteAnimation("ziehen", Math.min(900, 135 * pfad.length + 90), { pfad: pfad, start: figur.i, figur: figur }, fertig);
+  }
+
+  function fundEffekt(ziel, figur, fertig) {
+    var t = themaDaten();
+    starteAnimation("fund", 720, {
+      ziel: ziel,
+      farbe: figur.farbe,
+      emblem: t.items[figur.auf[figur.erledigt - 1]].e
+    }, fertig);
+  }
+
+  /* =====================================================================
+     7. OBERFLÄCHE
+     ===================================================================== */
+  function el(id) { return document.getElementById(id); }
+
+  var PFEIL_SVG = {
+    runter: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16 3 7h14z"/></svg>',
+    hoch: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4l7 9H3z"/></svg>',
+    rechts: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10 7 17V3z"/></svg>',
+    links: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10 13 3v14z"/></svg>'
+  };
+
+  function baueThemen() {
+    var leiste = el("themenLeiste");
+    if (!leiste) return;
+    Object.keys(THEMEN).forEach(function (id) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "wahl";
+      b.dataset.thema = id;
+      b.textContent = THEMEN[id].name;
+      b.setAttribute("aria-pressed", id === S.thema ? "true" : "false");
+      b.addEventListener("click", function () { setzeThema(id); });
+      leiste.appendChild(b);
+    });
+  }
+
+  function setzeThema(id) {
+    if (!THEMEN[id]) return;
+    S.thema = id;
+    document.body.dataset.thema = id;
+    document.querySelectorAll("#themenLeiste .wahl").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.dataset.thema === id ? "true" : "false");
+    });
+    try { localStorage.setItem("labyrinth-thema", id); } catch (e) {}
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      var farben = { klassisch: "#0d241d", maedchen: "#330d26", buben: "#0e171f", schloss: "#1c1630", dungeon: "#191410", wald: "#102318", eis: "#102534" };
+      meta.setAttribute("content", farben[id] || "#0d241d");
+    }
+    zeichneAlles();
+  }
+
+  function bauePfeile() {
+    var n = S.groesse;
+    var ziele = [
+      { id: "streifenOben", achse: "c", seite: "oben", icon: "runter", text: "Spalte %d von oben einschieben" },
+      { id: "streifenUnten", achse: "c", seite: "unten", icon: "hoch", text: "Spalte %d von unten einschieben" },
+      { id: "streifenLinks", achse: "r", seite: "links", icon: "rechts", text: "Zeile %d von links einschieben" },
+      { id: "streifenRechts", achse: "r", seite: "rechts", icon: "links", text: "Zeile %d von rechts einschieben" }
+    ];
+    ziele.forEach(function (d) {
+      var box = el(d.id);
+      if (!box) return;
+      box.textContent = "";
+      for (var i = 0; i < n; i++) {
+        if (!schiebeLinie(d.achse, i)) {
+          /* Feste Linie: hier steht kein Pfeil, nur ein Platzhalter, damit
+             die Pfeile genau über ihrer Reihe sitzen. */
+          var lücke = document.createElement("span");
+          lücke.className = "pfeilPlatz";
+          lücke.setAttribute("aria-hidden", "true");
+          box.appendChild(lücke);
+          continue;
+        }
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "pfeil";
+        b.innerHTML = PFEIL_SVG[d.icon];
+        b.dataset.achse = d.achse;
+        b.dataset.index = String(i);
+        b.dataset.seite = d.seite;
+        b.setAttribute("aria-label", d.text.replace("%d", String(i + 1)));
+        b.title = d.text.replace("%d", String(i + 1));
+        b.addEventListener("click", pfeilKlick);
+        box.appendChild(b);
+      }
+    });
+  }
+
+  function aktualisierePfeile() {
+    var dran = S.figuren[S.amZug];
+    var mensch = !!(dran && !dran.ki && !S.vorbei && S.phase === "schieben" && !S.laeuft);
+    document.querySelectorAll(".pfeil").forEach(function (b) {
+      var achse = b.dataset.achse, i = parseInt(b.dataset.index, 10), seite = b.dataset.seite;
+      b.disabled = !mensch || !schiebeErlaubt(achse, i, seite);
+    });
+    var beenden = el("btnBeenden");
+    if (beenden) beenden.hidden = !(dran && !dran.ki && S.phase === "ziehen" && !S.laeuft && !S.vorbei);
+  }
+
+  function pfeilKlick(e) {
+    var b = e.currentTarget;
+    if (S.vorbei || S.laeuft) return;
+    var dran = S.figuren[S.amZug];
+    if (!dran || dran.ki) return;
+    var achse = b.dataset.achse, index = parseInt(b.dataset.index, 10), seite = b.dataset.seite;
+    if (!schiebeErlaubt(achse, index, seite)) {
+      meldung("Diese Reihe wurde gerade von der Gegenseite geschoben – der Rückwärtseinschub ist verboten.", true);
+      return;
+    }
+    schiebeAusfuehren(achse, index, seite, S.drehung);
+    var f = S.figuren[S.amZug];
+    var zf = zielFeld(f);
+    if (f.i === zf) {
+      meldung(zf === f.heim ? "Deine Figur steht auf dem Startfeld – „Zug beenden“ gewinnt die Partie." : "Deine Figur steht jetzt auf deinem Gegenstand – „Zug beenden“ sammelt ihn ein.", true);
+    } else {
+      meldung("Gang eingeschoben. " + (zf >= 0 ? "Jetzt ein erreichbares Feld antippen oder „Zug beenden“." : "Jetzt ziehen oder „Zug beenden“."));
+    }
+    zeichneAlles();
+  }
+
+  function dreheFrei() {
+    if (S.vorbei || S.laeuft || S.phase !== "schieben") return;
+    var dran = S.figuren[S.amZug];
+    if (!dran || dran.ki) return;
+    S.drehung = (S.drehung + 1) % 4;
+    zeichneFrei();
+  }
+
+  function passeAn() {
+    if (!brett || !freiCanvas || !el("spielbereich") || el("spielbereich").hidden) return;
+    var buehne = document.querySelector(".buehne");
+    if (!buehne) return;
+    /* Am Handy steht der freie Stein unter dem Brett, dann zählt die volle
+       Breite. Die Höhe bleibt für Kopfzeile, Meldung und Spielerliste frei,
+       damit das Brett nie unter Bedienelementen verschwindet. */
+    var schmal = window.innerWidth < 620;
+    var pfeilS = schmal ? 27 : 34;   /* Breite der senkrechten Pfeilleisten */
+    var pfeilH = schmal ? 28 : 34;   /* Höhe der waagerechten Pfeilleisten */
+    var lücke = schmal ? 3 : 5;
+    var platz = buehne.clientWidth - 2;
+    var freiBox = document.querySelector(".freiBox");
+    if (!schmal && freiBox) platz -= (freiBox.offsetWidth + 12);
+    platz -= (pfeilS + pfeilH + 2 * lücke);
+    var maxH = Math.max(240, window.innerHeight - (schmal ? 244 : 268));
+    var kante = Math.max(180, Math.min(platz, maxH));
+    zelle = Math.max(24, Math.floor(kante / S.groesse));
+    bpx = zelle * S.groesse;
+    /* Auf hochauflösenden Handys (3×) wird sonst unscharf skaliert. */
+    dpr = Math.min(3, window.devicePixelRatio || 1);
+
+    brett.style.width = bpx + "px";
+    brett.style.height = bpx + "px";
+    brett.width = Math.round(bpx * dpr);
+    brett.height = Math.round(bpx * dpr);
+    g = brett.getContext("2d");
+
+    ["streifenOben", "streifenUnten"].forEach(function (id) {
+      var s = el(id);
+      if (!s) return;
+      s.style.width = bpx + "px";
+      s.style.height = pfeilH + "px";
+    });
+    ["streifenLinks", "streifenRechts"].forEach(function (id) {
+      var s = el(id);
+      if (!s) return;
+      s.style.width = pfeilS + "px";
+      s.style.height = bpx + "px";
+    });
+
+    var fk = schmal
+      ? Math.max(56, Math.min(78, Math.round(bpx * .24)))
+      : Math.max(58, Math.min(104, Math.round(bpx * 0.3)));
+    freiCanvas.style.width = fk + "px";
+    freiCanvas.style.height = fk + "px";
+    freiCanvas.width = Math.round(fk * dpr);
+    freiCanvas.height = Math.round(fk * dpr);
+    gFrei = freiCanvas.getContext("2d");
+
+    zeichneBrett();
+    zeichneFrei();
+  }
+
+  function aufgabenChip(itemIndex) {
+    var c = document.createElement("canvas");
+    var gross = 56;
+    c.width = gross; c.height = gross;
+    c.style.width = "26px"; c.style.height = "26px";
+    var gg = c.getContext("2d");
+    var t = themaDaten();
+    var pv = gg.createLinearGradient(0, 0, 0, gross);
+    pv.addColorStop(0, t.token[0]);
+    pv.addColorStop(1, t.token[1]);
+    gg.fillStyle = pv;
+    gg.strokeStyle = t.tokenKante;
+    gg.lineWidth = 2.5;
+    rr(gg, 1.5, 1.5, gross - 3, gross - 3, 11);
+    gg.fill();
+    gg.stroke();
+    zeichneGegenstand(gg, t.items[itemIndex].e, 7, 7, gross - 14, t.ink, t.token[0]);
+    return c;
+  }
+
+  function baueSpielerleiste() {
+    var box = el("spielerleiste");
+    if (!box) return;
+    box.textContent = "";
+    S.figuren.forEach(function (f, k) {
+      var karte = document.createElement("div");
+      karte.className = "spieler" + (k === S.amZug && !S.vorbei ? " amZug" : "");
+
+      var kopf = document.createElement("div");
+      kopf.className = "kopf";
+      var punkt = document.createElement("span");
+      punkt.className = "punkt";
+      punkt.style.background = f.farbe;
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = f.name + (f.ki ? " · " + S.stufe : "");
+      var fort = document.createElement("span");
+      fort.className = "fort";
+      fort.textContent = f.erledigt + "/" + f.auf.length;
+      kopf.appendChild(punkt); kopf.appendChild(name); kopf.appendChild(fort);
+      karte.appendChild(kopf);
+
+      var liste = document.createElement("div");
+      liste.className = "aufgaben";
+      f.auf.forEach(function (item, n) {
+        var chip = document.createElement("span");
+        chip.className = "aufgabe" + (n < f.erledigt ? " erledigt" : "") + (n === f.erledigt && k === S.amZug && !S.vorbei ? " jetzt" : "");
+        chip.title = themaDaten().items[item].n;
+        chip.appendChild(aufgabenChip(item));
+        var bez = document.createElement("span");
+        bez.textContent = themaDaten().items[item].n;
+        chip.appendChild(bez);
+        liste.appendChild(chip);
+      });
+      karte.appendChild(liste);
+
+      if (f.erledigt >= f.auf.length && !S.vorbei) {
+        var h = document.createElement("div");
+        h.className = "heimHinweis";
+        h.textContent = "Alle Aufgaben erledigt – zurück zum Startfeld!";
+        karte.appendChild(h);
+      }
+      box.appendChild(karte);
+    });
+  }
+
+  function aktualisiereStatus() {
+    var dran = S.figuren[S.amZug];
+    var punkt = el("punktZug");
+    if (punkt) punkt.style.background = dran ? dran.farbe : "#666";
+    var wer = el("werZug");
+    if (wer) wer.textContent = dran ? dran.name + (dran.ki ? " (" + S.stufe + ")" : "") : "–";
+    var fort = el("fortschritt");
+    if (fort) fort.textContent = dran ? dran.erledigt + "/" + dran.auf.length : "0/0";
+    var zz = el("zugZahl");
+    if (zz) zz.textContent = String(S.zuege);
+    var ph = el("phasePill");
+    if (ph) ph.textContent = S.vorbei ? "Vorbei" : (S.phase === "schieben" ? "Schieben" : "Ziehen");
+  }
+
+  function zeichneAlles() {
+    document.body.dataset.thema = S.thema;
+    var gesucht = false;
+    var dranJetzt = S.figuren[S.amZug];
+    if (dranJetzt && !S.vorbei && dranJetzt.erledigt < dranJetzt.auf.length && S.frei) {
+      gesucht = S.frei.g === dranJetzt.auf[dranJetzt.erledigt];
+    }
+    var boxFrei = document.querySelector(".freiBox");
+    if (boxFrei) boxFrei.classList.toggle("gesucht", gesucht);
+    if (g) zeichneBrett();
+    if (gFrei) zeichneFrei();
+    aktualisiereStatus();
+    baueSpielerleiste();
+    aktualisierePfeile();
+  }
+
+  function zugText() {
+    var f = S.figuren[S.amZug];
+    if (!f) return "";
+    if (f.ki) return f.name + " ist dran.";
+    if (f.erledigt < f.auf.length && S.frei && S.frei.g === f.auf[f.erledigt]) {
+      return f.name + ": dein gesuchter Gegenstand liegt im freien Gang – schiebe ihn ins Feld.";
+    }
+    return f.name + ": erst schieben, dann ziehen.";
+  }
+
+  /* =====================================================================
+     8. COMPUTERGEGNER
+     ===================================================================== */
+  function kopieFeld(feld) {
+    return feld.map(function (t) { return { offen: t.offen.slice(), g: t.g }; });
+  }
+
+  /* Dieselbe Schiebelogik wie im Spiel, aber auf einer Kopie – damit der
+     Computer Züge vorher durchrechnen kann. */
+  function verschiebeSim(feld, frei, fig, achse, index, seite, drehung) {
+    var n = S.groesse;
+    var neu = { offen: dreheSeiten(frei.offen, drehung), g: frei.g };
+    var raus, c, r, a, p, w;
+    if (achse === "r") {
+      if (seite === "links") {
+        raus = feld[idx(index, n - 1)];
+        for (c = n - 1; c > 0; c--) feld[idx(index, c)] = feld[idx(index, c - 1)];
+        feld[idx(index, 0)] = neu;
+        for (a = 0; a < fig.length; a++) {
+          p = rc(fig[a]);
+          if (p[0] !== index) continue;
+          w = p[1] + 1; if (w >= n) w -= n;
+          fig[a] = idx(index, w);
+        }
+      } else {
+        raus = feld[idx(index, 0)];
+        for (c = 0; c < n - 1; c++) feld[idx(index, c)] = feld[idx(index, c + 1)];
+        feld[idx(index, n - 1)] = neu;
+        for (a = 0; a < fig.length; a++) {
+          p = rc(fig[a]);
+          if (p[0] !== index) continue;
+          w = p[1] - 1; if (w < 0) w += n;
+          fig[a] = idx(index, w);
+        }
+      }
+    } else {
+      if (seite === "oben") {
+        raus = feld[idx(n - 1, index)];
+        for (r = n - 1; r > 0; r--) feld[idx(r, index)] = feld[idx(r - 1, index)];
+        feld[idx(0, index)] = neu;
+        for (a = 0; a < fig.length; a++) {
+          p = rc(fig[a]);
+          if (p[1] !== index) continue;
+          w = p[0] + 1; if (w >= n) w -= n;
+          fig[a] = idx(w, index);
+        }
+      } else {
+        raus = feld[idx(0, index)];
+        for (r = 0; r < n - 1; r++) feld[idx(r, index)] = feld[idx(r + 1, index)];
+        feld[idx(n - 1, index)] = neu;
+        for (a = 0; a < fig.length; a++) {
+          p = rc(fig[a]);
+          if (p[1] !== index) continue;
+          w = p[0] - 1; if (w < 0) w += n;
+          fig[a] = idx(w, index);
+        }
+      }
+    }
+    frei.offen = raus.offen.slice();
+    frei.g = raus.g;
+    return frei;
+  }
+
+  function distanzKarte(feld, von) {
+    var n = S.groesse, dist = {}, q = [von], kopf = 0;
+    var dr = [-1, 0, 1, 0], dc = [0, 1, 0, -1];
+    dist[von] = 0;
+    while (kopf < q.length) {
+      var a = q[kopf++], p = rc(a);
+      for (var s = 0; s < 4; s++) {
+        if (!feld[a].offen[s]) continue;
+        var r = p[0] + dr[s], c = p[1] + dc[s];
+        if (r < 0 || c < 0 || r >= n || c >= n) continue;
+        var b = idx(r, c);
+        if (feld[b].offen[(s + 2) % 4] !== 1) continue;
+        if (dist[b] !== undefined) continue;
+        dist[b] = dist[a] + 1;
+        q.push(b);
+      }
+    }
+    return dist;
+  }
+
+  function zielInFeld(feld, figur) {
+    if (figur.erledigt >= figur.auf.length) return figur.heim;
+    var wunsch = figur.auf[figur.erledigt];
+    for (var i = 0; i < feld.length; i++) if (feld[i].g === wunsch) return i;
+    return -1;
+  }
+
+  function kiKandidaten() {
+    var n = S.groesse, aus = [], i, d;
+    var seiten = [["r", "links"], ["r", "rechts"], ["c", "oben"], ["c", "unten"]];
+    for (i = 0; i < n; i++) {
+      for (var k = 0; k < seiten.length; k++) {
+        if (!schiebeErlaubt(seiten[k][0], i, seiten[k][1])) continue;
+        for (d = 0; d < 4; d++) aus.push({ achse: seiten[k][0], index: i, seite: seiten[k][1], drehung: d });
+      }
+    }
+    return aus;
+  }
+
+  function manhattan(a, b, n) {
+    var pa = rc(a), pb = rc(b);
+    return Math.abs(pa[0] - pb[0]) + Math.abs(pa[1] - pb[1]);
+  }
+
+  /* Bewertung eines Kandidaten:
+     - Ziel erreichbar → kurzer Weg zählt viel.
+     - Ziel nicht erreichbar → Wege dorthin öffnen: Nähe, Größe der
+       Zielinsel und eigene Bewegungsfreiheit. Ohne diesen Teil blieb der
+       Computer vor verschlossenen Gängen stehen. */
+  function kiWert(zug) {
+    var feld = kopieFeld(S.feld);
+    var fig = S.figuren.map(function (x) { return x.i; });
+    var freiKopie = { offen: S.frei.offen.slice(), g: S.frei.g };
+    verschiebeSim(feld, freiKopie, fig, zug.achse, zug.index, zug.seite, zug.drehung);
+
+    var ich = S.figuren[S.amZug];
+    var meinFeld = fig[S.amZug];
+    var meinZiel = zielInFeld(feld, ich);
+    var karte = distanzKarte(feld, meinFeld);
+    var wert;
+
+    if (meinZiel >= 0 && karte[meinZiel] !== undefined) {
+      var d = karte[meinZiel];
+      wert = 120 - d * 8;
+      if (d === 0) wert += 60;
+      if (ich.erledigt >= ich.auf.length && d === 0) wert += 200;
+    } else if (meinZiel >= 0) {
+      var abstand = manhattan(meinFeld, meinZiel);
+      var zielInsel = Object.keys(distanzKarte(feld, meinZiel)).length;
+      var meineInsel = Object.keys(karte).length;
+      wert = -abstand * 4 + zielInsel * 2.2 + meineInsel * 1.1;
+    } else {
+      /* Ziel liegt im freien Stein – der wird gerade eingeschoben. */
+      var insel = Object.keys(karte).length;
+      wert = insel * 1.2 + (S.frei.g === ich.auf[ich.erledigt] ? 30 : 0);
+    }
+
+    for (var k = 0; k < S.figuren.length; k++) {
+      if (k === S.amZug) continue;
+      var o = S.figuren[k];
+      var oz = zielInFeld(feld, o);
+      if (oz < 0) continue;
+      var ok = distanzKarte(feld, fig[k]);
+      var od = ok[oz] === undefined ? 60 : ok[oz];
+      if (od === 0) wert -= (S.stufe === "schwer" ? 90 : 45);
+      else if (od === 1) wert -= (S.stufe === "schwer" ? 55 : 22);
+      else if (od <= 4) wert -= (S.stufe === "schwer" ? 14 : 6);
+    }
+    return wert;
+  }
+
+  function kiWahl(ich) {
+    var kandidaten = kiKandidaten();
+    if (!kandidaten.length) return null;
+    var bewertet = kandidaten.map(function (z) { return { zug: z, wert: kiWert(z) }; });
+    bewertet.sort(function (a, b) { return b.wert - a.wert; });
+    if (S.stufe === "leicht") {
+      var teil = bewertet.slice(0, Math.max(3, Math.ceil(bewertet.length * 0.35)));
+      return teil[Math.floor(Math.random() * teil.length)].zug;
+    }
+    if (S.stufe === "normal" && Math.random() < 0.2) {
+      var teil2 = bewertet.slice(0, Math.min(5, bewertet.length));
+      return teil2[Math.floor(Math.random() * teil2.length)].zug;
+    }
+    return bewertet[0].zug;
+  }
+
+  function kiZiel(f) {
+    var zf = zielFeld(f);
+    if (zf < 0) return null;
+    var karte = erreichbarKarte(f.i, S.amZug);
+    if (karte.dist[zf] !== undefined) return zf;
+    var zellen = Object.keys(karte.dist).map(Number).filter(function (i) { return i !== f.i; });
+    if (!zellen.length) return null;
+    if (S.stufe === "leicht" && Math.random() < 0.35) {
+      return zellen[Math.floor(Math.random() * zellen.length)];
+    }
+    var bestes = null, bester = 1e9;
+    zellen.forEach(function (i) {
+      var d = manhattan(i, zf);
+      if (d < bester) { bester = d; bestes = i; }
+    });
+    return bestes;
+  }
+
+  function planeKi() {
+    if (S.vorbei) return;
+    var f = S.figuren[S.amZug];
+    if (!f || !f.ki) return;
+    meldung(f.name + " überlegt …");
+    window.setTimeout(kiZug, 460);
+  }
+
+  function kiZug() {
+    if (S.vorbei) return;
+    if (S.laeuft) { window.setTimeout(kiZug, 120); return; }
+    if (S.phase !== "schieben") return;
+    var f = S.figuren[S.amZug];
+    if (!f || !f.ki) return;
+    var zug = kiWahl(f);
+    if (!zug) { naechsterSpieler(); return; }
+    schiebeAusfuehren(zug.achse, zug.index, zug.seite, zug.drehung);
+    var weiter = function () {
+      if (S.vorbei) return;
+      if (S.laeuft) { window.setTimeout(weiter, 120); return; }
+      if (S.phase !== "ziehen") return;
+      var ziel = kiZiel(f);
+      if (ziel === null) {
+        meldung(f.name + " bleibt stehen.");
+        turnAbschluss(f);
+        return;
+      }
+      if (!zugAusfuehren(ziel)) {
+        meldung(f.name + " bleibt stehen.");
+        turnAbschluss(f);
+      }
+    };
+    window.setTimeout(weiter, 430);
+  }
+
+  /* =====================================================================
+     9. SIEG UND EINRICHTUNG
+     ===================================================================== */
+  function gewonnen(f) {
+    if (window.TGErgebnis) TGErgebnis.gewonnen(); // zentrale Connector-Texte
+    S.vorbei = true;
+    S.phase = "vorbei";
+    S.laeuft = false;
+    A.art = null;
+    var t = el("siegTitel");
+    if (t) t.textContent = f.name + " gewinnt!";
+    var x = el("siegText");
+    if (x) x.textContent = "Alle " + f.auf.length + " Aufgaben gesammelt und zurück am eigenen Startfeld – nach " + S.zuege + " Einschüben.";
+    el("sieg").hidden = false;
+    meldung(f.name + " hat gewonnen: alle Aufgaben erledigt und zurück am Start.", true);
+    zeichneAlles();
+  }
+
+  var EINST_KEY = "labyrinth-einst";
+
+  function ladeEinst() {
+    try { return JSON.parse(localStorage.getItem(EINST_KEY) || "null"); } catch (e) { return null; }
+  }
+
+  function speichereEinst() {
+    try {
+      localStorage.setItem(EINST_KEY, JSON.stringify({
+        groesse: S.groesse, modus: S.modus, spielerzahl: S.spielerzahl,
+        stufe: S.stufe, kreuze: S.kreuze, aufgaben: S.aufgaben
+      }));
+    } catch (e) {}
+  }
+
+  function setzePresse(boxId, attribut, wert) {
+    document.querySelectorAll("#" + boxId + " .wahl").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(String(b.dataset[attribut]) === String(wert)));
+    });
+  }
+
+  function einrichtungZeigen() {
+    S.vorbei = true;
+    S.laeuft = false;
+    A.art = null;
+    el("sieg").hidden = true;
+    el("spielbereich").hidden = true;
+    el("einrichtung").hidden = false;
+    el("reiheSpieler").hidden = S.modus === "solo" ? false : false;
+  }
+
+  function starteSpiel() {
+    neuesSpiel({
+      modus: S.modus,
+      spielerzahl: S.spielerzahl,
+      groesse: S.groesse,
+      aufgaben: S.aufgaben,
+      kreuze: el("chkKreuze").checked,
+      stufe: el("selStufe").value,
+      thema: S.thema
+    });
+    speichereEinst();
+    el("sieg").hidden = true;
+    el("einrichtung").hidden = true;
+    el("spielbereich").hidden = false;
+    bauePfeile();
+    passeAn();
+    zeichneAlles();
+    meldung(zugText());
+    if (S.figuren[S.amZug] && S.figuren[S.amZug].ki) planeKi();
+  }
+
+  /* =====================================================================
+     10. VERDRAHTUNG
+     ===================================================================== */
+  function verdrahte() {
+    el("btnStart").addEventListener("click", starteSpiel);
+    el("btnNeu").addEventListener("click", einrichtungZeigen);
+    el("btnNochmal").addEventListener("click", einrichtungZeigen);
+
+    document.querySelectorAll("#wahlModus .wahl").forEach(function (b) {
+      b.addEventListener("click", function () {
+        S.modus = b.dataset.modus;
+        setzePresse("wahlModus", "modus", S.modus);
+      });
+    });
+    document.querySelectorAll("#wahlSpieler .wahl").forEach(function (b) {
+      b.addEventListener("click", function () {
+        S.spielerzahl = parseInt(b.dataset.n, 10);
+        setzePresse("wahlSpieler", "n", S.spielerzahl);
+      });
+    });
+    document.querySelectorAll("#wahlFeld .wahl").forEach(function (b) {
+      b.addEventListener("click", function () {
+        S.groesse = parseInt(b.dataset.n, 10);
+        setzePresse("wahlFeld", "n", S.groesse);
+      });
+    });
+    document.querySelectorAll("#wahlAufgaben .wahl").forEach(function (b) {
+      b.addEventListener("click", function () {
+        S.aufgaben = parseInt(b.dataset.n, 10);
+        setzePresse("wahlAufgaben", "n", S.aufgaben);
+      });
+    });
+
+    el("selStufe").addEventListener("change", function () {
+      S.stufe = el("selStufe").value;
+      speichereEinst();
+      baueSpielerleiste();
+    });
+
+    el("frei").addEventListener("click", dreheFrei);
+    el("btnDrehen").addEventListener("click", dreheFrei);
+    el("btnBeenden").addEventListener("click", function () {
+      if (S.vorbei || S.laeuft || S.phase !== "ziehen") return;
+      var dran = S.figuren[S.amZug];
+      if (!dran || dran.ki) return;
+      meldung("Zug ohne Bewegung beendet.");
+      turnAbschluss(dran);
+    });
+
+    el("brett").addEventListener("click", function (e) {
+      if (S.vorbei || S.laeuft || S.phase !== "ziehen") return;
+      var dran = S.figuren[S.amZug];
+      if (!dran || dran.ki) return;
+      var r = el("brett").getBoundingClientRect();
+      var c = Math.floor((e.clientX - r.left) / zelle);
+      var zeile = Math.floor((e.clientY - r.top) / zelle);
+      if (c < 0 || zeile < 0 || c >= S.groesse || zeile >= S.groesse) return;
+      var feldIndex = idx(zeile, c);
+      if (feldIndex === dran.i) { meldung("Hier steht deine Figur schon."); return; }
+      if (!zugAusfuehren(feldIndex)) meldung("Dorthin führt kein offener Gang – erst schieben oder anders schieben.", true);
+    });
+
+    var zeit = 0;
+    window.addEventListener("resize", function () {
+      window.clearTimeout(zeit);
+      zeit = window.setTimeout(passeAn, 120);
+    });
+  }
+
+  function vorbelegen() {
+    var gespeichert = ladeEinst();
+    if (gespeichert) {
+      if (gespeichert.groesse) S.groesse = gespeichert.groesse;
+      if (gespeichert.modus) S.modus = gespeichert.modus;
+      if (gespeichert.spielerzahl) S.spielerzahl = gespeichert.spielerzahl;
+      if (gespeichert.stufe) S.stufe = gespeichert.stufe;
+      if (typeof gespeichert.kreuze === "boolean") S.kreuze = gespeichert.kreuze;
+      if (gespeichert.aufgaben) S.aufgaben = gespeichert.aufgaben;
+    }
+    try {
+      var th = localStorage.getItem("labyrinth-thema");
+      if (th && THEMEN[th]) S.thema = th;
+    } catch (e) {}
+    setzePresse("wahlModus", "modus", S.modus);
+    setzePresse("wahlSpieler", "n", S.spielerzahl);
+    setzePresse("wahlFeld", "n", S.groesse);
+    setzePresse("wahlAufgaben", "n", S.aufgaben);
+    el("chkKreuze").checked = S.kreuze;
+    el("selStufe").value = S.stufe;
+  }
+
+  function init() {
+    brett = el("brett");
+    freiCanvas = el("frei");
+    if (!brett || !freiCanvas) return;
+    vorbelegen();
+    document.body.dataset.thema = S.thema;
+    /* Zentraler Grafikstil (spiele/stil.js): gilt, solange im Spiel kein
+       eigenes Thema gewählt wurde. Die Themenauswahl unten bleibt die Wahl
+       des Spielers – sobald er dort etwas anklickt, gewinnt seine Wahl. */
+    function stilThema() {
+      return window.TGStil
+        ? TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "buben" })
+        : "klassisch";
+    }
+    function eigenesThema() {
+      try { return localStorage.getItem("labyrinth-thema"); } catch (e) { return "1"; }
+    }
+    function stilSetzen(id) {
+      if (!THEMEN[id]) return;
+      S.thema = id;
+      document.body.dataset.thema = id;
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        var farben = { klassisch: "#0d241d", maedchen: "#330d26", buben: "#0e171f", schloss: "#1c1630", dungeon: "#191410", wald: "#102318", eis: "#102534" };
+        meta.setAttribute("content", farben[id] || "#0d241d");
+      }
+    }
+    if (!eigenesThema() && window.TGStil) stilSetzen(stilThema());
+    if (window.TGStil) {
+      TGStil.beiWechsel(function () {
+        if (eigenesThema()) return;
+        stilSetzen(stilThema());
+        document.querySelectorAll("#themenLeiste .wahl").forEach(function (b) {
+          b.setAttribute("aria-pressed", b.dataset.thema === S.thema ? "true" : "false");
+        });
+      });
+    }
+    baueThemen();
+    verdrahte();
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      var farben = { klassisch: "#0d241d", maedchen: "#330d26", buben: "#0e171f", schloss: "#1c1630", dungeon: "#191410", wald: "#102318", eis: "#102534" };
+      meta.setAttribute("content", farben[S.thema] || "#0d241d");
+    }
+  }
+
+  /* =====================================================================
+     11. SCHNITTSTELLE FÜR TESTS UND SPÄTEREN ONLINE-BETRIEB
+     Der Zustand ist vollständig über diese Funktionen lesbar und änderbar.
+     Ein späterer Mehrspieler-Modus kann Züge hier einspeisen und den Stand
+     verteilen, ohne die Regeln zu duplizieren.
+     ===================================================================== */
+  window.Labyrinth = {
+    stand: function () {
+      return {
+        groesse: S.groesse, thema: S.thema, modus: S.modus, phase: S.phase,
+        amZug: S.amZug, zuege: S.zuege, vorbei: S.vorbei, letzter: S.letzter,
+        frei: S.frei, drehung: S.drehung,
+        fest: S.fest.slice(),
+        feld: S.feld.map(function (t) { return { offen: t.offen.slice(), g: t.g }; }),
+        figuren: S.figuren.map(function (f) {
+          return { i: f.i, heim: f.heim, name: f.name, ki: f.ki, farbe: f.farbe, erledigt: f.erledigt, auf: f.auf.slice() };
+        })
+      };
+    },
+    neu: function (einst) { neuesSpiel(einst || {}); return S.groesse; },
+    erlaubt: function (achse, index, seite) { return schiebeErlaubt(achse, index, seite); },
+    schiebe: function (achse, index, seite, drehung) { return schiebeAusfuehren(achse, index, seite, drehung); },
+    erreichbar: function () {
+      var f = S.figuren[S.amZug];
+      return Object.keys(erreichbarKarte(f.i, S.amZug).dist).map(Number);
+    },
+    ziehe: function (ziel) { return zugAusfuehren(ziel); },
+    beenden: function () {
+      if (S.vorbei || S.laeuft || S.phase !== "ziehen") return false;
+      turnAbschluss(S.figuren[S.amZug]);
+      return true;
+    },
+    /* Stand eines Online-Zugs übernehmen: alles, was stand() liefert. */
+    laden: function (d) {
+      if (!d || !d.feld) return false;
+      S.groesse = d.groesse || S.groesse;
+      S.thema = d.thema || S.thema;
+      S.modus = d.modus || "mehrspieler";
+      S.phase = d.phase || "schieben";
+      S.amZug = d.amZug || 0;
+      S.zuege = d.zuege || 0;
+      S.vorbei = !!d.vorbei;
+      S.laeuft = false;
+      S.letzter = d.letzter || null;
+      S.frei = { offen: (d.frei && d.frei.offen ? d.frei.offen : [1, 1, 0, 0]).slice(), g: d.frei ? d.frei.g : null };
+      S.fest = (d.fest && d.fest.length === S.groesse * S.groesse)
+        ? d.fest.map(function (v) { return !!v; })
+        : festMuster(S.groesse);
+      S.drehung = d.drehung || 0;
+      S.feld = d.feld.map(function (t) { return { offen: t.offen.slice(), g: t.g }; });
+      S.figuren = d.figuren.map(function (f) {
+        return { i: f.i, heim: f.heim, name: f.name, ki: !!f.ki, farbe: f.farbe,
+                 erledigt: f.erledigt || 0, auf: f.auf.slice() };
+      });
+      A.art = null; A.t = 0;
+      el("sieg").hidden = true;
+      el("einrichtung").hidden = true;
+      el("spielbereich").hidden = false;
+      bauePfeile();
+      passeAn();
+      zeichneAlles();
+      meldung(zugText());
+      return true;
+    },
+    starte: starteSpiel,
+    drehen: function () { S.drehung = (S.drehung + 1) % 4; zeichneFrei(); return S.drehung; },
+    turbo: function (v) { ohneAnim = !!v; },
+    themen: Object.keys(THEMEN),
+    gegenstaende: function (thema) { return (THEMEN[thema || S.thema] || THEMEN.klassisch).items; },
+    kiWahl: function () { return kiWahl(S.figuren[S.amZug]); },
+    distanz: function (von) { return distanzKarte(S.feld, von); },
+    hilfe: function () {
+      return {
+        schiebe: "schiebe(achse,index,seite,drehung)",
+        ziehe: "ziehe(zielIndex) – nur nach schieben und nur erreichbar",
+        beenden: "beenden() – Zug ohne Bewegung abschließen",
+        stand: "stand() – vollständiger Zustand"
+      };
+    }
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+<script src="../../zurueck.js"></script>
+<script src="../../token.js"></script>
+<script>window.TG_ONLINE_SPIEL = "labyrinth";</script>
+<script src="../online-sync.js"></script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
+</body>
+</html>
