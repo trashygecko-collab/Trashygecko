@@ -1677,11 +1677,50 @@ function neuesSpiel(){
  zeichne();
 }
 
+/* ---------------------------------------------------------------- Feldmasse
+
+   Die Leinwand ist 480 x 520. Mit width:100% wurde sie am PC 742 px breit und
+   804 px hoch und ragte 98 px aus dem Fenster (die Seite scrollte 204 px).
+   Jetzt begrenzt die freie Fensterhoehe die Breite; die Buehne bekommt genau
+   die Feldbreite, damit der Startschleier auf dem Feld liegt. Nur Darstellung:
+   die Zeichenflaeche selbst bleibt 480 x 520. */
+
+function passeFeld(){
+ const buehne=document.querySelector(".buehne");
+ const feld=$("feld");
+ if(!buehne||!feld)return;
+
+ const kopf=buehne.getBoundingClientRect().top;
+ const fuss=document.querySelector(".fuss");
+ const regeln=$("regeln");
+ const unten=(fuss?fuss.getBoundingClientRect().height:0)
+  +(regeln?regeln.getBoundingClientRect().height:0)+34;
+ const platzH=Math.max(240,window.innerHeight-kopf-unten);
+ const platzB=Math.max(200,(buehne.parentElement?buehne.parentElement.clientWidth:window.innerWidth)-16);
+
+ const hoehe=Math.min(platzH-16,platzB*520/480);
+ const breite=hoehe*480/520;
+
+ feld.style.width=Math.round(breite)+"px";
+ feld.style.height=Math.round(hoehe)+"px";
+ buehne.style.width=Math.round(breite)+16+"px";
+ buehne.style.marginLeft="auto";
+ buehne.style.marginRight="auto";
+}
+
+window.addEventListener("resize",passeFeld);
+window.addEventListener("orientationchange",passeFeld);
+if(window.visualViewport){
+ window.visualViewport.addEventListener("resize",passeFeld);
+}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(passeFeld);
+
 stilSetzen(stilWahl);
 TGStil.beiWechsel(()=>stilSetzen(TGStil.lokal({ klassisch: "klassisch", maedchen: "maedchen", buben: "jungs" })));
 
 tonKnopf();
 neuesSpiel();
+passeFeld();
 requestAnimationFrame(schleife);
 
 })();

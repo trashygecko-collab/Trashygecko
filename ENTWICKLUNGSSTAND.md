@@ -5,6 +5,80 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Acht Spiele nach der Grafik-Überarbeitung technisch geprüft
+
+**Auftrag:** Arkanoid, Flappy Bird, Frogger, Pac-Man, Snake, Space Invaders,
+Doodle Jump und Pong sollten nach den optischen Überarbeitungen wieder
+zuverlässig spielbar sein – ohne die neuen Grafiken anzufassen.
+
+**Vorgehen:** Statt jede Datei nur zu öffnen, wurden Steuerung und Mechanik
+gemessen (Playwright/Chromium, echter lokaler Server): je Spiel und Stil
+(Klassisch/Mädchen/Buben) auf PC 1280 × 800 und Handy 390 × 844, mit Tastatur,
+Mausklick und Wischen, dazu Spielstart, Neustart und Spielende. Die Spiele
+haben keine Test-Globals (alles in IIFEs); deshalb saßen für die Messung
+kurzzeitig Zustandshaken in den acht Dateien und wurden danach entfernt –
+alle acht sind wieder hakenfrei (`window.__t` gibt es nirgends), die
+Rückkehr wurde per md5 gegen die Sicherungen geprüft.
+
+**Drei echte Fehler gefunden und behoben:**
+
+1. **Arkanoid: Feld zu hoch (der gemeldete Fehler).** Die Leinwand ist
+   480 × 520, stand aber mit `width:100%` in einer 760 px breiten Spalte:
+   am PC **742 × 804 px**, Unterkante 898 bei 800 px Fensterhöhe, die Seite
+   scrollte 204 px. Neu: `passeFeld()` in `arkanoid.html` begrenzt die
+   Feldbreite auf die freie Fensterhöhe (Kopf, Fuß und Regelzeile werden
+   abgezogen); die Bühne bekommt genau die Feldbreite, damit der Startschleier
+   deckungsgleich bleibt; neu gerechnet bei `resize`, Drehung und
+   `visualViewport`. Gemessen: 1280 × 800 → **551 × 596**, Seite genau 800;
+   1024 × 768 → 521 × 564 / 768; 1920 × 1080 → 742 × 804 / 1080;
+   Handy 390 × 844 unverändert 360 × 390 / 844. Zeigerzuordnung geprüft:
+   Klick bei 15 / 50 / 85 % der Feldbreite setzt den Schläger auf
+   72 / 240 / 408 von 480 – links ist links.
+2. **Space Invaders am Handy: 8 px zu lange Seite.** `body` hatte 18 px
+   Unterrand, die Seite war 852 statt 844 px hoch. Jetzt 2 px unter 430 px
+   Breite: Seite 844 px, kein Quer- oder Hochscrollen, Feld 374 × 442.
+3. **Frogger: erste Pfeiltaste nach „Starten“ wurde geschluckt.** Der
+   Tastaturwächter (`bedienelementFokussiert()`) lässt Tasten liegen, solange
+   ein Bedienelement den Fokus hat – nach dem Klick auf „Starten“ war das der
+   Knopf. `starten()` gibt den Fokus jetzt ab (nur `BUTTON`; ein Auswahlfeld
+   behält ihn). Gemessen: nach dem Klick bewegen alle vier Richtungen sofort
+   (hoch −32, runter +32, links −32, rechts +32 px).
+
+**Gemessen in Ordnung (keine Änderung nötig):**
+
+- **Flappy Bird:** Flattern hebt (y 204 → 148, vy −2), Rohre, Tod und
+  „Nochmal“ (danach wieder `laeuft`, y 202) – in allen drei Stilen.
+- **Frogger:** vier Richtungen, Wischen, echte Vollbild-API (an: Feld
+  553 → 565 px, Knopf „Vollbild beenden“, Escape aus, danach bewegt sich der
+  Frosch weiter), alle drei Stile.
+- **Pac-Man:** links/rechts/hoch aus je einem frischen Spiel (−51 / +51 / −51
+  px). „Runter“ ist am Startfeld **absichtlich** durch die Wand blockiert
+  (Reihe 20 ist `###`), nach dem Losfahren greift es.
+- **Snake:** hoch → links → runter → rechts, ohne Umkehrfehler,
+  Einzelspieler läuft.
+- **Space Invaders:** Schuss existiert (alle 10 ms gemessen: 1, 1, 1, 0 – er
+  trifft zuerst den eigenen Bunker), nach dem Durchschießen fliegt er weiter,
+  Punkte 0 → 90/105, Gegner werden zerstört.
+- **Doodle Jump:** Sprung −10,8 → +10,8 (Sprunghöhe 146 px bei 0,40
+  Schwerkraft, größter Plattformabstand 98 px), Seitensteuerung
+  200 → 132 → 216, Gegner exakt 24 × 18 px in allen drei Stilen,
+  Trefferellipse 23,4 × 20,7 px (Treffer bis 23 px Abstand, bei 26 px keiner)
+  – also nie größer als Gegner plus Spielfigur, kein unfairer Treffer.
+- **Pong:** Schläger links/rechts, Ball prallt, Solo läuft.
+- **Neustart:** `#btnNeu` in allen acht Spielen führt zurück in den
+  Startzustand (Punkte 0). Arkanoid bis zum Ende gespielt: 3 → 2 → 1 → 0
+  Leben, „Nochmal“ gibt 3 Leben und 0 Punkte.
+- **Rahmen (Connector-Start):** Spiel im iframe geöffnet und dort gestartet –
+  die Tastatur kommt im Spiel an (Schläger 240 → 42), sobald ein Klick im
+  Rahmen war; Klick und Wischen funktionieren dort genauso. Der laufende
+  Go-Connector wurde dafür nicht gestartet (iframe-Nachbau im Browser).
+
+**Offen:** Kein Spiel wurde in einem durchgehenden Durchlauf bis zum Sieg
+gespielt (Ausnahme Arkanoid bis Game over); Power-ups bei Arkanoid und
+Invaders wurden nur indirekt über Punkte geprüft. Doodle-Jump-Gegner
+erscheinen erst ab 150 m und dann mit 0,07 % je Plattform – gemessen wurde
+deshalb mit kurzzeitig gesetztem Abstand, nicht im freien Spiel.
+
 ## 26.11.2026 · Live-Stand zusammengeführt: Mensch ärgere dich nicht am Standweg
 
 Vor dem Live-Test im Mehrspieler lief die Go-Suite über den unfertigen Stand.
