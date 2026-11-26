@@ -5103,6 +5103,13 @@ async function bereitAktion(spiel){
 // Einem offenen Tisch beitreten und das Spiel öffnen.
 async function beitreten(spiel,tischId){
  const def=SUPPORTED_GAMES.find(g=>g.id===spiel);
+ // Mensch ärgere dich nicht: Die Sitzzahl hängt am Tisch, nicht an der
+ // eigenen Auswahl – sonst öffnet der Beitretende die Runde mit 2 Sitzen.
+ if(spiel==="menschaerger"){
+  const tisch=angebote.find(t=>t.id===tischId);
+  const n=tisch?Number(tisch.maxPlayers):0;
+  if(n>=2&&n<=4)selectedSeats=n;
+ }
  if(await angebotAktion("annehmen",spiel,tischId)){
   if(def)openGame(def.path, null, "online");
  }
@@ -6108,7 +6115,17 @@ function labSchleierBauen() {
 }
 
 function labVerstecken() {
-  if (labSchleier) labSchleier.style.display = "none";
+  if (!labSchleier) return;
+  labSchleier.style.display = "none";
+  // Beim Verstecken alles leeren: Beim nächsten Einblenden darf kein
+  // veralteter Satz aufblitzen. Der Vergleich in labZeige wird
+  // zurückgesetzt, damit dort neu aufgebaut wird.
+  const text = document.getElementById("labText");
+  if (text) text.textContent = "";
+  const box = document.getElementById("labKnoepfe");
+  if (box) box.textContent = "";
+  labMeldung = "";
+  labKnoepfe = [];
 }
 
 /* Der Schleier hängt am Spielfenster, nicht am Fensterrand: Beim Scrollen

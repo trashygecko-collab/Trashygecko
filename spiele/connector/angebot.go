@@ -745,6 +745,20 @@ func angebotHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				felder["runden"] = input.Runden
 			}
+			// Mensch ärgere dich nicht: Die Sitzzahl steht in der Spielauswahl
+			// (maxPlayers), das Spiel liest sie beim Eröffnen als "anzahl". Ohne
+			// das Umlegen entstand jede Runde mit zwei Sitzen – egal, was im
+			// Connector eingestellt war.
+			if spiel == "menschaerger" {
+				sitze := input.MaxPlayers
+				if sitze == 0 {
+					sitze = input.Anzahl
+				}
+				if sitze < 2 || sitze > 4 {
+					sitze = 2
+				}
+				felder["anzahl"] = sitze
+			}
 			if nr, text := spielAufruf(api, code, "create", felder); nr >= 300 {
 				mu.Lock()
 				if room := rooms[code]; room != nil {
