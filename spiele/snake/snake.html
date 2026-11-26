@@ -156,8 +156,8 @@ html[data-stil="buben"] #regeln b,body[data-stil="buben"] #regeln b,html[data-st
   <canvas id="feld" width="420" height="460"></canvas>
   <div class="meldung" id="meldung">
    <div class="kasten">
-    <h2 id="meldungTitel">SNAKE</h2>
-    <p id="meldungText">Wische über das Feld, um die Richtung zu bestimmen – oder nimm die Pfeiltasten.</p>
+    <h2 id="meldungTitel">SNAKE · EINZELSPIELER</h2>
+    <p id="meldungText">Allein gegen die eigene Bestleistung: wische über das Feld oder nimm die Pfeiltasten.</p>
     <button id="meldungKnopf">Starten</button>
     <div class="meldung-knoepfe" id="meldungKnoepfe" hidden></div>
    </div>
@@ -176,6 +176,7 @@ html[data-stil="buben"] #regeln b,body[data-stil="buben"] #regeln b,html[data-st
    <li><b>Steuern:</b> Mit dem Finger über das Feld wischen – nach oben, unten, links oder rechts. Am PC gehen auch die Pfeiltasten und W A S D.</li>
    <li><b>Vorsicht:</b> Die Schlange darf weder den Rand noch sich selbst berühren. Umkehren geht nicht, Richtungswechsel werden gesammelt und nacheinander ausgeführt.</li>
    <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+   <li><b>Zu zweit:</b> Der Einzelspieler ist der Standard. Ein Duell gegen einen zweiten Spieler gibt es zusätzlich über den Connector – auf dieser Seite über „Duell im Raum“, wenn Raum und Kennung in der Adresse stehen.</li>
   </ol>
   <p class="klein mitte"><a href="../spiele.html">Zurück zur Spieleübersicht</a></p>
  </details>
@@ -187,14 +188,18 @@ const canvas=document.getElementById("feld");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
 
-/* Über den Connector: Raum, Kennung und Name stehen in der Adresse. Dann
-   führt der Server beide Schlangen, den Apfel und die Runden – hier wird
-   nur gelenkt und gezeichnet. Ohne diese Angaben läuft alles lokal. */
+/* Zwei Spielarten in einer Seite:
+     Einzelspieler  Standard. Läuft ohne Raum, ohne zweiten Spieler, ohne Netz.
+     Duell           nur mit ?art=duell UND room+id; dann führt der Server
+                     beide Schlangen, den Apfel und die Runden.
+   Raum und Kennung allein schalten bewusst nichts um: die Spielhalle öffnet
+   jede Seite mit room+id, und Snake muss dort trotzdem allein spielbar sein. */
 const params=new URLSearchParams(location.search);
 const ROOM=(params.get("room")||"").toUpperCase();
 const ID=params.get("id")||"";
 const NAME=params.get("name")||"Spieler";
-const ONLINE=!!(ROOM&&ID);
+const ART=params.get("art")||"";
+const ONLINE=!!(ROOM&&ID&&ART==="duell");
 
 const SPALTEN=21, ZEILEN=23;
 const ZELLE=20;
@@ -430,9 +435,9 @@ function neuesSpiel(){
  apfelSetzen();
  zahlenZeigen();
  $("rekord").textContent=rekordLaden();
- zustand="start";
- $("btnPause").textContent="Pause";
- zeigeMeldung("SNAKE","Wische über das Feld, um die Richtung zu bestimmen – oder nimm die Pfeiltasten.","Starten");
+   zustand="start";
+  $("btnPause").textContent="Pause";
+  zeigeMeldung("SNAKE · EINZELSPIELER","Allein gegen die eigene Bestleistung: wische über das Feld oder nimm die Pfeiltasten.","Starten");
  $("meldungKnopf").onclick=starten;
  zeichne();
 }
@@ -839,6 +844,20 @@ if(ONLINE){
  WG.leben({room:ROOM,id:ID,name:NAME}).then(holen);
 }else{
  neuesSpiel();
+ /* Aus der Spielhalle kommt Snake mit Raum und Kennung in der Adresse. Der
+    Einzelspieler läuft trotzdem; wer das Duell will, schaltet hier um. */
+ if(ROOM&&ID){
+  const b=document.createElement("button");
+  b.id="btnDuell";
+  b.textContent="Duell im Raum";
+  b.title="Gegen einen zweiten Spieler im Raum antreten";
+  b.onclick=()=>{
+   const u=new URL(location.href);
+   u.searchParams.set("art","duell");
+   location.href=u.toString();
+  };
+  $("menueleiste").appendChild(b);
+ }
 }
 requestAnimationFrame(schleife);
 

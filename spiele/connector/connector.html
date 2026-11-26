@@ -2201,10 +2201,11 @@ function tttStatus(text, gameId){
 // Browser eine alte Spielseite aus dem Zwischenspeicher zeigt (anderes Brett,
 // alter Würfel). Die Kennung muss mit, weil die Spielseite ihren eigenen
 // sessionStorage-Zugriff hat und denselben Spieler wiedererkennen muss.
-function spielAdresse(path){
+function spielAdresse(path, art){
  return path+"?room="+encodeURIComponent(activeRoom)+
   "&name="+encodeURIComponent(playerName())+
   "&id="+encodeURIComponent(sessionID)+
+  (art?"&art="+encodeURIComponent(art):"")+
   "&v="+Date.now();
 }
 
@@ -2225,9 +2226,9 @@ function spielDef(path){
 // einen eigenen Tab, damit der Connector dort stehen bleibt. Blockiert der
 // Browser den Tab, geht es wie bisher im selben Tab weiter.
 // PC: rechts neben dem Chat. Handy: unter dem Chat, in derselben Seite.
-function openGame(path){
+function openGame(path, art){
  const def=spielDef(path);
- spielOeffnen(spielAnzeigename(path),spielAdresse(path),{mehrspieler:true,gameId:def?def.id:""});
+ spielOeffnen(spielAnzeigename(path),spielAdresse(path, art),{mehrspieler:true,gameId:def?def.id:""});
 }
 
 // Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
@@ -3054,11 +3055,11 @@ async function refreshSnake(players){
  if(game.status==="invited"){
   tttStatus("Snake: "+namen+" – "+game.spieler.length+" von 2 Plätzen belegt.");
   if(meiner){
-   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("snake")));
+   addStatusButton("Spiel öffnen", ()=>openGame(gamePath("snake"), "duell"));
   }else{
    addStatusButton("Mitspielen", async()=>{
     if(await gameApiAction("snake","join")){
-     openGame(gamePath("snake"));
+     openGame(gamePath("snake"), "duell");
     }
    });
   }
@@ -3074,7 +3075,7 @@ async function refreshSnake(players){
   tttStatus("Snake – Runde "+game.runde+" vorbei: "+(game.meldung||"")+" Stand "+stand+".", "snake");
   addStatusButton("Nächste Runde", async()=>{
    if(await gameApiAction("snake","weiter")){
-    openGame(gamePath("snake"));
+    openGame(gamePath("snake"), "duell");
    }
   });
   return;
@@ -3084,7 +3085,7 @@ async function refreshSnake(players){
   tttStatus("Snake beendet – "+(game.sieger||"niemand")+" gewinnt "+stand+".", "snake");
   addStatusButton("Neue Partie", async()=>{
    if(await gameApiAction("snake","reset")){
-    openGame(gamePath("snake"));
+    openGame(gamePath("snake"), "duell");
    }
   });
  }
@@ -4267,9 +4268,13 @@ function ueberKarte(e, akzent) {
   modi.className = "u-modi";
 
   // Einzelspieler und Mitspieler am Gerät öffnen dieselbe Spielseite.
+  // Die Beschriftung sagt, wer am Gerät mitspielt: allein, zu mehreren oder
+  // beides (dann öffnet die Seite ihre eigene Auswahl).
   const amGeraet = e.solo || e.zwei || e.lokal;
   if (amGeraet) {
-    modi.appendChild(uModusZeile("Spielen",
+    const mehrere = e.zwei || e.lokal;
+    const wie = e.solo && !mehrere ? "Einzelspieler" : (mehrere && !e.solo ? "Am Gerät spielen" : "Spielen");
+    modi.appendChild(uModusZeile(wie,
       function () { openGame("/spiele/" + e.pfad); }, !e.online));
   }
   if (e.bot) {

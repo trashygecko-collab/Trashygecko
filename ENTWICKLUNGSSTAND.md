@@ -5,6 +5,39 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 25.11.2026 · Snake wieder Einzelspieler, Würfelspiele als Mehrspieler
+
+**Snake:** Die Spielhalle öffnet jede Seite mit `?room=…&id=…`; Snake schaltete daraufhin
+in die Zwei-Spieler-Lobby um – der Einzelspieler war aus der Halle nicht erreichbar. Das
+Duell gilt jetzt nur mit `&art=duell` (der Connector setzt das an seinen vier
+Snake-Aufrufen, `spielAdresse(path, art)`); ohne den Zusatz startet Snake allein, bei
+Raum+Kennung steht zusätzlich „Duell im Raum“ im Menü.
+Geprüft (headless Chromium, ohne Testhaken): Startbild „SNAKE · EINZELSPIELER“, HUD nur
+Punkte/Länge/Tempo/Rekord, kein Mitspielertext im DOM, Game Over nach 3,9 s, „Nochmal“
+setzt auf 0 Punkte / Länge 3, zweiter Lauf läuft. Apfel: 10 Punkte, Länge 3 → 4, Rekord
+10 im `localStorage`. Duell im Raum TG-33D5 gegen Bot „Mumpitz“ (`action=bot`): Menü
+ausgeblendet, Stand „Namenloser 2 0 : Mumpitz 1“, Runde 1 abgeschlossen.
+
+**Würfelspiele:** Alle 25 (7 unter `brettspiele/`, 18 in `wuerfelspiele/`) waren als
+`solo` geführt und standen damit unter „Einzelspieler“, obwohl sie einen Tisch für 2–6
+Personen und über den Connector Computergegner haben. Merkmale jetzt
+`lokal zwei computer`, auf den Hallenkarten „Solo“ → „Bots“.
+Gemessen im Connector: „Einzelspieler“ 52 → **36** Spiele (0 Würfelspiele),
+„Mehrspieler“ **72** mit allen 25; je Würfelkarte die Knöpfe „Am Gerät spielen“,
+„Gegen Computer“, „Online spielen“. Lokal zu zweit: Beelzebub, 5 Runden,
+**40 : 20** mit Siegmeldung. Gegen Computer: Beelzebub mit Bot „Vroni“, Bot würfelt und
+punktet (27). `go test ./...` in `spiele/connector` grün (229 s, u. a.
+`bot_wuerfel_test.go` über alle 18 Spiele, `bot_snake_test.go`).
+
+**Zahlen und Wege:** `spiele.html` lädt jetzt `spieldaten.js` und setzt „N Spiele ·
+N Kategorien“ daraus (**95 / 6**, vorher 94); Werkzeugkachel und
+`android/start/app.html` ebenfalls 95. `python spiele/pruefe-spieldaten.py` läuft ohne
+Abweichung (vorher 3). Keine CDNs, keine neuen Bibliotheken.
+
+**Noch offen:** Das verlinkte APK ist der alte Bau; `assets/www` und `katalog.json`
+entstehen beim Bauen und wurden nicht von Hand geändert – die App zeigt die neue
+Zuordnung erst nach einem Neubau.
+
 ## 24.11.2026 · Schritt 7: Cache- und Ausfallverhalten geprüft
 
 Geprüft auf Emulator B (Android 14) mit dem Debug-Bau 1.17/18, Flugmodus
