@@ -5,6 +5,64 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Super Pimmelchen fertiggestellt: drei Stufen, Querformat, Vollbild, Pause
+
+**Nur `spiele/pimmel/spimmel.html` angefasst** (beide Ablagen byte-gleich), Sicherung
+vorher in `arbeit/sicherung/2026-11-26-super-pimmelchen/`. Die 61 Level sind
+unverändert: `LEVEL_1_MAP` plus 60 Einträge in `LEVEL_MAPS`; alle 61 über die
+Levelauswahl geladen, 0 Warnungen („Level … fehlt oder hat falsche Dimension“),
+Anzeige läuft bis „61“.
+
+**Stufen.** Leicht 10 s, Mittel 15 s, Schwer 20 s – nur der Takt der Specials hängt
+daran (`STUFEN`), die Wahl steht in der Levelauswahl und wird als
+`superPimmelchenStufe` gespeichert. Gemessen im Browser (Zeitstempel im Taktgeber):
+Leicht **10,01 / 9,99 s**, Mittel **15,01 s**, Schwer **20,00 s**.
+Der Auftrag nennt in §9 für Leicht „5 Sekunden“, in §3 „10 Sekunden“ – umgesetzt
+ist §3 (10 s); eine Zeile in `STUFEN` ändert das.
+
+**Specials bleiben liegen.** Bisher gab es genau einen Platz (`extra`): lag dort
+etwas, erschien nichts Neues. Jetzt eine Liste (`extras`), neue Specials suchen sich
+ein freies Feld, ein liegendes wird weder ersetzt noch gelöscht; nur der Totenkopf
+verschwindet weiter nach 5–10 s (bestehende Regel). Gemessen: nach 11 / 22 / 33 s
+lagen **1 / 2 / 3** Specials gleichzeitig.
+
+**Takt ohne Doppelauslösung.** Ein einziger `setInterval` (200 ms) prüft eine
+Fälligkeit; er wird beim Pausieren angehalten, beim Weiterlaufen neu gestellt und
+von Levelwechsel oder Drehung **nicht** neu gestartet. Gemessen: 10,43 → 9,99 s
+über eine Drehung hinweg, 18,09 s über eine 6-s-Pause (Pause + neuer Takt, kein
+Nachtrag), 9,99 s über einen Levelwechsel.
+
+**Querformat (390 × 844 → 844 × 390, Touch).** `passeBuehne()` rechnet das Feld aus
+der freien Fläche (20:11, nie verzerrt): Hochformat **378 × 207** (Verhältnis 1,826),
+Querformat **631 × 347** (1,818) bei 31 px hoher Anzeigezeile, kein Hoch- oder
+Querscrollen (Seite genau 844 bzw. 390). Im Querformat liegt die Steuerung
+halbtransparent unten rechts über dem Feld (44-px-Tasten, Feuerknopf 84 px),
+Überschriften, Startleiste und der Connector-Knopf sind im Spiel ausgeblendet.
+Drehen zurück ergibt wieder 378 × 207; Neuberechnung über `resize`,
+`orientationchange`, `visualViewport` und `fullscreenchange`.
+
+**Vollbild.** Ein und aus über die Leiste (PC/Handy), zusätzlich aus dem Pause-Blatt;
+die Größe wird nach dem Wechsel neu gerechnet (Hochformat **382 × 210**, Verhältnis
+1,819; Querformat 345 px hoch). Erlaubt der Browser kein echtes Vollbild, füllt
+`body.pseudo-vollbild` das Fenster – gleiche Ansicht, gleicher Weg zurück.
+
+**Pause.** Neu: Knopf in der Spielleiste, `P`/`Escape`, Tabwechsel und Fensterverlust;
+das Blatt bietet Weiterspielen, Neustart, Vollbild und Verlassen. Nach dem Weiter
+läuft die Bewegung von selbst wieder an.
+
+**Steuerung.** Pfeiltasten und WASD unverändert, Leertaste schießt, Enter startet.
+Loslassen hält an (gemessen: x 10 → 13, danach 0,6 s unverändert), Tippen auf ▲ setzt
+die Richtung. Der Connector-Knopf bleibt in der Kopfzeile, ohne eine zweite Reihe zu
+öffnen (sechste Spalte).
+
+**Geprüft:** alle 61 Level, Takt je Stufe, liegende Specials, Drehung, Pause,
+Levelwechsel, Neustart (Punkte 0, Level 01), Tastatur, Touch, Vollbild an/aus,
+PC 1280 × 800 (Feld 948 × 521, Seite genau 1280 × 800) – **0 Konsolenfehler**.
+Nicht durchgespielt: eine Partie über alle 61 Level am Stück; IOS-Safari und echte
+Geräte wurden nicht getestet.
+
+---
+
 ## 26.11.2026 · Mädchenstil am PC ruhiger, Rotlicht auf vier Stunden ausgelegt
 
 **Mädchenstil.** Am Handy trägt die kräftige Rosafläche die Seite, am PC wurde
