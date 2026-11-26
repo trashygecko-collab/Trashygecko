@@ -18,29 +18,32 @@
   var VERSION = 1;
   var STUNDE_SEK = 60;              /* eine Spielstunde in Echtzeitsekunden */
   var KONDOM = { anzahl: 4, preis: 5 };
-  var OFFLINE_GRUND_STUNDEN = 8;
+  /* Zwei Stunden Abwesenheit zählen voll, jede Buchhaltungs-Stufe gibt eine
+     Stunde dazu. Länger als vier Stunden sammelt niemand – sonst würde eine
+     Nacht das halbe Spiel abkürzen. */
+  var OFFLINE_GRUND_STUNDEN = 2;
 
   /* ---------------------------------------------------------------- Stufen */
   var STUFEN = [
-    { nr: 1, name: "Straßenarbeit", kosten: 0, faktor: 1,
+    { nr: 1, name: "Straßenarbeit", kosten: 0, faktor: 1.5,
       text: "Ein Laternenpfahl, eine Decke, große Träume. Mehr ist gerade nicht drin." },
-    { nr: 2, name: "Kleine private Unterkunft", kosten: 500, faktor: 1.5,
+    { nr: 2, name: "Kleine private Unterkunft", kosten: 500, faktor: 1.72,
       text: "Zum ersten Mal ein Dach über dem Kopf – und ein Türschild, das jeder sieht." },
-    { nr: 3, name: "Erste eigene Geschäftsräume", kosten: 2000, faktor: 1.9,
+    { nr: 3, name: "Erste eigene Geschäftsräume", kosten: 21500, faktor: 1.94,
       text: "Schaufenster, Neonherz, Kopierer. Die Nachbarschaft nennt es „Studio“." },
-    { nr: 4, name: "Kleines Freudenhaus", kosten: 8647.26, faktor: 2.2,
+    { nr: 4, name: "Kleines Freudenhaus", kosten: 924500, faktor: 2.16,
       text: "Drei Zimmer, ein Wartebereich und ein Staubsauger mit sehr viel Leistung." },
-    { nr: 5, name: "Größeres Etablissement", kosten: 6.41302e+06, faktor: 2.6,
+    { nr: 5, name: "Größeres Etablissement", kosten: 39753500, faktor: 2.38,
       text: "Bar, Musik, Kaffeemaschine. Die Kaffeemaschine ist der wahre Star." },
-    { nr: 6, name: "Mehrstöckiges Rotlichtgebäude", kosten: 2.72076e+11, faktor: 3,
+    { nr: 6, name: "Mehrstöckiges Rotlichtgebäude", kosten: 1709400500, faktor: 2.6,
       text: "Aufzug, Etagenklingel, Sicherheitsdienst. Der Aufzug fährt jetzt rund um die Uhr." },
-    { nr: 7, name: "Luxus-Freudenhaus", kosten: 2.19104e+13, faktor: 3.5,
+    { nr: 7, name: "Luxus-Freudenhaus", kosten: 73504221500, faktor: 2.82,
       text: "Marmor, Samt und ein Pissoir mit Beleuchtung. Der Hausmeister weint vor Glück." },
-    { nr: 8, name: "Großes Stundenhotel", kosten: 4.61924e+15, faktor: 4,
+    { nr: 8, name: "Großes Stundenhotel", kosten: 3160681524500, faktor: 3.04,
       text: "Zimmerkarten, Zimmerservice, Zimmer mit Aussicht auf den Parkplatz." },
-    { nr: 9, name: "Luxushotel in der Großstadt", kosten: 1.14919e+18, faktor: 4.5,
+    { nr: 9, name: "Luxushotel in der Großstadt", kosten: 135909305535000, faktor: 3.26,
       text: "Die Skyline kennt euren Namen. Der Concierge kennt ihn schon lange." },
-    { nr: 10, name: "Internationales Luxusimperium", kosten: 2.22149e+20, faktor: 6,
+    { nr: 10, name: "Internationales Luxusimperium", kosten: 5844100138005000, faktor: 3.48,
       text: "Von der Straße an die Börse. Die erste Laterne steht jetzt im Foyer." }
   ];
 
@@ -48,148 +51,148 @@
   /* preis = erster Mitarbeiter, stunde = Euro je Spielstunde und Kopf,
      wuchs = Preissteigerung je weiterem Kopf, ab = nötige Stufe. */
   var PERSONAL = [
-    { id: "mia", name: "Mia", rolle: "Praktikantin", preis: 200, stunde: 20, wuchs: 1.23, ab: 1,
+    { id: "mia", name: "Mia", rolle: "Praktikantin", preis: 200, stunde: 27.2, wuchs: 1.33, ab: 1,
       text: "Bringt Kaffee, gute Laune und den ersten zahlenden Gast." },
-    { id: "ruby", name: "Ruby", rolle: "Hostess", preis: 500, stunde: 100, wuchs: 1.23, ab: 1,
+    { id: "ruby", name: "Ruby", rolle: "Hostess", preis: 500, stunde: 136, wuchs: 1.33, ab: 1,
       text: "Hat ein Händchen für Stammkunden und ein zweites für Trinkgeld." },
-    { id: "bea", name: "Bea", rolle: "Studioleitung", preis: 3000, stunde: 550, wuchs: 1.24, ab: 2,
+    { id: "bea", name: "Bea", rolle: "Studioleitung", preis: 3000, stunde: 748, wuchs: 1.34, ab: 2,
       text: "Führt Dienstplan, Preistafel und die Nerven aller anderen." },
-    { id: "kevin", name: "Kevin", rolle: "Türsteher", preis: 12000, stunde: 2200, wuchs: 1.24, ab: 2,
+    { id: "kevin", name: "Kevin", rolle: "Türsteher", preis: 12000, stunde: 2992, wuchs: 1.34, ab: 2,
       text: "Sagt „kein Zutritt“ so freundlich, dass es wie ein Kompliment klingt." },
-    { id: "krueger", name: "Frau Krüger", rolle: "Buchhaltung", preis: 60000, stunde: 12000, wuchs: 1.25, ab: 3,
+    { id: "krueger", name: "Frau Krüger", rolle: "Buchhaltung", preis: 60000, stunde: 16320, wuchs: 1.35, ab: 3,
       text: "Findet jede Quittung. Auch die, die nie geschrieben wurde." },
-    { id: "ali", name: "Ali", rolle: "Chauffeur", preis: 350000, stunde: 80000, wuchs: 1.25, ab: 3,
+    { id: "ali", name: "Ali", rolle: "Chauffeur", preis: 560000, stunde: 108800, wuchs: 1.35, ab: 3,
       text: "Fährt diskret im Kreis, bis der Gast fertig ist. Tanken zahlt die Firma." },
-    { id: "bohne", name: "Dr. Bohne", rolle: "Anwalt", preis: 2.5e6, stunde: 700000, wuchs: 1.26, ab: 4,
+    { id: "bohne", name: "Dr. Bohne", rolle: "Anwalt", preis: 4e+06, stunde: 952000, wuchs: 1.36, ab: 4,
       text: "Liest das Kleingedruckte und ergänzt es um ein zweites Kleingedrucktes." },
-    { id: "steffi", name: "Steffi", rolle: "Marketing", preis: 2e7, stunde: 6e6, wuchs: 1.26, ab: 5,
+    { id: "steffi", name: "Steffi", rolle: "Marketing", preis: 3.2e+07, stunde: 8.16e+06, wuchs: 1.36, ab: 5,
       text: "Macht aus einem roten Fenster eine Marke mit eigenem Hashtag." },
-    { id: "conny", name: "Conny", rolle: "Hotelmanagerin", preis: 3e8, stunde: 9e7, wuchs: 1.27, ab: 6,
+    { id: "conny", name: "Conny", rolle: "Hotelmanagerin", preis: 5.4e+08, stunde: 1.224e+08, wuchs: 1.37, ab: 6,
       text: "Checkt Gäste ein, Beschwerden aus und Personal nach." },
-    { id: "glanz", name: "Agentur Glanz", rolle: "PR", preis: 6e9, stunde: 2e9, wuchs: 1.27, ab: 7,
+    { id: "glanz", name: "Agentur Glanz", rolle: "PR", preis: 1.08e+10, stunde: 2.72e+09, wuchs: 1.37, ab: 7,
       text: "Presse, Podcasts, Preisverleihungen – alles mit demselben roten Teppich." },
-    { id: "guenther", name: "Günther", rolle: "Immobilienhai", preis: 1.5e11, stunde: 5e10, wuchs: 1.28, ab: 8,
+    { id: "guenther", name: "Günther", rolle: "Immobilienhai", preis: 3e+11, stunde: 6.8e+10, wuchs: 1.38, ab: 8,
       text: "Kauft Häuser, bevor sie gebaut sind. Manchmal auch die Straße davor." },
-    { id: "family", name: "Family Office", rolle: "Vermögensverwaltung", preis: 4e12, stunde: 1.4e12, wuchs: 1.28, ab: 9,
+    { id: "family", name: "Family Office", rolle: "Vermögensverwaltung", preis: 8e+12, stunde: 1.904e+12, wuchs: 1.38, ab: 9,
       text: "Verwaltet das Geld so diskret, dass selbst ihr Chef es nicht mehr findet." },
-    { id: "concierge", name: "Jet-Set-Concierge", rolle: "Concierge", preis: 2e14, stunde: 8e13, wuchs: 1.29, ab: 10,
+    { id: "concierge", name: "Jet-Set-Concierge", rolle: "Concierge", preis: 4.4e+14, stunde: 1.088e+14, wuchs: 1.39, ab: 10,
       text: "Bucht Suite, Jet und Alibi – in dieser Reihenfolge." },
-    { id: "filz", name: "Dr. Filz", rolle: "Lobbyist", preis: 1e16, stunde: 4e15, wuchs: 1.29, ab: 10,
+    { id: "filz", name: "Dr. Filz", rolle: "Lobbyist", preis: 2.2e+16, stunde: 5.44e+15, wuchs: 1.39, ab: 10,
       text: "Sorgt dafür, dass die Steuererklärung so aussieht wie ein Gartenzaun." }
   ];
 
   /* -------------------------------------------------------------- Upgrades */
   var UPGRADES = [
-    { id: "tafel", name: "Reklametafel", art: "einnahme", faktor: 1.15, preis: 250, ab: 1,
+    { id: "tafel", name: "Reklametafel", art: "einnahme", faktor: 1.06, preis: 250, ab: 1,
       text: "Ein Schild an der Laterne: diskret, aber mit Pfeil." },
-    { id: "ausstattung", name: "Bessere Ausstattung", art: "einnahme", faktor: 1.2, preis: 900, ab: 1,
+    { id: "ausstattung", name: "Bessere Ausstattung", art: "einnahme", faktor: 1.08, preis: 900, ab: 1,
       text: "Frische Bezüge, weiche Decke, ein Spiegel ohne Sprung." },
-    { id: "kalender", name: "Terminkalender", art: "tempo", faktor: 0.85, preis: 1500, ab: 1,
+    { id: "kalender", name: "Terminkalender", art: "tempo", faktor: 0.94, preis: 1500, ab: 1,
       text: "Doppelbuchungen werden weniger. Die Wartezeit auch." },
-    { id: "eingang", name: "Zweiter Eingang", art: "einnahme", faktor: 1.25, preis: 24000, ab: 2,
+    { id: "eingang", name: "Zweiter Eingang", art: "einnahme", faktor: 1.1, preis: 24000, ab: 2,
       text: "Zwei Türen, zwei Wege, halb so viel Gedränge im Flur." },
-    { id: "blatt", name: "Werbung im Lokalblatt", art: "einnahme", faktor: 1.3, preis: 80000, ab: 2,
+    { id: "blatt", name: "Werbung im Lokalblatt", art: "einnahme", faktor: 1.12, preis: 80000, ab: 2,
       text: "Vier Zeilen, ein Foto vom Hinterkopf, erstaunlich viele Anrufe." },
-    { id: "reinigung", name: "Reinigungspersonal", art: "einnahme", faktor: 1.2, preis: 180000, ab: 3,
+    { id: "reinigung", name: "Reinigungspersonal", art: "einnahme", faktor: 1.08, preis: 180000, ab: 3,
       text: "Riecht nach Zitrone statt nach Entscheidungen." },
-    { id: "sicherheit", name: "Sicherheitsdienst", art: "einnahme", faktor: 1.25, preis: 360000, ab: 3,
+    { id: "sicherheit", name: "Sicherheitsdienst", art: "einnahme", faktor: 1.1, preis: 360000, ab: 3,
       text: "Zwei kräftige Kollegen und ein Funkgerät mit Taschenlampe." },
-    { id: "buchhaltung", name: "Automatische Buchhaltung", art: "offline", faktor: 1.25, stunden: 2,
+    { id: "buchhaltung", name: "Automatische Buchhaltung", art: "offline", faktor: 1.1, stunden: 1,
       preis: 600000, ab: 3,
       text: "Zählt weiter, während niemand hinsieht – und findet das völlig normal." },
-    { id: "raeume", name: "Größere Räumlichkeiten", art: "einnahme", faktor: 1.35, preis: 1.6e+06, ab: 4,
+    { id: "raeume", name: "Größere Räumlichkeiten", art: "einnahme", faktor: 1.14, preis: 1.6e+06, ab: 4,
       text: "Mehr Zimmer heißt mehr Umsatz. Und mehr Flur, der gewischt werden will." },
-    { id: "marketing", name: "Professionelles Marketing", art: "einnahme", faktor: 1.4, preis: 4.8e+06, ab: 4,
+    { id: "marketing", name: "Professionelles Marketing", art: "einnahme", faktor: 1.16, preis: 4.8e+06, ab: 4,
       text: "Zielgruppe, Reichweite, rote Zahlen nur in der Bilanz." },
-    { id: "kapazitaet", name: "Kundenkapazität verdoppelt", art: "einnahme", faktor: 1.5, preis: 1.6e+07, ab: 5,
+    { id: "kapazitaet", name: "Kundenkapazität verdoppelt", art: "einnahme", faktor: 1.2, preis: 1.6e+07, ab: 5,
       text: "Statt Wartezimmer jetzt Wartebereich mit Sitzsack und Bildschirm." },
-    { id: "etage", name: "Zusätzliche Etage", art: "einnahme", faktor: 1.3, preis: 6e+07, ab: 5,
+    { id: "etage", name: "Zusätzliche Etage", art: "einnahme", faktor: 1.12, preis: 6e+07, ab: 5,
       text: "Eine Treppe mehr, ein Aufzug weniger. Beschwerden: zwei." },
-    { id: "organisation", name: "Bessere Organisation", art: "tempo", faktor: 0.85, preis: 2e+08, ab: 6,
+    { id: "organisation", name: "Bessere Organisation", art: "tempo", faktor: 0.94, preis: 2e+08, ab: 6,
       text: "Schichtplan aus der Cloud. Der Kalender hat jetzt einen Kalender." },
-    { id: "neon", name: "Neonfassade", art: "einnahme", faktor: 1.35, preis: 8e+08, ab: 6,
+    { id: "neon", name: "Neonfassade", art: "einnahme", faktor: 1.14, preis: 8e+08, ab: 6,
       text: "Von drei Autobahnen aus sichtbar. Die Nachbarn haben aufgehört zu zählen." },
-    { id: "vip", name: "VIP-Bereich", art: "einnahme", faktor: 1.5, preis: 4e+09, ab: 7,
+    { id: "vip", name: "VIP-Bereich", art: "einnahme", faktor: 1.2, preis: 4e+09, ab: 7,
       text: "Samt, Sekt und eine Tür, die nur nach oben aufgeht." },
-    { id: "waescherei", name: "Eigene Wäscherei", art: "einnahme", faktor: 1.2, preis: 2.4e+10, ab: 7,
+    { id: "waescherei", name: "Eigene Wäscherei", art: "einnahme", faktor: 1.08, preis: 2.4e+10, ab: 7,
       text: "Drei Maschinen, ein Trockner und ein Mitarbeiter mit starkem Rücken." },
-    { id: "chauffeur", name: "Chauffeur-Service", art: "einnahme", faktor: 1.4, preis: 1.6e+11, ab: 8,
+    { id: "chauffeur", name: "Chauffeur-Service", art: "einnahme", faktor: 1.16, preis: 1.6e+11, ab: 8,
       text: "Abholung an der Haustür, Rückweg ohne Umwege, Scheiben undurchsichtig." },
-    { id: "interieur", name: "Designer-Interieur", art: "einnahme", faktor: 1.5, preis: 1.2e+12, ab: 8,
+    { id: "interieur", name: "Designer-Interieur", art: "einnahme", faktor: 1.2, preis: 1.2e+12, ab: 8,
       text: "Alles in Roségold. Sogar der Aschenbecher hat einen Namen." },
-    { id: "pr", name: "Eigene PR-Abteilung", art: "einnahme", faktor: 1.6, preis: 8e+12, ab: 9,
+    { id: "pr", name: "Eigene PR-Abteilung", art: "einnahme", faktor: 1.24, preis: 8e+12, ab: 9,
       text: "Schreibt die Schlagzeilen selbst, bevor es jemand anders tut." },
-    { id: "lounge", name: "Luxus-Lounge", art: "tempo", faktor: 0.8, preis: 8e+13, ab: 9,
+    { id: "lounge", name: "Luxus-Lounge", art: "tempo", faktor: 0.92, preis: 8e+13, ab: 9,
       text: "Wer wartet, wartet jetzt auf einer Ledercouch mit Blick auf die Stadt." },
-    { id: "buchung", name: "Globales Buchungssystem", art: "offline", faktor: 1.3, stunden: 2,
+    { id: "buchung", name: "Globales Buchungssystem", art: "offline", faktor: 1.12, stunden: 1,
       preis: 1.2e+15, ab: 10,
       text: "Bucht rund um die Uhr, in jeder Zeitzone, ohne ein einziges Telefonat." },
-    { id: "jet", name: "Privatjet-Flotte", art: "einnahme", faktor: 1.8, preis: 2e+16, ab: 10,
+    { id: "jet", name: "Privatjet-Flotte", art: "einnahme", faktor: 1.32, preis: 2e+16, ab: 10,
       text: "Zwei Jets, eine Crew, sehr viele rote Koffer." },
-    { id: "steuern", name: "Steueroptimierung Deluxe", art: "einnahme", faktor: 1.7, preis: 3.2e+17, ab: 10,
+    { id: "steuern", name: "Steueroptimierung Deluxe", art: "einnahme", faktor: 1.28, preis: 3.2e+17, ab: 10,
       text: "Der Firmensitz ist jetzt ein Briefkasten mit Meerblick." }
   ];
 
   /* ------------------------------------------------------------- Erfolge */
   var ERFOLGE = [
-    { id: "erstes-geld", name: "Erste Einnahme", bonus: 0.02,
+    { id: "erstes-geld", name: "Erste Einnahme", bonus: 0.007,
       text: "Die ersten 20 € sind verdient – ehrlicher als sie aussehen.",
       pruef: function (s) { return s.gesamtEinnahmen >= 20; } },
-    { id: "hundert", name: "Der erste Hunni", bonus: 0.02,
+    { id: "hundert", name: "Der erste Hunni", bonus: 0.007,
       text: "100 € auf dem Konto. Die Laterne ist jetzt Stammgast.",
       pruef: function (s) { return s.gesamtEinnahmen >= 100; } },
-    { id: "erste-kraft", name: "Erste Mitarbeiterin", bonus: 0.03,
+    { id: "erste-kraft", name: "Erste Mitarbeiterin", bonus: 0.0105,
       text: "Zum ersten Mal verdient jemand anderes das Geld mit.",
       pruef: function (s) { return anzahlPersonal(s) >= 1; } },
-    { id: "team-10", name: "Zehn Leute", bonus: 0.03,
+    { id: "team-10", name: "Zehn Leute", bonus: 0.0105,
       text: "Ein Team, ein Dienstplan, ein Kaffeeautomat.",
       pruef: function (s) { return anzahlPersonal(s) >= 10; } },
-    { id: "team-50", name: "Fünfzig Leute", bonus: 0.05,
+    { id: "team-50", name: "Fünfzig Leute", bonus: 0.0175,
       text: "Die Personalabteilung ist jetzt größer als das erste Zimmer.",
       pruef: function (s) { return anzahlPersonal(s) >= 50; } },
-    { id: "stufe-3", name: "Eigene Räume", bonus: 0.03,
+    { id: "stufe-3", name: "Eigene Räume", bonus: 0.0105,
       text: "Ein Schaufenster mit Neonherz. Kein Umweg mehr über die Straße.",
       pruef: function (s) { return s.stufe >= 3; } },
-    { id: "stufe-5", name: "Etablissement", bonus: 0.04,
+    { id: "stufe-5", name: "Etablissement", bonus: 0.014,
       text: "Mit Bar. Die Bar war teurer als das Gebäude.",
       pruef: function (s) { return s.stufe >= 5; } },
-    { id: "stufe-7", name: "Luxus", bonus: 0.05,
+    { id: "stufe-7", name: "Luxus", bonus: 0.0175,
       text: "Marmor im Flur. Der Hausmeister trägt jetzt Handschuhe.",
       pruef: function (s) { return s.stufe >= 7; } },
-    { id: "stufe-10", name: "Weltimperium", bonus: 0.08,
+    { id: "stufe-10", name: "Weltimperium", bonus: 0.028,
       text: "Die Laterne aus Stufe 1 steht im Foyer unter Denkmalschutz.",
       pruef: function (s) { return s.stufe >= 10; } },
-    { id: "million", name: "Millionär", bonus: 0.04,
+    { id: "million", name: "Millionär", bonus: 0.014,
       text: "Eine Million Einnahmen. Die Bank fragt nicht mehr, woher.",
       pruef: function (s) { return s.gesamtEinnahmen >= 1e6; } },
-    { id: "milliarde", name: "Milliardär", bonus: 0.05,
+    { id: "milliarde", name: "Milliardär", bonus: 0.0175,
       text: "Eine Milliarde. Der Steuerberater hat jetzt einen Steuerberater.",
       pruef: function (s) { return s.gesamtEinnahmen >= 1e9; } },
-    { id: "billion", name: "Billionär", bonus: 0.06,
+    { id: "billion", name: "Billionär", bonus: 0.021,
       text: "Eine Billion. Das Finanzamt schickt Grußkarten.",
       pruef: function (s) { return s.gesamtEinnahmen >= 1e12; } },
-    { id: "billiarde", name: "Billiardär", bonus: 0.07,
+    { id: "billiarde", name: "Billiardär", bonus: 0.0245,
       text: "Zahlen mit 16 Stellen. Die Buchhaltung nennt es „Montag“.",
       pruef: function (s) { return s.gesamtEinnahmen >= 1e15; } },
-    { id: "klicks-100", name: "100 Handgriffe", bonus: 0.02,
+    { id: "klicks-100", name: "100 Handgriffe", bonus: 0.007,
       text: "Einhundertmal selbst angepackt. Die Hände erinnern sich.",
       pruef: function (s) { return s.klicks >= 100; } },
-    { id: "klicks-1000", name: "1000 Handgriffe", bonus: 0.03,
-      text: "Tausendmal. Langsam übernimmt das Personal – wie es soll.",
-      pruef: function (s) { return s.klicks >= 1000; } },
-    { id: "standorte-5", name: "Fünf Standorte", bonus: 0.05,
+    { id: "klicks-400", name: "400 Handgriffe", bonus: 0.0105,
+      text: "Vierhundertmal selbst angepackt. Langsam übernimmt das Personal – wie es soll.",
+      pruef: function (s) { return s.klicks >= 400; } },
+    { id: "standorte-5", name: "Fünf Standorte", bonus: 0.0175,
       text: "Fünf Städte, fünf Neonherzen, eine Rechnung.",
       pruef: function (s) { return s.standorte >= 5; } },
-    { id: "standorte-25", name: "Fünfundzwanzig Standorte", bonus: 0.06,
+    { id: "standorte-25", name: "Fünfundzwanzig Standorte", bonus: 0.021,
       text: "Die Karte im Büro braucht eine zweite Karte.",
       pruef: function (s) { return s.standorte >= 25; } },
-    { id: "upgrades-10", name: "Zehn Verbesserungen", bonus: 0.04,
+    { id: "upgrades-10", name: "Zehn Verbesserungen", bonus: 0.014,
       text: "Zehnmal nachgerüstet. Der Handwerker kennt den Weg blind.",
       pruef: function (s) { return anzahlUpgrades(s) >= 10; } },
-    { id: "upgrades-alle", name: "Alles ausgebaut", bonus: 0.05,
+    { id: "upgrades-alle", name: "Alles ausgebaut", bonus: 0.0175,
       text: "Keine einzige Baustelle mehr. Unheimlich.",
       pruef: function (s) { return anzahlUpgrades(s) >= UPGRADES.length; } },
-    { id: "kondome-100", name: "Großeinkauf", bonus: 0.02,
+    { id: "kondome-100", name: "Großeinkauf", bonus: 0.007,
       text: "Hundert Kondome gekauft. Der Großhandel grüßt freundlich.",
       pruef: function (s) { return s.kondomeGekauft >= 100; } }
   ];
@@ -292,7 +295,7 @@
       }
     }
     var stufe = STUFEN[Math.min(STUFEN.length, Math.max(1, ganz(s.stufe))) - 1];
-    var standort = Math.pow(1.22, ganz(s.standorte));
+    var standort = Math.pow(1.05, ganz(s.standorte));
     var erfolg = 1;
     for (var id in s.erfolge) if (s.erfolge[id] && ERFOLG_BONUS[id]) erfolg += ERFOLG_BONUS[id];
     var gesamt = stufe.faktor * ein * standort * erfolg;
@@ -428,7 +431,7 @@
   }
 
   function standortKosten(s) {
-    return runde(5000 * Math.pow(2.4, ganz(s.standorte)));
+    return runde(5000 * Math.pow(2.5, ganz(s.standorte)));
   }
 
   function standortKaufen(s, jetzt) {
@@ -487,7 +490,7 @@
     var w = werte(s);
     var geld = 0;
     if (w.proSekunde > 0 && Math.random() < 0.6) {
-      geld = runde(w.proSekunde * (20 + Math.random() * 70));
+      geld = runde(w.proSekunde * (15 + Math.random() * 45));
       if (geld < 5) geld = 5;
       s.geld += geld;
       s.gesamtEinnahmen += geld;

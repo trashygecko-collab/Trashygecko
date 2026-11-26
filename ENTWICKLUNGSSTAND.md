@@ -5,6 +5,54 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Mädchenstil am PC ruhiger, Rotlicht auf vier Stunden ausgelegt
+
+**Mädchenstil.** Am Handy trägt die kräftige Rosafläche die Seite, am PC wurde
+dieselbe Fläche zur Leuchtwand: bei 1440 px füllte `#f7a6d4` alles außer der
+Inhaltsspalte, Karten und Tafeln hoben sich kaum ab. Jetzt liegt auf großen
+Bildschirmen ein Verlauf aus Weiß, Rosé und Altrosa (`#fdf8fa → #f9e7ee →
+#f3d5e1 → #eecad7`) unter einer sehr leisen Herzkulisse (SVG-Kachel, 264 px,
+Deckkraft 3,4–4,8 %, keine Animation). Geändert in `spiele/stil.js` – dort
+liegt die zentrale Stilwahl, 101 der 104 Seiten mit Mädchenstil laden sie –
+und in `spiele/wuerfelspiele/stil.css` (hellere Tafeln und Karten, feinere
+Linien, weicherer Schatten, Herz neben der Überschrift, sichtbarer
+Tastaturfokus). Alles hängt an `@media (min-width: 641px)` bzw. `561px` und an
+`html[data-stil="maedchen"]`: Klassisch und Buben sind unberührt, die
+Handy-Ansicht ist **pixelgleich** geblieben (Vergleich 390 × 844 vorher/nachher
+mit `cmp`). Geprüft bei 1024, 1440 und 1920 px an Sammlung, Würfelpoker, Dame,
+Kniffel, 1×1 und der Spielehalle; Text auf Karte und Tafel bleibt dunkel auf
+fast weiß (Kontrast über 7:1), nur Flächen, Rahmen und Hintergrund ändern sich.
+
+**Rotlicht.** Die Partie war nach **58 Minuten** durch (Simulation, optimales
+Spiel), weil die Einnahmen am gesamten Multiplikator hingen: Stufe, Upgrades und
+Standorte multiplizierten den Lohn, die Preise blieben aber gleich – jede Stufe
+machte die nächste billiger, die letzten fünf Stufen fielen im Minutentakt.
+Neu:
+- **Stufen** kosten gleichmäßig das 43-Fache der vorigen (500 € bis 5,84 Brd. €)
+  und heben die Einnahmen nur noch von ×1,5 auf ×3,48 (vorher ×1 bis ×6).
+- **Personal** ist teurer (Preise ×1,6 bis ×2,2 ab Ali), zahlt mehr Lohn und
+  steigt je Kopf um 1,33–1,39 (vorher 1,23–1,29) – Mengenkauf lohnt nicht mehr.
+- **Verbesserungen** wirken schwächer (×1,06 bis ×1,32 statt ×1,15 bis ×1,8),
+  **Standorte** geben ×1,05 (vorher ×1,22) und kosten das 2,5-Fache.
+- **Erfolge** geben zusammen +30 % (vorher +85 %), **Ereignisse** zahlen 15–45 s
+  Ertrag statt 20–90 s.
+- **Offline:** zwei Stunden zählen voll, die beiden Buchhaltungen geben je eine
+  dazu (maximal vier, vorher acht). Eine Nacht kürzt die Partie damit nicht ab.
+- Der Klick-Erfolg „1000 Handgriffe“ war bei 60 s Takt nie erreichbar und heißt
+  jetzt „400 Handgriffe“.
+
+Gemessene Spieldauer bis „Stufe 10 + alle Verbesserungen“ (1-s-Simulation,
+`pruefung.js`, drei Spielweisen): aktiv **3:55–4:21 h**, normal **3:49–4:30 h**,
+vorsichtig **5:25–5:48 h**. Alle 20 Erfolge werden in jedem Lauf erreicht.
+Stufenabstände im Normallauf: 9, 31, 27, 22, 18, 42, 39, 23, 35 Minuten – in
+jeder halben Stunde passiert etwas. Zwei Stunden Pause nach 20 Minuten Spiel
+kürzen die aktive Spielzeit um rund 20 Minuten (4:17 → 3:57); acht Stunden
+Pause bringen nichts mehr, weil bei vier Stunden gekappt wird. Neue Prüfung `sicherung/2026-11-26-rotlicht-balance/pruefung.js`
+(71 Prüfungen, 0 Fehler) samt `durchspiel.js` und `offline.js`; der alte Kern
+liegt als `rotlicht-kern.vorher.js` daneben.
+
+---
+
 ## 26.11.2026 · Wiederverbindung: Partie, Chat und Platz überleben den Abbruch
 
 **Fehler (reproduziert, nicht vermutet):** Bei einer laufenden 10.000-Runde zu
