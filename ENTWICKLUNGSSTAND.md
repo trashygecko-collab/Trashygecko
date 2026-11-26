@@ -5,6 +5,35 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Chat am Handy tiefer, Smiley-Auswahl passt ins Bild
+
+**Fehler:** Im Handy-Layout stand `#chatbox` per `order:1` direkt unter dem Kopf
+(Chatbeginn bei 46 px). Das Smiley-Fenster hing fest über der Eingabezeile
+(`position:absolute; bottom:calc(100% + 6px)`) – weil die Eingabezeile ganz oben
+lag, öffnete es nach oben aus dem Bild: hochkant `top −2 px`, quer `−24 px`, die
+obersten Kacheln waren abgeschnitten und nicht antippbar.
+
+**Geändert** (`spiele/connector/connector.html`, byte-gleich in `connector-online/`):
+Reihenfolge im Handy-Block jetzt Spieler (1), Einstellungen (2), Chat (3); dazu
+`smileyPanelPlatzieren()`, das die Eingabezeile und den sichtbaren Bereich
+(`visualViewport`) misst und das Fenster über der Eingabe (ab 240 px Platz), sonst
+darunter, sonst über die ganze Höhe öffnet – Lage und Höhe auf 8 px Rand begrenzt,
+`position:fixed` nur in diesem Bereich, neu gerechnet bei Drehen, Tastatur,
+Adressleiste und Scrollen. Solange es offen ist, ist der schwebende Chat-Knopf aus.
+Am PC (≥1024 px) steigt die Rechnung sofort aus; dort bleibt alles beim CSS.
+
+**Gemessen** (Chromium-Emulation, echter Connector 8767): Chat beginnt statt bei
+46 px bei **320 px**; Fenster hochkant **8 … 306** (vorher `−2 … 338`), quer
+**8 … 348** (vorher `−24 … 171`), bei auf 560 px verengtem Fenster (Tastatur)
+**227 … 552**, mit offener Partie (Chat 287 px) **274 … 614** – überall `passt: true`.
+
+Oberste und unterste Kachel angetippt → Auswahl übernommen, Nachricht mit Bild
+gesendet (`naturalWidth > 0`), Escape und Klick daneben schließen, Drehen bei
+offenem Fenster rechnet neu (298 → 340 → 298), Partie öffnen/schließen unverändert,
+keine Seitenfehler. **PC 1280 × 800 unverändert:** Chat 147 … 800 (653 px), Fenster
+381 … 721 (340 px). Grenze: Geräte-Emulation statt echtem Telefon, Tastatur über
+kleinere Fensterhöhe nachgestellt.
+
 ## 25.11.2026 · Snake wieder Einzelspieler, Würfelspiele als Mehrspieler
 
 **Snake:** Die Spielhalle öffnet jede Seite mit `?room=…&id=…`; Snake schaltete daraufhin

@@ -528,11 +528,14 @@ body.griff-aktiv iframe{pointer-events:none}
    die ganze Seite); die Eingabe sitzt unten in diesem Block. Die Seite
    scrollt, damit Spiel und Auswahl erreichbar bleiben. */
 @media (max-width:1023px){
- /* Handy: Kopf, dann sofort der Chat – Spieler, Name und Einstellungen
-    folgen darunter. So sind Chat und Spiel ohne langes Scrollen da. */
- #linkeSpalte #chatbox{order:1}
- #linkeSpalte #zentrale{order:2}
- #linkeSpalte #einstellungen{order:4}
+ /* Handy: Kopf, Spieler, Einstellungen – und erst darunter der Chat.
+    So steht über der Eingabezeile genug Platz für das Smiley-Fenster. */
+ /* Reihenfolge am Handy: Kopf, Spieler, Einstellungen, dann der Chat.
+    Vorher stand der Chat ganz oben direkt unter dem Kopf und klebte am
+    Bildschirmrand – darüber war kein Platz für das Smiley-Fenster. */
+ #linkeSpalte #zentrale{order:1}
+ #linkeSpalte #einstellungen{order:2}
+ #linkeSpalte #chatbox{order:3}
  #chatbox{display:flex;flex-direction:column;flex:0 0 auto;height:44dvh;min-height:200px;
   margin:0;padding:8px 10px 10px;border:none;background:none}
  #chat{flex:1 1 auto;height:auto;min-height:0;overflow-y:auto;
@@ -555,6 +558,16 @@ body.griff-aktiv iframe{pointer-events:none}
  body.spiel-offen #soloListe{display:none}
  body.spiel-offen #soloListe.offen{display:block}
  body.spiel-offen #soloSchalter{display:block}
+ /* Smilies am Handy: ein eigenes Fenster. Wo es steht und wie hoch es
+    ist, rechnet smileyPanelPlatzieren() unten aus – es öffnet über der
+    Eingabezeile, wenn dort Platz ist, sonst darunter, notfalls über die
+    ganze Höhe. Keine Kachel ragt damit aus dem Bild. */
+ .smiley-panel{position:fixed;left:8px;right:8px;top:auto;bottom:auto;
+  max-height:none;overflow:hidden}
+ .smiley-panel .smiley-kopf,.smiley-panel .smiley-tabs{flex:0 0 auto}
+ .smiley-panel .smiley-raster{flex:1 1 auto;min-height:0}
+ /* Der schwebende Chat-Knopf darf keine Kachel verdecken. */
+ body.smiley-offen #tg-mobil-knopf{display:none!important}
 }
 /* Spielauswahl im Multiplayer-Tab: ein Auswahlfeld mit einer Gruppe je
    Kategorie (optgroup), darunter der Satz zum gewählten Spiel. */
@@ -5518,16 +5531,62 @@ async function ladeSmileyBestand(){
  return smileyBestand;
 }
 
+// Am Handy ist das Smiley-Fenster ein eigenes Fenster: Es öffnet sich dort,
+// wo wirklich Platz ist – vor der Eingabezeile nach oben, wenn dort genug
+// Platz ist, sonst darunter, und wenn beides eng ist, über die ganze Höhe.
+// Gemessen wird am sichtbaren Fenster (visualViewport), damit auch die
+// eingeblendete Tastatur und die Adressleiste am Handy mitzählen.
+const SMILEY_RAND=8, SMILEY_ABSTAND=6, SMILEY_MAX=340;
+function smileyPanelPlatzieren(){
+ const panel=document.getElementById("smileyPanel");
+ if(!panel||panel.hidden)return;
+ // Am PC steht das Fenster fest über der Eingabezeile – dort macht das CSS das.
+ if(window.innerWidth>=1024){ panel.removeAttribute("style"); return; }
+ const zeile=document.querySelector(".chat-send-row");
+ if(!zeile)return;
+ const r=zeile.getBoundingClientRect();
+ const vv=window.visualViewport;
+ const oben=vv?vv.offsetTop:0;
+ const vh=(vv&&vv.height)||window.innerHeight;
+ const platzOben=r.top-SMILEY_RAND-oben;
+ const platzUnten=oben+vh-r.bottom-SMILEY_RAND;
+ // Über der Eingabe steht der Chat: dort öffnet sich die Auswahl zuerst, wenn
+ // mindestens 240 px Platz sind. Sonst nach unten, wo mehr Platz ist.
+ const nachUnten=platzOben<240&&platzUnten>platzOben;
+ const platz=Math.max(0,Math.min(SMILEY_MAX,nachUnten?platzUnten:platzOben));
+ let hoehe, top;
+ if(platz>=240){
+  hoehe=platz;
+  top=nachUnten?r.bottom+SMILEY_ABSTAND:r.top-SMILEY_ABSTAND-hoehe;
+ }else{
+  // Beide Seiten zu eng (quer gehaltenes Handy, Tastatur offen): das Fenster
+  // nimmt die ganze Höhe und legt sich über den Chat.
+  hoehe=Math.min(SMILEY_MAX,Math.max(96,vh-2*SMILEY_RAND));
+  top=oben+SMILEY_RAND;
+ }
+ top=Math.max(oben+SMILEY_RAND,Math.min(top,oben+vh-SMILEY_RAND-hoehe));
+ panel.style.position="fixed";
+ panel.style.left=SMILEY_RAND+"px";
+ panel.style.right=SMILEY_RAND+"px";
+ panel.style.top=Math.round(top)+"px";
+ panel.style.bottom="auto";
+ panel.style.height=Math.round(hoehe)+"px";
+ panel.style.maxHeight="none";
+}
+
 function smileyPanelZeigen(zeigen){
  const panel=document.getElementById("smileyPanel");
  const knopf=document.getElementById("smileyBtn");
+ if(zeigen)smileyPanelPlatzieren();     // erst rechnen, dann zeigen: kein Springen
  panel.hidden=!zeigen;
  knopf.setAttribute("aria-expanded",zeigen?"true":"false");
+ document.body.classList.toggle("smiley-offen",zeigen);
  if(!zeigen){
   smileyHinweisSetzen("");
+  panel.removeAttribute("style");
   return;
  }
- ladeSmileyBestand().then(()=>smileyPanelZeichnen());
+ ladeSmileyBestand().then(()=>{ smileyPanelZeichnen(); smileyPanelPlatzieren(); });
  setTimeout(()=>{ try{ document.getElementById("smileySuche").focus(); }catch(e){} },30);
 }
 
@@ -5618,6 +5677,14 @@ document.getElementById("smileyBtn").addEventListener("click",smileyPanelUmschal
 document.getElementById("smileyZu").addEventListener("click",()=>smileyPanelZeigen(false));
 document.getElementById("smileyAnhangWeg").addEventListener("click",smileyWahlLoeschen);
 document.getElementById("smileySuche").addEventListener("input",smileyPanelZeichnen);
+// Das Fenster bleibt am Platz, wenn sich die sichtbare Höhe ändert (Tastatur,
+// Adressleiste, Drehen) oder die Seite scrollt.
+["resize","orientationchange"].forEach(n=>window.addEventListener(n,smileyPanelPlatzieren));
+window.addEventListener("scroll",smileyPanelPlatzieren,{passive:true});
+if(window.visualViewport){
+ window.visualViewport.addEventListener("resize",smileyPanelPlatzieren);
+ window.visualViewport.addEventListener("scroll",smileyPanelPlatzieren);
+}
 // Klick daneben oder Esc schließt die Auswahl – wie bei den anderen Panels.
 document.addEventListener("click",e=>{
  const panel=document.getElementById("smileyPanel");
