@@ -5,6 +5,46 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Super Pimmelchen: eigener Startbildschirm + Startschnittstelle
+
+`spiele/pimmel/spimmel.html` (beide Ablagen byte-gleich): Beim Öffnen erscheint
+ein eigener Startbildschirm im Retro-Stil – Titel, Schwierigkeit, Start-Level
+(1–61), Übersicht der Einstellungen, großer Knopf „SPIEL STARTEN“, Highscore und
+Vollbild. HUD, Spielfeld und Touch-Pad sind so lange ausgeblendet; es laufen
+keine Timer. Kein Grafikstil-Knopf (KLASSISCH/MÄDCHEN-BOOM bleiben zurückgestellt).
+
+- **Stufen:** LEICHT 5 s (vorher 10 s, jetzt laut Vorgabe), MITTEL 15 s, SCHWER
+  20 s. Ein neues Special erscheint je Takt, alle bleiben liegen (Ausnahme
+  Totenkopf wie bisher). Gespeichert wird weiter `superPimmelchenStufe`.
+- **Ein Startweg:** `starteSpiel()` ist die einzige Stelle, die eine Partie
+  beginnt – Startknopf, Enter/Pfeiltasten, Pause-Neustart und die Schnittstelle
+  laufen alle darüber. Rückkehr zum Startbildschirm über das Pause-Blatt
+  („STARTBILDSCHIRM“), Timer werden dabei gestoppt (`stoppeAlles`). Nach
+  Spielende kommt der Startbildschirm von selbst zurück und zeigt „Letzte
+  Runde: … Punkte · Level …“.
+- **Schnittstelle:** `window.SuperPimmelchen` mit `version` (1.0.0), `bereit`,
+  `start({stufe, level})`, `einstellungen()`, `zustand()` (nur Lesen) und
+  `startbildschirm()`. `stufe` = `leicht|mittel|schwer`, `level` = 1–61;
+  fehlende Felder bleiben auf der aktuellen Auswahl, ungültige Werte werden mit
+  `{ok:false, fehler}` abgelehnt, ohne das Spiel anzufassen; bei laufender
+  Partie `fehler:'spiel-laeuft'`. Nach der Initialisierung `bereit = true` und
+  Ereignis `superpimmelchen:bereit`. Ein gültiger Aufruf überspringt den
+  Startbildschirm; unbekannte Felder werden ignoriert (später erweiterbar).
+- **Geprüft (Chromium, 24 Einzelprüfungen grün + Takt-/Layout-/Ende-Läufe):**
+  Startbildschirm beim Öffnen, MITTEL vorgewählt, LEICHT/MITTEL/SCHWER schalten
+  Anzeige und Takt; echte Specials gemessen: 4 s → 0 und 6,1 s → 1 (5 s),
+  13 s → 0 und 16 s → 1 (15 s), 18 s → 0 und 21 s → 1 (20 s), nach 22 s liegen
+  4; Pause hält Takt und Uhr an; Start-Level 1, 30 und 61 laden; Uhr läuft nach
+  Neustart einfach (3 s → 3 s); Pause → Startbildschirm → Neustart sauber;
+  Spielende bringt den Startbildschirm mit Ergebniszeile; Highscore-Eintrag
+  bleibt lesbar; ungültige Schnittstellenwerte (Level 0/99/„abc“, Stufe
+  „ultra“, String, leeres Objekt bei laufender Partie) ändern nichts; 0
+  Konsolenfehler. Layout: Startblatt 581 px (PC/Tablet), 604 px (Handy hoch),
+  345 px (Handy quer, zweispaltig) – ohne Scrollen, alle Knöpfe im Bild,
+  Startknopf 52/40 px, Stufen 44/38 px; Vollbild aus dem Startmenü und im Spiel
+  (Feld 1272×699, 382×210, 628×345) ohne Verschiebung; Tastatur 9,9→13,9,
+  Touch 13,9→17,9. Leveldaten (36 221 Zeichen) byte-gleich.
+
 ## 26.11.2026 · Smilie-Auswahl: Kategorien beim ersten Einblenden zusammengedrückt
 
 Die Reiter über dem Smilie-Raster waren beim ersten Öffnen nur noch ein dünner
