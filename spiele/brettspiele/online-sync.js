@@ -27,6 +27,10 @@
   var SPIEL = window.TG_ONLINE_SPIEL || "";
   if (!RAUM || !ICH || !SPIEL) return;
 
+  /* Sitzzahl aus der Adresse (der Connector schickt die gewählte Zahl mit);
+     ohne Angabe bleibt es bei zwei Plätzen. */
+  var ANZAHL = Math.max(2, Math.min(4, parseInt(frage.get("anzahl"), 10) || 2));
+
   var API = "/api/" + SPIEL;
   var RISIKO = SPIEL === "risiko";
   // Mensch ärgere dich nicht heißt im Server maensync: dort liegt nur der
@@ -275,13 +279,13 @@
   }).then(function () { return ruf("rejoin"); }).then(function (d) {
     if (d && d.game) { uebernehmen(d.game); return; }
     /* Noch keine Partie im Raum: dann eröffnen wir sie. */
-    return ruf("create", { anzahl: 2 }).then(function (e) {
+    return ruf("create", { anzahl: ANZAHL }).then(function (e) {
       if (e && e.game) uebernehmen(e.game);
     });
   }).catch(function (e) {
     melde(e.message);
     /* Ohne Partie im Raum legt der erste Spieler sie an. */
-    ruf("create", { anzahl: 2 }).then(function (e) {
+    ruf("create", { anzahl: ANZAHL }).then(function (e) {
       if (e && e.game) uebernehmen(e.game);
     }).catch(function (e2) { melde(e2.message); });
   });

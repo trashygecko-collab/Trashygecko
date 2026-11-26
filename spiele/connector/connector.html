@@ -1998,7 +1998,7 @@ function serverNeustartGemeldet(){
    if(await join(ziel,true)!=="ok")setRoomStatus("Der Beitritt hat nicht geklappt. Bitte die Seite neu öffnen.");
    return;
   }
-  if(framePartie&&framePartie.pfad){ openGame(framePartie.pfad); return; }
+  if(framePartie&&framePartie.pfad){ openGame(framePartie.pfad, null, framePartie.modus||""); return; }
   const def=SUPPORTED_GAMES.find(g=>g.id===aktivesSpielId);
   if(def){ openGame(def.path); return; }
   wiederLaeuft=false;
@@ -2398,11 +2398,18 @@ function tttStatus(text, gameId){
 // Browser eine alte Spielseite aus dem Zwischenspeicher zeigt (anderes Brett,
 // alter Würfel). Die Kennung muss mit, weil die Spielseite ihren eigenen
 // sessionStorage-Zugriff hat und denselben Spieler wiedererkennen muss.
-function spielAdresse(path, art){
+function spielAdresse(path, art, modus){
+ const def=spielDef(path);
+ // Der Spielmodus gehört in die Adresse: Ohne ihn eröffnet eine Spielseite
+ // mit Raunkennung von sich aus eine Online-Runde – auch dann, wenn der
+ // Spieler nur am Gerät oder gegen den Computer spielen will.
+ let zusatz="";
+ if(modus)zusatz+="&modus="+encodeURIComponent(modus);
+ if(modus==="online"&&def&&def.id==="menschaerger")zusatz+="&anzahl="+encodeURIComponent(selectedSeats);
  return path+"?room="+encodeURIComponent(activeRoom)+
   "&name="+encodeURIComponent(playerName())+
   "&id="+encodeURIComponent(sessionID)+
-  (art?"&art="+encodeURIComponent(art):"")+
+  (art?"&art="+encodeURIComponent(art):"")+zusatz+
   "&v="+Date.now();
 }
 
@@ -2425,7 +2432,10 @@ function spielDef(path){
 // PC: rechts neben dem Chat. Handy: unter dem Chat, in derselben Seite.
 function openGame(path, art, modus){
  const def=spielDef(path);
- spielOeffnen(spielAnzeigename(path),spielAdresse(path, art),{mehrspieler:true,gameId:def?def.id:"",pfad:path,modus:modus||""});
+ // Läuft im Raum schon eine Mensch-ärgere-dich-nicht-Runde, ist „online“
+ // auch ohne ausdrücklichen Wunsch gemeint (Fortsetzen, Kachel, Neuladen).
+ const wunsch=modus||(def&&def.id==="menschaerger"&&currentMaenGame?"online":"");
+ spielOeffnen(spielAnzeigename(path),spielAdresse(path, art, wunsch),{mehrspieler:true,gameId:def?def.id:"",pfad:path,modus:wunsch});
 }
 
 // Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
@@ -4310,7 +4320,7 @@ async function refreshMaen(players){
   if(game.hostId===sessionID && ready>=2){
    addStatusButton("Spiel starten", async()=>{
     if(await gameApiAction("menschaerger", "start")){
-     openGame(gamePath("menschaerger"));
+     openGame(gamePath("menschaerger"), null, "online");
     }
    });
   }
@@ -5094,7 +5104,7 @@ async function bereitAktion(spiel){
 async function beitreten(spiel,tischId){
  const def=SUPPORTED_GAMES.find(g=>g.id===spiel);
  if(await angebotAktion("annehmen",spiel,tischId)){
-  if(def)openGame(def.path);
+  if(def)openGame(def.path, null, "online");
  }
 }
 
@@ -6039,7 +6049,7 @@ function stilAnSpiel(){
    Verbindungsabriss kann so keinen falschen Stand erzeugen. */
 const LAB_TAKT = 1100;
 let labTakt = 0, labZugLaeuft = false, labStandText = "", labGezeigt = -1;
-let labFenster = null, labSchleier = null, labMeldung = "", labKnoepfe = [];
+let labApi = null, labSchleier = null, labMeldung = "", labKnoepfe = [];
 let labAufbauFuer = "";
 
 function labSpiel() {
@@ -6072,10 +6082,13 @@ async function labRuf(aktion, daten) {
   return d;
 }
 
-/* Der Stand, den das Spiel über zustand() liefert, in der Form des Servers. */
+/* Der Stand, den das Spiel über zustand() liefert, in der Form des Servers.
+   Der Grafikstil fehlt hier bewusst: Er ist die Ansicht des Spielers und
+   gehört nicht in den Spielstand. Sonst färbte der Gastgeber, der die erste
+   Seite baut, den Gast auf dessen eigenem Gerät um. */
 function labStandAus(z) {
   return {
-    groesse: z.groesse, thema: z.thema, modus: "mehrspieler", phase: z.phase,
+    groesse: z.groesse, modus: "mehrspieler", phase: z.phase,
     amZug: z.amZug, zuege: z.zuege, vorbei: z.vorbei, drehung: z.drehung,
     fest: z.fest, feld: z.feld, frei: z.frei, figuren: z.figuren
   };
@@ -6098,6 +6111,20 @@ function labVerstecken() {
   if (labSchleier) labSchleier.style.display = "none";
 }
 
+/* Der Schleier hängt am Spielfenster, nicht am Fensterrand: Beim Scrollen
+   (Handy, wachsender Chat) muss er mitwandern. Sonst läge das Brett bis zum
+   nächsten Takt frei und ließe sich vom Spieler bedienen, der nicht dran ist. */
+function labPlatzieren() {
+  if (!labSchleier || labSchleier.style.display !== "flex") return;
+  const rahmen = document.getElementById("spielRahmen");
+  if (!rahmen) return;
+  const r = rahmen.getBoundingClientRect();
+  labSchleier.style.left = r.left + "px";
+  labSchleier.style.top = r.top + "px";
+  labSchleier.style.width = r.width + "px";
+  labSchleier.style.height = r.height + "px";
+}
+
 function labZeige(text, knoepfe) {
   const rahmen = document.getElementById("spielRahmen");
   if (!rahmen) return;
@@ -6107,11 +6134,8 @@ function labZeige(text, knoepfe) {
   const gleich = text === labMeldung && JSON.stringify(knoepfe || []) === JSON.stringify(labKnoepfe);
   labMeldung = text;
   labKnoepfe = knoepfe || [];
-  labSchleier.style.left = r.left + "px";
-  labSchleier.style.top = r.top + "px";
-  labSchleier.style.width = r.width + "px";
-  labSchleier.style.height = r.height + "px";
   labSchleier.style.display = "flex";
+  labPlatzieren();
   if (gleich) return;
   document.getElementById("labText").textContent = text;
   const box = document.getElementById("labKnoepfe");
@@ -6261,8 +6285,11 @@ async function labAbgleich() {
 /* Beim Öffnen: Platz sichern, sonst Partie eröffnen. */
 async function labBrueckeAn() {
   const spiel = labSpiel();
-  if (!spiel || labFenster === spiel.fenster) return;
-  labFenster = spiel.fenster;
+  /* Nicht am Fenster erkennen: Der Rahmen behält beim Spielwechsel dasselbe
+     Fenster-Objekt, nur das Spiel darin ist neu. Nach „anderes Spiel und
+     zurück“ bliebe der Stand sonst auf dem Startbildschirm stehen. */
+  if (!spiel || labApi === spiel.api) return;
+  labApi = spiel.api;
   labStandText = ""; labGezeigt = -1; labMeldung = ""; labKnoepfe = []; labAufbauFuer = "";
   try { spiel.api.aktion("thema", { thema: labThema() }); } catch (e) {}
   try {
@@ -6292,6 +6319,7 @@ window.addEventListener("resize", function () {
   if (!labSpiel()) return;
   if (labSchleier && labSchleier.style.display === "flex") labZeige(labMeldung, labKnoepfe);
 });
+window.addEventListener("scroll", labPlatzieren, true);
 
 if (window.TGStil && typeof TGStil.beiWechsel === "function") {
   TGStil.beiWechsel(function () {

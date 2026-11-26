@@ -2420,7 +2420,14 @@ window.MenschAergereDichNicht = Object.freeze({
 <!-- Der Online-Weg braucht den Spielnamensraum: erst laden, wenn das Spiel
      seine Schnittstelle bereitgestellt hat. Ohne ?room=…&id=… in der Adresse
      tut die Datei nichts. -->
-<script>window.TG_ONLINE_SPIEL = "maensync";</script>
+<script>
+/* Online nur auf ausdrücklichen Wunsch (?modus=online). Diesen Parameter setzt
+   der Connector beim Anbieten, Beitreten oder Fortsetzen einer Runde. Ohne ihn
+   bleibt der Startbildschirm mit Einzelspieler, Bot und Spielerzahl die erste
+   Wahl – ein Start über den Connector darf die Modusauswahl nicht ersetzen. */
+const MAEN_ONLINE_WUNSCH = (new URLSearchParams(location.search).get("modus") || "").trim();
+if (MAEN_ONLINE_WUNSCH === "online") window.TG_ONLINE_SPIEL = "maensync";
+</script>
 <script src="../online-sync.js"></script>
 </body>
 </html>
