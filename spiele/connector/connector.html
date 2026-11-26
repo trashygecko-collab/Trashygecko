@@ -651,6 +651,9 @@ body.griff-aktiv iframe{pointer-events:none}
  .ueber-vorschau{flex:1 1 100%;text-align:left}}
 .ueber-gitter{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px}
 .u-karte{display:flex;flex-direction:column;gap:4px;padding:8px 9px;border-radius:9px;border:1px solid var(--c-rahmen);background:var(--c-flaeche-2);border-left:3px solid var(--u-akzent,var(--c-rahmen-2));min-width:0}
+/* Aus einer Favoriten-Kachel angesprungene Karte: kurz hervorgehoben, damit
+   klar ist, wo die Modi stehen. */
+.u-karte.u-gewaehlt{outline:2px solid var(--c-akzent);outline-offset:2px;box-shadow:0 0 0 6px var(--c-fokus-20)}
 .u-name{margin:0;font-size:12.5px;line-height:1.22;font-weight:600;overflow-wrap:anywhere}
 /* Die Beschreibung steht immer da – kein Auf- und Zuklappen mehr. */
 .u-text{margin:0;font-size:11px;line-height:1.32;color:var(--c-leise)}
@@ -1552,8 +1555,10 @@ function zentraleDeepLink(){
   return;
  }
  setModus("multi", false);
- zentraleMeldung(def.name+" ist offen – Mitspieler im Chat einladen oder eine Runde anbieten.");
- setTimeout(()=>{ openGame(def.path); }, 350);
+ // Nicht sofort ins Spiel: Ein Start an der Spielkarte vorbei hätte keinen
+ // Tisch, dem jemand beitreten kann. Die Karte zeigt alle Modi – auch
+ // „Online spielen“ mit Tisch, Einladung und Warten auf Mitspieler.
+ setTimeout(function(){ zeigeSpielKarte(def.path); }, 250);
 }
 
 function zentraleAufbau(){
@@ -4265,6 +4270,9 @@ function uModusZeile(knopf, aktion, haupt) {
 function ueberKarte(e, akzent) {
   const karte = document.createElement("article");
   karte.className = "u-karte";
+  // Sprungziel für Favoriten-Kacheln und ?spiel=… aus der Spielhalle.
+  karte.dataset.pfad = e.pfad;
+  karte.id = spielKartenId(e.pfad);
   if (akzent) karte.style.setProperty("--u-akzent", akzent);
   const name = document.createElement("h4");
   name.className = "u-name";
@@ -4321,6 +4329,54 @@ function spielAnbieten(id) {
     if (id === "malen") openMalen();
     else openGame(def.path);
   });
+}
+
+// Kennung einer Spielkarte im DOM – Sprungziel der Favoriten-Kacheln.
+function spielKartenId(pfad) {
+  return "u-spiel-" + String(pfad || "")
+    .replace(/^\.?\/?/, "")
+    .replace(/^spiele\//, "")
+    .replace(/[^A-Za-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Eine Favoriten-Kachel startet kein Spiel mehr auf eigene Faust: Sie holt die
+// Spielkarte in den Blick, und dort stehen alle Modi (am Gerät, gegen Computer,
+// online). Damit gilt für Kachel und Karte dieselbe Startlogik.
+function zeigeSpielKarte(pfad) {
+  const gesucht = String(pfad || "")
+    .replace(/^\.?\/?/, "")
+    .replace(/^spiele\//, "");
+  const finden = function () {
+    const karten = document.querySelectorAll("#gameplayers .u-karte");
+    for (let i = 0; i < karten.length; i++) {
+      if (karten[i].dataset.pfad === gesucht) return karten[i];
+    }
+    return null;
+  };
+  let karte = finden();
+  if (!karte) {
+    // Suche oder Filter können die Karte gerade verstecken: Auswahl
+    // zurücksetzen und die Übersicht neu zeichnen, statt einen Modus zu raten.
+    ueberSuche = "";
+    const ueber = document.querySelector("#gameplayers .spieluebersicht");
+    if (ueber) { ueber.dataset.filter = "alle"; ueber.dataset.sig = ""; }
+    if (typeof renderGamePicker === "function") renderGamePicker(currentPlayersList);
+    karte = finden();
+  }
+  if (!karte) {
+    zentraleMeldung("Dieses Spiel steht nicht in der Übersicht.");
+    return;
+  }
+  const bereich = karte.closest("details.ueber-bereich");
+  if (bereich) bereich.open = true;
+  karte.classList.add("u-gewaehlt");
+  karte.scrollIntoView({ block: "center", behavior: "smooth" });
+  setTimeout(function () { karte.classList.remove("u-gewaehlt"); }, 2600);
+  const knopf = karte.querySelector(".u-knopf.haupt") || karte.querySelector(".u-knopf");
+  if (knopf) setTimeout(function () { try { knopf.focus({ preventScroll: true }); } catch (e) {} }, 350);
+  const name = (karte.querySelector(".u-name") || {}).textContent || "Das Spiel";
+  zentraleMeldung(name + " – Modus wählen: am Gerät, gegen Computer oder online mit Einladung.");
 }
 
 // Zeichnet die Übersicht in ein Ziel. filter ist der Startfilter
@@ -4451,8 +4507,13 @@ function uebersichtZeichnen(ziel, filter) {
       hl.forEach(function (x) {
         const a = document.createElement("a");
         a.className = "ueber-hl";
-        a.href = "/spiele/" + x.e.pfad;
-        a.onclick = function (ev) { ev.preventDefault(); openGame("/spiele/" + x.e.pfad); };
+        // Kein eigener Startweg: Die Kachel holt die Spielkarte in den Blick,
+        // dort stehen alle Modi – auch „Online spielen“ mit Tisch und
+        // Einladung. Vorher öffnete sie das Spiel ohne Tisch, dem niemand
+        // beitreten konnte.
+        a.href = "#" + spielKartenId(x.e.pfad);
+        a.title = x.e.name + " – Modus wählen";
+        a.onclick = function (ev) { ev.preventDefault(); zeigeSpielKarte(x.e.pfad); };
         // Kompakt: ein Bildstreifen und der Name. Ohne eigenes Foto tritt das
         // gezeichnete Brett (.ueber-hl-platz) an dieselbe Stelle.
         const streifen = document.createElement(x.bild ? "img" : "span");

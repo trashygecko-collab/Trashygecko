@@ -5,6 +5,36 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Favoriten-Kacheln öffnen wieder den Mehrspieler-Weg
+
+**Fehler:** Die sechs Bild-Kacheln über der Spieleübersicht starteten mit
+`openGame(…)` direkt in die Partie – ohne den Tisch, den „Online spielen“ über
+`/api/angebot` anlegt. Niemand konnte beitreten, die Partie wartete ohne Runde.
+Dasselbe tat `?spiel=…`. Die Spielhalle hatte den Weg in den Connector ganz
+verloren: beim Vorab-Rendern von `spiele.html` (Commit `c24f11c`) fielen
+`multiplayer-register.js` und `halle-online.js` heraus, jede Kachel verlinkte
+direkt auf die Spielseite – auch bei den 71 Spielen mit Mehrspieler-Modus.
+
+**Geändert** (`spiele/connector/connector.html`, byte-gleich in
+`connector-online/`): Favoriten-Kachel und `?spiel=…` rufen `zeigeSpielKarte()` –
+Kategorie auf, Karte in den Blick, kurz umrandet, Hauptknopf fokussiert. Damit
+gilt für Kachel und Karte dieselbe Startlogik mit allen Modi. In
+`spiele/spiele.html` und `spiele/halle-online.js` sind beide Skripte wieder
+eingebunden; Klicks auf Favoriten- und Hallenkacheln führen für Spiele aus
+`multiplayer-register.js` in den Connector (`?spiel=<kennung>`), Einzelspieler
+und Werkzeuge bleiben direkt. Kachel-Ziele werden mit umgeschrieben (neuer Tab),
+Pfade normalisiert (`brettspiele/…` ↔ `/spiele/brettspiele/…`).
+
+**Geprüft** (Chromium, echter Connector): 10.000 über Favoriten-Kachel →
+Karte/Modi, „Online spielen“ legt den Tisch an; zweiter Browser über
+`?room=TG-…` im selben Raum, „Mitspielen“ öffnet dieselbe Partie, beide Lobbys
+zeigen beide Spieler, „Bereit“ beider schaltet „Spiel starten“ frei. Normale
+Hallenkarte nimmt denselben Weg; Mahjong und Würfelbecher starten direkt;
+Mahjong-Karte ohne „Online spielen“; „Gegen Computer“ (Pig) mit Bot, ohne
+Angebot; Handy 390 × 844 mit Karte im Bild (337 px). `go test ./...` grün.
+Grenze: Emulation statt echtem Telefon, zweiter Spieler als zweiter
+Browser-Kontext.
+
 ## 26.11.2026 · Chat am Handy tiefer, Smiley-Auswahl passt ins Bild
 
 **Fehler:** Im Handy-Layout stand `#chatbox` per `order:1` direkt unter dem Kopf
