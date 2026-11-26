@@ -5,6 +5,31 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Smilie-Auswahl: Kategorien beim ersten Einblenden zusammengedrückt
+
+Die Reiter über dem Smilie-Raster waren beim ersten Öffnen nur noch ein dünner
+Streifen (Höhe 10 px, Text abgeschnitten); erst nach einem Klick auf eine Kategorie
+hatten sie ihre richtige Höhe. Breite war nie betroffen (41–94 px je Reiter).
+
+- Ursache: `.smiley-panel` ist eine Spalte mit `max-height:min(50vh,340px)`. Beim
+  Reiter „Alle“ meldet das Raster 2100 px Inhaltshöhe; da Reiterzeile (durch
+  `overflow-x:auto` mit Mindesthöhe 0) und Kopfzeile schrumpfbare Flex-Elemente
+  waren, verteilte der Browser die fehlende Höhe auf genau diese beiden – das
+  Raster selbst behielt seine Mindesthöhe. Am Handy stand die Schutzregel
+  (`flex:0 0 auto`) schon im `@media (max-width:1023px)`-Block, am Desktop fehlte sie.
+- Korrektur (nur CSS, `connector.html`): `.smiley-panel .smiley-kopf,
+  .smiley-panel .smiley-tabs{flex:0 0 auto}` – Kopf und Reiter behalten ihre Höhe,
+  das Raster scrollt wie bisher.
+- Gemessen (Chromium, erster Ladevorgang): Reiterhöhe 24 px sofort, nach 900 ms,
+  nach Kategorieklick und nach Schließen/erneutem Öffnen – alle acht Reiter gleich
+  hoch, Reiterzeile 26 px. Desktop 1280×800 (Panel 383 px, Reiterzeile 365 px breit),
+  Desktop 900×700, Handy 390×844 (374/356) und Handy quer 844×390 (828/810) gleich.
+  Vorher: 10 px beim ersten Öffnen, 19,8 px nach Klick (Desktop).
+- Funktion unverändert: 275/275 Bilder geladen, Suche „tanz“ 15 Treffer, Kategorie
+  „tiere“ 15, Auswahl schließt das Panel und setzt die Vorschau, 0 Konsolenfehler,
+  Raster scrollt (2100 px Inhalt bei 251 px Höhe).
+- Ablagen byte-gleich, Sicherung der Hilfsskripte nicht nötig (Einmalprüfungen).
+
 ## 26.11.2026 · Smilies auf den neuen, sortierten Bestand umgestellt
 
 Maßgeblich ist jetzt der neu sortierte Ordner `spiele/connector/smilies` mit
