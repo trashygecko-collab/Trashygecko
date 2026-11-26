@@ -5,6 +5,46 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Smilies auf den neuen, sortierten Bestand umgestellt
+
+Maßgeblich ist jetzt der neu sortierte Ordner `spiele/connector/smilies` mit
+Unterordnern als Kategorien. Er ist in beiden Ablagen byte-gleich übernommen;
+der alte Stand (341 Dateien) liegt als Sicherung in
+`arbeit/sicherung/2026-11-26-smilies-neu/smilies-alt`.
+
+**Bestand:** 275 Grafiken – **149 png, 101 gif, 24 webp, 1 jpg**; dazu die
+unveränderte Anleitung `s (1).md` (per `.gitignore` nicht im Repo). Verteilung:
+**böse 56, love 37, tanz 15, tiere 15, traurig 13, xxx 68**, ohne Ordner 71.
+Im Repo sind dafür 272 alte Dateien entfallen, 68 an gleicher Stelle ersetzt und
+207 neu dazugekommen. Inhaltlich sind alle Bilder des alten Standes bis auf zwei
+(`s (138).png`, `s (139).png`, je ~1,1 kB) im neuen Bestand enthalten – die
+übrigen sind umbenannt oder ersetzt; 63 Bildinhalte sind neu. Nichts gelöscht,
+umbenannt oder ausgetauscht wurde von mir.
+
+**Kein Codeeingriff nötig:** Server (`smilies.go`) liest den Ordner bei jeder
+Abfrage neu, ein Unterordner ist die Kategorie, und die Auswahl im Connector
+(`connector.html`) baut Reiter, Suche und Vorschau aus dieser Antwort. Ein
+Unterordner mit Umlaut (`böse`) funktioniert ohne Sonderfall, weil der Pfad
+kodiert und serverseitig wieder dekodiert wird.
+
+**Geprüft am laufenden Connector (Port 8778, echter Server):**
+`GET /api/smilies` → **275 Einträge**, Kategorien wie oben, keine doppelten
+Namen; **alle 275 Pfade 200** und byte-gleich zur Dateigröße, auch
+`/spiele/connector/smilies/böse/böse (1).gif`. Auswahlfenster: Reiter
+„Alle · böse · love · tanz · tiere · traurig · xxx · Ohne Ordner“, **275 Bilder
+in „Alle“, 0 kaputt, 0 doppelt**, je Kategorie 56/37/15/15/13/68/71 mit allen
+Bildern geladen. Suche „love (3“ → 2 Treffer, „böse“ → 56, „tanz“ → 15. Eine
+Grafik aus `böse` gewählt, gesendet und im Chat wieder gefunden
+(`böse/böse (10).gif`, geladen, nicht als „Nicht gesendet“ markiert, 0
+Konsolenfehler). `go vet ./...` sauber, `go test -count=1 ./...` **283,6 s, ok**
+(kein Go-Test berührt Smilies).
+
+**Bekannt, bewusst nicht angefasst:** `love/love (1).webp` und
+`xxx/xxx (4).webp` sind byte-gleich (12 358 B) – doppelter Inhalt, aber zwei
+gewollte Einträge; gelöscht wird hier nichts ohne Ansage.
+
+---
+
 ## 26.11.2026 · Super Pimmelchen: Pausenzeile im Hochformat unter dem Feld
 
 Die Leiste mit Pause, Neustart und Vollbild lag im Hochformat als schwebender
