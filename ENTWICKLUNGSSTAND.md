@@ -5,6 +5,63 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Smileys: 583 im Bestand, 500er-Grenze entfernt, Vorschauen laden in Sicht
+
+**Auftrag:** Der Smiley-Ordner ist gewachsen, die Anleitung sprach noch von
+„höchstens 500“. Bestand prüfen, Grenze weg, beide Ablagen gleichziehen,
+veröffentlichen.
+
+**Bestand:** **583 Grafiken, 112,1 MB** – 342 PNG, 216 GIF, 24 WebP, 1 JPG.
+Ohne Ordner 379, xxx 68, böse 56, love 37, tanz 15, tiere 15, traurig 13.
+Die Documents-Ablage hatte 573, das Repo 275; 298 Dateien kamen aus Documents
+ins Repo. Zehn alte `s (n)`-Grafiken lagen nur im Repo (klein, eigener Inhalt)
+und stehen jetzt in beiden Ablagen – nichts gelöscht, umbenannt oder ersetzt.
+Alle 583 Dateien mit gültigem Bildkopf (PNG/GIF/WebP/JPEG), **0 defekt, 0
+leer**, keine über 1 MiB (größte `MyLittleDevil-07.gif`, 1.040.801 B). Bekannte
+Doppelung: `love/love (1).webp` = `xxx/xxx (4).webp` (12.358 B) – zwei gewollte
+Einträge, nichts angefasst.
+
+**Ursache der fehlenden Einträge:** `smilies.go` (connector und
+connector-online, beide Ablagen) brach das Einlesen bei
+`smileyMaxAnzahl = 500` ab – mitten in der Ordnerreihenfolge. Deshalb fehlten
+83 Grafiken, und welche, hing vom Dateisystem ab. Grenze ersatzlos entfernt;
+die 1-MiB-Grenze je Datei bleibt. Die Anleitung `s (1).md` nennt jetzt 583
+und keine Obergrenze mehr.
+
+**Zweiter Fehler beim Messen:** Beim Öffnen des Auswahlfensters holte der
+Browser 392 von 583 Bildern auf Vorrat (89,4 MB in 1,5 s) – bei GIFs bis 1 MB
+am Handy unbrauchbar. `connector.html` legt die Adresse jetzt in `data-src`
+und lädt per IntersectionObserver (Wurzel = Raster, 240 px Vorlauf) nur die
+Kacheln in Sicht.
+
+**Geprüft am laufenden Connector (Port 8770, frischer Bau):**
+
+- `GET /api/smilies`: **583 Einträge**, 74.551 B, 12–14 ms, 0 doppelte Namen,
+  Arten und Kategorien wie oben.
+- PC 1400×900: Fenster nach **71 ms** da, 583 Kacheln, davon 63 geladen
+  (**20,0 MB** statt 89,4 MB); nach Durchscrollen **583/583 geladen, 0 kaputt**.
+  Reiter „Alle · böse · love · tanz · tiere · traurig · xxx · Ohne Ordner“;
+  Suche „love (3“ → 2 Treffer, Reiter „böse“ → 56. `böse/böse (1).gif`
+  eingefügt, gesendet und im Chat geladen; 4 Nachrichten in 862 ms;
+  0 Konsolenfehler.
+- Handy 390×844: Fenster nach **91 ms**, 583 Kacheln, 54 geladen, Panel
+  374×340 px bei top 56 (im Bild), Raster scrollt 5.623 von 5.874 px, Senden
+  mit Grafik ok, kein Querscrollen, 0 Konsolenfehler.
+- Die Spamgrenze des Chats bleibt unverändert (5 Nachrichten je 10 s,
+  `chat.go`): ein Lauf mit 20 Nachrichten lief erwartungsgemäß in 429 – kein
+  Smiley-Problem.
+- `go vet ./...` 0 in beiden Paketen, `go test -count=1 ./...` connector grün
+  (siehe Prüfbericht unten).
+
+**Ablagen:** byte-gleich – `spiele/connector/smilies` mit 584 Dateien
+(583 Grafiken + `s (1).md`, das per `.gitignore` außerhalb des Repos bleibt),
+`smilies.go` und `connector.html` in `connector` und `connector-online`.
+Sicherung vorher: `arbeit/sicherung/2026-11-27-smilies-573/` (altes
+`smilies.go`, alte Anleitung, alter ENTWICKLUNGSSTAND, Repo-Dateiliste).
+Die laufende `trashygecko-connector.exe` war von geöffneten Instanzen gesperrt
+und ist deshalb nicht neu gebaut – lokal zeigt sie bis zum Neubau weiter 500.
+Neubau: `go build -o trashygecko-connector.exe .`, dann Connector neu starten.
+
 ## 27.11.2026 · Risiko: Kampf auf der Karte, Würfelmarken, Bot-Charaktere, Tastatur
 
 **Auftrag:** Das Risiko sollte taktisch und optisch nach vorn: nachvollziehbare

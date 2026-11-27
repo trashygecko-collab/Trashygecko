@@ -5763,6 +5763,9 @@ document.getElementById("message").addEventListener("keydown",e=>{
 // Kategorie). Der Server liest ihn bei jeder Abfrage neu; hier wird er einmal
 // geholt, gesucht und gefiltert.
 let smileyBestand=null, smileyKategorie="", smileyWahl=null, smileyLaedt=false;
+// Lädt die Vorschauen erst, wenn ihre Kachel in die Nähe des Rasters kommt:
+// 583 Dateien sind 112 MB, davon holte der Browser beim Öffnen 89 MB auf Vorrat.
+let smileyBeobachter=null;
 
 // Nur Namen aus dem eigenen Bestand werden zu Adressen: ein relativer Pfad mit
 // erlaubter Endung, kein "..", keine fremde Domain. Umlaute und ß sind erlaubt
@@ -5913,13 +5916,30 @@ function smileyPanelZeichnen(){
   b.className="smiley-bild-btn";
   b.title=s.name;
   const img=document.createElement("img");
-  img.src=adresse;
   img.alt=s.name;
   img.loading="lazy";
+  img.dataset.src=adresse;   // Adresse steht bereit, geladen wird in Sicht
   b.appendChild(img);
   b.onclick=(e)=>{ e.stopPropagation(); smileyWaehlen(s); };
   raster.appendChild(b);
  });
+ // Nur laden, was in der Nähe des sichtbaren Rasters liegt. Ohne das holte
+ // der Browser beim Öffnen 392 von 583 Bildern (89,4 MB) auf einen Schlag.
+ if(smileyBeobachter)smileyBeobachter.disconnect();
+ if("IntersectionObserver" in window){
+  smileyBeobachter=new IntersectionObserver(eintraege=>{
+   eintraege.forEach(e=>{
+    if(!e.isIntersecting)return;
+    const bild=e.target;
+    smileyBeobachter.unobserve(bild);
+    if(!bild.getAttribute("src")&&bild.dataset.src)bild.src=bild.dataset.src;
+   });
+  },{root:raster,rootMargin:"240px"});
+  raster.querySelectorAll("img[data-src]").forEach(bild=>smileyBeobachter.observe(bild));
+ }else{
+  // Ohne Beobachter (alte Browser) wie bisher: alles laden.
+  raster.querySelectorAll("img[data-src]").forEach(bild=>{ bild.src=bild.dataset.src; });
+ }
 }
 
 function smileyWaehlen(s){

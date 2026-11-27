@@ -18,9 +18,8 @@ import (
 // im Chat verfügbar, ohne dass hier irgendwo eine Liste gepflegt wird. Ein
 // Unterordner ist die Kategorie; Dateien direkt im Ordner haben keine.
 const (
-	smileyOrdner    = "spiele/connector/smilies"
-	smileyMaxBytes  = 1 << 20 // 1 MiB je Datei
-	smileyMaxAnzahl = 500     // mehr wird nicht angeboten
+	smileyOrdner   = "spiele/connector/smilies"
+	smileyMaxBytes = 1 << 20 // 1 MiB je Datei
 )
 
 // smileyArten sind die erlaubten Dateiendungen (klein geschrieben).
@@ -51,18 +50,12 @@ func smileyListe() []Smiley {
 		return liste
 	}
 	for _, e := range eintraege {
-		if len(liste) >= smileyMaxAnzahl {
-			break
-		}
 		if e.IsDir() {
 			unter, err := os.ReadDir(filepath.Join(wurzel, e.Name()))
 			if err != nil {
 				continue
 			}
 			for _, u := range unter {
-				if len(liste) >= smileyMaxAnzahl {
-					break
-				}
 				if s, ok := smileyEintrag(e.Name() + "/" + u.Name()); ok {
 					liste = append(liste, s)
 				}
