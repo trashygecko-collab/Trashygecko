@@ -50,8 +50,8 @@ Kacheln in Sicht.
 - Die Spamgrenze des Chats bleibt unverändert (5 Nachrichten je 10 s,
   `chat.go`): ein Lauf mit 20 Nachrichten lief erwartungsgemäß in 429 – kein
   Smiley-Problem.
-- `go vet ./...` 0 in beiden Paketen, `go test -count=1 ./...` connector grün
-  (siehe Prüfbericht unten).
+- `go vet ./...` 0 in beiden Paketen; `go test -count=1 ./...` connector
+  **201,5 s, ok** (kein Go-Test berührt Smilies).
 
 **Ablagen:** byte-gleich – `spiele/connector/smilies` mit 584 Dateien
 (583 Grafiken + `s (1).md`, das per `.gitignore` außerhalb des Repos bleibt),
