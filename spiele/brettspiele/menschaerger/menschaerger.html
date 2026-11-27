@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a211b">
 <title>Mensch ärgere dich nicht</title>
 <script src="../../token.js"></script>
 <script src="../../netz.js"></script>
@@ -25,19 +26,22 @@ html{
   --knopf:#0f2b23;--knopfrand:#d9bc7c66;--knopftext:#e8cd8e;
   --startbtn:#e8cd8e;--starttext:#0b241d;--startrand:#d9bc7c;
   --fehler:#ffb4a0;--gut:#8ee6b0;
+  --blink:#ffe6a8;--blink-halo:#07110c;
   color-scheme:dark;
 }
 html[data-stil="maedchen"]{
-  --bg:#f7a6d4;--bg2:#ffe0ef;
-  --panel:#fff6fa;--linie:#ef7aa8;--rand:#ef7aa8;
-  --gold:#8f2450;--hell:#3a0f24;--muted:#7a2b4c;
-  --feld:#fff6fa;--feldrand:#d2457d;--kreuz:#fff0f7;--kreuzrand:#ef7aa8;
-  --park:#ffeaf3;--parkrand:#f79cc2;
-  --saum:#3a0f24;--zahl:#fff6fa;
-  --knopf:#fff6fa;--knopfrand:#d2457d;--knopftext:#8f2450;
-  --startbtn:#8f2450;--starttext:#fff6fa;--startrand:#8f2450;
-  --fehler:#8f1030;--gut:#1c6b46;
-  color-scheme:light;
+  --bg:#160912;--bg2:#3a1428;
+  --panel:#2a1020;--linie:#b45a7d;--rand:#73344a;
+  --gold:#f0c9a8;--hell:#f8edf1;--muted:#d9a9b9;
+  --feld:#24101a;--feldrand:#c98a9d;--kreuz:#2c1220;--kreuzrand:#c98a9d66;
+  --park:#1d0b14;--parkrand:#b05a76;
+  --saum:#160710;--zahl:#f8edf1;
+  --knopf:#331522;--knopfrand:#b05a76;--knopftext:#f0c9d6;
+  --startbtn:#c94f7c;--starttext:#2a0714;--startrand:#f0c9a8;
+  --fehler:#ff9ab0;--gut:#8fe0b8;
+  --blink:#ffe8ee;
+  --blink-halo:#17060e;
+  color-scheme:dark;
 }
 html[data-stil="buben"]{
   --bg:#04070b;--bg2:#182430;
@@ -49,6 +53,7 @@ html[data-stil="buben"]{
   --knopf:#1b1e23;--knopfrand:#3a4450;--knopftext:#e6e9ec;
   --startbtn:#e0242f;--starttext:#fff5f5;--startrand:#e0242f;
   --fehler:#ff9aa2;--gut:#6dff4a;
+  --blink:#a8f8ff;--blink-halo:#02080d;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -58,6 +63,19 @@ body{
   background:radial-gradient(circle 900px at 50% -8%,var(--bg2) 0%,var(--bg) 62%) fixed;
   color:var(--hell);font-family:var(--tg-schrift,inherit);
   -webkit-text-size-adjust:100%;text-size-adjust:100%;
+}
+html[data-stil="maedchen"][data-stil]{
+  background-color:#160912;
+}
+html[data-stil="maedchen"][data-stil] body{
+  background:
+    radial-gradient(circle 520px at 16% 2%,#7a2d50aa 0%,#00000000 66%),
+    radial-gradient(circle 640px at 86% 10%,#c98a9d38 0%,#00000000 68%),
+    radial-gradient(circle 900px at 50% 104%,#07030a 0%,#160912 58%,#2a0f1e 100%) fixed;
+}
+html[data-stil="maedchen"] .leiste,
+html[data-stil="maedchen"] .fuss{
+  box-shadow:inset 0 1px 0 #ffffff12,0 12px 30px -24px #000;
 }
 button{font:inherit;color:inherit;cursor:pointer}
 button:disabled{cursor:default;opacity:.45}
@@ -88,14 +106,17 @@ button:disabled{cursor:default;opacity:.45}
 /* Spielfeld: die Kante folgt dem freien Platz – nie größer, nie verzerrt. */
 .buehne{
   flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
-  position:relative;
+  position:relative;container-type:size;
 }
 .brett{
   display:block;aspect-ratio:1/1;
-  height:100%;width:auto;max-height:100%;max-width:100%;
+  /* Quadrat aus der kleineren verfügbaren Kante: Bei sehr kleinen Handys
+     (z. B. 320×568) blieb das Feld sonst einige Pixel breiter als hoch. */
+  width:min(100cqw,100cqh);height:auto;max-height:100%;max-width:100%;
   background:none;touch-action:manipulation;
   border-radius:12px;
   forced-color-adjust:none;-webkit-forced-color-adjust:none;
+  overflow:hidden;
 }
 .treffer{fill:transparent;cursor:pointer}
 .figur{cursor:pointer}
@@ -103,19 +124,35 @@ button:disabled{cursor:default;opacity:.45}
 .figur:hover .stein{filter:brightness(1.07)}
 .figur.spielbar .stein{filter:drop-shadow(0 0 6px var(--gold))}
 .figur-symbol{pointer-events:none}
-.figur-ring{
-  fill:none;stroke:var(--gold);stroke-width:3.2;
-  animation:puls .8s ease-in-out infinite alternate;
+.figur.spielbar .stein{animation:steinpuls .62s ease-in-out infinite alternate}
+@keyframes steinpuls{
+  from{filter:drop-shadow(0 0 1px var(--blink)) brightness(1.02)}
+  to{filter:drop-shadow(0 0 10px var(--blink)) brightness(1.18)}
 }
-@keyframes puls{from{opacity:1}to{opacity:.3}}
+.figur-schein{
+  fill:var(--blink);opacity:.16;pointer-events:none;
+  animation:schein .62s ease-in-out infinite alternate;
+}
+@keyframes schein{from{opacity:.30}to{opacity:.06}}
+.figur-ring-halo{
+  fill:none;stroke:var(--blink-halo);stroke-width:11;stroke-opacity:.82;
+  pointer-events:none;
+}
+.figur-ring{
+  fill:none;stroke:var(--blink);stroke-width:6;stroke-linecap:round;
+  animation:puls .62s ease-in-out infinite alternate;pointer-events:none;
+  filter:drop-shadow(0 0 3px var(--blink));
+}
+@keyframes puls{from{opacity:1}to{opacity:.28}}
 
 /* Würfel + Meldung + Spielerkarten */
 .fuss{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;gap:8px 12px;
   background:var(--panel);border:1px solid var(--linie);border-radius:11px;
   padding:7px 9px;
 }
-.wuerfel-wrap{display:flex;align-items:center;gap:9px}
+.wuerfel-wrap{grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:center;gap:9px;justify-self:center}
 .wuerfel{
   width:56px;height:56px;flex:0 0 auto;position:relative;
   border-radius:12px;border:3px solid var(--saum);
@@ -127,9 +164,9 @@ button:disabled{cursor:default;opacity:.45}
 .wuerfel.klickbar{cursor:pointer;box-shadow:inset 0 -4px 8px #0004,0 0 0 3px var(--gold),0 2px 8px #0006}
 .augen{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--wpip,#f6edda);transform:translate(-50%,-50%)}
 .frage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--wpip,#f6edda)}
-.meldung{flex:1 1 190px;min-width:0;font-size:12.5px;line-height:1.35;color:var(--hell)}
+.meldung{grid-column:1;grid-row:1;min-width:0;font-size:12.5px;line-height:1.35;color:var(--hell)}
 .meldung b{color:var(--gold)}
-.karten{display:flex;gap:6px;flex-wrap:wrap}
+.karten{grid-column:3;grid-row:1;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;justify-self:end}
 .karte{
   font-size:10.5px;line-height:1.25;text-align:center;padding:5px 7px;
   border:1px solid var(--linie);border-radius:8px;background:var(--feld);
@@ -183,7 +220,7 @@ button:disabled{cursor:default;opacity:.45}
   border-color:var(--gold);color:var(--gold);
   box-shadow:0 0 0 2px var(--gold) inset;
 }
-html[data-stil="maedchen"] .chip.aktiv{background:#ffd7e8;color:#7a1039}
+html[data-stil="maedchen"] .chip.aktiv{background:#5b1f39;color:#ffeaf0;border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
 html[data-stil="buben"] .chip.aktiv{background:#2a1114;color:#ff9aa2;border-color:#e0242f}
 /* Farbwahl: je Spieler eine Zeile mit vier Punkten in den Figurenfarben. */
 .farbzeilen{display:flex;flex-direction:column;gap:5px}
@@ -205,6 +242,12 @@ html[data-stil="buben"] .chip.aktiv{background:#2a1114;color:#ff9aa2;border-colo
 .hinweis{margin:0;font-size:10.5px;color:var(--muted);text-align:center;line-height:1.45}
 
 /* Schmale und flache Fenster: weniger Rand, alles bleibt erreichbar. */
+@media(max-width:760px){
+  .fuss{grid-template-columns:minmax(0,1fr);gap:7px}
+  .wuerfel-wrap{grid-column:1;grid-row:1}
+  .meldung{grid-column:1;grid-row:2;justify-self:center;text-align:center}
+  .karten{grid-column:1;grid-row:3;justify-self:stretch;justify-content:center}
+}
 @media(max-width:520px){
   body{padding:5px;gap:5px}
   .leiste{padding:5px 7px;gap:6px;min-height:38px}
@@ -213,7 +256,7 @@ html[data-stil="buben"] .chip.aktiv{background:#2a1114;color:#ff9aa2;border-colo
   .mini{padding:5px 8px;font-size:11px}
   .fuss{padding:6px;gap:7px}
   .wuerfel{width:50px;height:50px}
-  .meldung{font-size:11.5px;flex-basis:100%}
+  .meldung{font-size:11.5px}
   .karte{font-size:10px;padding:4px 5px;min-width:56px}
   .startkarte{padding:12px;gap:9px}
   .chip{padding:8px 6px;font-size:11px}
@@ -395,10 +438,10 @@ const FARBEN = {
     blue:  {name:"Blau",  hex:"#3f7fd6", saum:"#f2e7cf", ink:"#f2f7ff", ton:"#1d4a8a", licht:"#93c2f7", symbol:"raute",    symbolName:"Raute"}
   },
   maedchen: {
-    red:   {name:"Rosa",     hex:"#e8467f", saum:"#4a0a24", ink:"#fff6fa", ton:"#93103f", licht:"#ffa3c6", symbol:"herz",         symbolName:"Herz"},
-    yellow:{name:"Zitrone",  hex:"#e0a800", saum:"#3f2c00", ink:"#2b1d00", ton:"#8a6300", licht:"#ffe070", symbol:"blume",        symbolName:"Blume"},
-    green: {name:"Minze",    hex:"#34b07f", saum:"#06301f", ink:"#f2fff9", ton:"#0f6b4b", licht:"#93e8c6", symbol:"schmetterling",symbolName:"Schmetterling"},
-    blue:  {name:"Veilchen", hex:"#8a4bdb", saum:"#2a0d4d", ink:"#f8f2ff", ton:"#4a1c85", licht:"#c8a6fb", symbol:"stern",        symbolName:"Stern"}
+    red:   {name:"Rosa",     hex:"#c9366b", saum:"#2a0714", ink:"#fff4f8", ton:"#7d1237", licht:"#f08aaf", symbol:"herz",         symbolName:"Herz"},
+    yellow:{name:"Zitrone",  hex:"#c9971b", saum:"#2a2000", ink:"#231a00", ton:"#7a5a05", licht:"#f2d37a", symbol:"blume",        symbolName:"Blume"},
+    green: {name:"Minze",    hex:"#238a68", saum:"#041f16", ink:"#effff9", ton:"#0b543c", licht:"#77d3ae", symbol:"schmetterling",symbolName:"Schmetterling"},
+    blue:  {name:"Veilchen", hex:"#7140b8", saum:"#1e0b38", ink:"#fbf7ff", ton:"#3a1a67", licht:"#bda2ed", symbol:"stern",        symbolName:"Stern"}
   },
   buben: {
     red:   {name:"Blutrot", hex:"#d3121d", saum:"#e6ecef", ink:"#fff2f2", ton:"#73060c", licht:"#ff6d6d", symbol:"drache",    symbolName:"Drache"},
@@ -522,6 +565,12 @@ function stilSetzen(stil, vonAussen){
   S.stil = wert;
   if (vonAussen) S.stilVonAussen = true;
   document.documentElement.dataset.stil = wert;
+  /* Alle drei Welten sind dunkel; die alte zentrale Stilwahl setzt am PC
+     fälschlich hell für Mädchen. Hier gilt die Spielpalette. */
+  document.documentElement.style.colorScheme = "dark";
+  const farben = {normal:"#0a211b", maedchen:"#160912", buben:"#04070b"};
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", farben[wert] || farben.normal);
   if (!S.stilVonAussen) schreib(STIL_SCHLUESSEL, wert);
   knoepfeMarkieren();
   zeichneBrett();
@@ -553,7 +602,10 @@ const BRETTMITTE = KANTE / 2;
 const PARKPLATZ = {};
 Object.keys(BASE_ORIGIN).forEach(f => {
   const [gx, gy] = BASE_ORIGIN[f];
-  PARKPLATZ[f] = [[1.25,1.25],[2.75,1.25],[1.25,2.75],[2.75,2.75]]
+  /* Die vier Parkplätze liegen symmetrisch um die Mitte des 3×3-Feldes:
+     1,5 ± 0,75 Zellen. Vorher waren sie um eine halbe Zelle nach unten
+     rechts versetzt; dadurch standen Figuren und Zierrat gegeneinander. */
+  PARKPLATZ[f] = [[0.75,0.75],[2.25,0.75],[0.75,2.25],[2.25,2.25]]
     .map(([sx, sy]) => [gx * CELL + sx * CELL, gy * CELL + sy * CELL]);
 });
 
@@ -745,65 +797,76 @@ function rahmenNormal(){
 
 /* ---------- Welt MÄDCHEN: Blumenwiese mit Bach ---------------------------- */
 function weltMaedchen(defs){
-  grad(defs, "m-himmel", [[0,"#bdeba0"],[.4,"#8fd66f"],[1,"#5aa844"]], {cx:"50%", cy:"8%", r:"98%"});
-  grad(defs, "m-sonne", [[0,"#fffbd8"],[.5,"#ffe98f"],[1,"#ffe98f"]], {cx:"50%", cy:"50%", r:"50%"});
-  grad(defs, "m-wiese", [[0,"#a6e37c"],[.5,"#86cf62"],[1,"#6cbb4f"]], {cx:"50%", cy:"24%", r:"94%"});
-  grad(defs, "m-feld", [[0,"#fffdf6"],[.62,"#fff4e6"],[1,"#ffe6d3"]], {cx:"38%", cy:"30%", r:"86%"});
-  grad(defs, "m-wasser", [[0,"#a8e4fb"],[.55,"#7fd0f2"],[1,"#4fa8d8"]]);
+  /* Abendgarten statt greller Wiese: tiefes Pflaumenrosa, gedämpftes
+     Salbeigrün, warmes Pergament und ein leiser Goldschein. */
+  grad(defs, "m-himmel", [[0,"#6b3049"],[.46,"#3b1a2b"],[1,"#170a12"]], {cx:"50%", cy:"8%", r:"98%"});
+  grad(defs, "m-sonne", [[0,"#ffe8bd"],[.55,"#d7a45e"],[1,"#8f6231"]], {cx:"50%", cy:"50%", r:"50%"});
+  grad(defs, "m-wiese", [[0,"#3d5e4d"],[.52,"#273f34"],[1,"#14251f"]], {cx:"50%", cy:"24%", r:"94%"});
+  grad(defs, "m-feld", [[0,"#f1dfca"],[.62,"#dfc6ae"],[1,"#bb9580"]], {cx:"38%", cy:"30%", r:"86%"});
+  grad(defs, "m-wasser", [[0,"#8fd0c3"],[.55,"#3f8d88"],[1,"#1e5052"]]);
   FARBEN_ALLE.forEach(f => {
     const c = FARBEN.maedchen[f];
-    grad(defs, "m-start-" + f, [[0, c.licht],[.6, c.hex],[1, c.hex]], {cx:"40%", cy:"30%", r:"84%"});
-    grad(defs, "m-lane-" + f, [[0,"#ffffff"],[.4, c.licht],[1, c.hex]], {cx:"40%", cy:"18%", r:"96%"});
+    grad(defs, "m-start-" + f, [[0, c.licht],[.58, c.hex],[1, c.ton]], {cx:"40%", cy:"30%", r:"84%"});
+    grad(defs, "m-lane-" + f, [[0,"#f6e9dc"],[.42, c.licht],[1, c.hex]], {cx:"40%", cy:"18%", r:"96%"});
   });
   muster(defs, "m-wiesenmuster", 120, 120, [
-    svg("path", {d:"M14 96 q3 -12 0 -20", stroke:"#4f9a3b", "stroke-opacity":.35, "stroke-width":2, fill:"none"}),
-    svg("path", {d:"M18 96 q9 -9 12 -20", stroke:"#4f9a3b", "stroke-opacity":.28, "stroke-width":2, fill:"none"}),
-    svg("path", {d:"M64 44 q3 -10 0 -17", stroke:"#4f9a3b", "stroke-opacity":.3, "stroke-width":2, fill:"none"}),
-    svg("circle", {cx:24, cy:100, r:2.4, fill:"#fff8b0", opacity:.55}),
-    svg("circle", {cx:72, cy:52, r:2.2, fill:"#ffd3e6", opacity:.6}),
-    svg("circle", {cx:100, cy:104, r:2.6, fill:"#fff", opacity:.5})
+    svg("path", {d:"M14 96 q3 -12 0 -20", stroke:"#8fbb9a", "stroke-opacity":.24, "stroke-width":2, fill:"none"}),
+    svg("path", {d:"M18 96 q9 -9 12 -20", stroke:"#8fbb9a", "stroke-opacity":.18, "stroke-width":2, fill:"none"}),
+    svg("path", {d:"M64 44 q3 -10 0 -17", stroke:"#8fbb9a", "stroke-opacity":.20, "stroke-width":2, fill:"none"}),
+    svg("circle", {cx:24, cy:100, r:2.4, fill:"#e7c98f", opacity:.42}),
+    svg("circle", {cx:72, cy:52, r:2.2, fill:"#e8b7c4", opacity:.46}),
+    svg("circle", {cx:100, cy:104, r:2.6, fill:"#f3e2d2", opacity:.38})
   ]);
   return knoten("g", {class:"welt"}, [
     svg("rect", {x:0, y:0, width:KANTE, height:KANTE, fill:"url(#m-himmel)"}),
     svg("rect", {x:0, y:0, width:KANTE, height:KANTE, fill:"url(#m-wiesenmuster)"}),
-    svg("circle", {cx:KANTE - 110, cy:88, r:96, fill:"url(#m-sonne)", opacity:.30}),
+    svg("circle", {cx:KANTE - 110, cy:88, r:112, fill:"url(#m-sonne)", opacity:.16}),
+    svg("circle", {cx:KANTE - 110, cy:88, r:76, fill:"none", stroke:"#f3d7a1", "stroke-opacity":.16, "stroke-width":2}),
     knoten("g", null, ECKEN.map(([x, y, sx, sy]) =>
       knoten("g", {transform:"translate(" + x + " " + y + ") scale(" + sx + " " + sy + ")"}, [
-        svg("path", {d:"M0 150 q46 -22 92 0 t92 0 t92 0", fill:"none", stroke:"#4f9a3b", "stroke-opacity":.25, "stroke-width":6})
+        svg("path", {d:"M0 150 q46 -22 92 0 t92 0 t92 0", fill:"none", stroke:"#8fbb9a", "stroke-opacity":.18, "stroke-width":6})
       ])))
   ]);
 }
 function spielflaecheMaedchen(){
   return knoten("g", null, [
     knoten("path", {d:plusPfad(26), fill:"url(#m-wiese)"}),
-    knoten("path", {d:plusPfad(26), fill:"none", stroke:"#ffffff", "stroke-width":3, "stroke-opacity":.55}),
-    knoten("path", {d:plusPfad(20, 12), fill:"none", stroke:"#ffffff", "stroke-width":1.6, "stroke-opacity":.45, "stroke-dasharray":"7 9"})
+    knoten("path", {d:plusPfad(26), fill:"none", stroke:"#c98a9d", "stroke-width":2.4, "stroke-opacity":.65}),
+    knoten("path", {d:plusPfad(20, 12), fill:"none", stroke:"#e7c98f", "stroke-width":1.2, "stroke-opacity":.38, "stroke-dasharray":"7 9"})
   ]);
 }
 function startbereichMaedchen(defs, f){
   const c = FARBEN.maedchen[f];
   const [ox, oy] = BASE_ORIGIN[f];
   const x = ox * CELL, y = oy * CELL, s = 3 * CELL;
-  grad(defs, "m-basis-" + f, [[0,"#fffaf3"],[.7,"#ffeedf"],[1,"#ffe0ea"]], {cx:"42%", cy:"20%", r:"96%"});
+  grad(defs, "m-basis-" + f, [[0,"#7b3c50"],[.55,"#4a1b2c"],[1,"#250b16"]], {cx:"42%", cy:"20%", r:"96%"});
+  /* Symmetrisches Rosenmedaillon in der Mitte des Beetes. Die vier
+     Parkplätze liegen bei 0,75 und 2,25 Zellen – also exakt um diese Mitte. */
+  const mx = x + s / 2, my = y + s / 2;
   const teile = [
     svg("rect", {x:x + 9, y:y + 9, width:s - 18, height:s - 18, rx:22, fill:"url(#m-basis-" + f + ")"}),
-    svg("rect", {x:x + 9, y:y + 9, width:s - 18, height:s - 18, rx:22, fill:"none", stroke:c.hex, "stroke-width":3, "stroke-opacity":.85}),
-    svg("rect", {x:x + 17, y:y + 17, width:s - 34, height:s - 34, rx:16, fill:"none", stroke:"#ffffff", "stroke-width":1.4, "stroke-opacity":.9}),
-    knoten("g", {opacity:.22, transform:"translate(" + (x + s / 2) + " " + (y + s / 2) + ") scale(" + (s * .54 / 24) + ") translate(-12 -12)"},
-      symboleTeile(c.symbol, c.hex, "#ffeedf"))
+    svg("rect", {x:x + 9, y:y + 9, width:s - 18, height:s - 18, rx:22, fill:"none", stroke:"#d9a9b2", "stroke-width":2.6, "stroke-opacity":.9}),
+    svg("rect", {x:x + 17, y:y + 17, width:s - 34, height:s - 34, rx:16, fill:"#260d18", "fill-opacity":.34, stroke:"#b77b8a", "stroke-width":1.2, "stroke-opacity":.9}),
+    svg("circle", {cx:mx, cy:my, r:s * .245, fill:"#1b0811", "fill-opacity":.30, stroke:"#e7c98f", "stroke-width":1.1, "stroke-opacity":.55}),
+    svg("circle", {cx:mx, cy:my, r:s * .185, fill:"none", stroke:"#d9a9b2", "stroke-width":.8, "stroke-opacity":.5}),
+    knoten("g", {opacity:.13, transform:"translate(" + mx + " " + my + ") scale(" + (s * .46 / 24) + ") translate(-12 -12)"},
+      symboleTeile(c.symbol, "#f0c9a8", "#4a1b2c"))
   ];
-  /* Gänseblümchen in den Ecken des Beetes */
+  /* Kleine goldene Rosetten in den vier Ecken des Beetes. */
   [[26,26],[s - 26,26],[26,s - 26],[s - 26,s - 26]].forEach(([dx, dy]) => {
-    for (let k = 0; k < 5; k++){
-      const a = k * Math.PI * 2 / 5;
-      teile.push(svg("circle", {cx:x + dx + Math.cos(a) * 4.6, cy:y + dy + Math.sin(a) * 4.6, r:2.6, fill:"#ffffff", opacity:.95}));
+    for (let k = 0; k < 6; k++){
+      const a = k * Math.PI / 3;
+      teile.push(svg("ellipse", {cx:x + dx + Math.cos(a) * 4.2, cy:y + dy + Math.sin(a) * 4.2,
+        rx:3.2, ry:1.9, fill:"#e7c98f", opacity:.55,
+        transform:"rotate(" + (a * 180 / Math.PI) + " " + (x + dx + Math.cos(a) * 4.2) + " " + (y + dy + Math.sin(a) * 4.2) + ")"}));
     }
-    teile.push(svg("circle", {cx:x + dx, cy:y + dy, r:2.6, fill:"#ffd75e"}));
+    teile.push(svg("circle", {cx:x + dx, cy:y + dy, r:2.3, fill:"#c98a4a", stroke:"#f0d6b0", "stroke-width":.7}));
   });
   PARKPLATZ[f].forEach(([cx, cy]) => {
-    teile.push(svg("ellipse", {cx, cy:cy + 2, rx:CELL * .40, ry:CELL * .36, fill:"#7cc35c"}));
-    teile.push(svg("ellipse", {cx, cy, rx:CELL * .40, ry:CELL * .36, fill:"#a4e07f", stroke:"#5aa844", "stroke-width":1.6}));
-    teile.push(svg("ellipse", {cx, cy:cy - CELL * .1, rx:CELL * .26, ry:CELL * .17, fill:"#ffffff", opacity:.30}));
+    teile.push(svg("circle", {cx, cy:cy + 2, r:CELL * .40, fill:"#12060b", "fill-opacity":.62}));
+    teile.push(svg("circle", {cx, cy, r:CELL * .40, fill:"#1a0912", stroke:"#e7c98f", "stroke-width":2.2, "stroke-opacity":.9}));
+    teile.push(svg("circle", {cx, cy, r:CELL * .315, fill:"none", stroke:c.hex, "stroke-width":1.6, "stroke-opacity":.72}));
+    teile.push(svg("circle", {cx, cy:cy - CELL * .08, r:CELL * .20, fill:"#f8e9dc", opacity:.07}));
   });
   return knoten("g", null, teile);
 }
@@ -813,16 +876,16 @@ function zierratMaedchen(defs){
     return knoten("g", null, [
       /* Bach: läuft um den Startbereich herum */
       svg("path", {d:"M-8 " + M + " Q" + (S * .5) + " " + (M - 10) + " " + S + " " + M + " T" + (S + 30) + " " + (M - 2) + " Q" + (M + 3) + " " + (M - 2) + " " + M + " " + S + " L" + M + " " + (S + 30),
-        fill:"none", stroke:"#59b0d8", "stroke-width":CELL * .30, "stroke-linecap":"round", "stroke-linejoin":"round"}),
+        fill:"none", stroke:"#153f3f", "stroke-width":CELL * .34, "stroke-linecap":"round", "stroke-linejoin":"round"}),
       svg("path", {d:"M-8 " + M + " Q" + (S * .5) + " " + (M - 10) + " " + S + " " + M + " T" + (S + 30) + " " + (M - 2) + " Q" + (M + 3) + " " + (M - 2) + " " + M + " " + S + " L" + M + " " + (S + 30),
-        fill:"none", stroke:"#a8e4fb", "stroke-width":CELL * .16, "stroke-linecap":"round", "stroke-linejoin":"round"}),
+        fill:"none", stroke:"#5fa8a1", "stroke-width":CELL * .13, "stroke-linecap":"round", "stroke-linejoin":"round"}),
       svg("path", {d:"M-4 " + (M - 3) + " Q" + (S * .5) + " " + (M - 15) + " " + (S - 6) + " " + (M - 3) + " M" + (M - 3) + " " + (S - 6) + " L" + (M - 3) + " " + (S + 20),
-        fill:"none", stroke:"#ffffff", "stroke-opacity":.5, "stroke-width":1.6, "stroke-linecap":"round"}),
+        fill:"none", stroke:"#d6eee4", "stroke-opacity":.32, "stroke-width":1.4, "stroke-linecap":"round"}),
       /* Kiesel und Blätter am Ufer */
-      svg("ellipse", {cx:S * .42, cy:M + 13, rx:5, ry:3.4, fill:"#cfd8d2", opacity:.85}),
-      svg("ellipse", {cx:S * .72, cy:M - 9, rx:4, ry:2.8, fill:"#b9c6bf", opacity:.8}),
-      svg("path", {d:"M" + (S * .58) + " " + (M + 6) + " q7 -6 13 -2 q-5 7 -13 2 Z", fill:"#4f9a3b", opacity:.8}),
-      svg("path", {d:"M" + (S * .86) + " " + (M - 4) + " q6 -5 11 -1 q-4 6 -11 1 Z", fill:"#63b34a", opacity:.8})
+      svg("ellipse", {cx:S * .42, cy:M + 13, rx:5, ry:3.4, fill:"#8f9c96", opacity:.8}),
+      svg("ellipse", {cx:S * .72, cy:M - 9, rx:4, ry:2.8, fill:"#788981", opacity:.75}),
+      svg("path", {d:"M" + (S * .58) + " " + (M + 6) + " q7 -6 13 -2 q-5 7 -13 2 Z", fill:"#3f6b52", opacity:.9}),
+      svg("path", {d:"M" + (S * .86) + " " + (M - 4) + " q6 -5 11 -1 q-4 6 -11 1 Z", fill:"#507a5d", opacity:.85})
     ]);
   });
 }
@@ -836,15 +899,15 @@ function feldMaedchen(defs, i, startF, cx, cy){
     g.appendChild(svg("ellipse", {
       cx:cx + Math.cos(a) * r * .60, cy:cy + Math.sin(a) * r * .60,
       rx:r * .52, ry:r * .40, transform:"rotate(" + (a * 180 / Math.PI + 90) + " " + (cx + Math.cos(a) * r * .60) + " " + (cy + Math.sin(a) * r * .60) + ")",
-      fill: startF ? c.licht : "#fffdf7", "fill-opacity": startF ? .95 : 1,
-      stroke:"#f2a8c5", "stroke-width":1.1, "stroke-opacity":.7
+      fill: startF ? c.licht : "#ead6c3", "fill-opacity": startF ? .95 : 1,
+      stroke:"#b77b8a", "stroke-width":1.1, "stroke-opacity":.72
     }));
   }
-  g.appendChild(svg("circle", {cx, cy, r:r * .58, fill: startF ? c.hex : "#ffeec6",
-    stroke: startF ? "#ffffff" : "#f4c46a", "stroke-width": startF ? 2.2 : 1.2}));
-  g.appendChild(svg("circle", {cx, cy:cy - r * .16, r:r * .30, fill:"#ffffff", opacity:.35}));
+  g.appendChild(svg("circle", {cx, cy, r:r * .58, fill: startF ? c.hex : "#c9a06b",
+    stroke: startF ? "#f0d6c8" : "#8f6a3e", "stroke-width": startF ? 2.2 : 1.2}));
+  g.appendChild(svg("circle", {cx, cy:cy - r * .16, r:r * .30, fill:"#fff6e9", opacity:.28}));
   if (startF){
-    g.appendChild(svg("circle", {cx, cy, r:r + 3, fill:"none", stroke:"#ffffff", "stroke-width":2.4, "stroke-opacity":.85}));
+    g.appendChild(svg("circle", {cx, cy, r:r + 3, fill:"none", stroke:"#f0d6c8", "stroke-width":2.2, "stroke-opacity":.85}));
   }
   return g;
 }
@@ -852,8 +915,8 @@ function zielFeldMaedchen(defs, f, k, cx, cy){
   const dreh = {green:0, yellow:-90, blue:180, red:90}[f];
     return knoten("g", {"data-lane":f + k, transform:"translate(" + cx + " " + cy + ") rotate(" + dreh + ")"}, [
     svg("path", {d:"M-20 -21 Q0 -26 20 -21 Q9 1 0 25 Q-9 1 -20 -21 Z",
-      fill:"url(#m-lane-" + f + ")", stroke:"#ffffff", "stroke-width":2.2}),
-    svg("path", {d:"M-12 -15 Q0 -19 12 -15 Q5 -2 0 11 Q-5 -2 -12 -15 Z", fill:"#ffffff", opacity:.32})
+      fill:"url(#m-lane-" + f + ")", stroke:"#f0d6c8", "stroke-width":2}),
+    svg("path", {d:"M-12 -15 Q0 -19 12 -15 Q5 -2 0 11 Q-5 -2 -12 -15 Z", fill:"#fff6e9", opacity:.26})
   ]);
 }
 function mitteMaedchen(defs){
@@ -863,25 +926,26 @@ function mitteMaedchen(defs){
   farben.forEach(([f, winkel]) => {
     const c = FARBEN.maedchen[f];
     const teil = knoten("g", {transform:"rotate(" + winkel + ")"}, [
-      svg("ellipse", {cx:0, cy:-r * .52, rx:r * .34, ry:r * .46, fill:c.hex, stroke:"#ffffff", "stroke-width":1.6}),
-      svg("circle", {cx:0, cy:-r * .52, r:r * .12, fill:"#ffffff", opacity:.55})
+      svg("ellipse", {cx:0, cy:-r * .52, rx:r * .34, ry:r * .46, fill:c.hex, stroke:"#f0d6c8", "stroke-width":1.4}),
+      svg("circle", {cx:0, cy:-r * .52, r:r * .12, fill:"#fff6e9", opacity:.42})
     ]);
     blueten.push(teil);
   });
   return knoten("g", {"data-mitte":"1"}, [
-    svg("circle", {cx:BRETTMITTE, cy:BRETTMITTE, r:r + 5, fill:"#ffffff", "fill-opacity":.85}),
+    svg("circle", {cx:BRETTMITTE, cy:BRETTMITTE, r:r + 5, fill:"#1a0811", "fill-opacity":.9}),
     knoten("g", {transform:"translate(" + BRETTMITTE + " " + BRETTMITTE + ")"}, [
-      svg("circle", {r:r + 1, fill:"#fff2f8", stroke:"#ef7aa8", "stroke-width":2.4}),
+      svg("circle", {r:r + 1, fill:"#2a0f1b", stroke:"#c98a9d", "stroke-width":2.2}),
       knoten("g", null, blueten),
-      svg("circle", {r:r * .34, fill:"#ffd75e", stroke:"#e8a92c", "stroke-width":1.4}),
-      svg("circle", {cx:-r * .1, cy:-r * .12, r:r * .12, fill:"#fff8c8", opacity:.8})
+      svg("circle", {r:r * .34, fill:"#c9a06b", stroke:"#f0d6b0", "stroke-width":1.3}),
+      svg("circle", {cx:-r * .1, cy:-r * .12, r:r * .12, fill:"#fff2c9", opacity:.55})
     ])
   ]);
 }
 function rahmenMaedchen(){
   return knoten("g", {"pointer-events":"none"}, [
-    svg("rect", {x:3.5, y:3.5, width:KANTE - 7, height:KANTE - 7, rx:24, fill:"none", stroke:"#ffffff", "stroke-width":4, "stroke-opacity":.9}),
-    svg("rect", {x:11, y:11, width:KANTE - 22, height:KANTE - 22, rx:18, fill:"none", stroke:"#ef7aa8", "stroke-width":2, "stroke-opacity":.75})
+    svg("rect", {x:3.5, y:3.5, width:KANTE - 7, height:KANTE - 7, rx:24, fill:"none", stroke:"#7b3c50", "stroke-width":5}),
+    svg("rect", {x:11, y:11, width:KANTE - 22, height:KANTE - 22, rx:18, fill:"none", stroke:"#d9a9b2", "stroke-width":1.6, "stroke-opacity":.8}),
+    svg("rect", {x:18, y:18, width:KANTE - 36, height:KANTE - 36, rx:14, fill:"none", stroke:"#e7c98f", "stroke-width":.9, "stroke-opacity":.5})
   ]);
 }
 
@@ -1262,6 +1326,9 @@ function steinMitSymbol(pi, fi, cx, cy, p, spielbar){
     /* Randlinie des Steins */
     svg("circle", {r:r * .99, fill:"none", stroke:"#000", "stroke-opacity":.30, "stroke-width":r * .03})
   ]);
+  /* Der weiche Schein liegt HINTER dem Stein und pulsiert mit; der Ring
+     darüber bleibt auch auf hellen Blütenfeldern erkennbar. */
+  if (spielbar) g.appendChild(svg("circle", {class:"figur-schein", r:r * 1.28}));
   g.appendChild(stein);
 
   /* Zierrat je Welt: feine Goldlinie, weiße Porzellankante oder Eisenring */
@@ -1284,7 +1351,11 @@ function steinMitSymbol(pi, fi, cx, cy, p, spielbar){
   g.appendChild(symbolGrosse(0, r * .02, r * 1.02, c.symbol, c.ink, c.hex, "figur-symbol"));
 
   if (spielbar){
-    g.appendChild(svg("circle", {class:"figur-ring", r:r * 1.16}));
+    /* Dunkler Halo plus heller Blinkring: sichtbar auf hellen Beeten und
+       dunklem Tisch, ohne die Figur oder den Klickbereich zu verändern. */
+    /* Knapp außerhalb des Steins: bleibt auch am Rand des Brettes sichtbar. */
+    g.appendChild(svg("circle", {class:"figur-ring-halo", r:r * 1.09}));
+    g.appendChild(svg("circle", {class:"figur-ring", r:r * 1.09}));
   }
   return g;
 }

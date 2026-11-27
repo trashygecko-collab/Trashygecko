@@ -5,6 +5,85 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Mensch ärgere dich nicht: Ecken, Mädchenstil, Blinken, Würfel
+
+**Auftrag:** In allen drei Stilen die vier Eckbereiche und Figuren mittig
+ausrichten, den zu hellen Mädchenstil hochwertiger machen, das Blinken
+aktiver Figuren sichtbar machen und den Würfel wieder in die Mitte des
+Spielbereichs holen – ohne Änderung an Regeln, Laufwegen, Bot oder
+Mehrspieler.
+
+**Ursache der versetzten Ecken:** `PARKPLATZ` lag mit den Offsets
+`[1.25,1.25] … [2.75,2.75]` um **0,5 Zellen** (bei 800 Einheiten
+**36,36 px**) rechts und unten neben der Mitte des 3×3-Startbereichs.
+Gemessen lag der Figurenmittelpunkt vorher **36,4 px** neben dem
+Bereichsmittelpunkt; Eckmedaillon und Parkkreise hatten dadurch keine
+gemeinsame Mitte.
+
+**Umgesetzt**
+
+- **Ecken:** `PARKPLATZ` auf `[0.75,0.75] … [2.25,2.25]` gesetzt – also
+  symmetrisch um 1,5 Zellen. Gemessene Home-Transforms:
+  `563.64 / 672.73`; Gruppenmittelpunkte **109.095 / 618.185** in allen vier
+  Ecken und allen drei Stilen. Die Figuren selbst wurden nicht einzeln
+  verschoben.
+- **Mädchenstil:** tiefes Pflaumen-/Beerenbild statt grellem Rosa:
+  Seite `#160912`, Panel `#2a1020`, Felder `#24101a`, Parkflächen `#1d0b14`,
+  Text `#f8edf1`, Gold/Rosé `#f0c9a8`/`#c98a9d`. Ruhiger Abendgarten mit
+  Bach, Goldrosetten, Rosenmedaillon in jeder Basis, Blütenfeldern und
+  Goldrahmen statt großer weißer Flächen. Die Figurenfarben sind tiefer
+  (Rosa `#c9366b`, Zitrone `#c9971b`, Minze `#238a68`, Veilchen `#7140b8`).
+- **Warum die Seite am PC zunächst hell blieb:** `/spiele/stil.js` setzt für
+  Mädchen am PC eine helle Herz-Kulisse und `color-scheme:light`. Die
+  spezifischere Regel `html[data-stil="maedchen"][data-stil] body` und
+  `stilSetzen()` (setzt `color-scheme:dark` und `theme-color`) übernehmen
+  jetzt die Spielpalette. Kontraste gemessen: Text/Panel **15,40 : 1**,
+  gedämpft/Panel **8,65 : 1**, Gold/Panel **11,42 : 1**, Ring/Park
+  **16,24 : 1**.
+- **Blinken:** pro aktiver Figur ein weicher Schein hinter dem Stein, ein
+  dunkler Halo (11 Einheiten) und ein heller Ring (6 Einheiten), dazu
+  helligkeitspulsierender Stein. Takt **0,62 s**; Ringopazität
+  **1 → 0,28**, Schein **0,30 → 0,06**. Gemessene Ringopazitäten im Verlauf:
+  `0,974 · 0,844 · 0,660 · 0,442 · 0,320 · 0,281 · 0,329` – der Ring
+  verschwindet nicht mehr im hellen Feld.
+- **Würfel:** Fuß wieder als Grid `minmax(0,1fr) auto minmax(0,1fr)`:
+  Meldung links, Würfel Mitte, Karten rechts. Am Handy gestapelt Würfel →
+  Meldung → Karten. Gemessen: PC Würfelmittelpunkt **640 / 726**, Fußmitte
+  **640**; Handy **195 / 707,5**, Fußmitte **195**; Touchfläche **50 px**
+  (PC 56 px). Maus- und Touch-Klick zeigen danach „Deine leuchtende Figur
+  anklicken (oder 1–4).“.
+- **Feldquadrat:** `.buehne` ist Größencontainer, `.brett` nimmt
+  `min(100cqw,100cqh)`; dadurch bleibt das Brett auch bei 320×568 quadratisch
+  (vorher 266 × 258,6). Gemessen: 320 → **256 × 256**, 360 → **350 × 350**,
+  390 → **380 × 380**, 768 → **752 × 752**, 1280 → **624 × 624**; überall
+  `scrollWidth = Fensterbreite`, kein Quer- oder Hochscrollen.
+
+**Geprüft**
+
+- Drei Stile × PC 1280×800 und Handy 390×844: Start, Vier-Spieler-Partie,
+  alle 16 Figuren, vier Ecken, keine Konsolenfehler.
+- Schnittstelle **2.0.0**: `version`, `whenReady()`, `start({anzahl:4,
+  stil, seed})`, `zustand()`, `aktion('wuerfeln')` und
+  `aktion('figur',{figur})` in allen drei Stilen; Figur zog von `0` nach
+  `4`, der Zug wechselte zum nächsten Spieler.
+- Würfel mit Maus (PC) und `touchscreen.tap` (390×844 und 320×568);
+  Auswahlphase und Meldung danach korrekt.
+- Größen 320×568, 360×640, 390×844, 768×1024 und 1280×800 in allen drei
+  Stilen; Brett quadratisch, Karten im Fuß sichtbar, kein Überlauf.
+- Connector-Seite geladen; der laufende Connector-Prozess auf 8766 liefert
+  für `/api/maensync` weiterhin **404** (alter Prozess), daher keine echte
+  Online-Runde gestartet. Der direkte Spielstart und die Connector-
+  Adressform (`?modus=online&room=…&id=…&anzahl=…`) wurden geprüft.
+
+**Sicherung:** `arbeit/sicherung/menschaerger-2026-11-27/` (beide Ablagen
+vor der Änderung). Bilder: `arbeit/screens/maen-start-*`,
+`maen-neu-*`, `maen-ringpeak-*`, `maen-size-*`.
+
+**Dateien:** `spiele/brettspiele/menschaerger/menschaerger.html` in beiden
+Ablagen, byte-gleich; keine anderen Spiele geändert.
+
+---
+
 ## 27.11.2026 · 10.000: eigenständig, Bot und Schnittstelle 2.0
 
 **Auftrag:** Das vorhandene Würfelspiel 10.000 vollständig überarbeiten –
