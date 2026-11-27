@@ -5,6 +5,62 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Mensch ärgere dich nicht: Würfel wieder in der Brettmitte
+
+**Auftrag:** Den Würfel auf PC und Handy zurück in den freien zentralen
+Bereich des Spielfelds holen – nicht in die Fußzeile, nicht links oder rechts
+unten. Die zuletzt umgesetzten Eckpositionen, Stile, Blinkanimation,
+Spielmechanik, Bots, Mehrspieler und Schnittstelle 2.0 bleiben unverändert.
+
+**Umgesetzt**
+
+- **Ursprüngliche Position wiedergefunden:** In der früheren Fassung lag der
+  Würfel absolut mit `left:50%;top:50%;transform:translate(-50%,-50%)` im
+  Brettbereich. Genau diese zentrale Overlay-Position ist wiederhergestellt.
+- **Markup:** Der Würfel steht jetzt als `.wuerfel-mitte` innerhalb von
+  `.buehne` direkt über dem SVG-Brett. Er wird nicht mehr im `.fuss`
+  gerendert; die Fußzeile enthält nur noch Meldung und Spielerkarten.
+- **Responsiv:** Die Position bindet an die Mitte des Brettbereichs, nicht an
+  eine feste Pixelkoordinate. Die Würfelgröße bleibt 56 px am PC, 50 px bei
+  höchstens 520 px Breite und 42 px in flachen Fenstern; Maus- und
+  Touch-Bedienung sowie die Touchfläche bleiben erhalten.
+- **Fußzeile:** Auf schmalen Fenstern stehen Meldung und Karten jetzt in zwei
+  Zeilen statt in drei; unter dem Brett entsteht kein zusätzlicher
+  Würfelbereich.
+- **Unverändert:** Ecken und Figuren, dunkler Mädchenstil, Normal- und
+  Bubenstil, Blinkanimation, Regeln, Laufwege, Bots, Mehrspieler und
+  Schnittstelle 2.0.
+
+**Geprüft**
+
+- **1280 × 800:** Brett 641 × 641 px, Würfel 56 × 56 px, beide Mittelpunkte
+  exakt `(640, 379,95)`; Abstand dx/dy **0**. Würfel vollständig im Brett,
+  `footerContainsDie` **false**, Fußzeile 7,5 px unter dem Brett.
+- **390 × 844:** Brett 380 × 380 px, Würfel 50 × 50 px, Mittelpunkte beide
+  `(195, 402,23)`; dx/dy **0**. Keine Figur überlappt den Würfel; die
+  Fußzeile beginnt 140,3 px unter dem Brett, kein Querscrollen.
+- **Alle drei Stile** (Normal, Mädchen, Buben) auf PC und Handy: Würfel jeweils
+  sichtbar und zentriert, keine Konsolen- oder Seitenfehler.
+- **Kleinere Größen und Zoom:** 320 × 568, 844 × 390 (quer) sowie 260 × 562
+  (entspricht 150 % Zoom auf 390 × 844) und 195 × 422 (200 % Zoom): Würfel
+  jeweils mittig im Brett, vollständig sichtbar, kein Querscrollen. Bei
+  200 % bleibt die Touchfläche 42 × 42 px.
+- **Bedienung:** PC-Mausklick und Handy-Touch auf den Würfel starten den Wurf
+  (`phase` `wartenWurf` → `wurfLaeuft`, Klasse `rollt`, Meldung „Der Würfel
+  rollt …“). Trefferpunkt ist der Würfel selbst.
+- **Nicht geprüft:** Eine vollständige Partie wurde für diese reine
+  Positionsänderung nicht erneut durchgespielt; Regeln und Spielablauf wurden
+  nicht angefasst.
+
+**Sicherung:** `arbeit/sicherung/menschaerger-wuerfel-2026-11-27/` (beide
+Ablagen vor der Änderung). Bilder: `arbeit/screens/maen-wuerfel-mitte-pc.png`,
+`arbeit/screens/maen-wuerfel-mitte-handy.png`.
+
+**Dateien:** `spiele/brettspiele/menschaerger/menschaerger.html` in beiden
+Ablagen, `ENTWICKLUNGSSTAND.md`.
+
+---
+
 ## 27.11.2026 · Gold Miner: Nuggets, Gestein und klarer Startbildschirm
 
 **Auftrag:** Die Startseite von Gold Miner auf das Nötige reduzieren und
