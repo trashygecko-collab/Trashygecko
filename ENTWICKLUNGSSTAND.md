@@ -5,6 +5,106 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Pac-Man: großes PC-Feld, Daumensteuerung, ruhigeres Tempo
+
+**Auftrag:** Pac-Man gezielt überarbeiten: großes PC-Spielfeld, feste
+Daumensteuerung rechts unten am Handy, spürbar langsameres Spieltempo,
+dunklerer Mädchenstil, Start/Pause/Neustart/Ende im Spiel und vollständige
+Schnittstelle 2.0. Normal- und Bubenstil sowie Labyrinth, Punkte, Leben,
+Geisterregeln und Kraftpillen bleiben erhalten. Keine anderen Spiele ändern.
+
+**Umgesetzt**
+
+- **PC-Layout:** `main` ist jetzt bis 1440 px breit; das Spielfeld sitzt in
+  einer großen Bühne, Status und Hinweis stehen darüber, die Steuerung und
+  der Tastaturhinweis in einer schmalen rechten Leiste. Das Seitenverhältnis
+  bleibt exakt 19:21 und wird aus dem freien Platz berechnet. Gemessen:
+  **1280×800 → Feld 586×648**, Bühne 964×666; **1920×1080 → Feld 839×928**,
+  Bühne 1121×946; kein Abschneiden, kein Querscrollen.
+- **Startbildschirm:** eigener Bereich mit Titel, Figurenvorschau, kurzer
+  Erklärung, Grafikstilwahl (Normal/Mädchen/Buben), großem Startknopf und
+  aufklappbaren Regeln. Der Spielbereich ist bis zum Start verborgen. Die
+  Wahl wird unter `pacman-stil` gemerkt; beim direkten Start ist sie sichtbar,
+  bei einem von außen übergebenen Stil nicht.
+- **Handysteuerung:** Das Steuerkreuz sitzt fest rechts unten
+  (`position:fixed`, Safe-Area-Abstand), nicht mehr mittig über dem Feld.
+  Gemessen bei 390×844: Feld 360×397, Pad **175,8×108,4 px** bei
+  x 204,2/y 725,6 (rechts 380, unten 834), kein Überlappen. Bei 320×568:
+  Feld 243×269, Pad 156×99; bei 260×563 (150-%-Zoom-Ersatz): Feld 230×254,
+  Pad 156×99, kein Überlappen. Querformat 844×390: Feld 256×284, Pad 152×92,
+  Tasten 48×44 px, ebenfalls ohne Überlappen. Im Querformat sitzt das Pad
+  rechts neben der Bühne.
+- **Tempo tatsächlich langsamer:** Pac-Man **6,1 → 3,6 Kacheln/s** (Level-
+  Zuwachs 1,2 → 0,75, pro Level 0,2 → 0,12). Geister **5,2/5,02/4,84/4,66 →
+  3,15/3,00/2,85/2,70 Kacheln/s** (Level-Zuwachs 1,4 → 0,6, pro Level 0,18 →
+  0,10), Heimweg **9 → 4,8**; Angstfaktor bleibt 0,62. Geändert ist die in
+  `bewegePac`/`bewegeGeist` benutzte Geschwindigkeit, nicht nur die Animation.
+  Gemessen: Pac-Man 72 px in 1 s = **3,6 Kacheln/s**; Geister im geraden Lauf
+  rund 3,0–3,3 Kacheln/s (Rasterabtastung).
+- **Grafik:** Normal und Buben bleiben in ihrer vorhandenen Zeichenwelt.
+  Der Mädchenstil wurde von Leuchtrosa auf **dunkles Rosenholz** umgestellt:
+  Seitenfläche `#9a446a → #6d2948 → #3b1228`, Bühne `#240b18`, Wände
+  `#c07a9c/#8f4a6c/#6d3250/#4a2038`, Punkte warmgold, Figuren hell und klar
+  erkennbar. Der Start-Pac-Man ist jetzt ein echter Kreis mit Mund und Auge
+  statt eines Dreiecks. Keine neuen Dekorationen im Spielfeld.
+- **Schnittstelle 2.0:** `window.PacMan` mit `version 2.0.0`, `bereit`,
+  `whenReady`, `start`, `einstellungen`, `zustand`, `startbildschirm`, `stop`,
+  `pause`, `resume` und `aktion`. Erlaubtes Startfeld nur `stil`
+  (`normal`/`maedchen`/`buben`); ein reiner `start({stil})` richtet nur die
+  Welt ein. Aktionen `richtung`, `start`, `pause`, `weiter`, `neu`; Ereignisse
+  `pacman:bereit|ende|pausiert|weiter`. Pause/Weiter sind idempotent,
+  `zustand()`/`einstellungen()` liefern Kopien, Fehlercodes nach Schnittstelle.
+- **Connector:** `PacMan` steht jetzt in `SPIEL_API_NAMEN` beider
+  `connector.html`; der Connector ruft `start({stil})` auf. Die eigene
+  Stilwahl bleibt dort verborgen; ein Connector-Stil hat Vorrang, auch vor
+  einer im Spiel gespeicherten Wahl. Keine CDN- oder Netzabhängigkeit.
+
+**Geprüft**
+
+- **PC 1280×800 und 1920×1080**, Handy **390×844, 320×568, 260×563** und
+  Querformat **844×390**, jeweils alle drei Stile: Feld vollständig sichtbar,
+  Seitenverhältnis erhalten, kein Querscrollen, Pad innerhalb des Viewports
+  und ohne Überlappung mit dem Feld. Startbildschirm bei 390 und 320 ohne
+  Scrollen; Stilwahl bleibt nach Neuladen erhalten (Mädchen getestet).
+- **Tastatur:** Pfeil links bewegt Pac-Man (190 → 145,6 px in 600 ms),
+  Pfeil hoch wird angenommen; Pause/Weiter-Knopf wechselt `laeuft → pause →
+  laeuft`; „Neu“ startet sofort eine neue Runde, „Start“ öffnet den
+  Startbildschirm. Keine Konsolen- oder Seitenfehler.
+- **Touch:** Tipp auf das rechte Pad-Feld bewegt Pac-Man (390: 190 → 227,2 px
+  in 500 ms; 320 und Querformat ebenso); Pad ist sichtbar und erreichbar.
+- **Schnittstelle:** Version/`whenReady`; `start({stil})` ohne Start;
+  unbekannter Stil → `normal`; fremdes Feld, falscher Typ und laufende Partie
+  liefern die vorgesehenen Fehler; `pause`/`resume` zweimal hintereinander
+  antworten mit demselben Pausenzustand; `aktion` prüft Richtung und Felder;
+  Kopien bleiben unabhängig; Ereignisse `bereit`, `pausiert`, `weiter` und
+  `ende` wurden beobachtet. Ein Testlauf bis **GAME OVER** (3 Leben, 130
+  Punkte, „Nochmal“) und drei kurze Neustart-Runden (je 60 Punkte) liefen ohne
+  Fehler; Kraftpille an der Ecke: 130 Punkte, 3 Leben.
+- **Connector:** Pac-Man im Rahmen geöffnet, `stilAnSpiel()` meldet Erfolg;
+  Mädchen aus dem Connector kommt an (`stil:maedchen`, `stilWahl:false`,
+  Kachel verborgen), Startknopf startet die Partie; Connector `klassisch`
+  überschreibt eine gespeicherte Mädchenwahl auf `normal`. Die statische
+  Connector-Prüfseite meldete nur die erwarteten 501/404 des nicht laufenden
+  Go-Backends, keine Pac-Man-Skriptfehler.
+
+**Offen / Grenzen**
+
+- Kein vollständiger Levelabschluss und keine Frucht wurde separat
+  durchgespielt; Levelstruktur, Punkte, Leben, Kollisionen, Geisterregeln und
+  Kraftpillen wurden nicht umgebaut. Ein echter Browser-Zoom wurde nicht
+  separat gemessen; 260×563 diente als 150-%-Ersatz für 390×844.
+- **Nicht gepusht, nicht deployed.** Nur der Commit folgt nach den Tests.
+
+**Sicherung:** `arbeit/sicherung/pacman-2026-11-27/` (GitHub- und
+Homepage-Kopie vor der Änderung). Bilder: `arbeit/screens/pacman-*.png`.
+
+**Dateien:** `spiele/pacman/pacman.html` in beiden Ablagen;
+`spiele/connector/connector.html` und `spiele/connector-online/connector.html`
+(nur `PacMan` in der API-Liste); `ENTWICKLUNGSSTAND.md`.
+
+---
+
+
 ## 27.11.2026 · Mensch ärgere dich nicht: Eckmedaillons an die Figuren gesetzt
 
 **Auftrag:** Die Spielfiguren wieder in ihre ursprünglichen Parkplätze

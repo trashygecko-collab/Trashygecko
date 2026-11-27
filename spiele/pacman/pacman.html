@@ -137,60 +137,236 @@ html[data-stil="buben"]{
 --pm-auge:#ffffff;--pm-pupille:#04070b;--pm-pupille-blau:#ffffff;
 --pm-pac:#c8ff3d;--pm-pac-rand:#4a6b00;--pm-tod:#e0242f;--pm-rahmen:#c8ff3d44;
 }
+
+/* ---- 27.11.2026: großes PC-Feld, Startbildschirm, Daumensteuerung ---- */
+main{width:100%;max-width:1440px;height:calc(100dvh - 24px);display:flex;flex-direction:column;gap:8px}
+.titelleiste{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px;
+ padding:4px 8px;background:linear-gradient(var(--kopf),var(--kopf-2));border:1px solid var(--rand-1);
+ border-radius:8px;box-shadow:0 4px 12px var(--schatten)}
+.titelleiste .titel{color:var(--hell);font-size:14px;letter-spacing:.14em;font-weight:bold;white-space:nowrap}
+.titel-aktionen{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:4px}
+.titel-aktionen button{font-family:inherit;font-size:12px;padding:5px 8px;border-radius:6px;cursor:pointer;
+ border:1px solid var(--rand-1);background:var(--leiste);color:var(--gold);white-space:nowrap}
+.titel-aktionen button:hover{background:var(--hover)}
+.titel-aktionen button:disabled{opacity:.55;cursor:default}
+.titel-aktionen .vb-symbol{margin-right:4px}
+
+.startbildschirm{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center;
+ align-items:center;gap:clamp(8px,2.2vh,18px);padding:clamp(12px,3vh,30px) clamp(12px,4vw,34px);
+ text-align:center;border:1px solid var(--rand-1);border-radius:10px;
+ background:radial-gradient(circle at 50% -10%,var(--bg-1),var(--bg-2) 52%,var(--bg-3));
+ box-shadow:0 8px 24px var(--schatten);overflow:auto}
+.start-kopf h1{margin:0;color:var(--gold-hell);font-size:clamp(34px,8vh,68px);line-height:.95;letter-spacing:.1em}
+.start-marke{margin:0 0 4px;color:var(--muted);font-size:10px;letter-spacing:.26em}
+.start-unter{margin:5px 0 0;color:var(--gold);font-size:clamp(12px,1.8vh,15px)}
+.start-szene{display:flex;align-items:center;justify-content:center;gap:12px;height:clamp(28px,7vh,62px)}
+.start-pac{position:relative;width:clamp(30px,7vh,62px);aspect-ratio:1;border-radius:50%;
+ background:conic-gradient(from 35deg,var(--pm-pac) 0 292deg,transparent 292deg 360deg);
+ box-shadow:0 0 18px color-mix(in srgb,var(--pm-pac) 55%,transparent)}
+.start-pac::after{content:"";position:absolute;left:54%;top:27%;width:12%;height:15%;border-radius:50%;
+ background:var(--pm-pupille);box-shadow:0 0 0 1px #ffffff55}
+.start-geist{width:clamp(22px,5.2vh,46px);height:clamp(25px,6vh,52px);border-radius:50% 50% 26% 26%;
+ position:relative;border:1px solid #ffffff55;box-shadow:0 0 12px #00000055}
+.start-geist::before,.start-geist::after{content:"";position:absolute;top:32%;width:22%;height:26%;
+ border-radius:50%;background:var(--pm-auge)}
+.start-geist::before{left:24%}.start-geist::after{right:24%}
+.start-geist.g1{background:var(--pm-geist-1)}.start-geist.g2{background:var(--pm-geist-2)}
+.start-geist.g3{background:var(--pm-geist-3)}.start-geist.g4{background:var(--pm-geist-4)}
+.start-inhalt{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:620px}
+.start-text{margin:0;color:var(--text);font-size:clamp(12px,1.8vh,15px);line-height:1.45}
+.wahl-block{display:flex;flex-direction:column;gap:5px;align-items:center}
+.wahl-titel{margin:0;color:var(--muted);font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+.wahl-reihe{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.wahl{font-family:inherit;font-size:13px;font-weight:bold;padding:9px 14px;border-radius:8px;cursor:pointer;
+ background:var(--leiste);color:var(--hell);border:1px solid var(--rand-1);min-height:38px}
+.wahl[aria-pressed="true"]{background:var(--gold);color:var(--leiste);border-color:var(--gold-hell)}
+.wahl:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.start-knoepfe{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px}
+.start-knoepfe button{font-family:inherit;font-size:clamp(14px,2vh,17px);font-weight:bold;padding:11px 22px;
+ border-radius:9px;cursor:pointer;color:var(--leiste);border:1px solid var(--gold-hell);
+ background:linear-gradient(var(--gold-hell),var(--gold));box-shadow:0 4px 0 var(--schatten-tief)}
+.start-knoepfe button:active{transform:translateY(2px);box-shadow:0 2px 0 var(--schatten-tief)}
+#regeln{margin-top:2px;max-width:680px;width:100%;text-align:left}
+#regeln summary{cursor:pointer;color:var(--gold);font-size:13px;padding:4px 0}
+#regeln ol{margin:0;padding-left:18px;line-height:1.5;font-size:12px;color:var(--regeln);max-height:24vh;overflow:auto}
+
+.spielbereich{flex:1 1 auto;min-height:0;display:grid;gap:7px;
+ grid-template-columns:minmax(0,1fr) clamp(210px,23vw,310px);
+ grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"status status" "hinweis hinweis" "buehne seite"}
+.statuszeile{grid-area:status;border:1px solid var(--rand-1);border-radius:7px;padding:5px 9px}
+.hinweiszeile{grid-area:hinweis;margin:0;min-height:18px;color:var(--muted);font-size:12px;line-height:1.35}
+.buehne{grid-area:buehne;height:100%;min-height:0;padding:8px;border:1px solid var(--rand-1);
+ border-radius:9px;background:var(--buehne);box-shadow:inset 0 0 34px var(--schatten-tief)}
+.seitenleiste{grid-area:seite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+ min-height:0;padding:10px 8px;border:1px solid var(--rand-1);border-radius:9px;background:var(--panel)}
+.seitenleiste .pad{background:transparent;padding:0}
+.seitenleiste .steuer-tip{margin:0;color:var(--muted);font-size:11px;text-align:center;line-height:1.35}
+ .seitenleiste .steuer-tip{display:none}
+.pad{grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,52px);gap:6px;padding:6px;
+ background:var(--panel);border-radius:12px;touch-action:none}
+.pad button{font-family:inherit;font-size:22px;min-width:52px;min-height:48px;border-radius:9px;cursor:pointer;
+ border:1px solid var(--rand-1);background:var(--pad);color:var(--gold);touch-action:none;
+ -webkit-user-select:none;user-select:none;transition:background .08s,transform .08s}
+.pad button:active,.pad button.aktiv{background:var(--kopf);transform:scale(.96)}
+.pad .oben{grid-column:2;grid-row:1}.pad .links{grid-column:1;grid-row:2}
+.pad .runter{grid-column:2;grid-row:2}.pad .rechts{grid-column:3;grid-row:2}
+body.zeigt-start .spielbereich{display:none}
+body:not(.zeigt-start) .startbildschirm{display:none}
+
+/* Mädchen: dunkleres, tieferes Rosenholz statt Leuchtrosa. */
+html[data-stil="maedchen"]{--text:#fbeaf2;--bg-1:#9a446a;--bg-2:#6d2948;--bg-3:#3b1228;
+ --gold-hell:#ffe1ee;--gold:#ffb3d0;--leiste:#3f1629;--panel:#4a1b31;--kopf:#793253;--kopf-2:#5a203b;
+ --hover:#5e2742;--buehne:#240b18;--schleier:#240b18dd;--pad:#5d2543;
+ --hell:#fff1f6;--muted:#e0aec4;--regeln:#f4d6e3;--meldung-text:#fbe7f0;
+ --rand:#e88bb2;--rand-1:#e88bb266;--rand-2:#e88bb244;--rand-3:#e88bb233;--rand-4:#e88bb222;
+ --schatten:#00000066;--schatten-tief:#00000099;
+ --pm-grund:#2b0f1e;--pm-wand-1:#a54c74;--pm-wand-2:#7a3052;--pm-wand-rand:#ffd0e055;
+ --pm-tor:#ff9cc2;--pm-punkt:#ffd9a8;--pm-kraft:#fff1c9;
+ --pm-geist-1:#ff5d7e;--pm-geist-2:#c77bff;--pm-geist-3:#48d6b0;--pm-geist-4:#ffb347;
+ --pm-geist-heim:#8c5c79;--pm-geist-blau:#5b6cff;--pm-auge:#fff8fb;--pm-pupille:#431226;
+ --pm-pupille-blau:#fff8fb;--pm-pac:#ff5c86;--pm-pac-rand:#5b1028;--pm-tod:#d92b59;--pm-rahmen:#e88bb255}
+html[data-stil="maedchen"] body{background:radial-gradient(circle 900px at 50% -6%,#9a446a 0%,#6d2948 46%,#3b1228 100%) fixed !important}
+html[data-stil="maedchen"] #leben{color:#ffb3d0;text-shadow:0 0 8px #00000066}
+
+@media (max-width:820px) and (orientation:portrait){
+ body:not(.zeigt-start){padding-bottom:calc(148px + env(safe-area-inset-bottom));overflow:hidden}
+ body:not(.zeigt-start) main{height:calc(100dvh - 20px - 148px);max-width:none;gap:5px}
+ .titelleiste{min-height:32px;padding:3px 6px}
+ .titelleiste .titel{font-size:12px;letter-spacing:.08em}
+ .titel-aktionen{gap:3px}
+ .titel-aktionen button{font-size:11px;padding:4px 6px}
+ /* Der Zurueck-Knopf des Connectors wird am Handy zum kurzen "Zurueck",
+    sonst draengt sein langer Text die uebrigen Knoepfe in eine zweite Zeile. */
+ body .titelleiste .tg-zurueck{font-size:0;min-height:0;line-height:1;padding:5px 7px;
+  color:var(--gold);background:var(--leiste);border-color:var(--rand-1);opacity:.9}
+ body .titelleiste .tg-zurueck::after{content:"Zurück";font-size:10px;letter-spacing:.02em}
+ .spielbereich{display:flex;flex-direction:column;gap:4px;min-height:0}
+ .statuszeile{order:0;font-size:12px;padding:4px 7px}
+ .hinweiszeile{order:1;min-height:15px;font-size:11px}
+ .buehne{order:2;flex:1 1 auto;min-height:0;padding:4px;border:0;background:transparent;box-shadow:none}
+ .seitenleiste{display:contents}
+ .pad{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;
+  grid-template-columns:repeat(3,clamp(48px,14vw,60px));grid-template-rows:repeat(2,clamp(46px,13vw,56px));gap:5px;
+  padding:7px;border:1px solid var(--rand-1);border-radius:16px;background:color-mix(in srgb,var(--panel) 92%,transparent);
+  box-shadow:0 8px 20px var(--schatten-tief)}
+ .pad button{min-width:0;min-height:0;font-size:22px}
+ .startbildschirm{padding:10px 14px;gap:7px;overflow:auto}
+ .start-kopf h1{font-size:clamp(34px,8vh,50px)}
+ .start-szene{height:52px}
+ .start-inhalt{gap:7px}
+ .wahl{padding:8px 12px;min-height:36px}
+ .start-knoepfe button{padding:10px 18px}
+ #regeln ol{max-height:20vh}
+}
+@media (max-width:820px) and (orientation:landscape), (max-height:560px) and (orientation:landscape){
+ body{padding:4px}
+ main{max-width:100%;height:calc(100dvh - 8px);gap:4px}
+ .titelleiste{min-height:28px;padding:2px 6px}
+ .titelleiste .titel{font-size:12px}
+ .titel-aktionen button{font-size:10px;padding:3px 5px}
+ .spielbereich{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);gap:3px}
+ .statuszeile{font-size:12px;padding:3px 7px}
+ .hinweiszeile{min-height:0;font-size:11px}
+ .buehne{padding:4px}
+ .seitenleiste{padding:5px;gap:6px;width:auto}
+ .pad{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,44px);gap:4px;padding:4px}
+ .pad button{font-size:18px;min-width:0;min-height:0}
+ .seitenleiste .steuer-tip{display:none}
+ .startbildschirm{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.4fr) auto;align-content:center;
+  gap:8px 14px;padding:8px 12px;text-align:left}
+ .start-kopf{grid-column:1;grid-row:1/3}.start-szene{grid-column:1;grid-row:2;justify-content:flex-start}
+ .start-inhalt{grid-column:2;grid-row:1/3;align-items:flex-start;text-align:left}
+ .start-knoepfe{grid-column:3;grid-row:1/3;align-self:center}
+ #regeln{grid-column:1/-1;grid-row:3;max-width:100%}
+ #regeln ol{max-height:18vh}
+}
 </style>
 <script src="../stil.js"></script>
+<script src="../spiel-start.js"></script>
 <link rel="stylesheet" href="../schrift.css">
 </head>
 <body>
 <main class="fenster">
 
- <div class="menueleiste">
-  <button id="btnNeu">Neues Spiel</button>
-  <button id="btnPause">Pause</button>
- </div>
+ <header class="titelleiste">
+  <div class="titel">PAC-MAN</div>
+  <div class="titel-aktionen">
+   <button id="btnNeu" type="button">Neu</button>
+   <button id="btnPause" type="button">Pause</button>
+   <button id="btnStart" type="button">Start</button>
+   <button id="knopfVollbild" class="arcade-vollbild" type="button" aria-pressed="false">
+    <span class="vb-symbol" aria-hidden="true">⛶</span><span class="vb-text">Vollbild</span>
+   </button>
+  </div>
+ </header>
 
- <div class="statuszeile">
-  <span>Punkte <b id="punkte">0</b></span>
-  <span>Level <b id="level">1</b></span>
-  <span>Leben <b id="leben">●●●</b></span>
-  <span>Rekord <b id="rekord">0</b></span>
- </div>
-
- <div class="buehne">
-  <canvas id="feld" width="380" height="420"></canvas>
-  <div class="meldung" id="meldung">
-   <div class="kasten">
-    <h2 id="meldungTitel">PAC-MAN</h2>
-    <p id="meldungText">Alle Punkte fressen und den Geistern ausweichen. Kraftpillen machen die Geister für kurze Zeit essbar.</p>
-    <button id="meldungKnopf">Starten</button>
+ <section class="startbildschirm" id="startBildschirm" aria-labelledby="startTitel">
+  <div class="start-kopf">
+   <p class="start-marke">ARCADE · 1 SPIELER</p>
+   <h1 id="startTitel">PAC-MAN</h1>
+   <p class="start-unter">Punkte fressen. Geistern ausweichen.</p>
+  </div>
+  <div class="start-szene" aria-hidden="true">
+   <span class="start-pac"></span>
+   <span class="start-geist g1"></span><span class="start-geist g2"></span>
+   <span class="start-geist g3"></span><span class="start-geist g4"></span>
+  </div>
+  <div class="start-inhalt">
+   <p class="start-text">Frisst alle Punkte, weicht den Geistern aus und nutzt die Kraftpillen in den Ecken. Drei Leben pro Partie.</p>
+   <div class="wahl-block" id="stilBlock">
+    <p class="wahl-titel">Grafikstil</p>
+    <div class="wahl-reihe" id="stilKnoepfe" role="group" aria-label="Grafikstil">
+     <button type="button" class="wahl" data-stil="normal" aria-pressed="true">Normal</button>
+     <button type="button" class="wahl" data-stil="maedchen" aria-pressed="false">Mädchen</button>
+     <button type="button" class="wahl" data-stil="buben" aria-pressed="false">Buben</button>
+    </div>
    </div>
   </div>
- </div>
+  <div class="start-knoepfe">
+   <button id="knopfStarten" type="button">Spiel starten</button>
+  </div>
+  <details id="regeln">
+   <summary>Regeln</summary>
+   <ol>
+    <li><b>Ziel:</b> Alle Punkte im Labyrinth fressen. Kleine Punkte geben 10, die großen Kraftpillen in den Ecken 50 Punkte.</li>
+    <li><b>Kraftpille:</b> Für etwa sieben Sekunden werden die Geister blau und lassen sich fressen – 200, 400, 800 und 1600 Punkte nacheinander.</li>
+    <li><b>Geister:</b> Vier Verfolger mit unterschiedlichen Wegen. Wer sie ohne Kraftpille berührt, verliert ein Leben. Drei Leben pro Spiel.</li>
+    <li><b>Steuern:</b> Mit dem Finger über das Feld wischen, das Pfeilfeld rechts unten benutzen oder am PC die Pfeiltasten drücken. Die Richtung wird vorgemerkt und beim nächsten Abzweig genommen.</li>
+    <li><b>Frucht:</b> Nach 60 und 120 gefressenen Punkten erscheint unter dem Geisterhaus eine Frucht. Sie bleibt neun Sekunden liegen; wer sie einsammelt, bekommt je Level 100 bis 5000 Punkte.</li>
+    <li><b>Level:</b> Sind alle Punkte weg, geht es ein Level höher – die Geister werden etwas schneller.</li>
+    <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
+   </ol>
+  </details>
+ </section>
 
-   <div class="pad" id="pad">
-  <button class="oben" data-dir="hoch">▲</button>
-  <button class="links" data-dir="links">◀</button>
-  <button class="runter" data-dir="runter">▼</button>
-  <button class="rechts" data-dir="rechts">▶</button>
+ <div class="spielbereich" id="spielBereich" hidden>
+  <div class="statuszeile">
+   <span>Punkte <b id="punkte">0</b></span>
+   <span>Level <b id="level">1</b></span>
+   <span>Leben <b id="leben">●●●</b></span>
+   <span>Rekord <b id="rekord">0</b></span>
+  </div>
+  <p class="hinweiszeile" id="hinweis">Wischen oder Pfeile: Pac-Man läuft in die Richtung.</p>
+  <div class="buehne">
+   <canvas id="feld" width="380" height="420" aria-label="Pac-Man-Labyrinth"></canvas>
+   <div class="meldung" id="meldung" hidden>
+    <div class="kasten">
+     <h2 id="meldungTitel">PAC-MAN</h2>
+     <p id="meldungText"></p>
+     <button id="meldungKnopf">Weiter</button>
+    </div>
+   </div>
+  </div>
+  <aside class="seitenleiste">
+   <div class="pad" id="pad" role="group" aria-label="Richtung">
+    <button class="oben" data-dir="hoch" type="button" aria-label="Nach oben">▲</button>
+    <button class="links" data-dir="links" type="button" aria-label="Nach links">◀</button>
+    <button class="runter" data-dir="runter" type="button" aria-label="Nach unten">▼</button>
+    <button class="rechts" data-dir="rechts" type="button" aria-label="Nach rechts">▶</button>
+   </div>
+   <p class="steuer-tip">Pfeiltasten · W A S D<br>am Handy rechts unten</p>
+  </aside>
  </div>
-
- <div class="fuss">
-  <span id="hinweis">Wischen oder Pfeile: Pac-Man läuft in die Richtung.</span>
- </div>
-
- <details id="regeln">
-  <summary>Regeln</summary>
-  <ol>
-   <li><b>Ziel:</b> Alle Punkte im Labyrinth fressen. Kleine Punkte geben 10, die großen Kraftpillen in den Ecken 50 Punkte.</li>
-   <li><b>Kraftpille:</b> Für etwa sieben Sekunden werden die Geister blau und lassen sich fressen – 200, 400, 800 und 1600 Punkte nacheinander.</li>
-   <li><b>Geister:</b> Vier Verfolger mit unterschiedlichen Wegen. Wer sie ohne Kraftpille berührt, verliert ein Leben. Drei Leben pro Spiel.</li>
-   <li><b>Steuern:</b> Mit dem Finger über das Feld wischen, das Pfeilfeld unter dem Brett benutzen oder am PC die Pfeiltasten drücken. Die Richtung wird vorgemerkt und beim nächsten Abzweig genommen.</li>
-   <li><b>Frucht:</b> Nach 60 und 120 gefressenen Punkten erscheint unter dem Geisterhaus eine Frucht. Sie bleibt neun Sekunden liegen; wer sie einsammelt, bekommt je Level 100 bis 5000 Punkte.</li>
-   <li><b>Level:</b> Sind alle Punkte weg, geht es ein Level höher – die Geister werden etwas schneller.</li>
-   <li><b>Rekord:</b> Die höchste Punktzahl merkt sich der Browser.</li>
-  </ol>
-  <p class="klein mitte"><a href="../spiele.html">Zurück zur Spieleübersicht</a></p>
- </details>
 </main>
 
 <script>
@@ -226,7 +402,7 @@ const MAZE=[
 const SPALTEN=19, ZEILEN=21, Z=20;
 const W=SPALTEN*Z, H=ZEILEN*Z;
 // Zeichnen in Kachelkoordinaten, Ausgabe in Geraetepixeln (scharf am PC).
-const DPR=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+const DPR=Math.min(3,Math.max(2,window.devicePixelRatio||1));
 canvas.width=Math.round(W*DPR);
 canvas.height=Math.round(H*DPR);
 ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -260,6 +436,8 @@ const GEIST_START=[
 
 let zustand="start";       // start, laeuft, pause, tot, level, ende
 let punkte=0, level=1, leben=3;
+let tick=0, endeGemeldet=false;
+let stilApi="normal", stilVorgabe=false;
 let pillen=[];             // 0 leer, 1 Punkt, 2 Kraftpille
 let offenePillen=0;
 let pac=null;
@@ -276,6 +454,10 @@ const FRUCHT_PUNKTE=[100,300,500,700,1000,2000,3000,5000];
 const FRUCHT_BEI=[60,120];
 
 const richtungen={hoch:{x:0,y:-1},runter:{x:0,y:1},links:{x:-1,y:0},rechts:{x:1,y:0}};
+
+function ereignis(name,detail){
+ try{ window.dispatchEvent(new CustomEvent(name,{detail:detail})); }catch(e){ /* ein Hörer darf das Spiel nicht aufhalten */ }
+}
 
 // ---------------------------------------------------------------- Kacheln
 
@@ -334,11 +516,28 @@ function geisterNeu(){
   y:zentrum(g.x,g.y).y
  }));
  /* Geschwindigkeiten: Index 0 ist der schnellste */
- geister.forEach((g,i)=>{ g.tempo=5.2-i*0.18; });
+ geister.forEach((g,i)=>{ g.tempo=3.15-i*0.15; });
+}
+
+function wahlZeigen(){
+ const block=$("stilBlock");
+ if(block)block.hidden=stilVorgabe||zustand!=="start";
+ document.querySelectorAll("#stilKnoepfe button").forEach(b=>{
+  b.setAttribute("aria-pressed",b.dataset.stil===stilApi?"true":"false");
+ });
+}
+
+function zeigeStart(an){
+ document.body.classList.toggle("zeigt-start",!!an);
+ const start=$("startBildschirm"), spiel=$("spielBereich"), pause=$("btnPause");
+ if(start)start.hidden=!an;
+ if(spiel)spiel.hidden=!!an;
+ if(pause){ pause.disabled=!!an; pause.textContent="Pause"; }
+ wahlZeigen();
 }
 
 function neuesSpiel(){
- punkte=0; level=1; leben=3;
+ punkte=0; level=1; leben=3; tick=0; endeGemeldet=false;
  angstZeit=0; geisterKette=0; jagdZeit=0;
  frucht=null; gefressen=0; funken=[];
  pillenLaden();
@@ -347,9 +546,10 @@ function neuesSpiel(){
  zahlenZeigen();
  $("rekord").textContent=rekordLaden();
  zustand="start";
- $("btnPause").textContent="Pause";
- zeigeMeldung("PAC-MAN","Alle Punkte fressen und den Geistern ausweichen. Kraftpillen machen die Geister für kurze Zeit essbar.","Starten");
- $("meldungKnopf").onclick=starten;
+ $("meldung").hidden=true;
+ meldungAktiv=false;
+ $("meldungKnopf").onclick=null;
+ zeigeStart(true);
  zeichne();
 }
 
@@ -364,11 +564,41 @@ function levelStarten(neu){
 }
 
 function starten(){
+ if(zustand==="laeuft"||zustand==="pause")return {ok:false,fehler:"spiel-laeuft"};
+ if(!pac)neuesSpiel();
  zustand="laeuft";
+ tick=0; endeGemeldet=false;
  $("meldung").hidden=true;
  meldungAktiv=false;
- letzteZeit=performance.now();
+ $("meldungKnopf").onclick=null;
+ zeigeStart(false);
+ $("btnPause").textContent="Pause";
+ $("btnPause").disabled=false;
  $("hinweis").textContent="Wischen oder Pfeile: Pac-Man läuft in die Richtung.";
+ letzteZeit=performance.now();
+ requestAnimationFrame(passeFeld);
+ return {ok:true,gestartet:true,stil:stilApi,level:level,levelAnzahl:0,tick:0};
+}
+
+function pauseSpiel(){
+ if(zustand!=="laeuft"&&zustand!=="pause")return {ok:false,fehler:"spiel-laeuft-nicht"};
+ if(zustand==="pause")return {ok:true,pausiert:true};
+ zustand="pause";
+ $("btnPause").textContent="Weiter";
+ $("hinweis").textContent="Pause – tippe auf Weiter.";
+ ereignis("pacman:pausiert",{tick:tick});
+ return {ok:true,pausiert:true};
+}
+
+function weiterSpiel(){
+ if(zustand!=="laeuft"&&zustand!=="pause")return {ok:false,fehler:"spiel-laeuft-nicht"};
+ if(zustand==="laeuft")return {ok:true,pausiert:false};
+ zustand="laeuft";
+ $("btnPause").textContent="Pause";
+ $("hinweis").textContent="Wischen oder Pfeile: Pac-Man läuft in die Richtung.";
+ letzteZeit=performance.now();
+ ereignis("pacman:weiter",{tick:tick});
+ return {ok:true,pausiert:false};
 }
 
 function rekordLaden(){
@@ -388,10 +618,10 @@ function zahlenZeigen(){
 
 // ---------------------------------------------------------------- Bewegung
 
-function tempoPac(){ return 6.1+Math.min(1.2,(level-1)*0.2); }
+function tempoPac(){ return 3.6+Math.min(0.75,(level-1)*0.12); }
 function tempoGeist(g){
- const basis=g.tempo+Math.min(1.4,(level-1)*0.18);
- if(g.status==="heim")return 9;
+ const basis=g.tempo+Math.min(0.6,(level-1)*0.10);
+ if(g.status==="heim")return 4.8;
  if(angstZeit>0&&g.status!=="heim")return basis*0.62;
  return basis;
 }
@@ -660,8 +890,12 @@ function nachTod(){
  if(leben<=0){
   zustand="ende";
   rekordPruefen();
+  if(!endeGemeldet){
+   endeGemeldet=true;
+   ereignis("pacman:ende",{grund:"verloren",punkte:punkte,level:level,levelAnzahl:0,tick:tick});
+  }
   zeigeMeldung("GAME OVER","Punkte: "+punkte+" · Level "+level,"Nochmal");
-  $("meldungKnopf").onclick=neuesSpiel;
+  $("meldungKnopf").onclick=()=>{ neuesSpiel(); starten(); };
   return;
  }
  pacNeu();
@@ -696,6 +930,7 @@ function update(dt){
   return;
  }
  if(zustand!=="laeuft")return;
+ tick++;
 
  if(angstZeit>0){
   angstZeit-=dt;
@@ -722,13 +957,48 @@ let stilWahl="klassisch";
 let hgTopf=null, hgStil=null;
 let funken=[];
 let schweifSpur=[];
+const API_STILE=["normal","maedchen","buben"];
 
-function stilLaden(){
- const s=document.documentElement.dataset.stil||"klassisch";
- stilWahl=(s==="buben")?"jungs":(s==="maedchen"?"maedchen":"klassisch");
+function stilAusUmgebung(){
+ if(window.parent===window)return "";
+ try{
+  const p=window.parent;
+  if(p.TGStil&&typeof p.TGStil.lokal==="function"){
+   const wert=p.TGStil.lokal({klassisch:"normal",maedchen:"maedchen",buben:"buben"});
+   if(API_STILE.indexOf(wert)>=0)return wert;
+  }
+  const attr=p.document&&p.document.documentElement.getAttribute("data-stil");
+  if(attr==="klassisch")return "normal";
+  if(API_STILE.indexOf(attr)>=0)return attr;
+ }catch(e){ /* fremder Rahmen */ }
+ return "";
 }
-stilLaden();
-if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(()=>{ stilLaden(); hgStil=null; });
+function stilLesen(){
+ try{ const w=localStorage.getItem("pacman-stil"); return API_STILE.indexOf(w)>=0?w:""; }catch(e){ return ""; }
+}
+function stilAusTGStil(){
+ if(window.TGStil&&typeof TGStil.lokal==="function"){
+  const w=TGStil.lokal({klassisch:"normal",maedchen:"maedchen",buben:"buben"});
+  return API_STILE.indexOf(w)>=0?w:"normal";
+ }
+ return "normal";
+}
+function stilSetzen(wert,merken){
+ const neu=API_STILE.indexOf(wert)>=0?wert:"normal";
+ stilApi=neu;
+ stilWahl=neu==="buben"?"jungs":neu==="maedchen"?"maedchen":"klassisch";
+ document.documentElement.setAttribute("data-stil",neu==="normal"?"klassisch":neu);
+ if(merken){ try{ localStorage.setItem("pacman-stil",neu); }catch(e){} }
+ const meta=document.querySelector('meta[name="theme-color"]');
+ if(meta)meta.setAttribute("content",neu==="maedchen"?"#6d2948":neu==="buben"?"#04070b":"#0b241d");
+ paletteLaden();
+ hgStil=null;
+ wahlZeigen();
+ if(pac&&zustand==="start")zeichne();
+}
+if(window.TGStil&&TGStil.beiWechsel){
+ TGStil.beiWechsel(()=>{ if(!stilVorgabe&&zustand==="start"){ const w=stilAusTGStil(); if(w)stilSetzen(w,false); } });
+}
 const STIL=()=>STILE[stilWahl]||STILE.klassisch;
 
 /* Feste Zufallszahl je Kachel – Kratzer und Facetten bleiben stehen. */
@@ -1847,6 +2117,109 @@ const STILE={
  }
 };
 
+/* Mädchenwelt 27.11.2026: Rosenholz statt Leuchtrosa. Die Figuren bleiben
+   hell und gut erkennbar; nur Flächen, Wände und Punkte bekommen Tiefe. */
+STILE.maedchen.hintergrund=function(g){
+ const v=g.createLinearGradient(0,0,0,H);
+ v.addColorStop(0,"#4a1d34");
+ v.addColorStop(.5,"#351326");
+ v.addColorStop(1,"#240b18");
+ g.fillStyle=v; g.fillRect(0,0,W,H);
+ const inseln=[[W*0.2,H*0.2,80,"#8f4a6c"],[W*0.82,H*0.32,70,"#3f4a78"],
+  [W*0.18,H*0.7,74,"#6d3450"],[W*0.78,H*0.8,60,"#7a512a"]];
+ for(const [x,y,r,ton] of inseln){
+  const s=g.createRadialGradient(x,y,2,x,y,r);
+  s.addColorStop(0,ton+"88"); s.addColorStop(1,ton+"00");
+  g.fillStyle=s; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+ }
+ for(let i=0;i<26;i++){
+  const x=kachelZahl(i,2,11)*W, y=kachelZahl(i,7,3)*H;
+  g.fillStyle="rgba(255,225,238,0.5)";
+  g.beginPath(); g.arc(x,y,0.8,0,Math.PI*2); g.fill();
+ }
+ const r=g.createRadialGradient(W/2,H*0.45,H*0.15,W/2,H*0.5,H);
+ r.addColorStop(0,"rgba(0,0,0,0)"); r.addColorStop(1,"rgba(8,1,6,0.55)");
+ g.fillStyle=r; g.fillRect(0,0,W,H);
+};
+STILE.maedchen.wand=function(g,x,y){
+ const px=x*Z, py=y*Z;
+ const v=g.createLinearGradient(px,py,px+Z,py+Z);
+ v.addColorStop(0,"#c07a9c"); v.addColorStop(.35,"#8f4a6c");
+ v.addColorStop(.7,"#6d3250"); v.addColorStop(1,"#4a2038");
+ g.fillStyle=v; g.beginPath(); g.roundRect(px+1,py+1,Z-2,Z-2,3); g.fill();
+ g.fillStyle="rgba(255,235,244,0.28)";
+ g.beginPath(); g.moveTo(px+2,py+2); g.lineTo(px+Z*0.45,py+2); g.lineTo(px+2,py+Z*0.5); g.closePath(); g.fill();
+ g.fillStyle="rgba(20,4,16,0.28)";
+ g.beginPath(); g.moveTo(px+Z-2,py+Z*0.4); g.lineTo(px+Z-2,py+Z-2); g.lineTo(px+Z*0.4,py+Z-2); g.closePath(); g.fill();
+ g.strokeStyle="rgba(40,8,28,0.78)"; g.lineWidth=1.4;
+ g.beginPath(); g.roundRect(px+1.2,py+1.2,Z-2.4,Z-2.4,3); g.stroke();
+ g.strokeStyle="rgba(232,180,100,0.72)"; g.lineWidth=0.9;
+ g.beginPath(); g.roundRect(px+2.4,py+2.4,Z-4.8,Z-4.8,2.6); g.stroke();
+ if(kachelZahl(x,y,4)>0.72){
+  const sx=px+Z*0.7, sy=py+Z*0.25;
+  g.fillStyle="rgba(255,240,246,0.85)";
+  g.beginPath(); g.moveTo(sx,sy-2.4); g.lineTo(sx+0.9,sy); g.lineTo(sx,sy+2.4); g.lineTo(sx-0.9,sy); g.closePath(); g.fill();
+ }
+};
+STILE.maedchen.tor=function(g,x,y){
+ const px=x*Z, py=y*Z+Z/2;
+ g.strokeStyle="#e8b46a"; g.lineWidth=2;
+ g.beginPath(); g.moveTo(px+2,py);
+ for(let i=0;i<4;i++)g.quadraticCurveTo(px+4+i*4,py-3,px+6+i*4,py);
+ g.stroke();
+ g.fillStyle="rgba(255,235,244,0.9)"; g.beginPath(); g.arc(px+Z/2,py,2,0,Math.PI*2); g.fill();
+};
+STILE.maedchen.punkt=function(g,x,y,t){
+ const tw=0.65+0.35*Math.sin(t/380+x*0.7);
+ schein(g,x,y,5.5,"rgba(255,176,120,0.45)",tw*0.7);
+ g.fillStyle="#ffd9a8"; g.beginPath(); g.arc(x,y,2.2,0,Math.PI*2); g.fill();
+ g.fillStyle="#fff1d0"; g.beginPath(); g.arc(x,y,1.45,0,Math.PI*2); g.fill();
+ g.fillStyle="#ffffff"; g.beginPath(); g.arc(x-0.5,y-0.6,0.65,0,Math.PI*2); g.fill();
+};
+STILE.maedchen.kraft=function(g,x,y,t){
+ const dreh=t/700;
+ schein(g,x,y,16,"rgba(255,140,190,0.4)",0.7);
+ g.save(); g.translate(x,y); g.rotate(dreh);
+ for(let i=0;i<6;i++){
+  g.rotate(Math.PI/3);
+  const v=g.createLinearGradient(0,0,0,-9);
+  v.addColorStop(0,"#ffe8f0"); v.addColorStop(1,"#d95c98");
+  g.fillStyle=v; g.beginPath(); g.ellipse(0,-5.6,2.2,4.2,0,0,Math.PI*2); g.fill();
+  g.strokeStyle="rgba(80,10,40,0.45)"; g.lineWidth=0.7; g.stroke();
+ }
+ g.restore();
+ const v=g.createRadialGradient(x-1,y-1,0.4,x,y,3.4);
+ v.addColorStop(0,"#fffdf2"); v.addColorStop(.6,"#ffe6a8"); v.addColorStop(1,"#b8742a");
+ g.fillStyle=v; g.beginPath(); g.arc(x,y,3.2,0,Math.PI*2); g.fill();
+};
+STILE.maedchen.pac=function(g,x,y,radius,winkel,offen,t){
+ g.save(); g.translate(x,y);
+ for(let i=0;i<3;i++){
+  const a=winkel+Math.PI+(i-1)*0.7, d=radius*(1.5+i*0.15);
+  g.fillStyle="rgba(255,220,238,0.6)"; g.beginPath(); g.arc(Math.cos(a)*d,Math.sin(a)*d,1.1+(i%2)*0.5,0,Math.PI*2); g.fill();
+ }
+ g.rotate(winkel);
+ g.beginPath(); g.moveTo(0,0); g.arc(0,0,radius,offen,Math.PI*2-offen); g.closePath();
+ const v=g.createRadialGradient(-radius*0.3,-radius*0.4,radius*0.1,0,0,radius);
+ v.addColorStop(0,"#ffe8ef"); v.addColorStop(.35,"#ffa8c8"); v.addColorStop(.75,"#e04478"); v.addColorStop(1,"#8f1e46");
+ g.fillStyle=v; g.fill(); g.strokeStyle="rgba(255,230,240,0.8)"; g.lineWidth=1; g.stroke();
+ g.fillStyle="rgba(90,10,35,0.55)"; g.beginPath(); g.moveTo(0,0); g.arc(0,0,radius*0.62,offen,Math.PI*2-offen); g.closePath(); g.fill();
+ g.fillStyle="rgba(255,110,150,0.35)"; g.beginPath(); g.ellipse(radius*0.05,radius*0.42,radius*0.26,radius*0.15,0,0,Math.PI*2); g.fill();
+ g.fillStyle="#4a1028"; g.beginPath(); g.ellipse(radius*0.18,-radius*0.35,radius*0.14,radius*0.2,0,0,Math.PI*2); g.fill();
+ g.fillStyle="#ffffff"; g.beginPath(); g.arc(radius*0.15,-radius*0.4,radius*0.06,0,Math.PI*2); g.fill();
+ g.strokeStyle="#4a1028"; g.lineWidth=0.9;
+ for(let i=0;i<2;i++){ g.beginPath(); g.moveTo(radius*(0.28+i*0.06),-radius*0.5); g.lineTo(radius*(0.36+i*0.05),-radius*0.62); g.stroke(); }
+ const bx=-radius*0.72, by=-radius*0.55;
+ g.fillStyle="#ff8fbd"; g.beginPath(); g.ellipse(bx-3,by,3,2,-0.4,0,Math.PI*2); g.ellipse(bx+3,by,3,2,0.4,0,Math.PI*2); g.fill();
+ g.fillStyle="#b32d62"; g.beginPath(); g.arc(bx,by,1.4,0,Math.PI*2); g.fill();
+ g.restore();
+};
+STILE.maedchen.rahmen=function(g){
+ g.save(); g.setLineDash([5,5]); g.strokeStyle="rgba(232,180,100,0.7)"; g.lineWidth=2;
+ g.strokeRect(2,2,W-4,H-4); g.restore();
+ g.strokeStyle="rgba(255,225,238,0.4)"; g.lineWidth=1; g.strokeRect(4.5,4.5,W-9,H-9);
+};
+
 function hintergrundBilden(){
  if(!hgTopf){
   hgTopf=document.createElement("canvas");
@@ -1944,9 +2317,10 @@ function schleife(zeitJetzt){
 // ---------------------------------------------------------------- Eingabe
 
 function richtungWunsch(d){
- if(zustand==="start"){ starten(); }
- if(zustand!=="laeuft")return;
- pac.wunsch={...d};
+ if(zustand!=="laeuft"||!d)return false;
+ if(!(d.x||d.y)||Math.abs(d.x)+Math.abs(d.y)!==1)return false;
+ pac.wunsch={x:d.x,y:d.y};
+ return true;
 }
 
 /* Feldgroesse aus dem freien Platz: Breite und Hoehe im Verhaeltnis 19:21,
@@ -1966,51 +2340,198 @@ window.addEventListener("orientationchange",()=>setTimeout(passeFeld,120));
 if(window.ResizeObserver) new ResizeObserver(passeFeld).observe(document.querySelector(".buehne"));
 passeFeld();
 
-let wischStart=null;
-canvas.addEventListener("pointerdown",e=>{ wischStart={x:e.clientX,y:e.clientY}; e.preventDefault(); });
-canvas.addEventListener("pointerup",e=>{
- if(!wischStart)return;
+let wischStart=null, wischGerichtet=false;
+canvas.addEventListener("pointerdown",e=>{
+ if(zustand!=="laeuft")return;
+ wischStart={x:e.clientX,y:e.clientY,id:e.pointerId};
+ wischGerichtet=false;
+ try{canvas.setPointerCapture(e.pointerId);}catch(fehler){}
+ e.preventDefault();
+});
+canvas.addEventListener("pointermove",e=>{
+ if(!wischStart||wischGerichtet)return;
  const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
- wischStart=null;
- if(Math.hypot(dx,dy)<14){ if(zustand==="start")starten(); return; }
+ if(Math.hypot(dx,dy)<16)return;
+ wischGerichtet=true;
  if(Math.abs(dx)>Math.abs(dy))richtungWunsch(dx>0?richtungen.rechts:richtungen.links);
  else richtungWunsch(dy>0?richtungen.runter:richtungen.hoch);
  e.preventDefault();
 });
-canvas.addEventListener("pointercancel",()=>{ wischStart=null; });
+function wischEnde(e){
+ if(!wischStart)return;
+ const dx=e.clientX-wischStart.x, dy=e.clientY-wischStart.y;
+ const start=wischStart;
+ wischStart=null;
+ try{canvas.releasePointerCapture(start.id);}catch(fehler){}
+ if(!wischGerichtet&&Math.hypot(dx,dy)>=14){
+  if(Math.abs(dx)>Math.abs(dy))richtungWunsch(dx>0?richtungen.rechts:richtungen.links);
+  else richtungWunsch(dy>0?richtungen.runter:richtungen.hoch);
+ }
+}
+canvas.addEventListener("pointerup",wischEnde);
+canvas.addEventListener("pointercancel",()=>{ wischStart=null; wischGerichtet=false; });
 
 document.querySelectorAll(".pad button").forEach(knopf=>{
- knopf.addEventListener("click",()=>{
+ const los=()=>{
   const d=knopf.dataset.dir;
-  richtungWunsch(richtungen[d]);
+  if(d&&richtungen[d])richtungWunsch(richtungen[d]);
+ };
+ knopf.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  los();
+  knopf.classList.add("aktiv");
+  try{knopf.setPointerCapture(e.pointerId);}catch(fehler){}
  });
+ const ende=()=>knopf.classList.remove("aktiv");
+ knopf.addEventListener("pointerup",ende);
+ knopf.addEventListener("pointercancel",ende);
+ knopf.addEventListener("lostpointercapture",ende);
+ knopf.addEventListener("click",e=>{ if(e.detail===0)los(); });
 });
 
+function istBedienziel(ziel){
+ return !!(ziel&&(ziel.tagName==="BUTTON"||ziel.tagName==="SELECT"||ziel.tagName==="INPUT"||
+  ziel.tagName==="TEXTAREA"||ziel.tagName==="A"||ziel.isContentEditable));
+}
+
 window.addEventListener("keydown",e=>{
+ if(e.altKey||e.ctrlKey||e.metaKey)return;
  const k=e.key;
  if(k==="ArrowUp"||k==="w"||k==="W"){ e.preventDefault(); richtungWunsch(richtungen.hoch); }
  else if(k==="ArrowDown"||k==="s"||k==="S"){ e.preventDefault(); richtungWunsch(richtungen.runter); }
  else if(k==="ArrowLeft"||k==="a"||k==="A"){ e.preventDefault(); richtungWunsch(richtungen.links); }
  else if(k==="ArrowRight"||k==="d"||k==="D"){ e.preventDefault(); richtungWunsch(richtungen.rechts); }
- else if(k===" "){ e.preventDefault(); if(zustand==="start")starten(); }
+ else if(k==="p"||k==="P"){
+  if(zustand==="start"||zustand==="ende")return;
+  e.preventDefault();
+  if(zustand==="pause")weiterSpiel(); else pauseSpiel();
+ }
+ else if(k==="Escape"){
+  if(window.TGSpiel&&TGSpiel.vollbild.ist())return;
+  if(zustand==="pause"){ e.preventDefault(); weiterSpiel(); }
+ }
+ else if(k===" "||k==="Enter"){
+  if(istBedienziel(e.target))return;
+  if(zustand==="start"){ e.preventDefault(); starten(); }
+  else if(zustand==="pause"){ e.preventDefault(); weiterSpiel(); }
+ }
 });
 
-$("btnNeu").onclick=neuesSpiel;
-$("btnPause").onclick=()=>{
- if(zustand==="laeuft"){
-  zustand="pause";
-  $("btnPause").textContent="Weiter";
-  $("hinweis").textContent="Pause – tippe auf Weiter.";
- }else if(zustand==="pause"){
-  zustand="laeuft";
-  $("btnPause").textContent="Pause";
-  letzteZeit=performance.now();
-  $("hinweis").textContent="Wischen oder Pfeile: Pac-Man läuft in die Richtung.";
+$("btnNeu").onclick=()=>{ neuesSpiel(); starten(); };
+$("btnPause").onclick=()=>{ if(zustand==="pause")weiterSpiel(); else if(zustand==="laeuft")pauseSpiel(); };
+$("btnStart").onclick=()=>neuesSpiel();
+$("knopfStarten").onclick=()=>starten();
+
+document.querySelectorAll("#stilKnoepfe button").forEach(b=>{
+ b.addEventListener("click",()=>{
+  const w=b.dataset.stil;
+  if(API_STILE.indexOf(w)>=0)stilSetzen(w,true);
+ });
+});
+
+if(window.TGSpiel&&TGSpiel.vollbild){
+ TGSpiel.vollbild.knopf($("knopfVollbild"),{textAn:"Vollbild aus",textAus:"Vollbild"});
+ TGSpiel.vollbild.beiWechsel(()=>requestAnimationFrame(passeFeld));
+}
+
+/* ------------------------------------------------------ Schnittstelle 2.0 */
+const API_VERSION="2.0.0";
+const FELDER_ERLAUBT=["stil"];
+function istObjekt(wert){ return wert!==null&&typeof wert==="object"&&!Array.isArray(wert); }
+
+function apiStart(konfiguration){
+ let k=konfiguration;
+ if(k===undefined||k===null)k={};
+ if(!istObjekt(k))return {ok:false,fehler:"konfiguration-muss-objekt-sein"};
+ const schluessel=Object.keys(k);
+ for(const feld of schluessel){
+  if(FELDER_ERLAUBT.indexOf(feld)<0)return {ok:false,fehler:"unbekanntes-feld",feld:feld};
  }
+ let neuerStil=stilApi;
+ if(Object.prototype.hasOwnProperty.call(k,"stil")){
+  if(typeof k.stil!=="string")return {ok:false,fehler:"unbekanntes-feld",feld:"stil"};
+  neuerStil=API_STILE.indexOf(k.stil)>=0?k.stil:"normal";
+ }
+ /* Connector: start({stil}) stellt nur die Welt ein und lässt den
+    Startbildschirm stehen. So bleibt die Wahl beim Spieler. */
+ if(schluessel.length===1&&schluessel[0]==="stil"){
+  stilVorgabe=true;
+  stilSetzen(neuerStil,false);
+  return {ok:true,gestartet:false,stil:stilApi,level:level,levelAnzahl:0,laeuft:zustand==="laeuft"};
+ }
+ if(zustand==="laeuft"||zustand==="pause")return {ok:false,fehler:"spiel-laeuft"};
+ if(schluessel.length===1)stilVorgabe=true;
+ if(Object.prototype.hasOwnProperty.call(k,"stil"))stilSetzen(neuerStil,false);
+ if(zustand==="ende"||zustand==="level")neuesSpiel();
+ return starten();
+}
+
+function apiEinstellungen(){
+ return {stil:stilApi,stile:API_STILE.slice(),stilWahl:!stilVorgabe,level:1,levelAnzahl:0,stufen:[]};
+}
+
+function apiZustand(){
+ const p=pac?{x:Math.round(pac.x*10)/10,y:Math.round(pac.y*10)/10}:null;
+ return {
+  laeuft:zustand==="laeuft",pausiert:zustand==="pause",tick:tick,
+  richtung:pac?{x:pac.dir.x,y:pac.dir.y}:{x:0,y:0},
+  level:level,punkte:punkte,
+  extras:frucht?[{x:Math.round(frucht.x),y:Math.round(frucht.y),type:"frucht"}]:[],
+  startbildschirm:zustand==="start",stil:stilApi,stilWahl:!stilVorgabe,
+  leben:leben,phase:zustand,levelAnzahl:0,pac:p,
+  geister:geister.map(g=>({name:g.name,status:g.status,x:Math.round(g.x*10)/10,y:Math.round(g.y*10)/10}))
+ };
+}
+
+function apiAktion(name,daten){
+ if(typeof name!=="string")return {ok:false,fehler:"unbekannte-aktion"};
+ if(daten!==undefined&&daten!==null&&!istObjekt(daten))return {ok:false,fehler:"daten-muessen-objekt-sein"};
+ const d=daten||{};
+ switch(name){
+  case "richtung":
+   for(const feld of Object.keys(d)){
+    if(feld!=="x"&&feld!=="y")return {ok:false,fehler:"unbekanntes-feld",feld:feld};
+   }
+   if(zustand!=="laeuft")return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   if(!(Math.abs(d.x)===1&&d.y===0)&&!(d.x===0&&Math.abs(d.y)===1))return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   richtungWunsch(d);
+   return {ok:true,tick:tick,richtung:{x:d.x,y:d.y}};
+  case "start":
+   if(zustand==="laeuft"||zustand==="pause")return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   return apiStart({});
+  case "pause":
+   if(zustand!=="laeuft"&&zustand!=="pause")return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   return pauseSpiel();
+  case "weiter":
+   if(zustand!=="laeuft"&&zustand!=="pause")return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   return weiterSpiel();
+  case "pause": return pauseSpiel();
+  case "weiter": return weiterSpiel();
+  case "neu":
+   if(zustand==="laeuft"||zustand==="pause"||zustand==="ende"||zustand==="level")neuesSpiel();
+   return starten();
+  default: return {ok:false,fehler:"unbekannte-aktion"};
+ }
+}
+
+const schnittstelle={
+ version:API_VERSION,bereit:true,
+ whenReady:()=>Promise.resolve({ok:true,version:API_VERSION}),
+ start:apiStart,einstellungen:apiEinstellungen,zustand:apiZustand,
+ startbildschirm:()=>{ neuesSpiel(); return {ok:true}; },
+ stop:()=>{ neuesSpiel(); return {ok:true}; },
+ pause:pauseSpiel,resume:weiterSpiel,aktion:apiAktion
 };
+if(Object.freeze)Object.freeze(schnittstelle);
+window.PacMan=schnittstelle;
+
+const aussen=stilAusUmgebung();
+if(aussen){ stilVorgabe=true; stilSetzen(aussen,false); }
+else { stilSetzen(stilLesen()||stilAusTGStil()||"normal",false); }
 
 neuesSpiel();
 requestAnimationFrame(schleife);
+setTimeout(()=>ereignis("pacman:bereit",{version:API_VERSION}),0);
 
 })();
 </script>
@@ -2021,7 +2542,8 @@ requestAnimationFrame(schleife);
  const setze=function(){
   const m=document.querySelector('meta[name="theme-color"]');
   if(!m||!window.TGStil||!TGStil.hole)return;
-  m.content={klassisch:"#0b241d",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0b241d";
+  const s=document.documentElement.dataset.stil||"klassisch";
+  m.content={klassisch:"#0b241d",maedchen:"#6d2948",buben:"#04070b"}[s]||"#0b241d";
  };
  setze();
  if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
