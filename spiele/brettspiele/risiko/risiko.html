@@ -128,12 +128,22 @@ input[type="text"]{width:132px}
 
 .wuerfelFlaeche{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-top:4px}
 .wuerfelGruppe{display:flex;gap:5px;flex-wrap:wrap}
-.wuerfel{width:26px;height:26px;border-radius:6px;background:#e8e4d8;position:relative;flex:0 0 auto;
- box-shadow:inset 0 -2px 0 #00000022,0 2px 5px #00000055}
-.wuerfel i{position:absolute;width:5px;height:5px;border-radius:50%;background:#2a2f33;transform:translate(-50%,-50%)}
+.wuerfel{width:26px;height:26px;border-radius:7px;position:relative;flex:0 0 auto;
+ background:linear-gradient(155deg,#fbf8f1 0%,#e9e4d7 58%,#d5cdba 100%);
+ box-shadow:inset 0 1px 0 #ffffff,inset 0 -2px 0 #00000026,0 2px 5px #00000055;
+ transition:box-shadow .18s,transform .18s,filter .18s}
+.wuerfel i{position:absolute;width:5px;height:5px;border-radius:50%;background:#2a2f33;
+ box-shadow:inset 0 1px 0 #ffffff33;transform:translate(-50%,-50%)}
 .wuerfel.leer{background:#ffffff10;box-shadow:none;border:1px dashed #ffffff22}
 .wuerfel.wurf{animation:wackeln .34s linear infinite}
+.wuerfel.sieg{box-shadow:0 0 0 2px #dcc08a,0 0 13px #dcc08a77,inset 0 -2px 0 #00000026;transform:translateY(-2px)}
+.wuerfel.verlust{filter:saturate(.35) brightness(.72);transform:translateY(1px) scale(.94)}
+.wuerfel.ruhig{opacity:.4}
+.wuerfel.einschlag{animation:einschlag .26s ease-out}
 @keyframes wackeln{0%{transform:rotate(-8deg) translateY(0)}50%{transform:rotate(9deg) translateY(-3px)}100%{transform:rotate(-8deg) translateY(0)}}
+@keyframes einschlag{0%{transform:scale(.72)}60%{transform:scale(1.14)}100%{transform:scale(1)}}
+html[data-risiko-stil="maedchen"] .wuerfel.sieg{box-shadow:0 0 0 2px #e2709b,0 0 13px #e2709b88,inset 0 -2px 0 #00000022}
+html[data-risiko-stil="buben"] .wuerfel.sieg{box-shadow:0 0 0 2px #ff5a4a,0 0 15px #ff5a4a88,inset 0 -2px 0 #00000033}
 .wurfText{font-size:12px;color:var(--muted);margin-top:6px;min-height:34px}
 .wurfText b{color:#fff}
 
@@ -191,6 +201,38 @@ input[type="text"]{width:132px}
 .gebiet.ziel{filter:brightness(1.1) drop-shadow(0 0 3px #d98b72aa)}
 .gebiet.nachbar{filter:brightness(1.1)}
 
+/* ---------- Kampf auf der Karte (nur während eines Angriffs sichtbar) ---------- */
+.buehne{position:relative}
+.kampfSchicht{pointer-events:none}
+.kampfPfeil{fill:none;stroke:#f2e2b8;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:5 5;
+ opacity:0;animation:risikoStoss .66s ease-out}
+.kampfPfeilKopf{fill:#f2e2b8;stroke:none;opacity:0;animation:risikoStoss .66s ease-out}
+.kampfRing{fill:none;stroke:#f7dfb4;stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center;
+ animation:risikoEinschlag .7s ease-out}
+.kampfFunke{stroke:#f7dfb4;stroke-width:1.8;stroke-linecap:round;opacity:0;animation:risikoFunke .8s ease-out}
+.kampfBlitz{fill:#ffffff;stroke:none;pointer-events:none;opacity:0;animation:risikoBlitz .85s ease-out}
+@keyframes risikoStoss{0%{opacity:0}18%{opacity:.95}68%{opacity:.8}100%{opacity:0}}
+@keyframes risikoEinschlag{0%{opacity:.9;transform:scale(.4)}65%{opacity:.55}100%{opacity:0;transform:scale(1.7)}}
+@keyframes risikoFunke{0%{opacity:0}20%{opacity:.95}100%{opacity:0}}
+@keyframes risikoBlitz{0%{opacity:0}22%{opacity:.42}100%{opacity:0}}
+html[data-risiko-stil="maedchen"] .kampfPfeil{stroke:#e2709b}
+html[data-risiko-stil="maedchen"] .kampfPfeilKopf{fill:#e2709b}
+html[data-risiko-stil="maedchen"] .kampfRing,html[data-risiko-stil="maedchen"] .kampfFunke{stroke:#f4b6cd}
+html[data-risiko-stil="buben"] .kampfPfeil{stroke:#ff5a4a}
+html[data-risiko-stil="buben"] .kampfPfeilKopf{fill:#ff5a4a}
+html[data-risiko-stil="buben"] .kampfRing,html[data-risiko-stil="buben"] .kampfFunke{stroke:#ff9a6a}
+@media (prefers-reduced-motion:reduce){.kampfPfeil,.kampfPfeilKopf,.kampfRing,.kampfFunke,.kampfBlitz,.wuerfel.einschlag{animation:none}}
+
+/* Kurze Rückmeldung über der Karte: erklärt, warum eine Aktion nicht geht. */
+.hinweisToast{position:absolute;left:50%;top:12px;transform:translateX(-50%) translateY(-4px);z-index:6;
+ max-width:min(92%,430px);padding:7px 14px;border-radius:999px;font-size:12.5px;line-height:1.35;text-align:center;
+ background:#0b1a23ee;border:1px solid #ffffff30;color:#eaf1f4;box-shadow:0 12px 28px -16px #000;
+ pointer-events:none;opacity:0;transition:opacity .16s,transform .16s}
+.hinweisToast.an{opacity:1;transform:translateX(-50%) translateY(0)}
+html[data-risiko-stil="maedchen"] .hinweisToast{background:#fff7fbf2;border-color:#dfaec4;color:#54273e;
+ box-shadow:0 12px 26px -16px #8b3f63}
+html[data-risiko-stil="buben"] .hinweisToast{background:#16181bf2;border-color:#7e3a34;color:#f3e2dc}
+
 @media (max-width:900px){
  .buehne{grid-template-columns:minmax(0,1fr)}
  .seitenleiste{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -214,6 +256,266 @@ input[type="text"]{width:132px}
  .log{max-height:88px}
 }
 @media (prefers-reduced-motion:reduce){.wuerfel.wurf{animation:none}.knopf,.karte{transition:none}}
+
+/* =====================================================================
+   Startseite (darf sich ändern; der Normal-Spielstil bleibt unberührt)
+   ===================================================================== */
+.startseite{padding:18px 16px 20px;display:flex;flex-direction:column;gap:18px}
+.startKopf{position:relative;padding:2px 2px 0}
+.startMarke{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.startKopf h1{margin:0;font-size:clamp(34px,6vw,56px);line-height:.92;letter-spacing:.09em;font-weight:700;color:var(--gold)}
+.startKopf h1 span{display:block;margin-top:7px;font-size:clamp(12px,2vw,16px);line-height:1.4;letter-spacing:.18em;text-transform:uppercase;color:var(--text);font-weight:500;opacity:.82}
+.startKopf .unter{max-width:720px;margin:9px 0 0;color:var(--muted);font-size:13.5px;line-height:1.55}
+.startAbschnitt h2{margin:0 0 9px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stilKarten{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stilKarte{position:relative;text-align:left;font-family:inherit;color:var(--text);cursor:pointer;overflow:hidden;
+ padding:0;border:1px solid var(--linie2);border-radius:14px;background:#ffffff08;transition:transform .15s,border-color .15s,box-shadow .15s}
+.stilKarte:hover{transform:translateY(-2px);border-color:#ffffff52}
+.stilKarte[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 2px #dcc08a55,0 12px 28px -18px #000}
+.stilKarte .stilBild{display:block;height:102px;overflow:hidden;border-bottom:1px solid var(--linie)}
+.stilKarte .stilBild svg{display:block;width:100%;height:100%}
+.stilKarte .stilText{display:block;padding:9px 11px 10px}
+.stilKarte .stilText b{display:block;font-size:14px;margin-bottom:2px}
+.stilKarte .stilText small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.stilKarte[data-stil="maedchen"] .stilText b{color:#c05f88}
+.stilKarte[data-stil="buben"] .stilText b{color:#e4525b}
+.stilKarte[data-stil="normal"] .stilText b{color:#dcc08a}
+/* Kartenemblem: im Normal-Stil unsichtbar, damit die Referenz exakt bleibt. */
+.stilEmblem{display:none;pointer-events:none;font-family:Georgia,serif;font-weight:700}
+#btnVollbild{display:none}
+html[data-risiko-stil="maedchen"] #btnVollbild,html[data-risiko-stil="buben"] #btnVollbild{display:inline-block}
+/* Schmuck am Kartenrand: eigene Welten, im Normal-Stil unsichtbar. */
+.stilSchmuck{display:none;pointer-events:none}
+html[data-risiko-stil="maedchen"] .stilSchmuck.maedchen{display:block;fill:#c46b91}
+html[data-risiko-stil="buben"] .stilSchmuck.buben{display:block;fill:#93302f}
+html[data-risiko-stil="maedchen"] .stilEmblem.maedchen{display:block;fill:#b64f7d}
+html[data-risiko-stil="buben"] .stilEmblem.buben{display:block;fill:#e0414a}
+html[data-risiko-stil="maedchen"] .spielerZeileKlein .punkt{box-shadow:0 0 0 3px #fff,0 0 0 5px #e9b9cf}
+html[data-risiko-stil="buben"] .spielerZeileKlein .punkt{box-shadow:0 0 0 3px #111,0 0 0 4px #b7323b}
+
+.startRaster{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(280px,.95fr);gap:12px;align-items:start}
+.startBlock{border:1px solid var(--linie);border-radius:14px;background:#ffffff06;padding:12px 13px}
+.startBlock h2{margin:0 0 9px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.startBlock .reihe{gap:7px;margin:0 0 9px}
+.startBlock .reihe:last-child{margin-bottom:0}
+.startBlock .etikett{min-width:88px;font-size:11px}
+.startBlock .wahl{font-size:12.5px;padding:7px 10px}
+.startBlock select{max-width:100%}
+.startSpielerzeilen{display:grid;gap:6px;margin:2px 0 12px}
+.startSpielerzeilen .spielerZeile{font-size:12.5px}
+.startSpielerzeilen .nameFeld{width:112px;font-size:12.5px;padding:6px 8px}
+.startKnopf{width:100%;font-size:14px;padding:11px 14px}
+.startFuss{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;border-top:1px solid var(--linie);padding-top:14px}
+.startFuss article{border:1px solid var(--linie);border-radius:12px;background:#ffffff05;padding:10px 11px}
+.startFuss article b{display:block;font-size:12.5px;margin-bottom:3px;color:var(--text)}
+.startFuss article p{margin:0;color:var(--muted);font-size:11.5px;line-height:1.45}
+.startFuss .startRegeln{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:none;padding:4px 0 0}
+.startFuss .startRegeln p{margin:0;max-width:760px;font-size:12px}
+.startFuss .startRegeln .knopf{flex:0 0 auto}
+
+/* Vorschauen: drei klar verschiedene Welten, unabhängig vom Spielstil. */
+.stilKarte[data-stil="normal"] .stilBild{background:linear-gradient(180deg,#193f54,#081923)}
+.stilKarte[data-stil="maedchen"] .stilBild{background:linear-gradient(180deg,#ffeaf3,#e9c9e9)}
+.stilKarte[data-stil="buben"] .stilBild{background:linear-gradient(180deg,#30363d,#0b0c0e)}
+.stilKarte .stilBild .meer{opacity:.95}
+.stilKarte[data-stil="normal"] .stilBild .meer{fill:#0b2634}
+.stilKarte[data-stil="maedchen"] .stilBild .meer{fill:#f9dbea}
+.stilKarte[data-stil="buben"] .stilBild .meer{fill:#171a1e}
+.stilKarte[data-stil="normal"] .stilBild .land{fill:#60849a;stroke:#b8d6e2;stroke-width:1.2}
+.stilKarte[data-stil="maedchen"] .stilBild .land{fill:#efa9c2;stroke:#fff7fb;stroke-width:1.4}
+.stilKarte[data-stil="buben"] .stilBild .land{fill:#6d252a;stroke:#d9a05f;stroke-width:1.2}
+.stilKarte .stilBild .chip{stroke:#fff;stroke-width:1}
+.stilKarte[data-stil="normal"] .stilBild .chip{fill:#e8cd8e;stroke:#f8e8bd}
+.stilKarte[data-stil="maedchen"] .stilBild .chip{fill:#fff;stroke:#d884a6}
+.stilKarte[data-stil="buben"] .stilBild .chip{fill:#d1242f;stroke:#ffb4b8}
+.stilKarte[data-stil="normal"] .stilBild .stern{fill:#f8e8bd}
+.stilKarte[data-stil="maedchen"] .stilBild .stern{fill:#d884a6}
+.stilKarte[data-stil="buben"] .stilBild .stern{fill:#ffb4b8}
+
+/* =====================================================================
+   MÄDCHEN – eigene Pastellwelt. Alle Regeln gelten nur für diesen Stil.
+   ===================================================================== */
+html[data-risiko-stil="maedchen"]{
+ --seite1:#fbeaf2; --seite2:#f3d6e4; --seite3:#ecc3d5;
+ --panel:#fffafd; --panel2:#f9eaf1;
+ --text:#4b2238; --muted:#8f6077;
+ --gold:#d981a8; --gold2:#bd6289;
+ --linie:#b96b8d2b; --linie2:#b96b8d55;
+}
+html[data-risiko-stil="maedchen"] body{
+ color:#4b2238;
+ background:
+  radial-gradient(760px 520px at 8% -8%,#fff9fc 0%,#fff9fc00 70%),
+  radial-gradient(620px 440px at 96% 8%,#f7c9dd88 0%,#f7c9dd00 72%),
+  radial-gradient(700px 580px at 50% 110%,#e9b9d366 0%,#e9b9d300 70%),
+  linear-gradient(160deg,#fff8fc 0%,#fbeaf3 38%,#f3d7e5 72%,#eec9da 100%) fixed;
+}
+html[data-risiko-stil="maedchen"] .fenster{border-color:#dfb4c8;background:linear-gradient(180deg,#fffafd,#f8e8f0);
+ box-shadow:inset 0 1px 0 #fff,0 26px 60px -32px #8b3f63,0 3px 14px #c980a344}
+html[data-risiko-stil="maedchen"] .titelleiste{border-bottom-color:#e5c2d2}
+html[data-risiko-stil="maedchen"] .titelleiste .titel{color:#6d2d49}
+html[data-risiko-stil="maedchen"] .titelleiste .titel b{color:#b64f7d}
+html[data-risiko-stil="maedchen"] .kreuz{color:#8f6077;background:#ffffff99;border-color:#d9aec3}
+html[data-risiko-stil="maedchen"] .kreuz:hover{background:#fff;color:#6d2d49}
+html[data-risiko-stil="maedchen"] .menueleiste{border-bottom-color:#e5c2d2}
+html[data-risiko-stil="maedchen"] .knopf{background:#ffffffb8;color:#5a2a41;border-color:#d8adc1}
+html[data-risiko-stil="maedchen"] .knopf:hover:not(:disabled){background:#fff;border-color:#c584a3}
+html[data-risiko-stil="maedchen"] .knopf.haupt{background:linear-gradient(180deg,#f4b1cb,#df82a8);color:#4a1830;border-color:#fff;box-shadow:0 8px 18px -10px #9a436b}
+html[data-risiko-stil="maedchen"] .wahl{background:#ffffffb0;color:#6b3650;border-color:#d8adc1}
+html[data-risiko-stil="maedchen"] .wahl:hover{background:#fff}
+html[data-risiko-stil="maedchen"] .wahl[aria-pressed="true"]{background:linear-gradient(180deg,#f3b4cc,#dd83a9);color:#4a1830;border-color:#fff}
+html[data-risiko-stil="maedchen"] select,html[data-risiko-stil="maedchen"] input[type="text"]{background:#fff7fb;color:#54273e;border-color:#d8adc1}
+html[data-risiko-stil="maedchen"] .pill{background:#fff7fb;border-color:#e5c2d2;color:#8f6077}
+html[data-risiko-stil="maedchen"] .pill b{color:#4b2238}
+html[data-risiko-stil="maedchen"] .statuszeile{border-bottom-color:#e5c2d2}
+html[data-risiko-stil="maedchen"] .buehne{background:#fffafd66}
+html[data-risiko-stil="maedchen"] .karteBox{border-color:#e4b9cc;background:radial-gradient(120% 100% at 50% 0%,#fbe3ee 0%,#f4d2e2 58%,#ecc4d7 100%)}
+html[data-risiko-stil="maedchen"] .karteBox::after{content:"♡   ✦   ♡";position:absolute;right:10px;bottom:5px;color:#c46b91;opacity:.5;font-size:12px;letter-spacing:.45em;pointer-events:none;animation:risikoHerz 5s ease-in-out infinite}
+html[data-risiko-stil="maedchen"] .legende span{background:#fff8fbf2;border-color:#e5c2d2;color:#8f6077}
+html[data-risiko-stil="maedchen"] .block{background:#fffafdcc;border-color:#e5c2d2}
+html[data-risiko-stil="maedchen"] .block .kopfzeile{color:#a06a82}
+html[data-risiko-stil="maedchen"] .block .gross,html[data-risiko-stil="maedchen"] .block .text b,html[data-risiko-stil="maedchen"] .gebietInfo .name,html[data-risiko-stil="maedchen"] .gebietInfo .zeile b,html[data-risiko-stil="maedchen"] .wurfText b{color:#4b2238}
+html[data-risiko-stil="maedchen"] .block .text,html[data-risiko-stil="maedchen"] .gebietInfo .zeile,html[data-risiko-stil="maedchen"] .wurfText{color:#6f4158}
+html[data-risiko-stil="maedchen"] .wuerfel{background:#fff4f8;box-shadow:inset 0 -2px 0 #c980a344,0 2px 5px #9a436b33}
+html[data-risiko-stil="maedchen"] .wuerfel i{background:#b25278}
+html[data-risiko-stil="maedchen"] .wuerfel.leer{background:#ffffff77;border-color:#d8adc1}
+html[data-risiko-stil="maedchen"] .spielerZeileKlein{border-bottom-color:#edd0dc}
+html[data-risiko-stil="maedchen"] .spielerZeileKlein.amZug{color:#4b2238;background:#fff0f6;border-radius:6px;padding-left:5px;padding-right:5px}
+html[data-risiko-stil="maedchen"] .spielerZeileKlein .zahl{color:#6f4158}
+html[data-risiko-stil="maedchen"] .kontinentZeile{color:#6f4158}
+html[data-risiko-stil="maedchen"] .kontinentZeile.voll{color:#4b2238}
+html[data-risiko-stil="maedchen"] .kontinentZeile .strich{background:#e7c7d5}
+html[data-risiko-stil="maedchen"] .karte{background:linear-gradient(180deg,#fff8fc,#f5dce9);border-color:#d8adc1;color:#6f4158}
+html[data-risiko-stil="maedchen"] .karte .land{color:#98657c}
+html[data-risiko-stil="maedchen"] .log{background:#fff8fbf2;border-color:#e5c2d2;color:#6f4158}
+html[data-risiko-stil="maedchen"] .log div{opacity:.78}
+html[data-risiko-stil="maedchen"] .log div:first-child{color:#4b2238}
+html[data-risiko-stil="maedchen"] .overlay{background:#7b365a44}
+html[data-risiko-stil="maedchen"] .overlay .karteGross{background:linear-gradient(180deg,#fffafd,#f6e1ec);border-color:#d981a8;box-shadow:0 30px 70px -24px #8b3f63}
+html[data-risiko-stil="maedchen"] .overlay h2{color:#b64f7d}
+html[data-risiko-stil="maedchen"] .overlay p{color:#6f4158}
+html[data-risiko-stil="maedchen"] .overlay .karteGross::before{content:"♛";display:block;font-size:32px;color:#d981a8;margin:-4px 0 4px}
+html[data-risiko-stil="maedchen"] #meer stop:nth-child(1){stop-color:#fce6f0}
+html[data-risiko-stil="maedchen"] #meer stop:nth-child(2){stop-color:#f3d0e2}
+html[data-risiko-stil="maedchen"] #meer stop:nth-child(3){stop-color:#e7bdd2}
+html[data-risiko-stil="maedchen"] .gebiet{stroke:#fff8fc}
+html[data-risiko-stil="maedchen"] .gebiet.gewaehlt{stroke:#b64f7d;stroke-width:2.8}
+html[data-risiko-stil="maedchen"] .gebiet.ziel{stroke:#d46e7d;stroke-width:2.6}
+html[data-risiko-stil="maedchen"] .gebiet.nachbar{stroke:#c98aaa;stroke-width:2}
+html[data-risiko-stil="maedchen"] .armeeKreis{fill:#fff9fc;stroke:#c7779b}
+html[data-risiko-stil="maedchen"] .armeeChip text{fill:#58233d;font-weight:700}
+html[data-risiko-stil="maedchen"] .gebietsName{fill:#5a2741;stroke:#fff8fccc}
+html[data-risiko-stil="maedchen"] .kontinentName{fill:#9d5b7a;opacity:.22}
+html[data-risiko-stil="maedchen"] .gradnetz line{stroke:#b36a8b;stroke-opacity:.16}
+html[data-risiko-stil="maedchen"] .kueste{stroke:#c980a3;stroke-opacity:.55}
+html[data-risiko-stil="maedchen"] .chipStrich{stroke:#c7779b99}
+html[data-risiko-stil="maedchen"] .gebiet:hover{filter:brightness(1.06) saturate(1.08)}
+
+/* =====================================================================
+   BUBEN – dunkle, metallische Schlachtenwelt. Keine realistischen Wunden.
+   ===================================================================== */
+html[data-risiko-stil="buben"]{
+ --seite1:#202327; --seite2:#15171a; --seite3:#090a0c;
+ --panel:#181a1e; --panel2:#0e1013;
+ --text:#f0e7e4; --muted:#b8aaa7;
+ --gold:#e0414a; --gold2:#9a1e27;
+ --linie:#d9474f2d; --linie2:#d9474f55;
+}
+html[data-risiko-stil="buben"] body{
+ color:#f0e7e4;
+ background:
+  radial-gradient(660px 420px at 12% -6%,#d1242f22 0%,#d1242f00 70%),
+  radial-gradient(520px 480px at 94% 18%,#8d6a3a1f 0%,#8d6a3a00 74%),
+  repeating-linear-gradient(115deg,#ffffff05 0 1px,#0000 1px 7px),
+  linear-gradient(160deg,#292c31,#17191c 48%,#08090b) fixed;
+}
+html[data-risiko-stil="buben"] .fenster{border-color:#7e2b30;background:linear-gradient(180deg,#1b1d21,#0d0e11);
+ box-shadow:inset 0 1px 0 #ffffff18,0 0 0 1px #00000088,0 26px 60px -30px #000,0 0 34px -16px #d1242f55}
+html[data-risiko-stil="buben"] .titelleiste .titel{color:#e6d8d4}
+html[data-risiko-stil="buben"] .titelleiste .titel b{color:#f05a61}
+html[data-risiko-stil="buben"] .menueleiste{background:#0c0d0f88}
+html[data-risiko-stil="buben"] .knopf{background:#23252a;color:#eee3df;border-color:#5e4b45}
+html[data-risiko-stil="buben"] .knopf:hover:not(:disabled){background:#34373d;border-color:#a25b50}
+html[data-risiko-stil="buben"] .knopf.haupt{background:linear-gradient(180deg,#d33a44,#8f151e);color:#fff4ef;border-color:#ffb0aa;box-shadow:0 8px 18px -10px #000,inset 0 1px 0 #ffb0aa66}
+html[data-risiko-stil="buben"] .wahl{background:#24262b;color:#e6d8d4;border-color:#5c4b45}
+html[data-risiko-stil="buben"] .wahl[aria-pressed="true"]{background:linear-gradient(180deg,#d33a44,#8f151e);color:#fff4ef;border-color:#ffb0aa}
+html[data-risiko-stil="buben"] .pill{background:#17191c;border-color:#604b46;color:#cbb7b1}
+html[data-risiko-stil="buben"] .pill b{color:#fff0eb}
+html[data-risiko-stil="buben"] .karteBox{border-color:#6b3a35;background:radial-gradient(120% 100% at 50% 0%,#2c3036 0%,#15171a 58%,#08090b 100%)}
+html[data-risiko-stil="buben"] .karteBox::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+ background:
+  radial-gradient(5px 9px at 8% 64%,#a51b24cc 0 58%,#0000 72%),
+  radial-gradient(3px 6px at 12% 71%,#a51b24aa 0 60%,#0000 74%),
+  radial-gradient(8px 4px at 89% 28%,#8e141dbb 0 56%,#0000 76%),
+  radial-gradient(3px 4px at 93% 35%,#8e141daa 0 58%,#0000 78%),
+  radial-gradient(6px 10px at 42% 91%,#7e1119aa 0 55%,#0000 74%);
+ filter:blur(.2px)}
+html[data-risiko-stil="buben"] .karteBox::after{content:"";position:absolute;inset:0;pointer-events:none;background:
+  radial-gradient(130px 90px at 18% 22%,#c8b6a51c 0%,#0000 72%),
+  radial-gradient(180px 100px at 76% 64%,#d1242f16 0%,#0000 74%);
+ animation:risikoRauch 7s ease-in-out infinite alternate}
+html[data-risiko-stil="buben"] .legende span{background:#111316dd;border-color:#5e423d;color:#cbb7b1}
+html[data-risiko-stil="buben"] .block{background:#16181bcc;border-color:#4f3935}
+html[data-risiko-stil="buben"] .block .kopfzeile{color:#b58b82}
+html[data-risiko-stil="buben"] .block .gross,html[data-risiko-stil="buben"] .block .text b,html[data-risiko-stil="buben"] .gebietInfo .name,html[data-risiko-stil="buben"] .gebietInfo .zeile b,html[data-risiko-stil="buben"] .wurfText b{color:#fff1ec}
+html[data-risiko-stil="buben"] .block .text,html[data-risiko-stil="buben"] .gebietInfo .zeile,html[data-risiko-stil="buben"] .wurfText{color:#d0bcb5}
+html[data-risiko-stil="buben"] .wuerfel{background:#d8d1c8;box-shadow:inset 0 -3px 0 #7c7770,0 2px 6px #000}
+html[data-risiko-stil="buben"] .wuerfel i{background:#281b1a}
+html[data-risiko-stil="buben"] .wuerfel.leer{background:#ffffff0b;border-color:#6b5650}
+html[data-risiko-stil="buben"] .spielerZeileKlein{border-bottom-color:#382b29}
+html[data-risiko-stil="buben"] .spielerZeileKlein.amZug{color:#fff;background:#2a1c1c;border-left:2px solid #d1242f;padding-left:6px}
+html[data-risiko-stil="buben"] .kontinentZeile{color:#d0bcb5}
+html[data-risiko-stil="buben"] .kontinentZeile.voll{color:#fff1ec}
+html[data-risiko-stil="buben"] .kontinentZeile .strich{background:#332a27}
+html[data-risiko-stil="buben"] .karte{background:linear-gradient(180deg,#292b2f,#151619);border-color:#70554d;color:#d9c6c0}
+html[data-risiko-stil="buben"] .karte .land{color:#b5948b}
+html[data-risiko-stil="buben"] .log{background:#111316cc;border-color:#4f3935;color:#d0bcb5}
+html[data-risiko-stil="buben"] .log div:first-child{color:#fff1ec}
+html[data-risiko-stil="buben"] .overlay{background:#000000cc}
+html[data-risiko-stil="buben"] .overlay .karteGross{background:linear-gradient(180deg,#1f2125,#0d0e10);border-color:#c22a34;box-shadow:0 0 45px -16px #d1242f99,0 30px 70px -24px #000}
+html[data-risiko-stil="buben"] .overlay h2{color:#f05a61;text-shadow:0 0 18px #d1242f66}
+html[data-risiko-stil="buben"] .overlay p{color:#d0bcb5}
+html[data-risiko-stil="buben"] .overlay .karteGross::before{content:"⚔";display:block;font-size:30px;color:#c22a34;margin:-4px 0 4px;text-shadow:0 0 14px #d1242f}
+html[data-risiko-stil="buben"] #meer stop:nth-child(1){stop-color:#2b3036}
+html[data-risiko-stil="buben"] #meer stop:nth-child(2){stop-color:#15181c}
+html[data-risiko-stil="buben"] #meer stop:nth-child(3){stop-color:#07080a}
+html[data-risiko-stil="buben"] .gebiet{stroke:#07080a}
+html[data-risiko-stil="buben"] .gebiet.gewaehlt{stroke:#ffb15b;stroke-width:2.8}
+html[data-risiko-stil="buben"] .gebiet.ziel{stroke:#ff4a4a;stroke-width:2.7}
+html[data-risiko-stil="buben"] .gebiet.nachbar{stroke:#c07a4a;stroke-width:2}
+html[data-risiko-stil="buben"] .armeeKreis{fill:#120e0d;stroke:#d24a4a}
+html[data-risiko-stil="buben"] .armeeChip text{fill:#ffe9df;font-weight:700}
+html[data-risiko-stil="buben"] .gebietsName{fill:#f0d8ce;stroke:#08090bdd}
+html[data-risiko-stil="buben"] .kontinentName{fill:#c69c84;opacity:.18}
+html[data-risiko-stil="buben"] .gradnetz line{stroke:#c39a7f;stroke-opacity:.11}
+html[data-risiko-stil="buben"] .kueste{stroke:#b47b58;stroke-opacity:.4}
+html[data-risiko-stil="buben"] .chipStrich{stroke:#d24a4a99}
+html[data-risiko-stil="buben"] .gebiet:hover{filter:brightness(1.12) saturate(1.15)}
+
+html[data-risiko-stil="maedchen"] .wurfText.erobert{color:#a63f6d;font-weight:700;animation:risikoHerzSieg .7s ease-out}
+html[data-risiko-stil="buben"] .wurfText.treffer{color:#ff7a72;font-weight:700;text-shadow:0 0 10px #d1242f88;animation:risikoTreffer .45s ease-out}
+html[data-risiko-stil="buben"] .wurfText.erobert{color:#ffb15b;font-weight:700;text-shadow:0 0 10px #d1242f99;animation:risikoTreffer .55s ease-out}
+@keyframes risikoHerz{0%,100%{opacity:.26;transform:translateY(0)}50%{opacity:.62;transform:translateY(-3px)}}
+@keyframes risikoHerzSieg{0%{transform:scale(.96);letter-spacing:.08em}55%{transform:scale(1.025)}100%{transform:scale(1)}}
+@keyframes risikoRauch{0%{opacity:.55;transform:translate3d(-4px,2px,0)}100%{opacity:.9;transform:translate3d(5px,-3px,0)}}
+@keyframes risikoTreffer{0%{transform:translateX(-2px);filter:brightness(1.6)}35%{transform:translateX(2px)}70%{transform:translateX(-1px)}100%{transform:translateX(0);filter:brightness(1)}}
+@media (prefers-reduced-motion:reduce){html[data-risiko-stil] .karteBox::after{animation:none}}
+
+@media (max-width:900px){
+ .startRaster{grid-template-columns:1fr}
+ .startFuss{grid-template-columns:1fr 1fr}
+}
+@media (max-width:620px){
+ .startseite{padding:14px 11px 16px;gap:14px}
+ .stilKarten{grid-template-columns:1fr}
+ .stilKarte{display:grid;grid-template-columns:96px minmax(0,1fr)}
+ .stilKarte .stilBild{height:100%;min-height:78px;border-bottom:0;border-right:1px solid var(--linie)}
+ .stilKarte .stilText{padding:8px 10px}
+ .startFuss{grid-template-columns:1fr}
+ .startFuss .startRegeln{flex-direction:column;align-items:flex-start}
+ .startFuss .startRegeln .knopf{width:100%}
+}
+
 </style>
 </head>
 <body>
@@ -229,50 +531,90 @@ input[type="text"]{width:132px}
    <button class="knopf" id="btnRegeln" type="button">Regeln</button>
   </div>
 
-  <div class="einrichtung" id="einrichtung">
-   <p class="unter">47 Gebiete, 6 Kontinente. Verstärken, angreifen, verschieben – bis die Weltkarte in einer Farbe leuchtet.</p>
+  <div class="startseite" id="einrichtung">
+   <header class="startKopf">
+    <div class="startMarke">TrashyGecko · Brettspiel</div>
+    <h1>RISIKO<span>Welt erobern</span></h1>
+    <p class="unter">47 Gebiete, 6 Kontinente. Verstärken, angreifen, verschieben – bis die Weltkarte in einer Farbe leuchtet. Wähle zuerst deine Welt.</p>
+   </header>
 
-   <div class="reihe">
-    <span class="etikett">Spielmodus</span>
-    <div class="auswahl" id="wahlModus" role="group" aria-label="Spielmodus">
-     <button class="wahl" type="button" data-modus="welt" aria-pressed="true" title="Alle Gebiete erobern">Weltherrschaft</button>
-     <button class="wahl" type="button" data-modus="schnell" aria-pressed="false" title="Sieger bei 24 Gebieten">Schnellspiel</button>
-     <button class="wahl" type="button" data-modus="kontinent" aria-pressed="false" title="Drei ganze Kontinente halten">Kontinentkrieg</button>
-     <button class="wahl" type="button" data-modus="mission" aria-pressed="false" title="Geheimes persönliches Ziel">Geheime Mission</button>
-     <button class="wahl" type="button" data-modus="hauptstadt" aria-pressed="false" title="Alle Hauptstädte halten">Hauptstadtkrieg</button>
-     <button class="wahl" type="button" data-modus="team" aria-pressed="false" title="Zwei Teams, ein Ziel">Teamkrieg</button>
+   <section class="startAbschnitt" aria-labelledby="stilTitel">
+    <h2 id="stilTitel">Grafikstil</h2>
+    <div class="stilKarten" id="wahlStil" role="group" aria-label="Grafikstil">
+     <button class="stilKarte" type="button" data-stil="normal" aria-pressed="true">
+      <span class="stilBild" aria-hidden="true"><svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice"><rect class="meer" width="240" height="110"/><path class="land" d="M8 35 38 18 76 26 82 48 55 58 28 50 12 62 4 48Zm68 3 34-12 31 8 18 18-10 17-28 5-22-8-17-15Zm82 27 28-8 19 10-4 17-28 5-19-10Zm-32 5 18-2 13 10-8 13-22 2-8-11Z"/><circle class="chip" cx="48" cy="37" r="4"/><circle class="chip" cx="102" cy="41" r="4"/><circle class="chip" cx="165" cy="64" r="4"/><circle class="chip" cx="73" cy="72" r="4"/><path class="stern" d="m205 14 1.8 4 4.3.5-3.2 3 .9 4.3-3.8-2.2-3.8 2.2.9-4.3-3.2-3 4.3-.5Z"/></svg></span>
+      <span class="stilText"><b>Normal</b><small>Die klassische, klare Weltkarte – unverändert.</small></span>
+     </button>
+     <button class="stilKarte" type="button" data-stil="maedchen" aria-pressed="false">
+      <span class="stilBild" aria-hidden="true"><svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice"><rect class="meer" width="240" height="110"/><path class="land" d="M8 35 38 18 76 26 82 48 55 58 28 50 12 62 4 48Zm68 3 34-12 31 8 18 18-10 17-28 5-22-8-17-15Zm82 27 28-8 19 10-4 17-28 5-19-10Zm-32 5 18-2 13 10-8 13-22 2-8-11Z"/><circle class="chip" cx="48" cy="37" r="4"/><circle class="chip" cx="102" cy="41" r="4"/><circle class="chip" cx="165" cy="64" r="4"/><circle class="chip" cx="73" cy="72" r="4"/><path class="stern" d="M29 76c-4-3-8-6-8-10 0-3 2-5 5-5 1 0 2 .5 3 1.5C30 61 31 60 33 60c3 0 5 2 5 5 0 4-4 7-9 11Zm170-58 2 4 4 .5-3 3 1 4-4-2-4 2 1-4-3-3 4-.5Z"/></svg></span>
+      <span class="stilText"><b>Mädchen</b><small>Pastell, Kronen und Herzen – eine märchenhafte Welt.</small></span>
+     </button>
+     <button class="stilKarte" type="button" data-stil="buben" aria-pressed="false">
+      <span class="stilBild" aria-hidden="true"><svg viewBox="0 0 240 110" preserveAspectRatio="xMidYMid slice"><rect class="meer" width="240" height="110"/><path class="land" d="M8 35 38 18 76 26 82 48 55 58 28 50 12 62 4 48Zm68 3 34-12 31 8 18 18-10 17-28 5-22-8-17-15Zm82 27 28-8 19 10-4 17-28 5-19-10Zm-32 5 18-2 13 10-8 13-22 2-8-11Z"/><circle class="chip" cx="48" cy="37" r="4"/><circle class="chip" cx="102" cy="41" r="4"/><circle class="chip" cx="165" cy="64" r="4"/><circle class="chip" cx="73" cy="72" r="4"/><path class="stern" d="m205 13 8 4-3 3 3 2-8 4-8-4 3-2-3-3Z"/></svg></span>
+      <span class="stilText"><b>Buben</b><small>Stahl, Asche und Belagerung – eine dunkle Schlachtenwelt.</small></span>
+     </button>
     </div>
+   </section>
+
+   <div class="startRaster">
+    <section class="startBlock" aria-labelledby="modusTitel">
+     <h2 id="modusTitel">Spielmodus</h2>
+     <div class="reihe">
+      <span class="etikett">Ziel</span>
+      <div class="auswahl" id="wahlModus" role="group" aria-label="Spielmodus">
+       <button class="wahl" type="button" data-modus="welt" aria-pressed="true" title="Alle Gebiete erobern">Weltherrschaft</button>
+       <button class="wahl" type="button" data-modus="schnell" aria-pressed="false" title="Sieger bei 24 Gebieten">Schnellspiel</button>
+       <button class="wahl" type="button" data-modus="kontinent" aria-pressed="false" title="Drei ganze Kontinente halten">Kontinentkrieg</button>
+       <button class="wahl" type="button" data-modus="mission" aria-pressed="false" title="Geheimes persönliches Ziel">Geheime Mission</button>
+       <button class="wahl" type="button" data-modus="hauptstadt" aria-pressed="false" title="Alle Hauptstädte halten">Hauptstadtkrieg</button>
+       <button class="wahl" type="button" data-modus="team" aria-pressed="false" title="Zwei Teams, ein Ziel">Teamkrieg</button>
+      </div>
+     </div>
+     <p class="hinweiszeile" id="startModusKurz">Alle 47 Gebiete erobern.</p>
+    </section>
+
+    <section class="startBlock" aria-labelledby="spielerTitel">
+     <h2 id="spielerTitel">Spieler &amp; Computer</h2>
+     <div class="reihe">
+      <span class="etikett">Spielerzahl</span>
+      <div class="auswahl" id="wahlSpieler" role="group" aria-label="Anzahl Spieler">
+       <button class="wahl" type="button" data-n="2" aria-pressed="true">2</button>
+       <button class="wahl" type="button" data-n="3" aria-pressed="false">3</button>
+       <button class="wahl" type="button" data-n="4" aria-pressed="false">4</button>
+       <button class="wahl" type="button" data-n="5" aria-pressed="false">5</button>
+       <button class="wahl" type="button" data-n="6" aria-pressed="false">6</button>
+      </div>
+     </div>
+     <div class="reihe">
+      <label class="etikett" for="selMenschen">Menschen</label>
+      <select id="selMenschen" aria-label="Anzahl menschlicher Spieler">
+       <option value="1" selected>1 Mensch</option>
+       <option value="2">2 Menschen</option>
+       <option value="3">3 Menschen</option>
+       <option value="4">4 Menschen</option>
+       <option value="5">5 Menschen</option>
+       <option value="6">6 Menschen</option>
+      </select>
+      <span class="hinweiszeile" id="rollenHinweis">1 Mensch · 1 Bot</span>
+     </div>
+     <div class="reihe">
+      <label class="etikett" for="selStufe">Bot-Stärke</label>
+      <select id="selStufe" aria-label="Schwierigkeit der Computergegner">
+       <option value="leicht">Leicht – macht Fehler</option>
+       <option value="mittel" selected>Mittel – spielt solide</option>
+       <option value="schwer">Schwer – plant langfristig</option>
+      </select>
+     </div>
+     <div class="startSpielerzeilen" id="spielerVorschau"></div>
+     <button class="knopf haupt startKnopf" id="btnStart" type="button">Partie starten</button>
+    </section>
    </div>
 
-   <div class="reihe">
-    <span class="etikett">Spieler</span>
-    <div class="auswahl" id="wahlSpieler" role="group" aria-label="Anzahl Spieler">
-     <button class="wahl" type="button" data-n="2" aria-pressed="true">2</button>
-     <button class="wahl" type="button" data-n="3" aria-pressed="false">3</button>
-     <button class="wahl" type="button" data-n="4" aria-pressed="false">4</button>
-     <button class="wahl" type="button" data-n="5" aria-pressed="false">5</button>
-     <button class="wahl" type="button" data-n="6" aria-pressed="false">6</button>
-    </div>
-   </div>
-
-   <div class="reihe">
-    <span class="etikett">Computerstärke</span>
-    <select id="selStufe" aria-label="Schwierigkeit der Computergegner">
-     <option value="leicht">Leicht</option>
-     <option value="normal" selected>Mittel</option>
-     <option value="schwer">Schwer</option>
-    </select>
-    <span class="hinweiszeile">Gilt für alle Computergegner.</span>
-   </div>
-
-   <div class="reihe">
-    <label class="hinweiszeile"><input type="checkbox" id="chkAlleMensch"> Alle Spieler als Mensch (lokal am selben Gerät)</label>
-   </div>
-
-   <div class="spielerZeilen" id="spielerVorschau"></div>
-
-   <div class="reihe">
-    <button class="knopf haupt" id="btnStart" type="button">Weltkarte aufbauen</button>
+   <div class="startFuss">
+    <article><b>Welt erobern</b><p>Verstärken, benachbarte Gebiete angreifen, würfeln und nachrücken. Eine Armee bleibt immer zurück.</p></article>
+    <article><b>Karten &amp; Kontinente</b><p>Eroberungen bringen Gebietskarten. Drei passende Karten geben zusätzliche Armeen; vollständige Kontinente bringen jede Runde Bonus.</p></article>
+    <article><b>Solo &amp; online</b><p>Gegen Bots, mit mehreren Menschen am Gerät oder im Spielraum mit Einladung – direkt im Browser.</p></article>
+    <div class="startRegeln"><p><b>Kurz:</b> Ziel ist je nach Modus die ganze Welt, 24 Gebiete, drei Kontinente, alle Hauptstädte oder das gegnerische Team.</p><button class="knopf" id="btnRegelnStart" type="button">Alle Regeln</button></div>
    </div>
   </div>
 
@@ -285,6 +627,7 @@ input[type="text"]{width:132px}
    </div>
 
    <div class="buehne">
+    <div class="hinweisToast" id="hinweisToast" role="status" aria-live="polite"></div>
     <div class="karteSpalte">
      <div class="karteBox">
      <svg id="weltkarte" viewBox="0 0 850 430" role="img" aria-label="Weltkarte mit 47 Gebieten"></svg>
@@ -367,8 +710,9 @@ input[type="text"]{width:132px}
    <p><b>Verschieben:</b> einmal pro Zug beliebig viele Armeen zwischen zwei eigenen, benachbarten Gebieten – eine Armee bleibt immer zurück.</p>
    <p><b>Hauptstädte:</b> Im Hauptstadtkrieg hat jeder Spieler eine Hauptstadt (goldener Ring). Wer alle Hauptstädte hält, gewinnt.</p>
    <p><b>Teams:</b> Im Teamkrieg sitzen Spieler abwechselnd in Team A und B; ein Team gewinnt, wenn es die ganze Welt hält.</p>
+   <p><b>Tastatur:</b> <b>A</b> greift an, <b>Enter</b> geht weiter, <b>Esc</b> löscht die Auswahl, <b>←</b> und <b>→</b> wechseln zwischen eigenen Gebieten mit mindestens zwei Armeen, <b>F</b> schaltet das Vollbild.</p>
   </div>
-  <div class="aktionen"><button class="knopf haupt" id="btnRegelnZu" type="button">Verstanden</button></div>
+  <div class="aktionen"><button class="knopf" id="btnVollbild" type="button" title="Vollbild ein/aus (F, Escape beendet)">⛶ Vollbild</button><button class="knopf haupt" id="btnRegelnZu" type="button">Verstanden</button></div>
  </div>
 </div>
 
@@ -496,7 +840,48 @@ input[type="text"]{width:132px}
   /* =====================================================================
      2. ZUSTAND
      ===================================================================== */
-  var FARBEN = ["#c8684f", "#4f7fa8", "#c9a44f", "#5f9160", "#8a74b4", "#b07d55"];
+  /* Drei Welten, ein Regelwerk. NORMAL behält exakt die bisherigen Farben. */
+  var FARBEN_NORMAL = ["#c8684f", "#4f7fa8", "#c9a44f", "#5f9160", "#8a74b4", "#b07d55"];
+  var FARBEN_MAEDCHEN = ["#dd87a8", "#6fb6c8", "#b393d6", "#80be91", "#d59a70", "#a78ac2"];
+  /* Buben: Rot, Stahl, Messing, Schwarz – kein Grün. */
+  var FARBEN_BUBEN = ["#c8323c", "#50799f", "#b8873a", "#6d7d8c", "#8a5a86", "#a05a34"];
+  var FARBEN = FARBEN_NORMAL.slice();
+  var STIL = "normal";
+  function stilWert(wert) {
+    wert = String(wert || "").toLowerCase();
+    if (wert === "maedchen" || wert === "mädchen") return "maedchen";
+    if (wert === "buben" || wert === "jungs") return "buben";
+    return "normal";
+  }
+  function farbenFuerStil() {
+    return (STIL === "maedchen" ? FARBEN_MAEDCHEN : STIL === "buben" ? FARBEN_BUBEN : FARBEN_NORMAL).slice();
+  }
+  function stilWenden(wert, extern) {
+    STIL = stilWert(wert);
+    if (extern) {
+      var abschnitt = document.querySelector("#wahlStil");
+      if (abschnitt && abschnitt.closest) {
+        var kopf = abschnitt.closest(".startAbschnitt");
+        if (kopf) kopf.hidden = true;
+      }
+    }
+    FARBEN = farbenFuerStil();
+    try {
+      document.documentElement.dataset.risikoStil = STIL;
+      document.documentElement.dataset.stil = STIL === "normal" ? "klassisch" : STIL;
+      document.documentElement.style.colorScheme = STIL === "buben" ? "dark" : "light";
+    } catch (e) {}
+    S.spieler.forEach(function (sp, i) { sp.farbe = FARBEN[i % FARBEN.length]; });
+    var karten = document.getElementById("wahlStil");
+    if (karten) Array.prototype.forEach.call(karten.querySelectorAll("[data-stil]"), function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-stil") === STIL ? "true" : "false");
+    });
+    if (document.getElementById("spiel") && !document.getElementById("spiel").hidden) {
+      zeichne();
+      aktualisiere();
+    }
+    return STIL;
+  }
   var FARBNAMEN = ["Rot", "Blau", "Gelb", "Grün", "Violett", "Braun"];
   var SYMBOLE = ["infanterie", "kavallerie", "artillerie"];
   var SYMBOLZEICHEN = { infanterie: "⚔", kavallerie: "♞", artillerie: "◎", joker: "★" };
@@ -510,6 +895,10 @@ input[type="text"]{width:132px}
     team:      { name: "Teamkrieg",        kurz: "Zwei Teams – ein Sieger." }
   };
   var START_ARMEE = { 2: 40, 3: 35, 4: 30, 5: 25, 6: 20 };
+  /* Jeder Computer bekommt eine eigene Handschrift. Damit spielen zwei Bots
+     derselben Stufe nicht identisch. */
+  var CHARAKTER = ["eroberer", "waechter", "stratege", "hitzkopf"];
+  var CHARAKTER_TEXT = { eroberer: "Eroberer", waechter: "Wächter", stratege: "Stratege", hitzkopf: "Hitzkopf" };
   var SATZ_WERTE = [4, 6, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 
   /* FERN ist im Online-Betrieb gesetzt: Dann rechnet der Server, die Seite
@@ -533,7 +922,8 @@ input[type="text"]{width:132px}
     hauptstaedte: [],
     teams: [],
     missionen: [],
-    runde: 1
+    runde: 1,
+    tick: 0
   };
 
   function neuesSpiel(einst) {
@@ -548,6 +938,7 @@ input[type="text"]{width:132px}
     S.auswahl = null;
     S.ziel = null;
     S.runde = 1;
+    S.tick = 0;
 
     var ids = GEBIETE.map(function (g) { return g.id; });
     S.gebiete = {};
@@ -568,13 +959,16 @@ input[type="text"]{width:132px}
     });
 
     S.spieler = [];
+    var botNr = 0;
     for (var k = 0; k < n; k++) {
+      var istKi = !!einst.ki[k];
       S.spieler.push({
         id: k,
         name: einst.namen[k] || ("Spieler " + (k + 1)),
-        farbe: FARBEN[k],
-        ki: !!einst.ki[k],
-        stufe: einst.stufe || "normal",
+        farbe: FARBEN[k % FARBEN.length],
+        ki: istKi,
+        charakter: istKi ? CHARAKTER[botNr++ % CHARAKTER.length] : null,
+        stufe: einst.stufe || "mittel",
         hand: [],
         ausgeschieden: false,
         team: einst.modus === "team" ? (k % 2) : -1
@@ -959,6 +1353,7 @@ input[type="text"]{width:132px}
       if (!S.spieler[k].ausgeschieden) { naechster = k; break; }
     }
     if (naechster <= S.amZug) S.runde++;
+    S.tick = (S.tick || 0) + 1;
     S.pool = 0;
     beginneZug(naechster);
     return true;
@@ -1094,8 +1489,16 @@ input[type="text"]{width:132px}
     while (pool > 0) {
       var bestes = eigene[0], besteNote = -1;
       eigene.forEach(function (id) {
-        var note = feindlicheNachbarn(id, sp.id).length * 2 + Math.random() * 1.5;
-        if (S.hauptstaedte && S.hauptstaedte[sp.id] === id) note += 1;
+        var stufe = sp.stufe || "mittel";
+        var note = feindlicheNachbarn(id, sp.id).length * (stufe === "schwer" ? 2.8 : 2) + Math.random() * (stufe === "leicht" ? 5 : 1.5);
+        if (S.hauptstaedte && S.hauptstaedte[sp.id] === id) note += stufe === "schwer" ? 2.5 : 1;
+        if (stufe === "schwer") {
+          var f = kontinentFortschritt(GEBIET[id].k, sp.id);
+          if (f.eigen === f.gesamt - 1) note += 3;
+        }
+        if (sp.charakter === "waechter") note += feindlicheNachbarn(id, sp.id).length * 1.3;
+        if (sp.charakter === "eroberer") note += kontinentFortschritt(GEBIET[id].k, sp.id).eigen * 0.35;
+        if (stufe === "leicht" && Math.random() < 0.35 && besteNote > 0) return;
         if (note > besteNote) { besteNote = note; bestes = id; }
       });
       S.gebiete[bestes].armeen++;
@@ -1119,7 +1522,27 @@ input[type="text"]{width:132px}
     feindlicheNachbarn(id, k).forEach(function (n) {
       note += S.gebiete[n].armeen > 3 ? 1.1 : 0.4;
     });
-    if (sp.stufe === "leicht") note += Math.random() * 4;
+    if (sp.charakter && sp.stufe !== "leicht") {
+      var gw = sp.stufe === "schwer" ? 1 : 0.55;
+      if (sp.charakter === "waechter") {
+        note += feindlicheNachbarn(id, k).reduce(function (s, n) { return s + S.gebiete[n].armeen; }, 0) * 0.8 * gw;
+      } else if (sp.charakter === "eroberer") {
+        note += feindlicheNachbarn(id, k).length * 2.2 * gw;
+        if (feindlicheNachbarn(id, k).some(function (n) { return S.gebiete[n].armeen <= 2; })) note += 1.8 * gw;
+      } else if (sp.charakter === "stratege") {
+        if (fortschritt.eigen >= fortschritt.gesamt - 2) note += 3 * gw;
+        if (S.gebiete[id].armeen >= 6) note -= 1.2 * gw;
+      } else {
+        note += Math.random() * 4 * gw;
+      }
+    }
+    if (sp.stufe === "leicht") {
+      note = Math.random() * 8 + S.gebiete[id].armeen * 0.2;
+    } else if (sp.stufe === "schwer") {
+      var druck = feindlicheNachbarn(id, k).reduce(function (summe, n) { return summe + S.gebiete[n].armeen; }, 0);
+      note += druck * 0.45;
+      if (fortschritt.eigen >= fortschritt.gesamt - 2) note += 2.5;
+    }
     return note;
   }
 
@@ -1159,43 +1582,89 @@ input[type="text"]{width:132px}
     }
     var gefahr = feindlicheNachbarn(nach, k).filter(function (n) { return n !== von; }).length;
     var kosten = (1 - p) * Math.min(a - 1, 4) * 0.9 + gefahr * 0.15;
+    /* Schwache Nachbarn sind lohnende Ziele – das gilt für jede Stufe. */
+    if (d <= 2) wert += 0.6;
     var note = p * (wert + d * 0.5) - kosten;
 
-    if (sp.stufe === "leicht") {
-      note = p * (wert * 0.5) - (1 - p) * 0.4 + Math.random() * 0.9;
-    } else if (sp.stufe === "normal") {
-      if (p < 0.45) note -= 0.8;
-    } else {
-      /* Schwer: Kontinente, Verteidigung und Bedrohung einrechnen. */
-      if (p > 0.62) note += 0.5;
-      if (p < 0.5) note -= 1.2;
-      if (S.gebiete[von].armeen <= 3) note -= 0.6;
-      var eigeneFront = feindlicheNachbarn(von, k).length;
-      if (eigeneFront > 2) note -= 0.3;
-      if (fortschritt.eigen >= fortschritt.gesamt - 2) note += 0.4;
+    /* Eigene Handschrift: gleiche Stufe heißt nicht gleiches Spiel. */
+    if (sp.charakter && sp.stufe !== "leicht") {
+      var gw = sp.stufe === "schwer" ? 1 : 0.55;
+      if (sp.charakter === "eroberer") {
+        if (d <= 2) note += 0.5 * gw;
+        if (p > 0.6) note += 0.3 * gw;
+        if (fortschritt.eigen > fortschritt.gesamt / 2) note += 0.25 * gw;
+      } else if (sp.charakter === "waechter") {
+        if (feindlicheNachbarn(von, k).length > 1) note -= 0.45 * gw;
+        if (p < 0.66) note -= 0.45 * gw;
+        if (fortschritt.eigen === fortschritt.gesamt - 1) note += 0.4 * gw;
+      } else if (sp.charakter === "stratege") {
+        if (a - d >= 3 && p > 0.58) note += 0.45 * gw;
+        if (p < 0.6) note -= 0.5 * gw;
+        note += 0.3 * gw * (KONT[ziel.k].bonus / 7);
+      } else if (sp.charakter === "hitzkopf") {
+        note += 0.45 * gw * Math.min(2, d) / 2;
+        if (armeenGesamt(S.gebiete[nach].besitzer) > armeenGesamt(k)) note += 0.2 * gw;
+        note -= 0.2 * gw;
+      }
     }
-    return { note: note, p: p, wert: wert };
+
+    if (sp.stufe === "leicht") {
+      /* Leicht spielt sichtbar ungenau: keine Kontinentplanung, dafür
+         gelegentlich ein unnötiger Angriff oder eine ausgelassene Chance. */
+      note = Math.random() * 2.2 - (1 - p) * 0.25;
+    } else if (sp.stufe === "mittel") {
+      if (p < 0.45) note -= 0.8;
+      if (fortschritt.eigen === fortschritt.gesamt - 1) note += 0.35;
+    } else {
+      /* Schwer: Kontinente, Verteidigung, Bedrohung und Gegenangriff. */
+      if (p > 0.62) note += 0.65;
+      if (p < 0.52) note -= 1.4;
+      if (S.gebiete[von].armeen <= 3) note -= 0.7;
+      var eigeneFront = feindlicheNachbarn(von, k).length;
+      if (eigeneFront > 2) note -= 0.35;
+      if (fortschritt.eigen >= fortschritt.gesamt - 2) note += 0.8;
+      var gegenwehr = feindlicheNachbarn(nach, k).filter(function (n) { return n !== von; })
+        .reduce(function (s, n) { return s + S.gebiete[n].armeen; }, 0);
+      if (gegenwehr > S.gebiete[von].armeen + 2) note -= 0.45;
+      if (S.modus === "mission" && S.missionen[k]) note += 0.25;
+    }
+    return { note: note, p: p, wert: wert, optionen: null };
   }
 
   function kiBesteAttacke(k) {
-    var beste = null;
+    var stufe = S.spieler[k].stufe || "mittel";
+    var optionen = [];
     gebieteVon(k).forEach(function (von) {
       if (S.gebiete[von].armeen < 2) return;
       feindlicheNachbarn(von, k).forEach(function (nach) {
         var w = kiAngriffsWert(von, nach, k);
         if (!w) return;
-        if (!beste || w.note > beste.note) beste = { von: von, nach: nach, note: w.note, p: w.p };
+        optionen.push({ von: von, nach: nach, note: w.note, p: w.p });
       });
     });
-    if (!beste) return null;
-    var stufe = S.spieler[k].stufe;
-    var schwelle = stufe === "leicht" ? 0.05 : stufe === "normal" ? 0.25 : 0.35;
+    if (!optionen.length) return null;
+    optionen.sort(function (a, b) { return b.note - a.note; });
+    if (stufe === "leicht") {
+      if (Math.random() < 0.35) return null;
+      return optionen[Math.floor(Math.random() * Math.min(optionen.length, 4))];
+    }
+    var beste = optionen[0];
+    var schwelle = stufe === "schwer" ? 0.3 : 0.18;
+    var charakter = S.spieler[k].charakter;
+    if (stufe !== "leicht" && charakter === "hitzkopf") schwelle -= 0.12;
+    if (stufe !== "leicht" && charakter === "waechter") schwelle += 0.1;
+    if (stufe !== "leicht" && charakter === "eroberer") schwelle -= 0.06;
     if (beste.note < schwelle) return null;
+    /* Schwer prüft vor dem Angriff, ob die eigene Grenze danach nackt wäre. */
+    if (stufe === "schwer" && S.gebiete[beste.von].armeen <= 3 && beste.p < 0.7) return null;
     return beste;
   }
 
   function kiVerschieben(k) {
     /* Armeen von hinten an die Front bringen, die am stärksten bedroht ist. */
+    var sp0 = S.spieler[k];
+    if (sp0.charakter === "hitzkopf" && Math.random() < 0.45) return;
+    if (sp0.charakter === "waechter" && Math.random() < 0.25) return;
     var beste = null;
     gebieteVon(k).forEach(function (von) {
       if (S.gebiete[von].armeen < 2) return;
@@ -1212,6 +1681,7 @@ input[type="text"]{width:132px}
         }
       });
     });
+    if (beste && sp0.charakter === "waechter" && S.gebiete[beste.von].armeen < 4) return;
     if (beste) verschiebe(beste.von, beste.nach, beste.anzahl);
   }
 
@@ -1253,6 +1723,7 @@ input[type="text"]{width:132px}
 
     if (S.phase === "verschieben") {
       if (sp.stufe !== "leicht") kiVerschieben(k);
+      else if (Math.random() < 0.3) kiVerschieben(k);
       beendeZug();
       return false;
     }
@@ -1260,7 +1731,7 @@ input[type="text"]{width:132px}
   }
 
   function kiZug(k) {
-    if (S.vorbei || S.amZug !== k) return;
+    if (S.vorbei || pausiert || S.amZug !== k) return;
     if (turbo) {
       var schutz = 0;
       while (!S.vorbei && S.amZug === k && kiEinSchritt(k) && schutz++ < 3000) { /* synchron */ }
@@ -1300,6 +1771,7 @@ input[type="text"]{width:132px}
   }
 
   var turbo = false;
+  var pausiert = false;
   var kiTimer = 0;
 
   /* Geometrie-Hilfen für die Karte, auch für Tests. */
@@ -1340,7 +1812,8 @@ input[type="text"]{width:132px}
   var skala = 1;
   var sperre = false;
   var svgEl = null, karteBox = null;
-  var einst = { modus: "welt", anzahl: 2, namen: ["Du", "Computer 1", "Computer 2", "Computer 3", "Computer 4", "Computer 5"] };
+  var einst = { modus: "welt", anzahl: 2, menschen: 1, stufe: "mittel",
+    namen: ["Du", "Computer 1", "Computer 2", "Computer 3", "Computer 4", "Computer 5"] };
 
   /* Chips sehr kleiner Gebiete rücken etwas ab, damit sie sich in Europa
      und bei Inseln nicht überdecken; ein dünner Strich zeigt den Bezug. */
@@ -1389,6 +1862,8 @@ input[type="text"]{width:132px}
     el("stop", {offset: "0", "stop-color": "#143a50"}, meer);
     el("stop", {offset: "0.55", "stop-color": "#0b2634"}, meer);
     el("stop", {offset: "1", "stop-color": "#061520"}, meer);
+    /* Die Farben selbst bleiben unverändert; Mädchen und Buben überschreiben
+       sie ausschließlich über ihre eigenen CSS-Regeln. */
 
     el("rect", {x: "0", y: "0", width: "850", height: "430", fill: "url(#meer)"}, svgEl);
 
@@ -1431,7 +1906,7 @@ input[type="text"]{width:132px}
         x2: cp[0].toFixed(1), y2: cp[1].toFixed(1), "class": "chipStrich"}, chip);
       var ring = el("circle", {cx: cp[0].toFixed(1), cy: cp[1].toFixed(1), "class": "kapRing",
         fill: "none", stroke: "#e2c58c", "stroke-width": 2, opacity: 0}, chip);
-      var kreis = el("circle", {cx: cp[0].toFixed(1), cy: cp[1].toFixed(1), fill: "#0b1a22",
+      var kreis = el("circle", {cx: cp[0].toFixed(1), cy: cp[1].toFixed(1), "class": "armeeKreis", fill: "#0b1a22",
         stroke: "#ffffff88", "stroke-width": 1}, chip);
       var txt = el("text", {x: cp[0].toFixed(1), y: cp[1].toFixed(1), "text-anchor": "middle",
         "dominant-baseline": "central", fill: "#f2f6f8", "font-weight": 600}, chip);
@@ -1440,6 +1915,27 @@ input[type="text"]{width:132px}
       name.textContent = KURZ[g.id] || g.name;
       elem[g.id] = {poly: poly, chip: chip, ring: ring, kreis: kreis, txt: txt, name: name, strich: strich};
     });
+
+    /* Randschmuck der beiden neuen Welten: Krone und Herzen im Mädchen-Bild,
+       Klingen, Blutspritzer und Totenkopf im Buben-Bild. Liegt über dem Land,
+       ist aber im Normal-Stil per CSS ausgeblendet. */
+    var schmuck = el("g", {}, svgEl);
+    var sm = el("g", {"class": "stilSchmuck maedchen"}, schmuck);
+    var tm = el("text", {x: "26", y: "417", "font-size": "22"}, sm);
+    tm.textContent = "♛ ✦ ♥";
+    [[68, 405, "12"], [92, 413, "9"], [112, 401, "7"]].forEach(function (p) {
+      var h = el("text", {x: String(p[0]), y: String(p[1]), "font-size": p[2], opacity: ".5"}, sm);
+      h.textContent = "♥";
+    });
+    var sb = el("g", {"class": "stilSchmuck buben"}, schmuck);
+    var tb = el("text", {x: "24", y: "416", "font-size": "26"}, sb);
+    tb.textContent = "⚔";
+    [[62, 402, 5], [78, 412, 3], [94, 397, 4], [110, 409, 2.5], [126, 403, 3.5], [140, 414, 2]].forEach(function (p) {
+      el("circle", {cx: String(p[0]), cy: String(p[1]), r: String(p[2]), opacity: ".32"}, sb);
+    });
+    var sk = el("text", {x: "822", y: "414", "font-size": "20", opacity: ".32", "text-anchor": "end"}, sb);
+    sk.textContent = "☠";
+
     passeKarteAn();
     zeichne();
   }
@@ -1603,7 +2099,7 @@ input[type="text"]{width:132px}
       var team = S.modus === "team" ? " · Team " + (sp.team === 0 ? "A" : "B") : "";
       return '<div class="' + kl + '"><span class="punkt" style="background:' + sp.farbe + '"></span>' +
         '<span' + (sp.ausgeschieden ? ' class="weg"' : '') + '>' + sp.name + team +
-        ((sp.ki || sp.bot) ? " · KI" : "") + '</span><span class="zahl">' + gebieteVon(sp.id).length + " Geb. · " +
+        ((sp.ki || sp.bot) ? " · KI" + (sp.charakter ? " (" + CHARAKTER_TEXT[sp.charakter] + ")" : "") : "") + '</span><span class="zahl">' + gebieteVon(sp.id).length + " Geb. · " +
         armeenGesamt(sp.id) + " Armeen" + (sp.hand.length ? " · " + sp.hand.length + " Karten" : "") +
         "</span></div>";
     }).join("");
@@ -1751,28 +2247,75 @@ input[type="text"]{width:132px}
         if (S.phase === "aufstellen" && (S.spieler[S.amZug].startPool || 0) === 0) aufstellenFertig(S.amZug);
         return;
       }
+      /* Warum geht es hier nicht weiter? Kurz erklären statt stumm bleiben. */
+      var eigentuemer = S.gebiete[id].besitzer;
+      if (eigentuemer !== S.amZug && eigentuemer >= 0) {
+        hinweis(GEBIET[id].name + " gehört " + S.spieler[eigentuemer].name +
+          ". Armeen lassen sich nur auf eigene Gebiete setzen.");
+      } else if (S.phase === "verstaerken" && S.pool <= 0) {
+        hinweis("Kein Vorrat mehr – „Weiter zum Angriff“ setzt den Zug fort.");
+      } else {
+        hinweis("Dieses Gebiet nimmt gerade keine Armeen auf.");
+      }
       S.auswahl = id;
       aktualisiere();
       return;
     }
     if (S.phase === "angreifen") {
-      if (S.nachruecken) return;
-      var besitzer = S.gebiete[id].besitzer;
-      if (besitzer === S.amZug && S.gebiete[id].armeen >= 2) {
-        S.auswahl = id; S.ziel = null;
-      } else if (S.auswahl && angriffMoeglich(S.auswahl, id)) {
-        S.ziel = id;
-      } else {
-        S.auswahl = id; S.ziel = null;
+      if (S.nachruecken) {
+        hinweis("Erst die Armeen nach " + GEBIET[S.nachruecken.nach].name + " nachrücken.");
+        return;
       }
+      var besitzer = S.gebiete[id].besitzer;
+      if (besitzer === S.amZug) {
+        var alt = S.auswahl;
+        S.auswahl = id; S.ziel = null;
+        if (S.gebiete[id].armeen < 2) {
+          hinweis(GEBIET[id].name + " hat nur eine Armee – eine muss immer zurückbleiben.");
+        } else if (alt && alt !== id && NACH[alt] && NACH[alt].indexOf(id) < 0) {
+          hinweis(GEBIET[id].name + " grenzt nicht an " + GEBIET[alt].name +
+            " – angegriffen wird nur über eine direkte Grenze.");
+        }
+        aktualisiere();
+        return;
+      }
+      if (S.auswahl && angriffMoeglich(S.auswahl, id)) {
+        S.ziel = id;
+        aktualisiere();
+        return;
+      }
+      if (S.auswahl) {
+        if (NACH[S.auswahl] && NACH[S.auswahl].indexOf(id) < 0) {
+          hinweis(GEBIET[id].name + " ist keine direkte Grenze von " + GEBIET[S.auswahl].name + ".");
+        } else {
+          hinweis("Von " + GEBIET[S.auswahl].name + " aus ist gerade kein Angriff möglich.");
+        }
+      } else {
+        hinweis("Wähle zuerst ein eigenes Gebiet mit mindestens zwei Armeen.");
+      }
+      S.auswahl = null; S.ziel = null;
       aktualisiere();
       return;
     }
     if (S.phase === "verschieben") {
-      if (S.verschoben) { S.auswahl = id; S.ziel = null; aktualisiere(); return; }
+      if (S.verschoben) {
+        S.auswahl = id; S.ziel = null;
+        hinweis("Pro Zug ist eine Verschiebung möglich – der Rest geht über „Zug beenden“.");
+        aktualisiere();
+        return;
+      }
       if (S.auswahl && armeenVerschiebenMoeglich(S.auswahl, id)) {
         S.ziel = id; S.verschiebeAnzahl = 1;
       } else {
+        if (S.auswahl && S.auswahl !== id) {
+          if (S.gebiete[id].besitzer !== S.amZug) {
+            hinweis(GEBIET[id].name + " gehört dir nicht – verschoben wird nur zwischen eigenen Gebieten.");
+          } else if (NACH[S.auswahl] && NACH[S.auswahl].indexOf(id) < 0) {
+            hinweis(GEBIET[id].name + " grenzt nicht an " + GEBIET[S.auswahl].name + ".");
+          } else {
+            hinweis("In " + GEBIET[S.auswahl].name + " muss mindestens eine Armee bleiben.");
+          }
+        }
         S.auswahl = id; S.ziel = null;
       }
       aktualisiere();
@@ -1794,12 +2337,17 @@ input[type="text"]{width:132px}
     box.innerHTML = html;
   }
 
-  function wuerfelSetzen(box, werte, anzahl, rollen) {
+  /* marken: je Würfel "sieg", "verlust" oder "ruhig" – so ist nach dem Wurf
+     zu sehen, welcher Vergleich gewonnen und welcher verloren wurde. */
+  function wuerfelSetzen(box, werte, anzahl, rollen, marken) {
+    if (!box) return;
     var html = "";
     for (var i = 0; i < anzahl; i++) {
       var w = werte ? werte[i] : null;
       if (!w) { html += '<div class="wuerfel leer"></div>'; continue; }
-      html += '<div class="wuerfel' + (rollen ? " wurf" : "") + '">';
+      var kl = "wuerfel" + (rollen ? " wurf" : "");
+      if (marken && marken[i]) kl += " " + marken[i];
+      html += '<div class="' + kl + '">';
       if (!rollen) {
         wuerfelBild(w).forEach(function (pp) {
           html += '<i style="left:' + pp[0] + '%;top:' + pp[1] + '%"></i>';
@@ -1810,6 +2358,102 @@ input[type="text"]{width:132px}
     box.innerHTML = html;
   }
 
+  /* Wirbelnde Würfel: schnelle Zufallsbilder, bis das Ergebnis feststeht. */
+  var wuerfelLaeufer = [];
+  function wuerfelStoppen() {
+    wuerfelLaeufer.forEach(function (t) { window.clearInterval(t); });
+    wuerfelLaeufer = [];
+  }
+  function wuerfelWirbeln(box, anzahl) {
+    if (!box) return;
+    function malen() {
+      var html = "";
+      for (var i = 0; i < anzahl; i++) {
+        var w = 1 + Math.floor(Math.random() * 6);
+        html += '<div class="wuerfel wurf" style="animation-delay:' + (i * 70) + 'ms">';
+        wuerfelBild(w).forEach(function (pp) {
+          html += '<i style="left:' + pp[0] + '%;top:' + pp[1] + '%"></i>';
+        });
+        html += "</div>";
+      }
+      box.innerHTML = html;
+    }
+    malen();
+    wuerfelLaeufer.push(window.setInterval(malen, 85));
+  }
+
+  /* Welcher Würfel hat seinen Vergleich gewonnen? Verglichen werden die
+     höchsten Paare; überzählige Würfel bleiben ohne Wert. */
+  function wuerfelMarken(aW, dW) {
+    var a = [], d = [], paar = Math.min(aW.length, dW.length), i;
+    for (i = 0; i < aW.length; i++) a.push(i < paar ? (aW[i] > dW[i] ? "sieg" : "verlust") : "ruhig");
+    for (i = 0; i < dW.length; i++) d.push(i < paar ? (aW[i] > dW[i] ? "verlust" : "sieg") : "ruhig");
+    return { a: a, d: d };
+  }
+
+  /* Kurze Rückmeldung über der Karte – erklärt eine Aktion, ohne Platz zu
+     belegen. Verschwindet nach gut drei Sekunden von selbst. */
+  var toastTimer = 0;
+  function hinweis(text) {
+    var t = document.getElementById("hinweisToast");
+    if (!t || !text) return;
+    t.textContent = text;
+    t.classList.add("an");
+    if (toastTimer) window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () { t.classList.remove("an"); toastTimer = 0; }, 3600);
+  }
+
+  /* Angriff auf der Karte: Pfeil vom Angreifer zum Ziel, Einschlagring und bei
+     einer Eroberung Funken samt kurzem Blitz auf dem Gebiet. Die Elemente
+     hängen in einer eigenen Gruppe und werden danach wieder entfernt, damit
+     der Ruhezustand der Karte unverändert bleibt. */
+  function kampfZeigen(von, nach, ergebnis) {
+    var svg = document.getElementById("weltkarte");
+    if (!svg || !elem[von] || !elem[nach] || !KARTE[nach]) return;
+    var a = chipPunkt(GEBIET[von]), b = chipPunkt(GEBIET[nach]);
+    var dx = b[0] - a[0], dy = b[1] - a[1];
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 6) return;
+    var ux = dx / len, uy = dy / len, px = -uy, py = ux;
+    var gruppe = el("g", {"class": "kampfSchicht"}, svg);
+    el("line", {x1: (a[0] + ux * 9).toFixed(1), y1: (a[1] + uy * 9).toFixed(1),
+      x2: (b[0] - ux * 8).toFixed(1), y2: (b[1] - uy * 8).toFixed(1), "class": "kampfPfeil"}, gruppe);
+    var kx = b[0] - ux * 2, ky = b[1] - uy * 2;
+    var bx = kx - ux * 9, by = ky - uy * 9;
+    el("polygon", {points: kx.toFixed(1) + "," + ky.toFixed(1) + " " +
+      (bx + px * 4.4).toFixed(1) + "," + (by + py * 4.4).toFixed(1) + " " +
+      (bx - px * 4.4).toFixed(1) + "," + (by - py * 4.4).toFixed(1), "class": "kampfPfeilKopf"}, gruppe);
+    el("circle", {cx: b[0].toFixed(1), cy: b[1].toFixed(1), r: "9", "class": "kampfRing"}, gruppe);
+    if (ergebnis && ergebnis.erobert) {
+      el("path", {d: KARTE[nach].d, "class": "kampfBlitz"}, gruppe);
+      for (var i = 0; i < 8; i++) {
+        var w = i * Math.PI / 4;
+        el("line", {x1: (b[0] + Math.cos(w) * 8).toFixed(1), y1: (b[1] + Math.sin(w) * 8).toFixed(1),
+          x2: (b[0] + Math.cos(w) * 17).toFixed(1), y2: (b[1] + Math.sin(w) * 17).toFixed(1),
+          "class": "kampfFunke", style: "animation-delay:" + (i * 22) + "ms"}, gruppe);
+      }
+    }
+    window.setTimeout(function () { if (gruppe.parentNode) gruppe.parentNode.removeChild(gruppe); }, 1150);
+  }
+
+  /* Beim neuen Spiel darf kein alter Wurf stehen bleiben. */
+  function kampfLeeren() {
+    wuerfelStoppen();
+    var bA = document.getElementById("wuerfelAngriff");
+    var bV = document.getElementById("wuerfelVerteidigung");
+    if (bA) bA.innerHTML = "";
+    if (bV) bV.innerHTML = "";
+    var f = document.getElementById("wurfErgebnis");
+    if (f) { f.textContent = "Noch kein Kampf."; f.className = "wurfText"; }
+    var t1 = document.getElementById("wurfText");
+    if (t1) t1.textContent = "Angriff: –";
+    var t2 = document.getElementById("wurfTextVerteidigung");
+    if (t2) t2.textContent = "Verteidigung: –";
+    if (toastTimer) { window.clearTimeout(toastTimer); toastTimer = 0; }
+    var toast = document.getElementById("hinweisToast");
+    if (toast) toast.classList.remove("an");
+  }
+
   function wuerfelZufall(n) {
     var aus = [];
     for (var i = 0; i < n; i++) aus.push(1 + Math.floor(Math.random() * 6));
@@ -1818,7 +2462,15 @@ input[type="text"]{width:132px}
 
   function angriffKlick() {
     var von = S.auswahl, nach = S.ziel;
-    if (!angriffMoeglich(von, nach) || sperre) return;
+    var ergebnisFeld = document.getElementById("wurfErgebnis");
+    if (ergebnisFeld) ergebnisFeld.className = "wurfText";
+    if (sperre) return;
+    if (!angriffMoeglich(von, nach)) {
+      hinweis(!von ? "Wähle zuerst ein eigenes Gebiet mit mindestens zwei Armeen." :
+        !nach ? "Wähle ein benachbartes feindliches Gebiet als Ziel." :
+        "Dieser Angriff ist nicht möglich – er braucht ein eigenes Gebiet mit mindestens zwei Armeen und eine direkte Grenze.");
+      return;
+    }
     var ka = Math.min(3, S.gebiete[von].armeen - 1);
     var kd = Math.min(2, S.gebiete[nach].armeen);
     var aW = wuerfle(ka), dW = wuerfle(kd);
@@ -1828,29 +2480,50 @@ input[type="text"]{width:132px}
     document.getElementById("wurfErgebnis").textContent = "Würfel rollen …";
     var bA = document.getElementById("wuerfelAngriff");
     var bV = document.getElementById("wuerfelVerteidigung");
-    wuerfelSetzen(bA, wuerfelZufall(ka), ka, true);
-    wuerfelSetzen(bV, wuerfelZufall(kd), kd, true);
+    wuerfelWirbeln(bA, ka);
+    wuerfelWirbeln(bV, kd);
     baueAktionen();
-    window.setTimeout(function () {
-      var r = angriffRunde(von, nach, aW, dW);
+    /* Online rechnet der Server – die Würfel zeigt danach der Serverstand.
+       Das Wirbeln muss hier aufhören, sonst überschreibt es den Serverwurf. */
+    if (FERN) {
+      FERN.sende("angriff", { von: von, nach: nach });
+      wuerfelStoppen();
+      wuerfelSetzen(bA, [], ka, false);
+      wuerfelSetzen(bV, [], kd, false);
+      document.getElementById("wurfErgebnis").textContent = "Angriff läuft …";
       sperre = false;
-      wuerfelSetzen(bA, aW, 3, false);
-      wuerfelSetzen(bV, dW, 2, false);
+      baueAktionen();
+      return;
+    }
+    window.setTimeout(function () {
+      wuerfelStoppen();
+      var r = angriffRunde(von, nach, aW, dW);
+      var marken = wuerfelMarken(aW, dW);
+      sperre = false;
+      wuerfelSetzen(bA, aW, 3, false, marken.a);
+      wuerfelSetzen(bV, dW, 2, false, marken.d);
+      Array.prototype.forEach.call(document.querySelectorAll("#wuerfelAngriff .wuerfel,#wuerfelVerteidigung .wuerfel"), function (d) {
+        if (!d.classList.contains("leer")) d.classList.add("einschlag");
+      });
       document.getElementById("wurfText").innerHTML = "Angriff: <b>" + aW.join(" · ") + "</b>";
       document.getElementById("wurfTextVerteidigung").innerHTML = "Verteidigung: <b>" + dW.join(" · ") + "</b>";
       if (!r.ok) {
         document.getElementById("wurfErgebnis").textContent = r.grund || "Kein gültiger Angriff.";
+        hinweis(r.grund || "Dieser Angriff ist nicht möglich.");
       } else if (r.erobert) {
         document.getElementById("wurfErgebnis").textContent = GEBIET[nach].name + " erobert! Armeen nachrücken.";
+        document.getElementById("wurfErgebnis").className = "wurfText erobert";
         if (S.nachruecken) S.ziel = nach;
       } else {
         document.getElementById("wurfErgebnis").innerHTML = "Verluste – Angreifer: <b>" + r.vgl.angriff +
           "</b>, Verteidiger: <b>" + r.vgl.verteidigung + "</b>.";
+        document.getElementById("wurfErgebnis").className = "wurfText treffer";
         if (S.gebiete[von].armeen < 2) { S.auswahl = von; S.ziel = nach; }
       }
       if (S.nachruecken) { S.auswahl = von; }
       aktualisiere();
-    }, 560);
+      if (r.ok) kampfZeigen(von, nach, r);
+    }, 600);
   }
 
   function aktion(akt) {
@@ -1908,55 +2581,91 @@ input[type="text"]{width:132px}
      ===================================================================== */
   function vorschau() {
     var box = document.getElementById("spielerVorschau");
-    var alleMensch = document.getElementById("chkAlleMensch").checked;
-    var n = einst.anzahl;
+    var n = Math.max(2, Math.min(6, einst.anzahl || 2));
+    var menschen = Math.max(1, Math.min(n, einst.menschen || 1));
+    einst.menschen = menschen;
+    var auswahl = document.getElementById("selMenschen");
+    if (auswahl) {
+      Array.prototype.forEach.call(auswahl.options, function (o) { o.disabled = parseInt(o.value, 10) > n; });
+      auswahl.value = String(menschen);
+    }
+    var stufe = (document.getElementById("selStufe") && document.getElementById("selStufe").value) || einst.stufe || "mittel";
     var zeilen = [];
     for (var i = 0; i < n; i++) {
-      var standard = i === 0 ? "Du" : (alleMensch ? "Spieler " + (i + 1) : "Computer " + i);
+      var mensch = i < menschen;
+      var standard = mensch ? (i === 0 ? "Du" : "Spieler " + (i + 1)) : "Computer " + (i - menschen + 1);
       var name = (einst.namen[i] || standard);
       var team = einst.modus === "team" ? " · Team " + (i % 2 === 0 ? "A" : "B") : "";
-      var rolle = (i === 0 || alleMensch) ? "Mensch" : "Computer (" + document.getElementById("selStufe").value + ")";
-      zeilen.push('<div class="spielerZeile"><span class="farbe" style="background:' + FARBEN[i] + '"></span>' +
+      var rolle = mensch ? "Mensch" : "Computer (" + stufe + " · " +
+        CHARAKTER_TEXT[CHARAKTER[(i - menschen) % CHARAKTER.length]] + ")";
+      zeilen.push('<div class="spielerZeile"><span class="farbe" style="background:' + FARBEN[i % FARBEN.length] + '"></span>' +
         '<input type="text" class="nameFeld" data-i="' + i + '" maxlength="14" value="' +
         String(name).replace(/"/g, "&quot;") + '" aria-label="Name von Spieler ' + (i + 1) + '">' +
         '<span class="rolle">' + rolle + team + '</span></div>');
     }
     box.innerHTML = zeilen.join("");
+    var hinweis = document.getElementById("rollenHinweis");
+    if (hinweis) hinweis.textContent = menschen + " Mensch" + (menschen === 1 ? "" : "en") +
+      " · " + (n - menschen) + " Bot" + (n - menschen === 1 ? "" : "s");
   }
 
-  function starteSpiel() {
+  function starteSpiel(konfig) {
+    konfig = konfig || {};
+    if (konfig.anzahl) einst.anzahl = Math.max(2, Math.min(6, parseInt(konfig.anzahl, 10) || einst.anzahl));
+    if (konfig.modus) einst.modus = konfig.modus;
+    if (konfig.stil) stilWenden(konfig.stil, true);
     var n = einst.anzahl;
     if (einst.modus === "team" && n % 2 === 1) n = Math.min(6, n + 1);
-    var alleMensch = document.getElementById("chkAlleMensch").checked;
+    var selectMenschen = document.getElementById("selMenschen");
+    var menschen = Math.max(1, Math.min(n, parseInt(konfig.menschen || (selectMenschen && selectMenschen.value) || einst.menschen || 1, 10)));
+    var stufe = konfig.stufe || (document.getElementById("selStufe") && document.getElementById("selStufe").value) || einst.stufe || "mittel";
+    if (["leicht", "mittel", "schwer"].indexOf(stufe) < 0) stufe = "mittel";
+    einst.anzahl = n;
+    einst.menschen = menschen;
+    einst.stufe = stufe;
     var namen = [], ki = [];
     for (var i = 0; i < n; i++) {
-      var standard = i === 0 ? "Du" : (alleMensch ? "Spieler " + (i + 1) : "Computer " + i);
-      namen.push((einst.namen[i] || standard).trim() || standard);
-      ki.push(!alleMensch && i > 0);
+      var mensch = i < menschen;
+      var standard = mensch ? (i === 0 ? "Du" : "Spieler " + (i + 1)) : "Computer " + (i - menschen + 1);
+      namen.push(((konfig.namen && konfig.namen[i]) || einst.namen[i] || standard).trim() || standard);
+      ki.push(!mensch);
     }
     deckStapel = [];
     S.log = [];
     S.kartenWahl = [];
     S.sieger = -1;
-    neuesSpiel({ modus: einst.modus, anzahl: n, namen: namen, ki: ki, stufe: document.getElementById("selStufe").value });
+    pausiert = false;
+    kampfLeeren();
+    endeGemeldet = false;
+    neuesSpiel({ modus: einst.modus, anzahl: n, namen: namen, ki: ki, stufe: stufe });
     document.getElementById("einrichtung").hidden = true;
     document.getElementById("spiel").hidden = false;
     document.getElementById("sieg").hidden = true;
+    document.getElementById("btnNeu").hidden = !!FERN;
     baueKarte();
     /* Am Handy ist die ganze Welt zu klein zum Antippen – dort startet die
        Karte vergrößert und lässt sich seitlich schieben. */
     setzeZoom(window.innerWidth < 620);
     aktualisiere();
     if (S.spieler[S.amZug] && S.spieler[S.amZug].ki) kiZug(S.amZug);
+    return { ok: true, gestartet: true, stil: STIL, modus: einst.modus, anzahl: n, menschen: menschen, stufe: stufe };
   }
 
-  function zurueckZurEinrichtung() {
+  function zurueckZurEinrichtung(zeigeStilwahl) {
     if (kiTimer) { window.clearTimeout(kiTimer); kiTimer = 0; }
+    kampfLeeren();
     if (turbo) turbo = false;
     S.vorbei = true;
     document.getElementById("sieg").hidden = true;
     document.getElementById("spiel").hidden = true;
     document.getElementById("einrichtung").hidden = false;
+    if (zeigeStilwahl) {
+      var stilAbschnitt = document.querySelector("#wahlStil");
+      if (stilAbschnitt && stilAbschnitt.closest) {
+        var kopf = stilAbschnitt.closest(".startAbschnitt");
+        if (kopf) kopf.hidden = false;
+      }
+    }
     vorschau();
   }
 
@@ -1999,6 +2708,7 @@ input[type="text"]{width:132px}
     document.getElementById("siegText").textContent = text;
     box.hidden = false;
     ergebnisMelden(sieger);
+    meldeEnde();
   }
 
   document.getElementById("wahlModus").addEventListener("click", function (ev) {
@@ -2009,7 +2719,8 @@ input[type="text"]{width:132px}
       x.setAttribute("aria-pressed", x === b ? "true" : "false");
     });
     document.getElementById("modusPill").textContent = MODI[einst.modus].name;
-    document.getElementById("phaseTextKurz").textContent = MODI[einst.modus].kurz;
+    var startKurz = document.getElementById("startModusKurz");
+    if (startKurz) startKurz.textContent = MODI[einst.modus].kurz;
     vorschau();
   });
 
@@ -2017,14 +2728,29 @@ input[type="text"]{width:132px}
     var b = ev.target.closest(".wahl");
     if (!b) return;
     einst.anzahl = parseInt(b.getAttribute("data-n"), 10);
+    if (einst.menschen > einst.anzahl) einst.menschen = einst.anzahl;
     Array.prototype.forEach.call(this.querySelectorAll(".wahl"), function (x) {
       x.setAttribute("aria-pressed", x === b ? "true" : "false");
     });
     vorschau();
   });
 
-  document.getElementById("chkAlleMensch").addEventListener("change", vorschau);
-  document.getElementById("selStufe").addEventListener("change", vorschau);
+  var wahlStil = document.getElementById("wahlStil");
+  if (wahlStil) wahlStil.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-stil]");
+    if (!b) return;
+    stilWenden(b.getAttribute("data-stil"));
+  });
+
+  var selMenschen = document.getElementById("selMenschen");
+  if (selMenschen) selMenschen.addEventListener("change", function () {
+    einst.menschen = parseInt(selMenschen.value, 10) || 1;
+    vorschau();
+  });
+  document.getElementById("selStufe").addEventListener("change", function () {
+    einst.stufe = this.value;
+    vorschau();
+  });
   document.getElementById("spielerVorschau").addEventListener("input", function (ev) {
     var feld = ev.target.closest(".nameFeld");
     if (!feld) return;
@@ -2034,11 +2760,17 @@ input[type="text"]{width:132px}
     setzeZoom(!document.querySelector(".karteBox").classList.contains("zoom"));
   });
 
-  document.getElementById("btnStart").addEventListener("click", starteSpiel);
+  document.getElementById("btnStart").addEventListener("click", function () { starteSpiel(); });
   document.getElementById("btnNeu").addEventListener("click", zurueckZurEinrichtung);
   document.getElementById("btnNochmal").addEventListener("click", zurueckZurEinrichtung);
-  document.getElementById("btnRegeln").addEventListener("click", function () { document.getElementById("regelnBox").hidden = false; });
-  document.getElementById("btnRegelnZu").addEventListener("click", function () { document.getElementById("regelnBox").hidden = true; });
+  function regelnZeigen() { document.getElementById("regelnBox").hidden = false; }
+  function regelnSchliessen() { document.getElementById("regelnBox").hidden = true; }
+  document.getElementById("btnRegeln").addEventListener("click", regelnZeigen);
+  var btnRegelnStart = document.getElementById("btnRegelnStart");
+  if (btnRegelnStart) btnRegelnStart.addEventListener("click", regelnZeigen);
+  document.getElementById("btnRegelnZu").addEventListener("click", regelnSchliessen);
+  var btnVollbild = document.getElementById("btnVollbild");
+  if (btnVollbild) btnVollbild.addEventListener("click", vollbildUmschalten);
 
   function aktionsKlick(ev) {
     var b = ev.target.closest("[data-akt]");
@@ -2080,6 +2812,8 @@ input[type="text"]{width:132px}
      die einzige Quelle; hier wird nichts gerechnet, nur gespiegelt. */
   function fernStand(d) {
     if (!d) return;
+    sperre = false;
+    wuerfelStoppen();
     S.modus = d.modus || "welt";
     S.amZug = Number(d.amZug) || 0;
     S.phase = d.phase || "aufstellen";
@@ -2100,8 +2834,8 @@ input[type="text"]{width:132px}
       S.gebiete[id] = { besitzer: f.besitzer, armeen: f.armeen };
     });
     S.spieler = (d.spieler || []).map(function (p, i) {
-      return { id: i, kennung: p.id, name: p.name, farbe: p.farbe, ki: false, bot: !!p.bot,
-               stufe: p.stufe, hand: (p.hand || []).slice(), ausgeschieden: !!p.ausgeschieden,
+      return { id: i, kennung: p.id, name: p.name, farbe: FARBEN[i % FARBEN.length], ki: false, bot: !!p.bot,
+               stufe: p.stufe || "mittel", hand: (p.hand || []).slice(), ausgeschieden: !!p.ausgeschieden,
                team: p.team, startPool: p.startPool || 0 };
     });
     S.nachruecken = d.nachruecken ? { von: d.nachruecken.von, nach: d.nachruecken.nach, max: d.nachruecken.max } : null;
@@ -2120,8 +2854,9 @@ input[type="text"]{width:132px}
       S.letzterAngriff = { von: k.von, nach: k.nach, aW: k.aw, dW: k.dw,
         vgl: { angriff: k.verlustA, verteidigung: k.verlustV }, erobert: !!k.erobert,
         besitzerVorher: k.vorher };
-      wuerfelSetzen(document.getElementById("wuerfelAngriff"), k.aw || [], (k.aw || []).length, "angriff");
-      wuerfelSetzen(document.getElementById("wuerfelVerteidigung"), k.dw || [], (k.dw || []).length, "verteidigung");
+      var marken = wuerfelMarken(k.aw || [], k.dw || []);
+      wuerfelSetzen(document.getElementById("wuerfelAngriff"), k.aw || [], (k.aw || []).length, false, marken.a);
+      wuerfelSetzen(document.getElementById("wuerfelVerteidigung"), k.dw || [], (k.dw || []).length, false, marken.d);
       document.getElementById("wurfText").textContent = "Angriff: " + (k.aw || []).join(", ");
       document.getElementById("wurfTextVerteidigung").textContent = "Verteidigung: " + (k.dw || []).join(", ");
       document.getElementById("wurfErgebnis").textContent = k.erobert
@@ -2131,7 +2866,36 @@ input[type="text"]{width:132px}
     aktualisiere();
   }
 
+  function spielFeldZeigen() {
+    document.getElementById("einrichtung").hidden = true;
+    document.getElementById("spiel").hidden = false;
+    document.getElementById("sieg").hidden = true;
+    document.getElementById("btnNeu").hidden = !!FERN;
+    if (!document.getElementById("weltkarte").childNodes.length) {
+      baueKarte();
+      setzeZoom(window.innerWidth < 620);
+    }
+    aktualisiere();
+  }
+
+  var endeGemeldet = false;
+  function meldeEnde() {
+    if (endeGemeldet || S.sieger < 0) return;
+    endeGemeldet = true;
+    try {
+      window.dispatchEvent(new CustomEvent("risiko:ende", { detail: {
+        grund: S.spieler[S.sieger] && S.spieler[S.sieger].ki ? "verloren" : "gewonnen",
+        punkte: gebieteVon(S.sieger).length, level: 1, levelAnzahl: 1, tick: S.tick || 0
+      }}));
+    } catch (e) {}
+  }
+
+  function kopie(wert) { return JSON.parse(JSON.stringify(wert)); }
+
   window.Risiko = {
+    version: "2.0.0",
+    bereit: true,
+    whenReady: function () { return Promise.resolve({ ok: true, version: "2.0.0" }); },
     fern: function (f) {
       FERN = f;
       if (FERN) {
@@ -2151,7 +2915,7 @@ input[type="text"]{width:132px}
     zoom: setzeZoom,
     stand: standKurz,
     karte: kartenDaten,
-    kontinente: function () { return JSON.parse(JSON.stringify(KONT)); },
+    kontinente: function () { return kopie(KONT); },
     nachbarn: function (id) { return NACH[id].slice(); },
     neu: function (o) {
       o = o || {};
@@ -2159,20 +2923,109 @@ input[type="text"]{width:132px}
       S.log = [];
       S.kartenWahl = [];
       S.sieger = -1;
+      endeGemeldet = false;
       return neuesSpiel({
         modus: o.modus || "welt",
         anzahl: o.anzahl || 2,
         namen: o.namen || (o.anzahl === 4 ? ["A", "B", "C", "D"] : ["A", "B", "C", "D", "E", "F"]),
         ki: o.ki || [false, true, true, true, true, true],
-        stufe: o.stufe || "normal"
+        stufe: o.stufe || "mittel"
       });
     },
-    start: function () {
-      document.getElementById("einrichtung").hidden = true;
-      document.getElementById("spiel").hidden = false;
-      baueKarte();
-      setzeZoom(window.innerWidth < 620);
-      aktualisiere();
+    start: function (k) {
+      if (k === null || k === undefined) {
+        if (FERN) { spielFeldZeigen(); return { ok: true, gestartet: true, fern: true, stil: STIL }; }
+        if (!document.getElementById("spiel").hidden && !S.vorbei) return { ok: false, fehler: "spiel-laeuft" };
+        return starteSpiel();
+      }
+      if (typeof k !== "object" || Array.isArray(k)) return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+      var erlaubt = ["stil", "modus", "anzahl", "menschen", "stufe", "namen", "online"];
+      for (var i = 0; i < Object.keys(k).length; i++) {
+        if (erlaubt.indexOf(Object.keys(k)[i]) < 0) return { ok: false, fehler: "unbekanntes-feld", feld: Object.keys(k)[i] };
+      }
+      if (k.stil !== undefined) stilWenden(k.stil, true);
+      if (k.stufe !== undefined && typeof k.stufe !== "string") return { ok: false, fehler: "stufe-muss-text-sein" };
+      var startet = ["modus", "anzahl", "menschen", "stufe", "namen", "online"].some(function (x) {
+        return Object.prototype.hasOwnProperty.call(k, x);
+      });
+      if (!startet) return { ok: true, gestartet: false, stil: STIL };
+      if (!document.getElementById("spiel").hidden && !S.vorbei) return { ok: false, fehler: "spiel-laeuft" };
+      if (k.online && FERN) { spielFeldZeigen(); return { ok: true, gestartet: false, online: true, stil: STIL }; }
+      if (k.stufe !== undefined && ["leicht", "mittel", "schwer"].indexOf(k.stufe) < 0) {
+        return { ok: false, fehler: "unbekannte-stufe" };
+      }
+      return starteSpiel(k);
+    },
+    startbildschirm: function () {
+      zurueckZurEinrichtung(true);
+      return { ok: true, startbildschirm: true, stil: STIL };
+    },
+    stop: function () {
+      zurueckZurEinrichtung(true);
+      return { ok: true };
+    },
+    pause: function () {
+      if (document.getElementById("spiel").hidden || S.vorbei) return { ok: false, fehler: "spiel-laeuft-nicht" };
+      if (!pausiert) {
+        pausiert = true;
+        if (kiTimer) { window.clearTimeout(kiTimer); kiTimer = 0; }
+        try { window.dispatchEvent(new CustomEvent("risiko:pausiert", { detail: { tick: S.tick || 0 } })); } catch (e) {}
+      }
+      return { ok: true, pausiert: true };
+    },
+    resume: function () {
+      if (document.getElementById("spiel").hidden || S.vorbei) return { ok: false, fehler: "spiel-laeuft-nicht" };
+      if (pausiert) {
+        pausiert = false;
+        try { window.dispatchEvent(new CustomEvent("risiko:weiter", { detail: { tick: S.tick || 0 } })); } catch (e) {}
+        if (S.spieler[S.amZug] && S.spieler[S.amZug].ki) kiZug(S.amZug);
+      }
+      return { ok: true, pausiert: false };
+    },
+    zustand: function () {
+      var startbildschirm = !document.getElementById("einrichtung").hidden;
+      return kopie({
+        laeuft: !startbildschirm && !S.vorbei, pausiert: !!pausiert, tick: S.tick || 0,
+        level: 1, levelAnzahl: 1, punkte: gebieteVon(S.amZug).length,
+        extras: [], richtung: { x: 0, y: 0 }, startbildschirm: startbildschirm, modus: S.modus, phase: S.phase,
+        amZug: S.amZug, runde: S.runde, pool: S.pool, stil: STIL,
+        spieler: S.spieler.map(function (x) {
+          return { name: x.name, ki: x.ki, bot: !!x.bot, ausgeschieden: x.ausgeschieden,
+                   land: gebieteVon(x.id).length, armeen: armeenGesamt(x.id) };
+        })
+      });
+    },
+    einstellungen: function () {
+      return {
+        level: 1, levelAnzahl: 1,
+        stile: ["normal", "maedchen", "buben"], stil: STIL,
+        stufen: ["leicht", "mittel", "schwer"], stufe: einst.stufe,
+        modi: Object.keys(MODI), modus: einst.modus,
+        spielerzahlen: [2, 3, 4, 5, 6], anzahl: einst.anzahl,
+        menschen: [1, 2, 3, 4, 5, 6], menschlicheSpieler: einst.menschen,
+        startbildschirm: !document.getElementById("einrichtung").hidden
+      };
+    },
+    aktion: function (name, daten) {
+      if (daten !== undefined && (daten === null || typeof daten !== "object" || Array.isArray(daten))) {
+        return { ok: false, fehler: "daten-muessen-objekt-sein" };
+      }
+      daten = daten || {};
+      var bekannt = ["setzen", "angriff", "nachruecken", "verschieben", "aufstellenFertig",
+        "verstaerkenEnde", "angriffEnde", "zugEnde", "karten", "stil"];
+      if (bekannt.indexOf(name) < 0) return { ok: false, fehler: "unbekannte-aktion" };
+      if (name === "stil") { stilWenden(daten.stil); return { ok: true, stil: STIL }; }
+      if (document.getElementById("spiel").hidden || S.vorbei) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      if (name === "setzen") return { ok: !!setzeArmee(daten.gebiet), gebiet: daten.gebiet };
+      if (name === "angriff") return angriffRunde(daten.von, daten.nach);
+      if (name === "nachruecken") return { ok: nachruecken(daten.armee || daten.armeen || 1) };
+      if (name === "verschieben") return { ok: verschiebe(daten.von, daten.nach, daten.armee || daten.armeen || 1) };
+      if (name === "aufstellenFertig") return { ok: aufstellenFertig(S.amZug) };
+      if (name === "verstaerkenEnde") return { ok: beendeVerstaerken() };
+      if (name === "angriffEnde") return { ok: beendeAngriff() };
+      if (name === "zugEnde") return { ok: beendeZug() };
+      if (name === "karten") return kartenTauschen(daten.karten || []);
+      return { ok: false, fehler: "unbekannte-aktion" };
     },
     setze: setzeArmee,
     aufstellenFertig: function () { return aufstellenFertig(S.amZug); },
@@ -2195,27 +3048,33 @@ input[type="text"]{width:132px}
     turbo: function (an) { turbo = !!an; },
     kartenWert: kartenSatzWert,
     exportieren: function () {
-      return JSON.parse(JSON.stringify({
-        modus: S.modus, amZug: S.amZug, phase: S.phase, pool: S.pool, runde: S.runde,
+      return kopie({
+        modus: S.modus, amZug: S.amZug, phase: S.phase, pool: S.pool, runde: S.runde, sieger: S.sieger,
         kartenSatz: S.kartenSatz, gebiete: S.gebiete, hauptstaedte: S.hauptstaedte,
-        missionen: S.missionen, vorbei: !!S.vorbei,
+        missionen: S.missionen, vorbei: !!S.vorbei, tick: S.tick || 0,
+        nachruecken: S.nachruecken ? { von: S.nachruecken.von, nach: S.nachruecken.nach, max: S.nachruecken.max } : null,
+        verschoben: !!S.verschoben,
         spieler: S.spieler.map(function (x) {
-          return { name: x.name, farbe: x.farbe, ki: x.ki, stufe: x.stufe, hand: x.hand.slice(),
+          return { name: x.name, farbe: x.farbe, ki: x.ki, stufe: x.stufe, charakter: x.charakter || null, hand: x.hand.slice(),
                    ausgeschieden: x.ausgeschieden, team: x.team, startPool: x.startPool || 0 };
         })
-      }));
+      });
     },
     laden: function (d) {
       S.modus = d.modus; S.amZug = d.amZug; S.phase = d.phase; S.pool = d.pool; S.runde = d.runde || 1;
+      S.sieger = typeof d.sieger === "number" ? d.sieger : -1;
       S.kartenSatz = d.kartenSatz || 0; S.gebiete = d.gebiete; S.hauptstaedte = d.hauptstaedte || [];
-      S.missionen = d.missionen || []; S.vorbei = !!d.vorbei;
+      S.missionen = d.missionen || []; S.vorbei = !!d.vorbei; S.tick = d.tick || 0;
+      S.nachruecken = d.nachruecken ? { von: d.nachruecken.von, nach: d.nachruecken.nach, max: d.nachruecken.max } : null;
+      S.verschoben = !!d.verschoben;
       S.spieler = d.spieler.map(function (x, i) {
-        return { id: i, name: x.name, farbe: x.farbe, ki: !!x.ki, stufe: x.stufe || "normal",
+        return { id: i, name: x.name, farbe: FARBEN[i % FARBEN.length], ki: !!x.ki, stufe: x.stufe || "mittel",
+                 charakter: x.charakter || (x.ki ? CHARAKTER[i % CHARAKTER.length] : null),
                  hand: (x.hand || []).slice(), ausgeschieden: !!x.ausgeschieden, team: x.team,
                  startPool: x.startPool || 0 };
       });
-      S.log = []; S.auswahl = null; S.ziel = null; S.nachruecken = null; S.verschoben = false;
-      S.kartenWahl = [];
+      S.log = []; S.auswahl = null; S.ziel = null;
+      S.kartenWahl = []; endeGemeldet = false;
       aktualisiere();
       return true;
     },
@@ -2224,9 +3083,79 @@ input[type="text"]{width:132px}
     missionen: function () { return S.missionen.slice(); }
   };
 
+  /* Vollbild ohne zusätzlichen Bedienknopf im unveränderten Normal-Spiel:
+     F schaltet um, Escape verlässt es, ein Doppelklick auf die Karte ebenso. */
+  function vollbildUmschalten() {
+    try {
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+      } else if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
+    } catch (e) {}
+  }
+  /* Die Hauptaktion der Phase – dieselbe, die der große Knopf auslöst. */
+  function hauptAktion() {
+    var sp = S.spieler[S.amZug];
+    if (!sp) return;
+    if (S.phase === "aufstellen") { if ((sp.startPool || 0) === 0) aufstellenFertig(S.amZug); }
+    else if (S.phase === "verstaerken") beendeVerstaerken();
+    else if (S.phase === "angreifen") { if (S.nachruecken) nachruecken(S.nachruecken.max); else beendeAngriff(); }
+    else if (S.phase === "verschieben") beendeZug();
+  }
+
+  /* Mit den Pfeiltasten durch die eigenen Gebiete wandern. */
+  function waehleNaechstes(delta) {
+    var eigene = gebieteVon(S.amZug).filter(function (id) {
+      return S.phase !== "angreifen" || S.gebiete[id].armeen >= 2;
+    });
+    if (!eigene.length) return;
+    var i = eigene.indexOf(S.auswahl);
+    i = i < 0 ? (delta > 0 ? 0 : eigene.length - 1) : (i + delta + eigene.length) % eigene.length;
+    S.auswahl = eigene[i];
+    S.ziel = null;
+    aktualisiere();
+    hinweis(GEBIET[S.auswahl].name + " · " + S.gebiete[S.auswahl].armeen + " Armeen");
+  }
+
+  document.addEventListener("keydown", function (ev) {
+    var ziel = ev.target;
+    if (ziel && (ziel.tagName === "INPUT" || ziel.tagName === "SELECT" || ziel.tagName === "TEXTAREA")) return;
+    if ((ev.key === "f" || ev.key === "F") && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+      ev.preventDefault();
+      vollbildUmschalten();
+      return;
+    }
+    if (ev.key === "Escape") {
+      if (!document.getElementById("regelnBox").hidden) { regelnSchliessen(); return; }
+      if (!document.getElementById("sieg").hidden) { document.getElementById("sieg").hidden = true; return; }
+      if (S.auswahl || S.ziel) { S.auswahl = null; S.ziel = null; aktualisiere(); }
+      return;
+    }
+    if (document.getElementById("spiel").hidden || S.vorbei || FERN) return;
+    var sp = S.spieler[S.amZug];
+    if (!sp || sp.ki || sperre) return;
+    if (ev.key === "a" || ev.key === "A") {
+      if (S.auswahl && S.ziel) { ev.preventDefault(); angriffKlick(); }
+      else hinweis("Für einen Angriff erst ein eigenes Gebiet und ein Nachbargebiet wählen.");
+      return;
+    }
+    if (ev.key === "Enter") { ev.preventDefault(); hauptAktion(); return; }
+    if (ev.key === "ArrowRight") { ev.preventDefault(); waehleNaechstes(1); return; }
+    if (ev.key === "ArrowLeft") { ev.preventDefault(); waehleNaechstes(-1); }
+  });
+  var startWahl = "normal";
+  try { if (window.TGStil && typeof TGStil.hole === "function") startWahl = stilWert(TGStil.hole()); } catch (e) {}
+  stilWenden(startWahl);
   vorschau();
-  document.getElementById("phaseTextKurz").textContent = MODI.welt.kurz;
+  var startKurz = document.getElementById("startModusKurz");
+  if (startKurz) startKurz.textContent = MODI.welt.kurz;
   document.getElementById("modusPill").textContent = MODI.welt.name;
+  var kartenFeld = document.getElementById("weltkarte");
+  if (kartenFeld) kartenFeld.addEventListener("dblclick", vollbildUmschalten);
+  document.addEventListener("fullscreenchange", function () {
+    window.setTimeout(function () { passeKarteAn(); zeichne(); }, 80);
+  });
 })();
 </script>
 <script src="../../zurueck.js"></script>

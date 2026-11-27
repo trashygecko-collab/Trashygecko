@@ -5,6 +5,328 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Risiko: Kampf auf der Karte, Würfelmarken, Bot-Charaktere, Tastatur
+
+**Auftrag:** Das Risiko sollte taktisch und optisch nach vorn: nachvollziehbare
+Kämpfe mit Würfelanimation, Erklärungen bei ungültigen Zügen, eigenständige
+Computergegner, mehr Tiefe in Mädchen und Buben. Der Normal-Stil musste die
+Referenz bleiben, Schnittstelle 2.0 und Online-Weg unangetastet.
+
+**Normal-Stil bleibt pixelgleich**
+
+- Sicherung (`sicherung/risiko-2026-11-27-stufe2/`) und neue Fassung mit
+  demselben exportierten Spielstand bei 1400×950 gerendert: ganze Seite
+  `bbox=None`, Kartenspalte 812×417 `bbox=None` – 0 abweichende Pixel.
+- Alle neuen Kartenelemente (Kampfpfeil, Ring, Funken, Blitz, Randschmuck)
+  liegen in eigenen Gruppen, sind im Ruhezustand unsichtbar bzw. per CSS
+  `display:none` und werden nach dem Kampf wieder entfernt.
+
+**Kampf wird sichtbar**
+
+- `kampfZeigen(von, nach, ergebnis)` zeichnet einen Pfeil vom Angreifer zum
+  Ziel (mit Spitze), einen Einschlagring auf dem Ziel und bei einer Eroberung
+  acht Funken plus einen kurzen Weißblitz über dem eroberten Gebiet. Die
+  Gruppe räumt sich nach 1,15 s selbst ab; ein Test nach 1,4 s findet
+  0 Kampfelemente.
+- Farben je Welt: Normal Goldbeige, Mädchen `#e2709b`, Buben `#ff5a4a`.
+
+**Würfel**
+
+- Während des Wurfs wirbeln beide Gruppen mit wechselnden Augen (Takt 85 ms,
+  versetzte Animation), nach 600 ms steht das Ergebnis.
+- `wuerfelMarken()` markiert je Vergleich: gewonnene Würfel mit Goldring
+  (`box-shadow` + 2 px hoch), verlorene gedimmt und kleiner, überzählige
+  Würfel blass. Gemessen: Wurf 6·4 gegen 5·2 → 2 Sieg- und 2 Verlustmarken;
+  Wurf 4·1 gegen 5·1 → 0 Sieg-, 2 Verlustmarken beim Angreifer.
+- Beim neuen Spiel und beim Zurück zur Startseite räumt `kampfLeeren()` alte
+  Würfel, Texte und den Hinweis weg (vorher stand der letzte Kampf noch da).
+
+**Ungültige Züge werden erklärt**
+
+- Neuer Toast über der Karte (`#hinweisToast`, 3,6 s, `role="status"`), keine
+  feste Fläche. Gemessene Texte: „Nordwest-Territorien gehört Computer 1.
+  Armeen lassen sich nur auf eigene Gebiete setzen.“, „Alaska hat nur eine
+  Armee – eine muss immer zurückbleiben.“, „Grönland ist keine direkte Grenze
+  von Alberta.“, dazu Hinweise für Nachrücken, fehlenden Vorrat, fremde
+  Gebiete beim Verschieben und die eine Verschiebung je Zug.
+
+**Computergegner**
+
+- Vier Handschriften, reihum je Bot: **Eroberer**, **Wächter**, **Stratege**,
+  **Hitzkopf**; sie stehen in der Spielerliste und in der Startvorschau.
+- Wirkung: Eroberer mag schwache Nachbarn (d ≤ 2) und Fronten, Wächter
+  verstärkt bedrohte Grenzen und greift vorsichtiger an, Stratege bevorzugt
+  klare Übermacht und Kontinentbonus, Hitzkopf greift früher und auch gegen
+  stärkere Gegner an. Schwellen: Hitzkopf −0,12, Eroberer −0,06, Wächter +0,10.
+- Gemessen (5 Spieler, Schwer, gleicher Spielstand): vier Bots wählten vier
+  verschiedene Ziele (Sibirien→Mongolei, Indien→Südostasien,
+  Ostafrika→Zentralafrika, Indonesien→Westaustralien).
+- Drei volle Partien: Leicht 6 Runden/171 Angriffe, Mittel 12/204,
+  Schwer 13/195 – sichtbar unterschiedliches Spiel.
+
+**Bedienung**
+
+- Tastatur: **A** greift an, **Enter** löst die Hauptaktion der Phase aus,
+  **Esc** schließt Regeln/Sieg oder löscht die Auswahl, **←/→** wandern durch
+  die eigenen Gebiete (mit Hinweis „Gebiet · Armeen“), **F** Vollbild. In den
+  Regeln steht jetzt eine Zeile dazu; Eingabefelder bleiben ausgenommen.
+- Handy 390×844: Karte 364×386 mit Zoom, Truppenzahl 11,1 px,
+  `scrollWidth` 390 = kein Querscrollen, keine Skriptfehler.
+
+**Mädchen und Buben**
+
+- Mädchen: Krone, Sterne und Herzen am Kartenrand (rosa `#c46b91`), weiche
+  Chips; Buben: Klingen, Blutspritzer und Totenkopf am Rand (`#93302f`),
+  dazu weiter die dunkle Karte und der rote Rand.
+- Die Buben-Spielerfarben sind jetzt Rot, Stahl, Messing, Grau, Violett und
+  Rost – das alte Olivgrün (`#577b4d`) ist raus, wie gefordert kein Grün.
+
+**Online-Weg**
+
+- `Risiko.fern`/`fernStand` unverändert im Vertrag; der Serverstand markiert
+  die Würfel jetzt ebenfalls (gemessen 2 Sieg / 2 Verlust bei 6·4 gegen 5·2).
+- **Behoben:** Im Online-Betrieb lief die Würfelanimation weiter und
+  überschrieb den Serverwurf; außerdem blieb `sperre` gesetzt. Jetzt stoppt
+  der Online-Angriff das Wirbeln, zeigt „Angriff läuft …“ und gibt die
+  Bedienung frei; `fernStand` setzt die Sperre ebenfalls zurück.
+- `exportieren`/`laden` führen zusätzlich `sieger` und je Spieler
+  `charakter`; Rundlauf geprüft.
+
+**Geprüft (27.11.2026)**
+
+- 34 von 34 Prüfungen im Browsertest (Playwright/Chromium): direkter Start,
+  volle Partie bis zum Sieg-Overlay, Hinweise, Würfel, Kampfgrafik, Tastatur,
+  drei Stufen, Bot-Charaktere, drei Stile, Handy, Pixelvergleich.
+- 6 von 6 Prüfungen zum Online-Weg mit Mock (`fern`, `fernStand`, A-Taste).
+- `node --check` auf dem ausgelagerten Spielskript: 0 Fehler.
+- **Nicht geprüft:** echter Connector-Raum mit zwei Geräten, echtes Vollbild
+  auf einem Gerät, kompletter Durchlauf aller sechs Modi in den neuen Stilen.
+
+---
+
+## 27.11.2026 · Risiko: neue Startseite, Mädchen- und Buben-Welt, drei Bot-Stufen
+
+**Auftrag:** Das bestehende Risiko erhielt eine eigene Startseite, zwei neue,
+selbstständige Spielwelten und klar unterscheidbare Computergegner. Der
+Normal-Spielstil musste optisch exakt die Referenz bleiben; Regeln, Karten,
+Mehrspielerbetrieb und Connector-Anbindung durften nicht verloren gehen.
+
+**Normal-Stil unverändert**
+
+- Keine neuen Farben, Formen oder Animationen im normalen Spiel. Alle neuen
+  Regeln hängen ausschließlich an `html[data-risiko-stil="maedchen"]` oder
+  `[data-risiko-stil="buben"]`; das Kartenemblem ist im Normal-Stil
+  `display:none`.
+- Nachweis: Sicherung und neue Fassung mit demselben exportierten Spielstand
+  bei 1600×900 gerendert. Die Screenshots
+  `vergleich/final-alt.png` und `vergleich/final-neu.png` sind pixelgleich
+  (Pillow/ImageChops: keine Differenz, `bbox=None`). Zusätzlich wurde die
+  Sicherung bei 1280×900 gegen die neue Spielfeldansicht geprüft.
+- Die neue Startseite ist erlaubt neu gestaltet; der laufende Normal-Stil
+  bleibt davon getrennt.
+
+**Startseite**
+
+- Titel `RISIKO`, eigene Vorschaukarten für Normal, Mädchen und Buben,
+  Spielerzahl 2–6, einstellbare Zahl menschlicher Spieler, Bot-Stärke
+  Leicht/Mittel/Schwer, Namensliste, Startknopf, Kurzregeln und
+  Spielmöglichkeiten (Weltherrschaft, Schnellspiel, Kontinentkrieg,
+  Geheime Mission, Hauptstadtkrieg, Teamkrieg).
+- Jede Stilwahl zeigt eine eigene Vorschau; die Startseite übernimmt den
+  gewählten Stil. Ein vom Connector übergebenes `start({stil})` hat Vorrang
+  und blendet die Stilwahl aus, sodass keine doppelte Auswahl entsteht.
+- Direktstart ohne Connector bleibt möglich; die Auswahl wird nicht erzwungen.
+
+**Mädchen**
+
+- Pastellrosa, Flieder, Mint und Creme, weiße Truppenchips mit roséfarbenem
+  Rand, Kronen-/Herz-/Sternemblem, Herzstaub und sanfte Kartenanimation.
+- Eigene Farben für Spieler, Panels, Knöpfe, Würfel, Karten, Log und
+  Sieg-/Niederlagekarte; Truppenzahlen und Gebietsnamen bleiben dunkel und
+  gut lesbar.
+
+**Buben**
+
+- Dunkle Stahl-/Aschefarben, rote und blaue Gebiete, schwarze Truppenchips,
+  rot glühende Auswahl, Rauch-/Funkenanimation, stilisierte Blutspritzer an
+  den Kartenrändern und rote Treffer-/Eroberungseffekte. Keine realistischen
+  Wunden oder Körperteile.
+- Panels, Knöpfe, Würfel, Karten, Log und Ergebnisoverlay nutzen dieselbe
+  düstere Metallsprache; Informationen bleiben kontrastreich.
+
+**Bots**
+
+- Lokale Stufen heißen jetzt `leicht`, `mittel`, `schwer`. Leicht würfelt
+  bewusst ungenau und lässt Chancen aus; Mittel bewertet Eroberungschance,
+  Kontinentfortschritt und Risiko; Schwer plant Nachbargebiete, Fronten,
+  Gegenangriffe, Verteidigung und langfristige Kontinente/Missionen. Die
+  Entscheidungsfunktionen (`kiVerstaerkungNote`, `kiAngriffsWert`,
+  `kiBesteAttacke`, `kiVerschieben`) sind je Stufe unterschiedlich; die
+  Würfel selbst werden nicht manipuliert und Bots sehen nur öffentliche
+  Nachbar- und Gebietsdaten.
+- Bot-Stärke, Spielerzahl und Menschenzahl sind auf der Startseite und über
+  `start({anzahl, menschen, stufe})` einstellbar.
+
+**Schnittstelle und Mehrspieler**
+
+- `window.Risiko` bleibt Schnittstelle 2.0 mit `version`, `bereit`,
+  `whenReady`, `start`, `einstellungen`, `zustand`, `startbildschirm`,
+  `stop`, `pause`, `resume` und `aktion`; `zustand()` ergänzt `richtung` und
+  `einstellungen()` `level`/`levelAnzahl`. `start({stil})` setzt nur den Stil,
+  `start()` ohne Argumente startet lokal bzw. zeigt online den Serverstand.
+- `risiko-fern.js` bleibt unverändert und kompatibel: Online wird weiterhin
+  ausschließlich der Serverstand über `fernStand` gespiegelt; lokale Aktionen
+  werden über `FERN.sende` weitergereicht. Connector-Dateien führen `Risiko`
+  in `SPIEL_API_NAMEN`.
+
+**Geprüft**
+
+- Vollständige Partie gegen Bots (2 Spieler, 1 Mensch, Schwer): 26 Runden,
+  295 Angriffe, 50 Ticks, Mensch 47 Gebiete, Bot 0; Sieg-Overlay und
+  Neustart funktionierten. Zusätzlich je eine vollständige Partie mit Leicht,
+  Mittel und Schwer (Ergebnisse variierten: Leicht/Mittel/Schwer 15/15/19
+  Runden).
+- Startkonfigurationen 2–6 Spieler mit 1–6 Menschen, alle sechs Modi,
+  Kartentausch (+4 Armeen aus drei Infanteriekarten), Würfel/chance,
+  Verstärkung, Angriff/Nachrücken/Verschieben, Sieg und Neustart.
+- Startseite direkt, Stilübergabe per API (Stilwahl verschwindet), Mädchen-
+  und Bubenansicht, Handy 390×844 ohne Seiten-Querscrollen und mit
+  automatischem Kartenzoom, Desktop 1280×900.
+- Keine JavaScript-Konsolenfehler in den geprüften Ansichten.
+
+**Nicht geprüft**
+
+- Echter Online-Raum mit zwei getrennten Sitzungen und echte Connector-
+  Einladung; die Brücke wurde nur mit einem nachgebildeten Serverstand
+  geprüft. Vollbild konnte in der Vorschau nicht in den echten Fullscreen
+  wechseln (Button vorhanden, Browser verweigerte den Wechsel).
+
+**Dateien/Sicherung**
+
+- Geändert: `spiele/brettspiele/risiko/risiko.html`,
+  `spiele/connector/connector.html`, `spiele/connector-online/connector.html`;
+  `risiko-fern.js` blieb unverändert. Beide Risiko-Ablagen wurden gespiegelt.
+- Sicherung: `C:\Users\DarkP\Documents\arbeit\sicherung\risiko-umbau-2026-11-27\`
+  (Original `risiko.html` und `risiko-fern.js`).
+
+---
+
+## 27.11.2026 · Arkanoid 2.0: Startseite, drei Welten, Kanonen, Tastatur und Balance
+
+**Auftrag:** Das bestehende Arkanoid deutlich aufwerten, ohne gute vorhandene
+Grafik, Extras oder Mechanik zu verlieren: eigene Startseite, drei
+eigenständige Grafikstile, zwei sichtbare Kanonen, vollständige Tastatur- und
+Maussteuerung ohne vorherigen Klick, bessere Extras, spürbare
+Schwierigkeitsgrade, sauberer Ablauf und eine Darstellung, die vom kleinen
+Handy bis zum großen PC passt.
+
+**Startseite und Auswahl**
+
+- Eigene Startseite mit Titel, animierter Spielfeld-Vorschau, drei
+  Stil-Kacheln (Normal, Mädchen, Buben), drei Schwierigkeitskarten,
+  Steuerungsübersicht, Extras/Level/Kanonen-Merkmalen und Startknopf.
+- Der Stil wird lokal als `arkanoid-stil` gemerkt, die Stufe als
+  `arkanoid-stufe`. Ein vom Connector übergebener Stil hat Vorrang, wird
+  nicht gespeichert und blendet die eigene Stilwahl aus. `start({stufe})`
+  oder `start({level})` startet eine Partie; `start({stil})` setzt nur den
+  Stil. Keine doppelte Auswahl.
+- Die Schnittstelle 2.0 ist vollständig: `window.Arkanoid`, Version
+  `2.0.0`, `bereit`, `whenReady`, `start`, `einstellungen`, `zustand`,
+  `startbildschirm`, `stop`, `pause`, `resume`, `aktion` sowie die Ereignisse
+  `arkanoid:bereit|ende|pausiert|weiter`. `zustand()` liefert jetzt auch
+  `bricks`, `schüsse`, `bälle`, Paddle- und Ballwerte.
+
+**Drei Welten (nicht nur Umfärbung)**
+
+- **Normal:** grün-goldene Arcade-Welt, facettierte Edelsteinplatten mit
+  Lichtkante, Punkten für Trefferpunkte und Riss-/Blitz-Effekten.
+- **Mädchen:** creme-rosa Bonbonwelt mit runden Steinen, Herzen, Glitzer,
+  Lippenstift-Schläger und eigener Hintergrundanimation.
+- **Buben:** fast schwarzes Neon-Stahlfeld mit Messraster, kantigen
+  Leuchtsteinen, Metallsteg und Energieeffekten; die vorhandene
+  Metallkugel-/Metallsteg-Idee wurde weitergeführt.
+- Steine, Hintergrund, Ball, Schläger, Kanonen, Extras und Rahmen sind je
+  Stil unterschiedlich; Maße, Punkte und Tempo bleiben gleich.
+
+**Kanonen und Extras**
+
+- Das Laser-Extra zeigt zwei kleine Kanonen links und rechts am Schläger.
+  Beide feuern gleichzeitig nach oben, mit sichtbaren Geschossen, eigener
+  Form/Farbe je Stil, Trefferprüfung an Steinen, 0,22 s Schussrate und
+  höchstens 28 Geschossen. Nach Ablauf des Extras verschwinden Kanonen und
+  Geschosse wieder.
+- Alle elf vorhandenen Extras bleiben erhalten: E (breiter), K (schmaler),
+  C (Ball klebt), L (Laser), D (drei Bälle), S (langsam), F (schnell),
+  T (durchdringend), G (Schild), P (Extraleben), B (Bonus). Jedes hat ein
+  eigenes Symbol und eine sichtbare Restzeit.
+
+**Steuerung und Ablauf**
+
+- Pfeiltasten und A/D bewegen, Leertaste startet/löst aus, Enter startet und
+  bestätigt, X oder Strg schießt, P pausiert. Funktioniert nach Levelwechsel,
+  Lebensverlust und Neustart ohne vorherigen Mausklick.
+- Maus und Touch bleiben erhalten; Touch zieht den Schläger und tippt den
+  Ball los. Auf der Startseite steht die Tastaturbelegung.
+- Pause/Fortsetzen, Levelwechsel, Ballverlust, Game Over, Neustart,
+  Rekordanzeige, Ton und Vollbild sind geprüft. Level 10 beendet die Partie
+  mit `gewonnen`; Game Over meldet `verloren`.
+
+**Schwierigkeitsgrade (gemessen, Level 1)**
+
+| Stufe | Leben | Schläger | Steine | Ballstart |
+|---|---:|---:|---:|---:|
+| Leicht | 4 | 104 px | 37 | 268 + Level |
+| Normal | 3 | 84 px | 50 | 298 + Level |
+| Schwer | 2 | 70 px | 60 | 338 + Level |
+
+Leicht lässt zusätzlich Felder aus und hat mehr Extra-Chancen; Schwer hat
+eine Extrareihe und weniger Extra-Chancen. Die Werte bleiben über die Partie
+konstant.
+
+**Geprüft (Chromium/Playwright, lokaler HTTP-Server, kein Testcode in der
+Auslieferung)**
+
+- **Startseite:** 18/18 Prüfungen; sieben Größen von 1280×800 bis 320×568
+  ohne Seiten- oder Innenüberlauf, Startknopf jeweils sichtbar; drei
+  Stil-Klicks, lokale Speicherung, API-Fehlerfälle und Kopien von `zustand()`
+  geprüft.
+- **Partie:** 10/10 Prüfungen; Enter-Start ohne Maus, Leertaste, Pfeil/A/D,
+  Maus, Pause/Fortsetzen, vollständige Partie bis Game Over (Leben
+  4→3→2→1→0), genau ein `arkanoid:ende`, Neustart mit Enter und erneuter
+  Ballstart.
+- **Darstellung:** drei Stile auf 390×844 mit Spielfeld 369×400, kein
+  Querscrollen; Maus und Touch bewegen den Schläger; Vollbild betreten und
+  mit Escape verlassen.
+- **Spielbetrieb:** Bot-Partien erreichten Level 2, Levelwechsel und
+  Fortsetzung; Laser-Extra: zwei Kanonen, zwei gleichzeitige Schüsse,
+  verschwinden nach Ablauf. Drei-Bälle-Extra erzeugte drei Bälle.
+- **Extras instrumentiert:** 13/13 Prüfungen auf einer temporären Kopie
+  (`arkanoid-test.html`, danach gelöscht): E 84→126 px, K 84→59 px, C aktiv,
+  L zwei Schüsse, D drei Bälle, P +1 Leben, B +350 Punkte, S exakt 72 %,
+  F exakt 128 %, T und G aktiv. Die ausgelieferte Datei enthält keinen
+  Prüfhaken.
+- **Connector:** echte Connector-Seite auf Port 8766, Arkanoid im
+  Spielrahmen geöffnet; `start({stil})` kam an, Mädchen/Buben/Normal wurden
+  im laufenden Spiel umgeschaltet, Startknopf startete die Partie. Der
+  Connector-Eintrag `Arkanoid` steht in beiden `SPIEL_API_NAMEN`-Listen
+  beider Ablagen.
+- **Nicht geprüft:** ein physisches Handy/Tablet (nur Touch-Emulation), eine
+  vollständige Partie bis Level 10/`gewonnen` (der Abschluss wurde über den
+  Game-Over-Weg geprüft), und ein echtes Vollbild auf einem Mobilgerät.
+  Kein Commit, Push oder Deployment.
+
+**Dateien/Sicherung:** `spiele/arkanoid/arkanoid.html` in beiden Ablagen,
+byte-gleich, **94.535 B / 2.659 Zeilen**, SHA-256
+`ec5f2459755f9dae0785facad7f0b8f87f62c2fa9fc95e987be753d4b54cb647`.
+Connector-Dateien beider Ablagen: SHA-256
+`5925013c0d9dc5a157c6373cc99ec69543c12b739b58f33947d1d429bc5c4aba`.
+Ausgangssicherung: `arbeit/sicherung/arkanoid-umbau-2026-11-27/arkanoid.html`
+(58.504 B, SHA-256 `1eaa06efa789cb009c9f468b991f3ec3db798416d803dd61b4455dedc1e92956`).
+Temp-Testdateien lagen ausschließlich unter `arbeit/temp/arkanoid` und wurden
+entfernt; die Sicherung bleibt.
+
+---
+
 ## 27.11.2026 · Pac-Man: Touch-Steuerung nur mobil, vier Eckboni respawnen
 
 **Auftrag:** Die Touch-Steuerung ausschließlich für Mobilgeräte anzeigen und
@@ -76,6 +398,81 @@ byte-gleich (SHA-256 `7d9b7ca25d6c0a98ed4ce58091b7b65f1c2ef06fab5697896517648b5f
 Ausgangssicherung: `arbeit/sicherung/pacman-2026-11-27-touch-bonus/`.
 Kein anderes Spiel und keine allgemeinen Spielsysteme geändert. Push und
 Deployment wurden nicht ausgeführt.
+
+---
+
+## 27.11.2026 · Mensch ärgere dich nicht: Parkuntergrund auf Parkmitte, Mädchen ohne Wasser
+
+**Auftrag:** Den zusätzlichen Grafik-Layer um die Parkplätze in allen vier
+Ecken richtig ausrichten. Im Mädchenstil alle Wasserläufe ersatzlos entfernen
+und die grüne Fläche in der Mitte durch eine passende Farbe ersetzen.
+Parkplätze, Hintergrundgrafiken, Figuren, Mechanik und Schnittstelle 2.0
+bleiben unverändert.
+
+**Ursache**
+
+- Die Parkkreise, die Figuren und die Eckmedaillons lagen bereits richtig bei
+  `1,25/2,75` Zellen, also mit der Mitte bei `2,0` Zellen.
+- Der zusätzliche Untergrund-Layer (die große 3×3-Platte mit Rand, Eckpunkten,
+  Rosetten bzw. Schrauben und Zierlinien) wurde dagegen noch mit
+  `x + s / 2` bzw. `y + s / 2` gezeichnet. Das ist die Mitte des 3×3-Feldes
+  bei `1,5` Zellen – eine halbe Zelle links und oben von den Parkkreisen.
+  Deshalb hing diese Ebene in jeder Ecke nach links oben.
+
+**Umgesetzt**
+
+- In `startbereichNormal`, `startbereichMaedchen` und `startbereichBuben`
+  liegt der Untergrund jetzt auf `px = x + (PARK_MITTE - s / 2)` und
+  `py = y + (PARK_MITTE - s / 2)`. Damit sind Platte, Rand, Eckpunkte,
+  Rosetten, Schrauben und die kleinen Zierlinien um die Parkmitte zentriert.
+- **Nicht verschoben:** `PARKPLATZ` (die vier Parkkreise), `mx/my`
+  (Rosenmedaillon), die großen Eckmedaillons, alle Figuren, Felder,
+  Laufwege und Zielbahnen. Sie behalten ihre bisherige Lage.
+- **Mädchenstil:** `zierratMaedchen` samt Aufruf und der unbenutzte
+  Gradient `m-wasser` sind vollständig entfernt. Damit sind alle Flüsse,
+  Uferlinien, Kiesel und Blätter weg; es wurden keine Ersatzlinien oder
+  Wellen hinzugefügt. Die übrige Welt (Himmel, Sonne, Wiese, Muster) bleibt.
+- **Mitte:** Die vormals grüne Spielfläche `m-wiese` ist jetzt ein warmes
+  Rosenholz mit den Stopps `#704654`, `#4a2c39`, `#281621`. Sie passt
+  zwischen die Pflaumenflächen der Parkplätze und das Pergament der Felder.
+
+**Geprüft**
+
+- **Alle vier Ecken in allen drei Stilen**, PC **1280×900** und Handy
+  **390×844**: Die Untergrundmitten liegen exakt bei
+  `145,45/145,45` (oben links), `654,55/145,45` (oben rechts),
+  `145,45/654,55` (unten links) und `654,55/654,55` (unten rechts).
+  Die Parkmitten sind dieselben Werte; Abweichung **0,00** in x. In
+  Mädchen/Buben liegt die gemessene Kreis-Mitte durch Schatten und Glanz
+  höchstens **0,9** Einheiten tiefer, die Platte selbst exakt auf `2,0`.
+- **Mädchen:** `document.querySelectorAll` findet **0** Elemente mit
+  `url(#m-wasser)`, `#5fa8a1`, `#153f3f` oder `#d6eee4`. Der Zierrat-Layer
+  fehlt vollständig (64 statt 65 SVG-Gruppen); die Wasserläufe sind damit
+  restlos entfernt, nicht nur überdeckt.
+- **Mitte:** Gradient `m-wiese` mit den drei oben genannten Stopps; kein
+  Grün mehr in der Spielfläche.
+- **Layout:** Brett **741×741** bei 1280×900, **380×380** bei 390×844;
+  `scrollWidth` jeweils gleich der Fensterbreite, kein Querscrollen.
+  Keine Konsolen- oder Seitenfehler in sechs Läufen.
+- **Mechanik/Schnittstelle:** `MenschAergereDichNicht.version` ist
+  **2.0.0**. Ein erzwungener Sechserzug (`MaenDebug.setze({wurf:6})`, dann
+  `aktion('figur',{figur:1})`) setzte die erste Figur von `0` auf `6`;
+  danach war der Würfel wieder leer. Keine Fehler.
+- **Nicht geprüft:** Eine vollständige Partie wurde für diese reine
+  Grafikänderung nicht erneut durchgespielt.
+
+**Sicherung:** `arbeit/sicherung/menschaerger-2026-11-27-parkplatz-wasser/`
+(beide Ablagen vor der Änderung, SHA-256
+`cba74a5a4ed071ed55d4899564c0e69ee9208794c21892456b20ff83e38f160d`).
+Bilder: `arbeit/screens/maen-parkplatz-wasser-ecken-normal.png`,
+`…-maedchen.png`, `…-buben.png` (PC) sowie
+`…-ecken-handy-normal.png`, `…-ecken-handy-maedchen.png`,
+`…-ecken-handy-buben.png`; Brettbilder
+`arbeit/screens/maen-parkplatz-wasser-pc-normal.png`, `…-maedchen.png`,
+`…-buben.png`.
+
+**Dateien:** `spiele/brettspiele/menschaerger/menschaerger.html` in beiden
+Ablagen, `ENTWICKLUNGSSTAND.md`.
 
 ---
 
@@ -3344,3 +3741,296 @@ werden, was tatsächlich existiert, was fehlt und warum.
 - **Offen:** kein technischer Blocker. Push und Deployment wurden nicht
   durchgeführt; der Online-Nachweis lief gegen den lokalen Connector, nicht
   gegen eine veröffentlichte Instanz.
+
+
+## Doodle Jump – Reparatur, Startseite, drei Welten und Schnittstelle 2.0 (27.11.2026)
+
+- **Alte Fehler und Ursachen:** Die Nachgenerierung erzeugte neue Plattformen,
+  fügte sie aber nicht in `plattformen` ein (`plattformen.push(p)` fehlte).
+  Dadurch endete die Kette nach den Startbrettern; der Spieler hing bei
+  14/34/68 m fest. Die alte Fassung hatte außerdem keine eigene Startseite,
+  keine Pause, kein Vollbild, keine Schnittstelle 2.0 und nur den alten
+  Rekordschlüssel `doodle-rekord`.
+- **Spielkern repariert:** `plattformen.push(p)` in `nachfuellen()`; die Kette
+  hängt jetzt am höheren von Bildschirmrand und Spielerposition, damit auch
+  Feder- und Goldsprünge Anschluss behalten. Sprung −10,8, Gravitation 0,40
+  (Höhe 146 px), größter neuer Abstand 92 px; Landung nur beim Fallen,
+  Kamera folgt weich nach oben, Absturz unter dem Bild beendet zuverlässig.
+- **Startseite:** eigene Startseite mit Normal/Mädchen/Buben, Vorschau,
+  Rekord, Tastatur-/Touchhinweis, Regeln und Startknopf. Die Wahl liegt in
+  `doodlejump-stil`; ein externer Stil (`DoodleJump.start({stil})`) hat
+  Vorrang, blendet die Kachel aus und wird nicht lokal gespeichert.
+- **Drei Welten:** Normal = grün-goldene Kreidewelt mit gezeichneten Figuren,
+  Hügeln, Kreidestrichen und Partikeln; Mädchen = Zuckerwolken mit Sonne,
+  Wolken, Macarons/Lollis und eigener Figur; Buben = Neon-Nacht mit Mond,
+  Skyline, Stahlplatten, Energieplatten und eigener Figur. Keine CDNs,
+  Grafiken vollständig im Spiel.
+- **Wichtig für die Stilwahl:** `stil.js` setzt beim `DOMContentLoaded` seinen
+  zentralen Wert und überschrieb zunächst die Spielwahl. `stilNachziehen()`
+  setzt danach die eigene Welt erneut, ohne die lokale Wahl zu ändern.
+- **Regeln-Dialog:** Öffnen pausiert; Schließen setzt nur dann fort, wenn
+  wirklich aus dem laufenden Spiel geöffnet wurde. Escape schließt den Dialog
+  auch bei fokussiertem Schließen-Knopf.
+- **Schnittstelle 2.0:** `window.DoodleJump` mit `version:"2.0.0"`,
+  `bereit`, `whenReady()`, `start()`, `einstellungen()`, `zustand()`,
+  `startbildschirm()`/`stop()`, `pause()`, `resume()`, `aktion()`,
+  Ereignissen `doodlejump:bereit|ende|pausiert|weiter`; Antworten sind Kopien,
+  das API-Objekt ist eingefroren. `start(null)`/`start(undefined)` gelten wie
+  fehlend; falscher Typ liefert `stil-muss-text-sein` (im Standard nicht
+  eigener Code, daher hier dokumentiert). Unbekannter Stil wird wie `normal`
+  behandelt.
+- **Geprüft (Chromium, echter lokaler Server):** Direkter Start über HTTP und
+  `file:///…/doodlejump.html` ohne Konsolenfehler. Größen: 1280×800 Feld
+  449×674, 1920×1080 636×954, 390×844 378×567, 320×568 283×424 (Kopf 75 px),
+  844×390 176×264; jeweils kein Seiten-Scrollen, Startseite und Spielfeld
+  getrennt sichtbar. Drei Stile im laufenden Spiel umgeschaltet: Canvas-
+  Durchschnitt Normal `[13,46,35]`, Mädchen `[198,228,236]`, Buben
+  `[19,25,34]`, `data-stil` jeweils passend, keine Fehler.
+- **Game Over/Neustart:** Bei 27 m endete die Partie, Karte „Vorbei“, Meldung
+  „Punkte: 27 · Höhe: 27 m“, Ereignis `doodlejump:ende`
+  `{grund:"verloren",punkte:27,level:1,tick:159}`, Rekord und
+  `localStorage["doodle-rekord"]="27"`. „Nochmal“ startete mit Tick 21
+  (nach 350 ms), `performance.getEntriesByType("navigation").length` blieb 1;
+  kein Neuladen. Pause/Weiter, Regeln öffnen/schließen, Startseite und
+  erneuter Start geprüft.
+- **Mehrminten-Test:** Ein Bot spielte **180 s** ohne Ausnahme, ohne Absturz
+  und ohne Konsolenfehler; er erreichte **329 m**, **Stufe 3** und **4 Extras**
+  und blieb danach wegen seiner einfachen Zielwahl hängen. Ein anderer
+  180-s-Lauf blieb bei 66 m, ein früherer 120-s-Lauf erreichte 846 m. Damit
+  ist belegt, dass die Mechanik über Minuten läuft; ein durchgehender,
+  immer weiter steigender Hochlauf eines echten Spielers ist damit noch
+  nicht bewiesen.
+- **Connector:** `DoodleJump` in beiden `SPIEL_API_NAMEN`; Kachel und
+  Einzelspieler-Start öffnen das Spiel als Solo-Rahmen. Mit `TGStil` Buben
+  geöffnet: Frame `stil:"buben"`, `data-stil:"buben"`, `stilBlock.hidden:true`,
+  Startknopf → `phase:"laeuft"`, keine Fehler. Keine doppelte Stilwahl.
+- **Dateien:** `spiele/doodlejump/doodlejump.html` in beiden Ablagen
+  byte-gleich (1783 Zeilen, SHA-256 `80f2c2aa…`); die vier
+  `connector.html`-Kopien sind byte-gleich. Sicherung:
+  `arbeit/sicherung/doodlejump-2026-11-27/`. Kein anderes Spiel geändert.
+- **Offen:** längerer menschlicher Hochlauf und Extras/Feder/Propeller/Schild
+  im Spielverlauf nicht einzeln nachgewiesen; Push und Deployment wurden
+  nicht ausgeführt. Die Projektregel „nichts committen“ bleibt eingehalten.
+
+
+## Solitär – deckende Karten und sichtbare Auswahl (27.11.2026)
+
+- **Ursache der Transparenz:** In der Grund-CSS standen `.karte.verdeckt`
+  (`opacity:.52`), `.karte.bedeckt` (`opacity:.8`), `.geist` (`opacity:.9`) und
+  `.waste-rest` (`opacity:.55`). Die modernen `.bahn`-Regeln hoben die meisten
+  Karten zwar schon auf `opacity:1`, aber die Grundwerte wirkten weiter auf
+  Drag-Geist, Ablage-Rest und Karten außerhalb der `.bahn`. Außerdem waren
+  Vorder- und Rückseiten nur über Farbverläufe mit transparenten Stopfen
+  gefüllt; eine harte undurchsichtige `background-color` fehlte in der Basis.
+- **Deckende Karten:** `.karte` und `.karte.hinten` haben jetzt zusätzlich eine
+  deckende `background-color`; `verdeckt`, `bedeckt`, `geist` und `waste-rest`
+  stehen auf `opacity:1`. Die vorhandenen Stilwelten behalten ihre Farben und
+  Muster. Gemessen in Klondike, Spider, FreeCell, Pyramid und TriPeaks:
+  29/55/52/30/30 Karten, jeweils `opacity:1` und deckende
+  `background-color` (Alpha 1); in Normal, Mädchen und Buben keine Ausnahme.
+- **Auswahl:** Ein eigener, nach allen Stilregeln eingefügter CSS-Block zeichnet
+  einen 3 px breiten, innen liegenden Rahmen plus 2/5-px-Ring und setzt die Karte
+  auf `z-index:4`; der Übergang läuft in 120 ms (bei `prefers-reduced-motion`
+  ohne Übergang). Die Karte bleibt an ihrem Platz.
+- **Nachtrag nach Browservergleich (1280×800/390×844):** Die Karten selbst sind
+  deckend; Sicherung und aktueller Stand sind ohne Auswahl pixelgleich. Sichtbar
+  durchscheinend war die Tischfläche **unter der ausgewählten Karte**, weil der
+  vorherige Auswahlstil sie um 7 px anhob und einen Schatten mit
+  `rgba(0,0,0,.68)` darüberlegte. Beim ausgewählten 7♥ lagen die Pixel unter der
+  Karte vorher bei RGB 80/83/51 (Tisch + Schatten), nachher bei 15/59/45
+  (Tisch). Versatz und Schlagschatten sind entfernt; Rahmen und Ring bleiben.
+  Farben: Normal `#b98a4c`, Mädchen `#b02a5b`, Buben `#1c8f86` – passend, aber
+  deutlich. Bei überlappenden Folgen werden alle Karten ab der gewählten Karte
+  markiert und angehoben.
+- **Auswahlverhalten:** `Shell.brettKlick()` schreibt die Auswahl nicht mehr
+  vorab auf die angeklickte Karte. Die `waehlen()`-Pfade in Klondike, Spider,
+  FreeCell und TriPeaks lassen bei einer ungültigen Karte die bisherige Auswahl
+  stehen und erklären das im Hinweis. Erneutes Antippen derselben Karte hebt
+  die Auswahl auf; ein erfolgreicher Zug löscht sie weiterhin. Geprüft:
+  Auswahl, Wechsel, Aufheben, ungültiges Ziel (Nachziehstapel), verdeckte Karte
+  in Klondike/Spider, bedeckte Karte in Pyramid, nicht passende freie Karte in
+  TriPeaks, gültiger Zug (Auswahl weg, Zug gezählt), Drag-and-drop.
+- **Überlappende Karten:** In Klondike eine offene Folge aufgebaut und die
+  untere Karte gewählt: zwei `.karte.gewaehlt` mit `outline:3px solid` und
+  `transform:none`, beide über den Nachbarn (`z-index:4`).
+- **Geprüft (Chromium, echter lokaler HTTP-Server):** Direktstart über die
+  sichtbare Klondike-Kachel, 1280×800 und 1920×1080; Handy 390×844 mit
+  Touch-Tap und 320×568, jeweils ohne Querscrollen. Alle fünf Varianten
+  startbar, keine Spielkonsolenfehler; `window.Solitaer.version` bleibt
+  `2.0.0`.
+- **Connector:** Über `openGame('/spiele/kartenspiele/solitaer/solitaer.html')`
+  im Connector-Rahmen geöffnet; `Solitaer` 2.0.0 erkannt, Klondike gestartet,
+  Karte ausgewählt und markiert. Der lokale statische Server liefert keine
+  Connector-API (`404`/`501` beim Host), das Spiel selbst blieb fehlerfrei.
+- **Dateien/Sicherung:** Beide Solitärkopien sind byte-gleich
+  (`solitaer.html` SHA-256 `05c054d71ec5355a7c966239f0998209e1e014f40e65594bc72735afa5ca3506`;
+  geänderte Module `shell.js`, `klondike.js`, `spider.js`, `freecell.js`,
+  `tripeaks.js` ebenfalls gleich). Ausgangssicherung:
+  `arbeit/sicherung/solitaer-2026-11-27-karten-vorher/`; zusätzlich liegt die
+  alte `ENTWICKLUNGSSTAND.vor.md` dort.
+- **Offen/Projektregel:** Die Projektregel in `AGENTS.md` sagt „nichts
+  committen“. Der Auftrag verlangt einen Commit erst nach erfolgreichen Tests;
+  dieser Widerspruch wurde zugunsten der Projektregel aufgelöst. Es wurde
+  **kein Commit, kein Push und kein Deployment** ausgeführt. Andere Spiele
+  wurden nicht geändert.
+## Malen – eigenständiges Spiel mit drei Stilen und gemeinsamem Malen (27.11.2026)
+
+- **Ausgangslage:** Die alte `spiele/malen/malen.html` war nur über den Connector
+  sinnvoll zu starten. Die Leinwand war quadratisch (1200 × 1200), der Server
+  klemmte y bei 1200 ab – bei einer A4-Seite fehlte damit das untere Fünftel.
+  Es gab keinen eigenen Startbildschirm, keine lokale Speicherung, kein
+  Undo/Redo und keinen PNG-Export. Die drei Stile färbten im Wesentlichen
+  dieselbe Oberfläche um.
+- **Eigenständigkeit:** Die Seite ist jetzt eine vollständige Spielseite nach
+  `SPIELE-SCHNITTSTELLE.md` 2.0. Sie ruft selbst **kein** `/api/` auf, liest
+  keine Raum- oder Kennungsdaten aus der Adresse und startet per
+  `file:///…/malen.html` ohne Homepage und ohne Connector. Der Einzelmodus
+  braucht keine Netzverbindung.
+- **API 2.0:** `window.Malen` bietet `version`, `bereit`, `whenReady`, `start`,
+  `einstellungen`, `zustand`, `startbildschirm`, `stop`, `pause`, `resume` und
+  `aktion`; Events sind `malen:bereit`, `malen:strich`, `malen:leeren`,
+  `malen:verlassen`, `malen:pausiert` und `malen:weiter`. `start({stil})`
+  übernimmt nur den Stil, `start({modus:"gemeinsam"})` ohne `online` antwortet
+  mit `online-fehlt`, `start({online:{room,id,…}})` startet den geteilten
+  Modus. Ein übergebener Stil hat Vorrang und blendet die Stilwahl dauerhaft
+  aus; der Direktstart zeigt sie.
+- **A4 und Server:** Die Leinwand ist 1200 × 1697 Punkte (Seitenverhältnis
+  1 : √2), der Server klemmt y jetzt bei `malSize*√2` (1697) statt 1200.
+  Gemessen im Connector-Test: ein Strich bis unten endet bei
+  `y = 1578,209992…`, nicht mehr bei 1200.
+- **Drei eigenständige Stile:**
+  - **Normal/Atelier:** warme Papierfläche, Holztöne, Werkzeugleiste wie ein
+    Maltisch, ruhige Typografie.
+  - **Mädchen/Papierwerkstatt:** rosé Papier mit Punktraster, Washi-Tape an
+    den Ecken, weiche Karten und runde Werkzeuge.
+  - **Buben/Neon-Labor:** dunkle Fläche mit Raster und Leuchtkanten,
+    Clip-Path-Ecken, Cyan/Acid-Akzente.
+  Die Leinwand bleibt in allen Stilen weiß; die Werkzeuge liegen außerhalb
+  der Zeichenfläche. Gemessen: Normal `rgb(239,233,221)`, Mädchen
+  `rgb(251,231,241)`, Buben `rgb(13,23,36)`; die Stilwahl bleibt je Browser
+  unter `malen-stil` gespeichert.
+- **Einzelmodus:** Startbildschirm mit Modus- und Stilwahl, freies Zeichnen
+  mit Maus und Touch, Pinselgrößen 2–40, zwölf Farben plus Farbwähler,
+  Radierer, Undo/Redo (bis 30 Schritte), Speichern/Laden unter
+  `localStorage["malen-bild"]` (Version 1, Zeitstempel, Striche), PNG-Export,
+  Löschen mit Sicherheitsabfrage, Zoom/Pan/Pinch, Vollbild, Pause und Hilfe.
+  Die Zeichenfläche passt sich an den freien Platz an: 1280 × 800 →
+  Leinwand 542 × 767, 390 × 844 → 272 × 384, 320 × 568 → 132 × 186; kein
+  Querscrollen.
+- **Gemeinsam malen:** Der Connector bleibt der Vermittler. Er öffnet die
+  saubere Adresse `/spiele/malen/malen.html?v=2`, übergibt Raum, Kennung, Name
+  und Besitzerrolle nur über `start({online:…})`, sendet Striche über
+  `malen:strich` und Leeren über `malen:leeren`, schiebt den Stand mit
+  `aktion("stand")` hinein und zeigt Verbindungsstatus sowie Spielerchips.
+  Eine Warteschlange sendet nach einem Abriss nach; der Server nimmt einen
+  Strich mit gleicher `clientId` nur einmal an. Der Ersteller darf leeren,
+  andere erhalten 403 mit Hinweis.
+- **Reconnect-Fehler behoben:** `nachWiederverbindung()` schloss den Rahmen,
+  wenn der Server für das Spiel keinen „aktiv“-Status meldete. Malen hat
+  keinen Partiestatus; die Leinwand lebt im Raum weiter. Für
+  `framePartie.gameId === "malen"` kehrt die Funktion jetzt vor dem Schließen
+  zurück. Vorher blieb nach einem kurzen Netzausfall `Malen` undefiniert und
+  der Offline-Strich kam nie an.
+- **Geprüft, Direktstart (`node temp/malen-pruefen.js`): 44 von 44.** Maus und
+  Touch, Pinselgrößen und Farben, Radierer, Undo/Redo, Speichern/Laden, PNG
+  (54.033 B), alle drei Stile, Löschdialog, 1280 × 800, 390 × 844 und
+  320 × 568 ohne Querscrollen, keine Seitenfehler und **keine `/api/`-Rufe**
+  im Spiel.
+- **Geprüft, Connector mit zwei unabhängigen Browser-Sitzungen
+  (`node temp/malen-connector-pruefen.js`): 21 von 21.** Beide Sitzungen im
+  Raum `TG-HALLE`, getrennte Kennungen, getrennte lokale Stile, Striche in
+  beide Richtungen, A4-Punkt bei y 1578, doppelter `clientId` nur einmal
+  (`erst: 1, zweit: 0`), Offline-Anzeige „Getrennt“, nach dem Wiederverbinden
+  automatisch wieder verbunden, der offline gezeichnete Strich kommt an
+  (B 4 → 5), Ersteller leert beide Flächen auf 0, B bleibt nach dem Verlassen
+  des Hosts bedienbar, „Beenden“ setzt den Rahmen auf `about:blank`, keine
+  Seitenfehler.
+- **Vollbild:** im echten Chromium (headless, Nutzergeste) geprüft:
+  `document.fullscreenElement` und `TGSpiel.vollbild.ist()` sind an, nach
+  Escape sind beide aus, Beschriftung wechselt zurück auf „Vollbild“.
+- **Go:** `gofmt` und `go vet ./...` in beiden Connector-Ordnern 0.
+  `go test ./...` im lokalen Connector: **ok, 209,587 s** (Protokoll
+  `arbeit/temp/malen-go-test.log`). Die drei Fehler in `connector-online`
+  (`TestBotDominoStufen` 198:201, `TestBotPongUeberDieRoute`,
+  `TestZehnTausendHTTP`) sind nicht Malen-bezogen und blieben unverändert.
+- **Dateien:** `spiele/malen/malen.html` (beide Ablagen byte-gleich,
+  2.388 Zeilen, 101.325 B, md5 `64195bca1caf7ac86e0d901680736cd3`),
+  `spiele/connector/malen.go` und `connector-online/malen.go`
+  (byte-gleich, md5 `96bc618f8ee293269f3f7531562bfdb7`), die vier
+  `connector.html`-Kopien (byte-gleich, md5
+  `c25987ca6f27e407db5d4d4542ff82f3`). Sicherung:
+  `arbeit/sicherung/malen-2026-11-27-vorher/`.
+- **Nicht geprüft:** echtes Touch-Gerät (nur Playwright-Touch), Connector auf
+  einem echten Handy, Einladung/Beitritt über die Connector-Oberfläche
+  (Raumverwaltung unverändert; getestet wurde der Beitritt zweier Sitzungen
+  zum bestehenden Raum), Admin-Neuzuweisung nach Host-Verlassen, eine
+  vollständige menschliche Malrunde, optische Bewertung per Bildschirmfoto.
+  Die laufenden lokalen Connector-Programme halten ihre EXE-Dateien; ein
+  Neubau der verteilten EXE war deshalb nicht möglich. Quelltext, Seite und
+  Spiel sind gespiegelt, die laufenden Programme müssen für den neuen Server
+  neu gebaut und gestartet werden.
+- **Projektregel:** Kein Commit, kein Push und kein Deployment ausgeführt.
+  Andere Spiele wurden nicht geändert. Temporäre Dateien liegen nur unter
+  `C:\Users\DarkP\Documents\arbeit\temp`; die bereits vorhandenen
+  untracked `spiele/connector/_shots/` und `spiele/connector/log` wurden
+  nicht angefasst.
+## Scherzshow: Startseite, drei Stile und Bots (27.11.2026)
+
+- **Eigenständige Spielseite:** `spiele/quizshow/quizshow.html` ist jetzt eine
+  vollständige Seite mit Startbildschirm, Spielbrett, Pause und Regelblatt.
+  Die alte Fassung hatte nur die Online-Seite (`/api/quiz`); direkt im Browser
+  ließ sie sich nicht starten. Das Spiel lädt `quizshow.css`,
+  `quizshow-fragen.js` (243 Fragen) und `quizshow.js`; ein `fetch` auf
+  `/api/` gibt es in der Spielseite nicht. Der Namensraum ist `Scherzshow`
+  mit `version` 2.0.0, `bereit`, `whenReady`, `start`, `einstellungen`,
+  `zustand`, `startbildschirm`, `stop`, `pause`, `resume` und `aktion`.
+- **Startseite:** Titel „SCHERZSHOW“, Moduswahl (Tempo/Punkte), Stilwahl,
+  Besetzung (0–3 Computer), Schwierigkeit (Leicht/Mittel/Schwer), Kategorie,
+  5/10/15 Fragen, Startknopf und eine kurze Regelzeile mit eigenem
+  Regelblatt. Bei extern übergebenem Stil (`start({stil})`, Connector) ist
+  die Stilwahl ausgeblendet; der externe Stil hat Vorrang.
+- **Drei Stile, nicht nur Farben:** Normal/Klassisch ist eine dunkle
+  Gold-Bühne (Akzent `#e7c46a`, Radius 18/12 px), Mädchen eine helle
+  Rosé-Bühne (Akzent `#d6336c`, Radius 28/18 px), Buben eine fast schwarze
+  Neon-Bühne (Akzent `#b7ff3c`, Radius 3/0 px). Gemessen im Chromium:
+  `--stage` ist in allen drei Fällen ein anderer Verlauf; zusätzlich ändern
+  sich Kartenform, Knöpfe, Typografie, Host-Gesicht und Antwortflächen.
+  Die Wahl liegt unter `scherzshowStil`; `TGStil` wird nur gelesen.
+- **Modi und Bots:** Tempo (100/75/50/25 nach Reihenfolge, falsch −25) und
+  Punkte (richtig +100, falsch −25) sind erhalten. Bots leicht/mittel/schwer
+  antworten mit 44/69/88 % Trefferquote und eigenen Wartezeiten; sie kennen
+  die richtige Antwort nicht aus der Spielerwahl. Gemessen mit je drei Bots
+  und drei Fragen: Leicht 4/9 richtig, Mittel 5/9, Schwer 9/9; die
+  Antwortzeiten lagen bei Leicht 5,7–6,3 s, Mittel 3,1–5,7 s, Schwer
+  1,4–3,2 s.
+- **Connector-Brücke:** `Scherzshow` steht in `SPIEL_API_NAMEN`;
+  `quizshowBrueckeAn()` schiebt den Serverstand mit `aktion("stand")` hinein
+  und hört auf `scherzshow:antwort`, `:weiter`, `:start`, `:bereit`,
+  `:beitreten` und `:neu`. Der Connector fragt `/api/quiz` im 1-s-Takt ab;
+  `quizshowTaktStoppen()` räumt beim Leeren des Rahmens auf. Der Connector
+  übergibt nur den Stil und die Online-Kennung, keine Regeln oder Startseite.
+- **Geprüft, Direktstart (`node temp/quizshow-*.cjs`):** Start ohne
+  Connector, alle drei Stile, beide Modi, 0–3 Bots, alle drei
+  Schwierigkeiten, vollständige Runden bis „ende“, „Noch eine Show“ und
+  „Zum Start“, Pause/Resume, Tastatur A–D und Enter, Touch-Tap, 1280×800,
+  390×844, 360×640 und 320×568; kein Querscrollen, keine JavaScript-Fehler.
+  Bei 320×568 liegt die letzte Antwort (unten 499 px) vor der Fußzeile
+  (531 px), nicht mehr darüber; die Startseite ist am Handy 390×844 752 px hoch.
+- **Geprüft, Connector mit zwei echten Sitzungen:** lokaler Go-Connector auf
+  Port 8770, Raum `TG-HALLE`, zwei getrennte Browser-Kontexte mit eigenen
+  Kennungen; `create`/`join` je 200, beide bereit, Start, zwei Fragen,
+  gegenseitige Antworten, Auflösung, Ende. Host-Stil Mädchen, Gast-Stil
+  Buben; beide Iframes zeigten den jeweils eigenen Stil und keine
+  Stilwahl. Der Connector-Takt hielt den Serverstand aktuell; die
+  abschließende Endanzeige erreichte den zweiten Client einen Takt später
+  (≤ 1 s). Keine Seitenfehler.
+- **Dateien:** neu `spiele/quizshow/quizshow.css`, `quizshow.js` und
+  `quizshow.html`; `quizshow-fragen.js` bleibt die erzeugte Fragenkopie;
+  `spiele/connector/connector.html` und `connector-online/connector.html`
+  wurden byte-gleich ergänzt. Beide Ablagen sind gespiegelt. Sicherung:
+  `C:\Users\DarkP\Documents\arbeit\sicherung\quizshow-umbau-2026-11-27\`.
+- **Nicht geprüft:** echtes Touch-Gerät (nur Playwright-Touch), ein
+  veröffentlichter Render-/Pages-Stand, eine echte Einladung über die
+  Connector-Oberfläche (der Test trat dem bestehenden Raum direkt bei) und
+  eine optische Bewertung per Bildschirmfoto. Kein Commit, kein Push und
+  kein Deployment ausgeführt; andere Spiele wurden nicht geändert.
