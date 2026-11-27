@@ -17,10 +17,10 @@
   --text:#e9eef4; --muted:#93a3b3;
   --warm:#f3c489; --warm-2:#c87a3e;
   --linie:rgba(255,255,255,.08); --linie-2:rgba(255,255,255,.16);
-  --karte-1:#313942; --karte-2:#262d34;
-  --karte-rand:#4d5964;
-  --rot:#c9705f; --schwarz:#e9e3d5;
-  --ruecken-1:#2b414f; --ruecken-2:#182832;
+  --karte-1:#fdfaf1; --karte-2:#efe6d4;
+  --karte-rand:#b9a887;
+  --rot:#b1262a; --schwarz:#232a36;
+  --ruecken-1:#1c3d68; --ruecken-2:#0d2038;
   --sfw:82px;
   --rand-oben:12px; --rand-unten:26px;
   --tg-schrift:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
@@ -117,10 +117,10 @@ html[data-stil="buben"]{--neu-1:#e0242f;--neu-2:#c41724;--neu-text:#150a0c;--neu
 .hinweis.warnung{color:#e8b9a4}
 
 /* ---------------------------------------------------------------- Karten */
-.karte{position:relative;aspect-ratio:5/7;border-radius:5px;overflow:hidden;
+.karte{position:relative;aspect-ratio:5/7;border-radius:7px;overflow:hidden;
   background:linear-gradient(165deg,var(--karte-1),var(--karte-2));
   border:1px solid var(--karte-rand);
-  box-shadow:0 2px 5px #00000066,inset 0 1px 0 #ffffff0f;
+  box-shadow:0 2px 5px #00000059,inset 0 1px 0 #ffffff40;
   user-select:none;touch-action:manipulation;cursor:grab;
   font-family:Georgia,"Times New Roman",serif;container-type:inline-size}
 .karte.rot{color:var(--rot)}
@@ -187,8 +187,8 @@ body.zieht{cursor:grabbing}
 .leerzeichen.farbe.rot{color:var(--rot)}
 /* Leere Farbplätze im klassischen Bild: voll deckend und aufgehellt, sonst sind
    die Symbole auf dem dunklen Grund zu blass (gemessen 22.11.2026). */
-html[data-stil="klassisch"] .leerzeichen.farbe{opacity:1;color:#9fb0bf}
-html[data-stil="klassisch"] .leerzeichen.farbe.rot{color:#e0836c}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .leerzeichen.farbe{opacity:1;color:#9fb0bf}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .leerzeichen.farbe.rot{color:#e0836c}
 .stapelzahl{position:absolute;right:-5px;bottom:-5px;min-width:18px;height:18px;border-radius:9px;
   background:var(--chip-bg);border:1px solid var(--chip-rand);color:var(--chip-text);font-size:10.5px;font-weight:600;
   display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:var(--tg-schrift)}
@@ -347,16 +347,142 @@ body.spielt .seite{min-height:calc(100dvh - var(--rand-oben) - var(--rand-unten)
 
 /* Die Kopfleiste holt ihre Farben vollständig aus --kopf-* (siehe oben):
    eine Stelle für alle drei Stile, kein Sonderfall mehr pro Stil. */
+
+/* ==================================================================
+   STARTBILDSCHIRM, PAUSE, STATISTIK (26.11.2026)
+   ================================================================== */
+.start-text{margin:0 2px 12px;color:var(--muted);font-size:13px;line-height:1.5}
+.stil-wahl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;
+  padding:12px 16px;border:1px solid var(--linie);border-radius:14px;
+  background:linear-gradient(180deg,var(--panel),var(--panel-2))}
+.stil-titel{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stil-knoepfe{display:flex;gap:8px;flex-wrap:wrap}
+.stil-knopf{font-family:inherit;font-size:13px;padding:7px 16px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--linie-2);background:rgba(255,255,255,.05);color:var(--text)}
+.stil-knopf:hover{border-color:var(--warm)}
+.stil-knopf[aria-pressed="true"]{border-color:var(--warm);box-shadow:inset 0 0 0 1px var(--warm);font-weight:600}
+html[data-stil="maedchen"] .stil-wahl{background:#fff6fa;border-color:#ef7aa8}
+html[data-stil="maedchen"] .stil-titel{color:#8f2450}
+html[data-stil="maedchen"] .stil-knopf{background:#fff;border-color:#ef7aa8;color:#8f2450}
+html[data-stil="maedchen"] .stil-knopf[aria-pressed="true"]{background:#ffe3ef;color:#3a0f24;border-color:#b0286a;box-shadow:inset 0 0 0 1px #b0286a}
+html[data-stil="buben"] .stil-wahl{background:#101317;border-color:#23262c}
+html[data-stil="buben"] .stil-knopf{background:#16181c;border-color:#2b3540;color:#e6e9ec}
+html[data-stil="buben"] .stil-knopf[aria-pressed="true"]{background:#e0242f;border-color:#ff6a73;color:#150a0c;font-weight:700;box-shadow:none}
+
+.kopf .zurueck{font-family:inherit;cursor:pointer}
+#btnPause[aria-pressed="true"]{border-color:var(--warm);color:var(--warm);font-weight:600}
+#pauseSchleier .dialog{width:min(400px,100%)}
+#pauseSchleier .dialog-inhalt p{margin:0;color:var(--muted)}
+
+.stat{width:100%;border-collapse:collapse;margin:4px 0 2px;font-size:13px}
+.stat th,.stat td{padding:6px 8px;border-bottom:1px solid var(--linie);text-align:left}
+.stat th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stat td:nth-child(n+2),.stat th:nth-child(n+2){text-align:right}
+.stat tbody tr:last-child td{border-bottom:0}
+html[data-stil="maedchen"] .stat th,html[data-stil="maedchen"] .stat td{border-color:#ef7aa833}
+
+/* ==================================================================
+   DREI EIGENSTÄNDIGE KARTENBILDER (26.11.2026)
+   Jede Ansicht hat eigene Vorderseite, Rückseite und Dekor; gemeinsam
+   bleiben nur Rang, Farbe und Aufbau.
+   ================================================================== */
+
+/* NORMAL – klassisches Kartenblatt: Elfenbein, Goldrand, feine Innenlinie,
+   Rückseite in Nachtblau mit Ovalmedaillon. */
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte{
+  border-radius:7px;
+  font-family:Georgia,"Times New Roman",serif;
+  box-shadow:0 2px 5px #00000059,inset 0 1px 0 #ffffff8c;
+  background:linear-gradient(168deg,#fffdf7 0%,#f7f0df 58%,#efe4cd 100%)}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte::after{
+  content:"";position:absolute;inset:4px;border-radius:4px;
+  border:1px solid #a98f5a40;pointer-events:none}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte .bild{
+  border-radius:4px;border-color:#a98f5a80;
+  background:repeating-linear-gradient(45deg,#a98f5a0f 0 2px,#00000000 2px 5px)}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte.hinten{
+  border-color:#c9ab6d;
+  background:repeating-linear-gradient(45deg,#ffffff0f 0 2px,#00000000 2px 8px),
+    linear-gradient(160deg,var(--ruecken-1),var(--ruecken-2))}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte.hinten::before{
+  inset:8%;border:1px solid #e8cd8e80;border-radius:3px;box-shadow:inset 0 0 0 3px #0b1a2e}
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte.hinten::after{
+  content:"";position:absolute;inset:26%;border:1px solid #e8cd8e66;border-radius:50%;
+  background:repeating-linear-gradient(45deg,#e8cd8e26 0 1px,#00000000 1px 5px)}
+
+/* MÄDCHEN – zartes Rosé, runde Ecken, gepunktete Innenlinie; Rückseite
+   perlweiß mit rosa Rautengitter und Schleifenmitte. */
+html[data-stil="maedchen"] .karte{
+  border-radius:11px;border-color:#ef7aa8;
+  font-family:Georgia,"Times New Roman",serif;
+  background:linear-gradient(160deg,#fffdfe 0%,#ffeef5 62%,#ffe0ec 100%);
+  box-shadow:0 3px 7px #b52a6333,inset 0 1px 0 #ffffff}
+html[data-stil="maedchen"] .karte::after{
+  content:"";position:absolute;inset:4px;border-radius:8px;
+  border:1px dashed #ef7aa8a6;pointer-events:none}
+html[data-stil="maedchen"] .karte .bild{
+  border-radius:6px;border-color:#ef7aa899;
+  background:radial-gradient(circle at 50% 40%,#fff 0%,#ffe3ef 100%)}
+html[data-stil="maedchen"] .karte .ecke b{font-weight:700;letter-spacing:0}
+html[data-stil="maedchen"] .karte.hinten{
+  border-color:#b0286a;
+  background:radial-gradient(circle at 50% 50%,#ffffff 0 17%,#00000000 18%),
+    repeating-linear-gradient(45deg,#ffffff66 0 1px,#00000000 1px 9px),
+    repeating-linear-gradient(-45deg,#ffffff66 0 1px,#00000000 1px 9px),
+    linear-gradient(155deg,#ffd7e8 0%,#ff9ec4 58%,#e0629f 100%)}
+html[data-stil="maedchen"] .karte.hinten::before{
+  inset:7%;border:2px solid #ffffffd9;border-radius:7px;
+  box-shadow:inset 0 0 0 3px #f0509f33}
+html[data-stil="maedchen"] .karte.hinten::after{
+  content:"";position:absolute;left:50%;top:50%;width:30%;height:30%;
+  transform:translate(-50%,-50%) rotate(45deg);border-radius:6px 50% 6px 50%;
+  background:#ffffffe6;box-shadow:0 0 0 3px #ffffff59}
+
+/* BUBEN – Anthrazit, harte Kanten, rote Schrägkante; Rückseite mit
+   Kohlefaser und roten Winkeln. */
+html[data-stil="buben"] .karte{
+  border-radius:3px;border-color:#3a424b;
+  font-family:"Segoe UI Semibold","Segoe UI",system-ui,sans-serif;
+  background:linear-gradient(160deg,#2a3138 0%,#1b2128 60%,#141920 100%);
+  box-shadow:0 2px 6px #000000b3,inset 0 1px 0 #ffffff17}
+html[data-stil="buben"] .karte::after{
+  content:"";position:absolute;inset:0;border:0;border-radius:0;pointer-events:none;
+  background:linear-gradient(135deg,#e0242f40 0%,#00000000 46%);
+  clip-path:polygon(0 0,74% 0,0 42%)}
+html[data-stil="buben"] .karte .bild{
+  border-radius:1px;border-color:#ff6b7499;
+  background:repeating-linear-gradient(135deg,#ffffff12 0 2px,#00000000 2px 6px)}
+html[data-stil="buben"] .karte.hinten{
+  border-color:#c41724;
+  background:repeating-linear-gradient(135deg,#ffffff12 0 2px,#00000000 2px 7px),
+    repeating-linear-gradient(45deg,#e0242f2e 0 3px,#00000000 3px 12px),
+    linear-gradient(160deg,#232a32 0%,#0d1116 72%,#070a0d 100%)}
+html[data-stil="buben"] .karte.hinten::before{
+  inset:9%;border:2px solid #e0242f;border-radius:1px;
+  box-shadow:inset 0 0 0 2px #0b0e11,inset 0 0 0 4px #ffffff1f}
+html[data-stil="buben"] .karte.hinten::after{
+  content:"";position:absolute;left:50%;top:50%;width:48%;height:13%;
+  transform:translate(-50%,-50%) skewX(-26deg);opacity:.85;
+  background:repeating-linear-gradient(90deg,#e0242f 0 6px,#00000000 6px 12px)}
 </style>
 </head>
 <body>
 <main class="seite">
   <header class="kopf">
     <h1 id="kopfTitel">Solitär</h1>
-    <a class="zurueck" href="../../spiele.html">← Übersicht</a>
+    <button type="button" class="zurueck" id="btnZurueck">← Übersicht</button>
   </header>
 
   <section class="auswahl" id="modusAuswahl" aria-label="Spielmodus wählen">
+    <p class="start-text">Fünf Varianten, drei Grafikstile. Wähle Stil und Variante – Start, Einstellungen und Bedienung liegen vollständig im Spiel.</p>
+    <div class="stil-wahl" id="stilWahl" aria-label="Grafikstil wählen">
+      <span class="stil-titel">Grafikstil</span>
+      <div class="stil-knoepfe" id="stilKnoepfe">
+        <button type="button" class="stil-knopf" data-stil="normal" aria-pressed="true">Normal</button>
+        <button type="button" class="stil-knopf" data-stil="maedchen" aria-pressed="false">Mädchen</button>
+        <button type="button" class="stil-knopf" data-stil="buben" aria-pressed="false">Buben</button>
+      </div>
+    </div>
     <div class="modus-liste" id="modusListe"></div>
   </section>
 
@@ -364,10 +490,12 @@ body.spielt .seite{min-height:calc(100dvh - var(--rand-oben) - var(--rand-unten)
     <div class="leiste">
       <button type="button" class="knopf zweit" id="btnMenue">☰ Modi</button>
       <button type="button" class="knopf" id="btnNeu">Neues Spiel</button>
+      <button type="button" class="knopf zweit" id="btnPause" aria-pressed="false">Pause</button>
       <button type="button" class="knopf zweit" id="btnUndo">Rückgängig</button>
       <button type="button" class="knopf zweit" id="btnTipp">Tipp</button>
       <button type="button" class="knopf zweit" id="btnAuto" disabled>Automatisch fertigspielen</button>
       <button type="button" class="knopf zweit" id="btnRegeln">Regeln</button>
+      <button type="button" class="knopf zweit" id="btnStat">Statistik</button>
       <div class="leiste-optionen" id="optionen" hidden></div>
     </div>
     <div class="anzeige">
@@ -385,6 +513,18 @@ body.spielt .seite{min-height:calc(100dvh - var(--rand-oben) - var(--rand-unten)
   <div class="dialog" id="dialog" role="dialog" aria-modal="true"></div>
 </div>
 
+<div class="schleier" id="pauseSchleier" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label="Pause">
+    <div class="dialog-kopf"><span>Pause</span></div>
+    <div class="dialog-inhalt"><p>Die Zeit steht, das Brett ist gesperrt. Taste P setzt ebenfalls fort.</p></div>
+    <div class="dialog-knoepfe">
+      <button type="button" class="knopf" id="btnWeiter">Weiterspielen</button>
+      <button type="button" class="knopf zweit" id="btnPauseNeu">Neues Spiel</button>
+      <button type="button" class="knopf zweit" id="btnPauseMenue">Modi</button>
+    </div>
+  </div>
+</div>
+
 <!-- Gemeinsames Kartenbild, Spaltenaufbau, dann die fünf Modi, zuletzt der Rahmen. -->
 <script src="js/karten.js"></script>
 <script src="js/tableau.js"></script>
@@ -394,5 +534,7 @@ body.spielt .seite{min-height:calc(100dvh - var(--rand-oben) - var(--rand-unten)
 <script src="js/pyramid.js"></script>
 <script src="js/tripeaks.js"></script>
 <script src="js/shell.js"></script>
+<script src="js/schnittstelle.js"></script>
+<script src="../../zurueck.js" data-kein-knopf="1"></script>
 </body>
 </html>

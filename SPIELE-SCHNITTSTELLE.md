@@ -577,6 +577,52 @@ bei seinem eigenen Umbau.
   `start()` lief; Umschalten auf „Buben“ wechselte die Welt bei laufender
   Partie, Level und Takt blieben gleich.
 
+- **Solitär nach dem Standard (26.11.2026):**
+  `spiele/kartenspiele/solitaer/solitaer.html`, Schnittstelle **2.0.0** –
+  `version`, `bereit`, `whenReady()`, `start()`, `einstellungen()`,
+  `zustand()`, `startbildschirm()`, `stop()`, `pause()`, `resume()`,
+  `aktion(name, daten)`, Ereignisse `solitaer:bereit|ende|pausiert|weiter`;
+  einziger globaler Name `window.Solitaer`. Die fünf Varianten Klondike,
+  Spider, FreeCell, Pyramid und TriPeaks bleiben unverändert. `zustand()`
+  ergänzt `modus`, `modi`, `zuege`, `zeit`, `stil` und `beendet`; `richtung`
+  bleibt `{x:0,y:0}`, `level` ist 1. Nach dem Ergebnis bleiben Züge, Punkte
+  und Zeit stehen.
+- **Aktionen bei Solitär:** `start` (Partie mit der aktuellen Wahl), `modus`
+  `{modus}` (Variante beginnen), `neu`/`mischen` (frisch gemischt), `pause`,
+  `weiter`, `tipp`, `zurueck`, `regeln`, `statistik` – alle über dieselben
+  internen Funktionen wie Knopf, Taste und Finger. Fehlercodes nach
+  Abschnitt 3.2; eine unbekannte Variante antwortet mit dem eigenen Code
+  `unbekannter-modus` (Solitär hat keine Stufen – die einzige Abweichung).
+- **Drei Stile bei Solitär:** `start({stil})` nimmt `normal`, `maedchen`
+  oder `buben` (Unbekanntes heißt `normal`) und stellt **nur** das Kartenbild
+  ein, ohne die Partie zu beginnen. Beim direkten Start wählt der Spieler in
+  `#stilWahl` (gemerkt in `solitaer-stil`, die zentrale Wahl `tg-stil` wird
+  nur gelesen); kommt der Stil von außen, ist die Kachel verborgen, auch nach
+  `startbildschirm()`, und `einstellungen().stilWahl` meldet `false`.
+- **Eigenständig:** Startbildschirm mit Stilwahl und fünf Varianten, Pause
+  als eigener Schleier (`#pauseSchleier`, Taste P, Uhr steht, Brett
+  gesperrt), Statistik je Variante, „Neu mischen“, Rückgängig, Tipp, Regeln,
+  Automatisch fertigspielen, Gewinn- und Verlustfenster; der Rückweg läuft
+  über `window.tgZurueck()` (`zurueck.js` mit `data-kein-knopf="1"`).
+- **Kartenbilder:** Normal Elfenbein mit Goldrand und Nachtblau-Rückseite
+  (Ovalmedaillon), Mädchen Rosé mit runden Ecken, gepunkteter Innenlinie und
+  Rautengitter, Buben Anthrazit mit harter Kante und Kohlefaser-Winkeln –
+  eigene Vorderseite, Rückseite, Radius, Schrift und Dekor je Stil. Bei 33 px
+  breiten Spider-Karten bleibt der Rang 12,5 px lesbar.
+- **Connector:** `Solitaer` steht in `SPIEL_API_NAMEN` (`connector.html` in
+  `connector` und `connector-online`, byte-gleich, NUL-Zahl unverändert 2).
+  Geprüft im echten Connector (Port 8765, IPv6): Katalog enthält „Solitär |
+  kartenspiele/solitaer/solitaer.html“, der Rahmen öffnete die Seite, Stil
+  „Mädchen“ kam an (`stilWahl:false`, Kachel verborgen), die Partie wurde im
+  Rahmen gestartet (1 Zug), Umschalten auf „Buben“ wechselte das Kartenbild
+  bei laufender Partie (Züge blieben 1), danach „klassisch“ ebenso.
+- **Geprüfte Partien:** TriPeaks echt durchgespielt – 8 Partien, 7-mal
+  „Keine Züge mehr“ (`solitaer:ende grund:'verloren'`) und eine gewonnene
+  Partie (51 Züge, `grund:'gewonnen'`, Punkte 280, Ergebnisfenster).
+  Klondike: Nachziehstapel, Rückgängig, Tipp, Neumischen. Handy 390×844:
+  kein Überlauf (Seitenbreite 390), keine Karte außerhalb, alle Stapel
+  sichtbar; PC 1280×800: Karten 151 px breit, Bahn 1118 px.
+
 ## 12. Prüfliste für ein neues Spiel
 
 1. Ohne Konnektor geöffnet: Startbildschirm, Start, Pause, Neustart, Ende.

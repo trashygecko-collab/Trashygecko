@@ -24,7 +24,11 @@
     uhr: null,
     laeuft: false,
     auswahl: null,
-    autoInProgress: false
+    autoInProgress: false,
+    pausiert: false,
+    beendet: false,
+    stil: "klassisch",
+    beiEnde: null
   };
 
   var MAX_VERLAUF = 200;
@@ -47,6 +51,100 @@
     var s = statLaden();
     if (!s[id]) s[id] = { gewonnen: 0, gespielt: 0 };
     return s[id];
+  }
+
+  /* ------------------------------------------------------------- Grafikstil */
+  /* Drei Ansichten, ein Wortschatz nach außen: normal · maedchen · buben.
+     Intern heißt die klassische Ansicht weiter "klassisch" – so heißen die
+     CSS-Regeln dieser Seite seit dem ersten Tag. */
+  var STILE = { normal: "klassisch", klassisch: "klassisch", maedchen: "maedchen", buben: "buben" };
+
+  function eigenerStil() {
+    var wert = "";
+    try { wert = String(localStorage.getItem("solitaer-stil") || ""); } catch (e) { wert = ""; }
+    if (STILE[wert]) return wert;
+    if (window.TGStil && typeof window.TGStil.hole === "function") return window.TGStil.hole();
+    return "normal";
+  }
+
+  /* merken=true schreibt die eigene Wahl; ein Stil von außen wird nie
+     gespeichert und überschreibt die lokale Wahl nicht. */
+  Shell.stilSetzen = function (wert, merken) {
+    var roh = String(wert || "normal").toLowerCase();
+    var s = STILE[roh] || "klassisch";
+    Shell.stil = s;
+    document.documentElement.dataset.stil = s;
+    document.documentElement.style.colorScheme = s === "buben" ? "dark" : "light";
+    if (merken) {
+      try { localStorage.setItem("solitaer-stil", s === "klassisch" ? "normal" : s); } catch (e) { }
+    }
+    var box = $("stilKnoepfe");
+    if (box) {
+      var api = s === "klassisch" ? "normal" : s;
+      box.querySelectorAll("button[data-stil]").forEach(function (b) {
+        var an = b.dataset.stil === api;
+        b.setAttribute("aria-pressed", an ? "true" : "false");
+        b.classList.toggle("aktiv", an);
+      });
+    }
+    return s;
+  };
+
+  Shell.stilApi = function () { return Shell.stil === "klassisch" ? "normal" : Shell.stil; };
+  Shell.stilWahlZeigen = function (an) { var b = $("stilWahl"); if (b) b.hidden = !an; };
+  Shell.amStart = function () { var a = $("modusAuswahl"); return !!(a && !a.hidden); };
+
+  /* ------------------------------------------------------------------ Pause */
+  function pausenschleier() {
+    var sch = $("pauseSchleier");
+    if (sch) sch.hidden = !Shell.pausiert;
+    var b = $("btnPause");
+    if (b) {
+      b.textContent = Shell.pausiert ? "Weiter" : "Pause";
+      b.setAttribute("aria-pressed", Shell.pausiert ? "true" : "false");
+    }
+    if (Shell.pausiert) dialogZu();
+  }
+
+  Shell.pausieren = function () {
+    if (!Shell.spiel || Shell.pausiert || Shell.beendet || Shell.amStart()) return false;
+    Shell.pausiert = true;
+    uhrAnhalten();
+    pausenschleier();
+    return true;
+  };
+
+  Shell.fortsetzen = function () {
+    if (!Shell.spiel || !Shell.pausiert) return false;
+    Shell.pausiert = false;
+    pausenschleier();
+    taktStarten();
+    Shell.stand(Shell.spiel.info());
+    return true;
+  };
+
+  Shell.pauseUmschalten = function () { return Shell.pausiert ? Shell.fortsetzen() : Shell.pausieren(); };
+
+  /* -------------------------------------------------------------- Statistik */
+  Shell.statistikZeigen = function () {
+    var s = statLaden();
+    var zeilen = Object.keys(TG.MODI).map(function (id) {
+      var m = TG.MODI[id];
+      var st = s[id] || { gewonnen: 0, gespielt: 0 };
+      var quote = st.gespielt ? Math.round(st.gewonnen * 100 / st.gespielt) + " %" : "–";
+      return "<tr><td>" + m.name + "</td><td>" + st.gespielt + "</td><td>" + st.gewonnen + "</td><td>" + quote + "</td></tr>";
+    }).join("");
+    dialog("Statistik", '<p class="klein">Gezählt wird je begonnener Partie. Gewonnen zählt nur ein vollständig abgelegtes Spiel.</p>' +
+      '<table class="stat"><thead><tr><th>Variante</th><th>Gespielt</th><th>Gewonnen</th><th>Quote</th></tr></thead><tbody>' +
+      zeilen + "</tbody></table>",
+      [{ text: "Schließen", haupt: true }]);
+  };
+
+  /* Ein Ergebnis nach außen melden – vor dem Ergebnisfenster. */
+  function endeMelden(grund, info) {
+    if (typeof Shell.beiEnde === "function") {
+      try { Shell.beiEnde(grund, info); } catch (e) { }
+    }
   }
 
   /* ------------------------------------------------------------- Modusliste */
@@ -126,6 +224,9 @@
     var m = TG.MODI[id];
     if (!m) return;
     dialogZu();
+    Shell.pausiert = false;
+    Shell.beendet = false;
+    pausenschleier();
     Shell.modus = id;
     Shell.optionen = opt || Shell.optionen || {};
     Shell.verlauf = [];
@@ -185,6 +286,9 @@
 
   Shell.neu = function () {
     if (!Shell.spiel) return;
+    Shell.pausiert = false;
+    Shell.beendet = false;
+    pausenschleier();
     Shell.verlauf = [];
     Shell.auswahl = null;
     Shell.sekunden = 0;
@@ -197,16 +301,20 @@
   };
 
   /* ---------------------------------------------------------------- Uhr */
-  function uhrStarten() {
-    uhrStoppen();
-    Shell.sekunden = 0;
+  function taktStarten() {
+    if (Shell.uhr) clearInterval(Shell.uhr);
     Shell.laeuft = true;
-    zeigeZeit();
     Shell.uhr = setInterval(function () {
       if (!Shell.laeuft) return;
       Shell.sekunden++;
       zeigeZeit();
     }, 1000);
+  }
+  function uhrStarten() {
+    uhrStoppen();
+    Shell.sekunden = 0;
+    zeigeZeit();
+    taktStarten();
   }
   function uhrStoppen() {
     if (Shell.uhr) clearInterval(Shell.uhr);
@@ -245,6 +353,7 @@
   };
 
   Shell.zurueck = function () {
+    if (Shell.pausiert) return;
     if (!Shell.verlauf.length) { Shell.hinweis("Nichts mehr zum Zurücknehmen.", true); return; }
     var stand = JSON.parse(Shell.verlauf.pop());
     Shell.auswahl = null;
@@ -256,14 +365,14 @@
   };
 
   Shell.tippen = function () {
-    if (!Shell.spiel || !Shell.spiel.tipp) return;
+    if (!Shell.spiel || Shell.pausiert || !Shell.spiel.tipp) return;
     var r = Shell.spiel.tipp();
     Shell.hinweis(r || "");
     Shell.stand(Shell.spiel.info());
   };
 
   Shell.autoBeenden = function () {
-    if (!Shell.spiel || !Shell.spiel.autoMoeglich || !Shell.spiel.autoMoeglich() || !Shell.spiel.autoVollenden) return;
+    if (!Shell.spiel || Shell.pausiert || !Shell.spiel.autoMoeglich || !Shell.spiel.autoMoeglich() || !Shell.spiel.autoVollenden) return;
     Shell.autoInProgress = true;
     Shell.stand(Shell.spiel.info());
     try { Shell.spiel.autoVollenden(); }
@@ -334,6 +443,9 @@
   /* --------------------------------------------------------------- Sieg */
   Shell.sieg = function (zusatz) {
     uhrAnhalten();
+    Shell.beendet = true;
+    Shell.pausiert = false;
+    pausenschleier();
     var m = TG.MODI[Shell.modus];
     var id = Shell.modus;
     var stat = statModus(id);
@@ -342,6 +454,7 @@
     alle[id] = stat;
     statSpeichern(alle);
     var info = Shell.spiel.info();
+    endeMelden("gewonnen", info);
     dialog("Gewonnen – " + m.name,
       "<p><b>Alle Karten sind weg.</b></p>" +
       "<p>Zeit " + zeitText() + " · Züge " + info.zuege + " · Punkte " + info.punkte + "</p>" +
@@ -352,6 +465,10 @@
 
   Shell.verloren = function (text) {
     uhrAnhalten();
+    Shell.beendet = true;
+    Shell.pausiert = false;
+    pausenschleier();
+    endeMelden("verloren", Shell.spiel && Shell.spiel.info ? Shell.spiel.info() : { zuege: 0, punkte: 0 });
     dialog("Keine Züge mehr", "<p>" + text + "</p>",
       [{ text: "Neues Spiel", haupt: true, beiKlick: function () { dialogZu(); Shell.neu(); } },
       { text: "Zurücknehmen", beiKlick: function () { dialogZu(); Shell.zurueck(); } }]);
@@ -360,7 +477,10 @@
   /* ---------------------------------------------------------- Menüwechsel */
   Shell.menue = function () {
     uhrAnhalten();
+    Shell.beendet = false;
+    Shell.pausiert = false;
     dialogZu();
+    pausenschleier();
     $("spielbereich").hidden = true;
     $("modusAuswahl").hidden = false;
     kopfTitelSetzen("Solitär");
@@ -394,7 +514,7 @@
   }
 
   function brettKlick(ev) {
-    if (!Shell.spiel) return;
+    if (!Shell.spiel || Shell.pausiert) return;
     if (Shell.gezogen) { Shell.gezogen = false; return; }
     var karte = ev.target.closest("[data-art]");
     if (karte) {
@@ -433,7 +553,7 @@
      die Zone darunter. Ohne Bewegung bleibt es ein Tippen. */
   var zug = null;
   function ziehenStart(ev) {
-    if (!Shell.spiel || (ev.button !== undefined && ev.button > 0)) return;
+    if (!Shell.spiel || Shell.pausiert || (ev.button !== undefined && ev.button > 0)) return;
     var karte = ev.target.closest("[data-art]");
     if (!karte) return;
     /* Liegt eine Auswahl auf einer anderen Karte und ist die berührte Karte
@@ -508,7 +628,15 @@
   function tasten(ev) {
     if (!Shell.spiel) return;
     var t = ev.key.toLowerCase();
+    if (Shell.pausiert) {
+      if (t === "p" || t === "escape") { ev.preventDefault(); Shell.fortsetzen(); }
+      return;
+    }
+    if (t === "p") { ev.preventDefault(); Shell.pausieren(); return; }
     if (ev.ctrlKey && t === "z") { ev.preventDefault(); Shell.zurueck(); return; }
+    /* Auf Knöpfen, Auswahlen und Feldern löst der Browser selbst aus. */
+    var fokus = document.activeElement;
+    if (fokus && /^(BUTTON|SELECT|INPUT|TEXTAREA|A)$/.test(fokus.tagName)) return;
     if (t === "f2") { ev.preventDefault(); Shell.neu(); return; }
     if (t === "f1") { ev.preventDefault(); Shell.regelnZeigen(); return; }
     if (t === "h" || t === "t") { Shell.tippen(); return; }
@@ -527,6 +655,23 @@
     });
 
     $("btnAuto").addEventListener("click", Shell.autoBeenden);
+    if ($("btnPause")) $("btnPause").addEventListener("click", Shell.pauseUmschalten);
+    if ($("btnStat")) $("btnStat").addEventListener("click", Shell.statistikZeigen);
+    if ($("btnWeiter")) $("btnWeiter").addEventListener("click", function () { Shell.fortsetzen(); });
+    if ($("btnPauseNeu")) $("btnPauseNeu").addEventListener("click", function () { Shell.fortsetzen(); Shell.neu(); });
+    if ($("btnPauseMenue")) $("btnPauseMenue").addEventListener("click", function () { Shell.fortsetzen(); Shell.menue(); });
+    if ($("btnZurueck")) $("btnZurueck").addEventListener("click", function () {
+      if (typeof window.tgZurueck === "function") window.tgZurueck();
+      else location.href = "../../spiele.html";
+    });
+
+    /* Eigene Stilwahl: nur beim direkten Start sichtbar. Kommt der Stil vom
+       Konnektor, versteckt ihn die Schnittstelle. */
+    Shell.stilSetzen(eigenerStil(), false);
+    var stilBox = $("stilKnoepfe");
+    if (stilBox) stilBox.querySelectorAll("button[data-stil]").forEach(function (b) {
+      b.addEventListener("click", function () { Shell.stilSetzen(b.dataset.stil, true); });
+    });
     var brett = $("brett");
     var einzelklickTimer = null;
     var doppelklickSchonAusgefuehrt = false;
@@ -574,6 +719,7 @@
 
     $("modusAuswahl").hidden = false;
     $("spielbereich").hidden = true;
+    pausenschleier();
   }
 
   /* Zurück zur Auswahl nur mit Rückfrage, wenn eine Partie läuft. */

@@ -5,6 +5,69 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 26.11.2026 · Solitär: eigenständig und Schnittstelle 2.0
+
+**Auftrag:** Solitär vollständig eigenständig machen – eigener
+Startbildschirm mit Stil- und Variantenwahl, drei eigenständige Kartenbilder,
+Pause, Statistik, Neumischen – und über die Spiele-Schnittstelle 2.0 in den
+Connector aufnehmen. Danach testen, dokumentieren, beide Ablagen spiegeln,
+committen.
+
+**Umgesetzt**
+
+- **Neue Schnittstelle** `spiele/kartenspiele/solitaer/js/schnittstelle.js`
+  (zuletzt geladen): `window.Solitaer` mit `version` 2.0.0, `bereit`,
+  `whenReady()`, `start()`, `einstellungen()`, `zustand()`,
+  `startbildschirm()`, `stop()`, `pause()`, `resume()`, `aktion()`; Ereignisse
+  `solitaer:bereit|ende|pausiert|weiter`. `:ende` kommt vor dem
+  Ergebnisfenster und trägt `grund`, `punkte`, `level`, `levelAnzahl`, `tick`,
+  `modus`, `zuege`, `zeit`, `stil`.
+- **`start({stil})`** stellt nur die Welt ein (Connector-Weg, keine
+  Doppelwahl); `start({modus})` beginnt eine Partie. Unbekannte Felder,
+  falsche Typen und unbekannte Varianten antworten mit den festen Codes;
+  eigener Code `unbekannter-modus` statt `unbekannte-stufe`.
+- **Rahmen** `js/shell.js`: Pause/Fortsetzen (`#btnPause`, Taste P, Uhr steht,
+  Brett gesperrt, `#pauseSchleier`), Statistikfenster je Variante
+  (`#btnStat`), Stilwahl (`#stilKnoepfe`, eigenes Gedächtnis
+  `solitaer-stil`), Ergebnismeldung vor dem Dialog, Eingabesperre in der
+  Pause; Tastenkürzel halten sich auf Knöpfen und Feldern zurück.
+- **Startbildschirm** `solitaer.html`: Stilwahl-Kachel über den fünf
+  Varianten, „Neues Spiel“, Pause, Rückgängig, Tipp, Automatisch, Regeln,
+  Statistik, Pausenfenster; Rückweg über `zurueck.js`/`window.tgZurueck()`.
+- **Drei eigenständige Kartenbilder** in CSS: Normal Elfenbein/Goldrand,
+  Nachtblau-Rückseite mit Ovalmedaillon; Mädchen Rosé, runde Ecken,
+  gepunktete Innenlinie, Rautengitter mit Schleifenmitte; Buben Anthrazit,
+  harte Kante, rote Schrägkante, Kohlefaser mit Winkeln. Je Stil eigene
+  Vorderseite, Rückseite, Radius, Schrift und Dekor – keine Umfärbung.
+- **Connector:** `Solitaer` in `SPIEL_API_NAMEN` beider `connector.html`
+  (byte-gleich, 2 NUL-Bytes unverändert).
+- **Sicherung:** `sicherung/solitaer-schnittstelle-2026-11-27/` mit
+  `solitaer.html` und allen `js/`-Dateien vor dem Umbau.
+
+**Geprüft (echte Läufe)**
+
+- Direktstart ohne Connector: Startbildschirm, Stilwahl sichtbar, fünf
+  Varianten, `window.Solitaer` vollständig, `whenReady()` und
+  `solitaer:bereit` je einmal.
+- Drei Stile: Datenattribut, gespeicherte Wahl, sichtbarer Knopf und
+  Kartenvorderseite/-rückseite unterscheiden sich messbar; gespeicherter
+  Stil überlebt das Neuladen.
+- Connector (Port 8765, IPv6): Katalog enthält Solitär; Rahmen öffnete die
+  Seite; Stil „Mädchen“ kam an, Kachel verborgen; Partie im Rahmen, 1 Zug;
+  Umschalten auf „Buben“ wechselte das Bild bei laufender Partie.
+- TriPeaks echt gespielt: 7 Verluste („Keine Züge mehr“) und ein Gewinn in
+  51 Zügen mit Ergebnisfenster; `:ende` jeweils mit richtigem `grund`.
+- Klondike: Nachziehstapel, Rückgängig (1 → 0), Tipp, Neumischen (Züge 0,
+  Zeit 0); Pause hält die Uhr an, `resume` startet sie wieder.
+- Handy 390×844 (Spider 33-px-Karten, Klondike 46 px): kein horizontaler
+  Überlauf, keine Karte außerhalb, Stapel sichtbar, Rang 12,5 px; Tippen ohne
+  Zug. PC 1280×800: Karten 151 px, Bahn 1118 px.
+- Keine Seitenfehler in allen Läufen.
+
+**Offen:** nichts aus dem Auftrag.
+
+---
+
 ## 26.11.2026 · Verrücktes Labyrinth: zwei neue Kachelwelten und Schnittstelle 2.0
 
 **Auftrag:** Das Kachelspiel „Das verrückte Labyrinth“ neu gestalten – Mädchen-
