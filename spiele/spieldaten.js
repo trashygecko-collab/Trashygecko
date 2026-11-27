@@ -50,7 +50,7 @@ window.TGSpieldaten = (function () {
     ["UNO", "kartenspiele/uno/uno.html", "karten", "lokal zwei"],
 
     /* --- Würfelspiele -------------------------------------------------- */
-    ["10.000", "brettspiele/zehntausend/zehntausend.html", "wuerfel", "lokal zwei computer", "10000 zehntausend"],
+    ["10.000", "brettspiele/zehntausend/zehntausend.html", "wuerfel", "lokal bot zwei bis sechs 2-6 computer", "10000 zehntausend"],
     ["Auf nach Boston", "brettspiele/boston/boston.html", "wuerfel", "lokal zwei computer", "boston"],
     ["Chicago", "brettspiele/chicago/chicago.html", "wuerfel", "lokal zwei computer"],
     ["Kniffel", "brettspiele/kniffel/kniffel.html", "wuerfel", "lokal zwei computer", "yahtzee"],

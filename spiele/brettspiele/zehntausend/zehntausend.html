@@ -996,8 +996,131 @@ body[data-stil="maenner"] .meldung button {
 
 /* Lesbarkeit 4: geprüft 21.11.2026 */
 html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
+
+/* ===============================================================
+   Startbildschirm, Pause und Feinschliff (Schnittstelle 2.0)
+   =============================================================== */
+.start-karte{width:min(100%,500px);text-align:left}
+.start-karte h2,.start-karte p.unter{text-align:center}
+.start-block{margin:0 0 10px}
+.start-label{
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 5px;font-weight:700;
+}
+.stil-knoepfe{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stil-knoepfe button{
+  min-height:56px;padding:6px 4px;border:1px solid var(--rand-fein);
+  border-radius:9px;background:var(--feld-bg);color:var(--text);
+  font-size:12px;font-weight:700;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;
+}
+.stil-knoepfe button i{
+  display:block;width:100%;height:14px;border-radius:4px;
+  border:1px solid #00000033;
+}
+.stil-knoepfe button[data-stil="normal"] i{background:linear-gradient(90deg,#123329 0 45%,#e8cd8e 45% 55%,#f6edda 55%)}
+.stil-knoepfe button[data-stil="maedchen"] i{background:linear-gradient(90deg,#2c1834 0 45%,#c68b8f 45% 55%,#f7dee3 55%)}
+.stil-knoepfe button[data-stil="buben"] i{background:linear-gradient(90deg,#141517 0 45%,#e0242f 45% 55%,#9ea1a7 55%)}
+.stil-knoepfe button[aria-pressed="true"]{
+  border-color:var(--akzent);
+  box-shadow:0 0 0 1px var(--akzent),0 0 12px #e8cd8e2e;
+  background:var(--spieler-bg-aktiv);
+}
+.start-reihe{display:grid;grid-template-columns:1.25fr .75fr;gap:8px}
+.start-reihe .feld{margin:0 0 10px}
+.start-karte .namen{margin-bottom:10px}
+.start-karte .namen .zeile{display:grid;grid-template-columns:24px minmax(0,1fr) 96px;gap:6px}
+.start-karte .namen .zeile input{
+  width:100%;min-width:0;min-height:42px;padding:8px 10px;
+  border-radius:8px;border:1px solid var(--rand-fein);
+  background:var(--feld-bg);color:var(--text);
+  font-family:inherit;font-size:16px;
+}
+.start-karte .namen .zeile select{
+  min-height:42px;padding:6px;border-radius:8px;
+  border:1px solid var(--rand-fein);background:var(--feld-bg);
+  color:var(--text);font-family:inherit;font-size:13px;
+}
+.start-tipp{margin:0 0 12px;font-size:11.5px;line-height:1.45;color:var(--muted)}
+#btnPause:disabled{opacity:.4;cursor:not-allowed}
+/* Das gemeinsame Regelblatt setzt display:flex und überschreibt damit das
+   hidden-Attribut; ohne diese Zeile bleibt der geschlossene Schleier über
+   der Seite liegen und fängt alle Klicks ab. */
+.regeln-schleier[hidden]{display:none !important}
+#pauseSchleier{z-index:25}
+.pause-karte{width:min(100%,380px)}
+
+/* Bot-Kennzeichnung und Punktestände */
+.spieler li .bot-marke{
+  font-style:normal;font-size:9px;letter-spacing:.08em;
+  border:1px solid var(--rand-fein);border-radius:4px;
+  padding:1px 4px;margin-left:6px;color:var(--muted);
+}
+.spieler li.sieger{outline:1px solid var(--gut)}
+@keyframes punktePuls{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.16);color:var(--akzent)}
+  100%{transform:scale(1)}
+}
+.wert.puls{animation:punktePuls .4s ease}
+@media (prefers-reduced-motion:reduce){
+  .wert.puls{animation:none}
+}
+
+/* Würfelmaterial je Stil – die Augenzahl bleibt in allen Stilen dunkel
+   bzw. hell genug für 4,5:1 und ist nie von Dekoration überdeckt. */
+body[data-stil="normal"]{
+  --w-bg:radial-gradient(circle at 30% 18%,#fffdf8 0%,#0000 58%),linear-gradient(160deg,#fffaf0 0%,#efe2c8 100%);
+  --w-bg-gewaehlt:radial-gradient(circle at 30% 18%,#ffffff 0%,#0000 58%),linear-gradient(160deg,#fffdf6 0%,#f6e9cd 100%);
+}
+body[data-stil="maedchen"]{
+  --w-bg:radial-gradient(circle at 22% 16%,#ffffff8c 0 1.2px,#0000 2px),radial-gradient(circle at 74% 68%,#ffffff66 0 1px,#0000 1.8px),linear-gradient(158deg,#f7dee3 0%,#e4b7c2 52%,#cf9aa9 100%);
+  --w-bg-gewaehlt:radial-gradient(circle at 22% 16%,#ffffffb3 0 1.2px,#0000 2px),radial-gradient(circle at 74% 68%,#ffffff80 0 1px,#0000 1.8px),linear-gradient(158deg,#fdeef1 0%,#ecc3cd 52%,#d9a8b4 100%);
+  --w-bg-gesichert:radial-gradient(circle at 22% 16%,#ffffff80 0 1px,#0000 2px),linear-gradient(158deg,#dcc6dc 0%,#b89cad 100%);
+}
+body[data-stil="buben"]{
+  --w-bg:repeating-linear-gradient(112deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(158deg,#4f5259 0%,#3d4045 45%,#242529 100%);
+  --w-bg-gewaehlt:repeating-linear-gradient(112deg,#ffffff10 0 1px,#0000 1px 3px),linear-gradient(158deg,#63676e 0%,#4f5259 45%,#2f3135 100%);
+  --w-bg-gesichert:repeating-linear-gradient(112deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(158deg,#3d4045 0%,#2f3135 100%);
+}
+body[data-stil="normal"] .wuerfel .auge.an{
+  background:radial-gradient(circle at 34% 30%,#3d5148,#16251f 72%);
+  box-shadow:inset 0 1px 1px #ffffff33;
+}
+body[data-stil="maedchen"] .wuerfel .auge.an{
+  background:radial-gradient(circle at 34% 28%,#7d3450,#3c1222 72%);
+  box-shadow:inset 0 1px 1px #ffd7e3cc;
+}
+body[data-stil="buben"] .wuerfel .auge.an{
+  background:linear-gradient(160deg,#f7f8f9,#b9bcc1);
+  box-shadow:inset 0 -1px 0 #6d7177,0 0 4px #ffffff1f;
+}
+body[data-stil="normal"] .wuerfel:not(.leer)::after{
+  content:"";position:absolute;inset:8%;
+  border:1px solid #b99b5f4d;border-radius:calc(var(--w-radius) - 3%);
+  pointer-events:none;
+}
+body[data-stil="maedchen"] .wuerfel:not(.leer)::after{
+  content:"";position:absolute;inset:7%;
+  border:1px solid #ffffff5c;border-radius:calc(var(--w-radius) - 3%);
+  pointer-events:none;
+}
+body[data-stil="buben"] .wuerfel:not(.leer)::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(135deg,#ffffff26 0 7%,#0000 7% 93%,#0000002e 93%);
+  pointer-events:none;
+}
+@media(max-width:420px){
+  .start-karte{padding:14px}
+  .start-karte h2{font-size:19px}
+  .start-reihe{grid-template-columns:1fr}
+  .start-reihe .feld{margin-bottom:6px}
+  .start-karte .namen .zeile{grid-template-columns:22px minmax(0,1fr) 88px}
+  .stil-knoepfe button{min-height:50px;font-size:11px}
+  .kopf .rechts{gap:5px}
+  .kopf .rechts .leise{padding:7px 8px}
+}
 </style>
-<script src="../../stil.js"></script>
 </head>
 
 <body data-stil="normal">
@@ -1006,10 +1129,14 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
 
   <header class="kopf">
     <div>
+      <h1>10.000</h1>
       <div class="unterzeile">Sechs Würfel, drei Ansichten, ein Ziel</div>
     </div>
     <div class="rechts">
+      <button type="button" class="leise" id="btnPause">Pause</button>
+      <button type="button" class="leise" id="btnRegeln">Regeln</button>
       <button type="button" class="leise" id="neuesSpiel">Neues Spiel</button>
+      <button type="button" class="leise" id="btnZurueck">← Übersicht</button>
     </div>
   </header>
 
@@ -1057,7 +1184,8 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
         <summary>Regeln</summary>
         <ul>
           <li><b>Sechs Würfel</b>, wer zuerst <b>10.000</b> Punkte hat, gewinnt.</li>
-          <li><b>Einzelwertung:</b> eine 1 = 100, eine 5 = 50.</li>
+          <li><b>Spielarten:</b> Einzelspieler gegen den Bot, mehrere Menschen an einem Gerät oder gemischt. Der Bot würfelt, wählt und sichert nach denselben Regeln.</li>
+          <li><b>Wertung (fest):</b> eine 1 = 100, eine 5 = 50.</li>
           <li><b>Dreierpasch:</b> drei 1er = 1.000, drei 2er = 200, drei 3er = 300, drei 4er = 400, drei 5er = 500, drei 6er = 600. Jeder weitere gleiche Würfel zählt den Satz noch einmal (vier 2er = 400).</li>
           <li>Andere Augenzahlen zählen nur als Dreierpasch – eine einzelne 2 bringt nichts.</li>
           <li>Gewürfelte Würfel antippen – eine 1, eine 5 oder ein vollständiger Pasch wird sofort fest gesichert und bleibt liegen.</li>
@@ -1074,22 +1202,40 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
 
 <!-- Start -->
 <div class="schleier" id="startSchleier">
-  <div class="karte">
-    <h2>Neues Spiel</h2>
-    <p class="unter">2 bis 6 Spieler, ein Gerät, sechs Würfel.</p>
+  <div class="karte start-karte">
+    <h2>10.000</h2>
+    <p class="unter">Sechs Würfel, ein Ziel: würfeln, auswählen, sichern.</p>
 
-    <div class="feld" id="anzahlFeld">
-      <label for="anzahl">Spieler</label>
-      <select id="anzahl">
-        <option>2</option><option>3</option><option>4</option>
-        <option>5</option><option>6</option>
-      </select>
+    <div class="start-block" id="stilBlock">
+      <div class="start-label">Grafikstil</div>
+      <div class="stil-knoepfe" id="stilKnoepfe" role="group" aria-label="Grafikstil">
+        <button type="button" data-stil="normal" aria-pressed="true"><i aria-hidden="true"></i>Normal</button>
+        <button type="button" data-stil="maedchen" aria-pressed="false"><i aria-hidden="true"></i>Mädchen</button>
+        <button type="button" data-stil="buben" aria-pressed="false"><i aria-hidden="true"></i>Buben</button>
+      </div>
     </div>
 
-    <div class="namen" id="namensListe"></div>
-    <div class="namen" id="lobbyListe" hidden></div>
+    <div class="start-reihe">
+      <div class="feld">
+        <label for="modus">Spielart</label>
+        <select id="modus">
+          <option value="bot">Einzelspieler · gegen Bot</option>
+          <option value="lokal">Mehrspieler · ein Gerät</option>
+        </select>
+      </div>
+      <div class="feld">
+        <label for="anzahl">Spieler</label>
+        <select id="anzahl">
+          <option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option>
+        </select>
+      </div>
+    </div>
 
-    <button type="button" class="zweitknopf" id="bereitKnopf" hidden>Bereit</button>
+    <div class="start-label">Wer spielt?</div>
+    <div class="namen" id="namensListe"></div>
+    <p class="start-tipp">„Bot“ spielt selbstständig. Alle anderen Plätze spielen an diesem Gerät – auch gemischt.</p>
+
     <button type="button" class="gross" id="startKnopf">Spiel starten</button>
     <button type="button" class="zweitknopf" id="weiterSpielKnopf" hidden>Laufendes Spiel fortsetzen</button>
   </div>
@@ -1106,6 +1252,17 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
   </div>
 </div>
 
+<!-- Pause -->
+<div class="schleier" id="pauseSchleier" hidden role="dialog" aria-modal="true" aria-labelledby="pauseTitel">
+  <div class="karte pause-karte">
+    <h2 id="pauseTitel">Pause</h2>
+    <p class="unter">Der Spielstand bleibt stehen – auch der Bot wartet.</p>
+    <button type="button" class="gross" id="btnWeiter">Weiterspielen</button>
+    <button type="button" class="zweitknopf" id="btnPauseNeu">Neues Spiel mit diesen Spielern</button>
+    <button type="button" class="zweitknopf" id="btnPauseStart">Spielart wählen</button>
+  </div>
+</div>
+
 <!-- Ende -->
 <div class="schleier" id="endeSchleier" hidden>
   <div class="karte">
@@ -1116,17 +1273,22 @@ html[data-stil="buben"] .wert.betont .etikett{color:#ffffff}
   </div>
 </div>
 
-<script src="../../token.js"></script>
 <script>
+(function () {
 "use strict";
 
 /* ============================================================
    Regeln – reine Rechenfunktionen, unabhängig von der Anzeige.
+   Diese Wertung ist fest und wird während einer Partie nicht
+   verändert: 1 = 100, 5 = 50, Dreierpasch 1er = 1.000, sonst
+   Augenzahl × 100, jeder weitere gleiche Würfel zählt den Satz
+   erneut (vier 2er = 400). Nur vollständige Sätze und einzelne
+   1er/5er bringen Punkte.
    ============================================================ */
 const ZIEL = 10000;
 const EINSTIEG = 350;
 // So lange steht die Fehlwurf-Meldung, bevor der Nächste übernimmt.
-const PECH_DAUER = 2600;
+const PECH_DAUER = 2400;
 const AUGEN = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 
 const REGELN = {
@@ -1172,30 +1334,46 @@ const REGELN = {
 /* ============================================================
    Spielstand
    ============================================================ */
+// Bestehender Schlüssel bleibt erhalten, damit laufende Partien nicht weg sind.
 const SPEICHER_SPIEL = "tg-zehntausend-spiel";
+const STIL_SCHLUESSEL = "zehntausendStil";
+const FIGUR_BOT = "Bot";
+let stilVonAussen = false;
 
 let zufall = () => 1 + Math.floor(Math.random() * 6);
 
-let S = neuerZustand(["Spieler 1", "Spieler 2"]);
-
-function neuerZustand(namen) {
+function neuerZustand(spieler, modus) {
   return {
-    spieler: namen.map((name) => ({ name: name, punkte: 0 })),
+    spieler: (spieler || []).map((s) => ({
+      name: String(s && s.name ? s.name : "Spieler").slice(0, 14),
+      punkte: Number(s && s.punkte) || 0,
+      bot: !!(s && s.bot)
+    })),
+    modus: modus === "bot" ? "bot" : "lokal",
     dran: 0,
     wuerfel: [0, 0, 0, 0, 0, 0],
     gesichert: [false, false, false, false, false, false],
     auswahl: [false, false, false, false, false, false],
-    wurfGesichert: [false, false, false, false, false, false], // in diesem Wurf festgelegt
-    wurfPunkte: 0,        // Punkte dieser Würfel (für die Anzeige „Wurf“)
+    wurfGesichert: [false, false, false, false, false, false],
+    wurfPunkte: 0,
     zugPunkte: 0,
-    wuerfe: 0,        // Würfe im laufenden Zug
-    laeuft: false,    // ein Spiel ist gestartet
-    gesperrt: false,  // während der Wurf-Animation
+    wuerfe: 0,
+    laeuft: false,
+    gesperrt: false,
+    pausiert: false,
     beendet: false,
+    sieger: "",
+    tick: 0,
+    botDenkt: false,
     hinweis: "",
     hinweisArt: ""
   };
 }
+
+let S = neuerZustand([
+  { name: "Spieler 1", bot: false },
+  { name: "Bot 1", bot: true }
+], "bot");
 
 function aktiverSpieler() {
   return S.spieler[S.dran];
@@ -1235,16 +1413,18 @@ function freieWuerfel() {
   return S.wuerfel.map((w, i) => (S.gesichert[i] ? null : i)).filter((i) => i !== null);
 }
 
-  /* Online über den Connector: dran ist, wer im Serverstand dran ist. */
-  function meinZug() {
-    if (!ONLINE) return true;
-    if (!onlineSpiel || onlineSpiel.status !== "active") return false;
-    const p = onlineSpiel.players[onlineSpiel.current];
-    return !!p && p.id === SPIELER_ID;
-  }
+function istBot(sp) {
+  return !!(sp && sp.bot);
+}
 
-  function darfWuerfeln() {
-  return S.laeuft && !S.beendet && !S.gesperrt && freieWuerfel().length > 0;
+// Ein Mensch ist nur am Zug, wenn kein Bot dran ist und nichts anhält.
+function menschDran() {
+  return S.laeuft && !S.beendet && !S.pausiert &&
+    !istBot(aktiverSpieler());
+}
+
+function darfWuerfeln() {
+  return menschDran() && !S.gesperrt && freieWuerfel().length > 0;
 }
 
 // Sind alle sechs Würfel festgelegt? (Eine Auswahl ohne Punkte zählt nicht.)
@@ -1253,13 +1433,12 @@ function allesVerbraucht() {
 }
 
 function darfWeiter() {
-  if (!S.laeuft || S.beendet || S.gesperrt || S.wuerfe === 0) return false;
-  // Weiterwürfeln mit den übrigen Würfeln – oder alle sechs zurück, wenn sie alle verbraucht sind.
+  if (!menschDran() || S.gesperrt || S.wuerfe === 0) return false;
   return allesVerbraucht() || freieWuerfel().length > 0;
 }
 
 function darfSichern() {
-  if (!S.laeuft || S.beendet || S.gesperrt || S.wuerfe === 0) return false;
+  if (!menschDran() || S.gesperrt || S.wuerfe === 0) return false;
   return S.zugPunkte >= EINSTIEG;
 }
 
@@ -1268,8 +1447,9 @@ function darfSichern() {
    ============================================================ */
 const $ = (id) => document.getElementById(id);
 const FELD = $("wuerfelFeld");
-let knoepfe = [];      // die sechs Würfelknöpfe
-let augenPaare = [];   // je Würfel die neun Punkte
+let knoepfe = [];
+let augenPaare = [];
+let letzteWerte = { wurf: 0, zug: 0, konto: 0 };
 
 function baueWuerfel() {
   FELD.innerHTML = "";
@@ -1305,11 +1485,20 @@ function setzeAugen(i, wert) {
   knoepfe[i].classList.toggle("leer", !wert);
 }
 
+function pulsieren(el) {
+  if (!el) return;
+  el.classList.remove("puls");
+  void el.offsetWidth;
+  el.classList.add("puls");
+}
+
 function zeichne() {
   const p = aktiverSpieler();
-  $("werDran").textContent = p ? p.name : "–";
+  const bot = istBot(p);
+  $("werDran").textContent = p ? p.name + (bot ? " · Bot" : "") : "–";
   $("wurfStand").textContent = S.laeuft
-    ? "Wurf " + Math.max(S.wuerfe, 0) + " · " + (S.wuerfe === 0 ? "noch nicht gewürfelt" : "im Zug")
+    ? (S.pausiert ? "Pause" : S.beendet ? "Partie beendet" : bot && S.botDenkt ? "Bot überlegt …" :
+      "Wurf " + Math.max(S.wuerfe, 0) + " · " + (S.wuerfe === 0 ? "noch nicht gewürfelt" : "im Zug"))
     : "kein Spiel";
 
   S.wuerfel.forEach((w, i) => {
@@ -1319,7 +1508,7 @@ function zeichne() {
     b.classList.toggle("gesichert", S.gesichert[i]);
     b.classList.toggle("gewaehlt", S.auswahl[i] && !S.gesichert[i]);
     b.classList.toggle("ohne", S.auswahl[i] && !S.gesichert[i] && !gilt);
-    b.disabled = S.gesperrt || S.beendet || S.gesichert[i] || w === 0;
+    b.disabled = S.gesperrt || S.beendet || S.pausiert || bot || S.gesichert[i] || w === 0;
     const stand = S.gesichert[i]
       ? "gesichert"
       : S.auswahl[i]
@@ -1327,7 +1516,6 @@ function zeichne() {
         : w ? "nicht ausgewählt" : "leer";
     b.setAttribute("aria-label", "Würfel " + (i + 1) + ": " + (w || "leer") + ", " + stand);
     b.setAttribute("aria-pressed", S.auswahl[i] ? "true" : "false");
-    // Ausgewählte und gesicherte Würfel bekommen ein deutliches Zeichen.
     const zeichen = S.gesichert[i] ? "✓" : S.auswahl[i] ? (gilt ? "✓" : "!") : "";
     let haken = b.querySelector(".haken");
     if (zeichen && !haken) {
@@ -1340,10 +1528,15 @@ function zeichne() {
     else if (haken) haken.remove();
   });
 
+  const konto = p ? p.punkte : 0;
   $("wertWurf").textContent = S.wurfPunkte.toLocaleString("de-DE");
   $("wertZug").textContent = S.zugPunkte.toLocaleString("de-DE");
-  $("wertKonto").textContent = (p ? p.punkte : 0).toLocaleString("de-DE");
+  $("wertKonto").textContent = konto.toLocaleString("de-DE");
   $("wertZiel").textContent = ZIEL.toLocaleString("de-DE");
+  if (S.wurfPunkte !== letzteWerte.wurf) pulsieren($("wertWurf").parentElement);
+  if (S.zugPunkte !== letzteWerte.zug) pulsieren($("wertZug").parentElement);
+  if (konto !== letzteWerte.konto) pulsieren($("wertKonto").parentElement);
+  letzteWerte = { wurf: S.wurfPunkte, zug: S.zugPunkte, konto: konto };
 
   const summe = S.zugPunkte;
   const anteil = Math.min(100, (summe / EINSTIEG) * 100);
@@ -1353,12 +1546,12 @@ function zeichne() {
     ? summe.toLocaleString("de-DE") + " – sichern möglich"
     : summe.toLocaleString("de-DE") + " von " + EINSTIEG + " zum Sichern";
 
-  const zug = meinZug();
-  // Online würfelt der Server: nach dem ersten Wurf geht es nur über WEITERWÜRFELN.
-  // Ein Knopf für beides: vor dem ersten Wurf würfeln, danach mit den
-  // übrigen Würfeln weiterwürfeln.
-  $("wuerfelnKnopf").disabled = !zug || !wuerfelnMoeglich();
-  $("sichernKnopf").disabled = !darfSichern() || !zug;
+  $("wuerfelnKnopf").textContent = S.wuerfe > 0 ? "Weiterwürfeln" : "Würfeln";
+  $("wuerfelnKnopf").disabled = !wuerfelnMoeglich();
+  $("sichernKnopf").disabled = !darfSichern();
+  $("btnPause").disabled = !S.laeuft || S.beendet || S.pausiert || S.gesperrt || !$("pechSchleier").hidden;
+  $("btnPause").setAttribute("aria-pressed", S.pausiert ? "true" : "false");
+  document.body.classList.toggle("pausiert", !!S.pausiert);
 
   zeichneSpieler();
   setzeHinweis(S.hinweis, S.hinweisArt);
@@ -1371,12 +1564,19 @@ function zeichneSpieler() {
     const li = document.createElement("li");
     if (i === S.dran && S.laeuft && !S.beendet) li.className = "aktiv";
     if (sp.punkte >= ZIEL - 2000) li.classList.add("zielnah");
+    if (S.beendet && sp.name === S.sieger) li.classList.add("sieger");
     const punkt = document.createElement("span");
     punkt.className = "punkt";
     punkt.setAttribute("aria-hidden", "true");
     const who = document.createElement("span");
     who.className = "who";
     who.textContent = sp.name;
+    if (sp.bot) {
+      const marke = document.createElement("i");
+      marke.className = "bot-marke";
+      marke.textContent = "BOT";
+      who.appendChild(marke);
+    }
     const punkte = document.createElement("span");
     punkte.className = "punkte";
     punkte.textContent = sp.punkte.toLocaleString("de-DE");
@@ -1403,7 +1603,6 @@ function hinweis(text, art) {
    Wechsel; nach PECH_DAUER übernimmt der Nächste.
    ============================================================ */
 let pechTimer = null;
-let pechMarke = 0;   // Nummer des zuletzt gezeigten Fehlwurfs (online)
 
 function wuerfelBild(wert) {
   const b = document.createElement("div");
@@ -1447,23 +1646,14 @@ function versteckePech() {
    Aktionen
    ============================================================ */
 function wuerfelKlick(i) {
-  if (!S.laeuft || S.beendet || S.gesperrt || !meinZug()) return;
+  if (!menschDran() || S.gesperrt) return;
   if (S.gesichert[i] || S.wuerfel[i] === 0) return;
   S.auswahl[i] = !S.auswahl[i];
-
-  // Online legt der Server den Würfel fest; die Antwort bringt Stand und Punkte.
-  if (ONLINE) {
-    if (S.auswahl[i]) onlineAktion("merken");
-    else zeichne();
-    return;
-  }
-
   const wert = S.wuerfel[i];
   if (S.auswahl[i]) {
     const vorher = S.zugPunkte;
     sichereAuswahl();
     if (S.gesichert[i]) {
-      // Der Würfel ist jetzt fest beiseitegelegt und wird nicht mehr geworfen.
       const dazu = S.zugPunkte - vorher;
       hinweis(
         wert + " gesichert" + (dazu > 0 ? ": +" + dazu.toLocaleString("de-DE") + " Punkte" : "") +
@@ -1471,7 +1661,6 @@ function wuerfelKlick(i) {
         "gut"
       );
     } else {
-      // Einzelne 2/3/4/6 zählen noch nicht; sie bleiben nur vorgemerkt liegen.
       const gewaehlt = S.wuerfel.map((w, k) => (S.auswahl[k] && w > 0 ? w : 0));
       const noch = 3 - REGELN.zaehle(gewaehlt)[wert];
       hinweis(
@@ -1491,11 +1680,8 @@ function wuerfelKlick(i) {
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function wuerfeln() {
-  if (ONLINE) {
-    if (meinZug()) onlineAktion("roll");
-    return;
-  }
-  if (!darfWuerfeln()) return;
+  if (!menschDran() && !(istBot(aktiverSpieler()) && S.laeuft && !S.beendet && !S.pausiert)) return;
+  if (!S.laeuft || S.beendet || S.pausiert || S.gesperrt) return;
   const ziele = freieWuerfel();
   if (!ziele.length) return;
 
@@ -1512,23 +1698,36 @@ async function wuerfeln() {
     ziele.forEach((i, k) => { S.wuerfel[i] = ergebnis[k]; setzeAugen(i, ergebnis[k]); });
     await warte(90);
   } else {
-    ziele.forEach((i) => knoepfe[i].classList.add("rollt"));
-    const ende = Date.now() + 480;
+    ziele.forEach((i, k) => {
+      knoepfe[i].style.animationDelay = (k * 28) + "ms";
+      knoepfe[i].classList.add("rollt");
+    });
+    const ende = Date.now() + 500;
     while (Date.now() < ende) {
       ziele.forEach((i) => setzeAugen(i, 1 + Math.floor(Math.random() * 6)));
       await warte(65);
     }
-    ziele.forEach((i) => knoepfe[i].classList.remove("rollt"));
+    ziele.forEach((i) => {
+      knoepfe[i].classList.remove("rollt");
+      knoepfe[i].style.animationDelay = "";
+    });
     ziele.forEach((i, k) => { S.wuerfel[i] = ergebnis[k]; setzeAugen(i, ergebnis[k]); });
   }
 
   S.wuerfe++;
+  S.tick++;
   S.gesperrt = false;
 
   const geworfen = ziele.map((i) => S.wuerfel[i]);
+  feuere("wurf", {
+    spieler: aktiverSpieler() ? aktiverSpieler().name : "",
+    wuerfel: geworfen.slice(),
+    punkte: REGELN.punkte(geworfen),
+    wuerfe: S.wuerfe,
+    tick: S.tick
+  });
+
   if (!REGELN.hatPunkte(geworfen)) {
-    // Die Würfel bleiben liegen, die Meldung erklärt den Wechsel; erst
-    // danach räumt naechsterSpieler() den Tisch.
     S.gesperrt = true;
     const verloren = S.zugPunkte;
     S.zugPunkte = 0;
@@ -1551,14 +1750,13 @@ async function wuerfeln() {
   );
   zeichne();
   speichern();
+  botPruefen(650);
 }
 
 // Auswahl festlegen: einzelne 1er/5er und vollständige Sätze kommen beiseite.
 // Gerechnet wird die ganze Gruppe dieses Wurfs neu; gespeichert wird nur der
 // Unterschied, damit auch der vierte gleiche Würfel seinen vollen Satz bringt.
 function sichereAuswahl() {
-  // Mitgezählt werden auch die Würfel, die in diesem Wurf schon beiseite
-  // liegen – sonst bliebe der vierte gleiche Würfel (vier 2er = 400) liegen.
   const gewaehlt = REGELN.zaehle(
     S.wuerfel.map((w, i) =>
       (S.auswahl[i] || S.wurfGesichert[i]) && w > 0 ? w : 0
@@ -1580,22 +1778,15 @@ function sichereAuswahl() {
 
 // Welche der beiden Aktionen löst der eine Würfeln-Knopf aus?
 function wuerfelnMoeglich() {
-  if (ONLINE) return S.wuerfe === 0 ? darfWuerfeln() : darfWeiter();
   return darfWeiter() || darfWuerfeln();
 }
 
-// Der eine Würfeln-Knopf: nach dem ersten Wurf würfelt er mit den übrigen
-// Würfeln weiter, vorher würfelt er alle sechs.
 function wuerfelnOderWeiter() {
   if (darfWeiter()) weiterwuerfeln();
   else wuerfeln();
 }
 
 async function weiterwuerfeln() {
-  if (ONLINE) {
-    if (meinZug()) onlineAktion("weiter");
-    return;
-  }
   if (!darfWeiter()) return;
   const p = sichereAuswahl();
   const alleWeg = S.gesichert.every(Boolean);
@@ -1628,10 +1819,6 @@ async function weiterwuerfeln() {
 }
 
 async function sichern() {
-  if (ONLINE) {
-    if (meinZug()) onlineAktion("sichern");
-    return;
-  }
   if (!darfSichern()) return;
   sichereAuswahl();
   const summe = S.zugPunkte;
@@ -1644,11 +1831,13 @@ async function sichern() {
 
   const sp = aktiverSpieler();
   sp.punkte += summe;
+  S.tick++;
   zeichne();
   speichern();
+  feuere("zug", { spieler: sp.name, punkte: sp.punkte, gesichert: summe, tick: S.tick });
 
   if (sp.punkte >= ZIEL) {
-    beenden();
+    beenden(sp);
     return;
   }
 
@@ -1662,6 +1851,7 @@ async function sichern() {
   naechsterSpieler();
   zeichne();
   speichern();
+  botPruefen(700);
 }
 
 function naechsterSpieler(text, art) {
@@ -1673,23 +1863,42 @@ function naechsterSpieler(text, art) {
   S.wurfPunkte = 0;
   S.zugPunkte = 0;
   S.wuerfe = 0;
+  S.botDenkt = false;
   if (text) hinweis(text, art || "");
   zeichne();
   speichern();
+  botPruefen(650);
 }
 
-function beenden() {
+function beenden(sieger) {
   S.beendet = true;
-  S.laeuft = true;
-  zeichne();
-  speichern();
-
+  S.pausiert = false;
+  S.sieger = sieger ? sieger.name : "";
+  botTimerLoeschen();
+  // Eine beendete Partie ist kein „Fortsetzen“ mehr.
+  try { localStorage.removeItem(SPEICHER_SPIEL); } catch (e) { /* ohne */ }
   const rang = S.spieler
     .map((sp, i) => ({ sp: sp, i: i }))
     .sort((a, b) => b.sp.punkte - a.sp.punkte || a.i - b.i);
-  $("endeTitel").textContent = rang[0].sp.name + " gewinnt";
+  const beste = rang[0].sp;
+  S.sieger = beste.name;
+  zeichne();
+  speichern();
+
+  // Ereignis vor dem Ergebnisfenster (Schnittstelle 2.0).
+  feuere("ende", {
+    grund: "gewonnen",
+    punkte: beste.punkte,
+    level: 1,
+    levelAnzahl: 1,
+    tick: S.tick,
+    gewinner: beste.name,
+    spieler: S.spieler.map((sp) => ({ name: sp.name, punkte: sp.punkte, bot: !!sp.bot }))
+  });
+
+  $("endeTitel").textContent = beste.name + " gewinnt";
   $("endeUnter").textContent =
-    rang[0].sp.punkte.toLocaleString("de-DE") + " Punkte – Ziel waren " +
+    beste.punkte.toLocaleString("de-DE") + " Punkte – Ziel waren " +
     ZIEL.toLocaleString("de-DE") + ".";
   const liste = $("rangListe");
   liste.innerHTML = "";
@@ -1707,26 +1916,157 @@ function beenden() {
     liste.appendChild(li);
   });
   $("endeSchleier").hidden = false;
-  // Siegspruch aus der zentralen Connector-Liste (einmal je Partie).
-  if (window.TGErgebnis) TGErgebnis.gewonnen();
 }
 
-function starteSpiel(namen) {
-  S = neuerZustand(namen);
+function starteSpiel(spieler, modus) {
+  botTimerLoeschen();
+  S = neuerZustand(spieler, modus);
   S.laeuft = true;
+  letzteWerte = { wurf: 0, zug: 0, konto: 0 };
   $("startSchleier").hidden = true;
   $("endeSchleier").hidden = true;
-  hinweis("Los geht's: " + namen[0] + " würfelt zuerst.", "");
+  $("pauseSchleier").hidden = true;
+  versteckePech();
+  hinweis("Los geht's: " + S.spieler[0].name + " würfelt zuerst.", "");
   zeichne();
   speichern();
+  feuere("neu", {
+    modus: S.modus,
+    spieler: S.spieler.map((sp) => ({ name: sp.name, bot: !!sp.bot }))
+  });
+  botPruefen(800);
+}
+
+/* ============================================================
+   Bot
+   Nachvollziehbar: Er nimmt alle Würfel mit Wertung beiseite,
+   würfelt weiter, solange der Zug klein ist, und sichert ab 350
+   Punkten – früher, wenn wenige Würfel übrig sind.
+   ============================================================ */
+let botTimer = null;
+let botLaeuft = false;
+
+function botTimerLoeschen() {
+  clearTimeout(botTimer);
+  botTimer = null;
+  S.botDenkt = false;
+}
+
+function botPruefen(verzoegerung) {
+  clearTimeout(botTimer);
+  botTimer = null;
+  if (botLaeuft) return;
+  if (!S.laeuft || S.beendet || S.pausiert || !istBot(aktiverSpieler())) return;
+  botTimer = setTimeout(botZug, verzoegerung || 650);
+}
+
+function botAuswahl() {
+  const zahl = REGELN.zaehle(S.wuerfel);
+  const raus = [];
+  S.wuerfel.forEach((w, i) => {
+    if (!w || S.gesichert[i]) return;
+    if (zahl[w] >= 3 || w === 1 || w === 5) raus.push(i);
+  });
+  return raus;
+}
+
+function botSichert() {
+  if (S.zugPunkte < EINSTIEG) return false;
+  const frei = freieWuerfel().length;
+  if (S.zugPunkte >= 1000) return true;
+  if (S.wuerfe >= 4) return true;
+  if (frei <= 1) return true;
+  return S.zugPunkte >= 600 && frei <= 3;
+}
+
+async function botZug() {
+  botTimer = null;
+  if (botLaeuft) return;
+  if (!S.laeuft || S.beendet || S.pausiert || !istBot(aktiverSpieler())) return;
+  botLaeuft = true;
+  try {
+  const ich = aktiverSpieler();
+
+  if (S.wuerfe === 0) {
+    S.botDenkt = true;
+    hinweis(ich.name + " würfelt …", "");
+    zeichne();
+    await wuerfeln();
+    S.botDenkt = false;
+    if (S.laeuft && !S.beendet && !S.pausiert && istBot(aktiverSpieler()) && S.wuerfe > 0) {
+      botPruefen(500);
+    }
+    return;
+  }
+
+  const raus = botAuswahl();
+  if (!raus.length) {
+    // Kein wertbarer Würfel: Der Fehlwurfpfad hat bereits übernommen.
+    S.botDenkt = false;
+    return;
+  }
+  S.botDenkt = true;
+  S.auswahl = [false, false, false, false, false, false];
+  raus.forEach((i) => { S.auswahl[i] = true; });
+  hinweis(ich.name + " legt " + raus.length + " Würfel beiseite.", "");
+  zeichne();
+  await warte(480);
+  if (!S.laeuft || S.beendet || S.pausiert) { S.botDenkt = false; return; }
+  sichereAuswahl();
+  zeichne();
+  await warte(320);
+  if (!S.laeuft || S.beendet || S.pausiert) { S.botDenkt = false; return; }
+
+  const sichernJetzt = botSichert();
+  S.botDenkt = false;
+  if (sichernJetzt) {
+    hinweis(ich.name + " sichert " + S.zugPunkte.toLocaleString("de-DE") + " Punkte.", "");
+    await sichern();
+  } else {
+    hinweis(ich.name + " würfelt weiter (" + S.zugPunkte.toLocaleString("de-DE") + " im Zug).", "");
+    await weiterwuerfeln();
+  }
+  if (S.laeuft && !S.beendet && !S.pausiert && istBot(aktiverSpieler())) botPruefen(600);
+  } finally {
+    botLaeuft = false;
+  }
+}
+
+/* ============================================================
+   Pause
+   Nach Schnittstelle 2.0: Der Spielfluss steht, der Bot pausiert mit.
+   ============================================================ */
+function pausieren() {
+  if (!S.laeuft || S.beendet) return false;
+  // Während der Fehlwurf-Anzeige läuft der Wechsel bereits; erst danach.
+  if (!$("pechSchleier").hidden || S.gesperrt) return false;
+  if (S.pausiert) return true;
+  S.pausiert = true;
+  botTimerLoeschen();
+  $("pauseSchleier").hidden = false;
+  zeichne();
+  feuere("pausiert", { tick: S.tick });
+  return true;
+}
+
+function fortsetzen() {
+  if (!S.laeuft || S.beendet) return false;
+  if (!S.pausiert) return true;
+  S.pausiert = false;
+  $("pauseSchleier").hidden = true;
+  zeichne();
+  feuere("weiter", { tick: S.tick });
+  botPruefen(500);
+  return true;
 }
 
 /* ============================================================
    Speichern und Wiederaufnehmen
    ============================================================ */
 function speichern() {
-  // Im Spielraum führt der Server den Stand, nichts lokal festhalten.
-  if (ONLINE) return;
+  // Nur eine laufende Partie wird gespeichert; ein Abbruch oder die offene
+  // Auswahl darf einen guten Stand nicht überschreiben.
+  if (!S.laeuft || S.beendet) return;
   try {
     localStorage.setItem(SPEICHER_SPIEL, JSON.stringify(S));
   } catch (e) { /* privater Modus: dann eben ohne */ }
@@ -1737,9 +2077,12 @@ function laden() {
     const roh = localStorage.getItem(SPEICHER_SPIEL);
     if (!roh) return null;
     const d = JSON.parse(roh);
-    if (!d || !Array.isArray(d.spieler) || d.spieler.length < 2) return null;
-    const z = neuerZustand(d.spieler.map((s) => s.name));
-    z.spieler = d.spieler.map((s) => ({ name: String(s.name || "Spieler"), punkte: Number(s.punkte) || 0 }));
+    if (!d || !Array.isArray(d.spieler) || d.spieler.length < 2 || d.spieler.length > 6) return null;
+    const z = neuerZustand(d.spieler.map((s) => ({
+      name: String(s.name || "Spieler"),
+      punkte: Number(s.punkte) || 0,
+      bot: !!s.bot
+    })), d.modus);
     z.dran = Number(d.dran) || 0;
     if (z.dran >= z.spieler.length) z.dran = 0;
     z.wuerfel = Array.isArray(d.wuerfel) && d.wuerfel.length === 6 ? d.wuerfel.map(Number) : [0, 0, 0, 0, 0, 0];
@@ -1749,8 +2092,11 @@ function laden() {
     z.wurfPunkte = 0;
     z.zugPunkte = Number(d.zugPunkte) || 0;
     z.wuerfe = Number(d.wuerfe) || 0;
+    z.tick = Number(d.tick) || 0;
     z.laeuft = !!d.laeuft;
     z.beendet = !!d.beendet;
+    z.pausiert = false;
+    z.sieger = typeof d.sieger === "string" ? d.sieger : "";
     z.hinweis = typeof d.hinweis === "string" ? d.hinweis : "";
     z.hinweisArt = typeof d.hinweisArt === "string" ? d.hinweisArt : "";
     return z.laeuft && !z.beendet ? z : null;
@@ -1762,20 +2108,46 @@ function laden() {
 /* ============================================================
    Ansichten (nur Optik, der Spielstand bleibt)
    ============================================================ */
-function stilSetzen(stil) {
-  if (!["normal", "maedchen", "buben"].includes(stil)) stil = "normal";
+function stilWert(stil) {
+  return ["normal", "maedchen", "buben"].includes(stil) ? stil : "normal";
+}
+
+function stilSetzen(stil, merken) {
+  stil = stilWert(stil);
   document.body.dataset.stil = stil;
   const meta = document.querySelector('meta[name="color-scheme"]');
   if (meta) meta.setAttribute("content", stil === "maedchen" ? "light" : "dark");
+  document.documentElement.style.colorScheme = stil === "maedchen" ? "light" : "dark";
+  const knoepfeStil = $("stilKnoepfe");
+  if (knoepfeStil) {
+    knoepfeStil.querySelectorAll("button[data-stil]").forEach((b) => {
+      b.setAttribute("aria-pressed", b.dataset.stil === stil ? "true" : "false");
+    });
+  }
+  if ($("stilBlock")) $("stilBlock").hidden = stilVonAussen;
+  if (merken) {
+    try { localStorage.setItem(STIL_SCHLUESSEL, stil); } catch (e) { /* ohne */ }
+  }
+}
+
+function eigenerStil() {
+  let gespeichert = "";
+  try { gespeichert = localStorage.getItem(STIL_SCHLUESSEL) || ""; } catch (e) { /* ohne */ }
+  if (gespeichert) return stilWert(gespeichert);
+  return "normal";
 }
 
 /* ============================================================
    Startbildschirm
    ============================================================ */
-function namensFelder() {
-  const anzahl = Number($("anzahl").value);
+function namensZeilen() {
+  const anzahl = Math.min(6, Math.max(2, Number($("anzahl").value) || 2));
+  const modus = $("modus").value;
   const liste = $("namensListe");
-  const alt = [...liste.querySelectorAll("input")].map((i) => i.value);
+  const alt = [...liste.querySelectorAll(".zeile")].map((z) => ({
+    name: z.querySelector("input") ? z.querySelector("input").value : "",
+    bot: z.querySelector("select") ? z.querySelector("select").value === "bot" : false
+  }));
   liste.innerHTML = "";
   for (let i = 0; i < anzahl; i++) {
     const zeile = document.createElement("div");
@@ -1786,355 +2158,397 @@ function namensFelder() {
     const feld = document.createElement("input");
     feld.type = "text";
     feld.maxLength = 14;
-    feld.value = alt[i] || "Spieler " + (i + 1);
+    const vorgabe = i === 0 ? "Spieler 1" : (modus === "bot" ? "Bot " + i : "Spieler " + (i + 1));
+    feld.value = (alt[i] && alt[i].name) || vorgabe;
     feld.setAttribute("aria-label", "Name von Spieler " + (i + 1));
-    zeile.append(nr, feld);
+    const botWahl = document.createElement("select");
+    botWahl.className = "bot-wahl";
+    botWahl.setAttribute("aria-label", "Spieler " + (i + 1) + ": Mensch oder Bot");
+    botWahl.innerHTML = '<option value="mensch">Mensch</option><option value="bot">Bot</option>';
+    const bot = alt[i] ? alt[i].bot : (modus === "bot" && i > 0);
+    botWahl.value = bot ? "bot" : "mensch";
+    zeile.append(nr, feld, botWahl);
     liste.appendChild(zeile);
   }
 }
 
+function spielerAusFormular() {
+  const zeilen = [...$("namensListe").querySelectorAll(".zeile")];
+  const spieler = zeilen.map((z, i) => {
+    const name = (z.querySelector("input").value.trim() || "Spieler " + (i + 1)).slice(0, 14);
+    const bot = z.querySelector("select").value === "bot";
+    return { name: name, bot: bot };
+  });
+  return spieler;
+}
+
 function zeigeStart() {
+  botTimerLoeschen();
+  versteckePech();
+  // Die Auswahl steht vor der Partie: Ein laufendes Spiel wird nicht mehr
+  // fortgesetzt, der gespeicherte Stand bleibt aber zum Fortsetzen erhalten.
+  S.laeuft = false;
+  S.beendet = false;
+  S.pausiert = false;
+  $("pauseSchleier").hidden = true;
   const gespeichert = laden();
   $("weiterSpielKnopf").hidden = !gespeichert;
   if (S.spieler && S.spieler.length >= 2) {
     $("anzahl").value = String(Math.min(6, Math.max(2, S.spieler.length)));
+    $("modus").value = S.modus === "bot" ? "bot" : "lokal";
   }
-  namensFelder();
+  namensZeilen();
+  $("btnPause").disabled = true;
   $("startSchleier").hidden = false;
 }
 
-$("anzahl").addEventListener("change", namensFelder);
-
-$("startKnopf").addEventListener("click", () => {
-  if (ONLINE) { onlineAktion("start"); return; }
-  const namen = [...$("namensListe").querySelectorAll("input")]
-    .map((i, k) => (i.value.trim() || "Spieler " + (k + 1)).slice(0, 14));
-  starteSpiel(namen);
-});
-
-$("weiterSpielKnopf").addEventListener("click", () => {
-  const gespeichert = laden();
-  if (!gespeichert) return;
-  S = gespeichert;
-  $("startSchleier").hidden = true;
-  hinweis("Weiter geht's: " + aktiverSpieler().name + " ist dran.", "");
-  zeichne();
-});
-
-$("neuesSpiel").addEventListener("click", zeigeStart);
-$("bereitKnopf").addEventListener("click", () => onlineAktion("ready"));
-$("nochmalKnopf").addEventListener("click", () => {
-  if (ONLINE) { $("endeSchleier").hidden = true; onlineAktion("reset"); return; }
-  $("endeSchleier").hidden = true;
-  zeigeStart();
-});
-$("wuerfelnKnopf").addEventListener("click", wuerfelnOderWeiter);
-$("sichernKnopf").addEventListener("click", sichern);
-
-
-/* Tastatur: Leertaste und W würfeln (weiter), S sichert. */
-document.addEventListener("keydown", (e) => {
-  if (e.target instanceof HTMLElement &&
-      (e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) return;
-  if ((e.key === " " || e.key.toLowerCase() === "w") && !$("wuerfelnKnopf").disabled) {
-    e.preventDefault();
-    wuerfelnOderWeiter();
-  } else if (e.key.toLowerCase() === "s" && !$("sichernKnopf").disabled) {
-    e.preventDefault();
-    sichern();
+function startVomFormular() {
+  const spieler = spielerAusFormular();
+  if (!spieler.some((s) => !s.bot)) {
+    hinweis("Mindestens ein Platz muss ein Mensch sein.", "schlecht");
+    const erste = $("namensListe").querySelector(".zeile select");
+    if (erste) erste.value = "mensch";
+    return false;
   }
-});
+  const modus = $("modus").value === "bot" && spieler.some((s) => s.bot) ? "bot" : "lokal";
+  starteSpiel(spieler, modus);
+  return true;
+}
 
 /* ============================================================
-   Online über den Connector (?room=…&id=…)
-   Der Server führt den Spielstand, die Seite zeigt ihn nur an.
+   Ereignisse und Schnittstelle 2.0
    ============================================================ */
-const PARAMS = new URLSearchParams(location.search);
-const ONLINE = PARAMS.has("room") && PARAMS.has("id");
-const ROOM = PARAMS.get("room") || "";
-const SPIELER_ID = PARAMS.get("id") || "";
-const ONLINE_API = "/api/zehntausend";
-let onlineSpiel = null;
-let onlineBusy = false;
-
-async function nachAnmelden() {
-  const ich = onlineSpiel ? onlineSpiel.players.find((p) => p.id === SPIELER_ID) : null;
-  const name = ich ? ich.name : (PARAMS.get("name") || "Spieler");
+function feuere(was, detail) {
   try {
-    await fetch("/api/presence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ room: ROOM, id: SPIELER_ID, name: name, active: true })
-    });
-  } catch (e) { /* beim nächsten Mal wieder */ }
+    window.dispatchEvent(new CustomEvent("zehntausend:" + was, { detail: detail || {} }));
+  } catch (e) { /* Ereignisse sind Beiwerk */ }
 }
 
-async function onlineFetch(url, optionen) {
-  let antwort = await fetch(url, optionen);
-  if (antwort.status === 403) {
-    const text = (await antwort.text()).trim();
-    // Lebenszeichen verloren (WLAN weg, Handy gesperrt): neu anmelden und
-    // dieselbe Anfrage wiederholen, statt in einer Sackgasse zu enden.
-    if (!/beitreten/i.test(text)) throw Error(text || "Die Aktion ist fehlgeschlagen.");
-    await nachAnmelden();
-    antwort = await fetch(url, optionen);
-  }
-  if (!antwort.ok) throw Error((await antwort.text()).trim() || "Die Aktion ist fehlgeschlagen.");
-  return antwort.json();
+function kopie(obj) {
+  return JSON.parse(JSON.stringify(obj));
 }
 
-function blinkeWuerfel() {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  knoepfe.forEach((b, i) => {
-    if (S.gesichert[i] || S.wuerfel[i] === 0) return;
-    b.classList.add("rollt");
-    setTimeout(() => b.classList.remove("rollt"), 420);
+function zustandsKopie() {
+  const p = aktiverSpieler();
+  return {
+    laeuft: !!(S.laeuft && !S.beendet),
+    pausiert: !!S.pausiert,
+    tick: Number(S.tick) || 0,
+    richtung: { x: 0, y: 0 },
+    level: 1,
+    levelAnzahl: 1,
+    punkte: p ? p.punkte : 0,
+    extras: [],
+    startbildschirm: !S.laeuft,
+    beendet: !!S.beendet,
+    sieger: S.sieger || "",
+    modus: S.modus,
+    stil: document.body.dataset.stil || "normal",
+    stilWahl: !stilVonAussen,
+    spieler: S.spieler.map((sp) => ({ name: sp.name, punkte: sp.punkte, bot: !!sp.bot })),
+    dran: S.dran,
+    amZug: p ? p.name : "",
+    wuerfel: S.wuerfel.slice(),
+    gesichert: S.gesichert.slice(),
+    auswahl: S.auswahl.slice(),
+    wurfPunkte: S.wurfPunkte,
+    zugPunkte: S.zugPunkte,
+    wuerfe: S.wuerfe,
+    botDenkt: !!S.botDenkt,
+    ziel: ZIEL,
+    einstieg: EINSTIEG
+  };
+}
+
+function einstellungsKopie() {
+  return {
+    modi: ["bot", "lokal"],
+    modus: S.modus,
+    anzahl: [2, 3, 4, 5, 6],
+    spielerAnzahl: S.spieler.length,
+    stile: ["normal", "maedchen", "buben"],
+    stil: document.body.dataset.stil || "normal",
+    stilWahl: !stilVonAussen,
+    spieler: S.spieler.map((sp) => sp.name),
+    ziel: ZIEL,
+    einstieg: EINSTIEG
+  };
+}
+
+function spielerAusKonfiguration(daten) {
+  const liste = Array.isArray(daten) ? daten : [];
+  if (liste.length < 2 || liste.length > 6) return null;
+  const spieler = liste.map((e, i) => {
+    if (typeof e === "string") return { name: (e.trim() || "Spieler " + (i + 1)).slice(0, 14), bot: false };
+    if (!e || typeof e !== "object") return null;
+    const name = String(e.name || "Spieler " + (i + 1)).trim().slice(0, 14) || "Spieler " + (i + 1);
+    return { name: name, bot: !!e.bot };
   });
+  if (spieler.some((s) => !s)) return null;
+  return spieler;
 }
 
-function uebernehmeOnline(g) {
-  const alt = onlineSpiel;
-  if (!g) {
-    // Keine Runde im Raum: die Spielkarte im Connector eröffnet eine.
-    S.laeuft = false;
-    S.spieler = [];
-    S.wuerfel = [0, 0, 0, 0, 0, 0];
-    S.gesichert = [false, false, false, false, false, false];
-    S.zugPunkte = 0;
-    S.wuerfe = 0;
-    $("startSchleier").hidden = true;
-    $("endeSchleier").hidden = true;
-    setzeHinweis("In diesem Spielraum läuft gerade keine 10.000-Runde. Eröffne sie über die Spielkarte im Connector – sie startet dann hier.", "");
-    zeichne();
-    return;
-  }
-  const vorher = S.wuerfel.slice();
-  onlineSpiel = g;
-  S.spieler = g.players.map((p) => ({ name: p.name, punkte: p.punkte }));
-  S.dran = Math.min(g.current || 0, Math.max(0, S.spieler.length - 1));
-  S.wuerfel = Array.from({ length: 6 }, (_, i) => (g.wuerfel ? g.wuerfel[i] || 0 : 0));
-  S.gesichert = Array.from({ length: 6 }, (_, i) => !!(g.gesichert && g.gesichert[i]));
-  S.wurfGesichert = Array.from({ length: 6 }, (_, i) => !!(g.wurfGesichert && g.wurfGesichert[i]));
-  S.wurfPunkte = g.wurfPunkte || 0;
-  // Die Abfrage läuft alle 1,2 s: bei einem neuen Wurf fällt die eigene
-  // Auswahl weg, sonst bleiben nur die inzwischen gesicherten Würfel draußen.
-  const neuerStand = !alt || alt.wuerfe !== g.wuerfe ||
-    JSON.stringify(alt.wuerfel) !== JSON.stringify(g.wuerfel) ||
-    alt.current !== g.current;
-  if (neuerStand) S.auswahl = [false, false, false, false, false, false];
-  else S.auswahl = S.auswahl.map((an, i) => an && !S.gesichert[i]);
-  S.zugPunkte = g.zugPunkte || 0;
-  S.wuerfe = g.wuerfe || 0;
-  S.laeuft = g.status === "active";
-  S.beendet = g.status === "finished";
-  S.gesperrt = false;
+let apiBereit = false;
+const API = {
+  version: "2.0.0",
+  get bereit() { return apiBereit; },
+  whenReady() {
+    return Promise.resolve({ ok: true, version: "2.0.0" });
+  },
+  start(konfiguration) {
+    let k = konfiguration;
+    if (k === undefined || k === null) k = {};
+    if (typeof k !== "object" || Array.isArray(k)) {
+      return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+    }
+    const erlaubt = ["stil", "spieler", "modus", "anzahl"];
+    for (const feld of Object.keys(k)) {
+      if (!Object.prototype.hasOwnProperty.call(k, feld)) continue;
+      if (!erlaubt.includes(feld)) return { ok: false, fehler: "unbekanntes-feld", feld: feld };
+    }
+    if (Object.prototype.hasOwnProperty.call(k, "stil")) {
+      stilVonAussen = true;
+      stilSetzen(k.stil, false);
+    }
+    const hatStil = Object.prototype.hasOwnProperty.call(k, "stil");
+    const hatSpieler = Object.prototype.hasOwnProperty.call(k, "spieler");
+    const hatModus = Object.prototype.hasOwnProperty.call(k, "modus");
+    const hatAnzahl = Object.prototype.hasOwnProperty.call(k, "anzahl");
+    if (hatStil && !hatSpieler && !hatModus && !hatAnzahl) {
+      return { ok: true, stil: document.body.dataset.stil || "normal" };
+    }
+    if (S.laeuft && !S.beendet) return { ok: false, fehler: "spiel-laeuft" };
 
-  if (g.status === "invited") {
-    S.laeuft = false;
-    zeigeLobby(g);
-    hinweis(g.note || "", "");
-    zeichne();
-    return;
-  }
-
-  $("startSchleier").hidden = true;
-  if (g.status === "finished") {
-    zeigeEndeOnline(g);
-    hinweis(g.note || "", "gut");
-    zeichne();
-    return;
-  }
-
-  $("endeSchleier").hidden = true;
-  // Der Server hat schon gewechselt: die Meldung zeigt die Würfel des
-  // Fehlwurfs noch einmal und nennt den Nächsten.
-  if (g.fehlwurf && g.fehlwurf.nr !== pechMarke) {
-    pechMarke = g.fehlwurf.nr;
-    zeigePech(g.fehlwurf.wuerfel || [], g.fehlwurf.verloren || 0, g.fehlwurf.naechster || "der Nächste");
-  }
-  const neu = S.wuerfel.some((w, i) => w !== vorher[i]);
-  zeichne();
-  if (neu) blinkeWuerfel();
-  if (!meinZug()) {
-    const p = g.players[g.current];
-    hinweis("Warte auf " + (p ? p.name : "den Nächsten") + " …", "");
-  } else if (g.note && neuerStand) {
-    hinweis(g.note, "");
-  }
-}
-
-function zeigeLobby(g) {
-  $("startSchleier").hidden = false;
-  $("endeSchleier").hidden = true;
-  $("anzahlFeld").hidden = true;
-  $("namensListe").hidden = true;
-  $("weiterSpielKnopf").hidden = true;
-
-  const kopf = document.querySelector("#startSchleier .karte h2");
-  if (kopf) kopf.textContent = "10.000";
-  const unter = document.querySelector("#startSchleier .karte p.unter");
-  if (unter) {
-    unter.textContent = "Im Spielraum " + ROOM + " – " + g.players.length +
-      " von 6 am Tisch. Alle drücken BEREIT, dann startet der Gastgeber.";
-  }
-
-  const liste = $("lobbyListe");
-  liste.hidden = false;
-  liste.innerHTML = "";
-  g.players.forEach((p) => {
-    const zeile = document.createElement("div");
-    zeile.className = "zeile";
-    const nr = document.createElement("span");
-    nr.className = "nr";
-    nr.textContent = p.ready ? "✓" : "·";
-    const nm = document.createElement("span");
-    nm.textContent = p.name + (p.id === SPIELER_ID ? " (Du)" : "") + (p.id === g.hostId ? " · Gastgeber" : "");
-    nm.style.cssText = "flex:1;color:var(--text)";
-    const st = document.createElement("span");
-    st.textContent = p.ready ? "BEREIT" : "WARTET";
-    st.style.cssText = "font-size:11px;letter-spacing:.08em;color:var(--muted)";
-    zeile.append(nr, nm, st);
-    liste.appendChild(zeile);
-  });
-
-  const ich = g.players.find((p) => p.id === SPIELER_ID);
-  const bereit = $("bereitKnopf");
-  bereit.hidden = !ich;
-  bereit.textContent = ich && ich.ready ? "Doch nicht bereit" : "Bereit";
-
-  const alle = g.players.length >= 2 && g.players.every((p) => p.ready);
-  const start = $("startKnopf");
-  start.hidden = g.hostId !== SPIELER_ID;
-  start.disabled = !alle;
-  start.textContent = alle ? "Spiel starten" : "Erst alle bereit";
-}
-
-function zeigeEndeOnline(g) {
-  const rang = [...g.players].sort((a, b) => b.punkte - a.punkte);
-  $("endeTitel").textContent = (g.winner || rang[0].name) + " gewinnt";
-  $("endeUnter").textContent = rang[0].punkte.toLocaleString("de-DE") +
-    " Punkte – Ziel waren " + ZIEL.toLocaleString("de-DE") + ".";
-  const liste = $("rangListe");
-  liste.innerHTML = "";
-  rang.forEach((p, platz) => {
-    const li = document.createElement("li");
-    const a = document.createElement("span");
-    a.className = "platz";
-    a.textContent = platz + 1 + ".";
-    const b = document.createElement("span");
-    b.textContent = p.name;
-    const c = document.createElement("span");
-    c.className = "punkte";
-    c.textContent = p.punkte.toLocaleString("de-DE");
-    li.append(a, b, c);
-    liste.appendChild(li);
-  });
-  $("nochmalKnopf").textContent = "Neue Runde";
-  // Jeder nach seinem eigenen Platz: Sieger bekommt den Gewinnspruch,
-  // alle anderen den Pechspruch.
-  if (window.TGErgebnis) {
-    const eigen = g.players.find((p) => p.id === SPIELER_ID);
-    const bester = g.winner || rang[0].name;
-    if (eigen && eigen.name !== bester) TGErgebnis.verloren();
-    else TGErgebnis.gewonnen();
-  }
-  $("endeSchleier").hidden = false;
-  $("startSchleier").hidden = true;
-}
-
-async function onlineHolen() {
-  if (onlineBusy) return;
-  try {
-    const d = await onlineFetch(
-      ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&id=" + encodeURIComponent(SPIELER_ID),
-      { cache: "no-store" }
-    );
-    uebernehmeOnline(d.game);
-  } catch (e) {
-    setzeHinweis("Verbindung wackelt – die Seite versucht es weiter …", "");
-  }
-}
-
-async function onlineAktion(aktion) {
-  if (onlineBusy) return;
-  onlineBusy = true;
-  try {
-    const d = await onlineFetch(
-      ONLINE_API + "?room=" + encodeURIComponent(ROOM) + "&action=" + encodeURIComponent(aktion),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: SPIELER_ID, auswahl: S.auswahl.slice() })
+    let modus = S.modus;
+    if (hatModus) {
+      if (k.modus !== "bot" && k.modus !== "lokal") {
+        return { ok: false, fehler: "modus-muss-bot-oder-lokal-sein" };
       }
-    );
-    uebernehmeOnline(d.game);
-  } catch (e) {
-    hinweis(e.message, "schlecht");
-  } finally {
-    onlineBusy = false;
+      modus = k.modus;
+    }
+    let anzahl = 2;
+    if (hatAnzahl) {
+      if (!Number.isInteger(k.anzahl) || k.anzahl < 2 || k.anzahl > 6) {
+        return { ok: false, fehler: "anzahl-muss-2-bis-6-sein" };
+      }
+      anzahl = k.anzahl;
+    }
+    let spieler = null;
+    if (hatSpieler) {
+      if (!Array.isArray(k.spieler)) return { ok: false, fehler: "spieler-muessen-liste-sein" };
+      spieler = spielerAusKonfiguration(k.spieler);
+      if (!spieler) return { ok: false, fehler: "spieler-muessen-2-bis-6-sein" };
+    } else if (!hatModus && !hatAnzahl && !$("startSchleier").hidden) {
+      // start() ohne Angaben übernimmt die sichtbare Auswahl.
+      spieler = spielerAusFormular();
+    } else {
+      const n = hatAnzahl ? anzahl : 2;
+      spieler = Array.from({ length: n }, (_, i) => ({
+        name: i === 0 ? "Spieler 1" : (modus === "bot" ? "Bot " + i : "Spieler " + (i + 1)),
+        bot: modus === "bot" && i > 0
+      }));
+    }
+    if (!spieler.some((s) => !s.bot)) {
+      return { ok: false, fehler: "spieler-braucht-mindestens-einen-menschen" };
+    }
+    if (!hatModus) modus = spieler.some((s) => s.bot) ? "bot" : "lokal";
+    if (modus === "bot" && !spieler.some((s) => s.bot)) {
+      return { ok: false, fehler: "bot-modus-braucht-einen-bot" };
+    }
+    starteSpiel(spieler, modus);
+    return {
+      ok: true,
+      modus: modus,
+      stil: document.body.dataset.stil || "normal",
+      spieler: spieler.map((s) => ({ name: s.name, bot: !!s.bot }))
+    };
+  },
+  einstellungen() {
+    return kopie(einstellungsKopie());
+  },
+  zustand() {
+    return kopie(zustandsKopie());
+  },
+  startbildschirm() {
+    botTimerLoeschen();
+    S.laeuft = false;
+    S.beendet = false;
+    S.pausiert = false;
+    $("endeSchleier").hidden = true;
+    $("pauseSchleier").hidden = true;
+    versteckePech();
+    // stop() bricht ab: Der alte Stand darf nicht als „Fortsetzen“ bleiben.
+    try { localStorage.removeItem(SPEICHER_SPIEL); } catch (e) { /* ohne */ }
+    zeigeStart();
+    return { ok: true };
+  },
+  stop() {
+    return this.startbildschirm();
+  },
+  pause() {
+    if (!S.laeuft || S.beendet) return { ok: false, fehler: "spiel-laeuft-nicht" };
+    if (!pausieren()) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    return { ok: true, pausiert: true };
+  },
+  resume() {
+    if (!S.laeuft || S.beendet) return { ok: false, fehler: "spiel-laeuft-nicht" };
+    fortsetzen();
+    return { ok: true, pausiert: false };
+  },
+  aktion(name, daten) {
+    if (daten !== undefined && daten !== null && (typeof daten !== "object" || Array.isArray(daten))) {
+      return { ok: false, fehler: "daten-muessen-objekt-sein" };
+    }
+    const d = daten || {};
+    switch (name) {
+      case "wuerfeln":
+        if (!S.laeuft || S.beendet || S.pausiert) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        if (istBot(aktiverSpieler()) || S.gesperrt || S.wuerfe > 0) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        wuerfeln();
+        return { ok: true };
+      case "weiterwuerfeln":
+        if (!darfWeiter()) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        weiterwuerfeln();
+        return { ok: true };
+      case "sichern":
+        if (!darfSichern()) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        sichern();
+        return { ok: true };
+      case "waehlen": {
+        if (!menschDran() || S.gesperrt) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        const i = Number(d.index);
+        if (!Number.isInteger(i) || i < 0 || i > 5) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        wuerfelKlick(i);
+        return { ok: true, auswahl: S.auswahl.slice() };
+      }
+      case "wertung": {
+        if (!Array.isArray(d.wuerfel)) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        const werte = d.wuerfel.filter((w) => Number.isInteger(w) && w >= 1 && w <= 6);
+        return { ok: true, punkte: REGELN.punkte(werte), zaehlt: REGELN.hatPunkte(werte) };
+      }
+      case "pause":
+        return this.pause();
+      case "fortsetzen":
+        return this.resume();
+      case "neu":
+        if (!S.laeuft || S.beendet) return { ok: false, fehler: "spiel-laeuft-nicht" };
+        starteSpiel(S.spieler.map((sp) => ({ name: sp.name, bot: !!sp.bot })), S.modus);
+        return { ok: true };
+      case "start":
+        return this.start();
+      case "regeln":
+        $("btnRegeln").click();
+        return { ok: true };
+      default:
+        return { ok: false, fehler: "unbekannte-aktion" };
+    }
   }
-}
-
-function onlineStarten() {
-  $("neuesSpiel").hidden = true;
-  $("weiterSpielKnopf").hidden = true;
-  $("anzahlFeld").hidden = true;
-  $("namensListe").hidden = true;
-  $("lobbyListe").hidden = false;
-  $("bereitKnopf").hidden = false;
-  $("startSchleier").hidden = false;
-  $("endeSchleier").hidden = true;
-  $("startKnopf").hidden = true;
-  S = neuerZustand(["Spieler", "Spieler"]);
-  pechMarke = 0;
-  versteckePech();
-  setzeHinweis("Verbinde mit dem Spielraum " + ROOM + " …", "");
-  zeichne();
-  // Erst den Platz im Raum sichern, dann den Stand holen.
-  nachAnmelden().then(onlineHolen);
-  setInterval(nachAnmelden, 5000);
-  setInterval(onlineHolen, 1200);
-}
+};
+Object.freeze(API);
+window.Zehntausend = API;
 
 /* ============================================================
-   Anlauf
+   Ereignisse der Oberfläche
    ============================================================ */
-baueWuerfel();
-let gespeicherterStil = "normal";
-gespeicherterStil = TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" });
-/* Dieselbe Stilwahl wie in allen anderen Spielen – sie steht jetzt auch hier
-   im Kopf und speichert unter demselben Schlüssel (tg-stil). */
-stilSetzen(gespeicherterStil);
-TGStil.beiWechsel(() => stilSetzen(TGStil.lokal({ klassisch: "normal", maedchen: "maedchen", buben: "buben" })));
+function initialisieren() {
+  baueWuerfel();
+  stilSetzen(eigenerStil(), false);
 
-if (ONLINE) {
-  // Im Spielraum führt der Server den Stand – nichts aus dem Speicher holen.
-  onlineStarten();
-} else {
-  const fortgesetzt = laden();
-  if (fortgesetzt) {
-    // Eine laufende Partie steht nach dem Neuladen sofort wieder da.
-    S = fortgesetzt;
-    $("startSchleier").hidden = true;
-    zeichne();
-    hinweis("Weiter geht's: " + aktiverSpieler().name + " ist dran. (Neues Spiel startet oben rechts.)", "");
-  } else {
-    zeichne();
-    zeigeStart();
+  $("anzahl").addEventListener("change", namensZeilen);
+  $("modus").addEventListener("change", () => {
+    if ($("modus").value === "bot") {
+      namensZeilen();
+      [...$("namensListe").querySelectorAll(".zeile")].forEach((z, i) => {
+        z.querySelector("select").value = i === 0 ? "mensch" : "bot";
+      });
+    } else {
+      namensZeilen();
+      [...$("namensListe").querySelectorAll(".zeile")].forEach((z) => {
+        z.querySelector("select").value = "mensch";
+      });
+    }
+  });
+
+  const stile = $("stilKnoepfe");
+  if (stile) {
+    stile.querySelectorAll("button[data-stil]").forEach((b) => {
+      b.addEventListener("click", () => stilSetzen(b.dataset.stil, true));
+    });
   }
+
+  $("startKnopf").addEventListener("click", startVomFormular);
+  $("weiterSpielKnopf").addEventListener("click", () => {
+    const gespeichert = laden();
+    if (!gespeichert) return;
+    S = gespeichert;
+    $("startSchleier").hidden = true;
+    hinweis("Weiter geht's: " + aktiverSpieler().name + " ist dran.", "");
+    zeichne();
+    botPruefen(800);
+  });
+  $("neuesSpiel").addEventListener("click", zeigeStart);
+  $("btnRegeln").addEventListener("click", () => {
+    const mehr = document.querySelector(".so-gehts .so-mehr");
+    if (mehr) mehr.click();
+  });
+  $("btnPause").addEventListener("click", () => {
+    if (S.pausiert) fortsetzen();
+    else pausieren();
+  });
+  $("btnWeiter").addEventListener("click", fortsetzen);
+  $("btnPauseNeu").addEventListener("click", () => {
+    const spieler = S.spieler.map((sp) => ({ name: sp.name, bot: !!sp.bot }));
+    const modus = S.modus;
+    fortsetzen();
+    starteSpiel(spieler, modus);
+  });
+  $("btnPauseStart").addEventListener("click", () => { zeigeStart(); });
+  $("btnZurueck").addEventListener("click", () => {
+    if (typeof window.tgZurueck === "function") window.tgZurueck();
+    else location.href = "../../spiele.html";
+  });
+
+  $("nochmalKnopf").addEventListener("click", () => {
+    $("endeSchleier").hidden = true;
+    zeigeStart();
+  });
+  $("wuerfelnKnopf").addEventListener("click", wuerfelnOderWeiter);
+  $("sichernKnopf").addEventListener("click", sichern);
+
+  document.addEventListener("keydown", (e) => {
+    const fokus = document.activeElement;
+    if (fokus && /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(fokus.tagName)) return;
+    const t = e.key.toLowerCase();
+    if (t === "p") {
+      e.preventDefault();
+      if (S.pausiert) fortsetzen();
+      else pausieren();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (!$("pauseSchleier").hidden) { fortsetzen(); return; }
+      if (!$("endeSchleier").hidden || !$("startSchleier").hidden) return;
+      return;
+    }
+    if ((e.key === " " || t === "w") && !$("wuerfelnKnopf").disabled) {
+      e.preventDefault();
+      wuerfelnOderWeiter();
+    } else if (t === "s" && !$("sichernKnopf").disabled) {
+      e.preventDefault();
+      sichern();
+    }
+  });
+
+  zeichne();
+  zeigeStart();
+
+  apiBereit = true;
+  feuere("bereit", { version: API.version });
 }
 
-/* Prüfhaken für die Werkzeuge: ersetzt den Zufall durch feste Werte.
-   Im Spiel selbst wird er nicht gebraucht. */
-window.TG10k = {
-  REGELN: REGELN,
-  ziel: ZIEL,
-  einstieg: EINSTIEG,
-  zustand: () => JSON.parse(JSON.stringify(S)),
-  setzeZufall: (f) => { zufall = typeof f === "function" ? f : () => 1 + Math.floor(Math.random() * 6); }
-};
+initialisieren();
+})();
 </script>
-<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
-<script src="../../ergebnis.js"></script>
+<script src="../../zurueck.js" data-kein-knopf="1"></script>
 </body>
 </html>

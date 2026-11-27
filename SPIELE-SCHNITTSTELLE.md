@@ -623,6 +623,46 @@ bei seinem eigenen Umbau.
   kein Überlauf (Seitenbreite 390), keine Karte außerhalb, alle Stapel
   sichtbar; PC 1280×800: Karten 151 px breit, Bahn 1118 px.
 
+- **Zweite Fassung nach dem Standard (27.11.2026):**
+  `spiele/brettspiele/zehntausend/zehntausend.html`, Schnittstelle **2.0.0**
+  wie Pimmel – `version`, `bereit`, `whenReady()`, `start()`,
+  `einstellungen()`, `zustand()`, `startbildschirm()`, `stop()`, `pause()`,
+  `resume()`, `aktion(name, daten)`, Ereignisse
+  `zehntausend:bereit|ende|pausiert|weiter` (zusätzlich `wurf`, `zug`, `neu`).
+  Kein `/api/`, kein `room`/`id` aus der Adresse, `token.js` und
+  `ergebnis.js` sind entfernt; der Rückweg läuft über `zurueck.js`.
+- **10.000-Start und -Modi:** eigener Startbildschirm mit drei Stilen,
+  `bot`/`lokal`, 2–6 Spielern und je Platz Mensch/Bot. `start({stil})`
+  richtet nur die Welt ein und lässt die Auswahl stehen (Connector-Weg);
+  `start({spieler, modus, anzahl})` beginnt eine Partie; `start()` ohne Angaben übernimmt die sichtbare Auswahl. `einstellungen()`
+  nennt `modi`, `modus`, `anzahl`, `stile`, `stil`, `stilWahl`, `spieler`,
+  `ziel`, `einstieg`; `zustand()` ergänzt `modus`, `stil`, `stilWahl`,
+  `spieler`, `dran`, `amZug`, `wuerfel`, `gesichert`, `auswahl`,
+  `wurfPunkte`, `zugPunkte`, `wuerfe`, `botDenkt`, `ziel`, `einstieg`,
+  `beendet`, `sieger`.
+- **10.000-Aktionen:** `wuerfeln`, `weiterwuerfeln`, `sichern`,
+  `waehlen {index}` (0–5), `wertung {wuerfel}` (reine Prüffunktion),
+  `pause`, `fortsetzen`, `neu`, `start`, `regeln` – alle über dieselben
+  internen Funktionen wie Maus, Touch, Tastatur und Bot. Eigene
+  Startfehlercodes: `spieler-muessen-2-bis-6-sein`,
+  `spieler-braucht-mindestens-einen-menschen`,
+  `modus-muss-bot-oder-lokal-sein`, `anzahl-muss-2-bis-6-sein`.
+- **10.000-Wertung (fest):** 1 = 100, 5 = 50, Dreierpasch 1er = 1.000, sonst
+  Augenzahl × 100, jeder weitere gleiche Würfel zählt den Satz erneut; nur
+  1/5/ab drei gleiche zählen; Einstieg 350, Ziel 10.000. Die Regel steht im
+  Spiel und im Regelblatt.
+- **10.000-Bot:** gehört zum Spiel, spielt über dieselben Aktionen, legt alle
+  wertbaren Würfel beiseite und sichert ab 350 (früher bei wenigen freien
+  Würfeln oder ab 1.000). Kein Server-Bot im lokalen Betrieb.
+- **10.000-Speicher:** `tg-zehntausend-spiel` (laufende Partie, alter
+  Schlüssel bewusst behalten) und `zehntausendStil` (eigene Stilwahl).
+- **10.000-Connector:** `Zehntausend` steht in `SPIEL_API_NAMEN` beider
+  `connector.html`; der Rahmen übergibt den Stil, die Stilkachel ist dann
+  verborgen. **Offen:** eine 2.0-Online-Brücke (Lobby, `start({online})`,
+  `aktion("stand")`) gibt es für 10.000 noch nicht; die alte `/api/`- und
+  `?room&id`-Logik ist auftragsgemäß entfernt. Die Online-Kachel des
+  Registers bleibt vorerst bestehen und öffnet die lokale Auswahl.
+
 ## 12. Prüfliste für ein neues Spiel
 
 1. Ohne Konnektor geöffnet: Startbildschirm, Start, Pause, Neustart, Ende.

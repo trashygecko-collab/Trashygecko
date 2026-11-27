@@ -5,6 +5,113 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · 10.000: eigenständig, Bot und Schnittstelle 2.0
+
+**Auftrag:** Das vorhandene Würfelspiel 10.000 vollständig überarbeiten –
+eigener Startbildschirm mit Stil-, Modus-, Spielerzahl- und Bot-Wahl, drei
+eigenständige Grafikstile, Bot, lokale Mehrspieler-Runden, Pause, Regeln,
+Schnittstelle 2.0 und Connector-Anbindung. Danach testen, dokumentieren,
+beide Ablagen spiegeln und committen.
+
+**Umgesetzt**
+
+- **Sicherung vor dem Umbau:**
+  `sicherung/zehntausend-schnittstelle-2026-11-27/zehntausend.html`
+  (71.147 Bytes, alte Fassung mit `/api/zehntausend` und `?room&id`).
+- **Mechanik und Wertung unverändert:** sechs Würfel, 1 = 100, 5 = 50,
+  Dreierpasch 1er = 1.000, sonst Augenzahl × 100, jeder weitere gleiche
+  Würfel zählt den Satz erneut; nur 1/5/ab drei gleiche zählen; Einstieg
+  350, Ziel 10.000. Die Wertung steht als reine `REGELN`-Funktion im Spiel
+  und wechselt während einer Partie nicht.
+- **Startbildschirm im Spiel:** Stilwahl (Normal/Mädchen/Buben), Spielart
+  (Einzelspieler gegen Bot oder Mehrspieler an einem Gerät), Spielerzahl
+  2–6, je Platz Name und Mensch/Bot, „Spiel starten“ und „Laufendes Spiel
+  fortsetzen“. Ohne Spielstand öffnet immer diese Auswahl.
+- **Modi:** Einzelspieler gegen einen oder mehrere Bots, zwei bis sechs
+  Menschen an einem Gerät, gemischte Sitze. Wer am Zug ist, steht in der
+  Kopfzeile und wird in der Spielerliste hervorgehoben.
+- **Bot gehört zum Spiel:** Er spielt über dieselben Funktionen wie ein
+  Mensch, legt alle wertbaren Würfel beiseite (1er, 5er, vollständige Sätze),
+  würfelt weiter und sichert ab 350 Punkten – früher bei wenigen freien
+  Würfeln oder ab 1.000 Punkten. Seine Auswahl ist kurz sichtbar, damit der
+  Zug nachvollziehbar bleibt. Ein Wächter verhindert doppelte Bot-Züge.
+- **Drei eigenständige Stile:** Normal ist grüner Filz mit Elfenbeinwürfeln
+  und Gold; Mädchen ist Aubergine/Rosé mit gepunkteten Würfeln, weichem
+  Innenrahmen und Serifentiteln; Buben ist Anthrazit/Stahl mit gebürsteten
+  Würfeln, roter Kante und klaren Linien. Die Augenzahlen bleiben in allen
+  Stilen dunkel bzw. hell genug und werden von keiner Dekoration überdeckt.
+- **Animationen:** Würfelrollen mit gestaffelter Bewegung, deutliche
+  Auswahl-/Sichert-Marken, Punktepuls bei Änderungen, Fehlwurmkarte mit
+  den stehen gebliebenen Würfeln. `prefers-reduced-motion` schaltet die
+  Bewegung ab.
+- **Bedienung im Spiel:** Würfeln/Weiterwürfeln, Würfel antippen, Punkte
+  sichern, Pause (Knopf und Taste P), Neues Spiel, Regeln (Kopfknopf und
+  „Spielregeln“), Spielstand (ständige Spielerliste), Rückweg über
+  `zurueck.js`/`window.tgZurueck()`.
+- **Schnittstelle 2.0:** `window.Zehntausend`, Version **2.0.0**, eingefroren;
+  `version`, `bereit`, `whenReady()`, `start()`, `einstellungen()`,
+  `zustand()`, `startbildschirm()`, `stop()`, `pause()`, `resume()`,
+  `aktion(name, daten)`. Ereignisse `zehntausend:bereit|ende|pausiert|weiter`
+  (zusätzlich `wurf`, `zug`, `neu`); `:ende` kommt vor dem Ergebnisfenster.
+- **Aktionen:** `wuerfeln`, `weiterwuerfeln`, `sichern`, `waehlen {index}`,
+  `wertung {wuerfel}` (reine Prüf-/Testfunktion), `pause`, `fortsetzen`,
+  `neu`, `start`, `regeln`. Unbekannte Namen antworten
+  `unbekannte-aktion`, falsche Zustände `aktion-nicht-erlaubt`, `daten`
+  außerhalb eines Objekts `daten-muessen-objekt-sein`.
+- **Konfiguration:** `start({stil})` stellt nur die Welt ein und lässt den
+  Startbildschirm stehen (Connector-Weg); `start({spieler, modus, anzahl})`
+  beginnt eine Partie; `start()` ohne Angaben übernimmt die sichtbare Auswahl. Erlaubt sind `stil`, `spieler`, `modus` (`bot`/`lokal`)
+  und `anzahl` (2–6); eigene Fehlercodes
+  `spieler-muessen-2-bis-6-sein`, `spieler-braucht-mindestens-einen-menschen`,
+  `modus-muss-bot-oder-lokal-sein`, `anzahl-muss-2-bis-6-sein`.
+- **Speicher:** laufende Partie `tg-zehntausend-spiel` (alter Schlüssel
+  bewusst behalten), eigene Stilwahl `zehntausendStil`. Eine beendete oder
+  abgebrochene Partie hinterlässt kein „Fortsetzen“.
+- **Connector:** `Zehntausend` steht in `SPIEL_API_NAMEN` beider
+  `connector.html` (byte-gleich, je 2 NUL-Bytes unverändert). Der Rahmen
+  übergibt den Stil über `start({stil})`; die Stilkachel im Spiel ist dann
+  verborgen. Kein `/api/`, kein `room`/`id` aus der Adresse, kein
+  `token.js`/`ergebnis.js` mehr.
+- **Regelblatt:** `regeln.js` öffnet die vorhandene Regelliste; die neue
+  Zeile erklärt Spielarten und die feste Wertung. Der geschlossene Schleier
+  wird in dieser Seite ausgeblendet, damit er keine Klicks abfängt.
+
+**Geprüft (Chromium, lokaler HTTP-Server, 103 Prüfungen grün)**
+
+- Startbildschirm mit drei Stilen, zwei Spielarten, 2–6 Spielern und
+  Namens-/Bot-Zeilen; `window.Zehntausend` 2.0.0, `whenReady()`, Kopien von
+  `einstellungen()`/`zustand()`, nur ein neuer globaler Name.
+- Wertungen: 1, 5, 1+5, 3×1, 4×2, 5×6, 4×1, unwertbare 2/3/4/6, ungültige
+  Würfel; unbekannte Aktion und falsche Daten.
+- Alle Startfehler ohne Zustandsänderung; `start` während einer Partie,
+  `pause` ohne Partie, `stop` und Fortsetzen.
+- Einzelspieler gegen Bot: Fehlwurf mit stehenden Würfeln, Verlust der
+  Zugpunkte, Bot würfelt selbstständig und gibt den Zug zurück; 1 und 5
+  sichern, unter 350 gesperrt, „Weiterwürfeln“ beschriftet.
+- Vier Menschen, Pause über Kopfzeile und API, genau ein
+  `pausiert`/`weiter`-Ereignis, Regeln öffnen/schließen, Neues Spiel mit
+  Fortsetzen.
+- Sieg über einen gespeicherten Stand: `:ende` mit `grund: gewonnen`,
+  Punkte und Gewinner, Rangliste, Neustart ohne Fortsetzen-Leiche.
+- Drei Stile und Connector-Weg (`start({stil})` startet nicht, Kachel weg)
+  geprüft; Prüfbilder für Start, Normal, Mädchen, Buben (390×844) und
+  Normal (1280×800) angesehen: Würfel groß und lesbar, keine abgeschnittenen
+  Elemente, kein Querscrollen, Handy-Würfel 3 × 2, Knöpfe ≥ 44 px.
+- Keine Konsolen- oder Seitenfehler in den Läufen.
+
+**Offen**
+
+- **Connector-Online für 10.000:** Die alte Fassung holte Raum und Kennung
+  aus der Adresse und sprach `/api/zehntausend` an. Das ist nach
+  Schnittstelle 2.0 verboten und wurde entfernt. Eine 2.0-Brücke im Connector
+  (Lobby, `start({online})`, `aktion("stand")`, `zehntausend:aktion`) gibt es
+  für dieses Spiel noch nicht. Die Online-Kachel im Mehrspieler-Register
+  bleibt deshalb vorerst bestehen, öffnet aber die lokale Auswahl; das ist
+  der einzige offene Punkt. Lokal, gegen Bot und im Connector-Rahmen (Stil)
+  ist die Fassung vollständig.
+
+---
+
 ## 26.11.2026 · Solitär: eigenständig und Schnittstelle 2.0
 
 **Auftrag:** Solitär vollständig eigenständig machen – eigener
