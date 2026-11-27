@@ -143,7 +143,9 @@ body[data-stil="jungs"],body[data-stil="buben"]{
 }
 
 /* Der Startbildschirm ist ein eigener Rasterbereich, kein Feld-Overlay. */
-#startBildschirm{position:relative;inset:auto;flex:1 1 auto;min-height:0}
+#startBildschirm{position:relative;inset:auto;flex:1 1 auto;min-height:0;justify-content:space-evenly}
+#startBildschirm .arcade-start__inhalt{display:flex;justify-content:center;gap:0}
+#startBildschirm .wahl-block{grid-column:auto}
 body.zeigt-start .spiel,body.zeigt-start .fuss{display:none}
 body.zeigt-start .kopf .werte{display:none}
 body:not(.zeigt-start) #startBildschirm{display:none}
@@ -201,7 +203,6 @@ body[data-stil="jungs"] .arcade-knopf--haupt,body[data-stil="buben"] .arcade-kno
   <!-- Startbildschirm: eigener Bereich; das Spielfeld ist darunter verborgen. -->
   <section class="arcade-start" id="startBildschirm" aria-labelledby="startTitel">
     <div class="arcade-start__kopf">
-      <p class="arcade-start__marke" id="startMarke">Arcade · ein Spieler</p>
       <h1 class="arcade-start__titel" id="startTitel">GOLD MINER</h1>
       <p class="arcade-start__unterzeile" id="startUnter">Haken auswerfen, Gold nach oben holen.</p>
     </div>
@@ -215,17 +216,6 @@ body[data-stil="jungs"] .arcade-knopf--haupt,body[data-stil="buben"] .arcade-kno
           <button type="button" class="wahl wahl--klein" data-stil="buben" aria-pressed="false">Buben</button>
         </div>
       </div>
-      <p class="arcade-start__text" id="startText">Der Haken schwingt am Seil: im richtigen Moment auswerfen und Gold, Diamanten und Säcke nach oben ziehen. Steine sind schwer – sie kommen langsam.</p>
-      <ul class="arcade-start__steuerung">
-        <li><span class="taste">Leertaste</span> Haken auswerfen</li>
-        <li><span class="taste">Klick</span> ins Feld tippen</li>
-        <li><span class="taste">P</span> Pause</li>
-      </ul>
-      <ul class="arcade-start__infos">
-        <li><span class="wert">50</span><span class="was">Level</span></li>
-        <li><span class="wert">120 s</span><span class="was">je Level</span></li>
-        <li><span class="wert">1</span><span class="was">Spieler</span></li>
-      </ul>
     </div>
     <div class="arcade-start__knoepfe">
       <button type="button" class="arcade-knopf arcade-knopf--haupt" id="knopfStarten">Graben beginnen</button>
@@ -384,6 +374,115 @@ const ARTEN = {
   sack:    { r: 21, wert: 0,   tempo: 340, farbe: "#c8a06a", rand: "#8a6740" } // Wert beim Aufsammeln ausgewürfelt
 };
 
+/* Gold und Gestein bekommen eigene, je Stil unterschiedliche Farbräume.
+   Die Formen entstehen zusätzlich aus einem festen Startwert je Fundstück:
+   keine zwei Brocken sind gleich, und nichts flackert von Bild zu Bild. */
+const FUND_FARBEN = {
+  klassisch: {
+    gold:  { tief: "#451f02", dunkel: "#8b5008", mitte: "#d3921d", hell: "#f6d26a",
+             glanz: "#fff9df", kante: "#2e1602", fleck: "#ffe9a3" },
+    stein: { tief: "#2e2b26", dunkel: "#5a554d", mitte: "#7e786e", hell: "#b3ada1",
+             glanz: "#ddd7c9", kante: "#1e1c18", ader: "#4a4137" },
+    sack:  { tief: "#4a2c16", dunkel: "#7a4f2c", mitte: "#b98850", hell: "#dcb681",
+             glanz: "#f6dfb8", kante: "#2b190b", band: "#d8b55f" }
+  },
+  maedchen: {
+    gold:  { tief: "#4e211b", dunkel: "#8d4a2c", mitte: "#cf8f3f", hell: "#ffd58a",
+             glanz: "#fff6d8", kante: "#35140f", fleck: "#ffe3ae" },
+    stein: { tief: "#3a3242", dunkel: "#62596b", mitte: "#8a7f8d", hell: "#bdb1ba",
+             glanz: "#f5eaf0", kante: "#2c2434", ader: "#8b6f86" },
+    sack:  { tief: "#4a2430", dunkel: "#7f4254", mitte: "#b96c83", hell: "#e3a5b2",
+             glanz: "#ffe4ec", kante: "#33141e", band: "#f0c89e" }
+  },
+  jungs: {
+    gold:  { tief: "#3b1803", dunkel: "#914708", mitte: "#ce8218", hell: "#f6c34f",
+             glanz: "#fff1b4", kante: "#1d0b02", fleck: "#ffdf7d" },
+    stein: { tief: "#101317", dunkel: "#2b3036", mitte: "#50575f", hell: "#858d96",
+             glanz: "#c9ced2", kante: "#080a0c", ader: "#b51f2b" },
+    sack:  { tief: "#211711", dunkel: "#4a3527", mitte: "#70523c", hell: "#9c7757",
+             glanz: "#d4b892", kante: "#100a05", band: "#b5a078" }
+  }
+};
+
+function saat(n) {
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/* Formt einen unregelmäßigen Umriss. Gold ist eher rundlich, Gestein
+   kantig; die gespeicherte Form bleibt für die ganze Partie gleich. */
+function formBauen(art, id) {
+  const stein = art.indexOf("stein") === 0;
+  const gold = art.indexOf("gold") === 0;
+  const anzahl = stein ? 7 + (id % 4) : gold ? 10 + (id % 3) : 8;
+  const dreh = saat(id * 4.13 + 1.7) * Math.PI * 2;
+  const sx = 0.84 + saat(id * 2.31) * 0.32;
+  const sy = 0.82 + saat(id * 3.17 + 4) * 0.34;
+  const phase = saat(id * 9.1 + 2.4) * Math.PI * 2;
+  const form = [];
+  for (let i = 0; i < anzahl; i++) {
+    const w = (i / anzahl) * Math.PI * 2 + (saat(id * 7.7 + i * 2.1) - 0.5) * (stein ? 0.34 : 0.2);
+    let rad = stein
+      ? 0.8 + saat(id * 5.3 + i * 4.9) * 0.24
+      : 0.74 + saat(id * 5.3 + i * 4.9) * 0.26;
+    if (gold) {
+      // Drei breite Buckel und eine tiefe Kerbe: kein Kreis mit Verlauf.
+      rad *= 1 + 0.13 * Math.sin(3 * w + phase) + 0.055 * Math.cos(5 * w + phase * 2);
+      if (i % 4 === 2) rad *= 0.8;
+      if (i % 4 === 0) rad *= 1.06;
+    }
+    if (stein && i % 4 === 1) rad *= 0.86;
+    form.push({ x: Math.cos(w) * rad * sx, y: Math.sin(w) * rad * sy });
+  }
+  const sprenkel = [];
+  for (let i = 0; i < (stein ? 7 : 4); i++) {
+    sprenkel.push({
+      x: (saat(id * 13.1 + i * 3.7) - 0.5) * 1.18,
+      y: (saat(id * 17.3 + i * 5.1) - 0.5) * 0.92,
+      r: 0.018 + saat(id * 19.7 + i * 2.3) * 0.035
+    });
+  }
+  const risse = [
+    [{ x: -0.58, y: -0.15 }, { x: -0.24, y: 0.08 }, { x: -0.08, y: 0.32 }, { x: 0.22, y: 0.47 }],
+    [{ x: 0.2, y: -0.68 }, { x: 0.25, y: -0.25 }, { x: 0.52, y: 0.02 }]
+  ];
+  return { form, dreh, sprenkel, risse };
+}
+
+/* Pfad in Objektkoordinaten; die Drehung ist eingebacken, damit er einmal
+   je Brocken gebaut und danach nur noch gezeichnet werden muss. */
+function formPfad(form, r, dreh, glatt) {
+  const p = new Path2D();
+  const cos = Math.cos(dreh), sin = Math.sin(dreh);
+  const pts = form.map((q) => ({
+    x: (q.x * cos - q.y * sin) * r,
+    y: (q.x * sin + q.y * cos) * r
+  }));
+  const n = pts.length;
+  if (!glatt) {
+    p.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < n; i++) p.lineTo(pts[i].x, pts[i].y);
+    p.closePath();
+    return p;
+  }
+  let vor = pts[n - 1], jetztP = pts[0];
+  p.moveTo((vor.x + jetztP.x) / 2, (vor.y + jetztP.y) / 2);
+  for (let i = 0; i < n; i++) {
+    const naechster = pts[(i + 1) % n];
+    p.quadraticCurveTo(jetztP.x, jetztP.y, (jetztP.x + naechster.x) / 2, (jetztP.y + naechster.y) / 2);
+    jetztP = naechster;
+  }
+  p.closePath();
+  return p;
+}
+
+function schmuckBauen(art, id, r) {
+  const form = formBauen(art, id);
+  form.pfadRund = formPfad(form.form, r, form.dreh, true);
+  form.pfadKant = formPfad(form.form, r, form.dreh, false);
+  return form;
+}
+
 const canvas = document.getElementById("leinwand");
 let ctx = canvas.getContext("2d");
 
@@ -397,6 +496,7 @@ function obenMine() {
 function passeAn() {
   const box = document.getElementById("spiel").getBoundingClientRect();
   if (box.width < 40 || box.height < 40) return;
+  const altW = W, altH = H, altOben = obenMine();
   dpr = Math.min(3, window.devicePixelRatio || 1);
   const flaeche = document.getElementById("spiel");
   W = Math.max(300, flaeche.clientWidth);
@@ -407,9 +507,18 @@ function passeAn() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (spiel) {
     const oben = obenMine();
+    const sx = altW > 0 ? W / altW : 1;
+    const sy = altH > 0 ? H / altH : 1;
     for (const o of spiel.objekte) {
-      o.x = Math.min(Math.max(o.x, o.r + 4), W - o.r - 4);
-      o.y = Math.min(Math.max(o.y, oben + o.r + 4), H - o.r - 8);
+      // Bei einer Größenänderung mit dem Feld skalieren, nicht alle Brocken
+      // am Rand zusammenstauchen; erst danach den Zeichenrand sichern.
+      if (sx !== 1 || sy !== 1) {
+        o.x *= sx;
+        o.y = oben + (o.y - altOben) * sy;
+      }
+      const m = Math.ceil(o.r * 0.15) + 5;
+      o.x = Math.min(Math.max(o.x, o.r + m), W - o.r - m);
+      o.y = Math.min(Math.max(o.y, oben + o.r + m), H - o.r - m - 4);
     }
   }
   zeichne();
@@ -430,6 +539,8 @@ let letzte = 0;            // Zeitstempel des letzten Bildes
 let bildAus = null;
 let jetzt = 0;             // Sekunden für Sonne, Gras, Schmetterling, Augen
 let stil = "klassisch";    // Ansicht: klassisch, maedchen, jungs
+let vorschauFunde = null;  // Startbild-Gold, einmal je Größe gebaut
+let vorschauGroesse = "";
 
 /* Schnittstelle 2.0: die öffentliche Welt heißt normal|maedchen|buben,
    gezeichnet wird weiter mit den bestehenden Ansichten klassisch|maedchen|jungs. */
@@ -506,8 +617,11 @@ function neuesLevel(nummer, geld) {
       const laenge = zufall(Math.min(tief, weit), Math.max(tief, weit));
       stelle = { x: DREH.x + sin * laenge, y: DREH.y + cos * laenge };
     }
+    const idJetzt = ++id;
+    const schmuck = schmuckBauen(art, idJetzt, a.r);
     objekte.push({
-      id: ++id, art, x: stelle.x, y: stelle.y, r: a.r, tempo: a.tempo, farbe: a.farbe, rand: a.rand,
+      id: idJetzt, art, x: stelle.x, y: stelle.y, r: a.r, tempo: a.tempo, farbe: a.farbe, rand: a.rand,
+      ...schmuck,
       // Der Wert steht beim Anlegen fest; der Sack würfelt ihn aus.
       wert: art === "sack" ? [30, 60, 90, 150, 300][Math.floor(Math.random() * 5)] : a.wert
     });
@@ -1150,6 +1264,354 @@ const ANSICHT = {
 };
 
 /* ---------------------------- Zeichnen ----------------------------- */
+/* Diamant und Sack behalten ihre bisherige, klar erkennbare Darstellung. */
+function zeichneEinfach(o) {
+  const g = ctx.createRadialGradient(o.x - o.r * 0.3, o.y - o.r * 0.35, o.r * 0.2, o.x, o.y, o.r);
+  g.addColorStop(0, o.farbe);
+  g.addColorStop(1, o.rand);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  if (o.art === "diamant") {
+    ctx.moveTo(o.x, o.y - o.r);
+    ctx.lineTo(o.x + o.r, o.y);
+    ctx.lineTo(o.x, o.y + o.r);
+    ctx.lineTo(o.x - o.r, o.y);
+    ctx.closePath();
+  } else {
+    ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.strokeStyle = "#00000044";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (o.art === "sack") {
+    ctx.fillStyle = "#6a4a28";
+    ctx.font = "bold " + Math.round(o.r) + "px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", o.x, o.y + 1);
+  }
+}
+
+function zeichneGold(o, p) {
+  const r = o.r;
+  const pfad = stil === "jungs" ? o.pfadKant : o.pfadRund;
+
+  // Weicher Bodenschatten gibt dem Brocken Standfläche.
+  ctx.save();
+  ctx.globalAlpha = stil === "jungs" ? 0.46 : 0.3;
+  ctx.fillStyle = stil === "maedchen" ? "#4a1738" : "#000000";
+  ctx.beginPath();
+  ctx.ellipse(o.x + r * 0.06, o.y + r * 0.3, r * 0.82, r * 0.44, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(o.x, o.y);
+  const g = ctx.createLinearGradient(-r * 0.8, -r * 0.85, r * 0.7, r * 0.75);
+  g.addColorStop(0, p.hell);
+  g.addColorStop(0.32, p.mitte);
+  g.addColorStop(0.72, p.dunkel);
+  g.addColorStop(1, p.tief);
+  ctx.fillStyle = g;
+  ctx.fill(pfad);
+
+  ctx.save();
+  ctx.clip(pfad);
+
+  // Helle, kantige Goldfläche oben links.
+  ctx.globalAlpha = 0.34;
+  ctx.fillStyle = p.hell;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.64, -r * 0.3);
+  ctx.lineTo(-r * 0.3, -r * 0.78);
+  ctx.lineTo(r * 0.03, -r * 0.64);
+  ctx.lineTo(r * 0.3, -r * 0.32);
+  ctx.lineTo(r * 0.02, -r * 0.08);
+  ctx.lineTo(-r * 0.34, -r * 0.12);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eine zweite, kleinere Facette bricht das Licht.
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = p.glanz;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.36, -r * 0.55);
+  ctx.lineTo(-r * 0.18, -r * 0.72);
+  ctx.lineTo(r * 0.05, -r * 0.48);
+  ctx.lineTo(-r * 0.12, -r * 0.3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Dunkle Unterseite und goldbraune Mulde.
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = p.tief;
+  ctx.beginPath();
+  ctx.moveTo(r * 0.64, -r * 0.08);
+  ctx.lineTo(r * 0.48, r * 0.44);
+  ctx.lineTo(-r * 0.02, r * 0.56);
+  ctx.lineTo(-r * 0.12, r * 0.18);
+  ctx.closePath();
+  ctx.fill();
+
+  if (r >= 12) {
+    // Zwei unregelmäßige Goldadern mit Gegenlicht.
+    ctx.globalAlpha = 0.58;
+    ctx.strokeStyle = p.kante;
+    ctx.lineWidth = Math.max(0.75, r * 0.035);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.46, -r * 0.3);
+    ctx.bezierCurveTo(-r * 0.16, -r * 0.08, r * 0.02, r * 0.26, r * 0.3, r * 0.38);
+    ctx.stroke();
+    ctx.globalAlpha = 0.34;
+    ctx.strokeStyle = p.glanz;
+    ctx.lineWidth = Math.max(0.6, r * 0.02);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.41, -r * 0.23);
+    ctx.bezierCurveTo(-r * 0.12, -r * 0.01, r * 0.07, r * 0.3, r * 0.34, r * 0.42);
+    ctx.stroke();
+  }
+
+  // Eingesprengte helle Goldkörner.
+  ctx.globalAlpha = 0.62;
+  ctx.fillStyle = p.fleck;
+  for (let i = 0; i < 3; i++) {
+    const s = o.sprenkel[i];
+    ctx.beginPath();
+    ctx.ellipse(s.x * r, s.y * r, s.r * r * 1.35, s.r * r * 0.72, i * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Zwei scharfe Glanzpunkte: das Material wirkt poliert, nicht nur gelb.
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = p.glanz;
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.3, -r * 0.45, r * 0.18, r * 0.065, -0.55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(r * 0.2, -r * 0.54, r * 0.09, r * 0.04, 0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = p.kante;
+  ctx.lineWidth = Math.max(0.9, Math.min(2.2, r * 0.062));
+  ctx.stroke(pfad);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function zeichneStein(o, p) {
+  const r = o.r;
+  const pfad = o.pfadKant;
+
+  ctx.save();
+  ctx.globalAlpha = stil === "jungs" ? 0.48 : 0.3;
+  ctx.fillStyle = stil === "maedchen" ? "#4a1738" : "#000000";
+  ctx.beginPath();
+  ctx.ellipse(o.x + r * 0.08, o.y + r * 0.3, r * 0.84, r * 0.42, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(o.x, o.y);
+  const g = ctx.createLinearGradient(-r * 0.8, -r * 0.8, r * 0.7, r * 0.8);
+  g.addColorStop(0, p.hell);
+  g.addColorStop(0.36, p.mitte);
+  g.addColorStop(0.78, p.dunkel);
+  g.addColorStop(1, p.tief);
+  ctx.fillStyle = g;
+  ctx.fill(pfad);
+
+  ctx.save();
+  ctx.clip(pfad);
+
+  // Eine helle Bruchfläche oben links, eine dunkle Flanke unten rechts.
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = p.hell;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.6, -r * 0.3);
+  ctx.lineTo(-r * 0.26, -r * 0.74);
+  ctx.lineTo(r * 0.14, -r * 0.62);
+  ctx.lineTo(r * 0.4, -r * 0.2);
+  ctx.lineTo(r * 0.06, -r * 0.01);
+  ctx.lineTo(-r * 0.32, -r * 0.06);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 0.36;
+  ctx.fillStyle = p.tief;
+  ctx.beginPath();
+  ctx.moveTo(r * 0.24, -r * 0.12);
+  ctx.lineTo(r * 0.72, r * 0.06);
+  ctx.lineTo(r * 0.48, r * 0.48);
+  ctx.lineTo(r * 0.1, r * 0.45);
+  ctx.lineTo(-r * 0.08, r * 0.18);
+  ctx.closePath();
+  ctx.fill();
+
+  // Feine Gesteinskrümel, nur wenige und bewusst dezent.
+  ctx.globalAlpha = 0.24;
+  ctx.fillStyle = p.dunkel;
+  const viele = r >= 21 ? o.sprenkel.length : 4;
+  for (let i = 0; i < viele; i++) {
+    const s = o.sprenkel[i];
+    ctx.beginPath();
+    ctx.ellipse(s.x * r, s.y * r, s.r * r * 2.1, s.r * r * 1.15, i * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = p.glanz;
+  for (let i = 3; i < Math.min(6, viele); i++) {
+    const s = o.sprenkel[i];
+    ctx.beginPath();
+    ctx.ellipse(s.x * r, s.y * r, s.r * r * 1.4, s.r * r * 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eine feine helle Bruchkante auf der oberen Gesteinsfläche.
+  ctx.globalAlpha = 0.28;
+  ctx.strokeStyle = p.hell;
+  ctx.lineWidth = Math.max(0.6, r * 0.025);
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.58, -r * 0.3);
+  ctx.lineTo(-r * 0.26, -r * 0.72);
+  ctx.lineTo(r * 0.14, -r * 0.6);
+  ctx.lineTo(r * 0.38, -r * 0.22);
+  ctx.stroke();
+
+  if (r >= 13) {
+    // Risse: dunkle Linie mit einer schmalen hellen Kante daneben.
+    ctx.globalAlpha = 0.58;
+    ctx.strokeStyle = p.kante;
+    ctx.lineWidth = Math.max(0.65, r * 0.038);
+    ctx.beginPath();
+    o.risse[0].forEach((q, i) => (i ? ctx.lineTo(q.x * r, q.y * r) : ctx.moveTo(q.x * r, q.y * r)));
+    ctx.stroke();
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = p.glanz;
+    ctx.lineWidth = Math.max(0.55, r * 0.02);
+    ctx.beginPath();
+    o.risse[0].forEach((q, i) => (i ? ctx.lineTo(q.x * r + 0.8, q.y * r - 0.7) : ctx.moveTo(q.x * r + 0.8, q.y * r - 0.7)));
+    ctx.stroke();
+  }
+
+  if (stil === "jungs" && r >= 14) {
+    // Eigenständiges Buben-Detail: eine rote Erzader im kalten Gestein.
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = p.ader;
+    ctx.lineWidth = Math.max(0.8, r * 0.045);
+    ctx.beginPath();
+    o.risse[1].forEach((q, i) => (i ? ctx.lineTo(q.x * r, q.y * r) : ctx.moveTo(q.x * r, q.y * r)));
+    ctx.stroke();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = "#ff7078";
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+  }
+
+  // Ein einzelner, kleiner Lichtreflex oben links.
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = p.glanz;
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.28, -r * 0.4, r * 0.2, r * 0.075, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.globalAlpha = 0.92;
+  ctx.strokeStyle = p.kante;
+  ctx.lineWidth = Math.max(0.9, Math.min(2.4, r * 0.065));
+  ctx.stroke(pfad);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function zeichneVorschauFund(art, x, y, r, id) {
+  const a = ARTEN[art];
+  const o = { art, x, y, r, farbe: a.farbe, rand: a.rand, ...schmuckBauen(art, id, r) };
+  return o;
+}
+
+/* Ein Sack ist kein gelber Kreis: eine kleine Lederbeutelform mit Band,
+   Knoten und weichem Volumen. Der Wert bleibt verdeckt. */
+function zeichneSack(o, p) {
+  const r = o.r;
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = "#000000";
+  ctx.beginPath();
+  ctx.ellipse(o.x + r * 0.06, o.y + r * 0.34, r * 0.76, r * 0.36, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(o.x, o.y);
+  const koerper = new Path2D();
+  koerper.moveTo(-r * 0.38, -r * 0.44);
+  koerper.bezierCurveTo(-r * 0.9, -r * 0.08, -r * 0.84, r * 0.48, -r * 0.45, r * 0.76);
+  koerper.bezierCurveTo(-r * 0.08, r * 1.0, r * 0.44, r * 0.94, r * 0.72, r * 0.5);
+  koerper.bezierCurveTo(r * 0.88, r * 0.08, r * 0.58, -r * 0.28, r * 0.38, -r * 0.44);
+  koerper.closePath();
+  const g = ctx.createLinearGradient(-r * 0.7, -r * 0.5, r * 0.65, r * 0.8);
+  g.addColorStop(0, p.hell);
+  g.addColorStop(0.35, p.mitte);
+  g.addColorStop(0.78, p.dunkel);
+  g.addColorStop(1, p.tief);
+  ctx.fillStyle = g;
+  ctx.fill(koerper);
+  ctx.save();
+  ctx.clip(koerper);
+  ctx.globalAlpha = 0.24;
+  ctx.fillStyle = p.glanz;
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.3, -r * 0.02, r * 0.2, r * 0.34, -0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.3;
+  ctx.strokeStyle = p.kante;
+  ctx.lineWidth = Math.max(0.6, r * 0.03);
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.18, -r * 0.32);
+  ctx.quadraticCurveTo(-r * 0.3, r * 0.12, -r * 0.12, r * 0.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(r * 0.2, -r * 0.3);
+  ctx.quadraticCurveTo(r * 0.3, r * 0.1, r * 0.18, r * 0.42);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = p.band;
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 0.46, r * 0.44, r * 0.13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = p.kante;
+  ctx.lineWidth = Math.max(0.7, r * 0.025);
+  ctx.stroke();
+  ctx.fillStyle = p.band;
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 0.43, r * 0.11, r * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = p.glanz;
+  ctx.font = "bold " + Math.round(r * 0.86) + "px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.globalAlpha = 0.9;
+  ctx.fillText("?", 0, r * 0.08);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = p.kante;
+  ctx.lineWidth = Math.max(0.9, Math.min(2.2, r * 0.06));
+  ctx.stroke(koerper);
+  ctx.restore();
+}
+
+function zeichneFundstueck(o) {
+  const palette = FUND_FARBEN[stil] || FUND_FARBEN.klassisch;
+  if (o.art === "diamant") zeichneEinfach(o);
+  else if (o.art === "sack") zeichneSack(o, palette.sack);
+  else if (o.art.indexOf("gold") === 0) zeichneGold(o, palette.gold);
+  else if (o.art.indexOf("stein") === 0) zeichneStein(o, palette.stein);
+  else zeichneEinfach(o);
+}
+
 function zeichne() {
   ctx.clearRect(0, 0, W, H);
   // Himmel oben, Erde unten – je nach Ansicht
@@ -1162,33 +1624,7 @@ function zeichne() {
   if (!spiel) return;
 
   // Fundstücke
-  for (const o of spiel.objekte) {
-    const g = ctx.createRadialGradient(o.x - o.r * 0.3, o.y - o.r * 0.35, o.r * 0.2, o.x, o.y, o.r);
-    g.addColorStop(0, o.farbe);
-    g.addColorStop(1, o.rand);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    if (o.art === "diamant") {
-      ctx.moveTo(o.x, o.y - o.r);
-      ctx.lineTo(o.x + o.r, o.y);
-      ctx.lineTo(o.x, o.y + o.r);
-      ctx.lineTo(o.x - o.r, o.y);
-      ctx.closePath();
-    } else {
-      ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
-    }
-    ctx.fill();
-    ctx.strokeStyle = "#00000044";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    if (o.art === "sack") {
-      ctx.fillStyle = "#6a4a28";
-      ctx.font = "bold " + Math.round(o.r) + "px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("?", o.x, o.y + 1);
-    }
-  }
+  for (const o of spiel.objekte) zeichneFundstueck(o);
 
   // Seil und Haken
   const spitze = hakenSpitze();
@@ -1277,13 +1713,18 @@ function zeigeEnde(titel, text, nochmal) {
 function starteSpiel(level) {
   const lv = Math.max(1, Math.min(LEVEL.length, Math.round(Number(level) || 1)));
   S.startLevel = lv;
-  spiel = neuesLevel(lv, 0);
   S.laeuft = true;
   S.pausiert = false;
   S.startbildschirm = false;
   S.tick = 0;
   S.endeGemeldet = false;
   document.body.classList.remove("zeigt-start");
+  // Erst die sichtbare Spielfläche messen, dann Objekte anlegen. Sonst
+  // entstehen sie für die alte, versteckte Größe und werden beim ersten
+  // ResizeObserver-Lauf an den Rand zusammengeschoben.
+  spiel = null;
+  passeAn();
+  spiel = neuesLevel(lv, 0);
   versteckeSchirme();
   zeigeInfo("Level " + spiel.level, "Ziel: " + spiel.ziel + " Geld in " + ZEIT_JE_LEVEL + " Sekunden.");
   aktualisiereKopf();
@@ -1421,6 +1862,22 @@ function zeichneSzene() {
   ans.erde(oben);
   ans.vorn(oben);
   ans.winde(oben);
+  // Ein paar echte Fundstücke zeigen schon auf dem Startbildschirm die
+  // überarbeiteten Gold- und Gesteinsformen. Einmal je Größe gebaut, nicht
+  // in jedem Bild neu – die Formen und Pfade bleiben unverändert.
+  const groesse = bw + "x" + bh;
+  if (vorschauGroesse !== groesse) {
+    vorschauGroesse = groesse;
+    const basis = Math.max(11, Math.min(19, W * 0.055));
+    vorschauFunde = [
+      zeichneVorschauFund("goldG", W * 0.27, H * 0.7, basis * 1.1, 31),
+      zeichneVorschauFund("steinG", W * 0.7, H * 0.66, basis * 1.02, 32),
+      zeichneVorschauFund("goldM", W * 0.48, H * 0.82, basis * 0.82, 33),
+      zeichneVorschauFund("goldS", W * 0.82, H * 0.86, basis * 0.66, 34),
+      zeichneVorschauFund("steinS", W * 0.56, H * 0.58, basis * 0.64, 35)
+    ];
+  }
+  for (const o of vorschauFunde) zeichneFundstueck(o);
   ctx = echt; W = eW; H = eH; DREH = eD;
 }
 

@@ -5,6 +5,94 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Gold Miner: Nuggets, Gestein und klarer Startbildschirm
+
+**Auftrag:** Die Startseite von Gold Miner auf das Nötige reduzieren und
+Gold sowie Steine als echte, plastische Objekte zeichnen – ohne Änderung an
+Seil, Haken, Treffern, Einholen, Punkten, Zeit, Leveln, Schnittstelle oder
+Mehrspieler.
+
+**Umgesetzt**
+
+- **Startseite:** Die Marke „Arcade · ein Spieler“ sowie der Erklärungstext,
+  die Steuerungsliste und die Info-Karten unter der Grafikstil-Auswahl sind
+  entfernt. Es bleiben Titel, kurze Unterzeile, Minenvorschau, die drei
+  Stile **Normal / Mädchen / Buben**, die Startfunktion und die
+  Vollbild-/Rückwege. Die Inhalte werden vertikal gleichmäßig verteilt; auf
+  flachen Geräten bleibt der Startknopf sichtbar.
+- **Gold:** Jedes Stück bekommt beim Anlegen eine feste, aus seinem Startwert
+  erzeugte Silhouette aus 10–12 Punkten mit drei Buckeln, einer tiefen Kerbe
+  und unterschiedlicher Streckung. Dazu kommen eine helle, kantige
+  Goldfacette, eine zweite kleine Facette, eine dunkle Unterseite,
+  Goldadern, eingesprengte Körner und zwei scharfe Glanzpunkte. Die Pfade
+  werden einmal als `Path2D` gebaut und nicht pro Bild neu erzeugt.
+- **Stile der Nuggets:** Normal warmes Amber-/Goldbraun, Mädchen ein
+  gedämpftes Roségold mit warmem Goldkern, Buben ein kräftiges Messinggold
+  mit harten Facetten. Das sind eigene Paletten und Formkanten, keine
+  bloßen Farbfilter über einem Kreis.
+- **Steine:** 7–10 unregelmäßige, kantige Eckpunkte, graue bis lavendelgraue
+  bzw. kalte Schiefer-Paletten, eine helle Bruchfläche, eine dunkle Flanke,
+  feine Gesteinskrümel, Risse mit Gegenlicht und ein dezenter Glanzreflex.
+  Buben bekommen zusätzlich eine rote Erzader, Mädchen eine weichere, aber
+  weiterhin eckige Silhouette. Gold und Gestein sind damit auch klein klar
+  unterscheidbar.
+- **Beutel:** Der frühere Kreis mit „?“ ist jetzt ein kleiner Lederbeutel
+  mit Band, Knoten und Volumen; der Wert bleibt verdeckt. Der Diamant behält
+  seine bisherige Form.
+- **Startvorschau:** Die Minenvorschau zeigt einige der neuen Gold- und
+  Gesteinsstücke. Sie wird einmal je Vorschaugröße gebaut und dann nur
+  gezeichnet.
+- **Objektplatzierung:** Das Spielfeld wird jetzt **vor** dem Erzeugen eines
+  Levels gemessen; vorher entstanden die Objekte für die alte, versteckte
+  Fläche und wurden beim ersten `ResizeObserver` an den Rand gedrückt. Bei
+  einer späteren Größenänderung werden die Positionen mit dem Feld skaliert,
+  danach mit einem Zeichenrand begrenzt. Dadurch überlappen die größeren
+  Brocken nicht mehr und ragen nicht aus dem Feld.
+- **Unverändert:** Regeln, Hakenfahrt, Trefferradius, Einholtempo, Punkte,
+  Zeit, Level, Pause, Neustart, Speicher und die Schnittstelle 2.0.0.
+
+**Geprüft**
+
+- Drei Stile auf PC 1280×800 und Handy 390×844 gestartet und fotografiert;
+  Gold, Steine, Beutel und Diamant sichtbar, keine Konsolenfehler.
+- **Treffer und Einholen** über die öffentliche Aktion `werfen` in allen drei
+  Stilen: Normal holte in 20 Versuchen u. a. `goldM` (+120), `goldS` (+50),
+  `goldG` (+260) und `steinS` (+11); Mädchen in 13 Versuchen `goldS` (+50),
+  `goldM` (+120) und `steinS` (+11); Buben in 13 Versuchen `goldS` (+50),
+  `goldM` (+120) und `steinS` (+11). Die Punkte entsprachen den Objektwerten,
+  die Objekte verschwanden nach dem Einholen.
+- Startseite: Marke, Erklärung, Steuerungsliste und Info-Karten sind nicht
+  mehr vorhanden; alle drei Stilknöpfe und der Startknopf funktionieren;
+  Stilwechsel aktualisiert Vorschau und Welt. Geprüft bei 320×568,
+  360×640, 390×844, 844×390, 1024×600 und 1280×800: kein Scrollen,
+  Startknopf im Bild.
+- PC-Mausklick und Handy-Touch starten den Haken (`tick` 1); Pause/Weiter,
+  Neu und Zum Start funktionieren. Bei einer Größenänderung von 390×844 auf
+  844×390 bleiben Level und Objektzahl erhalten, keine Fehler.
+- Schnittstelle **2.0.0**: `version`, `whenReady()`, `zustand()`-Kopie,
+  Fehlercodes `unbekannte-aktion`, `daten-muessen-objekt-sein`,
+  `unbekanntes-feld`, `level-muss-1-bis-50-sein`; direkter Start über die
+  Seite funktioniert.
+- **Connector-Rahmenpfad:** In einem Rahmen mit `TGStil.lokal()` = Mädchen
+  öffnete das Spiel mit `stilWahl:false`, verborgener Stilkachel und
+  Mädchenwelt; `start()` startete die Partie. `start({stil:'buben'})`
+  wechselte bei laufender Partie auf Buben, Level 1 und Takt 0 blieben
+  gleich, die Stilkachel blieb verborgen. Keine doppelte Auswahl.
+- **Offen:** Eine vollständige 50-Level-Partie wurde nicht durchgespielt. Der
+  laufende Connector auf 8766 zeigt weiterhin die alten 404-Aufrufe und
+  öffnet keinen Spielkatalog; deshalb wurde der Connector-Pfad über den
+  beschriebenen `TGStil`-Rahmen geprüft, nicht über eine echte Connector-Runde.
+
+**Sicherung:** `arbeit/sicherung/goldminer-2026-11-27/` (beide Ablagen vor
+der Änderung). Bilder: `arbeit/screens/gold-final-*`, `gold-start-final-*`,
+`gold-game-final-*`, `gold-game-touch-maedchen.png`.
+
+**Dateien:** `spiele/goldminer/goldminer.html` in beiden Ablagen,
+byte-gleich; `SPIELE-SCHNITTSTELLE.md` (Grafik-Absatz aktualisiert). Keine
+anderen Spiele geändert.
+
+---
+
 ## 27.11.2026 · Mensch ärgere dich nicht: Ecken, Mädchenstil, Blinken, Würfel
 
 **Auftrag:** In allen drei Stilen die vier Eckbereiche und Figuren mittig

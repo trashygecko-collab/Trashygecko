@@ -553,11 +553,13 @@ bei seinem eigenen Umbau.
   Funktionen wie Knopf, Leertaste, Klick und Touch. `zustand()` ergänzt
   `levelAnzahl`, `ziel`, `zeit`, `phase`, `zieht`; Fehlercodes nach
   Abschnitt 3.2, `stufe` gibt es nicht (keine Schwierigkeitsstufen).
-- **Grafik bei Goldminer ist Bestandsschutz:** Himmel, Erde, Vordergrund,
-  Winde und Fundstücke sind Canvas-Funktionen in der Datei (kein CDN, keine
-  Bilddateien). Gegenüber dem Stand vor dem Umbau ist der ganze Zeichenblock
-  (17.648 Zeichen) unverändert; Mädchen- und Bubenansicht sind nicht
-  angefasst.
+- **Grafik bei Goldminer:** Himmel, Erde, Vordergrund und Winde sind
+  Canvas-Funktionen in der Datei (kein CDN, keine Bilddateien). Die drei
+  Weltansichten blieben erhalten; am 27.11.2026 wurden Gold, Gestein und der
+  Beutel neu gezeichnet: feste, unregelmäßige Silhouetten mit stileigenen
+  Paletten, Facetten, Glanz, Rissen und Gesteinskrümeln. Die Pfade werden
+  einmal je Objekt gebaut; die Startvorschau zeigt einige der Fundstücke.
+  Regeln, Trefferradius und Laufwege blieben unverändert.
 - **Stil bei Goldminer:** `start({stil})` stellt **nur** die Welt ein (so
   übergibt der Connector beim Öffnen und beim Wechsel, ohne die Partie neu zu
   starten); `start()` und `start({level})` beginnen eine Partie. Beim direkten
@@ -568,9 +570,11 @@ bei seinem eigenen Umbau.
   Ansichtstabelle bleibt unverändert.
 - **Startbildschirm bei Goldminer:** eigener Bereich nach Abschnitt 9 mit
   Titel, echter Minenvorschau (`#startSzene`, dieselben Ansichtsfunktionen),
-  Steuerung, Infos und „Graben beginnen“; ohne inneres Scrollen bei 360×640,
-  390×844, 844×390, 1024×600 und 1280×800. Auf flachen Geräten (Höhe ≤ 680)
-  entfällt die Vorschau, der Knopf bleibt sichtbar.
+  der Stilwahl Normal/Mädchen/Buben und „Graben beginnen“. Die frühere
+  Marke, der Erklärungstext, die Steuerungsliste und die Info-Karten sind
+  entfernt. Ohne inneres Scrollen bei 320×568, 360×640, 390×844, 844×390,
+  1024×600 und 1280×800. Auf flachen Geräten (Höhe ≤ 680) entfällt die
+  Vorschau, der Knopf bleibt sichtbar.
 - **Connector:** `GoldMiner` steht in `SPIEL_API_NAMEN` (`connector.html` in
   `connector` und `connector-online`, byte-gleich). Geprüft im echten
   Connector (Port 8779): Stil „Mädchen“ kam im Rahmen an (Kachel verborgen),
