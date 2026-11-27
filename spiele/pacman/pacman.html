@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b241d">
 <title>Pac-Man</title>
 <style>
@@ -90,12 +90,11 @@ canvas{display:block;margin:0 auto;height:auto;aspect-ratio:19/21;width:100%;max
  body{padding:4px}
  main{max-width:100%;height:calc(100dvh - 8px);display:grid;gap:0;
   grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr) auto;
-  grid-template-areas:"titel status" "menu menu" "buehne pad" "fuss fuss"}
+  grid-template-areas:"titel status" "menu menu" "buehne buehne" "fuss fuss"}
  .titelleiste{grid-area:titel;padding:4px 8px}
  .menueleiste{grid-area:menu;padding:4px 6px}
  .statuszeile{grid-area:status;justify-content:flex-end;border-bottom:0;padding:4px 8px}
  .buehne{grid-area:buehne;min-height:0;padding:4px}
- .pad{grid-area:pad;align-self:center;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,38px);gap:4px;padding:4px}
  .fuss{grid-area:fuss;padding:2px 8px;font-size:12px;min-height:0}
  #regeln{display:none}
 }
@@ -191,22 +190,25 @@ main{width:100%;max-width:1440px;height:calc(100dvh - 24px);display:flex;flex-di
 #regeln ol{margin:0;padding-left:18px;line-height:1.5;font-size:12px;color:var(--regeln);max-height:24vh;overflow:auto}
 
 .spielbereich{flex:1 1 auto;min-height:0;display:grid;gap:7px;
- grid-template-columns:minmax(0,1fr) clamp(210px,23vw,310px);
- grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"status status" "hinweis hinweis" "buehne seite"}
+ grid-template-columns:minmax(0,1fr);
+ grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"status" "hinweis" "buehne"}
 .statuszeile{grid-area:status;border:1px solid var(--rand-1);border-radius:7px;padding:5px 9px}
 .hinweiszeile{grid-area:hinweis;margin:0;min-height:18px;color:var(--muted);font-size:12px;line-height:1.35}
 .buehne{grid-area:buehne;height:100%;min-height:0;padding:8px;border:1px solid var(--rand-1);
  border-radius:9px;background:var(--buehne);box-shadow:inset 0 0 34px var(--schatten-tief)}
-.seitenleiste{grid-area:seite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
- min-height:0;padding:10px 8px;border:1px solid var(--rand-1);border-radius:9px;background:var(--panel)}
-.seitenleiste .pad{background:transparent;padding:0}
-.seitenleiste .steuer-tip{margin:0;color:var(--muted);font-size:11px;text-align:center;line-height:1.35}
- .seitenleiste .steuer-tip{display:none}
-.pad{grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,52px);gap:6px;padding:6px;
- background:var(--panel);border-radius:12px;touch-action:none}
-.pad button{font-family:inherit;font-size:22px;min-width:52px;min-height:48px;border-radius:9px;cursor:pointer;
+/* Das Steuerkreuz liegt ausserhalb des Spielbereichs direkt im Body. So kann
+   kein Layout oder transformierter Vorfahre seine feste Position veraendern. */
+.pad{display:none;position:fixed;right:max(10px,env(safe-area-inset-right));
+ bottom:calc(10px + env(safe-area-inset-bottom));z-index:60;
+ grid-template-columns:repeat(3,clamp(48px,14vw,60px));grid-template-rows:repeat(2,clamp(46px,13vw,56px));
+ gap:5px;justify-content:center;padding:7px;border:1px solid var(--rand-1);border-radius:16px;
+ background:color-mix(in srgb,var(--panel) 92%,transparent);box-shadow:0 8px 20px var(--schatten-tief);
+ touch-action:none}
+.pad button{font-family:inherit;font-size:22px;min-width:0;min-height:0;border-radius:9px;cursor:pointer;
  border:1px solid var(--rand-1);background:var(--pad);color:var(--gold);touch-action:none;
  -webkit-user-select:none;user-select:none;transition:background .08s,transform .08s}
+@media (hover:none) and (pointer:coarse){.pad{display:grid}}
+body.zeigt-start .pad{display:none}
 .pad button:active,.pad button.aktiv{background:var(--kopf);transform:scale(.96)}
 .pad .oben{grid-column:2;grid-row:1}.pad .links{grid-column:1;grid-row:2}
 .pad .runter{grid-column:2;grid-row:2}.pad .rechts{grid-column:3;grid-row:2}
@@ -229,8 +231,8 @@ html[data-stil="maedchen"] body{background:radial-gradient(circle 900px at 50% -
 html[data-stil="maedchen"] #leben{color:#ffb3d0;text-shadow:0 0 8px #00000066}
 
 @media (max-width:820px) and (orientation:portrait){
- body:not(.zeigt-start){padding-bottom:calc(148px + env(safe-area-inset-bottom));overflow:hidden}
- body:not(.zeigt-start) main{height:calc(100dvh - 20px - 148px);max-width:none;gap:5px}
+ body:not(.zeigt-start){padding-bottom:calc(6px + env(safe-area-inset-bottom));overflow:hidden}
+ body:not(.zeigt-start) main{height:calc(100dvh - 12px - env(safe-area-inset-bottom));max-width:none;gap:5px}
  .titelleiste{min-height:32px;padding:3px 6px}
  .titelleiste .titel{font-size:12px;letter-spacing:.08em}
  .titel-aktionen{gap:3px}
@@ -244,12 +246,6 @@ html[data-stil="maedchen"] #leben{color:#ffb3d0;text-shadow:0 0 8px #00000066}
  .statuszeile{order:0;font-size:12px;padding:4px 7px}
  .hinweiszeile{order:1;min-height:15px;font-size:11px}
  .buehne{order:2;flex:1 1 auto;min-height:0;padding:4px;border:0;background:transparent;box-shadow:none}
- .seitenleiste{display:contents}
- .pad{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;
-  grid-template-columns:repeat(3,clamp(48px,14vw,60px));grid-template-rows:repeat(2,clamp(46px,13vw,56px));gap:5px;
-  padding:7px;border:1px solid var(--rand-1);border-radius:16px;background:color-mix(in srgb,var(--panel) 92%,transparent);
-  box-shadow:0 8px 20px var(--schatten-tief)}
- .pad button{min-width:0;min-height:0;font-size:22px}
  .startbildschirm{padding:10px 14px;gap:7px;overflow:auto}
  .start-kopf h1{font-size:clamp(34px,8vh,50px)}
  .start-szene{height:52px}
@@ -264,14 +260,10 @@ html[data-stil="maedchen"] #leben{color:#ffb3d0;text-shadow:0 0 8px #00000066}
  .titelleiste{min-height:28px;padding:2px 6px}
  .titelleiste .titel{font-size:12px}
  .titel-aktionen button{font-size:10px;padding:3px 5px}
- .spielbereich{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);gap:3px}
+ .spielbereich{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:3px}
  .statuszeile{font-size:12px;padding:3px 7px}
  .hinweiszeile{min-height:0;font-size:11px}
  .buehne{padding:4px}
- .seitenleiste{padding:5px;gap:6px;width:auto}
- .pad{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,44px);gap:4px;padding:4px}
- .pad button{font-size:18px;min-width:0;min-height:0}
- .seitenleiste .steuer-tip{display:none}
  .startbildschirm{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.4fr) auto;align-content:center;
   gap:8px 14px;padding:8px 12px;text-align:left}
  .start-kopf{grid-column:1;grid-row:1/3}.start-szene{grid-column:1;grid-row:2;justify-content:flex-start}
@@ -357,17 +349,15 @@ html[data-stil="maedchen"] #leben{color:#ffb3d0;text-shadow:0 0 8px #00000066}
     </div>
    </div>
   </div>
-  <aside class="seitenleiste">
-   <div class="pad" id="pad" role="group" aria-label="Richtung">
-    <button class="oben" data-dir="hoch" type="button" aria-label="Nach oben">▲</button>
-    <button class="links" data-dir="links" type="button" aria-label="Nach links">◀</button>
-    <button class="runter" data-dir="runter" type="button" aria-label="Nach unten">▼</button>
-    <button class="rechts" data-dir="rechts" type="button" aria-label="Nach rechts">▶</button>
-   </div>
-   <p class="steuer-tip">Pfeiltasten · W A S D<br>am Handy rechts unten</p>
-  </aside>
  </div>
 </main>
+
+<div class="pad" id="pad" role="group" aria-label="Richtung">
+ <button class="oben" data-dir="hoch" type="button" aria-label="Nach oben">▲</button>
+ <button class="links" data-dir="links" type="button" aria-label="Nach links">◀</button>
+ <button class="runter" data-dir="runter" type="button" aria-label="Nach unten">▼</button>
+ <button class="rechts" data-dir="rechts" type="button" aria-label="Nach rechts">▶</button>
+</div>
 
 <script>
 (() => {
@@ -439,6 +429,7 @@ let punkte=0, level=1, leben=3;
 let tick=0, endeGemeldet=false;
 let stilApi="normal", stilVorgabe=false;
 let pillen=[];             // 0 leer, 1 Punkt, 2 Kraftpille
+let bonusTimer=[];         // vier Eckpillen, jede mit eigenem Respawn-Timer
 let offenePillen=0;
 let pac=null;
 let geister=[];
@@ -479,13 +470,17 @@ function zentrum(x,y){ return {x:x*Z+Z/2,y:y*Z+Z/2}; }
 
 function pillenLaden(){
  pillen=[];
+ bonusTimer=[];
  offenePillen=0;
  for(let y=0;y<ZEILEN;y++){
   const zeile=[];
   for(let x=0;x<SPALTEN;x++){
    const c=MAZE[y][x];
    if(c==="."){ zeile.push(1); offenePillen++; }
-   else if(c==="o"){ zeile.push(2); offenePillen++; }
+   else if(c==="o"){
+    zeile.push(2); offenePillen++;
+    bonusTimer.push({x:x,y:y,rest:0});
+   }
    else zeile.push(0);
   }
   pillen.push(zeile);
@@ -846,6 +841,8 @@ function munchPruefen(){
   punkte+=50;
   angstZeit=7;
   geisterKette=0;
+  const bonus=bonusTimer.find(b=>b.x===x&&b.y===y);
+  if(bonus)bonus.rest=8;
   funkenStoss(c.x,c.y,stilWahl==="jungs"?"#ff5a1e":"#ffc6e6",14,110);
  }else{
   punkte+=10;
@@ -855,6 +852,19 @@ function munchPruefen(){
  zahlenZeigen();
  rekordPruefen();
  if(offenePillen<=0)levelGeschafft();
+}
+
+function bonusUpdate(dt){
+ for(const b of bonusTimer){
+  if(b.rest<=0)continue;
+  b.rest-=dt;
+  if(b.rest>0)continue;
+  b.rest=0;
+  if(pillen[b.y][b.x]===0){
+   pillen[b.y][b.x]=2;
+   offenePillen++;
+  }
+ }
 }
 
 function beruehrung(){
@@ -936,6 +946,7 @@ function update(dt){
   angstZeit-=dt;
   if(angstZeit<=0){ angstZeit=0; geisterKette=0; }
  }
+ bonusUpdate(dt);
  jagdZeit=(jagdZeit+dt)%30;
 
  bewegePac(dt);

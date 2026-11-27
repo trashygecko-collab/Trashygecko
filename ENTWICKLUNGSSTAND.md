@@ -5,6 +5,80 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Pac-Man: Touch-Steuerung nur mobil, vier Eckboni respawnen
+
+**Auftrag:** Die Touch-Steuerung ausschließlich für Mobilgeräte anzeigen und
+fest unten rechts schweben lassen. Die vier großen Eckboni sollen nach dem
+Einsammeln jeweils nach acht Sekunden an ihrer Originalposition zurückkehren.
+Grafik, Geschwindigkeit, Geister-KI, Levelaufbau und die übrige Mechanik
+bleiben unverändert.
+
+**Touch-Steuerung**
+
+- Das Pad wurde aus `.seitenleiste` und dem Spielfeld-Grid direkt in den
+  `body` verschoben. Damit hängt seine feste Position nicht von einem
+  transformierten oder scrollenden Vorfahren ab.
+- Die Basisregel ist jetzt `display:none`. Sichtbar wird es nur über
+  `@media (hover:none) and (pointer:coarse)`, also auf Geräten ohne Mauszeiger;
+  auf dem Startbildschirm bleibt es ebenfalls ausgeblendet.
+- `position:fixed` mit `env(safe-area-inset-right)` und
+  `env(safe-area-inset-bottom)` hält es unten rechts im sichtbaren Bereich.
+  Die Viewport-Angabe enthält außerdem `viewport-fit=cover`, damit die
+  Safe-Area-Werte auf iPhones tatsächlich ankommen.
+  Die früheren 148 px Reservierung im Hochformat und die eigene Pad-Spalte
+  im Querformat sind entfernt; das Spielfeld wird durch das Pad weder
+  verkleinert noch verschoben.
+- Die Tasten bleiben mit `clamp(48px…60px)` auch auf kleinen Displays
+  erreichbar; das Pad bleibt über dem Spielfeld schwebend.
+
+**Eckboni**
+
+- `pillenLaden()` legt für jede der vier `o`-Kraftpillen einen eigenen Eintrag
+  in `bonusTimer` mit `{x,y,rest}` an. Beim Einsammeln setzt nur die betroffene
+  Pille ihren Timer auf acht Sekunden.
+- `bonusUpdate(dt)` zählt die vier Restzeiten unabhängig herunter und setzt
+  genau die eingesammelte Pille an ihrer gespeicherten Position auf `2`
+  zurück, sofern das Feld noch leer ist. `offenePillen` wird dabei erhöht.
+- `pillenLaden()` wird bei neuem Spiel und bei jedem Levelstart aufgerufen und
+  setzt `bonusTimer` vollständig zurück; alte Timer können dadurch nicht in
+  eine neue Runde laufen. Die bestehende Fressbarkeit von sieben Sekunden und
+  die Geistermechanik wurden nicht verändert.
+
+**Geprüft (Chromium, lokaler HTTP-Server)**
+
+- **Layout/Bedienung: 57/57 Prüfungen bestanden.** PC 1280×900, 900×700 und
+  ein schmaler Desktop 390×844 ohne Touch: Pad jeweils `display:none`, keine
+  Layoutfläche. Mobil 390×844, 844×390 und 320×568: Pad `display:grid`,
+  `position:fixed`, direkt im `body`, unten rechts und vollständig im
+  Viewport. Das Canvas blieb nach dem Ausblenden des Pads pixelgleich; der
+  Body reservierte keine 148 px mehr.
+- **Boni: 42/42 Prüfungen bestanden.** Jede der vier Ecken einzeln
+  eingesammelt: eigene Restzeit acht Sekunden, andere Timer unberührt, vor
+  acht Sekunden noch weg, danach genau an der Originalposition, keine
+  Doppelung. Zwei Boni nacheinander respawnten unabhängig; dieselbe Ecke
+  funktionierte in zwei Runden; ein Neustart nach zwei Sekunden setzte alle
+  vier Boni zurück und hinterließ keine alten Timer.
+- **Geister:** Während der Fressbarkeit ergab eine erzwungene Berührung +200
+  Punkte und Heimweg; nach sieben Sekunden führte dieselbe Berührung zum
+  Lebensverlust. Keine Konsolen- oder Seitenfehler.
+- **Spielende: 4/4 Prüfungen bestanden.** Drei Lebensverluste führten zur
+  sichtbaren GAME-OVER-Meldung; „Nochmal“ startete mit drei Leben, Level 1
+  und 0 Punkten neu; keine Konsolenfehler.
+- **Testweise Instrumentierung:** Die Bonustests liefen auf einer externen
+  Testantwort mit einem temporären Hook, damit die vier Timer und Positionen
+  direkt geprüft werden konnten. Die ausgelieferte `pacman.html` enthält
+  keinen Testcode; die Layout- und Bedientests liefen direkt auf ihr.
+- **Nicht geprüft:** ein echtes physisches Smartphone/Tablet; die mobilen
+  Läufe waren Chromium-Emulationen mit Touch und `pointer:coarse`.
+
+**Dateien/Sicherung:** `spiele/pacman/pacman.html` in beiden Ablagen,
+byte-gleich (SHA-256 `7d9b7ca25d6c0a98ed4ce58091b7b65f1c2ef06fab5697896517648b5f4cdaa4`).
+Ausgangssicherung: `arbeit/sicherung/pacman-2026-11-27-touch-bonus/`.
+Kein anderes Spiel und keine allgemeinen Spielsysteme geändert. Push und
+Deployment wurden nicht ausgeführt.
+
+---
+
 ## 27.11.2026 · Pac-Man: großes PC-Feld, Daumensteuerung, ruhigeres Tempo
 
 **Auftrag:** Pac-Man gezielt überarbeiten: großes PC-Spielfeld, feste
