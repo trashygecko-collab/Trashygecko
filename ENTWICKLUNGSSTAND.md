@@ -3203,3 +3203,70 @@ werden, was tatsächlich existiert, was fehlt und warum.
   21 Fehlerfälle, `start`, `pause`, `resume`, alle Aktionen, `stop`,
   Ereignisabfolge, Speicherschlüssel, Konsolenfehler): alle gleich.
   Sicherung vorher: `Homepage/sicherung/pimmel-einzeldatei-2026-11-26/`.
+
+
+## Pong auf Schnittstelle 2.0 und drei Spielwelten (27.11.2026)
+
+- **`spiele/pong/pong.html` erfüllt jetzt `SPIELE-SCHNITTSTELLE.md` 2.0**
+  (`version` 2.0.0, `bereit`, `whenReady()`, `start()`, `einstellungen()`,
+  `zustand()`, `startbildschirm()`, `stop()`, `pause()`, `resume()`,
+  `aktion(name, daten)`, eingefrorenes Schnittstellenobjekt). Die frühere
+  `/api/pong`- und `?room&id`-Logik steckt nicht mehr im Spiel; es liest keine
+  Raumkennung und ruft selbst kein `/api/` auf. Die Ereignisse `pong:bereit`,
+  `pong:ende`, `pong:pausiert` und `pong:weiter` tragen die Daten aus dem
+  Standard; `zustand()` liefert Kopien inklusive `richtung`, `level` und
+  `extras`, `start()` antwortet mit den übernommenen Werten.
+- **Eigener Startbildschirm:** große Vorschau im aktuellen Stil, Grafikstil
+  Normal/Mädchen/Buben, Modus Computer/Zwei Personen/Online, die drei
+  Bot-Stufen Leicht/Mittel/Schwer, ein hervorgehobener Startknopf und ein
+  eingebautes Regelblatt. Direktstart zeigt die Stilwahl; kommt der Stil von
+  außen (`start({stil})` oder Connector), ist sie verborgen und hat Vorrang.
+  Keine doppelte Stilwahl, keine externen CDNs.
+- **Drei eigenständige Spielwelten statt Farbwechsel:** Normal ist ein
+  klassischer grün-goldener Tisch mit Netz, Rahmen und dezenten Lichtspuren;
+  Mädchen ist eine dunkle Aubergine-/Rosé-Welt mit Herzkulisse, Medaillon,
+  Rosenranken und passend gezeichneten Schlägern; Buben ist eine
+  anthrazit-neongelbe Sport-Arena mit Raster, harten Kanten und
+  Kohlefaser-/Stahl-Details. Ball und Schläger bleiben in allen drei Welten
+  kontrastreich sichtbar; die Startseite übernimmt den gewählten Stil sofort.
+- **Lokale Modi:** Einzelspieler gegen den Computer und Zwei Personen an einem
+  Gerät bleiben getrennt wählbar. Pfeiltasten bzw. A/D, Touch in der eigenen
+  Bildschirmhälfte, Pause/Weiter, Neustart, Startseite, Vollbild mit Escape
+  und die Ergebniskarte sind vorhanden. Die drei lokalen Bot-Stufen nutzen
+  dieselben Tempo-/Fehlerwerte wie der Server-Bot (250/350/480 px/s); die
+  Stufe Schwer sagt den Ballweg zusätzlich voraus. Gemessen bewegte sich der
+  Bot-Schläger bei gleicher Abtastung mit 12,5 / 17,5 / 24 px je Schritt –
+  die Unterschiede sind im Spiel spürbar, nicht nur beschriftet.
+- **Online über die Connector-Brücke:** `spiele/pong-bruecke.js` ist die
+  einzige Netzwerkstelle. Sie holt `/api/pong`, schiebt den Serverstand über
+  `aktion("stand", game)` ins Spiel und sendet Schlägerbewegungen und
+  Absichten (create/join/ready/start/reset) zurück. Tisch, Einladung, Beitritt,
+  Bereitschaft, Host-Start, Sieger und Neustart bleiben beim Connector; das
+  Spiel zeigt Lobby, Verbindungsfehler und Ergebnis als eigene Karte. Die
+  Brücke liest die zentrale Connector-Stilwahl (`TGStil`/`tg-stil`) und
+  übergibt sie beim Öffnen; alle drei Stile kamen im Rahmen an.
+- **Connector:** `Pong` steht in `SPIEL_API_NAMEN`; die drei Pong-Öffnungen
+  übergeben `online`; beide `connector.html` (GitHub- und Documents-Ablage)
+  sind byte-gleich. Die Brücke liegt in beiden Ablagen.
+- **Geprüft:** `go test -run 'TestPong|TestBotPong' ./...` grün. Chromium direkt
+  über `127.0.0.1:8850`: alle drei Stile und alle drei Bot-Stufen, Start/Pause/
+  Weiter/Neustart/Spielende (Duell 7:6), Tastatur und Touch für beide Spieler,
+  Vollbild an/aus per Knopf und Escape, API-Fehlerfälle, Kopien von
+  `zustand()`, 0 Konsolenfehler. Größen 1280×800 (Feld 441×661), 1920×1080
+  (627×941), 390×844 (372×558), 360×640 (292×438), 320×568 (244×366) und
+  844×390 (173×259): kein Seiten- oder Startbildschirm-Scrollen, keine
+  Überlappung. **Echte Online-Partie mit zwei getrennten Browser-Sitzungen**
+  über den laufenden Go-Connector: Host eröffnet, Gast tritt über „Mitspielen“
+  bei, beide „Bereit“, Host startet, Server führt den Ball, Endstand 7:0,
+  beide sehen das Ergebnis, „Neue Partie“ setzt zurück, zweiter Start läuft;
+  Reload des Gasts kam mit derselben Kennung und `du=1` in die laufende Partie
+  zurück. Die lokale Simulation wurde nicht als Online-Nachweis verwendet.
+  Dabei gefunden und behoben: Der Endstand zeigte zunächst die alte Lobby
+  statt „Neue Partie“; der Connector-Stil wurde anfangs nicht an Pong
+  weitergegeben.
+- **Sicherung:** `arbeit/sicherung/pong-2026-11-27/` (alte `pong.html`,
+  `pong.go`, `bot_pong.go`, Tests, `connector.html`,
+  `ENTWICKLUNGSSTAND.md`, `SHA256.txt`).
+- **Offen:** kein technischer Blocker. Push und Deployment wurden nicht
+  durchgeführt; der Online-Nachweis lief gegen den lokalen Connector, nicht
+  gegen eine veröffentlichte Instanz.
