@@ -74,7 +74,10 @@
     var s = STILE[roh] || "klassisch";
     Shell.stil = s;
     document.documentElement.dataset.stil = s;
-    document.documentElement.style.colorScheme = s === "buben" ? "dark" : "light";
+    document.documentElement.style.colorScheme = "dark";
+    var farben = { klassisch: "#0d2f26", maedchen: "#3a1029", buben: "#071a24" };
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", farben[s] || farben.klassisch);
     if (merken) {
       try { localStorage.setItem("solitaer-stil", s === "klassisch" ? "normal" : s); } catch (e) { }
     }
@@ -568,13 +571,15 @@
     }
     zug = {
       startX: ev.clientX, startY: ev.clientY, karte: karte, was: wasVon(karte),
+      /* Am Finger zittert ein Tippen leicht; erst ab 12 px wird gezogen. */
+      schwelle: ev.pointerType === "touch" ? 12 : 6,
       aktiv: false, geist: null, letzte: null
     };
   }
   function ziehenBewegen(ev) {
     if (!zug) return;
     var dx = ev.clientX - zug.startX, dy = ev.clientY - zug.startY;
-    if (!zug.aktiv && Math.abs(dx) + Math.abs(dy) > 7) {
+    if (!zug.aktiv && Math.hypot(dx, dy) > zug.schwelle) {
       zug.aktiv = true;
       var r = zug.karte.getBoundingClientRect();
       var g = zug.karte.cloneNode(true);
@@ -604,21 +609,24 @@
     if (z.letzte) z.letzte.classList.remove("ueber");
     if (!z.aktiv) return;
     if (z.geist) z.geist.remove();
-    Shell.gezogen = true;
-    setTimeout(function () { Shell.gezogen = false; }, 60);
     var ziel = document.elementFromPoint(ev.clientX, ev.clientY);
     var zone = zoneVon(ziel);
+    var startZone = zoneVon(z.karte);
+    /* Zurück auf der eigenen Zone: kein Zug, sondern ein Tippen mit
+       Fingerzittern. Als Tipp behandeln, sonst erscheint eine falsche
+       Fehlermeldung und die Karte wird nicht ausgewählt. */
+    if (zone && zone === startZone) {
+      brettKlick({ target: ziel || z.karte });
+      Shell.gezogen = true;
+      setTimeout(function () { Shell.gezogen = false; }, 400);
+      return;
+    }
+    Shell.gezogen = true;
+    setTimeout(function () { Shell.gezogen = false; }, 60);
     if (zone) {
-      /* Dieselbe Regel wie beim Klick: Ist die Zone ein gültiges Ziel der
-         vorhandenen Auswahl, wird diese abgelegt – nicht die gerade
-         berührte Zielkarte. Anzeige und Ablegen prüfen damit gleich. */
-      var was = z.was;
-      var aus = Shell.auswahl;
-      if (aus && z.was.id !== aus.id && Shell.spiel.zieleFuer &&
-          Shell.spiel.zieleFuer(aus).indexOf(zone) >= 0) {
-        was = aus;
-      }
-      ablegenSauber(was, zone);
+      /* Gezogen wird immer die gegriffene Karte – eine noch stehende Auswahl
+         darf den Zug nicht auf eine andere Karte umlenken. */
+      ablegenSauber(z.was, zone);
     } else {
       Shell.stand(Shell.spiel.info());
     }

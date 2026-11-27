@@ -96,6 +96,7 @@
 
       var tab = document.createElement("div");
       tab.className = "tableau zehn";
+      var schmal = window.matchMedia("(max-width:520px)").matches;
       z.t.forEach(function (spalte, i) {
         var feld = document.createElement("div");
         feld.className = "spalte";
@@ -103,7 +104,7 @@
         var aus = TG.Shell.auswahl;
         Sp.fuellen(feld, spalte, {
           art: "t", i: i,
-          abstandOffen: 0.30, abstandZu: 0.13,
+          abstandOffen: schmal ? 0.22 : 0.30, abstandZu: schmal ? 0.10 : 0.13,
           auswahl: aus && aus.art === "t" && aus.i === i ? aus.index : undefined
         });
         if (ziele.indexOf("t:" + i) >= 0) feld.classList.add("moeglich");
@@ -112,6 +113,13 @@
 
       var fuss = document.createElement("div");
       fuss.className = "spider-fuss";
+
+      var fertigZone = document.createElement("div");
+      fertigZone.className = "spider-zone spider-zone--ablagen";
+      fertigZone.setAttribute("aria-label", "Ablagen: " + z.ablage.length + " von 8 fertigen Folgen");
+      var fertigTitel = document.createElement("div");
+      fertigTitel.className = "spider-zone-titel";
+      fertigTitel.innerHTML = "<span>Ablagen</span><b>" + z.ablage.length + " / 8</b>";
 
       var fertig = document.createElement("div");
       fertig.className = "fertige";
@@ -130,6 +138,12 @@
         fertig.appendChild(platz);
       }
 
+      var vorratZone = document.createElement("div");
+      vorratZone.className = "spider-zone spider-zone--vorrat";
+      var vorratTitel = document.createElement("div");
+      vorratTitel.className = "spider-zone-titel";
+      vorratTitel.innerHTML = "<span>Vorrat</span><b>" + Math.floor(z.stock.length / 10) + " × 10</b>";
+
       var vorrat = document.createElement("div");
       vorrat.className = "vorrat" + (z.stock.length ? "" : " leer");
       vorrat.dataset.zone = "stock";
@@ -145,7 +159,9 @@
         vorrat.innerHTML = '<span class="leerzeichen">leer</span>';
       }
 
-      fuss.append(fertig, vorrat);
+      fertigZone.append(fertigTitel, fertig);
+      vorratZone.append(vorratTitel, vorrat);
+      fuss.append(fertigZone, vorratZone);
       wrap.append(tab, fuss);
       brett.appendChild(wrap);
     },

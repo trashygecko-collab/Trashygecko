@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-solitaer>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -121,7 +121,7 @@ html[data-stil="buben"]{--neu-1:#e0242f;--neu-2:#c41724;--neu-text:#150a0c;--neu
   background:linear-gradient(165deg,var(--karte-1),var(--karte-2));
   border:1px solid var(--karte-rand);
   box-shadow:0 2px 5px #00000059,inset 0 1px 0 #ffffff40;
-  user-select:none;touch-action:manipulation;cursor:grab;
+  user-select:none;touch-action:none;-webkit-touch-callout:none;cursor:grab;
   font-family:Georgia,"Times New Roman",serif;container-type:inline-size}
 .karte.rot{color:var(--rot)}
 .karte.schwarz{color:var(--schwarz)}
@@ -394,7 +394,7 @@ html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte{
   font-family:Georgia,"Times New Roman",serif;
   box-shadow:0 2px 5px #00000059,inset 0 1px 0 #ffffff8c;
   background:linear-gradient(168deg,#fffdf7 0%,#f7f0df 58%,#efe4cd 100%)}
-html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte::after{
+html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte:not(.hinten)::after{
   content:"";position:absolute;inset:4px;border-radius:4px;
   border:1px solid #a98f5a40;pointer-events:none}
 html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte .bild{
@@ -408,6 +408,7 @@ html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte.hinten::before{
   inset:8%;border:1px solid #e8cd8e80;border-radius:3px;box-shadow:inset 0 0 0 3px #0b1a2e}
 html:not([data-stil="maedchen"]):not([data-stil="buben"]) .karte.hinten::after{
   content:"";position:absolute;inset:26%;border:1px solid #e8cd8e66;border-radius:50%;
+  clip-path:none;
   background:repeating-linear-gradient(45deg,#e8cd8e26 0 1px,#00000000 1px 5px)}
 
 /* MÄDCHEN – zartes Rosé, runde Ecken, gepunktete Innenlinie; Rückseite
@@ -417,7 +418,7 @@ html[data-stil="maedchen"] .karte{
   font-family:Georgia,"Times New Roman",serif;
   background:linear-gradient(160deg,#fffdfe 0%,#ffeef5 62%,#ffe0ec 100%);
   box-shadow:0 3px 7px #b52a6333,inset 0 1px 0 #ffffff}
-html[data-stil="maedchen"] .karte::after{
+html[data-stil="maedchen"] .karte:not(.hinten)::after{
   content:"";position:absolute;inset:4px;border-radius:8px;
   border:1px dashed #ef7aa8a6;pointer-events:none}
 html[data-stil="maedchen"] .karte .bild{
@@ -435,7 +436,8 @@ html[data-stil="maedchen"] .karte.hinten::before{
   box-shadow:inset 0 0 0 3px #f0509f33}
 html[data-stil="maedchen"] .karte.hinten::after{
   content:"";position:absolute;left:50%;top:50%;width:30%;height:30%;
-  transform:translate(-50%,-50%) rotate(45deg);border-radius:6px 50% 6px 50%;
+  right:auto;bottom:auto;border:0;transform:translate(-50%,-50%) rotate(45deg);
+  border-radius:6px 50% 6px 50%;clip-path:none;
   background:#ffffffe6;box-shadow:0 0 0 3px #ffffff59}
 
 /* BUBEN – Anthrazit, harte Kanten, rote Schrägkante; Rückseite mit
@@ -445,7 +447,7 @@ html[data-stil="buben"] .karte{
   font-family:"Segoe UI Semibold","Segoe UI",system-ui,sans-serif;
   background:linear-gradient(160deg,#2a3138 0%,#1b2128 60%,#141920 100%);
   box-shadow:0 2px 6px #000000b3,inset 0 1px 0 #ffffff17}
-html[data-stil="buben"] .karte::after{
+html[data-stil="buben"] .karte:not(.hinten)::after{
   content:"";position:absolute;inset:0;border:0;border-radius:0;pointer-events:none;
   background:linear-gradient(135deg,#e0242f40 0%,#00000000 46%);
   clip-path:polygon(0 0,74% 0,0 42%)}
@@ -462,8 +464,338 @@ html[data-stil="buben"] .karte.hinten::before{
   box-shadow:inset 0 0 0 2px #0b0e11,inset 0 0 0 4px #ffffff1f}
 html[data-stil="buben"] .karte.hinten::after{
   content:"";position:absolute;left:50%;top:50%;width:48%;height:13%;
-  transform:translate(-50%,-50%) skewX(-26deg);opacity:.85;
+  right:auto;bottom:auto;border:0;transform:translate(-50%,-50%) skewX(-26deg);opacity:.85;
+  clip-path:none;
   background:repeating-linear-gradient(90deg,#e0242f 0 6px,#00000000 6px 12px)}
+/* ==================================================================
+   STILWELTEN 2026 – deckende Karten, drei eigene Tische
+   ================================================================== */
+
+/* --- Paletten ------------------------------------------------------- */
+html[data-stil="klassisch"]{
+  --bg1:#0d2f26; --bg2:#071d17; --bg3:#030d0a;
+  --panel:#0b241d; --panel-2:#071812;
+  --text:#f4eedf; --muted:#aab9ae;
+  --warm:#d8b878; --warm-2:#a77b43; --warn:#e8b9a4;
+  --linie:rgba(216,184,120,.14); --linie-2:rgba(216,184,120,.30);
+  --karte-1:#fffdf7; --karte-2:#f4e9d3; --karte-rand:#c9ad78;
+  --rot:#a51f2d; --schwarz:#1b2622;
+  --ruecken-1:#10392c; --ruecken-2:#061a14;
+  --tisch-1:#1b5a45; --tisch-2:#0d3529; --tisch-3:#061a14;
+  --tisch-glow:rgba(216,184,120,.14); --tisch-rand:rgba(216,184,120,.30);
+  --leer-rand:rgba(216,184,120,.28); --leer-fuell:rgba(0,0,0,.18); --leer-text:#b9c7b9;
+  --chip-bg:#0a2a21; --chip-rand:#8f7448; --chip-text:#f1e5cc;
+  --kopf-1:#0d2b23; --kopf-2:#071b16; --kopf-rand:rgba(216,184,120,.30); --kopf-text:#f4eedf;
+  --kopf-zurueck-text:#e8d8b8; --kopf-zurueck-bg:rgba(216,184,120,.08); --kopf-zurueck-rand:rgba(216,184,120,.30);
+  --kopf-zurueck-hover-bg:rgba(216,184,120,.16); --kopf-zurueck-hover-text:#fff8e8;
+  --neu-1:#e3c58c; --neu-2:#b98a4c; --neu-text:#23170a; --neu-rand:#f0d7a6; --neu-1-h:#f0d3a2; --neu-2-h:#c99a5c;
+  --bild-flaeche:#f7eedc; --bild-rand:rgba(148,116,64,.55);
+  --ziel-glow:rgba(216,184,120,.16); --karte-schatten:rgba(0,0,0,.45);
+  --vv-flaeche:#0a241c; --vv-karte:#173f32; --vv-rand:#8f7448; --vv-hell:#efe2c8; --vv-rot:#c9705f; --vv-leise:#9fb3a5;
+}
+html[data-stil="maedchen"]{
+  --bg1:#3a1029; --bg2:#24091a; --bg3:#12040c;
+  --panel:#2a0c1e; --panel-2:#1b0713;
+  --text:#ffeef5; --muted:#d9a8bf;
+  --warm:#e6b3c6; --warm-2:#b76a8a; --warn:#ffc2d5;
+  --linie:rgba(255,214,230,.12); --linie-2:rgba(255,214,230,.26);
+  --karte-1:#fffafc; --karte-2:#ffeaf3; --karte-rand:#c47a99;
+  --rot:#b01e55; --schwarz:#3a1026;
+  --ruecken-1:#5a1738; --ruecken-2:#280a1b;
+  --tisch-1:#5a1c3a; --tisch-2:#351027; --tisch-3:#1b0614;
+  --tisch-glow:rgba(230,179,198,.15); --tisch-rand:rgba(230,179,198,.30);
+  --leer-rand:rgba(230,179,198,.28); --leer-fuell:rgba(0,0,0,.18); --leer-text:#e3b9ca;
+  --chip-bg:#3a1028; --chip-rand:#b76a8a; --chip-text:#ffeef5;
+  --kopf-1:#3a1028; --kopf-2:#220818; --kopf-rand:rgba(230,179,198,.30); --kopf-text:#ffeef5;
+  --kopf-zurueck-text:#f0c8d8; --kopf-zurueck-bg:rgba(255,255,255,.06); --kopf-zurueck-rand:rgba(230,179,198,.30);
+  --kopf-zurueck-hover-bg:rgba(255,255,255,.12); --kopf-zurueck-hover-text:#fff;
+  --neu-1:#e8a8c0; --neu-2:#b85b80; --neu-text:#2a0715; --neu-rand:#f4c6d6; --neu-1-h:#f2b8cc; --neu-2-h:#c96a8e;
+  --bild-flaeche:#fff2f7; --bild-rand:rgba(196,122,153,.55);
+  --ziel-glow:rgba(230,179,198,.16); --karte-schatten:rgba(20,2,10,.50);
+  --vv-flaeche:#2a0c1e; --vv-karte:#ffeaf3; --vv-rand:#c47a99; --vv-hell:#3a1026; --vv-rot:#b01e55; --vv-leise:#d9a8bf;
+}
+html[data-stil="buben"]{
+  --bg1:#071a24; --bg2:#04121a; --bg3:#020a0f;
+  --panel:#0a202a; --panel-2:#06161e;
+  --text:#e6f4f5; --muted:#9fb8bf;
+  --warm:#35d6c4; --warm-2:#1c8f86; --warn:#ff9aa2;
+  --linie:rgba(53,214,196,.14); --linie-2:rgba(53,214,196,.30);
+  --karte-1:#f6fbfc; --karte-2:#e4eef1; --karte-rand:#5d8a96;
+  --rot:#c22d3a; --schwarz:#0d2430;
+  --ruecken-1:#0a2f3a; --ruecken-2:#04141c;
+  --tisch-1:#0d3442; --tisch-2:#071f2a; --tisch-3:#031016;
+  --tisch-glow:rgba(53,214,196,.15); --tisch-rand:rgba(53,214,196,.28);
+  --leer-rand:rgba(53,214,196,.28); --leer-fuell:rgba(0,0,0,.20); --leer-text:#a9c4c9;
+  --chip-bg:#0a202a; --chip-rand:#2f7f7a; --chip-text:#e6f4f5;
+  --kopf-1:#0a202a; --kopf-2:#05131a; --kopf-rand:rgba(53,214,196,.28); --kopf-text:#e6f4f5;
+  --kopf-zurueck-text:#9fe6dd; --kopf-zurueck-bg:rgba(53,214,196,.08); --kopf-zurueck-rand:rgba(53,214,196,.30);
+  --kopf-zurueck-hover-bg:rgba(53,214,196,.16); --kopf-zurueck-hover-text:#fff;
+  --neu-1:#2fb9aa; --neu-2:#176f69; --neu-text:#041817; --neu-rand:#5fe0d3; --neu-1-h:#45cfc0; --neu-2-h:#1f8c83;
+  --bild-flaeche:#eef7f8; --bild-rand:rgba(47,127,122,.55);
+  --ziel-glow:rgba(53,214,196,.16); --karte-schatten:rgba(0,0,0,.55);
+  --vv-flaeche:#071f2a; --vv-karte:#dceef0; --vv-rand:#2f7f7a; --vv-hell:#e6f4f5; --vv-rot:#ff6b74; --vv-leise:#8fb8be;
+}
+
+/* --- Tisch und Rahmen ---------------------------------------------- */
+html[data-solitaer]{background:var(--bg2)}
+html[data-solitaer][data-stil] body{
+  background-color:var(--bg2);
+  background-size:auto;
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(1100px 660px at 50% -12%,var(--tisch-glow) 0%,rgba(0,0,0,0) 62%),
+    radial-gradient(820px 540px at 94% 8%,var(--tisch-glow) 0%,rgba(0,0,0,0) 70%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 1px,rgba(0,0,0,0) 1px 4px),
+    linear-gradient(180deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+  background-attachment:fixed;
+  color:var(--text)
+}
+html[data-stil] body .fenster{
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  border-color:var(--linie-2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 28px 64px -34px #000
+}
+html[data-stil] body .kopf{
+  background:linear-gradient(180deg,var(--kopf-1),var(--kopf-2));
+  border-color:var(--kopf-rand); color:var(--kopf-text);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)
+}
+html[data-stil] body .kopf h1{color:var(--kopf-text)}
+html[data-stil] body .kopf .zurueck{color:var(--kopf-zurueck-text);background:var(--kopf-zurueck-bg);border-color:var(--kopf-zurueck-rand)}
+html[data-stil] body .kopf .zurueck:hover{color:var(--kopf-zurueck-hover-text);background:var(--kopf-zurueck-hover-bg)}
+html[data-stil] body .modus{background:linear-gradient(180deg,var(--panel),var(--panel-2));border-color:var(--linie)}
+html[data-stil] body .modus-vorschau{background:var(--vv-flaeche);border-color:var(--linie-2)}
+html[data-stil] body .stil-wahl{background:linear-gradient(180deg,var(--panel),var(--panel-2));border-color:var(--linie-2)}
+html[data-stil] body .stil-knopf{background:rgba(255,255,255,.06);border-color:var(--linie-2);color:var(--text)}
+html[data-stil] body .stil-knopf:hover{border-color:var(--warm)}
+html[data-stil] body .stil-knopf[aria-pressed="true"]{background:var(--warm);color:var(--neu-text);border-color:var(--warm);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+html[data-stil] body .knopf{background:rgba(255,255,255,.07);border-color:var(--linie-2);color:var(--text)}
+html[data-stil] body .knopf:hover{background:rgba(255,255,255,.13);border-color:var(--warm)}
+html[data-stil] body .knopf.zweit{background:rgba(0,0,0,.14)}
+html[data-stil] body .anzeige span{background:rgba(0,0,0,.16);border-color:var(--linie);color:var(--muted)}
+html[data-stil] body .anzeige b{color:var(--text)}
+html[data-stil] body .hinweis{color:var(--muted)}
+html[data-stil] body .hinweis.warnung{color:var(--warn)}
+html[data-stil] body .leiste-option select,html[data-stil] body .modus-option select{background:var(--panel-2);border-color:var(--linie-2);color:var(--text)}
+html[data-stil] body .dialog{background:linear-gradient(180deg,var(--panel),var(--panel-2));border-color:var(--linie-2)}
+html[data-stil] body .dialog-zu{background:rgba(255,255,255,.06);border-color:var(--linie-2);color:var(--text)}
+html[data-stil] body .schleier{background:rgba(2,8,6,.80);backdrop-filter:blur(3px)}
+html[data-stil="maedchen"] body .schleier{background:rgba(18,4,12,.82)}
+html[data-stil="buben"] body .schleier{background:rgba(2,10,15,.84)}
+html[data-stil] body .stat th,html[data-stil] body .stat td{border-color:var(--linie)}
+
+/* Der Tisch: eigene Fläche mit Rahmen, Licht und feiner Webstruktur. */
+html[data-solitaer][data-stil] body .bahn{
+  margin:0 10px 8px;padding:16px 16px 12px;border-radius:14px;
+  border:1px solid var(--tisch-rand);
+  background-color:var(--tisch-2);
+  background-image:
+    radial-gradient(120% 90% at 50% -12%,var(--tisch-glow) 0%,rgba(0,0,0,0) 58%),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 1px,rgba(0,0,0,0) 1px 4px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.035) 0 1px,rgba(0,0,0,0) 1px 7px),
+    linear-gradient(180deg,var(--tisch-1),var(--tisch-2) 62%,var(--tisch-3));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -24px 46px rgba(0,0,0,.28),0 18px 40px -30px #000;
+  overflow:visible
+}
+
+/* --- Karten: deckend, mit Papierkante und klaren Zeichen ----------- */
+html[data-stil] body .bahn .karte{
+  opacity:1;filter:none;
+  background-color:var(--karte-1);border:1px solid var(--karte-rand);
+  box-shadow:0 2px 5px var(--karte-schatten),inset 0 1px 0 rgba(255,255,255,.82)
+}
+html[data-stil] body .bahn .karte.rot{color:var(--rot)}
+html[data-stil] body .bahn .karte.schwarz{color:var(--schwarz)}
+html[data-stil] body .bahn .karte.verdeckt,html[data-stil] body .bahn .karte.bedeckt{opacity:1;filter:none}
+html[data-stil] body .bahn .karte .ecke i,html[data-stil] body .bahn .karte .pip,html[data-stil] body .bahn .karte .bild{opacity:1}
+html[data-stil] body .bahn .karte .ecke b{font-weight:700;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+html[data-stil] body .bahn .karte .ecke i{font-weight:700}
+html[data-stil] body .bahn .karte .pip{text-shadow:0 1px 0 rgba(255,255,255,.35)}
+html[data-stil] body .bahn .karte .bild{border:1px solid var(--bild-rand);background-color:var(--bild-flaeche)}
+html[data-stil] body .bahn .karte.gewaehlt{outline-color:var(--warm);box-shadow:0 0 0 1px #000,0 0 0 3px var(--ziel-glow),0 7px 18px -8px #000}
+html[data-stil] body .bahn .karte.moeglich{outline-color:var(--warm);box-shadow:0 0 0 3px var(--ziel-glow),0 2px 6px var(--karte-schatten)}
+html[data-stil] body .bahn .karte.tipp{outline-color:var(--warm)}
+html[data-stil] body .bahn .karte.spielbar{box-shadow:0 0 0 1px var(--linie-2),0 2px 6px var(--karte-schatten)}
+html[data-stil] body .bahn .karte.hinten{opacity:1;filter:none;border-color:var(--karte-rand)}
+html[data-stil] body .bahn .karte.hinten::before,html[data-stil] body .bahn .karte.hinten::after{pointer-events:none}
+.geist{opacity:1!important;filter:none;transform:rotate(-1deg);box-shadow:0 16px 32px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.25)}
+.waste-rest{opacity:1;filter:none;width:76%;left:-5px;top:-5px;z-index:0;pointer-events:none}
+.stapelfeld > .karte{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+html[data-stil] body .bahn .karte.hinten{background-color:var(--ruecken-2)}
+
+/* Normal: Elfenbein, Gold, grüner Filz, Medaillon-Rückseite. */
+html[data-stil="klassisch"] body .bahn .karte:not(.hinten){
+  background-color:#fffdf7;
+  background-image:
+    radial-gradient(120% 80% at 18% 0%,rgba(255,255,255,.88),rgba(255,255,255,0) 56%),
+    linear-gradient(168deg,#fffdf7 0%,#f8f0de 58%,#efe2c8 100%)}
+html[data-stil="klassisch"] body .bahn .karte:not(.hinten)::after{
+  content:"";position:absolute;inset:4px;border:1px solid rgba(166,130,68,.55);border-radius:4px;pointer-events:none;
+  background:none;clip-path:none
+}
+html[data-stil="klassisch"] body .bahn .karte .bild{
+  border-radius:4px;background-image:repeating-linear-gradient(45deg,rgba(166,130,68,.08) 0 2px,rgba(0,0,0,0) 2px 5px)
+}
+html[data-stil="klassisch"] body .bahn .karte.hinten{
+  border-color:#c9ab6d;
+  background-color:#061a14;
+  background-image:
+    radial-gradient(circle at 50% 50%,rgba(232,205,142,.20) 0 15%,rgba(0,0,0,0) 16%),
+    repeating-conic-gradient(from 0deg at 50% 50%,rgba(232,205,142,.10) 0 6deg,rgba(0,0,0,0) 6deg 12deg),
+    repeating-linear-gradient(45deg,rgba(232,205,142,.09) 0 1px,rgba(0,0,0,0) 1px 9px),
+    linear-gradient(160deg,var(--ruecken-1),var(--ruecken-2))}
+html[data-stil="klassisch"] body .bahn .karte.hinten::before{
+  content:"";position:absolute;inset:6%;border:1px solid rgba(232,205,142,.78);border-radius:3px;
+  box-shadow:inset 0 0 0 3px rgba(6,26,20,.92)
+}
+html[data-stil="klassisch"] body .bahn .karte.hinten::after{
+  content:"";position:absolute;left:50%;top:50%;width:36%;height:36%;right:auto;bottom:auto;
+  transform:translate(-50%,-50%) rotate(45deg);border:1px solid rgba(232,205,142,.72);border-radius:2px;
+  background:radial-gradient(circle at 50% 50%,rgba(232,205,142,.14) 0 34%,rgba(0,0,0,0) 35%);
+  box-shadow:0 0 0 1px rgba(6,26,20,.75)
+}
+
+/* Mädchen: Elfenbein mit Rosenkante, dunkler Beerentisch, Rosetten-Rückseite. */
+html[data-stil="maedchen"] body .bahn .karte:not(.hinten){
+  background-color:#fffafc;
+  background-image:
+    radial-gradient(circle at 50% 0%,rgba(255,255,255,.92),rgba(255,255,255,0) 56%),
+    linear-gradient(160deg,#fffafc 0%,#fff2f7 60%,#ffe6f0 100%)}
+html[data-stil="maedchen"] body .bahn .karte:not(.hinten)::after{
+  content:"";position:absolute;inset:4px;border:1px dashed rgba(176,30,85,.48);border-radius:8px;pointer-events:none;
+  background:none;clip-path:none
+}
+html[data-stil="maedchen"] body .bahn .karte .bild{
+  border-radius:7px;background-image:radial-gradient(circle at 50% 35%,rgba(255,255,255,.95),rgba(255,255,255,0) 60%),repeating-linear-gradient(45deg,rgba(196,122,153,.06) 0 1px,rgba(0,0,0,0) 1px 5px)
+}
+html[data-stil="maedchen"] body .bahn .karte.hinten{
+  border-color:#c47a99;
+  background-color:#280a1b;
+  background-image:
+    radial-gradient(circle at 50% 50%,rgba(255,230,240,.22) 0 14%,rgba(0,0,0,0) 15%),
+    repeating-linear-gradient(45deg,rgba(230,179,198,.11) 0 1px,rgba(0,0,0,0) 1px 9px),
+    repeating-linear-gradient(-45deg,rgba(230,179,198,.09) 0 1px,rgba(0,0,0,0) 1px 9px),
+    linear-gradient(155deg,var(--ruecken-1),#3a1028 56%,var(--ruecken-2))}
+html[data-stil="maedchen"] body .bahn .karte.hinten::before{
+  content:"";position:absolute;inset:7%;border:1px solid rgba(255,225,235,.72);border-radius:7px;
+  box-shadow:inset 0 0 0 3px rgba(40,10,27,.92)
+}
+html[data-stil="maedchen"] body .bahn .karte.hinten::after{
+  content:"";position:absolute;left:50%;top:50%;width:31%;height:31%;right:auto;bottom:auto;
+  transform:translate(-50%,-50%) rotate(45deg);border:1px solid rgba(255,225,235,.82);
+  border-radius:50% 8% 50% 8%;
+  background:
+    radial-gradient(circle at 30% 30%,rgba(255,235,243,.95) 0 13%,rgba(0,0,0,0) 14%),
+    radial-gradient(circle at 70% 30%,rgba(255,235,243,.95) 0 13%,rgba(0,0,0,0) 14%),
+    radial-gradient(circle at 30% 70%,rgba(255,235,243,.95) 0 13%,rgba(0,0,0,0) 14%),
+    radial-gradient(circle at 70% 70%,rgba(255,235,243,.95) 0 13%,rgba(0,0,0,0) 14%),
+    #5a1738;
+  box-shadow:0 0 0 1px rgba(40,10,27,.7)
+}
+
+/* Buben: kühles Elfenbein, Teal-Kanten, geometrische Rückseite. */
+html[data-stil="buben"] body .bahn .karte:not(.hinten){
+  background-color:#f6fbfc;
+  background-image:
+    radial-gradient(120% 80% at 20% 0%,rgba(255,255,255,.92),rgba(255,255,255,0) 58%),
+    linear-gradient(160deg,#f8fcfd 0%,#e8f1f3 62%,#dbe8ec 100%)}
+html[data-stil="buben"] body .bahn .karte:not(.hinten)::after{
+  content:"";position:absolute;inset:3px;border:1px solid rgba(47,127,122,.48);border-radius:2px;pointer-events:none;
+  background:none;clip-path:none
+}
+html[data-stil="buben"] body .bahn .karte .bild{
+  border-radius:1px;background-image:repeating-linear-gradient(135deg,rgba(47,127,122,.08) 0 2px,rgba(0,0,0,0) 2px 6px)
+}
+html[data-stil="buben"] body .bahn .karte.hinten{
+  border-color:#2f7f7a;
+  background-color:#04141c;
+  background-image:
+    linear-gradient(135deg,rgba(53,214,196,0) 44%,rgba(53,214,196,.16) 45% 55%,rgba(53,214,196,0) 56%),
+    repeating-linear-gradient(45deg,rgba(53,214,196,.09) 0 1px,rgba(0,0,0,0) 1px 10px),
+    repeating-linear-gradient(-45deg,rgba(53,214,196,.06) 0 1px,rgba(0,0,0,0) 1px 10px),
+    linear-gradient(160deg,var(--ruecken-1),#071f2a 55%,var(--ruecken-2))}
+html[data-stil="buben"] body .bahn .karte.hinten::before{
+  content:"";position:absolute;inset:8%;border:1px solid rgba(53,214,196,.72);border-radius:2px;
+  box-shadow:inset 0 0 0 3px rgba(4,20,28,.92),inset 0 0 18px rgba(53,214,196,.14)
+}
+html[data-stil="buben"] body .bahn .karte.hinten::after{
+  content:"";position:absolute;left:50%;top:50%;width:44%;height:18%;right:auto;bottom:auto;
+  opacity:1;transform:translate(-50%,-50%) skewX(-20deg);border:0;clip-path:polygon(0 0,100% 0,88% 100%,12% 100%);
+  background:repeating-linear-gradient(90deg,rgba(53,214,196,.8) 0 4px,rgba(0,0,0,0) 4px 8px);
+  box-shadow:none
+}
+
+/* --- Leere Plätze, Stapel, Markierungen ---------------------------- */
+html[data-stil] body .spalte.leer{border-color:var(--leer-rand);background:var(--leer-fuell)}
+html[data-stil] body .spalte.leer .leerfeld{color:var(--leer-text)}
+html[data-stil] body .stapelfeld.leer,html[data-stil] body .fertigplatz,html[data-stil] body .vorrat{border-color:var(--leer-rand);background:var(--leer-fuell)}
+html[data-stil] body .stapelfeld.leer:hover{border-color:var(--warm)}
+html[data-stil] body .leerzeichen{color:var(--leer-text)}
+html[data-stil] body .leerzeichen.farbe{opacity:1;color:var(--muted)}
+html[data-stil] body .leerzeichen.farbe.rot{color:var(--rot)}
+html[data-stil] body .spalte.moeglich,html[data-stil] body .stapelfeld.moeglich{border-color:var(--warm);background:var(--ziel-glow);box-shadow:inset 0 0 0 1px var(--ziel-glow),0 0 0 3px var(--ziel-glow)}
+html[data-stil] body .stapelfeld.ueber,html[data-stil] body .spalte.ueber{box-shadow:inset 0 0 0 2px var(--warm)}
+html[data-stil] body .stapelzahl{background:var(--chip-bg);border-color:var(--chip-rand);color:var(--chip-text)}
+html[data-stil] body .vorrat.leer{opacity:1}
+
+/* --- Spider: eigener Fußbereich mit Luft und Beschriftung ---------- */
+.spider{padding-bottom:6px}
+.spider .tableau{margin-bottom:0}
+.spider-fuss{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:26px;align-items:start;
+  margin-top:28px;padding:18px 18px 14px;border-top:1px solid var(--linie-2);
+  border-radius:0 0 12px 12px;
+  background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.20))
+}
+.spider-zone{display:flex;flex-direction:column;gap:9px;min-width:0}
+.spider-zone--vorrat{align-items:flex-end}
+.spider-zone-titel{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.spider-zone-titel b{color:var(--warm);font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.fertige{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;min-width:0;
+  max-width:calc(8 * var(--sfw) + 42px)}
+.fertigplatz{width:auto;min-width:0;border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.fertigplatz.voll{border-style:solid;border-color:var(--karte-rand);background:rgba(0,0,0,.10)}
+.fertigplatz .karte{box-shadow:0 3px 8px var(--karte-schatten)}
+.spider-fuss .vorrat{justify-self:end;width:var(--sfw);border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.spider-fuss .leerzeichen{font-size:10px;letter-spacing:.06em}
+
+/* --- Anpassungen ---------------------------------------------------- */
+@media(max-width:760px){
+  html[data-stil] body .bahn{margin:0 6px 6px;padding:12px 10px 10px;border-radius:11px}
+  .spider-fuss{gap:16px;margin-top:20px;padding:14px 12px 12px}
+}
+@media(max-width:520px){
+  .spider-fuss{grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-top:20px;padding:10px 8px 9px}
+  .spider-zone--vorrat{align-items:flex-end}
+  .spider-fuss .vorrat{justify-self:end}
+  .fertige{max-width:none;gap:3px}
+  .spider-zone-titel{font-size:9.5px;letter-spacing:.09em}
+}
+@media(max-width:420px){
+  .spider-fuss{margin-top:16px;padding:10px 8px 9px}
+  .spider-zone{gap:7px}
+}
+@media(max-width:760px){
+  html[data-solitaer][data-stil] body .bahn{margin:0 2px 4px;padding:10px 4px 8px;border-radius:10px}
+}
+@media(max-width:520px){
+  html[data-solitaer][data-stil] body{padding-left:3px;padding-right:3px}
+  .tableau.zehn{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px}
+}
+
+/* Der Tisch füllt den freien Platz; der Spider-Fuß sitzt unten, nicht direkt
+   unter dem Tableau. Bei viel Inhalt darf die Seite normal wachsen. */
+html[data-solitaer][data-stil] body.spielt{min-height:100dvh;overflow-y:auto}
+html[data-solitaer][data-stil] body.spielt .seite{min-height:calc(100dvh - var(--rand-oben) - var(--rand-unten));height:auto;display:flex;flex-direction:column}
+html[data-solitaer][data-stil] #spielbereich{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+html[data-solitaer][data-stil] #spielbereich .bahn{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+html[data-solitaer][data-stil] #brett{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+html[data-solitaer][data-stil] .klondike,html[data-solitaer][data-stil] .spider,html[data-solitaer][data-stil] .freecell{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+html[data-solitaer][data-stil] .spider{justify-content:center}
+html[data-solitaer][data-stil] .spider-fuss{margin-top:30px}
+html[data-solitaer][data-stil] .pyramid,html[data-solitaer][data-stil] .tripeaks{flex:1 1 auto;min-height:0;justify-content:center}
+html[data-solitaer][data-stil="maedchen"]{background-color:#24091a;background-image:none}
 </style>
 </head>
 <body>

@@ -112,6 +112,65 @@ beide Ablagen spiegeln und committen.
 
 ---
 
+## 27.11.2026 · Solitär und Spider: Grafik, Karten und Layout
+
+**Auftrag:** Karten vollständig deckend machen, die drei Grafikstile sichtbar
+hochwertiger und eigenständiger gestalten und den Spider-Fuß auf PC und Handy
+sauber vom Tableau trennen. Beide Spielvarianten, alle drei Stile und beide
+Geräte prüfen; Schnittstelle 2.0 und Regeln unverändert lassen.
+
+**Umgesetzt**
+
+- **Deckende Karten:** Die Ursache war `opacity` auf `.karte.verdeckt`
+  (0,52), `.karte.bedeckt` (0,8) sowie auf Kartenzeichen und Zieh-Geist.
+  Karten, Zeichen und Rückseiten stehen jetzt in allen Stilen auf `opacity:1`;
+  Vorderseiten haben ein deckendes Elfenbein, Rückseiten einen deckenden
+  Grund. Keine Transparenz, kein Filter, kein Blend-Modus auf Karten.
+- **Normal:** tiefer dunkelgrüner Tisch mit Goldkante, Elfenbeinkarten,
+  Goldmedaillon-Rückseite, ruhige Licht- und Schattenflächen.
+- **Mädchen:** dunkles Beeren-/Pflaumengarn statt heller Fläche, Rosé- und
+  Violettakzente, Beerenrosette als Rückseite, eigene Kartenkante und
+  Dekorlinien; die Karten bleiben hell und gut lesbar.
+- **Buben:** Anthrazit/Teal statt Blau-Einfärbung, eigenes Chevron-Muster auf
+  der Rückseite, harte Kanten und türkise Akzente.
+- **Spider-Fuß:** eigener Bereich mit den zwei beschrifteten Zonen „Ablagen“
+  (8 Plätze) und „Vorrat“; 30 px Abstand zum Tableau, eigene Tischkante und
+  klare Trennung. Auf dem Handy liegen die acht Ablagen und der Vorrat
+  nebeneinander in der Fußzeile; auf dem PC rechts neben den Ablagen.
+- **Handy-Spider:** Das Tableau bricht unter 521 px auf zwei Reihen mit je
+  fünf Spalten um. Dadurch bleiben die Karten 69 px breit (statt 35 px) und
+  die Werte lesbar; auf dem PC bleiben zehn Spalten nebeneinander. Die
+  Kartenabstände im Stapel werden für die schmale Ansicht leicht verringert.
+- **Hintergrund:** Die von `stil.js` gesetzte 264-px-Herzkachel und ihre
+  `background-size` werden für Solitär überschrieben; der Mädchen-PC zeigt
+  dadurch keinen waagerechten Kachelstreifen mehr.
+- **Schnittstelle 2.0 und Regeln:** unverändert. Keine externen Ressourcen,
+  keine neuen Bibliotheken.
+- **Sicherungen:** `sicherung/solitaer-2026-11-27-vor-final/` (Arbeitsstand
+  vor der letzten Layoutrunde) und `sicherung/solitaer-2026-11-27-mirror-vorher/`
+  (Spiegel vor dem Angleichen).
+
+**Geprüft (echte Läufe)**
+
+- `solitaer_pruefen.js`: **236/236** Prüfungen bestanden, alle sechs
+  Kombinationen aus Normal/Mädchen/Buben und Klondike/Spider, jeweils PC
+  1280×800 und Handy 390×844.
+- Zusätzlich 360×740 als Layout- und Sichtprüfung: kein Querscrollen,
+  Karten 62,8 px breit, Fuß vollständig sichtbar.
+- Geprüft wurden Deckkraft und Alpha-Werte aller Karten, Vorder-/Rückseiten,
+  Rot/Schwarz-Kontrast, Drag, Nachziehen, Aufdecken, Neustart, keine
+  Querscrollung, Fußabstand, acht Ablagen und Vorrat, keine Konsolenfehler.
+- Zusätzlicher Smoke-Test aller fünf Varianten in allen drei Stilen auf PC
+  und Handy: keine transparenten Karten, kein Querscrollen, keine Fehler.
+- Sichtprüfung per Screenshots: `screens/sol-final-*.png`,
+  `screens/sol-start-*.png`, `screens/sol-zoom-handy-spider.png`.
+- Beide Ablagen (`Documents/Homepage` und `Documents/GitHub/Homepage`)
+  byte-gleich; `sha256sum` ohne Unterschied.
+
+**Offen:** nichts aus dem Auftrag.
+
+---
+
 ## 26.11.2026 · Solitär: eigenständig und Schnittstelle 2.0
 
 **Auftrag:** Solitär vollständig eigenständig machen – eigener
