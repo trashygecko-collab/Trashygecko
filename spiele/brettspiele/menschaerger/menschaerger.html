@@ -605,12 +605,13 @@ const BRETTMITTE = KANTE / 2;
 const PARKPLATZ = {};
 Object.keys(BASE_ORIGIN).forEach(f => {
   const [gx, gy] = BASE_ORIGIN[f];
-  /* Die vier Parkplätze liegen symmetrisch um die Mitte des 3×3-Feldes:
-     1,5 ± 0,75 Zellen. Vorher waren sie um eine halbe Zelle nach unten
-     rechts versetzt; dadurch standen Figuren und Zierrat gegeneinander. */
-  PARKPLATZ[f] = [[0.75,0.75],[2.25,0.75],[0.75,2.25],[2.25,2.25]]
+  /* Die vier Parkplätze liegen wie ursprünglich bei 1,25 und 2,75 Zellen;
+     ihre Mitte ist 2,0 Zellen. Die Eckmedaillons werden an diese Mitte
+     gesetzt – nicht die Figuren an das Medaillon. */
+  PARKPLATZ[f] = [[1.25,1.25],[2.75,1.25],[1.25,2.75],[2.75,2.75]]
     .map(([sx, sy]) => [gx * CELL + sx * CELL, gy * CELL + sy * CELL]);
 });
+const PARK_MITTE = 2 * CELL;
 
 function knoten(tag, attrs, kinder){
   const n = svg(tag || "g", attrs);
@@ -710,7 +711,7 @@ function startbereichNormal(defs, f){
     svg("rect", {x:x + 17, y:y + 17, width:s - 34, height:s - 34, rx:11, fill:"none", stroke:"#6f5620", "stroke-width":1, "stroke-opacity":.9}),
     svg("path", {d:"M" + (x + s / 2) + " " + (y + 15) + " l6 6 l-6 6 l-6 -6 Z M" + (x + s / 2) + " " + (y + s - 27) + " l6 6 l-6 6 l-6 -6 Z M" + (x + 15) + " " + (y + s / 2) + " l6 6 l-6 6 l-6 -6 Z M" + (x + s - 27) + " " + (y + s / 2) + " l6 6 l-6 6 l-6 -6 Z",
       fill:"#c8a24a", opacity:.55}),
-    knoten("g", {opacity:.16, transform:"translate(" + (x + s / 2) + " " + (y + s / 2) + ") scale(" + (s * .52 / 24) + ") translate(-12 -12)"},
+    knoten("g", {opacity:.16, transform:"translate(" + (x + PARK_MITTE) + " " + (y + PARK_MITTE) + ") scale(" + (s * .52 / 24) + ") translate(-12 -12)"},
       symboleTeile(c.symbol, c.hex, "#0d2018")),
     svg("circle", {cx:x + 20, cy:y + 20, r:3, fill:"#c8a24a", opacity:.7}),
     svg("circle", {cx:x + s - 20, cy:y + 20, r:3, fill:"#c8a24a", opacity:.7}),
@@ -843,9 +844,9 @@ function startbereichMaedchen(defs, f){
   const [ox, oy] = BASE_ORIGIN[f];
   const x = ox * CELL, y = oy * CELL, s = 3 * CELL;
   grad(defs, "m-basis-" + f, [[0,"#7b3c50"],[.55,"#4a1b2c"],[1,"#250b16"]], {cx:"42%", cy:"20%", r:"96%"});
-  /* Symmetrisches Rosenmedaillon in der Mitte des Beetes. Die vier
-     Parkplätze liegen bei 0,75 und 2,25 Zellen – also exakt um diese Mitte. */
-  const mx = x + s / 2, my = y + s / 2;
+  /* Rosenmedaillon über der Mitte der vier Parkplätze (2,0 Zellen).
+     Die Figuren bleiben in ihren ursprünglichen Parkplätzen. */
+  const mx = x + PARK_MITTE, my = y + PARK_MITTE;
   const teile = [
     svg("rect", {x:x + 9, y:y + 9, width:s - 18, height:s - 18, rx:22, fill:"url(#m-basis-" + f + ")"}),
     svg("rect", {x:x + 9, y:y + 9, width:s - 18, height:s - 18, rx:22, fill:"none", stroke:"#d9a9b2", "stroke-width":2.6, "stroke-opacity":.9}),
@@ -1011,7 +1012,7 @@ function startbereichBuben(defs, f){
     svg("rect", {x:x + 20, y:y + 20, width:s - 40, height:s - 40, rx:12, fill:"none", stroke:c.hex, "stroke-width":1.4, "stroke-opacity":.45}),
     ...[[22,22],[s - 22,22],[22,s - 22],[s - 22,s - 22]].map(([dx, dy]) =>
       svg("circle", {cx:x + dx, cy:y + dy, r:3.2, fill:"#5c6773", opacity:.85})),
-    knoten("g", {opacity:.20, transform:"translate(" + (x + s / 2) + " " + (y + s / 2) + ") scale(" + (s * .54 / 24) + ") translate(-12 -12)"},
+    knoten("g", {opacity:.20, transform:"translate(" + (x + PARK_MITTE) + " " + (y + PARK_MITTE) + ") scale(" + (s * .54 / 24) + ") translate(-12 -12)"},
       symboleTeile(c.symbol, c.hex, "#101519")),
     svg("path", {d:"M" + (x + 24) + " " + (y + s * .62) + " L" + (x + 60) + " " + (y + s * .58) + " L" + (x + 84) + " " + (y + s * .66),
       fill:"none", stroke:"#ff7a2e", "stroke-opacity":.35, "stroke-width":2.4}),
@@ -1108,6 +1109,27 @@ function rahmenBuben(){
   ]);
 }
 
+/* Die großen Eckmedaillons werden nach dem Einsetzen an der sichtbaren
+   Zeichnung zentriert. Deren Umriss ist nicht immer symmetrisch zur 24×24-
+   Zeichenfläche (z. B. Krone und Kleeblatt); der leere Rand darf die optische
+   Mitte also nicht verschieben. */
+function zentriereEckSymbol(basis){
+  const sym = [...basis.querySelectorAll("g")].find(x => {
+    const t = x.getAttribute("transform") || "";
+    return t.includes("scale(") && t.includes("translate(-12");
+  });
+  if (!sym) return;
+  const m = (sym.getAttribute("transform") || "")
+    .match(/translate\(([-0-9.]+) ([-0-9.]+)\) scale\(([-0-9.]+)\) translate\(-12 -12\)/);
+  if (!m) return;
+  const b = sym.getBBox();
+  const mx = +m[1], my = +m[2], k = +m[3];
+  const dx = (b.x + b.width / 2 - 12) * k;
+  const dy = (b.y + b.height / 2 - 12) * k;
+  sym.setAttribute("transform", "translate(" + (mx - dx) + " " + (my - dy) +
+    ") scale(" + k + ") translate(-12 -12)");
+}
+
 function zeichneBrett(){
   el.brettZeichnung.innerHTML = "";
   const defs = svg("defs");
@@ -1118,7 +1140,11 @@ function zeichneBrett(){
     el.brettZeichnung.appendChild(weltMaedchen(defs));
     el.brettZeichnung.appendChild(spielflaecheMaedchen());
     el.brettZeichnung.appendChild(zierratMaedchen(defs));
-    ["yellow","green","blue","red"].forEach(f => el.brettZeichnung.appendChild(startbereichMaedchen(defs, f)));
+    ["yellow","green","blue","red"].forEach(f => {
+      const basis = startbereichMaedchen(defs, f);
+      el.brettZeichnung.appendChild(basis);
+      zentriereEckSymbol(basis);
+    });
     TRACK.forEach(([x, y], i) => {
       const [cx, cy] = mitte(x, y);
       const startF = Object.keys(START_INDEX).find(f => START_INDEX[f] === i);
@@ -1136,7 +1162,11 @@ function zeichneBrett(){
     el.brettZeichnung.appendChild(weltBuben(defs));
     el.brettZeichnung.appendChild(spielflaecheBuben());
     el.brettZeichnung.appendChild(zierratBuben());
-    ["yellow","green","blue","red"].forEach(f => el.brettZeichnung.appendChild(startbereichBuben(defs, f)));
+    ["yellow","green","blue","red"].forEach(f => {
+      const basis = startbereichBuben(defs, f);
+      el.brettZeichnung.appendChild(basis);
+      zentriereEckSymbol(basis);
+    });
     TRACK.forEach(([x, y], i) => {
       const [cx, cy] = mitte(x, y);
       const startF = Object.keys(START_INDEX).find(f => START_INDEX[f] === i);
@@ -1153,7 +1183,11 @@ function zeichneBrett(){
   el.brettZeichnung.appendChild(weltNormal(defs));
   el.brettZeichnung.appendChild(spielflaecheNormal(defs));
   el.brettZeichnung.appendChild(zierratNormal());
-  ["yellow","green","blue","red"].forEach(f => el.brettZeichnung.appendChild(startbereichNormal(defs, f)));
+  ["yellow","green","blue","red"].forEach(f => {
+    const basis = startbereichNormal(defs, f);
+    el.brettZeichnung.appendChild(basis);
+    zentriereEckSymbol(basis);
+  });
   TRACK.forEach(([x, y], i) => {
     const [cx, cy] = mitte(x, y);
     const startF = Object.keys(START_INDEX).find(f => START_INDEX[f] === i);

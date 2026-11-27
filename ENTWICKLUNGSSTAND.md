@@ -5,6 +5,64 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 27.11.2026 · Mensch ärgere dich nicht: Eckmedaillons an die Figuren gesetzt
+
+**Auftrag:** Die Spielfiguren wieder in ihre ursprünglichen Parkplätze
+setzen und die Hintergrundgrafiken der vier Ecken daran ausrichten – nicht
+umgekehrt. Nur diese Korrektur; Mädchenstil, Blinken, Würfelposition,
+Spielmechanik, Laufwege, Bots und Schnittstelle 2.0 bleiben unverändert.
+
+**Ursache und Umgesetzt**
+
+- Die letzte Änderung hatte `PARKPLATZ` von `1,25/2,75` auf `0,75/2,25`
+  Zellen verschoben. Dadurch standen die Figuren links oben im 3×3-Feld,
+  passend zu den bereits links oben stehenden Medaillons. Das ist
+  rückgängig gemacht.
+- **Figuren:** `PARKPLATZ` liegt wieder exakt bei `1,25` und `2,75` Zellen,
+  also mit der Mitte bei `2,0` Zellen. Die vier Parkplätze sind damit wieder
+  die ursprünglichen; die Startfelder und Laufwege sind unverändert.
+- **Eckgrafiken:** Die zentralen Medaillons/Symbole sitzen jetzt bei
+  `2,0` Zellen, nicht mehr bei `1,5`. Das betrifft den Stern (Normal), das
+  Rosenmedaillon samt Symbol (Mädchen) und das Symbol (Buben) in allen vier
+  Ecken.
+- **Sichtbare Bildmitte:** Neu ist `zentriereEckSymbol(basis)`: Nach dem
+  Einsetzen wird die sichtbare SVG-Zeichnung über ihre `getBBox()`-Mitte
+  ausgerichtet. Dadurch verschieben leere Ränder bzw. asymmetrische Formen
+  wie Krone und Kleeblatt die optische Mitte nicht.
+- **Unverändert:** Mädchenstil, Normal-/Bubenstil, Blinkanimation,
+  Würfelposition in der Brettmitte, Regeln, Laufwege, Bots, Mehrspieler und
+  Schnittstelle 2.0.
+
+**Geprüft**
+
+- **PC 1280×800 und Handy 390×844**, jeweils **Normal, Mädchen und Buben**,
+  jeweils alle vier Ecken (`yellow`, `green`, `blue`, `red`).
+- **Figuren:** 12 Figuren in den Parkplätzen exakt auf den vorgesehenen
+  Mittelpunkten, maximale Abweichung **0,00** SVG-Einheiten; die übrigen
+  4 Figuren stehen erwartungsgemäß auf den Startfeldern und wurden nicht
+  verändert. Geprüfte Parkplatzmitten:
+  `yellow 145,45/145,45`, `green 654,55/145,45`,
+  `blue 145,45/654,55`, `red 654,55/654,55`.
+- **Grafiken:** sichtbare Symbolmitte bzw. Medaillonmitte in allen vier
+  Ecken und allen drei Stilen exakt auf der jeweiligen Parkplatzmitte;
+  maximale Abweichung **0,00**.
+- Keine Konsolen- oder Seitenfehler; keine Figuren wurden verschoben, um
+  einen Grafikfehler zu kaschieren. Sichtprüfung aller vier Ecken in beiden
+  Größen über die Bilder unten.
+- **Nicht geprüft:** Eine vollständige Partie wurde für diese reine
+  Ausrichtungsänderung nicht erneut durchgespielt; Regeln und Spielablauf
+  sind nicht angefasst.
+
+**Sicherung:** `arbeit/sicherung/menschaerger-ecken-2026-11-27/` (beide
+Ablagen vor der Änderung). Bilder: `arbeit/screens/maen-ecken-normal-pc.png`,
+`…-maedchen-pc.png`, `…-buben-pc.png`, `…-normal-handy.png`,
+`…-maedchen-handy.png`, `…-buben-handy.png`.
+
+**Dateien:** `spiele/brettspiele/menschaerger/menschaerger.html` in beiden
+Ablagen, `ENTWICKLUNGSSTAND.md`.
+
+---
+
 ## 27.11.2026 · Mensch ärgere dich nicht: Würfel wieder in der Brettmitte
 
 **Auftrag:** Den Würfel auf PC und Handy zurück in den freien zentralen
