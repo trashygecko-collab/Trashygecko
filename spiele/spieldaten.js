@@ -59,7 +59,6 @@ window.TGSpieldaten = (function () {
     ["Ship Captain Crew", "brettspiele/shipcrew/shipcrew.html", "wuerfel", "lokal zwei computer", "schiffe versenken"],
 
     /* --- Würfelspiel-Sammlung (lokal am selben Gerät) ------------------- */
-    ["Beelzebub", "wuerfelspiele/beelzebub.html", "wuerfel", "lokal zwei computer"],
     ["Der Turm", "wuerfelspiele/der-turm.html", "wuerfel", "lokal zwei computer"],
     ["Die böse Drei", "wuerfelspiele/boese-drei.html", "wuerfel", "lokal zwei computer"],
     ["Die böse Eins", "wuerfelspiele/boese-eins.html", "wuerfel", "lokal zwei computer"],
@@ -165,7 +164,6 @@ window.TGSpieldaten = (function () {
     "brettspiele/maexchen/maexchen.html": "Zwei verdeckte Würfel, Ansage und Zweifel.",
     "brettspiele/pig/pig.html": "Würfeln und sammeln – aber vor der Eins aufhören.",
     "brettspiele/shipcrew/shipcrew.html": "Schiff, Kapitän, Crew – dann 500 Punkte sammeln.",
-    "wuerfelspiele/beelzebub.html": "Drei Würfel zählen plus, ein roter zählt minus.",
     "wuerfelspiele/der-turm.html": "Eigene Stichzahl treffen und Steine aus dem Turm holen.",
     "wuerfelspiele/boese-drei.html": "So oft würfeln wie du willst – eine Drei löscht den Zug.",
     "wuerfelspiele/boese-eins.html": "Fünf Würfe werden addiert – eine Eins stoppt sofort.",

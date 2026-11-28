@@ -33,7 +33,7 @@ import (
 // wuerfelKatalog sind die Würfelspiele, die der Connector anbietet. Die Namen
 // stehen in den Modulen selbst (titel), hier steht nur die Kennung.
 var wuerfelKatalog = []string{
-	"beelzebub", "boese-drei", "boese-eins", "der-turm", "dufte-hundert",
+	"boese-drei", "boese-eins", "der-turm", "dufte-hundert",
 	"eins-bis-sechzehn", "fenster", "gestrichene-zwoelf", "hin-und-her",
 	"hohe-hausnummer", "jule", "paerchen", "plus-minus", "rentmeister",
 	"streichhoelzer", "teure-sieben", "unter-oder-ueber", "wuerfelpoker",

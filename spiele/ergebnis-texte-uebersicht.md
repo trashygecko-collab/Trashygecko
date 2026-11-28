@@ -59,10 +59,10 @@ Eine eigene Karte `#tg-spruch` unten mittig über dem Spielfeld:
 
 ### Würfelspiele (vollständig)
 
-Alle 18 Spiele über den gemeinsamen Rahmen (`wuerfelspiele/rahmen.js`, online über
+Alle 17 Spiele über den gemeinsamen Rahmen (`wuerfelspiele/rahmen.js`, online über
 `wuerfelspiele/online.js`) – ein Hook deckt lokale Partie und Online-Partie ab:
 
-beelzebub, boese-drei, boese-eins, der-turm, dufte-hundert, eins-bis-sechzehn, fenster,
+boese-drei, boese-eins, der-turm, dufte-hundert, eins-bis-sechzehn, fenster,
 gestrichene-zwoelf, hin-und-her, hohe-hausnummer, jule, paerchen, plus-minus, rentmeister,
 streichhoelzer, teure-sieben, unter-oder-ueber, wuerfelpoker (plus `index.html`).
 
@@ -149,9 +149,6 @@ Partieziel), alle anderen das Partieende.
 * `node --check` über alle geänderten Seiten und die zentralen Dateien: keine Syntaxfehler
 * Alle 32 verdrahteten Brett-/Kartenseiten laden im Browser ohne JS-Fehler und ohne
   fehlende Dateien; `TGErgebnis` ist überall vorhanden
-* Beelzebub (2 Spieler, online): Sieg → Gewinnspruch aus `GEWONNEN_SPRUECHE`, genau eine
-  Meldung, Karte klickdurchlässig, nach 8 s ausgeblendet; Handy 390 × 844: Pechspruch aus
-  `PECH_SPRUECHE`, im Bild, kein Querscrollen
 * zehntausend, kniffel, tictactoe: Spielende über die echte Spiel-Logik ausgelöst → Spruch
   aus der jeweiligen Zentralliste; tictactoe zusätzlich auf 390 × 844
 * poker, schwimmen, skyjo, domino, halma und risiko: Spielende über die echte Logik

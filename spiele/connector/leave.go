@@ -760,7 +760,7 @@ func imSpielHandler(w http.ResponseWriter, r *http.Request) {
 func (r *Room) aktivesSpiel(id string) string {
 	if wuerfelAktiv(r.Wuerfel, id) {
 		// Die Würfelsammlung ist eine Partie, aber 18 Spiele: Die Seite sucht
-		// das Spiel über seine Kennung (beelzebub, fenster, …) und öffnet
+		// das Spiel über seine Kennung (fenster, jule, …) und öffnet
 		// dessen eigene Seite. "wuerfel" fände sie nicht – die Partie bliebe
 		// unsichtbar (keine Zeile unter „Laufende Partien“, kein Fortsetzen).
 		if r.Wuerfel != nil && r.Wuerfel.Spiel != "" {

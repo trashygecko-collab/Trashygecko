@@ -73,8 +73,6 @@ window.TGMultiplayer = {
     { "id": "pig", "name": "Pig", "kat": "wuerfel", "pfad": "/spiele/brettspiele/pig/pig.html", "api": "pig", "min": 2, "max": 4, "art": "tisch",
       "text": "Würfeln und sammeln, aber vor der Eins aufhören – sonst ist die Runde weg." },
 
-    { "id": "beelzebub", "name": "Beelzebub", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/beelzebub.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
-      "text": "Drei Würfel zählen plus, ein roter zählt minus. Fünf Runden, höchste Summe gewinnt." },
     { "id": "boese-drei", "name": "Die böse Drei", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/boese-drei.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Würfle so oft du willst und sichere mit „Halten“ – eine Drei löscht den ganzen Zug." },
     { "id": "boese-eins", "name": "Die böse Eins", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/boese-eins.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",

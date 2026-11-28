@@ -89,7 +89,7 @@
      Die zwei Vorlagen unten bauen ein ganzes Regelmodul; sie gehören zur
      Regel-Seite, nicht zur Oberfläche. */
 
-  /* Vier Würfel, `minus` davon rot, über fünf Runden – Pärchen und Beelzebub
+  /* Vier Würfel, `minus` davon rot, über fünf Runden – die Spiele
      unterscheiden sich nur in der Zahl der Minuswürfel. */
   TGW.plusMinusRunden = function (def) {
     var RUNDEN = 5;

@@ -5,6 +5,51 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Beelzebub ersatzlos entfernt
+
+**Auftrag:** Das Würfelspiel Beelzebub vollständig aus der Sammlung nehmen –
+Dateien, Karten, Listen, Connector-Einträge, Registrierungen. Kein Ersatz, keine
+leeren Stellen. Vorher gesichert: `sicherung/beelzebub-2026-11-28/` (21
+Dateien, beide Ablagen).
+
+**Entfernt:**
+- Spiel und Regelmodul: `spiele/wuerfelspiele/beelzebub.html`,
+  `spiele/wuerfelspiele/spiele/beelzebub.js`.
+- Übersicht `spiele/spiele.html`: die Karte und die vier Zählungen der
+  Kategorie (Würfelspiele **25 → 24**, „Alle 24 ansehen“).
+- `spiele/wuerfelspiele/index.html`: die Karte der Sammlung (**18 → 17**).
+- `spiele/spieldaten.js`: Suchzeile und Kurzbeschreibung.
+- `spiele/multiplayer-register.js`: der Mehrspieler-Eintrag.
+- Connector (beide Ablagen, byte-gleich): die drei Tabellen in `angebot.go`
+  (Kategorie, Name, online), der Eintrag in `wuerfelKatalog` (`wuerfel.go`)
+  und der Bot-Eintrag in `connector.html`; Zählkommentare 18 → 17.
+- `spiele/ergebnis-texte-uebersicht.md`: Kennung in der Liste und der
+  Beelzebub-Prüfpunkt.
+- Kommentare, die Beelzebub als Beispiel nannten (`rahmen.js`, `leave.go`).
+- Tests (lokal, nicht im Repo): `spielzuege_test.go`, `tabellen_test.go`.
+
+**Erhalten:** die gemeinsame Würfelmaschine (`wuerfelspiele/rahmen.js`,
+`online.js`, `TGW.plusMinusRunden`) und alle 17 übrigen Würfelspiele; die
+`minus`-Vorlage wird weiter von Pärchen benutzt. Keine anderen Spiele,
+Grafiken oder Bibliotheken angefasst.
+
+**Gemessen (Chromium, echter Seitenaufruf):**
+- `spiele.html`: **24** Karten in der Würfelkategorie, Kopfzahl 24,
+  Kategorie-Kachel „24 Spiele“, „Alle 24 ansehen“; im ganzen Dokument kein
+  „Beelzebub“ mehr, Spielesuche lädt.
+- `spiele/wuerfelspiele/index.html`: **17** Karten, kein Beelzebub-Link.
+- `beelzebub.html` → **404**; „Die böse Drei“ lädt normal (Titel, Würfelknopf,
+  Regelmaschine vorhanden); keine JS-Fehler außer dem selbst erzeugten 404.
+- `node --check` auf `spieldaten.js`, `multiplayer-register.js`,
+  `rahmen.js` grün; `gofmt -l` auf allen geänderten Go-Dateien leer;
+  `go build ./...` und `go test -run 'Angebot|Tabellen|Spielzuege|Wuerfel|
+  Beelzebub|Bots' ./...` in `connector` (**12,2 s**) und `connector-online`
+  (**11,9 s**) grün.
+
+**Nicht angefasst:** die erzeugten Android-Kopien unter
+`spiele/android/app/src/main/assets/www` samt `katalog.json` (gitignoriert,
+Bauartefakt) und die alten APKs – sie enthalten den Stand vor dieser Änderung.
+
 ## 28.11.2026 · Chicago: neu geschrieben nach Schnittstelle 2.0
 
 **Auftrag:** `spiele/brettspiele/chicago/chicago.html` vollständig überarbeiten
