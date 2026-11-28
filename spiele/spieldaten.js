@@ -61,7 +61,6 @@ window.TGSpieldaten = (function () {
     /* --- Würfelspiel-Sammlung (lokal am selben Gerät) ------------------- */
     ["Der Turm", "wuerfelspiele/der-turm.html", "wuerfel", "lokal zwei computer"],
     ["Die böse Drei", "wuerfelspiele/boese-drei.html", "wuerfel", "lokal zwei computer"],
-    ["Die böse Eins", "wuerfelspiele/boese-eins.html", "wuerfel", "lokal zwei computer"],
     ["Dufte Hundert", "wuerfelspiele/dufte-hundert.html", "wuerfel", "lokal zwei computer"],
     ["Eins bis Sechzehn", "wuerfelspiele/eins-bis-sechzehn.html", "wuerfel", "lokal zwei computer"],
     ["Fenster würfeln", "wuerfelspiele/fenster.html", "wuerfel", "lokal zwei computer"],
@@ -166,7 +165,6 @@ window.TGSpieldaten = (function () {
     "brettspiele/shipcrew/shipcrew.html": "Schiff, Kapitän, Crew – dann 500 Punkte sammeln.",
     "wuerfelspiele/der-turm.html": "Eigene Stichzahl treffen und Steine aus dem Turm holen.",
     "wuerfelspiele/boese-drei.html": "So oft würfeln wie du willst – eine Drei löscht den Zug.",
-    "wuerfelspiele/boese-eins.html": "Fünf Würfe werden addiert – eine Eins stoppt sofort.",
     "wuerfelspiele/dufte-hundert.html": "Pasch wird multipliziert, sonst addiert – Ziel 100.",
     "wuerfelspiele/eins-bis-sechzehn.html": "Die Zahlen 1 bis 16 aus drei Würfeln bilden.",
     "wuerfelspiele/fenster.html": "Nur Zweien zählen – eine 1, zwei 4, drei 9.",

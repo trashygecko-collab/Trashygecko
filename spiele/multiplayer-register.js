@@ -75,8 +75,6 @@ window.TGMultiplayer = {
 
     { "id": "boese-drei", "name": "Die böse Drei", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/boese-drei.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Würfle so oft du willst und sichere mit „Halten“ – eine Drei löscht den ganzen Zug." },
-    { "id": "boese-eins", "name": "Die böse Eins", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/boese-eins.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
-      "text": "Fünf Würfe, alles wird addiert – aber eine Eins stoppt dich sofort." },
     { "id": "der-turm", "name": "Der Turm", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/der-turm.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Jeder hat eine eigene Stichzahl; Treffer holen Steine aus dem Turm – oder geben sie weiter." },
     { "id": "dufte-hundert", "name": "Dufte Hundert", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/dufte-hundert.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",

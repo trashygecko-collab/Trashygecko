@@ -5,6 +5,50 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Die böse Eins ersatzlos entfernt
+
+**Auftrag:** Das Würfelspiel „Die böse Eins“ vollständig aus TrashyGecko
+nehmen – Dateien, Karten, Listen, Connector-Einträge, Registrierungen. Kein
+Ersatz, keine leeren Karten. Vorher gesichert: `sicherung/boese-eins-2026-11-28/`
+(18 Dateien, beide Ablagen).
+
+**Entfernt:**
+- Spiel und Regelmodul: `spiele/wuerfelspiele/boese-eins.html`,
+  `spiele/wuerfelspiele/spiele/boese-eins.js` – es gab nur diese eine Fassung,
+  keine weiteren Versionen oder Kopien außerhalb der Bauartefakte.
+- Übersicht `spiele/spiele.html`: die Karte und alle vier Zählungen der
+  Kategorie (Würfelspiele **24 → 23**, ARIA-Label, Kachel „23 Spiele“,
+  „Alle 23 ansehen“).
+- Sammlung `spiele/wuerfelspiele/index.html`: die Karte (**17 → 16**).
+- Suche `spiele/spieldaten.js`: Listeneintrag und Kurzbeschreibung.
+- Mehrspieler `spiele/multiplayer-register.js`: der Tisch-Eintrag.
+- Connector (beide Ablagen byte-gleich): die drei Tabellen in `angebot.go`
+  (Kategorie, Name, online), der Eintrag in `wuerfelKatalog` (`wuerfel.go`) und
+  in `BOTS_SPIELE` (`connector.html`); Zählkommentare 17 → 16.
+- `spiele/ergebnis-texte-uebersicht.md`: Kennung in der Liste (16 Spiele).
+- Tests (lokal, nicht im Repo): `spielzuege_test.go`, `tabellen_test.go`.
+
+**Erhalten:** die gemeinsame Würfelmaschine (`wuerfelspiele/rahmen.js`,
+`online.js`, `TGW.plusMinusRunden`), die Würfelgrafiken und alle 15 übrigen
+Würfelspiele sowie sämtliche anderen Spiele. Keine fremde Datei angefasst;
+eigene Grafiken hatte das Spiel keine.
+
+**Gemessen (Chromium, echter Seitenaufruf):**
+- `spiele.html`: **23** Karten in der Würfelkategorie, Kopfzahl 23, Kachel
+  „23 Spiele“, „Alle 23 ansehen“; im Dokument kein „böse Eins“/`boese-eins` mehr.
+- `spiele/wuerfelspiele/index.html`: **16** Karten, kein Böse-Eins-Link.
+- `boese-eins.html` → **404**; „Hohe Hausnummer“ lädt normal (Titel, Würfelknopf);
+  keine JS-Fehler.
+- `node --check` auf `spieldaten.js`, `multiplayer-register.js` grün;
+  `gofmt -l` auf allen geänderten Go-Dateien leer; `go build ./...` und
+  `go test -run 'Angebot|Tabellen|Spielzuege|Wuerfel|Bots' ./...` in
+  `connector` (**11,7 s**) und `connector-online` (**11,3 s**) grün.
+
+**Nicht angefasst:** die erzeugten Android-Kopien unter
+`spiele/android/app/src/main/assets/www` samt `katalog.json` (gitignoriert,
+Bauartefakt), die alten APKs und die Playwright-Schnappschüsse in
+`spiele/tests/...-snapshots` – sie zeigen den Stand vor dieser Änderung.
+
 ## 28.11.2026 · Beelzebub ersatzlos entfernt
 
 **Auftrag:** Das Würfelspiel Beelzebub vollständig aus der Sammlung nehmen –
