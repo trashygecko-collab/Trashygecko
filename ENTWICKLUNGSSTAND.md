@@ -5,6 +5,51 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Alte Versionsstände bereinigt
+
+**Auftrag:** Pro Spiel und Funktion nur noch eine maßgebliche Version.
+Geprüft wurden `malen.html`, `skyjo.html` und `connector.html` – Inhalt,
+Funktionen und Änderungsstand.
+
+**Maßgeblich (behalten, unverändert):**
+
+| Datei | Größe | Stand | Merkmal |
+| --- | --- | --- | --- |
+| `spiele/malen/malen.html` | 101.465 B | 28.11. 09:13 | Neufassung mit drei Welten, `TGNAV` |
+| `spiele/kartenspiele/skyjo/skyjo.html` | 39.091 B | 28.11. 09:12 | eigener Sitz korrekt, `zurueck.js` |
+| `spiele/connector/connector.html` | 301.531 B | 28.11. 09:45 | byte-gleich zu `connector-online/connector.html` |
+
+Die Connectoren bleiben doppelt: `connector-online/connector.html` ist die vom
+Dockerfile ausgelieferte Kopie, beide sind byte-gleich (keine Dublette im
+Sinne des Auftrags).
+
+**Gelöscht (9 alte Versionen, lokal und im Repo):**
+
+- `spiele/sicherung/2026-11-25-ergebnisfilter/skyjo.html` (38.961 B)
+- `spiele/sicherung/2026-11-25-ergebnistexte-rest/skyjo.html` (38.175 B)
+- `sicherung/ein-raum-2026-11-24/connector.html` (232.277 B)
+- `sicherung/spieleuebersicht-2026-11-24/connector.html` (238.667 B)
+- `sicherung/2026-11-25-snake-wuerfel/connector.html` (242.412 B)
+- `sicherung/2026-11-26-chat-handy/connector.html` (242.787 B)
+- `sicherung/2026-11-26-favoriten-multiplayer/connector.html` (246.286 B)
+- `sicherung/2026-11-26-reconnect/connector.html` (249.201 B)
+- `sicherung/labyrinth-2026-11-26/connector.html` (268.988 B)
+
+Sicherung vorher: `sicherung/bereinigung-dubletten-2026-11-28/` (9 Dateien).
+
+**Build-Kopien:** Die veralteten Fassungen in
+`spiele/android/app/src/main/assets/www/spiele/` (malen 37.291 B,
+skyjo 38.071 B, Stand 25.11.) sind durch die aktuellen ersetzt. Der Ordner ist
+per `spiele/android/.gitignore` vom Repo ausgenommen; die APK
+`spiele/android/tmahjong.apk` selbst ist unverändert (Stand 25.11.).
+
+**Geprüft:** `malen.html` lädt mit Canvas und `TGNAV`, `skyjo.html` mit
+`TGNAV`, keine Konsolenfehler; alle Verweise (`spiele.html`, `spieldaten.js`,
+`multiplayer-register.js`, beide Connectoren) zeigen auf die maßgeblichen
+Pfade.
+
+---
+
 ## 28.11.2026 · Pärchen und Plus-Minus entfernt
 
 **Auftrag:** Nur diese beiden Würfelspiele vollständig aus TrashyGecko
