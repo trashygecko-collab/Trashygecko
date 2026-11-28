@@ -5,6 +5,80 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Skyo: echtes Mehrspieler-Spiel nach Standard 2.0
+
+**Auftrag:** Skyo von zwei Plätzen auf 2–8 Spieler erweitern (Menschen und Bots
+frei gemischt), mehrere Bots in drei Stufen, kompakte Gegnerübersichten,
+Rundenwertung bis 100 Punkte, Migration auf die Spiele-Schnittstelle 2.0,
+online über den Connector, veröffentlichen.
+
+**Vorher:** `skyjo.html` hatte 1.499 Zeilen, genau zwei Plätze (rot/blau), holte
+seinen Stand selbst über `/api/skyjo` und `/api/presence`, las `room` und `id`
+aus der Adresse und hatte kein `window.Skyjo`. Der Go-Teil hielt Karten in
+`[2]`-Arrays. Ein Backup der Ausgangsfassungen liegt unter
+`temp/2026-11-28-skyjo-umbau/`.
+
+**Jetzt (Spiel, `spiele/kartenspiele/skyjo/skyjo.html`, 1.462 Zeilen):**
+- eigenständig: Startbildschirm mit Spielerzahl 2–8, Menschen 1–8, Bot-Stufe,
+  Grafikstil, Regeln, Start – ohne Connector voll spielbar
+- genau ein Global `window.Skyjo` mit `version` (`2.0.0`), `bereit`,
+  `whenReady`, `start`, `einstellungen`, `zustand`, `startbildschirm`, `stop`,
+  `pause`, `resume`, `aktion`; Ereignisse `skyjo:bereit|ende|pausiert|weiter`
+- Regelkern: 12 Karten (4×3), zwei Startkarten offen, höchste Startsumme
+  beginnt, Ablagekarte erzwingt den Tausch, Stapelkarte tauschen oder
+  abwerfen+aufdecken, drei gleiche in einer Spalte zählen 0, wer alle Karten
+  offen hat, löst die letzte Runde aus (jeder andere genau ein Zug),
+  Verdopplung, wenn der Auslöser nicht die niedrigste Summe hat, bis 100
+- Bots leicht/normal/schwer mit eigenen Karten und Zügen; sie handeln sichtbar
+  verzögert (gemessen 657 ms Minimum, 1.395 ms im Mittel zwischen zwei
+  Bot-Zügen)
+- Gegner als kompakte Kästchen (Name, Gesamtpunkte, Rundenstatus, Kartenzahl,
+  aktiver Spieler hervorgehoben); Antippen zeigt nur die offenen Karten
+- Rundenergebnis bleibt als Blatt stehen, „Nächste Runde“ nur auf Knopfdruck,
+  Endstand mit Sieger und allen Punkten
+- Atkinson Hyperlegible, drei Stile über `data-stil`
+
+**Geprüft (Browser, Chromium):**
+- ganze Partie 2 Menschen: 3 Runden, 121:153, Rundensummen ergeben exakt die
+  Gesamtpunkte, Sieger ist der niedrigste Stand, `skyjo:ende` genau einmal,
+  keine Konsolenfehler
+- 1 Mensch gegen 3 Bots (schwer): Bots decken auf, spielen eigene Züge, alle
+  12 Karten je Bot, keine geteilten Entscheidungen
+- 1 Mensch gegen 6 Bots auf 360×640: 7 Plätze, 6 Kästchen, kein Scrollen
+  (Seite 360×640, eigenes Feld 326×314, Karten 79×101)
+- 390×844: Seite passt (390×844), Karten 79×101, Kästchen 80×60 in einer Reihe
+- 1280×800: Seite passt, Karten 104×133, Kästchen 96×62
+- Online-Stand aus echten Serverdaten: eigene Karten vollständig, fremde nur
+  offen, Rundensummen und Endstand im Blatt, keine Fehler
+
+**Geprüft (Go, `spiele/connector`):**
+- `TestSkyjoPartienVerschiedeneGroessen`: Partien mit 2, 3, 4, 5, 6, 7 und 8
+  Plätzen laufen bis zum Ende (z. B. 8 Plätze: 2 Runden, 779 Schritte)
+- `TestSkyjoStufenUnterscheidenSich`: 60 Partien mit je einem Bot pro Stufe –
+  Punkte leicht 6.178, mittel 5.477, schwer 345; alle 60 Siege an „schwer“
+- `TestSkyjoSichtVerbirgtFremdeKarten`, `TestSkyjoRouteBotsUndSicht`,
+  `TestSkyjoRouteTischUndStart`, `TestSkyjoBotPauseSichtbar`: fremde verdeckte
+  Karten haben im JSON keinen Wert, Nicht-Sitzende bekommen 403, der Gastgeber
+  startet, Bots ziehen nicht ohne Denkpause
+
+**Connector:** neuer Server (`skyjo.go`) mit 2–8 Plätzen, Sitzverwaltung,
+serverseitigen Bots und je Spieler gefilterter Sicht (`eigeneKarten`,
+`spieler[].karten` nur offen, `gesamt`, `runden`, `deckCount`, `ablageOben`,
+`gezogen`, `quelle`, `phase`, `zug`, `status`, `sieger`, `notiz`,
+`letzteRunde`). `connector.html` hat jetzt eine Skyjo-Brücke nach dem
+Pick-Muster: Stand über `aktion("stand")`, Absichten als
+`skyjo:aufdecken|ziehen|tauschen|abwerfen|umdrehen|neueRunde`, Takt 1 s,
+„Start“/„Start mit Bots“ für den Gastgeber, „Mitspielen“ für die anderen.
+`Skyjo` steht in `SPIEL_API_NAMEN`.
+
+**Offen/ Grenzen:** Die Online-Strecke wurde mit echten Serverdaten im Browser
+und über die Go-Route geprüft, aber nicht in einem echten Raum mit zwei
+Geräten durchgeklickt. Das vollständige Go-Paket enthält einen langsamen,
+vorbestehenden Arschloch-Routentest (Eigenfrist 240 s); die Skyjo-Tests laufen
+in unter einer Sekunde.
+
+---
+
 ## 28.11.2026 · Smilies nach Aussehen benannt (557 Dateien)
 
 **Auftrag:** den Bestand `spiele/connector/smilies` endgültig sortieren und

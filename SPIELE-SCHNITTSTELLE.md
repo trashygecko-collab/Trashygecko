@@ -786,9 +786,38 @@ bei seinem eigenen Umbau.
   (`einstellungen().stilWahl` ist dann `false`). Drei Bot-Stufen: `leicht`
   (Grenze ≈ 46 mit Fehlgriffen), `normal` (Grenze 21, an den Stand angepasst),
   `schwer` (Wertiteration über eigene Punkte, Gegnerpunkte und Zugsumme,
-  61 Iterationen, ~210 ms). Online hält der Connector den Stand und schiebt
-  ihn über `aktion('stand', { spiel, ich })` hinein; das Spiel rechnet dann
-  nichts selbst, sondern meldet `pick:wurf`/`pick:sichern`/`pick:neu`.
+  102 Durchgänge bis maxDiff < 1e-9, ~350 ms). Online hält der Connector den
+  Stand und schiebt ihn über `aktion('stand', { spiel, ich })` hinein; das Spiel
+  rechnet dann nichts selbst, sondern meldet `pick:wurf`/`pick:sichern`/`pick:neu`.
+
+### Skyo (28.11.2026)
+
+- **Stand:** `spiele/kartenspiele/skyjo/skyjo.html` ist eigenständig und
+  vollständig auf **2.0.0**; ein einziges Global `Skyjo` mit allen Pflicht-
+  funktionen, Ereignisse `skyjo:bereit|ende|pausiert|weiter`.
+- **Partie:** 2–8 Plätze, Menschen und Bots frei gemischt (auch mehrere
+  Menschen am Gerät), Startbildschirm mit Spielerzahl, Menschenzahl,
+  Bot-Stufe (`leicht`, `normal`, `schwer`), Stil und Regeln.
+- **Regeln im Spiel:** 12 Karten in 4×3, zwei Startkarten offen, höchste
+  Startsumme beginnt, Ablagekarte erzwingt den Tausch, Stapelkarte tauschen
+  oder abwerfen und aufdecken, drei gleiche in einer Spalte zählen 0, letzte
+  Runde nach dem ersten vollständig aufgedeckten Feld, Verdopplung des
+  Auslösers, wenn er nicht die niedrigste Summe hat, Ende ab 100 Punkten.
+- **Bots:** eigener Platz, eigene Karten, eigene Entscheidungen, sichtbar
+  verzögert (gemessen mindestens ~0,66 s, im Mittel ~1,4 s zwischen zwei
+  Zügen). Die Stufen unterscheiden sich messbar (60 Partien: leicht 6.178,
+  mittel 5.477, schwer 345 Punkte).
+- **Anzeige:** eigenes Feld groß, Mitspieler als kompakte Kästchen mit Name,
+  Gesamtpunkten, Rundenstatus und Kartenzahl; Antippen zeigt nur die offenen
+  Karten. Rundenergebnis und Endstand bleiben als Blatt stehen, die nächste
+  Runde startet nur über eine Aktion.
+- **Online:** Der Connector hält den Stand (`skyjo.go`: Plätze, Bots,
+  Wertung) und schiebt ihn über `aktion("stand", {spiel, ich})` hinein; das
+  Spiel meldet Absichten als `skyjo:aufdecken`, `skyjo:ziehen`,
+  `skyjo:tauschen`, `skyjo:abwerfen`, `skyjo:umdrehen`, `skyjo:neueRunde`.
+  Fremde verdeckte Karten verlassen den Server nicht (`wert: null`).
+- **Ohne Connector:** Direktstart läuft vollständig, keine `/api/`-Aufrufe,
+  kein `room`/`id` aus der Adresse.
 
 ## 12. Prüfliste für ein neues Spiel
 

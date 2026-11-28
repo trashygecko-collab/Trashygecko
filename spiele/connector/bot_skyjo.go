@@ -1,20 +1,19 @@
 package main
 
 /* ===========================================================================
-   BOT FÜR SKYJO
+   BOTS FÜR SKYJO
 
-   Der Bot ist der blaue Platz und zieht ausschließlich über skyjoAktion –
-   dieselbe Prüfung wie der Mensch (Phase, Zug, offene Karten, Spaltenregel,
-   Rundenende). Er sieht nur seine eigenen offenen Karten; verdeckte Karten
-   kennt er nicht, sie werden nur als „irgendwo verdeckt“ gewählt.
+   Jeder Bot ist ein eigener Platz mit eigenen Karten und eigenen Zügen. Er
+   handelt ausschließlich über skyjoAktion und sieht – wie ein Mensch – nur
+   seine offenen Karten. Verdeckte Karten kennt er nicht.
 
-   Stufen:
-     leicht  – nimmt nur eine ganz niedrige Ablagekarte und wirft mittlere
-               Stapelkarten weg.
-     mittel  – tauscht, solange die gezogene Karte unter 5 liegt, und nimmt
-               eine Ablagekarte, wenn sie die höchste offene Karte schlägt.
-     schwer  – vervollständigt Spalten (drei gleiche zählen 0), nimmt auch
-               mittlere Ablagekarten und hält die Hand dadurch niedrig.
+   Stufen (die Entscheidungsqualität unterscheidet sich messbar):
+     leicht – nimmt fast nie eine Ablagekarte, tauscht nur sehr niedrige
+              Stapelkarten und deckt wahllos auf.
+     mittel – nimmt eine Ablagekarte, wenn sie die höchste offene Karte
+              schlägt, wirft hohe Stapelkarten ab.
+     schwer – rechnet Spalten mit (drei gleiche zählen 0), wählt das
+              günstigste Tauschziel und deckt die passende Spaltenkarte auf.
    =========================================================================== */
 
 import (
@@ -22,238 +21,261 @@ import (
 	"time"
 )
 
-// skyjoBotIndex ist der Platz des Bots (0 rot, 1 blau, -1 = keiner).
-func skyjoBotIndex(g *SkyjoGame) int {
-	if g == nil || g.BotID == "" {
-		return -1
+func skyjoBotPause(stufe string) time.Duration {
+	switch stufe {
+	case "leicht":
+		return 780 * time.Millisecond
+	case "schwer":
+		return 1150 * time.Millisecond
 	}
-	farbe := skyjoColorOf(g, g.BotID)
-	if farbe == "" {
-		return -1
-	}
-	return skyjoIndex(g, farbe)
+	return 950 * time.Millisecond
 }
 
-// skyjoBotAmZug sagt, ob der Bot jetzt etwas tun muss. Zwischen den Runden
-// nie: Die Abrechnung bleibt stehen, bis der Mensch „Nächste Runde“ drückt.
-func skyjoBotAmZug(g *SkyjoGame, me int) bool {
-	if g == nil || g.Status != "active" || me < 0 {
+// skyjoBotAmZug sagt, ob der Bot jetzt selbst handeln muss.
+func skyjoBotAmZug(g *SkyjoGame) bool {
+	if g == nil || g.Status != "active" {
 		return false
 	}
-	switch g.Phase {
-	case "setup":
-		return g.SetupPlayer == me
-	case "play", "reveal":
-		return g.Current == me
+	if g.Phase != "setup" && g.Phase != "play" && g.Phase != "reveal" {
+		return false
 	}
-	return false
+	return g.Zug >= 0 && g.Zug < len(g.Spieler) && g.Spieler[g.Zug].Bot
 }
 
-// skyjoBotTreiben lässt den Bot nach der Denkpause genau einen Schritt machen.
-// Aufgerufen wird es beim Abholen des Spielstands (GET).
+// skyjoBotTreiben lässt den aktiven Bot nach seiner Denkpause genau einen
+// Schritt machen. Aufgerufen beim Abholen des Stands.
 func skyjoBotTreiben(g *SkyjoGame, jetzt time.Time) bool {
-	me := skyjoBotIndex(g)
-	if !skyjoBotAmZug(g, me) {
+	if !skyjoBotAmZug(g) {
+		if g != nil {
+			g.BotFrist = time.Time{}
+		}
 		return false
 	}
-	if g.BotFrist.IsZero() {
-		g.BotFrist = jetzt.Add(botWartezeit(g.BotStufe))
+	if !g.BotFrist.IsZero() && jetzt.Before(g.BotFrist) {
 		return false
 	}
-	if jetzt.Before(g.BotFrist) {
-		return false
+	p := &g.Spieler[g.Zug]
+	if skyjoBotSchritt(g) {
+		g.BotFrist = jetzt.Add(skyjoBotPause(p.Stufe))
+		return true
 	}
 	g.BotFrist = time.Time{}
-	return skyjoBotSchritt(g, me)
+	return false
 }
 
-// skyjoBotSchritt macht genau einen Schritt: aufdecken, ziehen oder tauschen.
-// Die nächste Runde stößt nur der Mensch an.
-func skyjoBotSchritt(g *SkyjoGame, me int) bool {
+// skyjoBotSchritt führt eine einzelne Bot-Aktion aus.
+func skyjoBotSchritt(g *SkyjoGame) bool {
+	if !skyjoBotAmZug(g) {
+		return false
+	}
+	me := g.Zug
+	p := &g.Spieler[me]
+	stufe := p.Stufe
+	if stufe == "" {
+		stufe = "mittel"
+	}
 	switch g.Phase {
 	case "setup":
-		return skyjoBotTu(g, me, "reveal", skyjoBotVerdeckt(g, me), "")
-	case "reveal":
-		return skyjoBotTu(g, me, "opencard", skyjoBotAufdecken(g, me), "")
-	case "play":
-		if g.Drawn == nil {
-			return skyjoBotTu(g, me, "draw", 0, skyjoBotQuelle(g, me))
+		idx := skyjoBotVerdecktWahl(p, stufe)
+		if idx < 0 {
+			return false
 		}
-		return skyjoBotNachziehen(g, me)
+		code, _ := g.skyjoAktion(me, "reveal", idx, "")
+		return code == 0
+	case "play":
+		if g.Gezogen == nil {
+			quelle := "deck"
+			if wert, ok := skyjoAblageWert(g); ok && skyjoBotNimmtAblage(p, wert, stufe) {
+				quelle = "ablage"
+			}
+			code, _ := g.skyjoAktion(me, "draw", 0, quelle)
+			return code == 0
+		}
+		gezogen := *g.Gezogen
+		if g.Quelle == "deck" && skyjoBotWirftAb(p, gezogen, stufe) {
+			if code, _ := g.skyjoAktion(me, "discard", 0, ""); code != 0 {
+				return false
+			}
+			idx := skyjoBotVerdecktWahl(p, stufe)
+			if idx < 0 {
+				return true
+			}
+			code, _ := g.skyjoAktion(me, "opencard", idx, "")
+			return code == 0
+		}
+		idx := skyjoBotTauschZiel(p, gezogen, stufe)
+		if idx < 0 {
+			// Kein guter Tausch: die Karte möglichst dorthin, wo sie am
+			// wenigsten kostet (niedrigste offene Karte).
+			idx = skyjoBotNiedrigsterPlatz(p)
+		}
+		if idx < 0 {
+			return false
+		}
+		code, _ := g.skyjoAktion(me, "swap", idx, "")
+		return code == 0
+	case "reveal":
+		idx := skyjoBotVerdecktWahl(p, stufe)
+		if idx < 0 {
+			return false
+		}
+		code, _ := g.skyjoAktion(me, "opencard", idx, "")
+		return code == 0
 	}
 	return false
 }
 
-// skyjoBotTu schickt eine Aktion durch dieselbe Prüfung wie der Mensch.
-func skyjoBotTu(g *SkyjoGame, me int, akt string, index int, source string) bool {
-	status, _ := g.skyjoAktion(me, akt, index, source)
-	return status == 0
+func skyjoAblageWert(g *SkyjoGame) (int, bool) {
+	if g == nil || len(g.Ablage) == 0 {
+		return 0, false
+	}
+	return g.Ablage[len(g.Ablage)-1], true
 }
 
-// skyjoBotQuelle entscheidet, ob der Bot die Ablagekarte nimmt oder zieht.
-func skyjoBotQuelle(g *SkyjoGame, me int) string {
-	if len(g.Discard) == 0 {
-		return "deck"
-	}
-	top := g.Discard[len(g.Discard)-1]
-	hoechste, hatOffen := 0, false
-	for i := 0; i < skyjoCards; i++ {
-		if !g.Open[me][i] || g.Removed[me][i] {
+func skyjoHoechsteOffen(p *SkyjoSpieler) (int, int) {
+	wert, idx := -1<<30, -1
+	for i, k := range p.Karten {
+		if k.Weg || !k.Offen {
 			continue
 		}
-		if !hatOffen || g.Cards[me][i] > hoechste {
-			hoechste, hatOffen = g.Cards[me][i], true
+		if k.Wert > wert {
+			wert, idx = k.Wert, i
 		}
 	}
-	if !hatOffen {
-		return "deck"
-	}
-	// Eine Ablagekarte, die eine Spalte vollendet, ist immer richtig.
-	if skyjoBotSpalte(g, me, top) >= 0 {
-		return "discard"
-	}
-	switch botStufe(g.BotStufe) {
-	case botLeicht:
-		if top <= 0 && hoechste > top {
-			return "discard"
-		}
-	case botSchwer:
-		if hoechste > top || top <= 1 {
-			return "discard"
-		}
-	default:
-		if hoechste > top+1 {
-			return "discard"
-		}
-	}
-	return "deck"
+	return wert, idx
 }
 
-// skyjoBotNachziehen entscheidet nach dem Ziehen: tauschen oder abwerfen.
-func skyjoBotNachziehen(g *SkyjoGame, me int) bool {
-	v := *g.Drawn
-	ziel, spalte := skyjoBotTauschziel(g, me, v)
-	if g.DrawnSource == "discard" {
-		// Von der Ablage genommen: Es muss getauscht werden.
-		if ziel < 0 {
-			return false
-		}
-		return skyjoBotTu(g, me, "swap", ziel, "")
-	}
-	schwelle := 5
-	if botStufe(g.BotStufe) == botLeicht {
-		schwelle = 7
-	}
-	if ziel >= 0 && spalte {
-		return skyjoBotTu(g, me, "swap", ziel, "")
-	}
-	if ziel >= 0 && g.Open[me][ziel] && v < schwelle {
-		return skyjoBotTu(g, me, "swap", ziel, "")
-	}
-	if ziel >= 0 && !g.Open[me][ziel] && v < 3 {
-		// Sehr niedrige Karte offen hinlegen ist besser als sie wegzuwerfen.
-		return skyjoBotTu(g, me, "swap", ziel, "")
-	}
-	return skyjoBotTu(g, me, "discard", 0, "")
+// skyjoSpalteFuer liefert die Spaltenmitglieder einer Karte.
+func skyjoSpalteFuer(idx int) []int {
+	s := idx % skyjoSpalten
+	return []int{s, s + skyjoSpalten, s + skyjoSpalten*2}
 }
 
-// skyjoBotTauschziel sucht das beste Feld für die gezogene Karte: erst eine
-// Spalte vollenden, dann die höchste offene Karte schlagen, sonst verdeckt.
-func skyjoBotTauschziel(g *SkyjoGame, me, v int) (int, bool) {
-	if i := skyjoBotSpalte(g, me, v); i >= 0 {
-		return i, true
-	}
-	best, bestWert := -1, -1<<30
-	for i := 0; i < skyjoCards; i++ {
-		if !g.Open[me][i] || g.Removed[me][i] {
+// skyjoSpalteHilft sagt, ob ein Wert die Spalte vervollständigt: liegen dort
+// schon zwei offene gleiche Karten, zählt die Spalte danach 0. Verdeckte
+// Karten zählen nicht mit – der Bot kennt sie nicht.
+func skyjoSpalteHilft(p *SkyjoSpieler, idx, neuer int) bool {
+	gleich := 0
+	for _, j := range skyjoSpalteFuer(idx) {
+		if j == idx {
 			continue
 		}
-		if g.Cards[me][i] > v && g.Cards[me][i] > bestWert {
-			best, bestWert = i, g.Cards[me][i]
+		k := p.Karten[j]
+		if k.Weg || !k.Offen {
+			continue
+		}
+		if k.Wert == neuer {
+			gleich++
 		}
 	}
-	if best >= 0 {
-		return best, false
-	}
-	verdeckt := []int{}
-	for i := 0; i < skyjoCards; i++ {
-		if !g.Open[me][i] && !g.Removed[me][i] {
-			verdeckt = append(verdeckt, i)
-		}
-	}
-	if len(verdeckt) == 0 {
-		return -1, false
-	}
-	return verdeckt[rand.Intn(len(verdeckt))], false
+	return gleich >= 2
 }
 
-// skyjoBotSpalte findet ein verdecktes Feld, das mit zwei offenen gleichen
-// Karten eine Spalte vollendet – nur mit der passenden Karte v.
-func skyjoBotSpalte(g *SkyjoGame, me, v int) int {
-	for col := 0; col < 4; col++ {
-		idx := [3]int{col, col + 4, col + 8}
-		gleich, verdeckt, offen := 0, -1, 0
-		weg := false
-		for _, i := range idx {
-			if g.Removed[me][i] {
-				weg = true
-				break
+func skyjoSpalteFertig(p *SkyjoSpieler, wert int) bool {
+	for i, k := range p.Karten {
+		if k.Weg || !k.Offen || k.Wert != wert {
+			continue
+		}
+		if skyjoSpalteHilft(p, i, wert) {
+			return true
+		}
+	}
+	return false
+}
+
+func skyjoBotNimmtAblage(p *SkyjoSpieler, wert int, stufe string) bool {
+	hoechste, _ := skyjoHoechsteOffen(p)
+	if hoechste < 0 {
+		return wert <= 3
+	}
+	switch stufe {
+	case "leicht":
+		return wert <= -1
+	case "schwer":
+		if skyjoSpalteFertig(p, wert) {
+			return true
+		}
+		return wert < hoechste
+	}
+	return wert <= hoechste-3
+}
+
+func skyjoBotWirftAb(p *SkyjoSpieler, wert int, stufe string) bool {
+	hoechste, _ := skyjoHoechsteOffen(p)
+	if hoechste < 0 {
+		return false
+	}
+	switch stufe {
+	case "leicht":
+		return wert > hoechste+3
+	case "schwer":
+		// Abwerfen ändert die eigene Summe nicht – es lohnt nur, wenn kein
+		// Tausch die Hand verbessert.
+		return wert >= hoechste
+	}
+	return wert >= 10 && wert > hoechste
+}
+
+func skyjoBotTauschZiel(p *SkyjoSpieler, wert int, stufe string) int {
+	hoechste, ziel := skyjoHoechsteOffen(p)
+	if hoechste < 0 {
+		return -1
+	}
+	if stufe == "schwer" {
+		for i, k := range p.Karten {
+			if k.Weg || !k.Offen {
+				continue
 			}
-			if g.Open[me][i] {
-				offen++
-				if g.Cards[me][i] == v {
-					gleich++
-				}
-			} else {
-				verdeckt = i
+			if skyjoSpalteHilft(p, i, wert) {
+				return i
 			}
 		}
-		if !weg && offen == 2 && verdeckt >= 0 && gleich == 2 {
-			return verdeckt
+		if wert < hoechste {
+			return ziel
 		}
+		return -1
+	}
+	if stufe == "leicht" {
+		if hoechste >= 5 && wert <= hoechste-4 {
+			return ziel
+		}
+		return -1
+	}
+	if wert < hoechste-2 {
+		return ziel
 	}
 	return -1
 }
 
-// skyjoBotVerdeckt wählt eine verdeckte Karte (beim Aufdecken am Start).
-func skyjoBotVerdeckt(g *SkyjoGame, me int) int {
-	kandidaten := []int{}
-	for i := 0; i < skyjoCards; i++ {
-		if !g.Open[me][i] && !g.Removed[me][i] {
-			kandidaten = append(kandidaten, i)
+// skyjoBotVerdecktWahl wählt eine verdeckte Karte; aufgedeckt wird, was
+// darunter liegt – der Bot kann dabei nicht mehr wissen als ein Mensch.
+func skyjoBotVerdecktWahl(p *SkyjoSpieler, stufe string) int {
+	verdeckt := []int{}
+	for i, k := range p.Karten {
+		if !k.Offen && !k.Weg {
+			verdeckt = append(verdeckt, i)
 		}
 	}
-	if len(kandidaten) == 0 {
+	if len(verdeckt) == 0 {
 		return -1
 	}
-	return kandidaten[rand.Intn(len(kandidaten))]
+	return verdeckt[rand.Intn(len(verdeckt))]
 }
 
-// skyjoBotAufdecken wählt die Karte, die nach dem Abwerfen aufgedeckt wird.
-// Sie kann eine Spalte vollenden; sonst entscheidet der Zufall.
-func skyjoBotAufdecken(g *SkyjoGame, me int) int {
-	for col := 0; col < 4; col++ {
-		idx := [3]int{col, col + 4, col + 8}
-		verdeckt, wert, offen, weg := -1, 0, 0, false
-		for _, i := range idx {
-			if g.Removed[me][i] {
-				weg = true
-				break
-			}
-			if g.Open[me][i] {
-				if offen == 0 {
-					wert = g.Cards[me][i]
-				} else if g.Cards[me][i] != wert {
-					wert = -1 << 30
-				}
-				offen++
-			} else {
-				verdeckt = i
-			}
+// skyjoBotNiedrigsterPlatz liefert die offene Karte mit dem kleinsten Wert;
+// dort richtet eine unpassende Karte den geringsten Schaden an.
+func skyjoBotNiedrigsterPlatz(p *SkyjoSpieler) int {
+	wert, idx := 1<<30, -1
+	for i, k := range p.Karten {
+		if k.Weg || !k.Offen {
+			continue
 		}
-		if !weg && offen == 2 && verdeckt >= 0 && wert != -1<<30 {
-			return verdeckt
+		if k.Wert < wert {
+			wert, idx = k.Wert, i
 		}
 	}
-	return skyjoBotVerdeckt(g, me)
+	if idx >= 0 {
+		return idx
+	}
+	return skyjoBotVerdecktWahl(p, "")
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -12,7 +11,16 @@ import (
 // Skyjo: je 12 Karten in einem 4x3-Feld, zwei Startkarten offen,
 // drei gleiche Werte in einer Spalte zählen 0, wer am Ende die wenigsten
 // Punkte hat, gewinnt. Gespielt wird bis 100 Punkte.
-const skyjoCards = 12
+//
+// Mehrspieler: 2 bis 8 Plätze, Menschen und Bots gemischt. Der Server hält
+// den vollständigen Stand und gibt jedem Spieler nur seine eigenen Karten
+// vollständig; fremde verdeckte Karten verlassen den Server nie.
+const (
+	skyjoKarten  = 12
+	skyjoSpalten = 4
+	skyjoZiel    = 100
+	skyjoMax     = 8
+)
 
 var skyjoCounts = [][2]int{
 	{-2, 5}, {-1, 10}, {0, 15},
@@ -21,495 +29,550 @@ var skyjoCounts = [][2]int{
 	{9, 10}, {10, 10}, {11, 10}, {12, 10},
 }
 
+type SkyjoKarte struct {
+	Wert  int  `json:"wert"`
+	Offen bool `json:"offen"`
+	Weg   bool `json:"weg"`
+}
+
+type SkyjoSpieler struct {
+	ID     string       `json:"id"`
+	Name   string       `json:"name"`
+	Bot    bool         `json:"bot"`
+	Stufe  string       `json:"stufe,omitempty"`
+	Karten []SkyjoKarte `json:"-"`
+	Runden int          `json:"runden"`
+	Gesamt int          `json:"gesamt"`
+}
+
+type SkyjoRunde struct {
+	Runde   int      `json:"runde"`
+	Werte   []int    `json:"werte"`
+	Gesamte []int    `json:"gesamte"`
+	Sieger  []string `json:"sieger"`
+}
+
 type SkyjoGame struct {
-	ID          string    `json:"id"`
-	RedID       string    `json:"redId"`
-	RedName     string    `json:"redName"`
-	BlueID      string    `json:"blueId"`
-	BlueName    string    `json:"blueName"`
-	Cards       [2][]int  `json:"cards"`
-	Open        [2][]bool `json:"open"`
-	Removed     [2][]bool `json:"removed"`
-	Deck        []int     `json:"-"`
-	DeckCount   int       `json:"deckCount"`
-	Discard     []int     `json:"discard"`
-	Current     int       `json:"current"`
-	SetupPlayer int       `json:"setupPlayer"`
-	Phase       string    `json:"phase"` // setup, play, reveal, between
-	Drawn       *int      `json:"drawn"`
-	DrawnSource string    `json:"drawnSource"`
-	Finisher    int       `json:"finisher"` // -1 = noch keiner
-	LastTurn    int       `json:"lastTurn"`
-	// StartNext ist der Spieler, der die nächste Runde beginnt – laut Regel
-	// der, der die letzte Runde beendet hat (-1 = keine Vorgabe).
-	StartNext int `json:"startNext"`
-	// NextReady merkt, wer die nächste Runde schon bestätigt hat. Die Runde
-	// beginnt erst, wenn alle bestätigt haben; der Bot gilt immer als bereit.
-	NextReady   [2]bool   `json:"nextReady"`
-	Round       int       `json:"round"`
-	RoundScores [2]int    `json:"roundScores"`
-	Totals      [2]int    `json:"totals"`
-	Status      string    `json:"status"` // invited, active, finished
-	Winner      string    `json:"winner,omitempty"`
-	Note        string    `json:"note,omitempty"`
-	RoundWinner string    `json:"roundWinner,omitempty"`
-	BotID       string    `json:"botId,omitempty"`
-	BotStufe    string    `json:"-"`
-	BotFrist    time.Time `json:"-"`
+	ID          string         `json:"id"`
+	HostID      string         `json:"hostId"`
+	Spieler     []SkyjoSpieler `json:"-"`
+	Deck        []int          `json:"-"`
+	Ablage      []int          `json:"ablage"`
+	Zug         int            `json:"zug"`
+	Phase       string         `json:"phase"` // setup, play, reveal, between, fertig, warten
+	Gezogen     *int           `json:"gezogen"`
+	Quelle      string         `json:"quelle"`
+	Finisher    int            `json:"finisher"`
+	RestZuege   int            `json:"-"`
+	Runde       int            `json:"runde"`
+	Status      string         `json:"status"` // invited, active, finished
+	Sieger      []string       `json:"sieger,omitempty"`
+	Notiz       string         `json:"notiz"`
+	LetzteRunde *SkyjoRunde    `json:"letzteRunde,omitempty"`
+	Sitze       int            `json:"sitze"`
+	BotFrist    time.Time      `json:"-"`
 }
 
 func skyjoMakeDeck() []int {
 	deck := []int{}
-	for _, entry := range skyjoCounts {
-		for i := 0; i < entry[1]; i++ {
-			deck = append(deck, entry[0])
+	for _, e := range skyjoCounts {
+		for i := 0; i < e[1]; i++ {
+			deck = append(deck, e[0])
 		}
 	}
-	for i := len(deck) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		deck[i], deck[j] = deck[j], deck[i]
-	}
+	rand.Shuffle(len(deck), func(i, j int) { deck[i], deck[j] = deck[j], deck[i] })
 	return deck
 }
 
-func skyjoResetRound(g *SkyjoGame) {
+func skyjoNeueKarten() []SkyjoKarte {
+	k := make([]SkyjoKarte, skyjoKarten)
+	return k
+}
+
+func skyjoAusteilen(g *SkyjoGame) {
 	g.Deck = skyjoMakeDeck()
-	g.Discard = []int{}
-	for p := 0; p < 2; p++ {
-		g.Cards[p] = make([]int, skyjoCards)
-		g.Open[p] = make([]bool, skyjoCards)
-		g.Removed[p] = make([]bool, skyjoCards)
-		for i := 0; i < skyjoCards; i++ {
-			g.Cards[p][i] = g.Deck[len(g.Deck)-1]
+	g.Ablage = []int{}
+	for i := range g.Spieler {
+		g.Spieler[i].Runden = 0
+		g.Spieler[i].Karten = skyjoNeueKarten()
+		for k := 0; k < skyjoKarten; k++ {
+			g.Spieler[i].Karten[k] = SkyjoKarte{Wert: g.Deck[len(g.Deck)-1]}
 			g.Deck = g.Deck[:len(g.Deck)-1]
 		}
 	}
-	g.Discard = append(g.Discard, g.Deck[len(g.Deck)-1])
+	g.Ablage = append(g.Ablage, g.Deck[len(g.Deck)-1])
 	g.Deck = g.Deck[:len(g.Deck)-1]
-	g.DeckCount = len(g.Deck)
-
-	g.Current = 0
-	g.SetupPlayer = 0
+	g.Zug = 0
 	g.Phase = "setup"
-	g.Drawn = nil
-	g.DrawnSource = ""
+	g.Gezogen = nil
+	g.Quelle = ""
 	g.Finisher = -1
-	g.LastTurn = -1
-	g.NextReady = [2]bool{}
-	g.RoundScores = [2]int{}
-	g.RoundWinner = ""
-	g.Note = "Decke zwei Karten auf."
+	g.RestZuege = 0
+	g.Notiz = g.Spieler[0].Name + " deckt zwei Karten auf."
 }
 
-func skyjoNewGame(hostID, hostName, guestID, guestName, id string) *SkyjoGame {
-	g := &SkyjoGame{
-		ID:        id,
-		RedID:     hostID,
-		RedName:   hostName,
-		BlueID:    guestID,
-		BlueName:  guestName,
-		Round:     1,
-		Status:    "invited",
-		Finisher:  -1,
-		LastTurn:  -1,
-		StartNext: -1,
-	}
-	skyjoResetRound(g)
+func skyjoNeu(id, hostID, hostName string, sitze int) *SkyjoGame {
+	g := &SkyjoGame{ID: id, HostID: hostID, Runde: 1, Status: "invited", Finisher: -1, Sitze: sitze}
+	g.Spieler = []SkyjoSpieler{{ID: hostID, Name: hostName}}
+	g.Ablage = []int{}
+	g.Notiz = "Warte auf Mitspieler."
 	return g
 }
 
-func cloneSkyjo(g *SkyjoGame) *SkyjoGame {
+func (g *SkyjoGame) indexVon(id string) int {
+	for i, s := range g.Spieler {
+		if s.ID == id {
+			return i
+		}
+	}
+	return -1
+}
+
+func (g *SkyjoGame) name(i int) string {
+	if i < 0 || i >= len(g.Spieler) {
+		return "—"
+	}
+	return g.Spieler[i].Name
+}
+
+func (g *SkyjoGame) clone() *SkyjoGame {
 	if g == nil {
 		return nil
 	}
 	c := *g
 	c.Deck = append([]int(nil), g.Deck...)
-	c.Discard = append([]int(nil), g.Discard...)
-	for p := 0; p < 2; p++ {
-		c.Cards[p] = append([]int(nil), g.Cards[p]...)
-		c.Open[p] = append([]bool(nil), g.Open[p]...)
-		c.Removed[p] = append([]bool(nil), g.Removed[p]...)
+	c.Ablage = append([]int(nil), g.Ablage...)
+	c.Sieger = append([]string(nil), g.Sieger...)
+	if g.Gezogen != nil {
+		v := *g.Gezogen
+		c.Gezogen = &v
 	}
-	if g.Drawn != nil {
-		v := *g.Drawn
-		c.Drawn = &v
+	c.Spieler = make([]SkyjoSpieler, len(g.Spieler))
+	for i, s := range g.Spieler {
+		c.Spieler[i] = s
+		c.Spieler[i].Karten = append([]SkyjoKarte(nil), s.Karten...)
+	}
+	if g.LetzteRunde != nil {
+		r := *g.LetzteRunde
+		r.Werte = append([]int(nil), g.LetzteRunde.Werte...)
+		r.Gesamte = append([]int(nil), g.LetzteRunde.Gesamte...)
+		r.Sieger = append([]string(nil), g.LetzteRunde.Sieger...)
+		c.LetzteRunde = &r
 	}
 	return &c
 }
 
-func skyjoColorOf(g *SkyjoGame, id string) string {
-	if g.RedID == id {
-		return "red"
-	}
-	if g.BlueID == id {
-		return "blue"
-	}
-	return ""
-}
-
-func skyjoIndex(g *SkyjoGame, color string) int {
-	if color == "red" {
-		return 0
-	}
-	return 1
-}
-
-func skyjoName(g *SkyjoGame, player int) string {
-	if player == 0 {
-		return g.RedName
-	}
-	return g.BlueName
-}
-
-func skyjoCheckColumns(g *SkyjoGame, player int) {
-	cards := g.Cards[player]
-	open := g.Open[player]
-	removed := g.Removed[player]
-
-	for col := 0; col < 4; col++ {
-		a, b, c := col, col+4, col+8
-		if removed[a] || removed[b] || removed[c] {
-			continue
-		}
-		if !open[a] || !open[b] || !open[c] {
-			continue
-		}
-		if cards[a] == cards[b] && cards[b] == cards[c] {
-			g.Removed[player][a] = true
-			g.Removed[player][b] = true
-			g.Removed[player][c] = true
-		}
-	}
-}
-
-func skyjoAllRevealed(g *SkyjoGame, player int) bool {
-	for i := 0; i < skyjoCards; i++ {
-		if !g.Open[player][i] && !g.Removed[player][i] {
-			return false
-		}
-	}
-	return true
-}
-
-func skyjoScore(g *SkyjoGame, player int) int {
-	sum := 0
-	for i := 0; i < skyjoCards; i++ {
-		if g.Removed[player][i] {
-			continue
-		}
-		sum += g.Cards[player][i]
-	}
-	return sum
-}
-
-func skyjoStartPlaying(g *SkyjoGame) {
-	// Ab der zweiten Runde beginnt, wer die vorige Runde beendet hat.
-	if g.StartNext >= 0 {
-		g.Current = g.StartNext
-		g.StartNext = -1
-		g.Phase = "play"
-		g.Note = skyjoName(g, g.Current) + " beginnt!"
-		return
-	}
-
-	sum0 := 0
-	sum1 := 0
-	for i := 0; i < skyjoCards; i++ {
-		if g.Open[0][i] {
-			sum0 += g.Cards[0][i]
-		}
-		if g.Open[1][i] {
-			sum1 += g.Cards[1][i]
-		}
-	}
-	switch {
-	case sum0 > sum1:
-		g.Current = 0
-	case sum1 > sum0:
-		g.Current = 1
-	case rand.Intn(2) == 0:
-		g.Current = 0
-	default:
-		g.Current = 1
-	}
-	g.Phase = "play"
-	g.Note = skyjoName(g, g.Current) + " beginnt!"
-}
-
-func skyjoFinishTurn(g *SkyjoGame) {
-	justPlayed := g.Current
-
-	if g.Finisher >= 0 && justPlayed == g.LastTurn {
-		skyjoFinishRound(g)
-		return
-	}
-
-	if g.Finisher < 0 && skyjoAllRevealed(g, justPlayed) {
-		g.Finisher = justPlayed
-		g.LastTurn = 1 - justPlayed
-		g.Current = g.LastTurn
-		g.Phase = "play"
-		g.Note = skyjoName(g, g.Current) + " hat noch den letzten Zug!"
-		return
-	}
-
-	g.Current = 1 - g.Current
-	g.Phase = "play"
-	g.Note = skyjoName(g, g.Current) + " ist am Zug."
-}
-
-func skyjoFinishRound(g *SkyjoGame) {
-	for player := 0; player < 2; player++ {
-		for i := 0; i < skyjoCards; i++ {
-			g.Open[player][i] = true
-		}
-	}
-
-	// Die Dreier-Regel gilt auch bei der Schlussabrechnung: Werden beim
-	// Aufdecken drei gleiche in einer Spalte sichtbar, zählt die Spalte nicht.
-	skyjoCheckColumns(g, 0)
-	skyjoCheckColumns(g, 1)
-
-	s0 := skyjoScore(g, 0)
-	s1 := skyjoScore(g, 1)
-
-	// Wer die Runde beendet, muss danach die streng niedrigste Punktzahl haben –
-	// erreicht jemand weniger oder gleich viel, zählt die Summe doppelt (nur
-	// positive Werte).
-	if g.Finisher == 0 && s0 >= s1 && s0 > 0 {
-		s0 *= 2
-	}
-	if g.Finisher == 1 && s1 >= s0 && s1 > 0 {
-		s1 *= 2
-	}
-
-	g.RoundScores = [2]int{s0, s1}
-	g.Totals[0] += s0
-	g.Totals[1] += s1
-	g.Phase = "between"
-	g.Drawn = nil
-	g.DrawnSource = ""
-
-	switch {
-	case s0 < s1:
-		g.RoundWinner = "red"
-	case s1 < s0:
-		g.RoundWinner = "blue"
-	default:
-		g.RoundWinner = "draw"
-	}
-
-	// Der Rundenbeender beginnt die nächste Runde.
-	g.StartNext = g.Finisher
-
-	if g.Totals[0] >= 100 || g.Totals[1] >= 100 {
-		g.Status = "finished"
-		switch {
-		case g.Totals[0] < g.Totals[1]:
-			g.Winner = "red"
-		case g.Totals[1] < g.Totals[0]:
-			g.Winner = "blue"
-		default:
-			// Gleichstand: die bessere letzte Runde entscheidet.
-			switch {
-			case s0 < s1:
-				g.Winner = "red"
-			case s1 < s0:
-				g.Winner = "blue"
-			default:
-				g.Winner = "draw"
+func skyjoSpaltenPruefen(p *SkyjoSpieler) bool {
+	for s := 0; s < skyjoSpalten; s++ {
+		idx := []int{s, s + skyjoSpalten, s + skyjoSpalten*2}
+		ok := true
+		for _, i := range idx {
+			if p.Karten[i].Weg || !p.Karten[i].Offen {
+				ok = false
+				break
 			}
 		}
+		if !ok {
+			continue
+		}
+		w := p.Karten[idx[0]].Wert
+		if p.Karten[idx[1]].Wert == w && p.Karten[idx[2]].Wert == w {
+			for _, i := range idx {
+				p.Karten[i].Weg = true
+			}
+			return true
+		}
 	}
-
-	g.Note = "Runde " + skyjoNumber(g.Round) + " beendet – " + skyjoRoundText(g)
+	return false
 }
 
-// skyjoNextRound beginnt die nächste Runde. Aufgerufen wird es nur, wenn
-// alle Spieler bestätigt haben – nie von selbst.
-func skyjoNextRound(g *SkyjoGame) {
-	g.Round++
-	skyjoResetRound(g)
-}
-
-func skyjoNumber(n int) string {
-	return strconv.Itoa(n)
-}
-
-func skyjoRoundText(g *SkyjoGame) string {
-	if g.RoundWinner == "draw" {
-		return "unentschieden"
+func skyjoVerdeckt(p *SkyjoSpieler) int {
+	n := 0
+	for _, k := range p.Karten {
+		if !k.Offen && !k.Weg {
+			n++
+		}
 	}
-	return skyjoName(g, skyjoIndex(g, g.RoundWinner)) + " gewinnt die Runde"
+	return n
 }
 
-// skyjoAktion führt eine Spielaktion aus. Mensch (HTTP) und Bot
-// (skyjoBotSchritt) gehen durch dieselbe Prüfung: Phase, Zug, offene Karten,
-// Spaltenregel, Rundenende und Punktestand entstehen hier.
-// Rückgabe 0 heißt „ausgeführt“; sonst HTTP-Status und Meldung.
-func (g *SkyjoGame) skyjoAktion(me int, akt string, index int, source string) (int, string) {
+func skyjoPunkte(p *SkyjoSpieler) int {
+	summe := 0
+	for _, k := range p.Karten {
+		if !k.Weg {
+			summe += k.Wert
+		}
+	}
+	return summe
+}
+
+func (g *SkyjoGame) naechster(i int) int {
+	return (i + 1) % len(g.Spieler)
+}
+
+func (g *SkyjoGame) zugWeiter() {
+	if g.Finisher >= 0 {
+		g.RestZuege--
+		if g.RestZuege <= 0 {
+			g.rundeBeenden()
+			return
+		}
+	}
+	g.Zug = g.naechster(g.Zug)
+	g.Phase = "play"
+	g.Gezogen = nil
+	g.Quelle = ""
+	g.Notiz = g.name(g.Zug) + " ist am Zug."
+}
+
+func (g *SkyjoGame) zugBeenden() {
+	p := &g.Spieler[g.Zug]
+	if g.Finisher < 0 && skyjoVerdeckt(p) == 0 {
+		g.Finisher = g.Zug
+		g.RestZuege = len(g.Spieler)
+		g.Notiz = p.Name + " hat alle Karten offen – jeder andere hat noch einen Zug."
+	}
+	g.zugWeiter()
+}
+
+func (g *SkyjoGame) rundeBeenden() {
+	for i := range g.Spieler {
+		p := &g.Spieler[i]
+		for k := range p.Karten {
+			if !p.Karten[k].Weg {
+				p.Karten[k].Offen = true
+			}
+		}
+		for skyjoSpaltenPruefen(p) {
+		}
+	}
+	werte := make([]int, len(g.Spieler))
+	for i := range g.Spieler {
+		werte[i] = skyjoPunkte(&g.Spieler[i])
+	}
+	if g.Finisher >= 0 {
+		minAndere := 1 << 30
+		for i, w := range werte {
+			if i != g.Finisher && w < minAndere {
+				minAndere = w
+			}
+		}
+		if werte[g.Finisher] >= minAndere && werte[g.Finisher] > 0 {
+			werte[g.Finisher] *= 2
+		}
+	}
+	for i := range g.Spieler {
+		g.Spieler[i].Runden = werte[i]
+		g.Spieler[i].Gesamt += werte[i]
+	}
+	beste := werte[0]
+	for _, w := range werte {
+		if w < beste {
+			beste = w
+		}
+	}
+	sieger := []string{}
+	for i, w := range werte {
+		if w == beste {
+			sieger = append(sieger, g.Spieler[i].Name)
+		}
+	}
+	gesamte := make([]int, len(g.Spieler))
+	for i := range g.Spieler {
+		gesamte[i] = g.Spieler[i].Gesamt
+	}
+	g.LetzteRunde = &SkyjoRunde{Runde: g.Runde, Werte: werte, Gesamte: gesamte, Sieger: sieger}
+	g.Phase = "between"
+	if len(sieger) == 1 {
+		g.Notiz = "Runde " + itoa(g.Runde) + " beendet – " + sieger[0] + " gewinnt die Runde."
+	} else {
+		g.Notiz = "Runde " + itoa(g.Runde) + " beendet – unentschieden."
+	}
+	for i := range g.Spieler {
+		if g.Spieler[i].Gesamt >= skyjoZiel {
+			g.spielBeenden()
+			return
+		}
+	}
+}
+
+func (g *SkyjoGame) spielBeenden() {
+	g.Phase = "fertig"
+	g.Status = "finished"
+	beste := g.Spieler[0].Gesamt
+	for _, s := range g.Spieler {
+		if s.Gesamt < beste {
+			beste = s.Gesamt
+		}
+	}
+	kandidaten := []int{}
+	for i, s := range g.Spieler {
+		if s.Gesamt == beste {
+			kandidaten = append(kandidaten, i)
+		}
+	}
+	if len(kandidaten) > 1 && g.LetzteRunde != nil {
+		bestRunde := 1 << 30
+		for _, i := range kandidaten {
+			if g.LetzteRunde.Werte[i] < bestRunde {
+				bestRunde = g.LetzteRunde.Werte[i]
+			}
+		}
+		gefiltert := []int{}
+		for _, i := range kandidaten {
+			if g.LetzteRunde.Werte[i] == bestRunde {
+				gefiltert = append(gefiltert, i)
+			}
+		}
+		kandidaten = gefiltert
+	}
+	g.Sieger = []string{}
+	for _, i := range kandidaten {
+		g.Sieger = append(g.Sieger, g.Spieler[i].Name)
+	}
+	if len(g.Sieger) == 1 {
+		g.Notiz = g.Sieger[0] + " gewinnt mit " + itoa(beste) + " Punkten."
+	} else {
+		g.Notiz = "Unentschieden bei " + itoa(beste) + " Punkten."
+	}
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	ziffern := []byte{}
+	for n > 0 {
+		ziffern = append([]byte{byte('0' + n%10)}, ziffern...)
+		n /= 10
+	}
+	if neg {
+		return "-" + string(ziffern)
+	}
+	return string(ziffern)
+}
+
+// skyjoAktion führt eine Aktion für Spieler me aus. Rückgabe 0 = ausgeführt.
+func (g *SkyjoGame) skyjoAktion(me int, akt string, index int, quelle string) (int, string) {
 	if g == nil || g.Status != "active" {
 		return http.StatusConflict, "Es läuft gerade keine aktive Partie."
 	}
-	if me < 0 || me > 1 {
+	if me < 0 || me >= len(g.Spieler) {
 		return http.StatusForbidden, "Du gehörst nicht zu dieser Partie."
 	}
+	p := &g.Spieler[me]
 	switch akt {
 	case "reveal":
 		if g.Phase != "setup" {
 			return http.StatusConflict, "Das Aufdecken ist schon vorbei."
 		}
-		if g.SetupPlayer != me {
-			return http.StatusConflict, "Der andere Spieler deckt gerade auf."
+		if g.Zug != me {
+			return http.StatusConflict, "Ein anderer Spieler deckt gerade auf."
 		}
-		if index < 0 || index >= skyjoCards {
+		if index < 0 || index >= skyjoKarten || p.Karten[index].Offen || p.Karten[index].Weg {
 			return http.StatusBadRequest, "Diese Karte gibt es nicht."
 		}
-		if g.Open[me][index] || g.Removed[me][index] {
-			return http.StatusConflict, "Diese Karte ist schon offen."
-		}
-		g.Open[me][index] = true
-		opened := 0
-		for _, v := range g.Open[me] {
-			if v {
-				opened++
+		p.Karten[index].Offen = true
+		offen := 0
+		for _, k := range p.Karten {
+			if k.Offen {
+				offen++
 			}
 		}
-		if opened >= 2 {
-			if g.SetupPlayer == 0 {
-				g.SetupPlayer = 1
-				g.Note = skyjoName(g, 1) + ": Jetzt zwei Karten aufdecken."
-			} else {
-				skyjoStartPlaying(g)
-			}
-		} else {
-			g.Note = "Noch eine Karte aufdecken."
-		}
-
-	case "draw":
-		if g.Phase != "play" || g.Current != me {
-			return http.StatusConflict, "Du bist nicht am Zug."
-		}
-		if g.Drawn != nil {
-			return http.StatusConflict, "Du hast schon eine Karte gezogen."
-		}
-		quelle := strings.ToLower(strings.TrimSpace(source))
-		if quelle == "discard" {
-			if len(g.Discard) == 0 {
-				return http.StatusConflict, "Der Ablagestapel ist leer."
-			}
-			value := g.Discard[len(g.Discard)-1]
-			g.Discard = g.Discard[:len(g.Discard)-1]
-			g.Drawn = &value
-			g.DrawnSource = "discard"
-			g.Note = "Ablagekarte genommen."
+		if offen < 2 {
+			g.Notiz = p.Name + " deckt noch eine Karte auf."
 			break
 		}
-
-		if len(g.Deck) == 0 {
-			if len(g.Discard) <= 1 {
-				return http.StatusConflict, "Keine Karten mehr im Nachziehstapel!"
+		fertig := true
+		for i := range g.Spieler {
+			anz := 0
+			for _, k := range g.Spieler[i].Karten {
+				if k.Offen {
+					anz++
+				}
 			}
-			top := g.Discard[len(g.Discard)-1]
-			rest := append([]int(nil), g.Discard[:len(g.Discard)-1]...)
-			for i := len(rest) - 1; i > 0; i-- {
-				j := rand.Intn(i + 1)
-				rest[i], rest[j] = rest[j], rest[i]
+			if anz < 2 {
+				fertig = false
 			}
-			g.Deck = rest
-			g.Discard = []int{top}
 		}
+		if !fertig {
+			g.Zug = g.naechster(g.Zug)
+			g.Notiz = g.name(g.Zug) + " deckt zwei Karten auf."
+			break
+		}
+		// Höchste Startsumme beginnt.
+		beste, start := -1<<30, 0
+		for i := range g.Spieler {
+			summe := 0
+			for _, k := range g.Spieler[i].Karten {
+				if k.Offen {
+					summe += k.Wert
+				}
+			}
+			if summe > beste {
+				beste, start = summe, i
+			} else if summe == beste && rand.Intn(2) == 0 {
+				start = i
+			}
+		}
+		g.Zug = start
+		g.Phase = "play"
+		g.Notiz = g.name(start) + " beginnt (höchste Startsumme)."
 
-		value := g.Deck[len(g.Deck)-1]
+	case "draw":
+		if g.Phase != "play" || g.Zug != me {
+			return http.StatusConflict, "Du bist nicht am Zug."
+		}
+		if g.Gezogen != nil {
+			return http.StatusConflict, "Du hast schon eine Karte gezogen."
+		}
+		if strings.ToLower(strings.TrimSpace(quelle)) == "ablage" {
+			if len(g.Ablage) == 0 {
+				return http.StatusConflict, "Der Ablagestapel ist leer."
+			}
+			w := g.Ablage[len(g.Ablage)-1]
+			g.Ablage = g.Ablage[:len(g.Ablage)-1]
+			g.Gezogen = &w
+			g.Quelle = "ablage"
+			g.Notiz = p.Name + " nimmt die Ablagekarte."
+			break
+		}
+		if len(g.Deck) == 0 {
+			if len(g.Ablage) <= 1 {
+				return http.StatusConflict, "Keine Karten mehr im Nachziehstapel."
+			}
+			oben := g.Ablage[len(g.Ablage)-1]
+			rest := append([]int(nil), g.Ablage[:len(g.Ablage)-1]...)
+			rand.Shuffle(len(rest), func(i, j int) { rest[i], rest[j] = rest[j], rest[i] })
+			g.Deck = rest
+			g.Ablage = []int{oben}
+		}
+		w := g.Deck[len(g.Deck)-1]
 		g.Deck = g.Deck[:len(g.Deck)-1]
-		g.DeckCount = len(g.Deck)
-		g.Drawn = &value
-		g.DrawnSource = "deck"
-		g.Note = "Karte gezogen."
+		g.Gezogen = &w
+		g.Quelle = "deck"
+		g.Notiz = p.Name + " zieht vom Stapel."
 
 	case "swap":
-		if g.Phase != "play" || g.Current != me {
+		if g.Phase != "play" || g.Zug != me {
 			return http.StatusConflict, "Du bist nicht am Zug."
 		}
-		if g.Drawn == nil {
+		if g.Gezogen == nil {
 			return http.StatusConflict, "Du hast noch keine Karte gezogen."
 		}
-		if index < 0 || index >= skyjoCards {
+		if index < 0 || index >= skyjoKarten || p.Karten[index].Weg {
 			return http.StatusBadRequest, "Diese Karte gibt es nicht."
 		}
-		if g.Removed[me][index] {
-			return http.StatusConflict, "Diese Karte ist schon weg."
-		}
-		old := g.Cards[me][index]
-		g.Cards[me][index] = *g.Drawn
-		g.Open[me][index] = true
-		g.Discard = append(g.Discard, old)
-		g.Drawn = nil
-		g.DrawnSource = ""
-		skyjoCheckColumns(g, me)
-		skyjoFinishTurn(g)
+		alt := p.Karten[index].Wert
+		p.Karten[index].Wert = *g.Gezogen
+		p.Karten[index].Offen = true
+		g.Ablage = append(g.Ablage, alt)
+		g.Gezogen = nil
+		g.Quelle = ""
+		skyjoSpaltenPruefen(p)
+		g.zugBeenden()
 
 	case "discard":
-		if g.Phase != "play" || g.Current != me {
+		if g.Phase != "play" || g.Zug != me {
 			return http.StatusConflict, "Du bist nicht am Zug."
 		}
-		if g.Drawn == nil || g.DrawnSource != "deck" {
-			return http.StatusConflict, "Es liegt keine gezogene Karte zum Abwerfen bereit."
+		if g.Gezogen == nil || g.Quelle != "deck" {
+			return http.StatusConflict, "Es liegt keine Karte zum Abwerfen bereit."
 		}
-		g.Discard = append(g.Discard, *g.Drawn)
-		g.Drawn = nil
-		g.DrawnSource = ""
-		hidden := 0
-		for i := 0; i < skyjoCards; i++ {
-			if !g.Open[me][i] && !g.Removed[me][i] {
-				hidden++
-			}
-		}
-		if hidden == 0 {
-			skyjoFinishTurn(g)
+		g.Ablage = append(g.Ablage, *g.Gezogen)
+		g.Gezogen = nil
+		g.Quelle = ""
+		if skyjoVerdeckt(p) == 0 {
+			g.zugBeenden()
 			break
 		}
 		g.Phase = "reveal"
-		g.Note = "Decke eine deiner verdeckten Karten auf."
+		g.Notiz = p.Name + " deckt eine eigene Karte auf."
 
 	case "opencard":
-		if g.Phase != "reveal" || g.Current != me {
+		if (g.Phase != "reveal" && g.Phase != "play") || g.Zug != me {
 			return http.StatusConflict, "Du bist nicht am Zug."
 		}
-		if index < 0 || index >= skyjoCards {
+		if g.Phase == "play" && g.Gezogen == nil {
+			return http.StatusConflict, "Du hast noch keine Karte gezogen."
+		}
+		if index < 0 || index >= skyjoKarten || p.Karten[index].Offen || p.Karten[index].Weg {
 			return http.StatusBadRequest, "Diese Karte gibt es nicht."
 		}
-		if g.Open[me][index] || g.Removed[me][index] {
-			return http.StatusConflict, "Diese Karte ist schon offen."
-		}
-		g.Open[me][index] = true
-		skyjoCheckColumns(g, me)
+		p.Karten[index].Offen = true
+		skyjoSpaltenPruefen(p)
 		g.Phase = "play"
-		skyjoFinishTurn(g)
+		g.zugBeenden()
 
 	case "nextround":
-		if g.Phase != "between" || g.Status != "active" {
+		if g.Phase != "between" {
 			return http.StatusConflict, "Eine neue Runde ist gerade nicht möglich."
 		}
-		// Nicht einer allein: Jeder bestätigt die nächste Runde, erst dann
-		// beginnt sie. Der Bot gilt als bereit, sonst wartete man ewig.
-		g.NextReady[me] = true
-		if b := skyjoBotIndex(g); b >= 0 {
-			g.NextReady[b] = true
-		}
-		if g.NextReady[0] && g.NextReady[1] {
-			skyjoNextRound(g)
-			break
-		}
-		g.Note = skyjoName(g, me) + " möchte weiter – " +
-			skyjoName(g, 1-me) + " bestätigt noch."
+		g.Runde++
+		skyjoAusteilen(g)
 
 	case "start":
-		// Kurzer Anstoß, damit die Anzeige nach dem Beitritt stimmt.
+		// nur Anstoß für die Anzeige
+
 	default:
 		return http.StatusBadRequest, "Unbekannte Skyjo-Aktion."
 	}
 	return 0, ""
+}
+
+// skyjoSicht baut die Antwort für einen Spieler: eigene Karten vollständig,
+// fremde nur, wenn sie offen sind.
+func skyjoSicht(g *SkyjoGame, id string) map[string]any {
+	if g == nil {
+		return nil
+	}
+	me := g.indexVon(id)
+	spieler := make([]map[string]any, len(g.Spieler))
+	for i, s := range g.Spieler {
+		karten := make([]map[string]any, len(s.Karten))
+		for k, karte := range s.Karten {
+			eintrag := map[string]any{"offen": karte.Offen, "weg": karte.Weg}
+			if karte.Offen || i == me {
+				eintrag["wert"] = karte.Wert
+			} else {
+				eintrag["wert"] = nil
+			}
+			karten[k] = eintrag
+		}
+		offen := 0
+		for _, k := range s.Karten {
+			if k.Offen {
+				offen++
+			}
+		}
+		spieler[i] = map[string]any{
+			"id": s.ID, "name": s.Name, "bot": s.Bot, "stufe": s.Stufe,
+			"gesamt": s.Gesamt, "runden": s.Runden,
+			"karten": karten, "offen": offen, "verdeckt": skyjoVerdeckt(&g.Spieler[i]),
+		}
+	}
+	eigene := []map[string]any{}
+	if me >= 0 {
+		for _, k := range g.Spieler[me].Karten {
+			eigene = append(eigene, map[string]any{"wert": k.Wert, "offen": k.Offen, "weg": k.Weg})
+		}
+	}
+	var oben any
+	if len(g.Ablage) > 0 {
+		oben = g.Ablage[len(g.Ablage)-1]
+	}
+	return map[string]any{
+		"id": g.ID, "hostId": g.HostID, "status": g.Status, "phase": g.Phase,
+		"runde": g.Runde, "zug": g.Zug, "zugId": g.Spieler[g.Zug].ID, "zugName": g.name(g.Zug),
+		"spieler": spieler, "deckCount": len(g.Deck), "ablageOben": oben,
+		"gezogen": g.Gezogen, "quelle": g.Quelle, "finisher": g.Finisher,
+		"sieger": g.Sieger, "notiz": g.Notiz, "letzteRunde": g.LetzteRunde,
+		"eigeneKarten": eigene, "ich": me, "sitze": g.Sitze,
+	}
 }
 
 func skyjoHandler(w http.ResponseWriter, r *http.Request) {
@@ -533,12 +596,17 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Bitte zuerst dem Spielraum beitreten.", http.StatusForbidden)
 			return
 		}
+		if g := room.Skyjo; g != nil && g.indexVon(id) < 0 && g.Status != "invited" {
+			mu.Unlock()
+			http.Error(w, "Du sitzt nicht an diesem Tisch.", http.StatusForbidden)
+			return
+		}
 		if room.Skyjo != nil {
 			skyjoBotTreiben(room.Skyjo, time.Now())
 		}
-		game := cloneSkyjo(room.Skyjo)
+		sicht := skyjoSicht(room.Skyjo, id)
 		mu.Unlock()
-		jsonResponse(w, map[string]any{"game": game})
+		jsonResponse(w, map[string]any{"game": sicht})
 		return
 	}
 
@@ -549,17 +617,17 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		ID     string `json:"id"`
-		ToID   string `json:"toId"`
 		Index  int    `json:"index"`
 		Source string `json:"source"`
 		Stufe  string `json:"stufe"`
+		Bots   int    `json:"bots"`
+		Sitze  int    `json:"spieler"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
 		return
 	}
 	input.ID = kennung(r)
-	input.ToID = strings.TrimSpace(input.ToID)
 	action := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("action")))
 
 	mu.Lock()
@@ -579,109 +647,144 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "bot":
+		// Ein Mensch gegen mehrere Bots, direkt startklar.
 		room.botNamenNeu()
-		if room.Skyjo != nil && !room.gameSlotFree(room.Skyjo.Status, room.Skyjo.RedID, room.Skyjo.BlueID) {
+		if room.Skyjo != nil && room.Skyjo.Status == "active" {
 			mu.Unlock()
-			http.Error(w, "In diesem Spielraum läuft bereits eine Skyjo-Partie oder Einladung.", http.StatusConflict)
+			http.Error(w, "In diesem Spielraum läuft bereits eine Skyjo-Partie.", http.StatusConflict)
 			return
 		}
-		g := skyjoNewGame(input.ID, player.Name, botID(1), room.botName(1), randomCode())
-		g.BotID, g.BotStufe = botID(1), botStufe(input.Stufe)
+		bots := input.Bots
+		if bots < 1 {
+			bots = 1
+		}
+		if bots > skyjoMax-1 {
+			bots = skyjoMax - 1
+		}
+		g := skyjoNeu(randomCode(), input.ID, player.Name, bots+1)
+		for i := 1; i <= bots; i++ {
+			g.Spieler = append(g.Spieler, SkyjoSpieler{
+				ID: botID(i), Name: room.botName(i), Bot: true, Stufe: botStufe(input.Stufe),
+			})
+		}
 		g.Status = "active"
-		g.Note = player.Name + " spielt gegen " + room.botName(1) + " (" + botStufeText(g.BotStufe) + "). Decke zwei Karten auf."
+		skyjoAusteilen(g)
+		g.Notiz = player.Name + " spielt gegen " + itoa(bots) + " Bots. Decke zwei Karten auf."
 		room.Skyjo = g
-	case "invite":
-		target, ok := room.Players[input.ToID]
-		if !ok || input.ToID == input.ID {
-			mu.Unlock()
-			http.Error(w, "Dieser Spieler ist nicht verfügbar.", http.StatusBadRequest)
-			return
-		}
-		if room.Skyjo != nil && !room.gameSlotFree(room.Skyjo.Status, room.Skyjo.RedID, room.Skyjo.BlueID) {
-			mu.Unlock()
-			http.Error(w, "In diesem Spielraum läuft bereits eine Skyjo-Partie oder Einladung.", http.StatusConflict)
-			return
-		}
-		room.Skyjo = skyjoNewGame(input.ID, player.Name, input.ToID, target.Name, randomCode())
-		room.addMessage(Message{
-			Name:       player.Name,
-			Text:       "lädt dich zu Skyjo ein.",
-			Time:       uhrzeit(time.Now()),
-			SenderID:   input.ID,
-			ToID:       input.ToID,
-			ToName:     target.Name,
-			Whisper:    true,
-			GameInvite: true,
-			Game:       "skyjo",
-			GameID:     room.Skyjo.ID,
-		})
 
-	case "accept":
-		game := room.Skyjo
-		if game == nil || game.Status != "invited" || game.BlueID != input.ID {
+	case "join":
+		g := room.Skyjo
+		if g == nil || g.Status == "finished" {
+			g = skyjoNeu(randomCode(), input.ID, player.Name, 2)
+			room.Skyjo = g
+		}
+		if g.indexVon(input.ID) < 0 {
+			if len(g.Spieler) >= skyjoMax {
+				mu.Unlock()
+				http.Error(w, "Der Tisch ist voll.", http.StatusConflict)
+				return
+			}
+			g.Spieler = append(g.Spieler, SkyjoSpieler{ID: input.ID, Name: player.Name})
+			g.Notiz = player.Name + " sitzt jetzt mit am Tisch."
+		}
+		if g.Status == "active" {
 			mu.Unlock()
-			http.Error(w, "Diese Einladung ist nicht mehr verfügbar.", http.StatusConflict)
+			http.Error(w, "Die Partie läuft schon.", http.StatusConflict)
 			return
 		}
-		game.Status = "active"
-		game.Note = "Decke zwei Karten auf."
 
-	case "decline":
-		game := room.Skyjo
-		if game == nil || game.Status != "invited" || game.BlueID != input.ID {
+	case "start":
+		g := room.Skyjo
+		if g == nil || g.indexVon(input.ID) != 0 {
 			mu.Unlock()
-			http.Error(w, "Diese Einladung ist nicht mehr verfügbar.", http.StatusConflict)
+			http.Error(w, "Nur der Gastgeber kann starten.", http.StatusForbidden)
 			return
 		}
-		game.Status = "declined"
+		if g.Status != "invited" {
+			mu.Unlock()
+			http.Error(w, "Die Partie läuft schon.", http.StatusConflict)
+			return
+		}
+		ziel := input.Sitze
+		if ziel < len(g.Spieler) {
+			ziel = len(g.Spieler)
+		}
+		if ziel < 2 {
+			ziel = 2
+		}
+		if ziel > skyjoMax {
+			ziel = skyjoMax
+		}
+		room.botNamenNeu()
+		for len(g.Spieler) < ziel {
+			i := len(g.Spieler)
+			g.Spieler = append(g.Spieler, SkyjoSpieler{
+				ID: botID(i), Name: room.botName(i), Bot: true, Stufe: botStufe(input.Stufe),
+			})
+		}
+		g.Sitze = ziel
+		g.Status = "active"
+		skyjoAusteilen(g)
+		g.Notiz = "Los geht's – jeder deckt zwei Karten auf."
 
-	case "start", "reveal", "draw", "swap", "discard", "opencard", "nextround", "reset":
-		game := room.Skyjo
-		if game == nil || (action != "reset" && game.Status != "active") {
+	case "leave":
+		g := room.Skyjo
+		if g == nil {
+			mu.Unlock()
+			http.Error(w, "Keine Partie am Tisch.", http.StatusConflict)
+			return
+		}
+		if g.Status == "active" {
+			mu.Unlock()
+			http.Error(w, "Während der Partie kann niemand aufstehen.", http.StatusConflict)
+			return
+		}
+		for i := range g.Spieler {
+			if g.Spieler[i].ID == input.ID {
+				g.Spieler = append(g.Spieler[:i], g.Spieler[i+1:]...)
+				break
+			}
+		}
+		if len(g.Spieler) == 0 {
+			room.Skyjo = nil
+		}
+
+	case "reveal", "draw", "swap", "discard", "opencard", "nextround", "reset":
+		g := room.Skyjo
+		if g == nil || (action != "reset" && g.Status != "active") {
 			mu.Unlock()
 			http.Error(w, "Es läuft gerade keine aktive Partie.", http.StatusConflict)
 			return
 		}
-		color := skyjoColorOf(game, input.ID)
-		if color == "" {
+		me := g.indexVon(input.ID)
+		if me < 0 {
 			mu.Unlock()
 			http.Error(w, "Du gehörst nicht zu dieser Partie.", http.StatusForbidden)
 			return
 		}
-		me := skyjoIndex(game, color)
-
 		if action == "reset" {
-			if game.Status != "finished" {
+			if g.Status != "finished" {
 				mu.Unlock()
 				http.Error(w, "Ein neues Spiel ist erst nach Spielende möglich.", http.StatusConflict)
 				return
 			}
-			fresh := skyjoNewGame(game.RedID, game.RedName, game.BlueID, game.BlueName, game.ID)
-			fresh.Status = "active"
-			fresh.BotID, fresh.BotStufe = game.BotID, game.BotStufe
-			room.Skyjo = fresh
+			frisch := skyjoNeu(g.ID, g.HostID, g.name(0), g.Sitze)
+			frisch.Spieler = make([]SkyjoSpieler, len(g.Spieler))
+			for i, s := range g.Spieler {
+				frisch.Spieler[i] = SkyjoSpieler{ID: s.ID, Name: s.Name, Bot: s.Bot, Stufe: s.Stufe}
+			}
+			frisch.Status = "active"
+			skyjoAusteilen(frisch)
+			frisch.Notiz = "Neue Partie – jeder deckt zwei Karten auf."
+			room.Skyjo = frisch
 			break
 		}
-		if status, meldung := game.skyjoAktion(me, action, input.Index, input.Source); status != 0 {
+		if status, meldung := g.skyjoAktion(me, action, input.Index, input.Source); status != 0 {
 			mu.Unlock()
 			http.Error(w, meldung, status)
 			return
 		}
-		// Ist der andere Platz nicht mehr im Raum (Zeit abgelaufen, Tab zu),
-		// soll der verbliebene Spieler die nächste Runde nicht blockieren.
-		if action == "nextround" && game.Phase == "between" && game.Status == "active" {
-			other := 1 - me
-			otherID := game.RedID
-			if other == 1 {
-				otherID = game.BlueID
-			}
-			if _, da := room.Players[otherID]; !da {
-				game.NextReady[other] = true
-				if game.NextReady[0] && game.NextReady[1] {
-					skyjoNextRound(game)
-				}
-			}
-		}
+
 	default:
 		mu.Unlock()
 		http.Error(w, "Unbekannte Skyjo-Aktion.", http.StatusBadRequest)
@@ -689,7 +792,28 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	room.LastActive = time.Now()
-	result := cloneSkyjo(room.Skyjo)
+	sicht := skyjoSicht(room.Skyjo, input.ID)
 	mu.Unlock()
-	jsonResponse(w, map[string]any{"game": result})
+	jsonResponse(w, map[string]any{"game": sicht})
+}
+
+// skyjoRemoveSeat nimmt einen Platz aus einem offenen Tisch. Läuft die Partie
+// schon, endet sie für alle – mitten im Spiel kann niemand aufstehen, sonst
+// wären Karten und Zugfolge nicht mehr nachvollziehbar.
+func skyjoRemoveSeat(g *SkyjoGame, id, name string) (bool, bool, int) {
+	if g == nil {
+		return false, false, 0
+	}
+	i := g.indexVon(id)
+	if i < 0 {
+		return false, false, 0
+	}
+	if g.Status == "active" {
+		return true, true, 0
+	}
+	g.Spieler = append(g.Spieler[:i], g.Spieler[i+1:]...)
+	if len(g.Spieler) == 0 {
+		return true, true, 0
+	}
+	return true, false, len(g.Spieler)
 }

@@ -198,7 +198,7 @@ func (r *Room) spielerUmbenennen(id, neu string) {
 		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)
 	}
 	if g := r.Skyjo; g != nil {
-		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)
+		benenne(g.Spieler, id, neu, func(p *SkyjoSpieler) string { return p.ID }, func(p *SkyjoSpieler) *string { return &p.Name })
 	}
 	if g := r.Schach; g != nil {
 		duell(&g.RedID, &g.RedName, &g.BlueID, &g.BlueName)

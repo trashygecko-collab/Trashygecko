@@ -222,12 +222,9 @@ func (r *Room) partien() []partie {
 				return "", ""
 			},
 			func() { r.Mastermind = nil }),
-		duell("Skyjo",
-			func() (string, string) {
-				if g := r.Skyjo; g != nil {
-					return g.RedID, g.BlueID
-				}
-				return "", ""
+		sitz("Skyjo",
+			func(id, n string) (bool, bool, int) {
+				return skyjoRemoveSeat(r.Skyjo, id, n)
 			},
 			func() { r.Skyjo = nil }),
 		duell("Schach",
@@ -858,8 +855,8 @@ func (r *Room) aktivesSpiel(id string) string {
 		}
 	}
 	if g := r.Skyjo; g != nil {
-		if s := zwei("skyjo", g.Status, g.RedID, g.BlueID); s != "" {
-			return s
+		if g.Status == "active" && g.indexVon(id) >= 0 {
+			return "skyjo"
 		}
 	}
 	if g := r.Schach; g != nil {
@@ -1112,7 +1109,7 @@ func (r *Room) playerInGame(id string) bool {
 	if g := r.Mastermind; g != nil && (g.RedID == id || g.BlueID == id) {
 		return true
 	}
-	if g := r.Skyjo; g != nil && (g.RedID == id || g.BlueID == id) {
+	if g := r.Skyjo; g != nil && g.indexVon(id) >= 0 {
 		return true
 	}
 	if g := r.Schach; g != nil && (g.RedID == id || g.BlueID == id) {

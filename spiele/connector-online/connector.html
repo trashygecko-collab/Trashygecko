@@ -3710,53 +3710,138 @@ async function refreshEinsxeins(players){
 }
 
 // Skyjo: Karten tauschen, Spalten räumen, am Ende zählen die Punkte.
+/* --- Skyjo im Raum ------------------------------------------------------
+   Schnittstelle 2.0: Das Spiel kennt weder Raum noch /api/ und liest keine
+   Kennung aus der Adresse. Der Connector hält den Serverstand, schiebt ihn
+   über aktion("stand") hinein und nimmt die Absichten des Spiels als
+   skyjo:aufdecken, skyjo:ziehen, skyjo:tauschen, skyjo:abwerfen,
+   skyjo:umdrehen und skyjo:neueRunde entgegen. 2 bis 8 Plätze, Bots in drei
+   Stufen und die Aufteilung in eigene und fremde Karten macht der Server. */
+const SKYJO_TAKT = 1000;
+let skyjoTakt = 0;
+let skyjoSitzVersucht = false;
+const skyjoGehoert = new WeakSet();   // je Fenster nur eine Zuhörerschaft
+
+function skyjoSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer||treffer.name!=="Skyjo")return null;
+ return treffer;
+}
+
+function skyjoStandSchieben(game){
+ const spiel=skyjoSpiel();
+ if(!spiel||!game)return false;
+ try{ spiel.api.aktion("stand",{spiel:game, ich:{id:sessionID}}); }catch(e){ return false; }
+ return true;
+}
+
+async function skyjoAktion(aktion, daten){
+ const ok=await gameApiAction("skyjo",aktion,daten||{});
+ if(!ok)zeigeSpielHinweis("Verbindung unterbrochen – die Aktion wurde nicht gesendet.");
+ refreshSkyjo().catch(()=>{});
+ return ok;
+}
+
+function skyjoZuhören(spiel){
+ if(!spiel||skyjoGehoert.has(spiel.fenster))return;
+ skyjoGehoert.add(spiel.fenster);
+ const ein=(name,aktion,felder)=>spiel.fenster.addEventListener(name,(e)=>{
+  const d=(e&&e.detail)||{};
+  const daten={};
+  if(felder)for(const feld of felder)if(d[feld]!==undefined)daten[feld]=d[feld];
+  if(name==="skyjo:ziehen")daten.source=d.quelle==="ablage"?"ablage":"deck";
+  skyjoAktion(aktion,daten);
+ });
+ ein("skyjo:aufdecken","reveal",["index"]);
+ ein("skyjo:ziehen","draw",["quelle"]);
+ ein("skyjo:tauschen","swap",["index"]);
+ ein("skyjo:abwerfen","discard");
+ ein("skyjo:umdrehen","opencard",["index"]);
+ ein("skyjo:neueRunde","nextround");
+}
+
+function skyjoTaktStarten(){
+ if(skyjoTakt)return;
+ skyjoTakt=window.setInterval(()=>{
+  if(document.hidden)return;
+  if(!framePartie||framePartie.gameId!=="skyjo")return;
+  refreshSkyjo().catch(()=>{});
+ },SKYJO_TAKT);
+}
+
+function skyjoTaktStoppen(){
+ if(!skyjoTakt)return;
+ clearInterval(skyjoTakt);
+ skyjoTakt=0;
+}
+
+// Beim Öffnen des Rahmens: Zuhören, Online-Modus anmelden, Takt starten.
+async function skyjoBrueckeAn(){
+ const spiel=skyjoSpiel();
+ if(!spiel)return false;
+ skyjoZuhören(spiel);
+ if(!activeRoom||!sessionID)return false;
+ try{
+  spiel.api.start({online:{id:sessionID, name:(typeof aktuellerName==="function"?aktuellerName():"")}, stil:stilFuerSpiel()});
+ }catch(e){ /* das Spiel startet beim ersten Stand */ }
+ skyjoTaktStarten();
+ if(currentSkyjoGame)skyjoStandSchieben(currentSkyjoGame);
+ refreshSkyjo().catch(()=>{});
+ return true;
+}
+
 async function refreshSkyjo(players){
  let game=null;
+ let fehlt=false;
  try{
   const response=await fetch("/api/skyjo?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
-  if(!response.ok)throw Error();
-  game=(await response.json()).game;
+  if(response.status===404){
+   fehlt=true;
+  }else if(response.ok){
+   game=(await response.json()).game;
+  }else{
+   return;
+  }
  }catch(e){
+  return;
+ }
+ // Wer das Spiel im Raum öffnet und noch an keinem Tisch sitzt, bekommt einen Platz.
+ if(fehlt){
+  if(skyjoSitzVersucht||!activeRoom||!sessionID)return;
+  skyjoSitzVersucht=true;
+  if(await gameApiAction("skyjo","join"))refreshSkyjo().catch(()=>{});
   return;
  }
  currentSkyjoGame=game;
  if(!game)return;
-
- const nameOf=color=>color==="red"?game.redName:game.blueName;
- const standing=game.redName+" "+game.totals[0]+" : "+game.totals[1]+" "+game.blueName;
-
- if(game.status==="active" && game.phase!=="between"){
-  let zug;
-  if(game.phase==="setup"){
-   zug=(game.setupPlayer===0?game.redName:game.blueName)+" deckt seine Startkarten auf";
-  }else{
-   zug=nameOf(game.current===0?"red":"blue")+(" ist am Zug");
-  }
-  tttStatus("Skyjo läuft – Runde "+game.round+", "+standing+", "+zug+".", "skyjo");
+ skyjoStandSchieben(game);
+ const spieler=Array.isArray(game.spieler)?game.spieler:[];
+ const ich=spieler.find(s=>s.id===sessionID);
+ const stand=spieler.map(s=>s.name+" "+s.gesamt).join(" · ");
+ if(game.status==="active"){
+  const dran=spieler[game.zug];
+  tttStatus(game.phase==="between"
+   ? "Skyjo – Runde "+game.runde+" beendet: "+stand+". "+(game.notiz||"")
+   : "Skyjo läuft – Runde "+game.runde+": "+stand+". Am Zug: "+(dran?dran.name:"—")+".","skyjo");
+  addStatusButton("Zum Spiel",()=>openGame(gamePath("skyjo")));
   return;
  }
-
- if(game.status==="active" && game.phase==="between"){
-  const sieger=game.roundWinner==="draw"?"unentschieden":nameOf(game.roundWinner)+" gewinnt";
-  tttStatus("Skyjo – Runde "+game.round+" beendet, "+sieger+" ("+game.roundScores[0]+" : "+game.roundScores[1]+").", "skyjo");
-  return;
- }
-
  if(game.status==="finished"){
-  const text=game.winner==="draw"?"Unentschieden":nameOf(game.winner)+" hat gewonnen";
-  tttStatus("Skyjo beendet – "+standing+" · "+text+".", "skyjo");
+  tttStatus("Skyjo beendet – "+stand+". "+(game.notiz||""),"skyjo");
+  addStatusButton("Zum Spiel",()=>openGame(gamePath("skyjo")));
   return;
  }
-
- if(game.status==="invited"){
-  tttStatus("Skyjo: "+game.redName+" gegen "+game.blueName+" – warte …");
-  if(game.blueId===sessionID){
-   addStatusButton("Einladung annehmen", async()=>{
-    if(await gameApiAction("skyjo", "accept")){
-     openGame(gamePath("skyjo"));
-    }
-   });
-  }
+ tttStatus("Skyjo: "+spieler.map(s=>s.name).join(", ")+" am Tisch – "
+  +(spieler.length<2?"mindestens zwei Plätze nötig, der Gastgeber startet.":"der Gastgeber startet, weitere Spieler können mitspielen."),"skyjo");
+ if(!ich){
+  addStatusButton("Mitspielen",async()=>{ if(await gameApiAction("skyjo","join"))await refreshPlayers(); });
+ }else if(ich.id===game.hostId){
+  addStatusButton("Start",async()=>{
+   if(await gameApiAction("skyjo","start",{spieler:Math.max(2,spieler.length)}))openGame(gamePath("skyjo"));
+  });
+  addStatusButton("Start mit Bots",async()=>{
+   if(await gameApiAction("skyjo","start",{spieler:Math.max(4,spieler.length)}))openGame(gamePath("skyjo"));
+  });
  }
 }
 
@@ -6148,7 +6233,7 @@ function stilFuerSpiel(){
 
 // Spiele mit Schnittstelle 2.0 nennen ihren Namensraum selbst. Nur diese
 // Namen werden angefasst; aeltere Spiele merken von all dem nichts.
-const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","Pick","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","DoodleJump","Malen","Scherzshow","Arkanoid","Risiko"];
+const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","Pick","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","DoodleJump","Malen","Scherzshow","Arkanoid","Risiko","Skyjo"];
 
 function apiImRahmen(){
  const rahmen=document.getElementById("spielRahmen");
@@ -7195,6 +7280,8 @@ function rahmenLeeren(){
  schiffeTaktStoppen();
  chicagoTaktStoppen();
  pigTaktStoppen();
+ skyjoTaktStoppen();
+ skyjoSitzVersucht=false;
  quizshowTaktStoppen();
  document.body.classList.remove("spiel-offen");
  if(window.TGMobil)TGMobil.spielZu();
@@ -7267,7 +7354,7 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
 
 // Der Stil geht an jedes geladene Spiel und an jedes offene Spiel, sobald die
 // Wahl im Connector wechselt. Reine Übergabe, keine Spielsteuerung.
-document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); quizshowBrueckeAn(); pigBrueckeAn(); labBrueckeAn(); malBrueckeAn(); });
+document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); quizshowBrueckeAn(); pigBrueckeAn(); skyjoBrueckeAn(); labBrueckeAn(); malBrueckeAn(); });
 window.addEventListener("tg-stil", () => {
  if(document.body.classList.contains("spiel-offen"))stilAnSpiel();
 });
