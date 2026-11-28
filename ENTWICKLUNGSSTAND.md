@@ -45,7 +45,7 @@ bei 0:0 sichert er ab 22, bei 26 Punkten Rückstand erst ab 26, bei klarer
 Führung früher. Die 20-Punkte-Grenze bleibt als Erwartungswert-Anker in der
 Doku, wird aber nicht blind angewendet.
 
-**Simulation (20.000 Partien je Paarung, `node`):**
+**Simulation (20.000 Partien je Paarung, `node sicherung/pick-2026-11-28/simulation.mjs`):**
 
 | Paarung | Gewinnraten | Ø Punkte |
 | --- | --- | --- |
