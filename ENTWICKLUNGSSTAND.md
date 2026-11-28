@@ -100,6 +100,8 @@ Bot-Rechnung (`botZiel`) sind unverändert.
 
 **Sicherung:** `sicherung/schiffe-2026-11-28/` (schiffe.html beider
 Ablagen, SPIELE-SCHNITTSTELLE.md, ENTWICKLUNGSSTAND.md vor dem Umbau).
+**Commit:** `9a05ed8` auf `main`, beide Ablagen gleich (md5
+`3481acab7e95a9592b042b915df7b55f`).
 
 ## 28.11.2026 · Frogger: Schnittstelle 2.0 (`window.Frogger`)
 
