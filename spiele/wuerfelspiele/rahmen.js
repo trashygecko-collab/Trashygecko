@@ -160,7 +160,7 @@
   };
 
   /* Ein Zug in zwei Schritten: erst würfeln, dann genau eine Möglichkeit aus
-     der Auswahl nehmen (Hohe Hausnummer, Rentmeister). Das Modul liefert
+     der Auswahl nehmen (Rentmeister). Das Modul liefert
      start, sicht, wahl, wurf und setze; die Aktionen heißen „wurf“ und
      „waehlen“. */
   TGW.wurfDannWahl = function (def) {

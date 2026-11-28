@@ -85,8 +85,6 @@ window.TGMultiplayer = {
       "text": "Würfle Summen von 2 bis 12 und streiche sie; die Sieben zählt immer." },
     { "id": "hin-und-her", "name": "Hin und her", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/hin-und-her.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Jede gewürfelte Zahl wird umgeschaltet – wer alle sechs gleichzeitig gestrichen hat, gewinnt." },
-    { "id": "hohe-hausnummer", "name": "Hohe Hausnummer", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/hohe-hausnummer.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
-      "text": "Drei Würfe, drei Stellen: Setze jede Zahl auf Hunderter, Zehner oder Einer – die höchste Hausnummer gewinnt." },
     { "id": "jule", "name": "Jule", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/jule.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Würfle die Treppe 1 bis 6 hoch und 6 bis 1 zurück; ein Treffer lässt dich gleich weiterwürfeln." },
     { "id": "paerchen", "name": "Pärchen", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/paerchen.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",

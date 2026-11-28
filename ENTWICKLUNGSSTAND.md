@@ -5,6 +5,53 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Hohe Hausnummer ersatzlos entfernt
+
+**Auftrag:** Das Würfelspiel „Hohe Hausnummer“ vollständig aus TrashyGecko
+nehmen – Dateien, Karten, Listen, Connector-Einträge, Registrierungen. Kein
+Ersatz, keine leeren Karten. Vorher gesichert:
+`sicherung/hohe-hausnummer-2026-11-28/` (19 Dateien, beide Ablagen).
+
+**Entfernt:**
+- Spiel und Regelmodul: `spiele/wuerfelspiele/hohe-hausnummer.html`,
+  `spiele/wuerfelspiele/spiele/hohe-hausnummer.js` – nur diese eine Fassung,
+  keine weiteren Versionen außerhalb der Bauartefakte.
+- Übersicht `spiele/spiele.html`: die Karte und alle vier Zählungen der
+  Kategorie (Würfelspiele **22 → 21**, ARIA-Label, Kachel „21 Spiele“,
+  „Alle 21 ansehen“). Achtung: Die Brettspiele haben ebenfalls 22 Spiele –
+  die Kachel wurde gezielt über ihren Text getroffen, Brettspiele bleiben 22.
+- Sammlung `spiele/wuerfelspiele/index.html`: die Karte (**15 → 14**).
+- Suche `spiele/spieldaten.js`: Listeneintrag und Kurzbeschreibung.
+- Mehrspieler `spiele/multiplayer-register.js`: der Tisch-Eintrag.
+- Connector (beide Ablagen byte-gleich): die drei Tabellen in `angebot.go`
+  (Kategorie, Name, online), der Eintrag in `wuerfelKatalog` (`wuerfel.go`) und
+  in `BOTS_SPIELE` (`connector.html`); Zählkommentare 15 → 14.
+- `spiele/wuerfelspiele/rahmen.js`: der Kommentar nannte das Spiel als Beispiel
+  für `TGW.wurfDannWahl` (jetzt nur noch Rentmeister).
+- `spiele/ergebnis-texte-uebersicht.md`: Kennung in der Liste (14 Spiele).
+- Tests (lokal, nicht im Repo): `spielzuege_test.go`, `tabellen_test.go`.
+
+**Erhalten:** die gemeinsame Würfelmaschine (`rahmen.js`, `online.js`,
+`TGW.wurfDannWahl`), die Würfelgrafiken und alle 13 übrigen Würfelspiele; das
+Modul hatte keine eigenen Grafiken.
+
+**Gemessen (Chromium, echter Seitenaufruf):**
+- `spiele.html`: **21** Karten in der Würfelkategorie, Kopfzahl 21, Kachel
+  „21 Spiele“, „Alle 21 ansehen“; kein „Hohe Hausnummer“/`hohe-hausnummer`
+  mehr im Dokument; Brettspiele unverändert 22, Kartenspiele 11,
+  Denkspiele 15, Arcade 21, Quiz 1.
+- `spiele/wuerfelspiele/index.html`: **14** Karten, kein Hausnummer-Link.
+- `hohe-hausnummer.html` → **404**; „Jule“ lädt normal; keine JS-Fehler.
+- `node --check` auf `spieldaten.js`, `multiplayer-register.js`, `rahmen.js`
+  grün; `gofmt -l` auf allen geänderten Go-Dateien leer; `go build ./...` und
+  `go test -run 'Angebot|Tabellen|Spielzuege|Wuerfel|Bots' ./...` in
+  `connector` (**11,7 s**) und `connector-online` (**11,5 s**) grün.
+
+**Nicht angefasst:** die erzeugten Android-Kopien unter
+`spiele/android/app/src/main/assets/www` samt `katalog.json` (gitignoriert,
+Bauartefakt), die APKs und die Playwright-Schnappschüsse in
+`spiele/tests/...-snapshots`.
+
 ## 28.11.2026 · Die böse Drei ersatzlos entfernt
 
 **Auftrag:** Das Würfelspiel „Die böse Drei“ vollständig aus TrashyGecko
