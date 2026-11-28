@@ -12,7 +12,7 @@ umbauen, das Schweinegesicht als Wiedererkennungsmerkmal erhalten, drei echte
 Charaktere und drei tatsächlich unterschiedliche Bot-Stufen (schwer
 mathematisch begründet) umsetzen, testen und veröffentlichen.
 
-**Neu geschrieben (1.100 Zeilen, vorher 427):** eigenständiges Spiel mit
+**Neu geschrieben (1.182 Zeilen / 53.551 B, vorher 427 / 17.344 B):** eigenständiges Spiel mit
 Startbildschirm, Regeln, Modi, Bot-Zahl, Stufe, Stilwahl und Neustart. Ein
 Global `Pick` (2.0.0, eingefroren): `whenReady`, `start`, `einstellungen`,
 `zustand`, `startbildschirm`, `stop`, `pause`, `resume`, `aktion`. Ereignisse
