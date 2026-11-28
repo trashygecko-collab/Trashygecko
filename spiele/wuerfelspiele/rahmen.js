@@ -488,7 +488,7 @@
       }
     }
     if (!text) return;
-    /* Bei der stummen Jule bleibt der Verlauf verborgen (siehe jule.js). */
+    /* Ein leerer Verlauf (Spiel ohne Verlauf) bleibt verborgen. */
     if (s && Array.isArray(s.verlauf) && !s.verlauf.length) return;
     var band = document.getElementById("tg-ergebnis");
     if (!band) {

@@ -5,6 +5,32 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Gestrichene Zwölf, Hin und her und Jule entfernt
+
+**Auftrag:** Die drei Würfelspiele vollständig aus TrashyGecko entfernen –
+nicht ausblenden. Übersicht, Sammlung, Mehrspieler-Register, API-Tabellen und
+Connector sollten sie nicht mehr kennen, die Spieldateien selbst verschwinden.
+
+**Entfernt (6 Dateien):** `spiele/wuerfelspiele/{gestrichene-zwoelf,
+hin-und-her,jule}.html` und die zugehörigen Regelmodule in
+`spiele/wuerfelspiele/spiele/`. Eigene Grafiken hatten die drei nicht.
+
+**Bereinigt:** drei Karten in `spiele/spiele.html`, drei im Sammlungsindex,
+je ein Eintrag in `spieldaten.js` und `multiplayer-register.js`, die
+Kategorie-Tabelle in beiden `connector.html`, `wuerfelKatalog` in
+`wuerfel.go`, die drei Tabellen in `angebot.go` (Kategorie, Anzeigename,
+Tischspiel) – jeweils in `connector` und `connector-online`, byte-gleich.
+Der Würfelkatalog hat jetzt **10** statt 13 Spiele.
+
+**Tests:** `TestWuerfelVariantenOnline` entfiel, weil „Jule“ das einzige Spiel
+mit Zusatzregel (`varianten: stumm`) war; die Namenslisten in
+`tabellen_test.go` und `spielzuege_test.go` sind bereinigt.
+`go vet ./...` 0, `go build ./...` 0, `go test -run
+'Angebot|Tabellen|Spielzuege|Wuerfel|Bots'` in beiden Paketen grün
+(11,7 s / 10,8 s), `-run Abrechnung` grün. Die drei Binaries sind neu gebaut.
+
+---
+
 ## 28.11.2026 · Rücknavigation folgt der tatsächlichen Herkunft
 
 **Auftrag:** Spiele führten über „Zurück“ grundsätzlich zum Online-Connector,

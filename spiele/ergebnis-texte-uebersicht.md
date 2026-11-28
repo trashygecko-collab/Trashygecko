@@ -59,11 +59,11 @@ Eine eigene Karte `#tg-spruch` unten mittig über dem Spielfeld:
 
 ### Würfelspiele (vollständig)
 
-Alle 13 Spiele über den gemeinsamen Rahmen (`wuerfelspiele/rahmen.js`, online über
+Alle 10 Spiele über den gemeinsamen Rahmen (`wuerfelspiele/rahmen.js`, online über
 `wuerfelspiele/online.js`) – ein Hook deckt lokale Partie und Online-Partie ab:
 
 der-turm, eins-bis-sechzehn, fenster,
-gestrichene-zwoelf, hin-und-her, jule, paerchen, plus-minus, rentmeister,
+paerchen, plus-minus, rentmeister,
 streichhoelzer, teure-sieben, unter-oder-ueber, wuerfelpoker (plus `index.html`).
 
 Weitere Würfelspiele mit eigenem Ende:

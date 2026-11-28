@@ -34,8 +34,8 @@ import (
 // stehen in den Modulen selbst (titel), hier steht nur die Kennung.
 var wuerfelKatalog = []string{
 	"der-turm",
-	"eins-bis-sechzehn", "fenster", "gestrichene-zwoelf", "hin-und-her",
-	"jule", "paerchen", "plus-minus", "rentmeister",
+	"eins-bis-sechzehn", "fenster",
+	"paerchen", "plus-minus", "rentmeister",
 	"streichhoelzer", "teure-sieben", "unter-oder-ueber", "wuerfelpoker",
 }
 
