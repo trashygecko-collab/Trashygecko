@@ -4064,6 +4064,79 @@ async function refreshSchlangen(players){
 }
 
 // Pig: würfeln oder sichern, eine 1 nimmt die Punkte des Zuges.
+/* --- Pick im Raum -------------------------------------------------------
+   Schnittstelle 2.0: Das Spiel kennt weder Raum noch /api/ und liest keine
+   Kennung aus der Adresse. Der Connector hält den Serverstand, schiebt ihn
+   über aktion("stand") hinein und nimmt die Absichten des Spiels als
+   Ereignisse pick:wurf, pick:sichern und pick:neu entgegen. Ohne Antwort
+   des Servers bleibt der angezeigte Stand stehen. */
+const PIG_TAKT = 1000;
+let pigTakt = 0;
+const pigGehoert = new WeakSet();   // je Fenster nur eine Zuhoerschaft
+
+function pigSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer||treffer.name!=="Pick")return null;
+ return treffer;
+}
+
+function pigStandSchieben(game){
+ const spiel=pigSpiel();
+ if(!spiel||!game)return false;
+ try{ spiel.api.aktion("stand",{spiel:game, ich:{id:sessionID}}); }catch(e){ return false; }
+ return true;
+}
+
+async function pigAktion(aktion){
+ const ok=await gameApiAction("pig",aktion);
+ if(!ok)zeigeSpielHinweis("Verbindung unterbrochen – die Aktion wurde nicht gesendet.");
+ refreshPig().catch(()=>{});
+ return ok;
+}
+
+function pigZuhören(spiel){
+ if(!spiel||pigGehoert.has(spiel.fenster))return;
+ pigGehoert.add(spiel.fenster);
+ const einfach=(name,aktion)=>spiel.fenster.addEventListener(name,()=>{ pigAktion(aktion); });
+ einfach("pig:wurf","wuerfeln");
+ einfach("pig:sichern","sichern");
+ einfach("pig:neu","naechste");
+ einfach("pig:create","create");
+ einfach("pig:beitreten","join");
+ einfach("pig:bereit","ready");
+ einfach("pig:start","start");
+}
+
+function pigTaktStarten(){
+ if(pigTakt)return;
+ pigTakt=window.setInterval(()=>{
+  if(document.hidden)return;
+  if(!framePartie||framePartie.gameId!=="pig")return;
+  refreshPig().catch(()=>{});
+ },PIG_TAKT);
+}
+
+function pigTaktStoppen(){
+ if(!pigTakt)return;
+ clearInterval(pigTakt);
+ pigTakt=0;
+}
+
+// Beim Öffnen des Rahmens: Zuhoeren, Online-Modus anmelden, Takt starten.
+function pigBrueckeAn(){
+ const spiel=pigSpiel();
+ if(!spiel)return false;
+ pigZuhören(spiel);
+ if(!activeRoom||!sessionID)return false;
+ try{
+  spiel.api.start({online:{id:sessionID, name:(typeof aktuellerName==="function"?aktuellerName():"")}, stil:stilFuerSpiel()});
+ }catch(e){ /* das Spiel startet beim ersten Stand */ }
+ pigTaktStarten();
+ if(currentPigGame)pigStandSchieben(currentPigGame);
+ refreshPig().catch(()=>{});
+ return true;
+}
+
 async function refreshPig(players){
  let game=null;
  try{
@@ -4075,6 +4148,7 @@ async function refreshPig(players){
  }
  currentPigGame=game;
  if(!game)return;
+ pigStandSchieben(game);
  const ich=game.spieler.find(s=>s.id===sessionID);
  if(game.status!=="invited"){
   const dran=game.spieler[game.zug];
@@ -6074,7 +6148,7 @@ function stilFuerSpiel(){
 
 // Spiele mit Schnittstelle 2.0 nennen ihren Namensraum selbst. Nur diese
 // Namen werden angefasst; aeltere Spiele merken von all dem nichts.
-const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","DoodleJump","Malen","Scherzshow","Arkanoid","Risiko"];
+const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","Pick","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","DoodleJump","Malen","Scherzshow","Arkanoid","Risiko"];
 
 function apiImRahmen(){
  const rahmen=document.getElementById("spielRahmen");
@@ -7120,6 +7194,7 @@ function rahmenLeeren(){
  tttTaktStoppen();
  schiffeTaktStoppen();
  chicagoTaktStoppen();
+ pigTaktStoppen();
  quizshowTaktStoppen();
  document.body.classList.remove("spiel-offen");
  if(window.TGMobil)TGMobil.spielZu();
@@ -7192,7 +7267,7 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
 
 // Der Stil geht an jedes geladene Spiel und an jedes offene Spiel, sobald die
 // Wahl im Connector wechselt. Reine Übergabe, keine Spielsteuerung.
-document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); quizshowBrueckeAn(); labBrueckeAn(); malBrueckeAn(); });
+document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); quizshowBrueckeAn(); pigBrueckeAn(); labBrueckeAn(); malBrueckeAn(); });
 window.addEventListener("tg-stil", () => {
  if(document.body.classList.contains("spiel-offen"))stilAnSpiel();
 });

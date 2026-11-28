@@ -777,6 +777,19 @@ bei seinem eigenen Umbau.
   `?room&id`-Logik ist auftragsgemäß entfernt. Die Online-Kachel des
   Registers bleibt vorerst bestehen und öffnet die lokale Auswahl.
 
+- **Pick (28.11.2026):** `spiele/brettspiele/pig/pig.html`, Schnittstelle
+  **2.0.0**, ein Global `Pick`. Ereignisse `pick:bereit|wurf|sichern|ende|
+  pausiert|weiter|neu`. Aktionen `wuerfeln`, `sichern`, `start`, `pause`,
+  `weiter`, `neu`, `regeln`, `stand`, `online`. Drei Stile (`normal`,
+  `maedchen`, `buben`) mit drei eigenen Schweine-Charakteren; ohne Connector
+  wählbar, mit Connector übernimmt `start({stil})` die Vorgabe
+  (`einstellungen().stilWahl` ist dann `false`). Drei Bot-Stufen: `leicht`
+  (Grenze ≈ 46 mit Fehlgriffen), `normal` (Grenze 21, an den Stand angepasst),
+  `schwer` (Wertiteration über eigene Punkte, Gegnerpunkte und Zugsumme,
+  61 Iterationen, ~210 ms). Online hält der Connector den Stand und schiebt
+  ihn über `aktion('stand', { spiel, ich })` hinein; das Spiel rechnet dann
+  nichts selbst, sondern meldet `pick:wurf`/`pick:sichern`/`pick:neu`.
+
 ## 12. Prüfliste für ein neues Spiel
 
 1. Ohne Konnektor geöffnet: Startbildschirm, Start, Pause, Neustart, Ende.

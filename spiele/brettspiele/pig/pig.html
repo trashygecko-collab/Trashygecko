@@ -1,427 +1,1182 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-stil="normal">
 <head>
-<script src="../../token.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0a211b">
-<title>Pig – Das Schweinchen-Würfelspiel</title>
-<script src="../../stil.js"></script>
+<meta name="theme-color" content="#10241d">
+<title>Pick – Das Schweinchen-Würfelspiel</title>
 <link rel="stylesheet" href="../../schrift.css">
-<link rel="stylesheet" href="../../brettspiele/wuerfel.css">
+<link rel="stylesheet" href="../../spiel-start.css">
 <style>
+/* =========================================================================
+   PICK – Schweinchen-Würfelspiel
+   Drei eigene Schweine (normal, maedchen, buben), drei Bot-Stufen.
+   Schnittstelle 2.0: window.Pick, Ereignisse pick:bereit|wurf|sichern|ende|
+   pausiert|weiter|neu. Kein /api, keine Adressdaten, kein alert/prompt.
+   ========================================================================= */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;font-family:"Atkinson Hyperlegible",system-ui,sans-serif;
+  background:radial-gradient(120% 90% at 50% 0%,#1d4a3b 0%,#10241d 55%,#08150f 100%);
+  color:#f4ecd8;overflow:hidden;
+}
+.pk{
+  height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);
+  gap:8px;padding:8px 10px 10px;max-width:1200px;margin:0 auto;
+}
+/* ---------- Kopfleiste ---------- */
+.pk-kopf{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pk-kopf a{color:#f0d79a;text-decoration:none;font-size:14px;padding:6px 10px;border-radius:9px;
+  border:1px solid rgba(240,215,154,.28);background:rgba(0,0,0,.18)}
+.pk-kopf a:hover{background:rgba(240,215,154,.12)}
+.pk-titel{margin:0;font-size:clamp(16px,2.4vw,22px);letter-spacing:.22em;color:#f0d79a;font-weight:700}
+.pk-kopf-rechts{margin-left:auto;display:flex;gap:8px}
+.pk-kl{border:1px solid rgba(244,236,216,.24);background:rgba(255,255,255,.06);color:#f4ecd8;
+  border-radius:9px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+.pk-kl:hover{background:rgba(255,255,255,.12)}
+.pk-kl:focus-visible,.pk-knopf:focus-visible,.pk-wahl:focus-visible{outline:3px solid #ffd77a;outline-offset:2px}
+/* ---------- Startbildschirm ---------- */
+.pk-start{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;min-height:0}
+.pk-start-links,.pk-start-rechts{
+  border-radius:18px;border:1px solid rgba(240,215,154,.22);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+  padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto;
+}
+.pk-start-links{align-items:center;justify-content:center;text-align:center}
+.pk-start h1{margin:0;font-size:clamp(26px,5vw,44px);letter-spacing:.06em;color:#ffe4a8}
+.pk-start .unter{margin:0;color:#cfe0d6;font-size:15px;line-height:1.45;max-width:44ch}
+.pk-schwein-buehne{width:100%;display:flex;justify-content:center}
+.pk-schwein{width:min(46vw,240px);max-width:100%;height:auto;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+.pk-gruppe{display:flex;flex-direction:column;gap:6px}
+.pk-gruppe>span{font-size:12px;letter-spacing:.14em;color:#a9c4b6;text-transform:uppercase}
+.pk-reihe{display:flex;gap:6px;flex-wrap:wrap}
+.pk-wahl{flex:1 1 auto;min-width:74px;border:1px solid rgba(244,236,216,.24);background:rgba(255,255,255,.05);
+  color:#f4ecd8;border-radius:10px;padding:9px 8px;font:inherit;font-size:14px;cursor:pointer;text-align:center}
+.pk-wahl[aria-pressed="true"]{background:#ffd77a;color:#1a1206;border-color:#ffd77a;font-weight:700}
+.pk-regeln{font-size:13px;line-height:1.5;color:#cfe0d6;margin:0;padding-left:18px}
+.pk-regeln li{margin:2px 0}
+.pk-knopf{border:none;border-radius:12px;padding:14px 20px;font:inherit;font-weight:700;font-size:17px;
+  cursor:pointer;background:linear-gradient(180deg,#ffe08a,#e8b64c);color:#241703;
+  box-shadow:0 6px 0 #8f6c1e,0 10px 18px rgba(0,0,0,.35)}
+.pk-knopf:active{transform:translateY(2px);box-shadow:0 4px 0 #8f6c1e}
+.pk-knopf[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+.pk-start .pk-knopf{width:100%;font-size:19px;padding:16px}
+/* ---------- Spiel ---------- */
+.pk-spiel{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px;min-height:0}
+.pk-buehne{
+  position:relative;border-radius:18px;border:1px solid rgba(240,215,154,.22);
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.12));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:10px;min-height:0;overflow:hidden;
+}
+.pk-schwein-feld{width:min(40vh,260px);max-width:70%;height:auto;filter:drop-shadow(0 10px 16px rgba(0,0,0,.45))}
+.pk-schwein-feld.wackeln{animation:pk-wackeln .55s ease-in-out}
+.pk-schwein-feld.huepfen{animation:pk-huepfen .6s ease-out}
+@keyframes pk-wackeln{0%,100%{transform:rotate(0)}15%{transform:rotate(-6deg)}40%{transform:rotate(6deg)}65%{transform:rotate(-4deg)}85%{transform:rotate(3deg)}}
+@keyframes pk-huepfen{0%{transform:translateY(0)}35%{transform:translateY(-16px) scale(1.05)}65%{transform:translateY(0) scale(.98)}100%{transform:translateY(0)}}
+.pk-blase{position:absolute;top:10px;right:10px;max-width:62%;background:#f8f0dc;color:#2a2016;
+  border-radius:12px;padding:7px 11px;font-weight:700;font-size:15px;opacity:0;transform:translateY(5px);
+  transition:opacity .18s,transform .18s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.pk-blase.an{opacity:1;transform:translateY(0)}
+.pk-blase.schlecht{background:#f3b0a6}
+.pk-wurf{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+.pk-wuerfel{width:64px;height:64px;border-radius:12px;background:#fdf7e7;border:2px solid #cbb98c;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  padding:7px;gap:2px;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.pk-wuerfel i{display:block;border-radius:50%;background:transparent}
+.pk-wuerfel i.an{background:#2a2016}
+.pk-wuerfel.rollt{animation:pk-rollen .45s ease-in-out}
+@keyframes pk-rollen{0%{transform:rotate(0) scale(1)}45%{transform:rotate(190deg) scale(1.12)}100%{transform:rotate(360deg) scale(1)}}
+.pk-summe{text-align:center;line-height:1.05}
+.pk-summe small{display:block;font-size:11px;letter-spacing:.12em;color:#a9c4b6}
+.pk-summe b{font-size:clamp(26px,5vh,40px);color:#ffd77a}
+.pk-knoepfe{display:flex;gap:10px;width:100%;max-width:420px}
+.pk-knoepfe .pk-knopf{flex:1}
+.pk-panel{border-radius:18px;border:1px solid rgba(240,215,154,.22);padding:10px 12px;min-height:0;
+  display:flex;flex-direction:column;gap:8px;background:rgba(0,0,0,.16);overflow:auto}
+.pk-zeile{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pk-zeile b{color:#ffe4a8}
+.pk-notiz{margin:0;font-size:13px;color:#bdd2c8}
+.pk-sp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;
+  padding:5px 7px;border-radius:10px;border:1px solid transparent}
+.pk-sp.dran{border-color:#ffd77a;background:rgba(255,215,122,.12)}
+.pk-sp svg{width:30px;height:30px;flex:none}
+.pk-sp .name{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-sp .name small{color:#a9c4b6}
+.pk-sp .pkt{font-weight:700;color:#ffe4a8;font-size:14px;white-space:nowrap}
+.pk-sp .pkt em{color:#a9c4b6;font-style:normal;font-weight:400;font-size:12px}
+.pk-log{font-size:12px;color:#9fb6aa;line-height:1.45;min-height:2.6em}
+/* ---------- Blätter (Pause, Ergebnis) ---------- */
+.pk-blatt{position:fixed;inset:0;background:rgba(4,12,8,.78);display:flex;align-items:center;
+  justify-content:center;padding:16px;z-index:40;backdrop-filter:blur(4px)}
+.pk-blatt[hidden]{display:none}
+.pk-karte{background:linear-gradient(180deg,#21503f,#123026);border:1px solid rgba(240,215,154,.35);
+  border-radius:18px;padding:18px;max-width:460px;width:100%;text-align:center;
+  box-shadow:0 18px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:10px;max-height:92vh;overflow:auto}
+.pk-karte h2{margin:0;color:#ffe4a8;font-size:22px}
+.pk-karte p{margin:0;color:#d7e6dd;font-size:15px;line-height:1.5}
+.pk-karte .pk-schwein{width:130px;margin:0 auto}
+/* ---------- Drei Schweine als eigene Charaktere ---------- */
+html[data-stil="maedchen"] body{background:radial-gradient(120% 90% at 50% 0%,#ffe2ef 0%,#ffc9e0 55%,#f7a8cb 100%);color:#3a0f24}
+html[data-stil="maedchen"] .pk-start-links,html[data-stil="maedchen"] .pk-start-rechts,
+html[data-stil="maedchen"] .pk-buehne,html[data-stil="maedchen"] .pk-panel{background:rgba(255,255,255,.62);border-color:#e58ab1}
+html[data-stil="maedchen"] .pk-start h1{color:#a3175c}
+html[data-stil="maedchen"] .pk-start .unter,html[data-stil="maedchen"] .pk-notiz,html[data-stil="maedchen"] .pk-log{color:#6b2a45}
+html[data-stil="maedchen"] .pk-titel{color:#a3175c}
+html[data-stil="maedchen"] .pk-kopf a{color:#7c1147;border-color:#e58ab1;background:rgba(255,255,255,.6)}
+html[data-stil="maedchen"] .pk-kl{color:#4a1230;border-color:#e58ab1;background:rgba(255,255,255,.66)}
+html[data-stil="maedchen"] .pk-wahl{color:#4a1230;border-color:#e58ab1;background:#fff}
+html[data-stil="maedchen"] .pk-wahl[aria-pressed="true"]{background:#e8478f;color:#fff;border-color:#c2306f}
+html[data-stil="maedchen"] .pk-sp .pkt{color:#a3175c}
+html[data-stil="maedchen"] .pk-sp.dran{border-color:#e8478f;background:rgba(232,71,143,.12)}
+html[data-stil="maedchen"] .pk-summe b{color:#b81f68}
+html[data-stil="maedchen"] .pk-summe small,html[data-stil="maedchen"] .pk-gruppe>span{color:#8b4462}
+html[data-stil="maedchen"] .pk-karte{background:linear-gradient(180deg,#fff2f7,#ffd9e8);border-color:#e58ab1}
+html[data-stil="maedchen"] .pk-karte h2{color:#a3175c}
+html[data-stil="maedchen"] .pk-karte p{color:#4a1230}
+html[data-stil="maedchen"] .pk-blase{background:#fff;color:#4a1230}
+html[data-stil="maedchen"] .pk-blase.schlecht{background:#ffc2da}
+html[data-stil="maedchen"] .pk-regeln{color:#4a1230}
+html[data-stil="maedchen"] .pk-regeln li::marker{color:#c2306f}
 
-:root{
-/* Klassisch sind genau die alten Farben. Flaechen, Leisten und Knoepfe
-   kommen aus wuerfel.css (--wg-...), das auch die Stilbloecke traegt.
-   Das Schwein selbst steckt als SVG-Attribut im Zeichencode; nur die
-   Stilbloecke ueberschreiben es (--pig...). */
---blase:#f6edda;--blase-text:#2b211a;--blase-schlecht:#e8a8a0;
+html[data-stil="buben"] body{background:radial-gradient(120% 90% at 50% 0%,#2a1113 0%,#150809 55%,#080405 100%);color:#efe6de}
+html[data-stil="buben"] .pk-start-links,html[data-stil="buben"] .pk-start-rechts,
+html[data-stil="buben"] .pk-buehne,html[data-stil="buben"] .pk-panel{background:rgba(255,255,255,.04);border-color:#7a2226}
+html[data-stil="buben"] .pk-start h1,html[data-stil="buben"] .pk-titel{color:#ff8f7a}
+html[data-stil="buben"] .pk-start .unter,html[data-stil="buben"] .pk-notiz,html[data-stil="buben"] .pk-log{color:#c9b3ab}
+html[data-stil="buben"] .pk-wahl[aria-pressed="true"]{background:#c8342c;color:#fff;border-color:#c8342c}
+html[data-stil="buben"] .pk-knopf{background:linear-gradient(180deg,#ff8a72,#c8342c);color:#fff;box-shadow:0 6px 0 #6d1a1f,0 10px 18px rgba(0,0,0,.45)}
+html[data-stil="buben"] .pk-summe b,html[data-stil="buben"] .pk-sp .pkt{color:#ff9a86}
+html[data-stil="buben"] .pk-sp.dran{border-color:#c8342c;background:rgba(200,52,44,.16)}
+html[data-stil="buben"] .pk-karte{background:linear-gradient(180deg,#2a1113,#170a0b);border-color:#7a2226}
+html[data-stil="buben"] .pk-karte h2{color:#ff9a86}
+/* ---------- Maße ---------- */
+@media (max-width:820px){
+  .pk{grid-template-rows:auto minmax(0,1fr);padding:6px 8px 8px}
+  .pk-start,.pk-spiel{grid-template-columns:minmax(0,1fr);gap:8px;overflow:auto}
+  .pk-start-links,.pk-start-rechts{padding:10px 12px;overflow:visible}
+  .pk-start-rechts{order:2}
+  .pk-schwein{width:min(52vw,180px)}
+  .pk-schwein-feld{width:min(30vh,190px);max-width:58%}
+  .pk-blase{font-size:13px;padding:6px 9px}
+  .pk-knoepfe{max-width:none}
+  .pk-wuerfel{width:56px;height:56px}
 }
-
-.buehne{align-items:center;justify-content:center;gap:6px}
-.pig-wrap{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
-  width:100%}
-.pig{height:100%;max-height:340px;max-width:100%;width:auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
-.pig.traurig{animation:wg-schuettern .55s ease-in-out}
-.pig.freut{animation:wg-huepfen .6s ease-out}
-@keyframes wg-schuettern{
-  0%,100%{transform:rotate(0) translateY(0)}
-  15%{transform:rotate(-7deg) translateY(2px)}
-  35%{transform:rotate(7deg) translateY(-2px)}
-  55%{transform:rotate(-5deg) translateY(2px)}
-  75%{transform:rotate(5deg) translateY(-1px)}
+@media (max-height:560px) and (orientation:landscape){
+  .pk-start{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .pk-start-links{justify-content:flex-start}
+  .pk-schwein{width:min(24vw,130px)}
+  .pk-schwein-feld{width:min(46vh,150px)}
+  .pk-start .pk-knopf{padding:11px;font-size:16px}
 }
-@keyframes wg-huepfen{
-  0%{transform:translateY(0) scale(1)}
-  35%{transform:translateY(-18px) scale(1.06)}
-  65%{transform:translateY(0) scale(.98)}
-  100%{transform:translateY(0) scale(1)}
+@media (prefers-reduced-motion:reduce){
+  .pk-schwein-feld.wackeln,.pk-schwein-feld.huepfen,.pk-wuerfel.rollt{animation:none}
 }
-.blase{position:absolute;right:8%;top:6%;background:var(--blase);color:var(--blase-text);border-radius:14px;
-  padding:6px 12px;font-weight:bold;font-size:clamp(14px,2vw,20px);opacity:0;transform:translateY(6px);
-  transition:opacity .2s,transform .2s;pointer-events:none}
-.blase.an{opacity:1;transform:translateY(0)}
-.blase.schlecht{background:var(--blase-schlecht)}
-.wurfreihe{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;width:100%}
-.rundensumme{display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.rundensumme small{color:var(--wg-muted);font-size:11px;letter-spacing:1px}
-.rundensumme b{font-size:clamp(22px,4vh,34px);color:var(--wg-gold)}
-.btn-reihe{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
-@media(max-height:520px){
-  .pig{max-height:150px}
-  .rundensumme b{font-size:20px}
-}
-/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
-html[data-stil="maedchen"]{
---blase:#fff6fa;--blase-text:#3a0f24;--blase-schlecht:#ffc2da;
---pig:#ff9ec4;--pig-ohr:#ff8fb8;--pig-glanz:#ffd0e4;--ruessel:#c85f96;--tief:#5b2340;--auge:#ffffff;--pig-rand:#b0286a;
-}
-html[data-stil="buben"]{
---blase:#16181c;--blase-text:#e6e9ec;--blase-schlecht:#3a0d12;
---pig:#ff5560;--pig-ohr:#e0242f;--pig-glanz:#ff8a90;--ruessel:#8f1019;--tief:#0a0d10;--auge:#e6e9ec;--pig-rand:#6d1a1f;
-}
-html[data-stil="maedchen"] .pig [fill="#e79aa8"],html[data-stil="buben"] .pig [fill="#e79aa8"]{fill:var(--pig)}
-html[data-stil="maedchen"] .pig [fill="#ef97a6"],html[data-stil="buben"] .pig [fill="#ef97a6"]{fill:var(--pig-ohr)}
-html[data-stil="maedchen"] .pig [fill="#f2b3bf"],html[data-stil="buben"] .pig [fill="#f2b3bf"]{fill:var(--pig-glanz)}
-html[data-stil="maedchen"] .pig [fill="#7a4550"],html[data-stil="buben"] .pig [fill="#7a4550"]{fill:var(--ruessel)}
-html[data-stil="maedchen"] .pig [fill="#33222a"],html[data-stil="buben"] .pig [fill="#33222a"]{fill:var(--tief)}
-html[data-stil="maedchen"] .pig [fill="#fff6f8"],html[data-stil="buben"] .pig [fill="#fff6f8"]{fill:var(--auge)}
-html[data-stil="maedchen"] .pig [stroke="#8d5661"],html[data-stil="buben"] .pig [stroke="#8d5661"]{stroke:var(--pig-rand)}
-</style>
 </style>
 </head>
 <body>
-<main class="wg-app">
-  <header class="wg-kopf">
-    <small id="lage">Bereit</small>
-    <div class="wg-leiste" id="startLeiste">
-      <select class="wg-btn" id="anzahl" aria-label="Spielerzahl">
-        <option value="2">2 Spieler</option>
-        <option value="3">3 Spieler</option>
-        <option value="4">4 Spieler</option>
-      </select>
-      <button class="wg-btn haupt" id="btnLokal">Lokal starten</button>
-    </div>
-    <div class="wg-leiste wg-versteckt" id="onlineLeiste">
-      <button class="wg-btn haupt" id="btnErstellen">Runde eröffnen</button>
-      <button class="wg-btn" id="btnBereit">Bereit</button>
-      <button class="wg-btn" id="btnLos">Los</button>
+<main class="pk">
+  <header class="pk-kopf">
+    <a href="../../spiele.html" data-tg-zurueck>← alle Spiele</a>
+    <h1 class="pk-titel">PICK</h1>
+    <div class="pk-kopf-rechts">
+      <button class="pk-kl" id="btnPause" type="button" hidden>Pause</button>
+      <button class="pk-kl" id="btnVollbild" type="button">Vollbild</button>
     </div>
   </header>
 
-  <section class="wg-mitte">
-    <div class="wg-flaeche buehne">
-      <div class="pig-wrap">
-        <svg class="pig" id="pig" viewBox="0 0 220 200" role="img" aria-label="Schweinchen">
-          <ellipse cx="110" cy="186" rx="62" ry="9" fill="rgba(0,0,0,.35)"/>
-          <path d="M56 74 L44 30 L92 52 Z" fill="#e79aa8" stroke="#8d5661" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M164 74 L176 30 L128 52 Z" fill="#e79aa8" stroke="#8d5661" stroke-width="3" stroke-linejoin="round"/>
-          <ellipse cx="110" cy="116" rx="74" ry="68" fill="#f2b3bf" stroke="#8d5661" stroke-width="3"/>
-          <ellipse cx="82" cy="100" rx="9" ry="11" fill="#33222a"/>
-          <ellipse cx="138" cy="100" rx="9" ry="11" fill="#33222a"/>
-          <circle cx="79" cy="96" r="3" fill="#fff6f8"/>
-          <circle cx="135" cy="96" r="3" fill="#fff6f8"/>
-          <ellipse cx="110" cy="140" rx="34" ry="26" fill="#e79aa8" stroke="#8d5661" stroke-width="3"/>
-          <ellipse cx="99" cy="140" rx="6" ry="9" fill="#7a4550"/>
-          <ellipse cx="121" cy="140" rx="6" ry="9" fill="#7a4550"/>
-          <path d="M92 168 Q110 178 128 168" fill="none" stroke="#8d5661" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="52" cy="132" r="9" fill="#ef97a6" opacity=".75"/>
-          <circle cx="168" cy="132" r="9" fill="#ef97a6" opacity=".75"/>
-        </svg>
-        <div class="blase" id="blase"></div>
+  <!-- ------------------------------ Start ------------------------------ -->
+  <section class="pk-start" id="startbildschirm" aria-label="Spielauswahl">
+    <div class="pk-start-links">
+      <div class="pk-schwein-buehne" id="startSchwein"></div>
+      <h1>PICK</h1>
+      <p class="unter">Ein Schwein, ein Würfel, hundert Punkte. Jede Zahl von 2 bis 6 zählt in
+        diesem Zug – eine 1 nimmt alles. Wer zuerst 100 auf dem Konto hat, gewinnt.</p>
+      <button class="pk-knopf" id="btnStart" type="button">Starten</button>
+    </div>
+    <div class="pk-start-rechts">
+      <div class="pk-gruppe">
+        <span>Spielmodus</span>
+        <div class="pk-reihe" id="wahlModus">
+          <button class="pk-wahl" type="button" data-wert="bot" aria-pressed="true">Gegen Bots</button>
+          <button class="pk-wahl" type="button" data-wert="lokal" aria-pressed="false">Mehrere am Gerät</button>
+        </div>
       </div>
-      <div class="wurfreihe">
-        <span id="wurfHalte"></span>
-        <div class="rundensumme"><small>IN DIESEM ZUG</small><b id="rundensumme">0</b></div>
+      <div class="pk-gruppe" id="gruppeStufe">
+        <span>Bot-Schwierigkeit</span>
+        <div class="pk-reihe" id="wahlStufe">
+          <button class="pk-wahl" type="button" data-wert="leicht" aria-pressed="false">Leicht</button>
+          <button class="pk-wahl" type="button" data-wert="normal" aria-pressed="true">Normal</button>
+          <button class="pk-wahl" type="button" data-wert="schwer" aria-pressed="false">Schwer</button>
+        </div>
       </div>
-      <div class="btn-reihe">
-        <button class="wg-btn haupt gross" id="btnWuerfeln" disabled>Würfeln</button>
-        <button class="wg-btn gross" id="btnSichern" disabled>Sichern</button>
+      <div class="pk-gruppe" id="gruppeBots">
+        <span>Anzahl Bots</span>
+        <div class="pk-reihe" id="wahlBots">
+          <button class="pk-wahl" type="button" data-wert="1" aria-pressed="true">1</button>
+          <button class="pk-wahl" type="button" data-wert="2" aria-pressed="false">2</button>
+          <button class="pk-wahl" type="button" data-wert="3" aria-pressed="false">3</button>
+        </div>
+      </div>
+      <div class="pk-gruppe" id="gruppeSpieler">
+        <span>Spieler am Gerät</span>
+        <div class="pk-reihe" id="wahlSpieler">
+          <button class="pk-wahl" type="button" data-wert="1" aria-pressed="true">1</button>
+          <button class="pk-wahl" type="button" data-wert="2" aria-pressed="false">2</button>
+          <button class="pk-wahl" type="button" data-wert="3" aria-pressed="false">3</button>
+          <button class="pk-wahl" type="button" data-wert="4" aria-pressed="false">4</button>
+        </div>
+      </div>
+      <div class="pk-gruppe" id="gruppeStil">
+        <span>Grafikstil</span>
+        <div class="pk-reihe" id="wahlStil">
+          <button class="pk-wahl" type="button" data-wert="normal" aria-pressed="true">Normal</button>
+          <button class="pk-wahl" type="button" data-wert="maedchen" aria-pressed="false">Mädchen</button>
+          <button class="pk-wahl" type="button" data-wert="buben" aria-pressed="false">Buben</button>
+        </div>
+      </div>
+      <div class="pk-gruppe">
+        <span>So geht's</span>
+        <ul class="pk-regeln">
+          <li>Würfeln bringt 2–6 Punkte in den Zug; eine 1 löscht die Zugsumme.</li>
+          <li>Sichern legt die Zugsumme aufs Konto und gibt weiter.</li>
+          <li>Bei 100 Konto-Punkten ist die Partie gewonnen.</li>
+          <li>Die Bots würfeln fair mit demselben Würfel wie du.</li>
+        </ul>
       </div>
     </div>
+  </section>
 
-    <aside class="wg-karte">
-      <div class="wg-leiste"><b id="rundenTitel">Runde 1</b><span class="wg-notiz" id="zugText"></span></div>
-      <div class="wg-spieler" id="spieler"></div>
-      <div class="wg-fehler" id="fehler"></div>
-      <div class="wg-notiz" id="notiz"></div>
-      <div class="wg-log" id="log"></div>
-      <div class="wg-leiste wg-versteckt" id="ende">
-        <button class="wg-btn haupt" id="btnNochmal">Nächste Runde</button>
+  <!-- ------------------------------ Spiel ------------------------------ -->
+  <section class="pk-spiel" id="spielbereich" hidden>
+    <div class="pk-buehne">
+      <div id="feldSchwein"></div>
+      <div class="pk-blase" id="blase" role="status" aria-live="polite"></div>
+      <div class="pk-wurf">
+        <div class="pk-wuerfel" id="wuerfel" aria-label="Würfel"></div>
+        <div class="pk-summe"><small>IN DIESEM ZUG</small><b id="zugSumme">0</b></div>
       </div>
+      <div class="pk-knoepfe">
+        <button class="pk-knopf" id="btnWuerfeln" type="button">Würfeln</button>
+        <button class="pk-knopf" id="btnSichern" type="button">Sichern</button>
+      </div>
+    </div>
+    <aside class="pk-panel">
+      <div class="pk-zeile"><b id="rundenTitel">Runde 1</b><span class="pk-notiz" id="zugText"></span></div>
+      <div id="spielerListe"></div>
+      <p class="pk-notiz" id="notiz"></p>
+      <div class="pk-log" id="verlauf"></div>
     </aside>
   </section>
 </main>
 
-<script src="../../brettspiele/wuerfel-common.js"></script>
+<!-- ------------------------------ Pause ------------------------------ -->
+<div class="pk-blatt" id="pauseBlatt" hidden>
+  <div class="pk-karte">
+    <h2>Pause</h2>
+    <p>Die Partie steht. Nichts läuft weiter, auch die Bots warten.</p>
+    <button class="pk-knopf" id="btnWeiter" type="button">Weiterspielen</button>
+    <button class="pk-kl" id="btnAufgeben" type="button">Partie beenden</button>
+  </div>
+</div>
+
+<!-- ------------------------------ Ergebnis ------------------------------ -->
+<div class="pk-blatt" id="endeBlatt" hidden>
+  <div class="pk-karte">
+    <div class="pk-schwein-buehne" id="endeSchwein"></div>
+    <h2 id="endeTitel">Partie beendet</h2>
+    <p id="endeText"></p>
+    <div id="endeTabelle"></div>
+    <button class="pk-knopf" id="btnNochmal" type="button">Nächste Runde</button>
+    <button class="pk-kl" id="btnAuswahl" type="button">Zur Auswahl</button>
+  </div>
+</div>
+
+<script src="../../stil.js"></script>
+<script src="../../spiel-start.js"></script>
 <script>
 (() => {
 "use strict";
-/* Pig: Wer am Zug ist, würfelt beliebig oft. 2 bis 6 zählen zur Rundensumme,
-   eine 1 löscht sie und beendet den Zug. „Sichern" übernimmt die Punkte aufs
-   Konto. Wer zuerst 100 auf dem Konto hat, gewinnt. */
-const P = new URLSearchParams(location.search);
-const ROOM = (P.get("room") || "").trim().toUpperCase();
-const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
-const MYID = (P.get("id") || "").trim();
-const MYNAME = (P.get("name") || "").trim() || "Spieler";
 
+/* ======================================================================
+   Zustand
+   ====================================================================== */
 const ZIEL = 100;
+const STUFEN = ["leicht", "normal", "schwer"];
+const STILE = ["normal", "maedchen", "buben"];
+const SPIELERPUNKTE = [0, 1, 2, 3];
 const $ = (id) => document.getElementById(id);
-const elSpieler = $("spieler"), elNotiz = $("notiz"), elLog = $("log"),
-      elLage = $("lage"), elZug = $("zugText"), elRunde = $("rundenTitel"),
-      elEnde = $("ende"), elFehler = $("fehler"), elRundensumme = $("rundensumme"),
-      elPig = $("pig"), elBlase = $("blase"), elPigWrap = document.querySelector(".pig-wrap"),
-      btnWuerfeln = $("btnWuerfeln"), btnSichern = $("btnSichern");
 
-const dice = WG.wuerfelEl(0);
-$("wurfHalte").appendChild(dice);
+const el = {
+  start: $("startbildschirm"), spiel: $("spielbereich"),
+  startSchwein: $("startSchwein"), feldSchwein: $("feldSchwein"), endeSchwein: $("endeSchwein"),
+  blase: $("blase"), wuerfel: $("wuerfel"), zugSumme: $("zugSumme"),
+  btnWuerfeln: $("btnWuerfeln"), btnSichern: $("btnSichern"),
+  rundenTitel: $("rundenTitel"), zugText: $("zugText"), spielerListe: $("spielerListe"),
+  notiz: $("notiz"), verlauf: $("verlauf"),
+  pauseBlatt: $("pauseBlatt"), endeBlatt: $("endeBlatt"),
+  endeTitel: $("endeTitel"), endeText: $("endeText"), endeTabelle: $("endeTabelle"),
+  btnPause: $("btnPause"), btnVollbild: $("btnVollbild"),
+  btnStart: $("btnStart"), btnNochmal: $("btnNochmal"), btnAuswahl: $("btnAuswahl"),
+  btnWeiter: $("btnWeiter"), btnAufgeben: $("btnAufgeben")
+};
 
-let lokal = null;
-let onlineGame = null;
-let sperre = false;
+const auswahl = { modus: "bot", stufe: "normal", bots: 1, spieler: 1, stil: "normal" };
+let sp = null;              // laufende Partie oder null
+let pausiert = false;
+let tick = 0;
+let botTimer = 0;
 let blaseTimer = 0;
-let endeGemeldet = false;   // Ergebnis-Spruch nur einmal je Runde
+let sperre = false;          // während Wurf-Animation
+let stilVonAussen = false;   // Connector-Konfiguration hat Vorrang
+let online = null;           // { id, name } – Stand kommt über aktion('stand')
+let standGemeldet = false;   // :ende genau einmal je Partie
 
-const warte = WG.warte;
-const fehler = (text) => { elFehler.textContent = text || ""; };
-const notiz = (text) => { elNotiz.textContent = text || ""; };
+/* ======================================================================
+   Drei Schweine – eigene Charaktere, keine Farbvarianten
+   ====================================================================== */
+const SCHWEINE = {
+  normal: () => `
+  <svg class="pk-schwein" viewBox="0 0 220 200" role="img" aria-label="Schweinchen">
+    <ellipse cx="110" cy="187" rx="58" ry="8" fill="rgba(0,0,0,.3)"/>
+    <path d="M58 76 L44 30 L94 54 Z" fill="#e79aa8" stroke="#8d5661" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M162 76 L176 30 L126 54 Z" fill="#e79aa8" stroke="#8d5661" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="110" cy="118" rx="74" ry="67" fill="#f2b3bf" stroke="#8d5661" stroke-width="3"/>
+    <ellipse cx="82" cy="102" rx="9" ry="11" fill="#33222a"/>
+    <ellipse cx="138" cy="102" rx="9" ry="11" fill="#33222a"/>
+    <circle cx="79" cy="98" r="3" fill="#fff6f8"/>
+    <circle cx="135" cy="98" r="3" fill="#fff6f8"/>
+    <ellipse cx="110" cy="142" rx="34" ry="26" fill="#e79aa8" stroke="#8d5661" stroke-width="3"/>
+    <ellipse cx="99" cy="142" rx="6" ry="9" fill="#7a4550"/>
+    <ellipse cx="121" cy="142" rx="6" ry="9" fill="#7a4550"/>
+    <path d="M92 169 Q110 179 128 169" fill="none" stroke="#8d5661" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="52" cy="134" r="9" fill="#ef97a6" opacity=".7"/>
+    <circle cx="168" cy="134" r="9" fill="#ef97a6" opacity=".7"/>
+  </svg>`,
+  maedchen: () => `
+  <svg class="pk-schwein" viewBox="0 0 220 200" role="img" aria-label="Schweinemädchen">
+    <ellipse cx="110" cy="187" rx="58" ry="8" fill="rgba(0,0,0,.22)"/>
+    <path d="M40 178 Q6 116 26 58 Q38 28 74 40 Q54 100 60 178 Z" fill="#a83a6e" stroke="#7c1147" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M180 178 Q214 116 194 58 Q182 28 146 40 Q166 100 160 178 Z" fill="#a83a6e" stroke="#7c1147" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M40 128 Q24 100 30 70" fill="none" stroke="#ff9ec4" stroke-width="3" opacity=".55" stroke-linecap="round"/>
+    <path d="M180 128 Q196 100 190 70" fill="none" stroke="#ff9ec4" stroke-width="3" opacity=".55" stroke-linecap="round"/>
+    <path d="M60 78 L50 34 L96 56 Z" fill="#ffb3cd" stroke="#a8306a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M160 78 L170 34 L124 56 Z" fill="#ffb3cd" stroke="#a8306a" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="110" cy="120" rx="72" ry="64" fill="#ffd3e2" stroke="#a8306a" stroke-width="3"/>
+    <path d="M48 96 Q60 30 110 30 Q160 30 172 96 Q150 66 110 66 Q70 66 48 96 Z" fill="#b0447a"/>
+    <path d="M96 44 Q110 30 124 44 Q118 54 110 52 Q102 54 96 44 Z" fill="#ff5fa2" stroke="#a8306a" stroke-width="2"/>
+    <ellipse cx="82" cy="112" rx="12" ry="14" fill="#fff"/>
+    <ellipse cx="138" cy="112" rx="12" ry="14" fill="#fff"/>
+    <ellipse cx="84" cy="114" rx="7" ry="8" fill="#4a1230"/>
+    <ellipse cx="136" cy="114" rx="7" ry="8" fill="#4a1230"/>
+    <circle cx="81" cy="110" r="2.6" fill="#fff"/>
+    <circle cx="133" cy="110" r="2.6" fill="#fff"/>
+    <path d="M70 100 Q82 94 94 100" fill="none" stroke="#7c1147" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M126 100 Q138 94 150 100" fill="none" stroke="#7c1147" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="110" cy="146" rx="31" ry="24" fill="#ffb3cd" stroke="#a8306a" stroke-width="3"/>
+    <ellipse cx="100" cy="146" rx="5.5" ry="8" fill="#9e2a60"/>
+    <ellipse cx="120" cy="146" rx="5.5" ry="8" fill="#9e2a60"/>
+    <path d="M94 168 Q110 180 126 168" fill="none" stroke="#a8306a" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="56" cy="140" r="11" fill="#ff8fbd" opacity=".85"/>
+    <circle cx="164" cy="140" r="11" fill="#ff8fbd" opacity=".85"/>
+  </svg>`,
+  buben: () => `
+  <svg class="pk-schwein" viewBox="0 0 220 200" role="img" aria-label="Eber">
+    <ellipse cx="110" cy="188" rx="60" ry="8" fill="rgba(0,0,0,.4)"/>
+    <path d="M54 74 L36 26 L96 52 Z" fill="#7d3b33" stroke="#3c1a16" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M166 74 L184 26 L124 52 Z" fill="#7d3b33" stroke="#3c1a16" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M36 26 L30 8 L50 30 Z" fill="#e6dcc8" stroke="#3c1a16" stroke-width="2"/>
+    <path d="M184 26 L190 8 L170 30 Z" fill="#e6dcc8" stroke="#3c1a16" stroke-width="2"/>
+    <ellipse cx="110" cy="118" rx="76" ry="68" fill="#a8503f" stroke="#3c1a16" stroke-width="3"/>
+    <path d="M60 66 Q80 52 104 62" fill="none" stroke="#3c1a16" stroke-width="4" stroke-linecap="round"/>
+    <path d="M160 66 Q140 52 116 62" fill="none" stroke="#3c1a16" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="80" cy="102" rx="11" ry="9" fill="#1a0d0a"/>
+    <ellipse cx="140" cy="102" rx="11" ry="9" fill="#1a0d0a"/>
+    <circle cx="77" cy="99" r="2.4" fill="#ffd9a8"/>
+    <circle cx="137" cy="99" r="2.4" fill="#ffd9a8"/>
+    <path d="M104 78 L118 96 L110 100 L96 90 Z" fill="#7a2b22" opacity=".8"/>
+    <path d="M150 88 L162 100 L150 106 L142 94 Z" fill="#e6dcc8" opacity=".9"/>
+    <ellipse cx="110" cy="144" rx="36" ry="27" fill="#8d4033" stroke="#3c1a16" stroke-width="3"/>
+    <ellipse cx="98" cy="144" rx="6" ry="9" fill="#3c1a16"/>
+    <ellipse cx="122" cy="144" rx="6" ry="9" fill="#3c1a16"/>
+    <path d="M78 168 Q96 160 104 170" fill="none" stroke="#3c1a16" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M142 168 Q124 160 116 170" fill="none" stroke="#3c1a16" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M100 172 L96 184 M120 172 L124 184" stroke="#e6dcc8" stroke-width="4" stroke-linecap="round"/>
+    <path d="M60 108 L50 118 M62 118 L52 128" stroke="#5e2a22" stroke-width="3" opacity=".7"/>
+    <circle cx="54" cy="138" r="10" fill="#7a2b22" opacity=".6"/>
+    <circle cx="166" cy="138" r="10" fill="#7a2b22" opacity=".6"/>
+  </svg>`
+};
 
-/* ------------------------------- Regeln -------------------------------- */
-function neuerStand(anzahl) {
+const schweinWahl = () => (stilVonAussen ? auswahl.stil : auswahl.stil) || "normal";
+
+function schweinSetzen(ziel, art) {
+  if (!ziel) return;
+  ziel.innerHTML = (SCHWEINE[art] || SCHWEINE.normal)();
+}
+
+/* ======================================================================
+   Bot-KI
+   ----------------------------------------------------------------------
+   leicht: Anfänger, sichert spät und mit erkennbaren Fehlern.
+   normal: Freizeitspieler, feste Grenze um 22, leicht an den Stand angepasst.
+   schwer: Wertiteration (dynamische Programmierung) über (eigene Punkte,
+           Gegnerpunkte, Zugsumme). W(p,q) = Gewinnwahrscheinlichkeit am Zug
+           ohne laufende Summe; V(p,q,t) ebenso mit Summe t. Aktionen:
+           sichern oder würfeln; eine 1 gibt den Zug ohne Punkte ab.
+   ====================================================================== */
+let dpW = null;
+
+function dpBauen() {
+  if (dpW) return dpW;
+  const N = ZIEL;
+  const idx = (a, b) => a * N + b;
+  let W = new Float64Array(N * N).fill(0.5);
+  const V = new Float64Array(N + 8);
+  for (let it = 0; it < 60; it++) {
+    const neu = new Float64Array(N * N);
+    let maxDiff = 0;
+    for (let p = 0; p < N; p++) {
+      const rest = N - p;
+      for (let q = 0; q < N; q++) {
+        // W(a,b) gilt für den Spieler AM ZUG. Nach einem Zugwechsel ist der
+        // Gegner am Zug, sein Wert zählt also gespiegelt (1 - W).
+        const gegner = 1 - W[idx(q, p)];
+        const tmax = rest - 1;
+        for (let t = tmax; t >= 1; t--) {
+          const sicher = (p + t >= N) ? 1 : 1 - W[idx(q, p + t)];
+          let weiter = gegner / 6;
+          for (let a = 2; a <= 6; a++) {
+            const tn = t + a;
+            weiter += (tn >= rest ? 1 : V[tn]) / 6;
+          }
+          V[t] = sicher > weiter ? sicher : weiter;
+        }
+        let w0 = gegner / 6;
+        for (let a = 2; a <= 6; a++) w0 += ((a >= rest ? 1 : V[a])) / 6;
+        neu[idx(p, q)] = w0;
+        const d = Math.abs(w0 - W[idx(p, q)]);
+        if (d > maxDiff) maxDiff = d;
+      }
+    }
+    W = neu;
+    if (maxDiff < 1e-6) break;
+  }
+  dpW = W;
+  return W;
+}
+
+function dpEntscheidung(p, q, t) {
+  const W = dpBauen();
+  const N = ZIEL;
+  const idx = (a, b) => a * N + b;
+  p = Math.max(0, Math.min(N - 1, Math.round(p)));
+  q = Math.max(0, Math.min(N - 1, Math.round(q)));
+  t = Math.max(0, Math.min(N - 1, Math.round(t)));
+  const rest = N - p;
+  const sicherWert = (p + t >= N) ? 1 : 1 - W[idx(q, p + t)];
+  let weiterWert = (1 - W[idx(q, p)]) / 6;
+  if (t > 0) {
+    const V = new Float64Array(N + 8);
+    for (let tt = rest - 1; tt >= 1; tt--) {
+      const s = (p + tt >= N) ? 1 : 1 - W[idx(q, p + tt)];
+      let w = (1 - W[idx(q, p)]) / 6;
+      for (let a = 2; a <= 6; a++) {
+        const tn = tt + a;
+        w += (tn >= rest ? 1 : V[tn]) / 6;
+      }
+      V[tt] = s > w ? s : w;
+    }
+    weiterWert = (1 - W[idx(q, p)]) / 6;
+    for (let a = 2; a <= 6; a++) {
+      const tn = t + a;
+      weiterWert += (tn >= rest ? 1 : V[tn]) / 6;
+    }
+  }
+  return { sicherWert, weiterWert, sicher: sicherWert > weiterWert };
+}
+
+/* Erwartungswert eines Wurfs: 1/6 * 0 + 5/6 * Durchschnitt(2..6) – bei
+   laufender Summe t ist der Zugewinn im Mittel 4, die 1 kostet t. */
+function erwartung(t) {
+  return (5 / 6) * 4 - (1 / 6) * t;
+}
+
+function botEntscheidung(bot) {
+  const p = bot.punkte;
+  const t = bot.runde;
+  const gegner = sp.spieler.filter((x) => x !== bot).reduce((m, x) => Math.max(m, x.punkte), 0);
+  if (t === 0) return "wuerfeln";
+  if (sp.stufe === "schwer") {
+    const w = dpEntscheidung(p, gegner, t);
+    return w.sicher ? "sichern" : "wuerfeln";
+  }
+  if (sp.stufe === "normal") {
+    let grenze = 21;
+    if (p - gegner >= 25) grenze -= 4;        // klare Führung: früher sichern
+    if (gegner - p >= 25) grenze += 6;        // Rückstand: mehr riskieren
+    if (p + t >= ZIEL) return "sichern";
+    if (t >= grenze + 4) return "sichern";
+    if (t >= grenze - 3) return Math.random() < 0.18 ? "wuerfeln" : "sichern";
+    if (Math.random() < 0.07) return t > 30 ? "wuerfeln" : "sichern";  // Fehler
+    return "wuerfeln";
+  }
+  // leicht: sichert zu spät oder zu früh, überschätzt das Glück, aber nicht planlos
+  const grenze = 55 + (p > gegner ? 6 : 0) - (gegner - p > 35 ? 6 : 0);
+  if (p + t >= ZIEL) return "sichern";
+  if (t >= 58) return Math.random() < 0.6 ? "sichern" : "wuerfeln";
+  if (t >= grenze) return Math.random() < 0.35 ? "sichern" : "wuerfeln";
+  if (t >= 10 && t <= 24 && Math.random() < 0.3) return "sichern";
+  if (Math.random() < 0.5) return t > 26 ? "sichern" : "wuerfeln";
+  return "wuerfeln";
+}
+
+/* ======================================================================
+   Partie
+   ====================================================================== */
+function neuerSpieler(name, bot, farbe, stufe) {
+  return { name, bot: !!bot, stufe: stufe || "normal", punkte: 0, runde: 0, farbe };
+}
+
+function partieBauen() {
+  const liste = [];
+  if (auswahl.modus === "lokal") {
+    const n = Math.max(2, auswahl.spieler);
+    for (let i = 0; i < n; i++) liste.push(neuerSpieler("Spieler " + (i + 1), false, i));
+  } else {
+    const bots = Math.max(1, Math.min(3, auswahl.bots));
+    liste.push(neuerSpieler("Du", false, 0));
+    for (let i = 0; i < bots; i++) liste.push(neuerSpieler("Bot " + (i + 1), true, i + 1, auswahl.stufe));
+  }
   return {
-    runde: 1, zug: 0, wurf: 0, status: "spiel", sieger: "", verlauf: [],
-    spieler: Array.from({ length: anzahl }, (_, i) => ({
-      id: "s" + i, name: "Spieler " + (i + 1), farbe: i, punkte: 0, runde: 0
-    })),
-    note: "Würfle so oft du willst – eine 1 nimmt alles aus diesem Zug."
+    modus: auswahl.modus, stufe: auswahl.stufe, stil: auswahl.stil,
+    spieler: liste, zug: 0, runde: 1, status: "spiel", sieger: null,
+    wuerfel: 0, note: "", verlauf: []
   };
 }
 
-function wurfMachen(sp, sitz, wurf) {
-  sp.wurf = wurf;
-  const s = sp.spieler[sitz];
-  if (wurf === 1) {
-    const verloren = s.runde;
-    s.runde = 0;
-    sp.verlauf.push(s.name + " würfelt eine 1 – " + verloren + " Punkte aus diesem Zug sind weg.");
-    sp.zug = (sp.zug + 1) % sp.spieler.length;
-    return { eins: true, verloren };
-  }
-  s.runde += wurf;
-  sp.verlauf.push(s.name + " würfelt " + wurf + " – " + s.runde + " Punkte in diesem Zug.");
-  sp.verlauf = sp.verlauf.slice(-8);
-  return { eins: false, verloren: 0 };
+function dran() { return sp ? sp.spieler[sp.zug] : null; }
+
+function eintrag(text) {
+  if (!sp) return;
+  sp.verlauf.push(text);
+  if (sp.verlauf.length > 12) sp.verlauf.splice(0, sp.verlauf.length - 12);
 }
 
-function sichernMachen(sp, sitz) {
-  const s = sp.spieler[sitz];
-  if (!s.runde) return 0;
-  const punkte = s.runde;
-  s.punkte += punkte;
-  s.runde = 0;
-  sp.verlauf.push(s.name + " sichert " + punkte + " Punkte und steht bei " + s.punkte + ".");
-  sp.verlauf = sp.verlauf.slice(-8);
-  if (s.punkte >= ZIEL) {
-    sp.status = "ende";
-    sp.sieger = s.id;
-    sp.note = s.name + " hat " + s.punkte + " Punkte und gewinnt.";
-  } else {
-    sp.zug = (sp.zug + 1) % sp.spieler.length;
-  }
-  return punkte;
-}
-
-/* ------------------------------- Anzeige ------------------------------- */
 function blaseZeigen(text, gut) {
+  el.blase.textContent = text;
+  el.blase.classList.toggle("schlecht", !gut);
+  el.blase.classList.add("an");
+  const bild = el.feldSchwein.querySelector(".pk-schwein");
+  if (bild) {
+    bild.classList.remove("wackeln", "huepfen");
+    void bild.offsetWidth;
+    bild.classList.add(gut ? "huepfen" : "wackeln");
+  }
   clearTimeout(blaseTimer);
-  elBlase.textContent = text;
-  elBlase.classList.toggle("schlecht", !gut);
-  elBlase.classList.add("an");
-  elPig.classList.remove("traurig", "freut");
-  void elPig.offsetWidth;
-  elPig.classList.add(gut ? "freut" : "traurig");
-  blaseTimer = setTimeout(() => {
-    elBlase.classList.remove("an");
-    elPig.classList.remove("traurig", "freut");
-  }, 2000);
+  blaseTimer = window.setTimeout(() => {
+    el.blase.classList.remove("an");
+    const b = el.feldSchwein.querySelector(".pk-schwein");
+    if (b) b.classList.remove("wackeln", "huepfen");
+  }, 1900);
 }
 
-function spielerZeichnen(sp) {
-  elSpieler.innerHTML = "";
+const AUGEN = {
+  1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+};
+
+function wuerfelZeichnen(augen) {
+  el.wuerfel.innerHTML = "";
+  const an = new Set(AUGEN[augen] || []);
+  for (let i = 0; i < 9; i++) {
+    const p = document.createElement("i");
+    if (an.has(i)) p.className = "an";
+    el.wuerfel.appendChild(p);
+  }
+}
+
+async function wuerfelZeigen(augen) {
+  el.wuerfel.classList.remove("rollt");
+  void el.wuerfel.offsetWidth;
+  el.wuerfel.classList.add("rollt");
+  wuerfelZeichnen(augen);
+  await new Promise((f) => window.setTimeout(f, 430));
+}
+
+function anzeige() {
+  if (!sp) return;
+  const wer = dran();
+  el.rundenTitel.textContent = "Runde " + sp.runde;
+  el.zugText.textContent = sp.status === "ende"
+    ? "· Partie beendet"
+    : sp.status === "warten" ? "· warte auf den Tisch"
+    : wer ? "· " + (wer.ich ? "du bist dran" : wer.bot ? wer.name + " ist dran" : wer.name + " ist dran") : "";
+  el.zugSumme.textContent = wer ? wer.runde : 0;
+  el.notiz.textContent = sp.note || "";
+  el.spielerListe.innerHTML = "";
   sp.spieler.forEach((s, i) => {
-    const p = document.createElement("p");
-    p.className = "wg-sp" + (sp.status === "spiel" && sp.zug === i ? " dran" : "");
-    const f = WG.figur(s.farbe, s.name);
+    const p = document.createElement("div");
+    p.className = "pk-sp" + (sp.status === "spiel" && sp.zug === i ? " dran" : "");
+    const bild = document.createElement("span");
+    bild.innerHTML = (SCHWEINE[sp.stil] || SCHWEINE.normal)();
+    const svg = bild.querySelector("svg");
+    const name = document.createElement("span");
+    name.className = "name";
+    name.innerHTML = "";
+    name.textContent = s.name;
+    if (s.bot) {
+      const klein = document.createElement("small");
+      klein.textContent = " · Bot " + s.stufe;
+      name.appendChild(klein);
+    }
+    const pkt = document.createElement("span");
+    pkt.className = "pkt";
+    pkt.textContent = s.punkte + " P";
+    if (s.runde) {
+      const em = document.createElement("em");
+      em.textContent = " +" + s.runde;
+      pkt.appendChild(em);
+    }
+    p.appendChild(svg || document.createElement("span"));
+    p.append(name, pkt);
+    el.spielerListe.appendChild(p);
+  });
+  el.verlauf.innerHTML = "";
+  for (const z of sp.verlauf.slice(-5)) {
+    const d = document.createElement("div");
+    d.textContent = z;
+    el.verlauf.appendChild(d);
+  }
+  const meinZug = sp.status === "spiel" && wer && (sp.online ? !!wer.ich : !wer.bot);
+  el.btnWuerfeln.disabled = sperre || pausiert || !meinZug;
+  el.btnSichern.disabled = sperre || pausiert || !meinZug || !wer || wer.runde === 0;
+  if (sp.online) {
+    el.btnWuerfeln.textContent = "Würfeln";
+    el.btnSichern.textContent = "Sichern";
+  }
+  el.btnPause.hidden = !sp || sp.status === "ende";
+  if (sp.status === "ende" && !standGemeldet) {
+    standGemeldet = true;
+    melde("ende", { grund: "gewonnen", punkte: sp.spieler[0].punkte, level: 1, levelAnzahl: 1, tick, sieger: sp.sieger });
+  }
+}
+
+/* ======================================================================
+   Züge
+   ====================================================================== */
+async function wuerfeln() {
+  if (!sp || sp.status !== "spiel" || pausiert || sperre) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+  const wer = dran();
+  if (!wer) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+  if (sp.online) {
+    // Online entscheidet der Server; das Spiel meldet nur die Absicht.
+    if (!wer.ich) return { ok: false, fehler: "nicht-am-zug" };
+    if (wer.runde === 0) melde("wurf", { spieler: wer.name });
+    else melde("wurf", { spieler: wer.name });
+    return { ok: true, gesendet: true };
+  }
+  const augen = 1 + Math.floor(Math.random() * 6);
+  sperre = true;
+  anzeige();
+  await wuerfelZeigen(augen);
+  sp.wuerfel = augen;
+  tick++;
+  if (augen === 1) {
+    const verloren = wer.runde;
+    wer.runde = 0;
+    eintrag(wer.name + " würfelt eine 1 – " + verloren + " Punkte weg.");
+    blaseZeigen("Eine 1 – " + verloren + " Punkte weg", false);
+    sp.zug = (sp.zug + 1) % sp.spieler.length;
+  } else {
+    wer.runde += augen;
+    eintrag(wer.name + " würfelt " + augen + " – " + wer.runde + " in diesem Zug.");
+    if (wer.runde > 12) blaseZeigen("+" + augen, true);
+  }
+  sperre = false;
+  anzeige();
+  melde("wurf", { spieler: wer.name, augen, summe: wer.runde, zug: sp.zug });
+  planen();
+  return { ok: true, augen };
+}
+
+function sichern() {
+  if (!sp || sp.status !== "spiel" || pausiert || sperre) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+  const wer = dran();
+  if (!wer || wer.runde === 0) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+  if (sp.online) {
+    if (!wer.ich) return { ok: false, fehler: "nicht-am-zug" };
+    melde("sichern", { spieler: wer.name, punkte: wer.runde });
+    return { ok: true, gesendet: true };
+  }
+  const punkte = wer.runde;
+  wer.punkte += punkte;
+  wer.runde = 0;
+  eintrag(wer.name + " sichert " + punkte + " und steht bei " + wer.punkte + ".");
+  melde("sichern", { spieler: wer.name, punkte, konto: wer.punkte });
+  if (wer.punkte >= ZIEL) {
+    sp.status = "ende";
+    sp.sieger = wer.name;
+    sp.note = wer.name + " gewinnt mit " + wer.punkte + " Punkten.";
+    partieEnde(wer);
+    return { ok: true, punkte };
+  }
+  sp.zug = (sp.zug + 1) % sp.spieler.length;
+  anzeige();
+  planen();
+  return { ok: true, punkte };
+}
+
+function partieEnde(sieger) {
+  anzeige();
+  const ich = sp.spieler[0];
+  const gewonnen = sp.modus === "lokal" ? true : sieger === ich;
+  el.endeTitel.textContent = gewonnen ? "Gewonnen!" : "Partie vorbei";
+  el.endeText.textContent = sp.modus === "lokal"
+    ? sieger.name + " hat " + sieger.punkte + " Punkte und gewinnt die Runde."
+    : gewonnen ? "Du hast " + sieger.punkte + " Punkte und gewinnst." : sieger.name + " hat " + sieger.punkte + " Punkte und gewinnt. Nächste Runde?"
+  el.endeTabelle.innerHTML = "";
+  sp.spieler.forEach((s) => {
+    const d = document.createElement("div");
+    d.className = "pk-sp";
+    d.innerHTML = (SCHWEINE[sp.stil] || SCHWEINE.normal)();
     const n = document.createElement("span");
     n.className = "name";
     n.textContent = s.name;
-    const b = document.createElement("b");
-    b.textContent = s.punkte + " Punkte" + (s.runde ? " · +" + s.runde : "");
-    p.append(f, n, b);
-    elSpieler.appendChild(p);
+    const p = document.createElement("span");
+    p.className = "pkt";
+    p.textContent = s.punkte + " P";
+    d.querySelector("svg").after(n);
+    d.appendChild(p);
+    el.endeTabelle.appendChild(d);
+  });
+  schweinSetzen(el.endeSchwein, sp.stil);
+  el.endeBlatt.hidden = false;
+  sp.siegerPunkte = sieger.punkte;
+}
+
+/* ======================================================================
+   Bot-Ablauf
+   ====================================================================== */
+function planen() {
+  clearTimeout(botTimer);
+  if (!sp || sp.status !== "spiel" || pausiert || sp.online) return;
+  const wer = dran();
+  if (!wer || !wer.bot) return;
+  botTimer = window.setTimeout(botZug, 700 + Math.random() * 400);
+}
+
+async function botZug() {
+  if (!sp || sp.status !== "spiel" || pausiert) return;
+  const wer = dran();
+  if (!wer || !wer.bot) return;
+  if (wer.runde === 0) { await wuerfeln(); return; }
+  const wahl = botEntscheidung(wer);
+  if (wahl === "sichern") {
+    const r = sichern();
+    if (!r.ok) await wuerfeln();
+    return;
+  }
+  await wuerfeln();
+}
+
+/* ======================================================================
+   Start, Pause, Ende
+   ====================================================================== */
+function zeigeStartbildschirm(an) {
+  el.start.hidden = !an;
+  el.spiel.hidden = an;
+  el.btnPause.hidden = an || !sp;
+  document.body.classList.toggle("zeigt-start", an);
+}
+
+function startAuswahl() {
+  anzeigeStil();
+  syncAuswahl();
+  zeigeStartbildschirm(true);
+  schweinSetzen(el.startSchwein, stilVonAussen ? auswahl.stil : auswahl.stil);
+}
+
+function syncAuswahl() {
+  const setze = (id, wert) => {
+    const box = $(id);
+    if (!box) return;
+    [...box.querySelectorAll(".pk-wahl")].forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.wert === String(wert)));
+    });
+  };
+  setze("wahlModus", auswahl.modus);
+  setze("wahlStufe", auswahl.stufe);
+  setze("wahlBots", auswahl.bots);
+  setze("wahlSpieler", auswahl.spieler);
+  setze("wahlStil", auswahl.stil);
+  $("gruppeStufe").hidden = auswahl.modus !== "bot";
+  $("gruppeBots").hidden = auswahl.modus !== "bot";
+  $("gruppeSpieler").hidden = auswahl.modus !== "lokal";
+  $("gruppeStil").hidden = stilVonAussen;
+  $("wahlSpieler").querySelectorAll(".pk-wahl").forEach((b) => {
+    b.hidden = Number(b.dataset.wert) < 2;
   });
 }
 
-function kopfZeichnen(sp) {
-  elRunde.textContent = "Runde " + sp.runde;
-  elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
-  const dran = sp.status === "spiel" ? sp.spieler[sp.zug] : null;
-  elZug.textContent = dran ? "· " + (ONLINE && dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
-  elRundensumme.textContent = dran ? dran.runde : 0;
-  notiz(sp.note);
-  elLog.innerHTML = "";
-  for (const z of (sp.verlauf || []).slice(-4)) {
-    const d = document.createElement("div");
-    d.textContent = z;
-    elLog.appendChild(d);
+function anzeigeStil() {
+  document.documentElement.setAttribute("data-stil", auswahl.stil);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = { normal: "#10241d", maedchen: "#f7a8cb", buben: "#150809" }[auswahl.stil] || "#10241d";
+}
+
+/* Online: Der Connector holt den Stand vom Server und schiebt ihn hierher.
+   Das Spiel rechnet dann nichts selbst, sondern zeigt nur an und meldet
+   Absichten als pick:wurf / pick:sichern / pick:neu. */
+function standUebernehmen(g, ich) {
+  if (!g || !Array.isArray(g.spieler) || !g.spieler.length) {
+    return { ok: false, fehler: "stand-fehlt" };
   }
-  elEnde.classList.toggle("wg-versteckt", sp.status !== "ende");
-  /* Ergebnis-Spruch aus den zentralen Connector-Listen, sobald das Ende
-     feststeht: online nach dem eigenen Platz, lokal für den Sieger. */
+  if (ich && typeof ich.id === "string" && !online) online = { id: ich.id, name: ich.name || "Du" };
+  const meineId = online ? online.id : "";
+  const liste = g.spieler.map((s, i) => ({
+    name: s.name || "Spieler " + (i + 1),
+    bot: !!s.bot || !!(g.botId && s.id === g.botId),
+    stufe: g.botStufe || "normal",
+    punkte: Number(s.punkte) || 0,
+    runde: Number(s.runde) || 0,
+    ich: !!meineId && s.id === meineId
+  }));
+  const zug = Number.isInteger(g.zug) ? Math.max(0, Math.min(liste.length - 1, g.zug)) : 0;
+  sp = {
+    modus: "online", online: true, stufe: g.botStufe || "normal", stil: auswahl.stil,
+    spieler: liste, zug, runde: Number(g.runde) || 1,
+    status: g.status === "ende" ? "ende" : (g.status === "spiel" ? "spiel" : "warten"),
+    sieger: g.sieger || null, wuerfel: Number(g.wurf) || 0, note: g.note || "",
+    verlauf: Array.isArray(g.verlauf) ? g.verlauf.slice(-12) : []
+  };
+  standGemeldet = false;
+  zeigeStartbildschirm(false);
+  schweinSetzen(el.feldSchwein, sp.stil);
+  wuerfelZeichnen(sp.wuerfel || 0);
+  if (sp.status === "warten") sp.note = "Der Tisch wartet auf die Bereitschaft.";
+  anzeige();
   if (sp.status === "ende") {
-    if (!endeGemeldet && window.TGErgebnis) {
-      endeGemeldet = true;
-      const eigen = ONLINE ? (sp.spieler || []).find((x) => x.id === MYID) : null;
-      if (eigen && sp.sieger && eigen.id !== sp.sieger) TGErgebnis.verloren();
-      else TGErgebnis.gewonnen();
+    const sieger = sp.spieler.find((s) => s.name === sp.sieger) || sp.spieler[0];
+    if (el.endeBlatt.hidden) partieEnde(sieger);
+  }
+  return { ok: true, status: sp.status, zug: sp.zug, runde: sp.runde };
+}
+
+function starten(konf) {
+  if (konf && konf.online) {
+    if (typeof konf.online !== "object" || typeof konf.online.id !== "string" || !konf.online.id) {
+      return { ok: false, fehler: "online-muss-id-haben" };
     }
-  } else if (endeGemeldet) {
-    endeGemeldet = false;
+    if (sp && sp.status === "spiel") return { ok: false, fehler: "spiel-laeuft" };
+    if (typeof konf.stil === "string" && STILE.includes(konf.stil)) { auswahl.stil = konf.stil; stilVonAussen = true; anzeigeStil(); }
+    online = { id: konf.online.id, name: typeof konf.online.name === "string" ? konf.online.name : "Du" };
+    clearTimeout(botTimer);
+    sp = null;
+    el.endeBlatt.hidden = true;
+    zeigeStartbildschirm(false);
+    el.spielerListe.innerHTML = "";
+    el.notiz.textContent = "Warte auf den Tisch …";
+    el.zugText.textContent = "· verbinde";
+    el.zugSumme.textContent = "0";
+    el.btnWuerfeln.disabled = true;
+    el.btnSichern.disabled = true;
+    el.btnPause.hidden = true;
+    return { ok: true, online: true, warte: true };
   }
-  const meinZug = ONLINE
-    ? !!(dran && dran.id === MYID)
-    : sp.status === "spiel";
-  btnWuerfeln.disabled = sperre || !meinZug;
-  btnSichern.disabled = sperre || !meinZug || !dran || dran.runde === 0;
-}
-
-function standZeichnen(sp) {
-  spielerZeichnen(sp);
-  kopfZeichnen(sp);
-}
-
-/* -------------------------------- lokal -------------------------------- */
-async function lokalWuerfeln() {
-  if (sperre || !lokal || lokal.sp.status !== "spiel") return;
-  const sp = lokal.sp;
-  const sitz = sp.zug;
-  const wurf = 1 + Math.floor(Math.random() * 6);
-  sperre = true;
-  kopfZeichnen(sp);
-  await WG.wuerfeln(dice, wurf, 520);
-  const ergebnis = wurfMachen(sp, sitz, wurf);
-  standZeichnen(sp);
-  if (ergebnis.eins) {
-    blaseZeigen("Eine 1 – " + ergebnis.verloren + " Punkte weg", false);
-    await new Promise((fertig) => setTimeout(fertig, 2000));
+  if (sp && sp.status === "spiel") return { ok: false, fehler: "spiel-laeuft" };
+  if (konf && typeof konf !== "object") return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+  if (konf) {
+    const erlaubt = ["stufe", "modus", "bots", "spieler", "stil"];
+    for (const k of Object.keys(konf)) {
+      if (!erlaubt.includes(k)) return { ok: false, fehler: "unbekanntes-feld", feld: k };
+    }
+    if ("stufe" in konf) {
+      if (typeof konf.stufe !== "string") return { ok: false, fehler: "stufe-muss-text-sein" };
+      if (!STUFEN.includes(konf.stufe)) return { ok: false, fehler: "unbekannte-stufe" };
+      auswahl.stufe = konf.stufe;
+    }
+    if ("stil" in konf) {
+      if (typeof konf.stil !== "string") return { ok: false, fehler: "stil-muss-text-sein" };
+      if (!STILE.includes(konf.stil)) return { ok: false, fehler: "unbekannter-stil" };
+      auswahl.stil = konf.stil;
+      stilVonAussen = true;
+      anzeigeStil();
+    }
+    if ("modus" in konf) {
+      if (typeof konf.modus !== "string") return { ok: false, fehler: "modus-muss-text-sein" };
+      if (konf.modus !== "bot" && konf.modus !== "lokal") return { ok: false, fehler: "unbekannter-modus" };
+      auswahl.modus = konf.modus;
+    }
+    if ("bots" in konf) {
+      const n = konf.bots;
+      if (!Number.isInteger(n) || n < 1 || n > 3) return { ok: false, fehler: "bots-muessen-1-bis-3-sein" };
+      auswahl.bots = n;
+    }
+    if ("spieler" in konf) {
+      const n = konf.spieler;
+      if (!Number.isInteger(n) || n < 2 || n > 4) return { ok: false, fehler: "spieler-muessen-2-bis-4-sein" };
+      auswahl.spieler = n;
+    }
   }
+  // Reine Stil-Konfiguration (Connector): Ansicht stellen, Auswahl stehen lassen.
+  if (konf && Object.keys(konf).length === 1 && "stil" in konf && sp === null) {
+    startAuswahl();
+    syncAuswahl();
+    return { ok: true, stil: auswahl.stil, startbildschirm: true };
+  }
+  if (konf && "stil" in konf && !("bots" in konf) && !("spieler" in konf) && !("modus" in konf) && !("stufe" in konf) && sp) {
+    syncAuswahl();
+    return { ok: true, stil: auswahl.stil };
+  }
+  clearTimeout(botTimer);
+  sp = partieBauen();
+  pausiert = false;
+  tick = 0;
+  standGemeldet = false;
   sperre = false;
-  kopfZeichnen(sp);
+  wuerfelZeichnen(0);
+  blaseZeigen("Los geht's!", true);
+  zeigeStartbildschirm(false);
+  schweinSetzen(el.feldSchwein, sp.stil);
+  anzeige();
+  planen();
+  return {
+    ok: true, modus: sp.modus, stufe: sp.stufe, stil: sp.stil,
+    bots: sp.spieler.filter((s) => s.bot).length, spieler: sp.spieler.length
+  };
 }
 
-function lokalSichern() {
-  if (sperre || !lokal || lokal.sp.status !== "spiel") return;
-  const sp = lokal.sp;
-  const punkte = sichernMachen(sp, sp.zug);
-  if (!punkte) { fehler("In diesem Zug ist noch nichts zu sichern."); return; }
-  fehler("");
-  standZeichnen(sp);
-  blaseZeigen("+" + punkte + " gesichert", true);
+function pausieren() {
+  if (!sp || sp.status !== "spiel") return { ok: false, fehler: "spiel-laeuft-nicht" };
+  if (pausiert) return { ok: true, pausiert: true };
+  pausiert = true;
+  clearTimeout(botTimer);
+  el.pauseBlatt.hidden = false;
+  anzeige();
+  melde("pausiert", { tick });
+  return { ok: true, pausiert: true };
 }
 
-function lokalStarten(weiter) {
-  const anzahl = Number($("anzahl").value) || 2;
-  const vorher = weiter && lokal ? lokal.sp.runde : 0;
-  lokal = { sp: neuerStand(anzahl) };
-  if (vorher) lokal.sp.runde = vorher + 1;
-  fehler("");
-  WG.setzeWuerfel(dice, 0);
-  standZeichnen(lokal.sp);
+function fortsetzen() {
+  if (!sp || sp.status !== "spiel") return { ok: false, fehler: "spiel-laeuft-nicht" };
+  if (!pausiert) return { ok: true, pausiert: false };
+  pausiert = false;
+  el.pauseBlatt.hidden = true;
+  anzeige();
+  melde("weiter", { tick });
+  planen();
+  return { ok: true, pausiert: false };
 }
 
-/* -------------------------------- online ------------------------------- */
-const netz = WG.netz({ pfad: "/api/pig", room: ROOM, id: MYID, melde: (t) => fehler(t) });
+function beenden() {
+  clearTimeout(botTimer);
+  clearTimeout(blaseTimer);
+  sp = null;
+  pausiert = false;
+  sperre = false;
+  online = null;
+  el.endeBlatt.hidden = true;
+  el.pauseBlatt.hidden = true;
+  startAuswahl();
+  return { ok: true };
+}
 
-async function uebernehmen(g) {
-  const alt = onlineGame;
-  onlineGame = g;
-  if (!g) {
-    elSpieler.innerHTML = "";
-    notiz("Eröffne eine Runde – Mitspieler treten im Raum bei.");
-    leisteOnline(null);
+function naechsteRunde() {
+  if (!sp || sp.status !== "ende") return { ok: false, fehler: "aktion-nicht-erlaubt" };
+  if (sp.online) {
+    melde("neu", { runde: sp.runde });
+    return { ok: true, gesendet: true };
+  }
+  const alt = sp;
+  sp = {
+    modus: alt.modus, stufe: alt.stufe, stil: alt.stil,
+    spieler: alt.spieler.map((s) => ({ ...s, punkte: 0, runde: 0 })),
+    zug: 0, runde: alt.runde + 1, status: "spiel", sieger: null, wuerfel: 0, note: "", verlauf: []
+  };
+  tick = 0;
+  standGemeldet = false;
+  el.endeBlatt.hidden = true;
+  wuerfelZeichnen(0);
+  anzeige();
+  planen();
+  melde("neu", { runde: sp.runde });
+  return { ok: true, runde: sp.runde };
+}
+
+/* ======================================================================
+   Ereignisse (Schnittstelle 2.0)
+   ====================================================================== */
+function melde(was, detail) {
+  try {
+    window.dispatchEvent(new CustomEvent("pick:" + was, { detail: JSON.parse(JSON.stringify(detail || {})) }));
+  } catch (e) { /* Ereignisse sind Beiwerk, nie ein Fehler */ }
+}
+
+/* ======================================================================
+   Bedienung
+   ====================================================================== */
+el.btnStart.addEventListener("click", () => starten());
+el.btnWuerfeln.addEventListener("click", () => { wuerfeln(); });
+el.btnSichern.addEventListener("click", () => { sichern(); });
+el.btnNochmal.addEventListener("click", () => { naechsteRunde(); });
+el.btnAuswahl.addEventListener("click", () => { beenden(); });
+el.btnPause.addEventListener("click", () => { pausiert ? fortsetzen() : pausieren(); });
+el.btnWeiter.addEventListener("click", () => { fortsetzen(); });
+el.btnAufgeben.addEventListener("click", () => { beenden(); });
+
+for (const [box, feld, typ] of [
+  ["wahlModus", "modus", String], ["wahlStufe", "stufe", String],
+  ["wahlBots", "bots", Number], ["wahlSpieler", "spieler", Number],
+  ["wahlStil", "stil", String]
+]) {
+  $(box).addEventListener("click", (e) => {
+    const b = e.target.closest(".pk-wahl");
+    if (!b) return;
+    auswahl[feld] = typ === Number ? Number(b.dataset.wert) : b.dataset.wert;
+    if (feld === "stil") {
+      stilVonAussen = false;
+      anzeigeStil();
+      schweinSetzen(el.startSchwein, auswahl.stil);
+    }
+    syncAuswahl();
+  });
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !el.pauseBlatt.hidden) { fortsetzen(); return; }
+  if (e.key.toLowerCase() === "p" && sp && sp.status === "spiel") {
+    pausiert ? fortsetzen() : pausieren();
     return;
   }
-  const neuerWurf = !alt || alt.wurf !== g.wurf || alt.runde !== g.runde;
-  if (neuerWurf && g.wurf) {
-    sperre = true;
-    await WG.wuerfeln(dice, g.wurf, 520);
-    sperre = false;
+  const ziel = e.target;
+  const feld = ziel && ziel.closest && ziel.closest("button,select,input,textarea,a[href],[contenteditable]");
+  if (!feld && (e.key === " " || e.key === "Enter")) {
+    if (!el.start.hidden) { e.preventDefault(); starten(); }
+    else if (sp && sp.status === "spiel" && !pausiert) { e.preventDefault(); wuerfeln(); }
   }
-  standZeichnen(g);
-  if (neuerWurf && g.wurf === 1 && alt && alt.wurf !== 1) blaseZeigen("Eine 1 – Punkte weg!", false);
-  leisteOnline(g);
+});
+
+/* ======================================================================
+   Öffentliche Schnittstelle 2.0
+   ====================================================================== */
+const kopie = (o) => JSON.parse(JSON.stringify(o));
+
+function einstellungen() {
+  return kopie({
+    version: "2.0.0",
+    stufen: STUFEN.slice(),
+    stile: STILE.slice(),
+    modi: ["bot", "lokal"],
+    modus: auswahl.modus,
+    bots: auswahl.bots,
+    botAnzahl: { min: 1, max: 3 },
+    spieler: auswahl.spieler,
+    spielerAnzahl: { min: 2, max: 4 },
+    stil: auswahl.stil,
+    stilWahl: !stilVonAussen,
+    ziel: ZIEL
+  });
 }
 
-function leisteOnline(g) {
-  $("startLeiste").classList.add("wg-versteckt");
-  $("onlineLeiste").classList.remove("wg-versteckt");
-  const ich = g ? g.spieler.find((s) => s.id === MYID) : null;
-  $("btnErstellen").classList.toggle("wg-versteckt", !!g);
-  $("btnBereit").classList.toggle("wg-versteckt", !g || g.status !== "invited");
-  $("btnLos").classList.toggle("wg-versteckt", !g || g.status !== "invited");
-  if (g && g.status === "invited") {
-    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
-    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+function zustand() {
+  if (!sp) {
+    return kopie({
+      laeuft: false, pausiert: false, tick, richtung: { x: 0, y: 0 },
+      level: 1, punkte: 0, extras: [], startbildschirm: true,
+      version: "2.0.0", modus: auswahl.modus, stufe: auswahl.stufe,
+      stil: auswahl.stil, stilWahl: !stilVonAussen, spieler: [], zug: 0,
+      runde: 0, amZug: null, wuerfel: 0, zugSumme: 0, ziel: ZIEL,
+      sieger: null, beendet: false, botDenkt: false
+    });
+  }
+  const wer = dran();
+  return kopie({
+    laeuft: sp.status === "spiel", pausiert,
+    tick, richtung: { x: 0, y: 0 }, level: 1,
+    punkte: sp.spieler[0].punkte, extras: [], startbildschirm: false,
+    version: "2.0.0", modus: sp.modus, stufe: sp.stufe, stil: sp.stil,
+    stilWahl: !stilVonAussen,
+    spieler: sp.spieler.map((s) => ({ name: s.name, bot: s.bot, stufe: s.stufe, punkte: s.punkte, runde: s.runde })),
+    zug: sp.zug, runde: sp.runde, amZug: wer ? wer.name : null,
+    wuerfel: sp.wuerfel, zugSumme: wer ? wer.runde : 0, ziel: ZIEL,
+    sieger: sp.sieger, beendet: sp.status === "ende",
+    botDenkt: !!(wer && wer.bot && sp.status === "spiel" && !pausiert)
+  });
+}
+
+function aktion(name, daten) {
+  if (daten !== undefined && (daten === null || typeof daten !== "object" || Array.isArray(daten))) {
+    return { ok: false, fehler: "daten-muessen-objekt-sein" };
+  }
+  switch (name) {
+    case "wuerfeln": return wuerfeln();
+    case "sichern": return sichern();
+    case "start": return starten(daten || {});
+    case "pause": return pausieren();
+    case "weiter": return fortsetzen();
+    case "neu": return naechsteRunde();
+    case "regeln": return { ok: true };
+    case "stand": {
+      if (!daten || !daten.spiel) return { ok: false, fehler: "aktion-nicht-erlaubt" };
+      return standUebernehmen(daten.spiel, daten.ich);
+    }
+    case "online": return starten({ online: daten && daten.online, stil: daten && daten.stil });
+    default: return { ok: false, fehler: "unbekannte-aktion" };
   }
 }
 
-/* ------------------------------ Bedienung ------------------------------ */
-btnWuerfeln.addEventListener("click", async () => {
-  if (!ONLINE) { lokalWuerfeln(); return; }
-  const r = await netz.schicke("wuerfeln");
-  if (r.ok && r.game) await uebernehmen(r.game);
-});
-btnSichern.addEventListener("click", async () => {
-  if (!ONLINE) { lokalSichern(); return; }
-  const r = await netz.schicke("sichern");
-  if (r.ok && r.game) await uebernehmen(r.game);
-});
-$("btnLokal").addEventListener("click", lokalStarten);
-$("btnNochmal").addEventListener("click", async () => {
-  if (!ONLINE) { lokalStarten(true); return; }
-  const r = await netz.schicke("naechste");
-  if (r.ok && r.game) await uebernehmen(r.game);
-});
-$("btnErstellen").addEventListener("click", async () => {
-  const r = await netz.schicke("create");
-  if (r.ok && r.game) await uebernehmen(r.game);
-});
-$("btnBereit").addEventListener("click", async () => {
-  const r = await netz.schicke("ready");
-  if (r.ok && r.game) await uebernehmen(r.game);
-});
-$("btnLos").addEventListener("click", async () => {
-  const r = await netz.schicke("start");
-  if (r.ok && r.game) await uebernehmen(r.game);
-});
+const Schnittstelle = {
+  version: "2.0.0",
+  bereit: true,   // die Schnittstelle entsteht erst, wenn das Spiel steht
+  whenReady() {
+    return Promise.resolve({ ok: true, version: this.version });
+  },
+  start: (konf) => starten(konf),
+  einstellungen,
+  zustand,
+  startbildschirm: () => { beenden(); return { ok: true }; },
+  stop: () => { beenden(); return { ok: true }; },
+  pause: pausieren,
+  resume: fortsetzen,
+  aktion
+};
 
-if (ONLINE) {
-  $("startLeiste").classList.add("wg-versteckt");
-  const hohle = async () => {
-    const r = await netz.hole();
-    if (r.ok) { fehler(""); await uebernehmen(r.game); }
+window.Pick = Object.freeze(Schnittstelle);
+
+/* ======================================================================
+   Start
+   ====================================================================== */
+(function init() {
+  // Gespeicherte Auswahl (nur beim direkten Start; Connector hat Vorrang)
+  try {
+    const roh = localStorage.getItem("pick-auswahl");
+    if (roh) {
+      const g = JSON.parse(roh);
+      if (STUFEN.includes(g.stufe)) auswahl.stufe = g.stufe;
+      if (STILE.includes(g.stil)) auswahl.stil = g.stil;
+      if (g.modus === "bot" || g.modus === "lokal") auswahl.modus = g.modus;
+      if ([1, 2, 3].includes(g.bots)) auswahl.bots = g.bots;
+      if ([2, 3, 4].includes(g.spieler)) auswahl.spieler = g.spieler;
+    }
+  } catch (e) { /* ohne Speicher geht es auch */ }
+  const merken = () => {
+    try { localStorage.setItem("pick-auswahl", JSON.stringify(auswahl)); } catch (e) {}
   };
-  // Gemeinsames Lebenszeichen (wuerfel-common.js): erst den Platz sichern,
-  // dann fragen – sonst antwortet der erste Abruf mit „Bitte zuerst dem
-  // Spielraum beitreten“ und die Seite startet mit Fehler.
-  const bereit = WG.leben({ room: ROOM, id: MYID, name: MYNAME });
-  (async () => { await bereit; hohle(); })();
-  setInterval(hohle, 1200);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) hohle(); });
-  window.addEventListener("focus", hohle);
-} else {
-  notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");
-  elZug.textContent = "";
-}
+  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#wahlModus,#wahlStufe,#wahlBots,#wahlSpieler,#wahlStil")) merken(); });
+
+  wuerfelZeichnen(0);
+  anzeigeStil();
+  syncAuswahl();
+  schweinSetzen(el.startSchwein, auswahl.stil);
+  schweinSetzen(el.feldSchwein, auswahl.stil);
+  zeigeStartbildschirm(true);
+  if (window.TGSpiel && TGSpiel.vollbild) TGSpiel.vollbild.knopf(el.btnVollbild, { textAn: "Vollbild aus", textAus: "Vollbild" });
+  melde("bereit", { version: Schnittstelle.version });
+})();
 })();
 </script>
-<script>
-/* Fensterfarbe des Browsers je Ansicht */
-(function(){
- const setze=function(){
-  const m=document.querySelector('meta[name="theme-color"]');
-  if(!m||!window.TGStil||!TGStil.hole)return;
-  m.content={klassisch:"#0a211b",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0a211b";
- };
- setze();
- if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
-})();
-</script>
-<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
-<script src="../../ergebnis.js"></script>
-<script src="../../zurueck.js"></script>
+<script src="../../zurueck.js" data-kein-knopf="1"></script>
 </body>
 </html>

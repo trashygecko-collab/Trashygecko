@@ -5,6 +5,78 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Pick auf Schnittstelle 2.0, drei Schweine, drei Bot-Stufen
+
+**Auftrag:** `spiele/brettspiele/pig/pig.html` vollständig auf Standard 2.0
+umbauen, das Schweinegesicht als Wiedererkennungsmerkmal erhalten, drei echte
+Charaktere und drei tatsächlich unterschiedliche Bot-Stufen (schwer
+mathematisch begründet) umsetzen, testen und veröffentlichen.
+
+**Neu geschrieben (1.100 Zeilen, vorher 427):** eigenständiges Spiel mit
+Startbildschirm, Regeln, Modi, Bot-Zahl, Stufe, Stilwahl und Neustart. Ein
+Global `Pick` (2.0.0, eingefroren): `whenReady`, `start`, `einstellungen`,
+`zustand`, `startbildschirm`, `stop`, `pause`, `resume`, `aktion`. Ereignisse
+`pick:bereit|wurf|sichern|ende|pausiert|weiter|neu`. Kein `/api`, keine
+Adressdaten, kein `alert`; Antworten sind Kopien und werfen nie.
+
+**Aktionen:** `wuerfeln`, `sichern`, `start`, `pause`, `weiter`, `neu`,
+`regeln`, `stand` (Online-Stand), `online` (Connector-Anmeldung). Fehlercodes
+u. a. `unbekannte-stufe`, `unbekannter-stil`, `unbekannter-modus`,
+`bots-muessen-1-bis-3-sein`, `spieler-muessen-2-bis-4-sein`,
+`unbekanntes-feld`, `konfiguration-muss-objekt-sein`, `aktion-nicht-erlaubt`.
+
+**Drei Schweine als echte Charaktere** (SVG, je eigene Zeichnung, kein
+Farbwechsel): *Normal* das bisherige niedliche Gesicht; *Mädchen* mit langen
+seitlichen Haaren, Pony, Schleife, Wimpern, roten Bäckchen, großen Augen;
+*Buben* als Eber mit Hauern, Narben, dunkleren Farben und wilderem Blick.
+Jedes Schwein erscheint auf Startbildschirm, im Spielbereich, in der
+Spielerliste und im Ergebnis.
+
+**Bot-KI (keine Würfelmanipulation, gleiche Regeln):**
+
+| Stufe | Verfahren |
+| --- | --- |
+| leicht | Grenze ≈ 46, sichert zu spät oder zu früh, rund 40 % Fehlgriffe, aber nie planlos |
+| normal | Grenze 21, an Führung/Rückstand angepasst, 7 % kleine Fehler |
+| schwer | Wertiteration über (eigene Punkte, Gegnerpunkte, Zugsumme): `W(p,q)` = Gewinnwahrscheinlichkeit am Zug; 61 Iterationen, Abbruch < 1e-6, ~210 ms, einmalig |
+
+Der schwere Bot löst die echte Gewinnstrategie (nicht die 20-Punkte-Regel):
+bei 0:0 sichert er ab 22, bei 26 Punkten Rückstand erst ab 26, bei klarer
+Führung früher. Die 20-Punkte-Grenze bleibt als Erwartungswert-Anker in der
+Doku, wird aber nicht blind angewendet.
+
+**Simulation (20.000 Partien je Paarung, `node`):**
+
+| Paarung | Gewinnraten | Ø Punkte |
+| --- | --- | --- |
+| schwer – normal | **63,6 %** – 36,4 % | 82,1 – 73,5 |
+| schwer – leicht | **63,8 %** – 36,2 % | 81,9 – 73,0 |
+| normal – leicht | 53,9 % – 46,1 % | 83,6 – 80,1 |
+| 4er: schwer, normal, 2×leicht | 37,9 / 17,9 / 23,0 / 21,1 % | 64,5 / 60,6 / 58,5 / 56,9 |
+| 4er: 2×schwer, 2×normal | 36,8 / 34,0 / 15,5 / 13,7 % | 64,9 / 62,4 / 59,1 / 57,6 |
+
+Ein erster DP-Entwurf hatte die Zugwechsel-Werte nicht gespiegelt und verlor
+gegen „normal" (48,8 %); nach der Korrektur (1 − W des Gegners) liegt „schwer"
+bei 63,6 % und ist damit deutlich stärker.
+
+**Geprüft (Playwright, Server 127.0.0.1:8791):** Startbildschirm, alle drei
+Stile (gesetzt und gezeichnet), Fehlercodes, `zustand()`-Kopien, zwei volle
+Runden gegen den schweren Bot (Sieger, 100 Punkte, `pick:ende` je Runde),
+Pause/Weiter, `stop`, zwei Personen am Gerät (Wurf, Sichern, Zugwechsel),
+Online-Stand über `aktion('stand')` (Ereignis statt lokalem Wurf, Ende-Blatt),
+Handy 360×640 und 390×844 ohne Überlauf, keine Konsolenfehler.
+
+**Connector:** `SPIEL_API_NAMEN` kennt `Pick`; neue Brücke `pigSpiel`,
+`pigStandSchieben`, `pigZuhören`, `pigBrueckeAn` und ein 1-s-Takt schieben den
+Serverstand über `aktion('stand')` ins Spiel und senden `pick:wurf`,
+`pick:sichern`, `pick:neu` als `wuerfeln`, `sichern`, `naechste` an
+`/api/pig`. Beide `connector.html` sind byte-gleich. Go blieb unverändert.
+
+**Sicherung:** `sicherung/pick-2026-11-28/` (8 Dateien: altes `pig.html` aus
+beiden Bäumen, `pig.go`, `bot_pig.go`, `pig_test.go` für beide Connectoren).
+
+---
+
 ## 28.11.2026 · Alte Versionsstände bereinigt
 
 **Auftrag:** Pro Spiel und Funktion nur noch eine maßgebliche Version.

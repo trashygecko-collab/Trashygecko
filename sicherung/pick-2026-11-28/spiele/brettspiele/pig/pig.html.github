@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<script src="../../token.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a211b">
+<title>Pig – Das Schweinchen-Würfelspiel</title>
+<script src="../../stil.js"></script>
+<link rel="stylesheet" href="../../schrift.css">
+<link rel="stylesheet" href="../../brettspiele/wuerfel.css">
+<style>
+
+:root{
+/* Klassisch sind genau die alten Farben. Flaechen, Leisten und Knoepfe
+   kommen aus wuerfel.css (--wg-...), das auch die Stilbloecke traegt.
+   Das Schwein selbst steckt als SVG-Attribut im Zeichencode; nur die
+   Stilbloecke ueberschreiben es (--pig...). */
+--blase:#f6edda;--blase-text:#2b211a;--blase-schlecht:#e8a8a0;
+}
+
+.buehne{align-items:center;justify-content:center;gap:6px}
+.pig-wrap{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
+  width:100%}
+.pig{height:100%;max-height:340px;max-width:100%;width:auto;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
+.pig.traurig{animation:wg-schuettern .55s ease-in-out}
+.pig.freut{animation:wg-huepfen .6s ease-out}
+@keyframes wg-schuettern{
+  0%,100%{transform:rotate(0) translateY(0)}
+  15%{transform:rotate(-7deg) translateY(2px)}
+  35%{transform:rotate(7deg) translateY(-2px)}
+  55%{transform:rotate(-5deg) translateY(2px)}
+  75%{transform:rotate(5deg) translateY(-1px)}
+}
+@keyframes wg-huepfen{
+  0%{transform:translateY(0) scale(1)}
+  35%{transform:translateY(-18px) scale(1.06)}
+  65%{transform:translateY(0) scale(.98)}
+  100%{transform:translateY(0) scale(1)}
+}
+.blase{position:absolute;right:8%;top:6%;background:var(--blase);color:var(--blase-text);border-radius:14px;
+  padding:6px 12px;font-weight:bold;font-size:clamp(14px,2vw,20px);opacity:0;transform:translateY(6px);
+  transition:opacity .2s,transform .2s;pointer-events:none}
+.blase.an{opacity:1;transform:translateY(0)}
+.blase.schlecht{background:var(--blase-schlecht)}
+.wurfreihe{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;width:100%}
+.rundensumme{display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.rundensumme small{color:var(--wg-muted);font-size:11px;letter-spacing:1px}
+.rundensumme b{font-size:clamp(22px,4vh,34px);color:var(--wg-gold)}
+.btn-reihe{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
+@media(max-height:520px){
+  .pig{max-height:150px}
+  .rundensumme b{font-size:20px}
+}
+/* ---- Grafikstil (zentral): Klassisch bleibt unveraendert ---- */
+html[data-stil="maedchen"]{
+--blase:#fff6fa;--blase-text:#3a0f24;--blase-schlecht:#ffc2da;
+--pig:#ff9ec4;--pig-ohr:#ff8fb8;--pig-glanz:#ffd0e4;--ruessel:#c85f96;--tief:#5b2340;--auge:#ffffff;--pig-rand:#b0286a;
+}
+html[data-stil="buben"]{
+--blase:#16181c;--blase-text:#e6e9ec;--blase-schlecht:#3a0d12;
+--pig:#ff5560;--pig-ohr:#e0242f;--pig-glanz:#ff8a90;--ruessel:#8f1019;--tief:#0a0d10;--auge:#e6e9ec;--pig-rand:#6d1a1f;
+}
+html[data-stil="maedchen"] .pig [fill="#e79aa8"],html[data-stil="buben"] .pig [fill="#e79aa8"]{fill:var(--pig)}
+html[data-stil="maedchen"] .pig [fill="#ef97a6"],html[data-stil="buben"] .pig [fill="#ef97a6"]{fill:var(--pig-ohr)}
+html[data-stil="maedchen"] .pig [fill="#f2b3bf"],html[data-stil="buben"] .pig [fill="#f2b3bf"]{fill:var(--pig-glanz)}
+html[data-stil="maedchen"] .pig [fill="#7a4550"],html[data-stil="buben"] .pig [fill="#7a4550"]{fill:var(--ruessel)}
+html[data-stil="maedchen"] .pig [fill="#33222a"],html[data-stil="buben"] .pig [fill="#33222a"]{fill:var(--tief)}
+html[data-stil="maedchen"] .pig [fill="#fff6f8"],html[data-stil="buben"] .pig [fill="#fff6f8"]{fill:var(--auge)}
+html[data-stil="maedchen"] .pig [stroke="#8d5661"],html[data-stil="buben"] .pig [stroke="#8d5661"]{stroke:var(--pig-rand)}
+</style>
+</style>
+</head>
+<body>
+<main class="wg-app">
+  <header class="wg-kopf">
+    <small id="lage">Bereit</small>
+    <div class="wg-leiste" id="startLeiste">
+      <select class="wg-btn" id="anzahl" aria-label="Spielerzahl">
+        <option value="2">2 Spieler</option>
+        <option value="3">3 Spieler</option>
+        <option value="4">4 Spieler</option>
+      </select>
+      <button class="wg-btn haupt" id="btnLokal">Lokal starten</button>
+    </div>
+    <div class="wg-leiste wg-versteckt" id="onlineLeiste">
+      <button class="wg-btn haupt" id="btnErstellen">Runde eröffnen</button>
+      <button class="wg-btn" id="btnBereit">Bereit</button>
+      <button class="wg-btn" id="btnLos">Los</button>
+    </div>
+  </header>
+
+  <section class="wg-mitte">
+    <div class="wg-flaeche buehne">
+      <div class="pig-wrap">
+        <svg class="pig" id="pig" viewBox="0 0 220 200" role="img" aria-label="Schweinchen">
+          <ellipse cx="110" cy="186" rx="62" ry="9" fill="rgba(0,0,0,.35)"/>
+          <path d="M56 74 L44 30 L92 52 Z" fill="#e79aa8" stroke="#8d5661" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M164 74 L176 30 L128 52 Z" fill="#e79aa8" stroke="#8d5661" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="110" cy="116" rx="74" ry="68" fill="#f2b3bf" stroke="#8d5661" stroke-width="3"/>
+          <ellipse cx="82" cy="100" rx="9" ry="11" fill="#33222a"/>
+          <ellipse cx="138" cy="100" rx="9" ry="11" fill="#33222a"/>
+          <circle cx="79" cy="96" r="3" fill="#fff6f8"/>
+          <circle cx="135" cy="96" r="3" fill="#fff6f8"/>
+          <ellipse cx="110" cy="140" rx="34" ry="26" fill="#e79aa8" stroke="#8d5661" stroke-width="3"/>
+          <ellipse cx="99" cy="140" rx="6" ry="9" fill="#7a4550"/>
+          <ellipse cx="121" cy="140" rx="6" ry="9" fill="#7a4550"/>
+          <path d="M92 168 Q110 178 128 168" fill="none" stroke="#8d5661" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="52" cy="132" r="9" fill="#ef97a6" opacity=".75"/>
+          <circle cx="168" cy="132" r="9" fill="#ef97a6" opacity=".75"/>
+        </svg>
+        <div class="blase" id="blase"></div>
+      </div>
+      <div class="wurfreihe">
+        <span id="wurfHalte"></span>
+        <div class="rundensumme"><small>IN DIESEM ZUG</small><b id="rundensumme">0</b></div>
+      </div>
+      <div class="btn-reihe">
+        <button class="wg-btn haupt gross" id="btnWuerfeln" disabled>Würfeln</button>
+        <button class="wg-btn gross" id="btnSichern" disabled>Sichern</button>
+      </div>
+    </div>
+
+    <aside class="wg-karte">
+      <div class="wg-leiste"><b id="rundenTitel">Runde 1</b><span class="wg-notiz" id="zugText"></span></div>
+      <div class="wg-spieler" id="spieler"></div>
+      <div class="wg-fehler" id="fehler"></div>
+      <div class="wg-notiz" id="notiz"></div>
+      <div class="wg-log" id="log"></div>
+      <div class="wg-leiste wg-versteckt" id="ende">
+        <button class="wg-btn haupt" id="btnNochmal">Nächste Runde</button>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script src="../../brettspiele/wuerfel-common.js"></script>
+<script>
+(() => {
+"use strict";
+/* Pig: Wer am Zug ist, würfelt beliebig oft. 2 bis 6 zählen zur Rundensumme,
+   eine 1 löscht sie und beendet den Zug. „Sichern" übernimmt die Punkte aufs
+   Konto. Wer zuerst 100 auf dem Konto hat, gewinnt. */
+const P = new URLSearchParams(location.search);
+const ROOM = (P.get("room") || "").trim().toUpperCase();
+const ONLINE = /^TG-[A-F0-9]{4}$/.test(ROOM);
+const MYID = (P.get("id") || "").trim();
+const MYNAME = (P.get("name") || "").trim() || "Spieler";
+
+const ZIEL = 100;
+const $ = (id) => document.getElementById(id);
+const elSpieler = $("spieler"), elNotiz = $("notiz"), elLog = $("log"),
+      elLage = $("lage"), elZug = $("zugText"), elRunde = $("rundenTitel"),
+      elEnde = $("ende"), elFehler = $("fehler"), elRundensumme = $("rundensumme"),
+      elPig = $("pig"), elBlase = $("blase"), elPigWrap = document.querySelector(".pig-wrap"),
+      btnWuerfeln = $("btnWuerfeln"), btnSichern = $("btnSichern");
+
+const dice = WG.wuerfelEl(0);
+$("wurfHalte").appendChild(dice);
+
+let lokal = null;
+let onlineGame = null;
+let sperre = false;
+let blaseTimer = 0;
+let endeGemeldet = false;   // Ergebnis-Spruch nur einmal je Runde
+
+const warte = WG.warte;
+const fehler = (text) => { elFehler.textContent = text || ""; };
+const notiz = (text) => { elNotiz.textContent = text || ""; };
+
+/* ------------------------------- Regeln -------------------------------- */
+function neuerStand(anzahl) {
+  return {
+    runde: 1, zug: 0, wurf: 0, status: "spiel", sieger: "", verlauf: [],
+    spieler: Array.from({ length: anzahl }, (_, i) => ({
+      id: "s" + i, name: "Spieler " + (i + 1), farbe: i, punkte: 0, runde: 0
+    })),
+    note: "Würfle so oft du willst – eine 1 nimmt alles aus diesem Zug."
+  };
+}
+
+function wurfMachen(sp, sitz, wurf) {
+  sp.wurf = wurf;
+  const s = sp.spieler[sitz];
+  if (wurf === 1) {
+    const verloren = s.runde;
+    s.runde = 0;
+    sp.verlauf.push(s.name + " würfelt eine 1 – " + verloren + " Punkte aus diesem Zug sind weg.");
+    sp.zug = (sp.zug + 1) % sp.spieler.length;
+    return { eins: true, verloren };
+  }
+  s.runde += wurf;
+  sp.verlauf.push(s.name + " würfelt " + wurf + " – " + s.runde + " Punkte in diesem Zug.");
+  sp.verlauf = sp.verlauf.slice(-8);
+  return { eins: false, verloren: 0 };
+}
+
+function sichernMachen(sp, sitz) {
+  const s = sp.spieler[sitz];
+  if (!s.runde) return 0;
+  const punkte = s.runde;
+  s.punkte += punkte;
+  s.runde = 0;
+  sp.verlauf.push(s.name + " sichert " + punkte + " Punkte und steht bei " + s.punkte + ".");
+  sp.verlauf = sp.verlauf.slice(-8);
+  if (s.punkte >= ZIEL) {
+    sp.status = "ende";
+    sp.sieger = s.id;
+    sp.note = s.name + " hat " + s.punkte + " Punkte und gewinnt.";
+  } else {
+    sp.zug = (sp.zug + 1) % sp.spieler.length;
+  }
+  return punkte;
+}
+
+/* ------------------------------- Anzeige ------------------------------- */
+function blaseZeigen(text, gut) {
+  clearTimeout(blaseTimer);
+  elBlase.textContent = text;
+  elBlase.classList.toggle("schlecht", !gut);
+  elBlase.classList.add("an");
+  elPig.classList.remove("traurig", "freut");
+  void elPig.offsetWidth;
+  elPig.classList.add(gut ? "freut" : "traurig");
+  blaseTimer = setTimeout(() => {
+    elBlase.classList.remove("an");
+    elPig.classList.remove("traurig", "freut");
+  }, 2000);
+}
+
+function spielerZeichnen(sp) {
+  elSpieler.innerHTML = "";
+  sp.spieler.forEach((s, i) => {
+    const p = document.createElement("p");
+    p.className = "wg-sp" + (sp.status === "spiel" && sp.zug === i ? " dran" : "");
+    const f = WG.figur(s.farbe, s.name);
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = s.name;
+    const b = document.createElement("b");
+    b.textContent = s.punkte + " Punkte" + (s.runde ? " · +" + s.runde : "");
+    p.append(f, n, b);
+    elSpieler.appendChild(p);
+  });
+}
+
+function kopfZeichnen(sp) {
+  elRunde.textContent = "Runde " + sp.runde;
+  elLage.textContent = sp.status === "spiel" ? "Läuft" : "Runde vorbei";
+  const dran = sp.status === "spiel" ? sp.spieler[sp.zug] : null;
+  elZug.textContent = dran ? "· " + (ONLINE && dran.id === MYID ? "du bist dran" : dran.name + " ist dran") : "";
+  elRundensumme.textContent = dran ? dran.runde : 0;
+  notiz(sp.note);
+  elLog.innerHTML = "";
+  for (const z of (sp.verlauf || []).slice(-4)) {
+    const d = document.createElement("div");
+    d.textContent = z;
+    elLog.appendChild(d);
+  }
+  elEnde.classList.toggle("wg-versteckt", sp.status !== "ende");
+  /* Ergebnis-Spruch aus den zentralen Connector-Listen, sobald das Ende
+     feststeht: online nach dem eigenen Platz, lokal für den Sieger. */
+  if (sp.status === "ende") {
+    if (!endeGemeldet && window.TGErgebnis) {
+      endeGemeldet = true;
+      const eigen = ONLINE ? (sp.spieler || []).find((x) => x.id === MYID) : null;
+      if (eigen && sp.sieger && eigen.id !== sp.sieger) TGErgebnis.verloren();
+      else TGErgebnis.gewonnen();
+    }
+  } else if (endeGemeldet) {
+    endeGemeldet = false;
+  }
+  const meinZug = ONLINE
+    ? !!(dran && dran.id === MYID)
+    : sp.status === "spiel";
+  btnWuerfeln.disabled = sperre || !meinZug;
+  btnSichern.disabled = sperre || !meinZug || !dran || dran.runde === 0;
+}
+
+function standZeichnen(sp) {
+  spielerZeichnen(sp);
+  kopfZeichnen(sp);
+}
+
+/* -------------------------------- lokal -------------------------------- */
+async function lokalWuerfeln() {
+  if (sperre || !lokal || lokal.sp.status !== "spiel") return;
+  const sp = lokal.sp;
+  const sitz = sp.zug;
+  const wurf = 1 + Math.floor(Math.random() * 6);
+  sperre = true;
+  kopfZeichnen(sp);
+  await WG.wuerfeln(dice, wurf, 520);
+  const ergebnis = wurfMachen(sp, sitz, wurf);
+  standZeichnen(sp);
+  if (ergebnis.eins) {
+    blaseZeigen("Eine 1 – " + ergebnis.verloren + " Punkte weg", false);
+    await new Promise((fertig) => setTimeout(fertig, 2000));
+  }
+  sperre = false;
+  kopfZeichnen(sp);
+}
+
+function lokalSichern() {
+  if (sperre || !lokal || lokal.sp.status !== "spiel") return;
+  const sp = lokal.sp;
+  const punkte = sichernMachen(sp, sp.zug);
+  if (!punkte) { fehler("In diesem Zug ist noch nichts zu sichern."); return; }
+  fehler("");
+  standZeichnen(sp);
+  blaseZeigen("+" + punkte + " gesichert", true);
+}
+
+function lokalStarten(weiter) {
+  const anzahl = Number($("anzahl").value) || 2;
+  const vorher = weiter && lokal ? lokal.sp.runde : 0;
+  lokal = { sp: neuerStand(anzahl) };
+  if (vorher) lokal.sp.runde = vorher + 1;
+  fehler("");
+  WG.setzeWuerfel(dice, 0);
+  standZeichnen(lokal.sp);
+}
+
+/* -------------------------------- online ------------------------------- */
+const netz = WG.netz({ pfad: "/api/pig", room: ROOM, id: MYID, melde: (t) => fehler(t) });
+
+async function uebernehmen(g) {
+  const alt = onlineGame;
+  onlineGame = g;
+  if (!g) {
+    elSpieler.innerHTML = "";
+    notiz("Eröffne eine Runde – Mitspieler treten im Raum bei.");
+    leisteOnline(null);
+    return;
+  }
+  const neuerWurf = !alt || alt.wurf !== g.wurf || alt.runde !== g.runde;
+  if (neuerWurf && g.wurf) {
+    sperre = true;
+    await WG.wuerfeln(dice, g.wurf, 520);
+    sperre = false;
+  }
+  standZeichnen(g);
+  if (neuerWurf && g.wurf === 1 && alt && alt.wurf !== 1) blaseZeigen("Eine 1 – Punkte weg!", false);
+  leisteOnline(g);
+}
+
+function leisteOnline(g) {
+  $("startLeiste").classList.add("wg-versteckt");
+  $("onlineLeiste").classList.remove("wg-versteckt");
+  const ich = g ? g.spieler.find((s) => s.id === MYID) : null;
+  $("btnErstellen").classList.toggle("wg-versteckt", !!g);
+  $("btnBereit").classList.toggle("wg-versteckt", !g || g.status !== "invited");
+  $("btnLos").classList.toggle("wg-versteckt", !g || g.status !== "invited");
+  if (g && g.status === "invited") {
+    $("btnBereit").textContent = ich && ich.ready ? "Nicht bereit" : "Bereit";
+    $("btnLos").textContent = "Los (" + g.spieler.filter((s) => s.ready).length + "/" + g.spieler.length + " bereit)";
+  }
+}
+
+/* ------------------------------ Bedienung ------------------------------ */
+btnWuerfeln.addEventListener("click", async () => {
+  if (!ONLINE) { lokalWuerfeln(); return; }
+  const r = await netz.schicke("wuerfeln");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+btnSichern.addEventListener("click", async () => {
+  if (!ONLINE) { lokalSichern(); return; }
+  const r = await netz.schicke("sichern");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnLokal").addEventListener("click", lokalStarten);
+$("btnNochmal").addEventListener("click", async () => {
+  if (!ONLINE) { lokalStarten(true); return; }
+  const r = await netz.schicke("naechste");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnErstellen").addEventListener("click", async () => {
+  const r = await netz.schicke("create");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnBereit").addEventListener("click", async () => {
+  const r = await netz.schicke("ready");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+$("btnLos").addEventListener("click", async () => {
+  const r = await netz.schicke("start");
+  if (r.ok && r.game) await uebernehmen(r.game);
+});
+
+if (ONLINE) {
+  $("startLeiste").classList.add("wg-versteckt");
+  const hohle = async () => {
+    const r = await netz.hole();
+    if (r.ok) { fehler(""); await uebernehmen(r.game); }
+  };
+  // Gemeinsames Lebenszeichen (wuerfel-common.js): erst den Platz sichern,
+  // dann fragen – sonst antwortet der erste Abruf mit „Bitte zuerst dem
+  // Spielraum beitreten“ und die Seite startet mit Fehler.
+  const bereit = WG.leben({ room: ROOM, id: MYID, name: MYNAME });
+  (async () => { await bereit; hohle(); })();
+  setInterval(hohle, 1200);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hohle(); });
+  window.addEventListener("focus", hohle);
+} else {
+  notiz("Wähle oben die Spielerzahl und starte am selben Gerät.");
+  elZug.textContent = "";
+}
+})();
+</script>
+<script>
+/* Fensterfarbe des Browsers je Ansicht */
+(function(){
+ const setze=function(){
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(!m||!window.TGStil||!TGStil.hole)return;
+  m.content={klassisch:"#0a211b",maedchen:"#eb7bc0",buben:"#04070b"}[TGStil.hole()]||"#0a211b";
+ };
+ setze();
+ if(window.TGStil&&TGStil.beiWechsel)TGStil.beiWechsel(setze);
+})();
+</script>
+<!-- Ergebnis-Sprüche aus den zentralen Connector-Listen -->
+<script src="../../ergebnis.js"></script>
+<script src="../../zurueck.js"></script>
+</body>
+</html>
