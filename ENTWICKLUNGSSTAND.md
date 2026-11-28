@@ -44,9 +44,11 @@ Connector), mit sicher geprüftem Rücksprungziel.
 | Direktstart der Spielseite | „Zurück zur Spieleübersicht“ → `spiele.html` |
 | `?zurueck=https://evil.example/x` | verworfen, Ziel bleibt die Übersicht |
 | `?zurueck=https://trashygecko.onrender.com/admin` | verworfen, Ziel bleibt die Übersicht |
+| Veröffentlichte Übersicht → Spiel → Zurück (PC und 390×844) | „Zurück zur Spieleübersicht“ → `…/Trashygecko/spiele/spiele.html` |
+| Online-Connector → Spiel im Rahmen → Zurück (PC und 390×844) | Rahmen `about:blank`, `…/connector?spiel=jule` bleibt stehen |
 
-Veröffentlichte Fälle (Online-Übersicht, Online-Connector) nach dem
-Render-Deploy geprüft; Einzelheiten im Prüfbericht.
+Geprüft gegen `https://trashygecko-collab.github.io/Trashygecko` und
+`https://trashygecko.onrender.com` nach dem Deploy, ohne Konsolenfehler.
 
 ---
 
