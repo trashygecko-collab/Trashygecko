@@ -32,7 +32,7 @@ Ersatz, keine leeren Kategorien. Vorher gesichert:
   `tabellen_test.go` (Katalogtabelle).
 
 **Erhalten:** die gemeinsame Würfelmaschine (`rahmen.js`, `online.js`,
-`TGW.wurfDannWahl`), Würfelgrafiken und alle 12 übrigen Spiele der Sammlung;
+`TGW.wurfDannWahl`), Würfelgrafiken und alle 13 übrigen Spiele der Sammlung;
 die Treffer in `lob.js`, `pech.js`, `connector/lob.txt` und `pech.txt` sind
 das Wort „dufte“ in Sprüchen und bleiben.
 
