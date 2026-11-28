@@ -5,6 +5,51 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Smilies nach Aussehen benannt (557 Dateien)
+
+**Auftrag:** den Bestand `spiele/connector/smilies` endgültig sortieren und
+passend benennen, Referenzen nachziehen, veröffentlichen.
+
+**Bestand:** **557 Grafiken** in acht Gruppen – Wurzel 203, `böse` 108,
+`xxx` 106, `love` 65, `tanz` 23, `essen` 19, `traurig` 18, `tiere` 15.
+Dazu die (gitignorierte) Anleitung `s (1).md`. Die Ordnervorlage und die
+Reihenfolge darin sind unverändert; gezählt wurde vor und nach dem Umbau
+identisch.
+
+**Namen:** jede Datei heißt jetzt `NNN-beschreibung.ext` (z. B.
+`001-vogel-in-der-sonne.gif`, `böse/016-schild-hier-nix-ficki-ficki.png`,
+`tiere/013-esel.gif`). `NNN` ist die bisherige Position in der Gruppe, damit
+die vom Nutzer vorgenommene Sortierung erhalten bleibt; die Beschreibung
+kommt aus dem tatsächlichen Bild (drei Schweine-Charaktere, Meme-Text,
+Emoji, Tier …). Grundlage waren 18 Kontaktblätter zu je 36 Bildern, also
+jedes Bild einzeln angesehen. Umlaute sind in Dateinamen als `ae/oe/ue/ss`
+geschrieben.
+
+**Geprüft:**
+- **Doppelte Dateien:** genau ein Paar – `love/024-haende-formen-ein-herz.webp`
+  und `xxx/089-haende-formen-ein-herz-zwei.webp` sind byte-gleich (md5
+  `ec148f8e…`, 12.358 B). Beide bleiben, weil die Anzahl nicht schrumpfen
+  darf; die Namen unterscheiden sie.
+- **Dateiendungen:** alle 557 Dateien gegen ihre Magic Bytes geprüft – 216
+  GIF, 316 PNG, 24 WEBP, 1 JPEG, **keine** falsche Endung.
+- **Connector:** temporärer Go-Test liest den Ordner über `smileyListe()`:
+  557 Einträge, Kategorien wie oben, jeder Pfad existiert und hat die im
+  Eintrag genannte Größe. (Test danach wieder entfernt.)
+- **Referenzen:** es gibt keine fest verdrahteten Smiley-Namen. `smilies.go`
+  liest den Ordner bei jeder Abfrage, der Chat prüft über `smileyErlaubt`,
+  ausgeliefert wird über den Dateiserver der Webseite – Umbenennen genügt.
+- **Live (Render, nach dem Deploy):** `/api/smilies` liefert 557 Einträge,
+  erster `001-vogel-in-der-sonne.gif`; alle 557 Datei-URLs antworten 200
+  mit passendem Content-Type (216× image/gif, 316× image/png, 24× image/webp,
+  1× image/jpeg). GitHub Pages ebenso (Stichproben 200).
+
+**Git:** 557 Umbenennungen, 26 Bilder aus Git entfernt, die beim Sortieren
+weggefallen sind; der Repo-Bestand entspricht dem lokalen Ordner. Commit
+`7805f23`, Hauptablage und GitHub-Klon inhaltlich gleich (nur `s (1).md`
+liegt wie bisher nur lokal).
+
+---
+
 ## 28.11.2026 · Pick auf Schnittstelle 2.0, drei Schweine, drei Bot-Stufen
 
 **Auftrag:** `spiele/brettspiele/pig/pig.html` vollständig auf Standard 2.0
@@ -38,7 +83,7 @@ Spielerliste und im Ergebnis.
 | --- | --- |
 | leicht | Grenze ≈ 46, sichert zu spät oder zu früh, rund 40 % Fehlgriffe, aber nie planlos |
 | normal | Grenze 21, an Führung/Rückstand angepasst, 7 % kleine Fehler |
-| schwer | Wertiteration über (eigene Punkte, Gegnerpunkte, Zugsumme): `W(p,q)` = Gewinnwahrscheinlichkeit am Zug; 61 Iterationen, Abbruch < 1e-6, ~210 ms, einmalig |
+| schwer | Wertiteration über (eigene Punkte, Gegnerpunkte, Zugsumme): `W(p,q)` = Gewinnwahrscheinlichkeit am Zug; konvergiert nach 102 Durchgängen (Abbruch maxDiff < 1e-9, Grenze 400), ~350 ms im Browser, einmalig |
 
 Der schwere Bot löst die echte Gewinnstrategie (nicht die 20-Punkte-Regel):
 bei 0:0 sichert er ab 22, bei 26 Punkten Rückstand erst ab 26, bei klarer
@@ -49,15 +94,22 @@ Doku, wird aber nicht blind angewendet.
 
 | Paarung | Gewinnraten | Ø Punkte |
 | --- | --- | --- |
-| schwer – normal | **63,6 %** – 36,4 % | 82,1 – 73,5 |
-| schwer – leicht | **63,8 %** – 36,2 % | 81,9 – 73,0 |
-| normal – leicht | 53,9 % – 46,1 % | 83,6 – 80,1 |
-| 4er: schwer, normal, 2×leicht | 37,9 / 17,9 / 23,0 / 21,1 % | 64,5 / 60,6 / 58,5 / 56,9 |
-| 4er: 2×schwer, 2×normal | 36,8 / 34,0 / 15,5 / 13,7 % | 64,9 / 62,4 / 59,1 / 57,6 |
+| schwer – normal | **63,2 %** – 36,8 % | 81,7 – 73,8 |
+| schwer – leicht | **63,6 %** – 36,4 % | 81,7 – 73,1 |
+| normal – leicht | 53,6 % – 46,4 % | 83,6 – 80,1 |
+| 4er: schwer, normal, 2×leicht | 42,7 / 20,8 / 19,1 / 17,4 % | 68,0 / 64,1 / 62,3 / 60,8 |
+| 4er: 2×schwer, 2×normal | 36,5 / 34,2 / 15,0 / 14,4 % | 64,8 / 62,4 / 58,8 / 57,9 |
 
 Ein erster DP-Entwurf hatte die Zugwechsel-Werte nicht gespiegelt und verlor
 gegen „normal" (48,8 %); nach der Korrektur (1 − W des Gegners) liegt „schwer"
-bei 63,6 % und ist damit deutlich stärker.
+bei 63,2 % und ist damit deutlich stärker.
+
+Die Wertiteration lief zuerst mit Grenze 60 und Abbruch `maxDiff < 1e-6` – sie
+konvergierte nicht: nach 60 Durchgängen stand `maxDiff` noch bei 5,3e-6, für
+1e-6 wären 68 Durchgänge nötig gewesen. Jetzt gilt Grenze 400 und Abbruch
+`maxDiff < 1e-9`; sie endet nach **102 Durchgängen** (letzter `maxDiff`
+8,5e-10, asymptotisch 1,1e-15), gemessen 353 ms im Browser und 376 ms in
+`simulation.mjs`, `W(0,0)` = 0,5306.
 
 **Geprüft (Playwright, Server 127.0.0.1:8791):** Startbildschirm, alle drei
 Stile (gesetzt und gezeichnet), Fehlercodes, `zustand()`-Kopien, zwei volle
