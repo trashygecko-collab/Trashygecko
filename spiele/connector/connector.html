@@ -2476,7 +2476,7 @@ const SPIEL_ABFRAGEN={
  sim:refreshSim, tetris:refreshTetris, kalaha:refreshKalaha,
  streichholzspiel:refreshStreichholz, muehle:refreshMuehle, reversi:refreshReversi,
  hold:refreshHold, skyjo:refreshSkyjo, kniffel:refreshKniffel,
- schach:refreshSchach, go:refreshGo, backgammon:refreshBackgammon,
+ schach:refreshSchach, chicago:refreshChicago, go:refreshGo, backgammon:refreshBackgammon,
  maumau:refreshMauMau, siebzehn:refreshSiebzehn, baccara:refreshBaccara,
  schiffe:refreshSchiffe, pong:refreshPong, tron:refreshTron, bomberman:refreshBomberman, bubble:refreshBubble, snake:refreshSnake,
  cabo:refreshCabo, poker:refreshPoker,
@@ -6028,6 +6028,7 @@ function spielOeffnen(name,url,info){
  document.body.classList.add("spiel-offen");
  tttTaktStarten();   // 1-s-Takt nur fuer das Tic-Tac-Toe-Brett im Rahmen
  schiffeTaktStarten();
+ chicagoTaktStarten();
  labTaktStarten();   // Labyrinth: Stand und Zugreihenfolge laufen ueber den Connector
  soloAuswahl(false);   // Handy: Liste zuklappen, auch beim Wechsel des Spiels
  // Am Handy meldet sich die zentrale Bedienung an: Knopf, Zähler und
@@ -6047,7 +6048,7 @@ function stilFuerSpiel(){
 
 // Spiele mit Schnittstelle 2.0 nennen ihren Namensraum selbst. Nur diese
 // Namen werden angefasst; aeltere Spiele merken von all dem nichts.
-const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","Risiko"];
+const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","Risiko"];
 
 function apiImRahmen(){
  const rahmen=document.getElementById("spielRahmen");
@@ -6615,11 +6616,152 @@ function schiffeTaktStoppen(){
  schiffeTakt=0;
 }
 
+/* --- Chicago im Raum -------------------------------------------------------
+   Wie bei Schiffe: Der Connector kennt Raum, Kennung und die Abfrage, das Spiel
+   Regeln, Wuerfel, Bots und Anzeige. Der Stand kommt mit aktion("stand") in den
+   Rahmen; das Spiel meldet Absichten als Ereignisse chicago:wurf,
+   chicago:halten (indizes), chicago:weitergeben, chicago:drehen, chicago:weiter,
+   chicago:neu, chicago:bereit-melden, chicago:start, chicago:create und
+   chicago:beitreten. Das Spiel ruft selbst kein /api/ auf. */
+const CHICAGO_TAKT=1000;      // Abfrage, solange der Chicago-Tisch offen ist
+let chicagoTakt=0;
+let chicagoLaeuft=false;
+let currentChicagoGame=null;
+const chicagoGehoert=new WeakSet();   // je Fenster nur eine Zuhoerschaft
+
+function chicagoSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer||treffer.name!=="Chicago")return null;
+ return treffer;
+}
+
+function chicagoZuhören(spiel){
+ if(!spiel||chicagoGehoert.has(spiel.fenster))return;
+ chicagoGehoert.add(spiel.fenster);
+ const einfach=(name,aktion,text)=>spiel.fenster.addEventListener(name,()=>{
+  chicagoAktion(aktion,{},text);
+ });
+ spiel.fenster.addEventListener("chicago:wurf",()=>{
+  chicagoAktion("wurf",{},"Verbindung unterbrochen – der Wurf wurde nicht gesendet.");
+ });
+ spiel.fenster.addEventListener("chicago:halten",ev=>{
+  const d=ev&&ev.detail?ev.detail:{};
+  const indizes=Array.isArray(d.indizes)?d.indizes.filter(i=>Number.isInteger(i)&&i>=0&&i<=2):[];
+  chicagoAktion("halten",{indizes:indizes},"Verbindung unterbrochen – die Würfel wurden nicht gesendet.");
+ });
+ einfach("chicago:weitergeben","weitergeben","Verbindung unterbrochen – das Weitergeben wurde nicht gesendet.");
+ einfach("chicago:drehen","drehen","Verbindung unterbrochen – das Drehen wurde nicht gesendet.");
+ einfach("chicago:weiter","weiter","Verbindung unterbrochen – die nächste Runde wurde nicht angefragt.");
+ einfach("chicago:neu","reset","Verbindung unterbrochen – die neue Partie wurde nicht angefragt.");
+ einfach("chicago:bereit-melden","ready","Verbindung unterbrochen – die Bereitschaft wurde nicht gesendet.");
+ einfach("chicago:start","start","Verbindung unterbrochen – der Start wurde nicht gesendet.");
+ einfach("chicago:create","create","Verbindung unterbrochen – die Runde wurde nicht eröffnet.");
+ einfach("chicago:beitreten","join","Verbindung unterbrochen – der Beitritt wurde nicht gesendet.");
+}
+
+// Den Stand vom Server holen und in den Rahmen schieben.
+async function refreshChicago(){
+ if(!activeRoom||!sessionID)return;
+ let game=null;
+ try{
+  const r=await fetch("/api/chicago?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(r.ok)game=(await r.json()).game||null;
+  else if(r.status===403||r.status===404)game=null;
+  else return;
+ }catch(e){
+  return;
+ }
+ currentChicagoGame=game;
+ if(framePartie&&framePartie.gameId==="chicago"){
+  if(game)chicagoSpielstand(game,"");
+  else chicagoWarten();
+ }
+}
+
+// Spielstand in das Spiel: Kennung, Name und der Stand des Servers.
+function chicagoSpielstand(game,hinweis){
+ const spiel=chicagoSpiel();
+ if(!spiel||!activeRoom||!sessionID)return false;
+ if(!game)return chicagoWarten();
+ const meiner=Array.isArray(game.players)&&game.players.some(p=>p.id===sessionID);
+ if(!meiner)return false;                  // Zuschauer bekommen keinen Tisch
+ const ich=game.players.find(p=>p.id===sessionID);
+ try{
+  spiel.api.start({stil:stilFuerSpiel(),online:{id:sessionID,name:ich?ich.name:"",marke:game.id||""}});
+ }catch(e){}
+ try{
+  spiel.api.aktion("stand",{spiel:game,hinweis:hinweis||""});
+ }catch(e){ return false; }
+ return true;
+}
+
+// Noch keine Partie: Der Tisch wartet auf eine Runde im Raum.
+function chicagoWarten(){
+ const spiel=chicagoSpiel();
+ if(!spiel)return false;
+ try{ spiel.api.start({stil:stilFuerSpiel(),online:{id:sessionID,name:"",marke:""}}); }catch(e){ return false; }
+ return true;
+}
+
+// Eine Absicht des Spiels an den Server geben und den neuen Stand zurueckschieben.
+async function chicagoAktion(aktion,daten,fehlertext){
+ if(chicagoLaeuft||!activeRoom||!sessionID)return;
+ chicagoLaeuft=true;
+ let text="";
+ try{
+  const r=await fetch("/api/chicago?room="+encodeURIComponent(activeRoom)+"&action="+aktion,{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:sessionID},daten||{}))
+  });
+  if(!r.ok)text=(await r.text()).trim();
+ }catch(e){
+  text=fehlertext||"Verbindung unterbrochen – die Aktion wurde nicht gesendet.";
+ }
+ try{ await refreshChicago(); }catch(e){}
+ chicagoSpielstand(currentChicagoGame,text);
+ chicagoLaeuft=false;
+}
+
+// Nach jedem Laden des Rahmens: Zuhoerer anmelden, Stand schieben.
+function chicagoBrueckeAn(){
+ const spiel=chicagoSpiel();
+ if(!spiel)return false;
+ chicagoZuhören(spiel);
+ if(!activeRoom||!sessionID)return false;
+ const meiner=currentChicagoGame&&Array.isArray(currentChicagoGame.players)
+  &&currentChicagoGame.players.some(p=>p.id===sessionID);
+ if(meiner){ chicagoSpielstand(currentChicagoGame,""); return true; }
+ if(framePartie&&framePartie.modus==="online"){ chicagoWarten(); return true; }
+ // Wer gerade angenommen hat, sitzt schon in einer Partie, die der Connector
+ // noch nicht abgefragt hat: einmal nachsehen statt auf einen leeren Tisch zu warten.
+ refreshChicago().then(()=>{
+  const g=currentChicagoGame;
+  if(g&&g.players.some(p=>p.id===sessionID))chicagoSpielstand(g,"");
+ }).catch(()=>{});
+ return false;
+}
+
+function chicagoTaktStarten(){
+ if(chicagoTakt)return;
+ chicagoTakt=window.setInterval(()=>{
+  if(document.hidden)return;
+  if(!framePartie||framePartie.gameId!=="chicago")return;
+  refreshChicago().catch(()=>{});
+ },CHICAGO_TAKT);
+}
+
+function chicagoTaktStoppen(){
+ if(!chicagoTakt)return;
+ clearInterval(chicagoTakt);
+ chicagoTakt=0;
+}
+
 // Rahmen leeren, ohne den Server zu fragen – die Partie ist schon vorbei oder
 // der Spieler hat sie selbst verlassen.
 function rahmenLeeren(){
  tttTaktStoppen();
  schiffeTaktStoppen();
+ chicagoTaktStoppen();
  document.body.classList.remove("spiel-offen");
  if(window.TGMobil)TGMobil.spielZu();
  const rahmen=document.getElementById("spielRahmen");
@@ -6691,7 +6833,7 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
 
 // Der Stil geht an jedes geladene Spiel und an jedes offene Spiel, sobald die
 // Wahl im Connector wechselt. Reine Übergabe, keine Spielsteuerung.
-document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); labBrueckeAn(); });
+document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); labBrueckeAn(); });
 window.addEventListener("tg-stil", () => {
  if(document.body.classList.contains("spiel-offen"))stilAnSpiel();
 });

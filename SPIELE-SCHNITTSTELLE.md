@@ -599,6 +599,58 @@ bei seinem eigenen Umbau.
   untereinander (390 × 844: 248 px, 24,6-px-Kästchen, kein Querscrollen).
   **Bot unverändert:** drei Stufen, 400 Partien je Stufe 94,6 / 68,8 / 63,5
   Schüsse; `botZiel(beschuss,rest,zufall,stufe)` liest keine Schiffslage.
+- **Chicago nach dem Standard (28.11.2026):**
+  `spiele/brettspiele/chicago/chicago.html` ist neu geschrieben (1.639 Zeilen,
+  71.016 Bytes) und folgt der Schnittstelle **2.0.0**: `version`, `bereit`,
+  `whenReady()`, `start()`, `einstellungen()`, `zustand()`, `startbildschirm()`,
+  `stop()`, `pause()`, `resume()`, `aktion(name, daten)`, Ereignisse
+  `chicago:bereit|ende|pausiert|weiter`; einziger globaler Name
+  `window.Chicago`, eingefroren, alle Antworten Kopien. Kein `/api/`-Aufruf,
+  kein `room`/`id` aus der Adresse. Vorher gesichert:
+  `sicherung/chicago-2026-11-28/` (beide Ablagen).
+- **Chicago-Aktionen:** `wurf`, `halten {indizes}`, `weitergeben`, `drehen`
+  (nur mit zwei Sechsern im Wurf), `weiter` (nächste Runde), `neu`, `start`,
+  `pause`, `fortsetzen`, `stand` (Online), `zum-start`. Fehlercodes nach 3.2;
+  falscher Zustand → `aktion-nicht-erlaubt`, fremde Felder →
+  `unbekanntes-feld`, `start({stil})` allein stellt nur die Ansicht um.
+  Regeln wie im Go-Server: 1 = 100, 6 = 60, sonst Auge; der Vorleger bestimmt
+  die Wurfzahl, Gleichstand genügt nicht, zwei Sechser → eine Eins, drei
+  Sechser → zwei Einser (200), Chic (drei Einser) befreit von allen Filzen.
+  Alle **216** Würfe geprüft: `chWert` stimmt in jeder Kombination.
+- **Chicago-Bot, drei Stufen:** `leicht` behält Einsen immer, Sechsen zu 70 %,
+  Fünfen zu 35 % und dreht keine drei Sechser; `mittel` behält 1 und 6 und
+  gibt als Vorleger ab 200 früh ab; `schwer` behält 1 und 6 und gibt als
+  Vorleger schon ab 140 ab. Gemessen an je einer ganzen Partie mit zwei Bots
+  (6–7 Runden): **2,14 / 1,29 / 1,00 Würfe je Runde** – die Stufen spielen
+  messbar unterschiedlich. Der Bot würfelt sichtbar über dieselben Aktionen
+  wie ein Mensch (Denkpause 560 ms, Wurf 760 ms), nie über eine Abkürzung.
+- **Drei Stile:** `html[data-stil]` färbt Filz, Würfel, Filze, Knöpfe,
+  Blätter und Startbildschirm: `normal` grüner Filz mit Gold, `maedchen`
+  Pastellrosa mit Herzen und Punkten, `buben` schwarzes Metall mit
+  Gefahrenstreifen und Blutrot. Die Zahlen bleiben in allen drei Stilen
+  dunkel auf hellem Würfel.
+- **Startbildschirm:** Modus (gegen Bots / mehrere am Gerät), Bot-Anzahl 1–5,
+  Stufe, Spieler 2–6, Stil-Kacheln und die Regeln; gespeichert in
+  `chicago-modus|stufe|bots|spieler|stil`. Im Connector erscheint statt der
+  Auswahl die Lobby („Runde eröffnen“, „Mitspielen“, „Bereit“, „Spiel
+  starten“); der Connector-Stil hat Vorrang (`einstellungen().stilWahl`).
+- **Online-Brücke:** `spiele/connector/connector.html` und
+  `connector-online/connector.html` (byte-gleich) nennen `Chicago` in
+  `SPIEL_API_NAMEN`, `chicago:refreshChicago` in `SPIEL_ABFRAGEN` und haben
+  die Brücke `chicagoSpiel/Spielstand/Warten/Aktion/BrueckeAn/TaktStarten`
+  (1-s-Takt nur bei offenem Chicago-Rahmen). Das Spiel meldet
+  `chicago:wurf|halten|weitergeben|drehen|weiter|neu|bereit-melden|start|
+  create|beitreten`, der Connector antwortet mit
+  `start({stil,online:{id,name,marke}})` und `aktion("stand",{spiel})`.
+  Geprüft mit zwei Rahmen und gestubbtem Server: Lobby, `create`, Stand,
+  Weitergeben, `:ende` genau einmal, `stop()` → `{ok:true,ignoriert:true}`.
+- **Zwei Server-Fehler behoben (28.11.2026):** `weitergeben` verlangte Würfel
+  auf dem Tisch – nach dem Liegenlassen ohne Würfe war der Zug unlösbar; jetzt
+  genügt der eigene Wurf. Der Bot gab bei erschöpften Würfen auf
+  (`("",nil,false)`) und ließ den Tisch stehen; er gibt jetzt ab.
+  Regressionstests `TestChicagoWeitergebenNachLiegenlassen` und
+  `TestChicagoBotGibtBeiErschoepftenWuerfenAb` in beiden Ablagen,
+  `go test -run Chicago` grün.
 - **Goldminer nach dem Standard (26.11.2026):**
   `spiele/goldminer/goldminer.html`, Schnittstelle **2.0.0** wie Pimmel –
   `version`, `bereit`, `whenReady()`, `start()`, `einstellungen()`,

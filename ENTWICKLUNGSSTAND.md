@@ -5,6 +5,105 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Chicago: neu geschrieben nach Schnittstelle 2.0
+
+**Auftrag:** `spiele/brettspiele/chicago/chicago.html` vollständig überarbeiten
+und auf den Standard 2.0 migrieren – eigenständiges Spiel, reparierter Bot mit
+drei Stufen, drei Grafikstile, eigener Startbildschirm, Mehrspieler am Gerät,
+Online über den Connector. Vorher gesichert:
+`sicherung/chicago-2026-11-28/` (beide Ablagen, Doku).
+
+**Was schon da war und blieb:** Regeln, Wertung und Phasen lagen im
+Go-Server (`spiele/connector/chicago.go`, `bot_chicago.go`) und wurden 1:1 ins
+Spiel portiert. Das alte `chicago.html` war rein servergetrieben
+(`/api/chicago`, `?room&id`, Würfeln auf dem Server) und hatte keine eigene
+Anzeige für direkte Starts; es ist ersetzt, nicht ergänzt.
+
+**Neu im Spiel (1.639 Zeilen, 71.016 Bytes):**
+- **Schnittstelle 2.0:** `window.Chicago`, Version **2.0.0**, eingefroren –
+  `version`, `bereit`, `whenReady()`, `start()`, `einstellungen()`,
+  `zustand()`, `startbildschirm()`, `stop()`, `pause()`, `resume()`,
+  `aktion(name, daten)`, Ereignisse `chicago:bereit|ende|pausiert|weiter`.
+  Kein `/api/`, kein `room`/`id` aus der Adresse, keine zweite Fassung.
+- **Startbildschirm:** Modus (gegen Bots / mehrere am Gerät), Bot-Anzahl 1–5,
+  Stufe, Spieler 2–6, drei Stil-Kacheln, Regeln im Klapptext; Speicher
+  `chicago-modus|stufe|bots|spieler|stil`.
+- **Tisch:** drei klickbare Würfel mit Punktbild, liegende Würfel mit „liegt“,
+  Wert, Würfe übrig, „Es stehen“, tiefster Spieler, Bierfilz-Reihe mit
+  Neu-Markierung, Spielerliste mit aktivem Rand, Hinweiszeile, Blätter für
+  Runde, Ende und Pause. `prefers-reduced-motion` schaltet das Rollen ab.
+- **Bot:** würfelt sichtbar über dieselben Aktionen wie ein Mensch
+  (`botPruefen` → `planen`, 560 ms Denkpause, 760 ms vor dem Wurf), keine
+  Punkte ohne Wurf. `leicht` behält 1 immer, 6 zu 70 %, 5 zu 35 %; `mittel`
+  hält 1 und 6 und gibt als Vorleger ab 200 früh ab; `schwer` hält 1 und 6
+  und gibt ab 140 ab.
+- **Drei Stile:** `html[data-stil]` färbt Filz, Tisch, Würfel, Filze, Knöpfe,
+  Blätter und Startbildschirm – `normal` grüner Filz mit Goldrand,
+  `maedchen` Pastellrosa mit Herzen und Punkten, `buben` schwarzes Metall mit
+  Gefahrenstreifen und Blutrot. Die Augen bleiben dunkel auf hellem Würfel.
+- **Online:** Lobby mit „Runde eröffnen“, „Mitspielen“, „Bereit“, „Spiel
+  starten“; `start({stil, online})` und `aktion("stand")` nehmen den Stand,
+  Absichten gehen als `chicago:wurf|halten|weitergeben|drehen|weiter|neu|
+  bereit-melden|start|create|beitreten` hinaus. Der Connector-Stil hat
+  Vorrang, die eigene Stilwahl ist dort verborgen.
+
+**Gemessen (Chromium, echter Seitenaufruf über den lokalen HTTP-Server):**
+- Schnittstelle: `version` 2.0.0, eingefroren, `whenReady()` ok; `start('x')`
+  → `konfiguration-muss-objekt-sein`, `{foo:1}` → `unbekanntes-feld`,
+  `{modus:'drei'}` → `unbekannter-modus`, `{stufe:'x'}` → `unbekannte-stufe`,
+  `{stufe:3}` → `stufe-muss-text-sein`, `{bots:0}` und `{bots:2.5}` →
+  `botanzahl-muss-1-bis-5-sein`, `{spieler:1}` → `spieler-muessen-2-bis-6-sein`,
+  `{stil:5}` → `stil-muss-text-sein`, `{online:'x'}` → `online-muss-objekt-sein`,
+  `pause()` ohne Partie → `spiel-laeuft-nicht`, `aktion("quatsch")` →
+  `unbekannte-aktion`, `aktion("wurf",5)` → `daten-muessen-objekt-sein`;
+  `zustand()` blieb nach jedem Fehler gleich und liefert Kopien
+  (eingeschleuster Spieler verschwindet wieder). `start({stil:'maedchen'})`
+  allein: Startbildschirm bleibt, `data-stil` und Fläche
+  `rgb(246,228,236)`, `stilWahl:false`.
+- Wertung: alle **216** Würfe gegen die Sollrechnung geprüft, 0 Abweichungen
+  (1 1 1 = 300, 6 6 6 = 180, 6 6 4 = 124, 1 6 2 = 162, 5 5 5 = 15).
+- Bot-Partien, je eine ganze Partie mit zwei Bots, Stufe leicht/mittel/schwer:
+  **29,9 s / 16,7 s / 11,1 s**, 7 / 7 / 6 Runden, alle in Phase 2 mit
+  Verlierer beendet („Du verliert“), **Würfe je Runde 2,14 / 1,29 / 1,00** –
+  die Stufen spielen messbar unterschiedlich. Kein Hänger: eine 7-s-Wache auf
+  `tick` schlug nie an, 0 Konsolenfehler.
+- Mehrspieler am Gerät: drei Spieler, Wurf → Wert 11, Weitergeben setzt
+  „Spieler 2“ an den Zug, ganze Partie bis „Spieler 3 verliert“ durchgespielt.
+- Pause/Stop: `pause()` zweimal → `{ok:true,pausiert:true}`, `resume()`
+  zweimal → `{ok:true,pausiert:false}`, Ereignisse `chicago:pausiert` und
+  `chicago:weiter` je einmal; `stop()` → `{ok:true}`, Startbildschirm zurück.
+- Stile am Tisch: Seite `rgb(10,38,32)` / `rgb(246,228,236)` / `rgb(8,9,11)`,
+  Tisch `rgb(15,52,44)` / `rgb(255,247,251)` / `rgb(17,19,24)`, Schrift in
+  allen drei Atkinson Hyperlegible.
+- Darstellung Handy 390 × 844: `scrollWidth` **390**, Seitenhöhe **844**
+  (kein Scrollbalken), Startbildschirm 547 px mit SPIELEN bei 524 px,
+  Würfel 115 px, Tisch 549 px, Knöpfe 42 px hoch, drei Spieler in der Liste.
+- Online-Weg mit zwei Rahmen und gestubbtem Server: Lobby statt
+  Startbildschirm, Stand mit Würfeln 6/1/4 → Wert 164, „Es stehen 60“,
+  Würfelwahl → `chicago:halten {indizes:[0]}`, „WEITERGEBEN“ →
+  `chicago:weitergeben`, Endstand → `chicago:ende` **genau einmal** (auch beim
+  zweiten gleichen Stand), `stop()` → `{ok:true,ignoriert:true}`.
+- Connector-Brücke (gestubbter Server, echter Rahmen): `chicagoBrueckeAn`
+  meldet sich an, „Runde eröffnen“ → `POST /api/chicago?room=…&action=create`,
+  danach `GET …&id=…`, Stand erscheint im Rahmen (Würfel 6/6/4, Wert 124, drei
+  Spieler, „1 / 4 vergeben“), „Weitergeben“ → `POST …&action=weitergeben`
+  mit `{"id":"p0"}` und erneutem `GET`. 0 Seitenfehler.
+- Go: `weitergeben` ohne Würfel auf dem Tisch war gesperrt (nach dem
+  Liegenlassen ohne Würfe ging nichts mehr) und der Bot gab bei erschöpften
+  Würfen auf; beides behoben, `TestChicagoWeitergebenNachLiegenlassen` und
+  `TestChicagoBotGibtBeiErschoepftenWuerfenAb` neu,
+  `go test -run Chicago ./...` in `connector` grün (2,3 s).
+- `node --check` auf dem ausgelösten Spielskript und auf dem
+  Connector-Skript grün.
+
+**Grenze:** Der echte Connector-Server (bzw. die EXE) wurde für den
+Online-Test nicht gestartet – die Brücke lief gegen einen gestubbten Server im
+echten Rahmen; ein zweites echtes Gerät gab es nicht.
+
+**Sicherung/Ablagen:** `sicherung/chicago-2026-11-28/` in beiden Ablagen;
+`chicago.html`, `chicago.go`, `bot_chicago.go`, `chicago_test.go` und beide
+`connector.html` sind in beiden Ablagen byte-gleich.
+
 ## 28.11.2026 · Schiffe versenken: vollständiges Seeschlacht-Spiel
 
 **Auftrag:** `spiele/brettspiele/schiffe/schiffe.html` zum hochwertigen

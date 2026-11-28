@@ -853,7 +853,9 @@ func chicagoAktion(room *Room, id, aktion string, indizes []int) (int, string) {
 		if seat < 0 {
 			return http.StatusForbidden, "Du sitzt nicht an diesem Tisch."
 		}
-		if seat != game.Current || game.Wer != id || len(game.Wuerfel) == 0 {
+		// Weitergeben geht nach dem ersten Wurf – auch wenn die Würfel schon
+		// liegen gelassen wurden und gerade keiner mehr auf dem Tisch liegt.
+		if seat != game.Current || game.Players[seat].Wuerfe == 0 {
 			return http.StatusConflict, "Erst würfeln, dann weitergeben."
 		}
 		if game.Players[seat].Fertig {

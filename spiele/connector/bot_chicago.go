@@ -62,7 +62,9 @@ func chicagoBotAuftrag(g *ChicagoGame) (string, []int, bool) {
 		if p.Wuerfe < chMaxWuerfe(g) {
 			return "wurf", nil, true
 		}
-		return "", nil, false
+		// Würfe sind aufgebraucht: abgeben. Früher gab der Bot hier auf, und
+		// der Tisch blieb stehen, weil niemand mehr am Zug war.
+		return "weitergeben", nil, true
 	}
 
 	// Drei Sechser sind 180 – gedreht werden daraus zwei Einser (200).
