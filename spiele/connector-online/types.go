@@ -234,7 +234,6 @@ type Room struct {
 	VierGewinnt     *VierGewinntGame
 	Dame            *DameGame
 	Paare           *PaareGame
-	Menschaerger    *MenschaergerGame
 	Kaese           *KaeseGame
 	Sim             *SimGame
 	Tetris          *TetrisGame
@@ -751,14 +750,6 @@ func (r *Room) gameStatus() string {
 			return "Einladung ausstehend"
 		}
 	}
-	if r.Menschaerger != nil {
-		switch r.Menschaerger.Status {
-		case "active":
-			return "Spiel läuft"
-		case "invited":
-			return "Einladung ausstehend"
-		}
-	}
 	return "Verfügbar"
 }
 
@@ -787,19 +778,6 @@ func cloneVierGewinnt(g *VierGewinntGame) *VierGewinntGame {
 		for i, cell := range g.Winning {
 			c.Winning[i] = append([]int(nil), cell...)
 		}
-	}
-	return &c
-}
-
-func cloneMenschaerger(g *MenschaergerGame) *MenschaergerGame {
-	if g == nil {
-		return nil
-	}
-	c := *g
-	c.Players = make([]MaenPlayer, len(g.Players))
-	for i, player := range g.Players {
-		c.Players[i] = player
-		c.Players[i].Pieces = append([]int(nil), player.Pieces...)
 	}
 	return &c
 }
