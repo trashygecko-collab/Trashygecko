@@ -69,7 +69,10 @@ serverseitigen Bots und je Spieler gefilterter Sicht (`eigeneKarten`,
 Pick-Muster: Stand über `aktion("stand")`, Absichten als
 `skyjo:aufdecken|ziehen|tauschen|abwerfen|umdrehen|neueRunde`, Takt 1 s,
 „Start“/„Start mit Bots“ für den Gastgeber, „Mitspielen“ für die anderen.
-`Skyjo` steht in `SPIEL_API_NAMEN`.
+`Skyjo` steht in `SPIEL_API_NAMEN`, die Spieleverwaltung
+(`spiele/multiplayer-register.js`) führt Skyo als Tischspiel mit 2–8 Plätzen
+(`art: "tisch"`), und der Raum eröffnet den Tisch über `create`, nimmt
+Mitspieler über das Angebot auf und startet ihn über `start`.
 
 **Offen/ Grenzen:** Die Online-Strecke wurde mit echten Serverdaten im Browser
 und über die Go-Route geprüft, aber nicht in einem echten Raum mit zwei
