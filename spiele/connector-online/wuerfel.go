@@ -35,7 +35,7 @@ import (
 var wuerfelKatalog = []string{
 	"der-turm",
 	"eins-bis-sechzehn", "fenster",
-	"paerchen", "plus-minus", "rentmeister",
+	"rentmeister",
 	"streichhoelzer", "teure-sieben", "unter-oder-ueber", "wuerfelpoker",
 }
 

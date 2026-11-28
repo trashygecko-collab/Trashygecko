@@ -5,6 +5,31 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Pärchen und Plus-Minus entfernt
+
+**Auftrag:** Nur diese beiden Würfelspiele vollständig aus TrashyGecko
+entfernen – Übersicht, Kategorien, Mehrspieler-Register, Connector und
+API-Tabellen sollten sie nicht mehr führen.
+
+**Entfernt (4 Dateien):** `spiele/wuerfelspiele/paerchen.html`,
+`spiele/wuerfelspiele/plus-minus.html` und die Regelmodule
+`spiele/wuerfelspiele/spiele/{paerchen,plus-minus}.js`. Eigene Grafiken
+hatten beide nicht.
+
+**Bereinigt:** je eine Karte in `spiele/spiele.html` und im Sammlungsindex,
+je ein Eintrag in `spieldaten.js` und `multiplayer-register.js`, die
+Kategorie-Tabelle in beiden `connector.html`, `wuerfelKatalog` in
+`wuerfel.go` und die drei Tabellen in `angebot.go` – in `connector` und
+`connector-online` byte-gleich. Der Würfelkatalog hat jetzt **8** statt 10
+Spiele; die Sammlung umfasst 8 Spielseiten plus `index.html`.
+
+**Tests:** Namenslisten in `tabellen_test.go` und `spielzuege_test.go`
+bereinigt. `go vet ./...` 0, `go build ./...` 0, `go test -run
+'Angebot|Tabellen|Spielzuege|Wuerfel|Bots'` in beiden Paketen grün
+(11,2 s / 11,3 s), `-run Abrechnung` grün. Die drei Binaries sind neu gebaut.
+
+---
+
 ## 28.11.2026 · Gestrichene Zwölf, Hin und her und Jule entfernt
 
 **Auftrag:** Die drei Würfelspiele vollständig aus TrashyGecko entfernen –
