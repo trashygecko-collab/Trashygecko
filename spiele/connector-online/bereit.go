@@ -28,7 +28,6 @@ var bereitSpiele = map[string]bool{
 	"baccara":         true,
 	"bingo":           true,
 	"bomberman":       true,
-	"boston":          true,
 	"bubble":          true,
 	"cabo":            true,
 	"chicago":         true,

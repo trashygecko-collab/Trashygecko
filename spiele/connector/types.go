@@ -248,7 +248,6 @@ type Room struct {
 	Kniffel         *KniffelGame
 	ZehnTausend     *ZehnTausendGame // 10.000 (Würfelspiel online)
 	Maexchen        *MaexchenGame    // Lügen Mäxchen (Bluff-Würfelspiel online)
-	Boston          *BostonGame      // Auf nach Boston (Würfelrennen online)
 	Chicago         *ChicagoGame     // Chicago (Würfelspiel mit Bierfilzen)
 	ShipCrew        *ShipCrewGame    // Schiffe versenken (Ship Captain Crew, Würfel)
 	Halma           *HalmaGame       // Halma (klassisch, Stern, Sprung)

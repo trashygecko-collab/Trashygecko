@@ -311,14 +311,6 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Maexchen = nil }),
-		sitz("Auf nach Boston",
-			func(id, n string) (bool, bool, int) {
-				if g := r.Boston; g != nil {
-					return bostonRaus(g, id, n)
-				}
-				return false, false, 0
-			},
-			func() { r.Boston = nil }),
 		sitz("Chicago",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Chicago; g != nil {
@@ -927,13 +919,6 @@ func (r *Room) aktivesSpiel(id string) string {
 			}
 		}
 	}
-	if g := r.Boston; g != nil && (g.Status == "active" || g.Status == "runde") {
-		for _, p := range g.Players {
-			if p.ID == id {
-				return "boston"
-			}
-		}
-	}
 	if g := r.Chicago; g != nil && (g.Status == "active" || g.Status == "runde") {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -1277,13 +1262,6 @@ func (r *Room) playerInGame(id string) bool {
 		}
 	}
 	if g := r.Maexchen; g != nil {
-		for _, p := range g.Players {
-			if p.ID == id {
-				return true
-			}
-		}
-	}
-	if g := r.Boston; g != nil {
 		for _, p := range g.Players {
 			if p.ID == id {
 				return true

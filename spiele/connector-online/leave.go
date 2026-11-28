@@ -311,14 +311,6 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Maexchen = nil }),
-		sitz("Auf nach Boston",
-			func(id, n string) (bool, bool, int) {
-				if g := r.Boston; g != nil {
-					return bostonRaus(g, id, n)
-				}
-				return false, false, 0
-			},
-			func() { r.Boston = nil }),
 		sitz("Chicago",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Chicago; g != nil {
@@ -415,6 +407,14 @@ func (r *Room) partien() []partie {
 				return false, false, 0
 			},
 			func() { r.Gaense = nil }),
+		sitz("Mensch ärgere dich nicht",
+			func(id, n string) (bool, bool, int) {
+				if g := r.Menschaerger; g != nil {
+					return maenRemoveSeat(g, id, n)
+				}
+				return false, false, 0
+			},
+			func() { r.Menschaerger = nil }),
 		sitz("1x1",
 			func(id, n string) (bool, bool, int) {
 				if g := r.Rechen; g != nil {
@@ -927,13 +927,6 @@ func (r *Room) aktivesSpiel(id string) string {
 			}
 		}
 	}
-	if g := r.Boston; g != nil && (g.Status == "active" || g.Status == "runde") {
-		for _, p := range g.Players {
-			if p.ID == id {
-				return "boston"
-			}
-		}
-	}
 	if g := r.Chicago; g != nil && (g.Status == "active" || g.Status == "runde") {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -959,6 +952,13 @@ func (r *Room) aktivesSpiel(id string) string {
 		for _, p := range g.Players {
 			if p.ID == id {
 				return "arschloch"
+			}
+		}
+	}
+	if g := r.Menschaerger; g != nil && g.Status == "active" {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return "menschaerger"
 			}
 		}
 	}
@@ -1283,13 +1283,6 @@ func (r *Room) playerInGame(id string) bool {
 			}
 		}
 	}
-	if g := r.Boston; g != nil {
-		for _, p := range g.Players {
-			if p.ID == id {
-				return true
-			}
-		}
-	}
 	if g := r.Chicago; g != nil {
 		for _, p := range g.Players {
 			if p.ID == id {
@@ -1312,6 +1305,13 @@ func (r *Room) playerInGame(id string) bool {
 		}
 	}
 	if g := r.Arschloch; g != nil {
+		for _, p := range g.Players {
+			if p.ID == id {
+				return true
+			}
+		}
+	}
+	if g := r.Menschaerger; g != nil {
 		for _, p := range g.Players {
 			if p.ID == id {
 				return true
@@ -1538,6 +1538,35 @@ func arschlochRemoveSeat(g *ArschlochGame, id, name string) (bool, bool, int) {
 	if g.Current >= len(g.Players) {
 		g.Current = 0
 	}
+	g.Note = name + " ist raus – es geht mit " + strconv.Itoa(len(g.Players)) + " Spielern weiter."
+	return true, false, len(g.Players)
+}
+
+func maenRemoveSeat(g *MenschaergerGame, id, name string) (bool, bool, int) {
+	idx := -1
+	for i, p := range g.Players {
+		if p.ID == id {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		return false, false, len(g.Players)
+	}
+	g.Players = append(g.Players[:idx], g.Players[idx+1:]...)
+	if len(g.Players) < 2 {
+		return true, true, len(g.Players)
+	}
+	if g.HostID == id {
+		g.HostID = g.Players[0].ID
+	}
+	if g.Current > idx {
+		g.Current--
+	}
+	if g.Current >= len(g.Players) {
+		g.Current = 0
+	}
+	g.Dice = 0
+	g.ExtraRoll = false
 	g.Note = name + " ist raus – es geht mit " + strconv.Itoa(len(g.Players)) + " Spielern weiter."
 	return true, false, len(g.Players)
 }

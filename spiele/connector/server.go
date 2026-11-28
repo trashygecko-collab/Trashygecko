@@ -220,7 +220,6 @@ func routes() http.Handler {
 	mux.HandleFunc("/api/kniffel", kniffelHandler)
 	mux.HandleFunc("/api/zehntausend", zehnTausendHandler)
 	mux.HandleFunc("/api/maexchen", maexchenHandler)
-	mux.HandleFunc("/api/boston", bostonHandler)
 	mux.HandleFunc("/api/chicago", chicagoHandler)
 	mux.HandleFunc("/api/shipcrew", shipcrewHandler)
 	mux.HandleFunc("/api/halma", halmaHandler)

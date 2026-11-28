@@ -72,7 +72,6 @@ Weitere Würfelspiele mit eigenem Ende:
 | --- | --- | --- |
 | zehntausend | `beenden()` / `zeigeEndeOnline(g)` | lokal Sieger, online eigener Stand |
 | maexchen | `zeigeEnde()` | Sieger / eigener Platz |
-| boston | `zeigeEnde()` | Siegerliste |
 | chicago | `zeigeEnde()` | Verlierer wird erkannt |
 | shipcrew | `zeigeEnde()` | Siegerpunkte |
 | kniffel | `endGame()` | online eigener Platz, lokal Sieger |

@@ -5,6 +5,62 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Auf nach Boston ersatzlos entfernt
+
+**Auftrag:** Das Würfelspiel „Auf nach Boston“ (Brettspiel-Ablage, Kategorie
+Würfel, online über den Connector) vollständig aus TrashyGecko nehmen – Datei,
+Karte, Listen, Connector- und Bot-Einträge. Kein Ersatz, keine leeren
+Kategorien. Vorher gesichert: `sicherung/auf-nach-boston-2026-11-28/`
+(36 Dateien, gespiegelte Pfade).
+
+**Entfernt:**
+- Spielseite `spiele/brettspiele/boston/boston.html` (einzige Fassung, keine
+  eigenen Grafiken – das Verzeichnis ist damit leer und entfällt).
+- Übersicht `spiele/spiele.html`: die Karte und alle vier Zählungen der
+  Kategorie Würfelspiele (**21 → 20**: ARIA-Label, Kopfzahl, Kachel
+  „20 Spiele“, „Alle 20 ansehen“).
+- Suche `spiele/spieldaten.js`: Listeneintrag und Kurzbeschreibung.
+- Mehrspieler `spiele/multiplayer-register.js`: der Tisch-Eintrag
+  (id `boston`, API `boston`).
+- `spiele/ergebnis-texte-uebersicht.md`: die Zeile zur Siegerliste.
+- `spiele/brettspiele/regeln.css`: der Kommentarkopf nannte Boston als
+  Nutzer der gemeinsamen Bausteine (jetzt 10.000, Mäxchen, Chicago, Shipcrew).
+- Connector, beide Ablagen byte-gleich:
+  - Spiel-Engine `boston.go` samt `boston_test.go`, Bot `bot_boston.go` samt
+    `bot_boston_test.go`;
+  - Route `/api/boston` (`server.go`), Feld `Room.Boston` (`types.go`);
+  - drei Bot-Angebotstabellen und die Statusabfrage (`angebot.go`), die
+    Bereitschaftsliste (`bereit.go`), der Eintrag in `SUPPORTED_GAMES`
+    (`connector.html`);
+  - Verlassen/Aufräumen (`leave.go`, drei Stellen), Lobby-Status (`lobby.go`),
+    Umbenennen (`umbenennen.go`);
+  - Testtreiber `spielzuege_test.go` und `tabellen_test.go`.
+- Regressionstest `TestAbrechnungBostonBleibtStehen` (das Spiel gibt es nicht
+  mehr); die übrigen elf Abrechnungstests bleiben.
+
+**Erhalten:** die gemeinsame Würfelmaschine (`rahmen.js`, `online.js`), die
+Würfelgrafiken und alle übrigen Spiele – auch Chicago, Shipcrew, 10.000 und
+Mäxchen, die dieselben Regel-Bausteine und -Dateien nutzen.
+
+**Gemessen (Chromium, echter Seitenaufruf, lokal 8791):**
+- `spiele.html`: **20** Karten in der Würfelkategorie, Kopfzahl 20, Kachel
+  „20 Spiele“, „Alle 20 ansehen“; kein „Boston“ mehr im Dokument; Brettspiele
+  unverändert 22 Karten / 22 Spiele, insgesamt 102 Karten.
+- `spiele/wuerfelspiele/index.html`: 14 Karten, kein Boston.
+- `brettspiele/boston/boston.html` → **404**; Schach und Mahjong laden (200),
+  keine JS-Fehler.
+- `node --check` auf `spieldaten.js` und `multiplayer-register.js` grün;
+  `gofmt -l` auf beiden Go-Bäumen leer; `go build ./...` grün;
+  `go test -run 'Angebot|Tabellen|Spielzuege|Bereit|Leave|Umbenennen|Wuerfel'`
+  ok (6,0 s / 5,7 s), `go test -run 'Abrechnung'` ok (0,17 s / 0,16 s) – je
+  `connector` und `connector-online`.
+- Projektweite Textsuche nach „boston“/„Boston“ in `spiele/`: keine Treffer
+  außerhalb der Android-Bauartefakte, der Sicherung und alter Binaries.
+
+**Nicht angefasst:** die erzeugten Android-Kopien unter
+`spiele/android/app/src/main/assets/www` samt `katalog.json`
+(gitignoriert, Bauartefakt), die APKs und die Playwright-Schnappschüsse.
+
 ## 28.11.2026 · Hohe Hausnummer ersatzlos entfernt
 
 **Auftrag:** Das Würfelspiel „Hohe Hausnummer“ vollständig aus TrashyGecko

@@ -64,8 +64,6 @@ window.TGMultiplayer = {
       "text": "Sechs Würfel, Punkte sammeln und sichern – wer zuerst 10.000 hat, gewinnt." },
     { "id": "maexchen", "name": "Lügen Mäxchen", "kat": "wuerfel", "pfad": "/spiele/brettspiele/maexchen/maexchen.html", "api": "maexchen", "min": 2, "max": 6, "art": "tisch",
       "text": "Zwei verdeckte Würfel, Ansage und Zweifel – wer zu hoch lügt, verliert." },
-    { "id": "boston", "name": "Auf nach Boston", "kat": "wuerfel", "pfad": "/spiele/brettspiele/boston/boston.html", "api": "boston", "min": 2, "max": 6, "art": "tisch",
-      "text": "Boston: Würfelrunde mit Ansagen, bei der auch die Würfe der anderen zählen." },
     { "id": "chicago", "name": "Chicago", "kat": "wuerfel", "pfad": "/spiele/brettspiele/chicago/chicago.html", "api": "chicago", "min": 2, "max": 6, "art": "tisch",
       "text": "Chicago: Filze, Würfe und der beste Wurf der Runde." },
     { "id": "shipcrew", "name": "Ship Captain Crew", "kat": "wuerfel", "pfad": "/spiele/brettspiele/shipcrew/shipcrew.html", "api": "shipcrew", "min": 2, "max": 6, "art": "tisch",

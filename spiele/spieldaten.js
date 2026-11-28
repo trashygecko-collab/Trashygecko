@@ -51,7 +51,6 @@ window.TGSpieldaten = (function () {
 
     /* --- Würfelspiele -------------------------------------------------- */
     ["10.000", "brettspiele/zehntausend/zehntausend.html", "wuerfel", "lokal bot zwei bis sechs 2-6 computer", "10000 zehntausend"],
-    ["Auf nach Boston", "brettspiele/boston/boston.html", "wuerfel", "lokal zwei computer", "boston"],
     ["Chicago", "brettspiele/chicago/chicago.html", "wuerfel", "lokal zwei computer"],
     ["Kniffel", "brettspiele/kniffel/kniffel.html", "wuerfel", "lokal zwei computer", "yahtzee"],
     ["Lügen Mäxchen", "brettspiele/maexchen/maexchen.html", "wuerfel", "lokal zwei computer", "maexchen mäxchen"],
@@ -155,7 +154,6 @@ window.TGSpieldaten = (function () {
     "kartenspiele/uno/uno.html": "Farben wechseln, aussetzen und mit +2 und +4 ärgern.",
 
     "brettspiele/zehntausend/zehntausend.html": "Sechs Würfel, Punkte sichern – wer zuerst 10.000 hat.",
-    "brettspiele/boston/boston.html": "Würfelrunde mit Ansagen, auch die Würfe der anderen zählen.",
     "brettspiele/chicago/chicago.html": "Filze, Würfe und der beste Wurf der Runde.",
     "brettspiele/kniffel/kniffel.html": "Fünf Würfel, drei Würfe, 13 Kategorien.",
     "brettspiele/maexchen/maexchen.html": "Zwei verdeckte Würfel, Ansage und Zweifel.",

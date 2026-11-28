@@ -68,7 +68,6 @@ var spielApi = map[string]string{
 	"kniffel":            "kniffel",
 	"zehntausend":        "zehntausend",
 	"maexchen":           "maexchen",
-	"boston":             "boston",
 	"chicago":            "chicago",
 	"shipcrew":           "shipcrew",
 	"halma":              "halma",
@@ -139,7 +138,6 @@ var spielAnzeige = map[string]string{
 	"kniffel":            "Kniffel",
 	"zehntausend":        "10.000",
 	"maexchen":           "Lügen Mäxchen",
-	"boston":             "Auf nach Boston",
 	"chicago":            "Chicago",
 	"shipcrew":           "Ship Captain Crew",
 	"halma":              "Halma",
@@ -222,7 +220,6 @@ var tischspiel = map[string]bool{
 	"menschaerger":       true,
 	"zehntausend":        true,
 	"maexchen":           true,
-	"boston":             true,
 	"chicago":            true,
 	"shipcrew":           true,
 	"halma":              true,
@@ -379,10 +376,6 @@ func (r *Room) spielStatus(spiel string) (string, bool) {
 		}
 	case "maexchen":
 		if g := r.Maexchen; g != nil {
-			return g.Status, true
-		}
-	case "boston":
-		if g := r.Boston; g != nil {
 			return g.Status, true
 		}
 	case "chicago":
