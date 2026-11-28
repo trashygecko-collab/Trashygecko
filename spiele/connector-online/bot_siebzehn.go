@@ -78,11 +78,9 @@ func siebzehnBotAuftrag(g *SiebzehnGame) (int, string, int, bool) {
 		}
 
 	case "runde":
-		// Die Bank gibt die nächste Runde frei (oder reicht sie weiter); ist
-		// der Mensch die Bank, wartet der Bot auf dessen Klick.
-		if bankBot {
-			return g.BankSitz, "naechste", 0, true
-		}
+		// Nach der Abrechnung wartet der Bot – auch als Bank. Die nächste
+		// Runde beginnt erst, wenn ein Mensch „Nächste Runde“ drückt.
+		return 0, "", 0, false
 	}
 	return 0, "", 0, false
 }

@@ -100,9 +100,9 @@ func baccaraBotAuftrag(g *BaccaraGame) (string, int, bool) {
 		}
 
 	case "runde":
-		// Der Bot gibt die nächste Runde frei (und reicht die Bank weiter,
-		// wenn sie geschlagen wurde).
-		return "naechste", 0, true
+		// Nach der Abrechnung wartet der Bot auf einen Menschen: Die nächste
+		// Runde (oder die neue Bank) kommt erst auf Klick.
+		return "", 0, false
 	}
 	return "", 0, false
 }

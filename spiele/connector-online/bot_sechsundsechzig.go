@@ -74,8 +74,9 @@ func sechsundsechzigBotAuftrag(g *SechsundsechzigGame) (string, int, int, bool) 
 		return "spielen", karte, 0, true
 
 	case "runde":
-		// Der Bot gibt die nächste Runde frei, damit der Tisch weiterläuft.
-		return "naechste", 0, 0, true
+		// Nach der Abrechnung wartet der Bot auf einen Menschen: Die Runde
+		// beginnt erst auf „Nächste Runde“, damit das Ergebnis stehen bleibt.
+		return "", 0, 0, false
 	}
 	return "", 0, 0, false
 }

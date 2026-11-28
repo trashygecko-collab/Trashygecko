@@ -22,7 +22,6 @@ package main
 import (
 	"math/rand"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -52,26 +51,19 @@ func arschBotIstBot(g *ArschlochGame, seat int) bool {
 	return false
 }
 
-// arschBotDran sagt, ob ein Bot handeln muss: er ist am Zug oder die Runde ist
-// zu Ende und die nächste wartet.
+// arschBotDran sagt, ob ein Bot handeln muss: er ist am Zug. Nach der Runde
+// rührt er sich nicht – die Rangliste bleibt stehen, bis ein Mensch die
+// nächste Runde startet.
 func arschBotDran(g *ArschlochGame) bool {
 	if g == nil || g.Status != "active" || len(g.Bots) == 0 {
 		return false
 	}
-	if g.Phase == "between" {
-		return true
-	}
 	return g.Phase == "playing" && arschBotIstBot(g, g.Current)
 }
 
-// arschBotPause ist die Denkpause; zwischen zwei Runden doppelt so lang, damit
-// die Rangliste stehen bleibt.
+// arschBotPause ist die Denkpause zwischen zwei Zügen.
 func arschBotPause(g *ArschlochGame) time.Duration {
-	pause := botWartezeit(g.BotStufe)
-	if g.Phase == "between" {
-		pause *= 2
-	}
-	return pause
+	return botWartezeit(g.BotStufe)
 }
 
 // arschBotTreiben lässt genau einen Bot nach der Denkpause handeln. Aufgerufen
@@ -92,16 +84,8 @@ func arschBotTreiben(g *ArschlochGame, jetzt time.Time) bool {
 	return arschBotSchritt(g)
 }
 
-// arschBotSchritt macht genau einen Schritt: nächste Runde starten, Karten
-// legen oder passen.
+// arschBotSchritt macht genau einen Schritt: Karten legen oder passen.
 func arschBotSchritt(g *ArschlochGame) bool {
-	if g.Phase == "between" {
-		g.Round++
-		g.arschDeal()
-		g.BotFrist = time.Time{}
-		g.Note = "Runde " + strconv.Itoa(g.Round) + ": " + g.Note
-		return true
-	}
 	if g.Phase != "playing" {
 		return false
 	}

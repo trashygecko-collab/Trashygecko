@@ -39,8 +39,9 @@ func pokerBotAuftrag(g *PokerGame) (string, int, bool) {
 		return "", 0, false
 	}
 	if g.Runde == "showdown" {
-		// Die Bots geben die nächste Hand frei.
-		return "naechste", 0, true
+		// Nach dem Showdown wartet der Bot auf einen Menschen: Die nächste
+		// Hand kommt erst auf „Nächste Hand“, damit das Ergebnis stehen bleibt.
+		return "", 0, false
 	}
 	sitz := g.AmZug
 	if sitz < 0 || sitz >= len(g.Spieler) {

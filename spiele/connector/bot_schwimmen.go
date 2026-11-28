@@ -33,13 +33,11 @@ func schwimmBotSitz(g *SchwimmenGame) int {
 }
 
 // schwimmBotAmZug sagt, ob der Bot jetzt etwas tun muss. Zwischen den Runden
-// darf jeder die nächste anstoßen – das übernimmt der Bot nach kurzer Pause.
+// rührt er sich nicht: Die Abrechnung bleibt stehen, bis ein Mensch
+// „Nächste Runde“ drückt.
 func schwimmBotAmZug(g *SchwimmenGame, sitz int) bool {
 	if g == nil || g.Status != "active" || sitz < 0 {
 		return false
-	}
-	if g.Phase == "between" {
-		return true
 	}
 	return g.Phase == "playing" && g.Current == sitz
 }
@@ -52,11 +50,7 @@ func schwimmBotTreiben(g *SchwimmenGame, jetzt time.Time) bool {
 		return false
 	}
 	if g.BotFrist.IsZero() {
-		warte := botWartezeit(g.BotStufe)
-		if g.Phase == "between" {
-			warte *= 2
-		}
-		g.BotFrist = jetzt.Add(warte)
+		g.BotFrist = jetzt.Add(botWartezeit(g.BotStufe))
 		return false
 	}
 	if jetzt.Before(g.BotFrist) {
@@ -66,12 +60,8 @@ func schwimmBotTreiben(g *SchwimmenGame, jetzt time.Time) bool {
 	return schwimmBotSchritt(g, sitz)
 }
 
-// schwimmBotSchritt macht genau einen Schritt: nächste Runde, klopfen, tauschen
-// oder schieben.
+// schwimmBotSchritt macht genau einen Schritt: klopfen, tauschen oder schieben.
 func schwimmBotSchritt(g *SchwimmenGame, sitz int) bool {
-	if g.Phase == "between" {
-		return schwimmBotTu(g, sitz, "next", 0, 0)
-	}
 	if g.Phase != "playing" || g.Current != sitz {
 		return false
 	}
