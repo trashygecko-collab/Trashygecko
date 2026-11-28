@@ -4026,25 +4026,27 @@ function getLevelMap(levelIndex) {
     Object.freeze(schnittstelle);
   })();
   </script>
-<script data-ziel="main.cabinet > section">
-/* Einzeldatei: /spiele/zurueck.js steckt in der Datei. */
+<script data-ziel="main.cabinet >
 /*
- * TRASHYGECKO – „Zurück zum Connector“ für Einzelspieler-Spiele
+ * TRASHYGECKO – Rückweg für Spiele (zentrale Navigation)
  *
  * Eine Datei für alle Spiele: sie setzt einen kleinen Knopf in die Seite und
- * regelt die Rückkehr je nach Umgebung.
+ * führt zu der Stelle zurück, von der das Spiel gestartet wurde.
  *
- *   PC (Connector):        Das Spiel läuft im rechten Rahmen. Der Knopf meldet
- *                          sich beim Connector; der leert nur den Rahmen. Chat
- *                          und Spieleliste links bleiben, kein Neuladen.
- *   Handy / Tablet:        Das Spiel läuft im eigenen Tab. Der Knopf schließt
- *                          ihn (window.close). Verhindert der Browser das,
- *                          geht es wie bisher zurück zum Connector.
+ *   aus der Spieleübersicht  →  zurück zur Übersicht (lokal oder veröffentlicht)
+ *   aus dem Connector        →  zurück zum Connector (derselbe, mit Raum)
+ *   im Rahmen des Connectors →  der Connector leert nur den Rahmen
+ *   direkt geöffnet          →  zurück zur Spieleübersicht
+ *
+ * Die Herkunft kommt aus ?zurueck=…, sonst aus dem Referrer, sonst aus dem
+ * Rahmen. Jedes Ziel wird geprüft: nur eigene Adresse, die bekannten
+ * Projektadressen (Render, GitHub Pages) und Pfade innerhalb von /spiele.
+ * Fremde URLs werden nie übernommen.
  *
  * Einbau: eine Zeile vor </body>, Pfad je nach Tiefe der Spielseite:
  *
- *   <script src="../zurueck.js"><\/script>
- *   <script src="../../zurueck.js"><\/script>
+ *   <script src="../zurueck.js"></script>
+ *   <script src="../../zurueck.js"></script>
  *
  * Platzwahl über data-Attribute am Script-Tag (alle freiwillig):
  *
@@ -4053,12 +4055,13 @@ function getLevelMap(levelIndex) {
  *   data-anfang="1"            als erstes Kind des Behälters
  *   data-auf="karte"           als eigene Zeile oben in einer Karte
  *   data-nur="ohne-room"       nicht zeigen, wenn ?room= in der Adresse steht
- *   data-kein-knopf="1"        nur window.tgZurueck() bereitstellen
+ *   data-kein-knopf="1"        nur die Funktionen bereitstellen
  *
- * Ohne data-ziel landet der Knopf in der Titelleiste des Fensters
- * (.titelleiste), sonst fest in der Ecke oben rechts.
+ * Eigene Zurück-Links bekommen data-tg-zurueck; ihr href wird auf das
+ * berechnete Ziel gesetzt und der Klick läuft über dieselbe Logik.
  *
  * Für Spiele mit eigenem Zurück-Knopf: window.tgZurueck() aufrufen.
+ * Für eigene Verweise: window.TGNAV.zurueckZiel() / TGNAV.connectorZiel().
  */
 (function () {
     "use strict";
@@ -4068,12 +4071,12 @@ function getLevelMap(levelIndex) {
     // gar nichts tun - kein Knopf, kein window.tgZurueck.
     if (window.TMahjong) return;
 
-    // Nie zwei Knöpfe in einer Seite.
-    if (document.querySelector(".tg-zurueck")) return;
-
     const skript = document.currentScript;
     const daten = skript ? skript.dataset : {};
-    const CONNECTOR = "https://trashygecko.onrender.com/connector";
+    const ONLINE = "https://trashygecko.onrender.com";
+
+    // Nie zwei Knöpfe in einer Seite.
+    if (document.querySelector(".tg-zurueck")) return;
 
     // In einer laufenden Mehrspieler-Partie gehört das Verlassen dem Spiel.
     if (daten.nur === "ohne-room") {
@@ -4085,23 +4088,110 @@ function getLevelMap(levelIndex) {
     }
 
     // --------------------------------------------------
-    // WOHIN ZURÜCK?
+    // WOHER KAM DAS SPIEL, WOHIN GEHT ES ZURÜCK?
     // --------------------------------------------------
 
-    // Connector-Adresse: die des Tabs, der das Spiel geöffnet hat (Referrer),
-    // sonst dieselbe Herkunft wie die Seite, sonst die bekannte Online-Adresse.
-    function connectorAdresse() {
-        const herkunft = String(document.referrer || "");
+    // Die Spiele liegen unter …/spiele/…; die Übersicht ist …/spiele/spiele.html.
+    function spieleWurzel() {
+        const pfad = location.pathname;
+        const i = pfad.toLowerCase().indexOf("/spiele/");
 
-        if (/\/connector(?:[/?#]|$)/.test(herkunft)) {
-            return herkunft.replace(/[?#].*$/, "");
+        if (i >= 0) return location.origin + pfad.slice(0, i + "/spiele/".length);
+        if (/\/spiele\/?$/.test(pfad)) return location.origin + pfad.replace(/\/?$/, "/");
+
+        // file:// oder ein einzelner Ordner: von der Seite aus eine Ebene hoch.
+        try {
+            return new URL("./", new URL(".", location.href)).href;
+        } catch (fehler) {
+            return location.href.replace(/[^/]*$/, "");
+        }
+    }
+
+    function uebersichtZiel() {
+        try {
+            return new URL("spiele.html", spieleWurzel()).href;
+        } catch (fehler) {
+            return null;
+        }
+    }
+
+    // Der Connector braucht einen Server. Auf GitHub Pages liegt nur die
+    // statische Seite, dort gilt die laufende Adresse; im APK (file://) ebenso.
+    function connectorZiel() {
+        if (location.protocol === "file:") return ONLINE + "/connector";
+        if (/\.github\.io$/.test(location.hostname)) return ONLINE + "/connector";
+        if (location.protocol !== "http:" && location.protocol !== "https:") return ONLINE + "/connector";
+
+        try {
+            return new URL("connector/connector.html", spieleWurzel()).href;
+        } catch (fehler) {
+            return ONLINE + "/connector";
+        }
+    }
+
+    // Nur eigene und bekannte Projektziele, nur innerhalb der Spiele/Connector.
+    function geprueft(ziel) {
+        if (!ziel) return null;
+
+        let u;
+
+        try {
+            u = new URL(String(ziel), location.href);
+        } catch (fehler) {
+            return null;
         }
 
-        if (location.protocol === "http:" || location.protocol === "https:") {
-            return location.origin + "/connector";
+        if (u.protocol === "file:") {
+            if (location.protocol !== "file:") return null;
+
+            return /\/spiele\//i.test(u.pathname) || /\/spiele$/i.test(u.pathname) ? u.href : null;
         }
 
-        return CONNECTOR;
+        if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+        // Kein Sprung in einen fremden Host, auch nicht mit gültigem Pfad.
+        const eigen = u.origin === location.origin;
+        const render = u.hostname === "trashygecko.onrender.com";
+        const pages = u.hostname === "trashygecko-collab.github.io" && /^\/Trashygecko\//i.test(u.pathname);
+
+        if (!eigen && !render && !pages) return null;
+        // Und nur in Bereiche, die zum Projekt gehören (kein /admin usw.).
+        if (!/\/spiele(\/|$)/i.test(u.pathname) && !/\/connector(\/|\.html|$)/i.test(u.pathname)) return null;
+
+        return u.href;
+    }
+
+    function herkunft() {
+        // 1. Ausdrücklich übergeben (?zurueck=…).
+        let ausAdresse = null;
+
+        try {
+            ausAdresse = geprueft(new URLSearchParams(location.search).get("zurueck"));
+        } catch (fehler) {
+            ausAdresse = null;
+        }
+
+        if (ausAdresse) return ausAdresse;
+
+        // 2. Der Referrer sagt, welche Seite das Spiel geöffnet hat.
+        const referrer = geprueft(document.referrer);
+
+        if (referrer) return referrer;
+
+        // 3. Im Rahmen des Connectors: dort bleibt der Rahmen, kein Seitenwechsel.
+        if (imRahmen()) return "rahmen";
+
+        // 4. Direkt geöffnet: zurück zur Spieleübersicht.
+        return uebersichtZiel();
+    }
+
+    function istConnector(ziel) {
+        if (ziel === "rahmen") return true;
+
+        try {
+            return /\/connector(?:[/?#.]|$)/i.test(new URL(ziel, location.href).pathname);
+        } catch (fehler) {
+            return false;
+        }
     }
 
     function imRahmen() {
@@ -4113,8 +4203,15 @@ function getLevelMap(levelIndex) {
         }
     }
 
+    // --------------------------------------------------
+    // ZURÜCK
+    // --------------------------------------------------
+
     function zurueck() {
-        // PC: nur den rechten Rahmen schließen. Der Connector hört zu.
+        const ziel = herkunft();
+
+        // PC/Handy im Connector: nur den rechten Rahmen schließen. Der
+        // Connector hört zu und leert ihn; Chat und Liste bleiben stehen.
         if (imRahmen()) {
             try {
                 window.parent.postMessage(
@@ -4140,16 +4237,63 @@ function getLevelMap(levelIndex) {
 
         if (zu) return;
 
-        // Der Browser lässt das Schließen nicht zu: zurück zum Connector,
-        // ohne den Tab dahinter (die Homepage) anzufassen.
+        // Der Browser lässt das Schließen nicht zu: zum tatsächlichen
+        // Herkunftsziel. replace statt href – der Verlauf bleibt sauber.
+        const adresse = ziel === "rahmen" ? connectorZiel() : ziel;
+
         setTimeout(function () {
             try {
-                if (!window.closed) location.href = connectorAdresse();
+                if (!window.closed && adresse) location.replace(adresse);
             } catch (fehler) {
-                location.href = CONNECTOR;
+                // Dann bleibt nur der Connector als letzter Ausweg.
+                location.replace(connectorZiel());
             }
         }, 60);
     }
+
+    // Eigene Zurück-Links ([data-tg-zurueck]) versorgen: href richtig setzen,
+    // Klick über dieselbe Logik (im Rahmen also ohne Seitenwechsel).
+    function verweiseVersorgen() {
+        const ziel = herkunft();
+        const adresse = ziel === "rahmen" ? connectorZiel() : ziel;
+        const liste = document.querySelectorAll("[data-tg-zurueck]");
+
+        for (let i = 0; i < liste.length; i++) {
+            const a = liste[i];
+
+            if (adresse) a.setAttribute("href", adresse);
+            if (a.dataset.tgText === "connector" || !a.dataset.tgText) {
+                if (a.dataset.tgText === "connector") a.textContent = istConnector(ziel) ? "Zurück zum Connector" : "Zurück zur Spieleübersicht";
+            }
+            if (!a.__tgZurueck) {
+                a.__tgZurueck = true;
+                a.addEventListener("click", function (ereignis) {
+                    // Neuer Tab / eigenes Fenster: normaler Link.
+                    if (ereignis.metaKey || ereignis.ctrlKey || ereignis.shiftKey || a.target === "_blank") return;
+
+                    ereignis.preventDefault();
+                    zurueck();
+                });
+            }
+        }
+    }
+
+    window.tgZurueck = zurueck;
+    window.TGNAV = {
+        zurueckZiel: function () {
+            const ziel = herkunft();
+
+            return ziel === "rahmen" ? connectorZiel() : ziel;
+        },
+        connectorZiel: connectorZiel,
+        uebersichtZiel: uebersichtZiel,
+        herkunft: function () {
+            const ziel = herkunft();
+
+            return ziel === "rahmen" ? "connector" : istConnector(ziel) ? "connector" : "uebersicht";
+        },
+        geprueft: geprueft
+    };
 
     // --------------------------------------------------
     // AUSSEHEN
@@ -4220,29 +4364,33 @@ function getLevelMap(levelIndex) {
 
     function knopfEinsetzen() {
         const knopf = document.createElement("button");
+        const ziel = herkunft();
+        const zumConnector = istConnector(ziel);
 
         knopf.type = "button";
         knopf.className = "tg-zurueck";
         knopf.id = "tgZurueck";
-        knopf.textContent = "Zurück zum Connector";
-        knopf.title = "Spiel schließen und zurück zum Connector";
+        knopf.textContent = zumConnector ? "Zurück zum Connector" : "Zurück zur Spieleübersicht";
+        knopf.title = zumConnector
+            ? "Spiel schließen und zurück zum Connector"
+            : "Spiel schließen und zurück zur Spieleübersicht";
         knopf.addEventListener("click", zurueck);
 
-        const ziel = daten.ziel ? document.querySelector(daten.ziel) : null;
+        const zielBehaelter = daten.ziel ? document.querySelector(daten.ziel) : null;
         const vor = daten.vor ? document.querySelector(daten.vor) : null;
         const leiste = document.querySelector(".titelleiste");
 
         // 1. Ausdrücklich genannter Behälter.
-        if (ziel) {
+        if (zielBehaelter) {
             if (daten.anfang === "1") {
-                ziel.insertBefore(knopf, ziel.firstChild);
+                zielBehaelter.insertBefore(knopf, zielBehaelter.firstChild);
                 if (daten.auf === "karte") knopf.classList.add("tg-zurueck--karte");
-            } else if (vor && vor.parentElement === ziel) {
-                ziel.insertBefore(knopf, vor);
-                if (istReihe(ziel)) knopf.classList.add("tg-zurueck--rechts");
+            } else if (vor && vor.parentElement === zielBehaelter) {
+                zielBehaelter.insertBefore(knopf, vor);
+                if (istReihe(zielBehaelter)) knopf.classList.add("tg-zurueck--rechts");
             } else {
-                ziel.appendChild(knopf);
-                if (istReihe(ziel)) knopf.classList.add("tg-zurueck--rechts");
+                zielBehaelter.appendChild(knopf);
+                if (istReihe(zielBehaelter)) knopf.classList.add("tg-zurueck--rechts");
             }
 
             return;
@@ -4287,8 +4435,10 @@ function getLevelMap(levelIndex) {
     // Spiele mit eigenem Zurück-Knopf (Mahjong, Tetris) rufen das hier auf.
     window.tgZurueck = zurueck;
 
-    // data-kein-knopf="1": nur die Funktion bereitstellen, nichts einbauen.
+    // data-kein-knopf="1": nur die Funktionen bereitstellen, nichts einbauen.
     function start() {
+        verweiseVersorgen();
+
         if (daten.keinKnopf === "1") return;
 
         stilEinsetzen();
@@ -4300,6 +4450,9 @@ function getLevelMap(levelIndex) {
     } else {
         start();
     }
+
+    // Später eingebaute Verweise (Spiele bauen ihre Oberfläche selbst).
+    document.addEventListener("DOMContentLoaded", verweiseVersorgen);
 })();
 </script>
 </body>

@@ -1,679 +1,1539 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-stil="normal">
 <head>
-<script src="../token.js"></script>
-<script src="../stil.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#102b27">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#102b27" id="themeFarbe">
 <title>Malen – TrashyGecko</title>
+<link rel="stylesheet" href="../schrift.css">
 <style>
-:root{
-  --table-dark:#102b27;
-  --table-light:#1b4038;
-  --gold:#d5b36a;
-  --ivory:#f5edda;
-  --muted:#b7c8bd;
-  --teal:#d9bc7c;
-}
+/* =========================================================================
+   MALEN – eigenständige Malfläche
+   Drei Welten: Normal (Atelier), Mädchen (Papierwerkstatt), Buben (Neon-Labor)
+   Die Leinwand bleibt in allen Welten weiß und ruhig; Stil zeigt sich in
+   Rahmen, Werkzeugen, Typografie und Flächen – nie in der Zeichenfarbe.
+   ========================================================================= */
 *{box-sizing:border-box}
+html,body{height:100%;margin:0}
+html{background:#0b211d}
 body{
-  margin:0;
-  min-height:100vh;
-  color:var(--ivory);
+  color:var(--ink);
   font-family:var(--tg-schrift);
-  background:radial-gradient(ellipse at center,#244b40 0%,#102b27 75%);
-}
-button{font:inherit;cursor:pointer}
-.seite{
-  width:min(1000px,96%);
-  margin:0 auto;
-  padding:12px 14px 16px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.kopf{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  padding-bottom:10px;
-  border-bottom:1px solid rgba(213,179,106,.4);
-}
-.kopf h1{
-  margin:0;
-  color:var(--gold);
-  font-size:clamp(18px,3vw,26px);
-  letter-spacing:3px;
-}
-.kopf p{margin:4px 0 0;font-size:12px;color:var(--muted);letter-spacing:1px}
-.kopf-knoepfe{display:flex;gap:8px;flex-wrap:wrap}
-.knopf{
-  padding:10px 14px;
-  color:var(--ivory);
-  background:linear-gradient(180deg,#315b4c,#1b4038);
-  border:1px solid var(--gold);
-  border-radius:7px;
-  font-size:12px;
-  font-weight:bold;
-  letter-spacing:1px;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-}
-.knopf:hover{background:#426e59}
-.werkzeug{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  padding:10px 12px;
-  background:rgba(0,0,0,.17);
-  border:1px solid rgba(213,179,106,.2);
-  border-radius:12px;
-}
-.farben{display:flex;gap:7px;flex-wrap:wrap}
-.farbe{
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  border:3px solid #3d4a45;
-  padding:0;
-  background:#fff;
-}
-.farbe.aktiv{border-color:var(--teal);box-shadow:0 0 10px #4df5c288}
-.hinweis{margin:0;font-size:12px;color:var(--muted)}
-.farbkreis{
-  width:44px;
-  height:44px;
-  flex:0 0 auto;
-  padding:3px;
-  border:3px solid #3d4a45;
-  border-radius:50%;
-  background:conic-gradient(#e53935,#fbc02d,#43a047,#1e88e5,#8e24aa,#e53935);
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-}
-.farbkreis:hover{border-color:var(--teal)}
-.farbkreis input{
-  width:100%;
-  height:100%;
-  padding:0;
-  border:none;
-  border-radius:50%;
-  background:transparent;
-  cursor:pointer;
-  appearance:none;
-  -webkit-appearance:none;
-}
-.farbkreis input::-webkit-color-swatch-wrapper{padding:0}
-.farbkreis input::-webkit-color-swatch{border:none;border-radius:50%}
-.farbkreis input::-moz-color-swatch{border:none;border-radius:50%}
-.knopf.aktiv{
-  background:linear-gradient(180deg,#e8cd8e,#a8873f);
-  border-color:var(--teal);
-  color:#102b27;
-}
-.staerke{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  font-size:11px;
-  letter-spacing:1px;
-  color:var(--muted);
-}
-.staerke input[type=range]{width:120px;accent-color:var(--teal)}
-.staerke output{min-width:16px;color:var(--ivory);font-weight:bold;letter-spacing:0}
-.felder{position:absolute;inset:0;pointer-events:none}
-.felder i{position:absolute;background:rgba(120,112,96,.3)}
-#gitterX{top:0;bottom:0;width:1.5px}
-#gitterY{left:0;right:0;height:1.5px}
-.flaeche{
-  position:relative;
-  background:#fff;
-  border:2px solid rgba(213,179,106,.65);
-  border-radius:12px;
   overflow:hidden;
-  box-shadow:inset 0 0 0 1px #0002;
+  background:var(--seiten-grund);
+  -webkit-tap-highlight-color:transparent;
 }
-canvas{
-  display:block;
-  width:100%;
-  height:auto;
-  aspect-ratio:210 / 297;
-  touch-action:none;
-  cursor:crosshair;
-  background:#fff;
+button,input,select{font:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+
+:root{
+  --seiten-grund:radial-gradient(ellipse at 50% 0%,#285145 0%,#102b27 58%,#081713 100%);
+  --panel:rgba(10,31,26,.9);
+  --panel-2:rgba(21,56,47,.82);
+  --panel-3:rgba(4,17,13,.5);
+  --ink:#f6efdd;
+  --muted:#b8c9bd;
+  --accent:#e0bd76;
+  --accent-ink:#1b1206;
+  --accent-2:#79d8bd;
+  --line:rgba(224,189,118,.36);
+  --line-2:rgba(255,255,255,.09);
+  --danger:#ff8a7a;
+  --radius:13px;
+  --radius-klein:8px;
+  --schatten:0 20px 60px rgba(0,0,0,.38);
+  --titel-schrift:"Georgia","Times New Roman",serif;
+  --leisten-hoehe:60px;
+  --werkzeug-breite:304px;
 }
-.status{margin:0;font-size:12px;color:var(--gold)}
-/* Leere Statuszeile nimmt keinen Platz weg. */
-.status:empty{display:none}
-/* ZURÜCKSETZEN und SPIELE sitzen in der Werkzeugleiste, damit oben keine
-   eigene Kopfzeile nötig ist. */
-.kopf-rechts{margin-left:auto;display:flex;gap:8px;align-items:center}
-.knopf-klein{padding:7px 10px;font-size:11px}
-/* Die Fläche wird so groß wie möglich: ihre Breite setzt das Skript so,
-   dass das Quadrat immer in den Bildschirm passt. Deshalb nicht strecken. */
-.flaeche{align-self:center}
-/* Vollbild: Werkzeugleiste und Fläche füllen den ganzen Schirm. */
-.seite:fullscreen{
-  width:100%;max-width:none;height:100vh;
-  padding:8px 10px 10px;gap:8px;
-  background:radial-gradient(ellipse at center,#244b40 0%,#102b27 75%);
+html[data-stil="normal"]{--seiten-grund:radial-gradient(ellipse at 50% 0%,#2d5a4c 0%,#102b27 58%,#071511 100%)}
+html[data-stil="normal"] body{background:var(--seiten-grund)}
+html[data-stil="normal"] .leiste{
+  background:linear-gradient(180deg,rgba(19,50,42,.96),rgba(8,27,22,.92));
+  border-bottom-color:rgba(224,189,118,.38);
 }
-.seite:-webkit-full-screen{
-  width:100%;max-width:none;height:100vh;padding:8px 10px 10px;
+html[data-stil="normal"] .werkzeuge{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 26%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 7px),
+    var(--panel);
+  border-color:var(--line);
 }
-/* Kleine Anzeige über dem Brett: Pinsel (mit Farbe) oder Radierer.
-   Sie lässt Klicks durch und stört beim Malen nicht. */
+html[data-stil="normal"] .leinwandRahmen{
+  background:
+    radial-gradient(ellipse at 50% 36%,rgba(118,193,165,.17),transparent 62%),
+    linear-gradient(180deg,rgba(255,255,255,.035),rgba(0,0,0,.12));
+}
+
+/* ---- Mädchen: Papierwerkstatt ------------------------------------------ */
+html[data-stil="maedchen"]{
+  --seiten-grund:
+    radial-gradient(circle at 13% 18%,rgba(255,255,255,.75),transparent 24%),
+    radial-gradient(circle at 88% 7%,rgba(255,218,234,.72),transparent 27%),
+    repeating-linear-gradient(135deg,rgba(190,82,127,.045) 0 2px,transparent 2px 18px),
+    linear-gradient(160deg,#fff8fb 0%,#fbe6ef 42%,#f3c9dc 100%);
+  --panel:rgba(255,249,252,.94);
+  --panel-2:rgba(255,231,241,.9);
+  --panel-3:rgba(255,255,255,.52);
+  --ink:#45152c;
+  --muted:#88506a;
+  --accent:#cf3d7e;
+  --accent-ink:#fff8fb;
+  --accent-2:#a45ad6;
+  --line:rgba(207,61,126,.34);
+  --line-2:rgba(111,40,74,.13);
+  --danger:#b4234b;
+  --radius:22px;
+  --radius-klein:14px;
+  --schatten:0 18px 42px rgba(133,55,91,.18);
+  --titel-schrift:"Georgia","Times New Roman",serif;
+}
+html[data-stil="maedchen"] body{background:var(--seiten-grund)}
+html[data-stil="maedchen"] .leiste{
+  background:linear-gradient(180deg,rgba(255,252,254,.96),rgba(255,235,244,.93));
+  border-bottom-color:rgba(207,61,126,.25);
+  box-shadow:0 4px 20px rgba(151,70,105,.08);
+}
+html[data-stil="maedchen"] .marke-zeichen{
+  background:linear-gradient(145deg,#ffabc9,#e65b95 62%,#c83273);
+  color:#fffafd;
+  box-shadow:0 6px 14px rgba(190,58,112,.28);
+}
+html[data-stil="maedchen"] .werkzeuge{
+  background:
+    radial-gradient(circle at 12% 4%,rgba(255,255,255,.9),transparent 30%),
+    repeating-linear-gradient(0deg,rgba(207,61,126,.045) 0 1px,transparent 1px 22px),
+    var(--panel);
+  border:2px dashed rgba(207,61,126,.32);
+  box-shadow:var(--schatten);
+}
+html[data-stil="maedchen"] .werkzeuge::before{
+  content:"♡";
+  position:absolute;right:15px;top:9px;
+  color:rgba(207,61,126,.28);font-size:28px;line-height:1;
+  pointer-events:none;
+}
+html[data-stil="maedchen"] .leinwandRahmen{
+  background:
+    radial-gradient(circle at 14% 12%,rgba(255,255,255,.8),transparent 22%),
+    radial-gradient(circle at 86% 88%,rgba(255,203,225,.6),transparent 26%),
+    linear-gradient(145deg,rgba(255,255,255,.55),rgba(250,210,228,.62));
+  border:1px solid rgba(207,61,126,.22);
+}
+html[data-stil="maedchen"] .papier{
+  padding:9px;
+  background:linear-gradient(145deg,#fffdfd,#fff0f6);
+  border:1px solid rgba(207,61,126,.28);
+  box-shadow:0 16px 34px rgba(146,47,90,.22);
+}
+html[data-stil="maedchen"] .papier::before,
+html[data-stil="maedchen"] .papier::after{
+  content:"";
+  position:absolute;z-index:4;width:58px;height:19px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.62) 0 5px,rgba(244,166,199,.72) 5px 10px);
+  border:1px solid rgba(255,255,255,.62);
+  opacity:.86;pointer-events:none;
+}
+html[data-stil="maedchen"] .papier::before{left:-18px;top:17px;transform:rotate(-39deg)}
+html[data-stil="maedchen"] .papier::after{right:-17px;bottom:17px;transform:rotate(-39deg)}
+html[data-stil="maedchen"] .brett-kopf h2{font-style:italic}
+html[data-stil="maedchen"] .knopf{box-shadow:0 4px 10px rgba(151,61,101,.09)}
+html[data-stil="maedchen"] .knopf.haupt{background:linear-gradient(180deg,#ec72a7,#cf3d7e);color:#fffafd;border-color:#cf3d7e}
+html[data-stil="maedchen"] .knopf.haupt:hover{background:linear-gradient(180deg,#f184b4,#d94b8b)}
+html[data-stil="maedchen"] .farbe{border-radius:50%;border-width:2px;box-shadow:0 2px 6px rgba(116,42,76,.13)}
+html[data-stil="maedchen"] .farbe.aktiv{box-shadow:0 0 0 4px rgba(207,61,126,.16),0 0 0 2px #fff}
+html[data-stil="maedchen"] .start-held{background:rgba(255,251,253,.67);border:1px solid rgba(207,61,126,.18);box-shadow:0 22px 60px rgba(139,46,88,.12)}
+html[data-stil="maedchen"] .modus-karte{background:linear-gradient(150deg,#fffdfd,#fff0f6)}
+html[data-stil="maedchen"] .modus-karte::after{content:"✿";position:absolute;right:15px;top:12px;color:rgba(207,61,126,.32);font-size:20px}
+html[data-stil="maedchen"] .start-kicker{color:#a72e64}
+html[data-stil="maedchen"] .start-held h2{color:#7b1d4a;font-style:italic}
+html[data-stil="maedchen"] .stil-karte{background:linear-gradient(160deg,#fffdfd,#ffe9f2)}
+html[data-stil="maedchen"] .stil-karte.aktiv{border-color:#cf3d7e;box-shadow:0 0 0 3px rgba(207,61,126,.14)}
+html[data-stil="maedchen"] .dialog-panel{background:linear-gradient(160deg,#fffdfd,#fff0f6);border-color:rgba(207,61,126,.3)}
+html[data-stil="maedchen"] .status{color:#7d3558}
+
+/* ---- Buben: Neon-Labor ------------------------------------------------- */
+html[data-stil="buben"]{
+  --seiten-grund:
+    linear-gradient(rgba(56,232,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(56,232,255,.035) 1px,transparent 1px),
+    radial-gradient(ellipse at 76% 0%,rgba(18,80,87,.45),transparent 43%),
+    radial-gradient(ellipse at 12% 100%,rgba(58,54,16,.2),transparent 42%),
+    linear-gradient(150deg,#0a1218 0%,#05090d 58%,#020406 100%);
+  --panel:rgba(9,18,24,.94);
+  --panel-2:rgba(17,34,43,.92);
+  --panel-3:rgba(1,5,7,.72);
+  --ink:#e8f7ff;
+  --muted:#8fa7b6;
+  --accent:#c8ff3d;
+  --accent-ink:#101603;
+  --accent-2:#38e8ff;
+  --line:rgba(56,232,255,.34);
+  --line-2:rgba(200,255,61,.14);
+  --danger:#ff5d6c;
+  --radius:3px;
+  --radius-klein:2px;
+  --schatten:0 22px 58px rgba(0,0,0,.62);
+  --titel-schrift:"Consolas","Courier New",monospace;
+}
+html[data-stil="buben"] body{background:var(--seiten-grund);background-size:34px 34px,34px 34px,auto,auto,auto}
+html[data-stil="buben"] .leiste{
+  background:linear-gradient(180deg,rgba(9,20,27,.97),rgba(4,10,14,.94));
+  border-bottom:1px solid #1d4653;
+  box-shadow:0 1px 0 rgba(56,232,255,.16),0 8px 30px rgba(0,0,0,.45);
+}
+html[data-stil="buben"] .marke-zeichen{
+  border-radius:0;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(145deg,#c8ff3d,#3b7300);
+  color:#061006;
+  box-shadow:0 0 18px rgba(200,255,61,.34);
+}
+html[data-stil="buben"] .marke h1{
+  color:#c8ff3d;letter-spacing:.14em;text-transform:uppercase;
+  text-shadow:0 0 16px rgba(200,255,61,.22);
+}
+html[data-stil="buben"] .werkzeuge{
+  background:
+    linear-gradient(135deg,rgba(200,255,61,.035),transparent 32%),
+    repeating-linear-gradient(135deg,rgba(56,232,255,.035) 0 1px,transparent 1px 9px),
+    var(--panel);
+  border:1px solid #1c4652;
+  border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 17px) 0,100% 17px,100% 100%,17px 100%,0 calc(100% - 17px));
+  box-shadow:inset 0 1px 0 rgba(56,232,255,.14),var(--schatten);
+}
+html[data-stil="buben"] .werkzeug-gruppe{border-bottom-color:rgba(56,232,255,.18)}
+html[data-stil="buben"] .gruppe-kopf h2,
+html[data-stil="buben"] .brett-kopf h2{color:#38e8ff;letter-spacing:.12em;text-transform:uppercase;font-size:11px}
+html[data-stil="buben"] .leinwandRahmen{
+  background:
+    linear-gradient(90deg,rgba(56,232,255,.05) 1px,transparent 1px),
+    linear-gradient(rgba(56,232,255,.05) 1px,transparent 1px),
+    radial-gradient(ellipse at 50% 45%,rgba(27,88,99,.22),transparent 58%),
+    rgba(2,8,11,.72);
+  background-size:26px 26px,26px 26px,auto,auto;
+  border:1px solid #173b46;
+  border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+}
+html[data-stil="buben"] .papier{
+  padding:5px;
+  background:linear-gradient(145deg,#14262e,#071014);
+  border:1px solid #2a6575;
+  border-radius:0;
+  box-shadow:0 0 0 1px rgba(200,255,61,.15),0 18px 44px rgba(0,0,0,.64);
+}
+html[data-stil="buben"] .papier::before,
+html[data-stil="buben"] .papier::after{
+  content:"";position:absolute;width:23px;height:23px;z-index:4;pointer-events:none;
+}
+html[data-stil="buben"] .papier::before{left:-1px;top:-1px;border-left:3px solid #c8ff3d;border-top:3px solid #c8ff3d}
+html[data-stil="buben"] .papier::after{right:-1px;bottom:-1px;border-right:3px solid #38e8ff;border-bottom:3px solid #38e8ff}
+html[data-stil="buben"] .knopf{
+  border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  border-color:#28515e;
+  background:linear-gradient(180deg,#132832,#0a161c);
+}
+html[data-stil="buben"] .knopf:hover{border-color:#38e8ff;background:#17313b}
+html[data-stil="buben"] .knopf.haupt{
+  background:linear-gradient(180deg,#d7ff69,#9dcc16);
+  color:#0c1503;border-color:#c8ff3d;
+  box-shadow:0 0 16px rgba(200,255,61,.2);
+}
+html[data-stil="buben"] .knopf.haupt:hover{background:#e4ff8e}
+html[data-stil="buben"] .farbe{border-radius:0;border-width:2px;border-color:#33515c}
+html[data-stil="buben"] .farbe.aktiv{border-color:#c8ff3d;box-shadow:0 0 0 2px #0a1115,0 0 12px rgba(200,255,61,.35)}
+html[data-stil="buben"] .start-held{
+  background:linear-gradient(155deg,rgba(12,25,32,.92),rgba(3,8,11,.9));
+  border:1px solid #1d4753;border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 26px) 0,100% 26px,100% 100%,26px 100%,0 calc(100% - 26px));
+  box-shadow:inset 0 1px 0 rgba(56,232,255,.16),var(--schatten);
+}
+html[data-stil="buben"] .modus-karte{
+  border-radius:0;border-color:#21434e;
+  background:linear-gradient(155deg,#0d1b22,#071014);
+}
+html[data-stil="buben"] .modus-karte:hover{border-color:#38e8ff;box-shadow:0 0 0 1px rgba(56,232,255,.18),0 12px 30px rgba(0,0,0,.45)}
+html[data-stil="buben"] .modus-karte::after{content:"//";position:absolute;right:16px;top:12px;color:rgba(56,232,255,.35);font-family:Consolas,monospace;font-size:18px}
+html[data-stil="buben"] .start-kicker{color:#38e8ff}
+html[data-stil="buben"] .start-held h2{color:#e9fbff;text-transform:uppercase;letter-spacing:.08em}
+html[data-stil="buben"] .stil-karte{border-radius:0;background:linear-gradient(155deg,#0d1b22,#071014)}
+html[data-stil="buben"] .stil-karte.aktiv{border-color:#c8ff3d;box-shadow:0 0 0 1px rgba(200,255,61,.25),0 0 20px rgba(200,255,61,.1)}
+html[data-stil="buben"] .dialog-panel{border-radius:0;background:linear-gradient(160deg,#0d1c23,#050b0e);border-color:#28515e;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+html[data-stil="buben"] .status{color:#c8ff3d}
+html[data-stil="buben"] .verbindung{box-shadow:inset 0 0 0 1px rgba(56,232,255,.1)}
+
+/* ---- Grundgerüst -------------------------------------------------------- */
+#app{
+  height:100vh;height:100dvh;
+  display:flex;flex-direction:column;
+  min-height:0;
+}
+.leiste{
+  flex:0 0 auto;
+  min-height:var(--leisten-hoehe);
+  padding:8px 14px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border-bottom:1px solid var(--line);
+  position:relative;z-index:10;
+}
+.marke{display:flex;align-items:center;gap:11px;min-width:0}
+.marke-zeichen{
+  width:38px;height:38px;flex:0 0 auto;border-radius:11px;
+  display:grid;place-items:center;
+  background:linear-gradient(145deg,#edcf93,#b58a3f);
+  color:#17342b;box-shadow:0 4px 14px rgba(0,0,0,.24);
+}
+.marke-zeichen svg{width:23px;height:23px;display:block}
+.marke-text{min-width:0}
+.marke h1{
+  margin:0;font-family:var(--titel-schrift);font-size:24px;line-height:1;
+  letter-spacing:.06em;color:var(--accent);white-space:nowrap;
+}
+.marke p{
+  margin:4px 0 0;font-size:10.5px;line-height:1.1;color:var(--muted);
+  letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;
+}
+.leiste-rechts{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:0}
+.verbindung{
+  display:inline-flex;align-items:center;gap:6px;
+  min-height:30px;padding:5px 9px;border-radius:999px;
+  border:1px solid var(--line-2);background:var(--panel-3);
+  color:var(--muted);font-size:11px;white-space:nowrap;
+}
+.verbindung i{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:0 0 auto;box-shadow:0 0 0 2px rgba(0,0,0,.16)}
+.verbindung[data-zustand="ok"]{color:#bff4d8;border-color:rgba(80,220,150,.36)}
+.verbindung[data-zustand="ok"] i{background:#48e69b;box-shadow:0 0 8px rgba(72,230,155,.6)}
+.verbindung[data-zustand="wartet"]{color:#ffe0a3;border-color:rgba(255,190,80,.42)}
+.verbindung[data-zustand="wartet"] i{background:#ffc14d;animation:pulst 1.1s ease-in-out infinite}
+.verbindung[data-zustand="fehler"]{color:#ffc0bb;border-color:rgba(255,100,90,.46)}
+.verbindung[data-zustand="fehler"] i{background:#ff665a;box-shadow:0 0 8px rgba(255,90,80,.55)}
+.verbindung[data-zustand="offline"]{color:var(--muted)}
+@keyframes pulst{50%{opacity:.35}}
+.modus-pille{
+  display:inline-flex;align-items:center;min-height:30px;padding:5px 9px;
+  border:1px solid var(--line);border-radius:999px;color:var(--accent);
+  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  background:var(--panel-3);white-space:nowrap;
+}
+html[data-stil="buben"] .modus-pille,html[data-stil="buben"] .verbindung{border-radius:0}
+.knopf{
+  min-height:34px;padding:7px 11px;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  color:var(--ink);
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius-klein);
+  font-size:11px;font-weight:700;letter-spacing:.045em;
+  text-decoration:none;white-space:nowrap;
+  transition:background .14s,border-color .14s,color .14s,transform .1s;
+}
+.knopf:hover{background:var(--panel);border-color:var(--accent)}
+.knopf:active{transform:translateY(1px)}
+.knopf.haupt{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.knopf.haupt:hover{filter:brightness(1.06)}
+.knopf.gefahr{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent)}
+.knopf:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.knopf.icon{padding:7px 9px;min-width:34px}
+.knopf .vb-symbol{font-size:15px;line-height:1}
+.knopf kbd{font:inherit;font-size:9px;opacity:.66;font-weight:400;letter-spacing:0}
+:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+
+.buehne{flex:1;min-height:0;display:flex;position:relative}
+.start{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  display:grid;place-items:center;padding:22px 18px 26px;
+}
+.start-held{
+  width:min(980px,100%);
+  padding:28px 30px 24px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--panel);
+  box-shadow:var(--schatten);
+}
+.start-kicker{
+  margin:0 0 8px;color:var(--accent);font-size:11px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;
+}
+.start-held h2{
+  margin:0;font-family:var(--titel-schrift);
+  font-size:clamp(30px,4.7vw,52px);line-height:1.04;letter-spacing:-.01em;
+}
+.start-text{margin:10px 0 22px;color:var(--muted);font-size:14px;line-height:1.55;max-width:620px}
+.modus-wahl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin-bottom:22px}
+.modus-karte{
+  position:relative;text-align:left;color:var(--ink);
+  min-height:140px;padding:19px 18px 17px;
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--panel-2);
+  box-shadow:0 8px 24px rgba(0,0,0,.1);
+  transition:transform .15s,border-color .15s,box-shadow .15s;
+  overflow:hidden;
+}
+.modus-karte:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.2)}
+.modus-karte .modus-symbol{
+  width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+  margin-bottom:12px;background:var(--panel-3);border:1px solid var(--line-2);
+  color:var(--accent);
+}
+.modus-karte .modus-symbol svg{width:25px;height:25px}
+.modus-karte h3{margin:0 0 5px;font-family:var(--titel-schrift);font-size:22px;line-height:1.1}
+.modus-karte p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45;max-width:360px}
+.modus-karte .modus-fuss{
+  display:inline-flex;align-items:center;gap:5px;margin-top:12px;
+  color:var(--accent);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+}
+html[data-stil="buben"] .modus-karte .modus-symbol{border-radius:0}
+.stil-block{
+  padding-top:19px;border-top:1px solid var(--line-2);
+}
+.stil-kopf{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.stil-kopf h3{margin:0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.stil-kopf p{margin:0;color:var(--muted);font-size:11.5px}
+.stil-wahl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.stil-karte{
+  display:flex;align-items:center;gap:10px;text-align:left;
+  min-height:61px;padding:8px 10px;
+  color:var(--ink);background:var(--panel-2);
+  border:1px solid var(--line-2);border-radius:var(--radius-klein);
+  transition:border-color .14s,background .14s,box-shadow .14s;
+}
+.stil-karte:hover{border-color:var(--accent)}
+.stil-karte.aktiv{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent)}
+.stil-vorschau{
+  width:49px;height:43px;flex:0 0 auto;border-radius:8px;position:relative;overflow:hidden;
+  border:1px solid rgba(0,0,0,.18);background:#173b33;
+}
+.stil-vorschau::before{content:"";position:absolute;left:7px;right:7px;bottom:7px;height:23px;background:#fff;border-radius:2px;transform:rotate(-5deg);box-shadow:0 2px 5px rgba(0,0,0,.22)}
+.stil-vorschau::after{content:"";position:absolute;left:12px;bottom:14px;width:23px;height:3px;border-radius:9px;background:#cf3d7e;transform:rotate(-18deg);box-shadow:0 6px 0 #2c8cd1}
+.stil-karte[data-stil="normal"] .stil-vorschau{background:radial-gradient(circle at 30% 25%,#365f51,#102b27)}
+.stil-karte[data-stil="maedchen"] .stil-vorschau{background:repeating-linear-gradient(135deg,#ffe8f1 0 5px,#f7cadd 5px 10px)}
+.stil-karte[data-stil="maedchen"] .stil-vorschau::before{border-radius:6px;background:#fffafd;box-shadow:0 2px 5px rgba(137,43,84,.23)}
+.stil-karte[data-stil="maedchen"] .stil-vorschau::after{background:#cf3d7e;box-shadow:0 6px 0 #9d56d0}
+.stil-karte[data-stil="buben"] .stil-vorschau{background:linear-gradient(145deg,#132833,#05090d);border-radius:0}
+.stil-karte[data-stil="buben"] .stil-vorschau::before{border-radius:0;background:#e8f7ff;box-shadow:0 0 8px rgba(56,232,255,.4)}
+.stil-karte[data-stil="buben"] .stil-vorschau::after{background:#c8ff3d;box-shadow:0 6px 0 #38e8ff;border-radius:0}
+html[data-stil="buben"] .stil-vorschau{border-radius:0}
+.stil-text{min-width:0}
+.stil-name{display:block;font-weight:700;font-size:13px;line-height:1.2}
+.stil-text small{display:block;color:var(--muted);font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.start-fuss{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin-top:18px;padding-top:14px;border-top:1px solid var(--line-2);
+}
+.start-fuss p{margin:0;color:var(--muted);font-size:11px;line-height:1.45}
+.start-fuss .knopf{font-size:11px}
+
+/* ---- Malbereich --------------------------------------------------------- */
+.malbereich{
+  flex:1;min-height:0;
+  display:grid;grid-template-columns:var(--werkzeug-breite) minmax(0,1fr);
+  gap:12px;padding:11px 14px 13px;
+}
+.werkzeuge{
+  position:relative;
+  min-height:0;overflow-y:auto;overflow-x:hidden;
+  padding:2px 13px 12px;
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--schatten);
+  scrollbar-width:thin;
+  scrollbar-color:var(--line) transparent;
+}
+.werkzeug-gruppe{padding:12px 0 13px;border-bottom:1px solid var(--line-2)}
+.werkzeug-gruppe:last-of-type{border-bottom:0;padding-bottom:8px}
+.gruppe-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.gruppe-kopf h2{margin:0;color:var(--accent);font-size:11px;letter-spacing:.11em;text-transform:uppercase}
+.gruppe-kopf span{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.palette{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.farbe{
+  width:100%;aspect-ratio:1;min-width:0;padding:0;
+  border:2px solid rgba(0,0,0,.32);border-radius:50%;
+  position:relative;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.farbe::after{content:"";position:absolute;inset:-5px;border-radius:50%}
+.farbe.aktiv{box-shadow:inset 0 0 0 2px rgba(255,255,255,.85),0 0 0 2px var(--accent),0 0 10px color-mix(in srgb,var(--accent) 28%,transparent)}
+.farb-zeile{display:flex;align-items:center;gap:8px;margin-top:10px}
+.farbwahl{
+  width:39px;height:39px;flex:0 0 auto;border-radius:50%;padding:2px;
+  border:2px solid var(--line);background:conic-gradient(#f33,#fd3,#3d3,#39f,#93f,#f33);
+  display:grid;place-items:center;cursor:pointer;position:relative;
+}
+.farbwahl input{width:100%;height:100%;border:0;padding:0;border-radius:50%;background:transparent;appearance:none;-webkit-appearance:none;cursor:pointer}
+.farbwahl input::-webkit-color-swatch-wrapper{padding:0}
+.farbwahl input::-webkit-color-swatch{border:0;border-radius:50%}
+.farbwahl input::-moz-color-swatch{border:0;border-radius:50%}
+.werkzeug-segmente{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.werkzeug-knopf{
+  min-height:42px;padding:7px 8px;display:flex;align-items:center;justify-content:center;gap:6px;
+  color:var(--ink);background:var(--panel-3);border:1px solid var(--line-2);
+  border-radius:var(--radius-klein);font-size:11px;font-weight:700;letter-spacing:.035em;
+}
+.werkzeug-knopf:hover{border-color:var(--accent);background:var(--panel-2)}
+.werkzeug-knopf.aktiv{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.werkzeug-knopf svg{width:17px;height:17px;flex:0 0 auto}
+.staerke{display:block;margin-top:12px}
+.staerke-kopf{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.staerke-kopf span{color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.staerke-kopf output{color:var(--ink);font-size:12px;font-weight:700}
+.staerke input{width:100%;height:24px;margin:0;accent-color:var(--accent);cursor:pointer}
+.aktionen-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.aktionen-grid .knopf{min-height:42px;padding:6px 8px;font-size:10.5px;gap:5px}
+.aktionen-grid .knopf svg{width:16px;height:16px}
+.aktionen-grid .breit{grid-column:1/-1}
+.werkzeug-fuss{padding:8px 0 2px;color:var(--muted);font-size:10.5px;line-height:1.45}
+.werkzeug-fuss kbd{font:inherit;font-size:9.5px;border:1px solid var(--line-2);border-radius:3px;padding:0 3px;background:var(--panel-3)}
+
+.zeichenbereich{min-height:0;display:flex;flex-direction:column;gap:6px}
+.brett-kopf{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:31px;padding:0 2px}
+.brett-titel{min-width:0}
+.brett-kopf h2{margin:0;color:var(--ink);font-size:13px;line-height:1.2;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brett-kopf small{display:block;color:var(--muted);font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zoom-reihe{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.zoom-reihe button{
+  min-width:30px;min-height:29px;padding:4px 7px;border-radius:6px;
+  border:1px solid var(--line-2);background:var(--panel-3);color:var(--ink);font-size:12px;font-weight:700;
+}
+.zoom-reihe button:hover{border-color:var(--accent)}
+.zoom-reihe #zoomWert{min-width:48px;font-size:10.5px;color:var(--muted)}
+.leinwandRahmen{
+  flex:1;min-height:0;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  padding:15px;
+  border:1px solid var(--line-2);border-radius:var(--radius);
+  overflow:hidden;
+}
+.papier{
+  position:relative;display:inline-block;flex:0 0 auto;
+  max-width:100%;max-height:100%;
+  padding:6px;background:#f4eee2;border-radius:7px;
+  box-shadow:0 14px 36px rgba(0,0,0,.32),0 2px 6px rgba(0,0,0,.18);
+}
+html[data-stil="normal"] .papier{padding:7px;background:linear-gradient(145deg,#e7cf9f,#b58a4d);border-radius:5px}
+html[data-stil="normal"] .papier::after{content:"";position:absolute;inset:3px;border:1px solid rgba(255,255,255,.28);border-radius:3px;pointer-events:none}
+canvas#blatt{
+  display:block;width:520px;height:735px;max-width:100%;max-height:100%;
+  background:#fff;border-radius:2px;
+  touch-action:none;cursor:crosshair;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+}
+html[data-stil="buben"] canvas#blatt{border-radius:0;box-shadow:inset 0 0 0 1px rgba(56,232,255,.2)}
+.felder{position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:2px;overflow:hidden}
+.felder i{position:absolute;background:rgba(72,64,48,.15);display:block}
+html[data-stil="buben"] .felder i{background:rgba(56,232,255,.13)}
+#gitterX{top:0;bottom:0;width:1px}
+#gitterY{left:0;right:0;height:1px}
 .werkzeug-anzeige{
-  position:absolute;left:10px;bottom:10px;z-index:3;
+  position:absolute;left:14px;bottom:14px;z-index:3;
   display:flex;align-items:center;gap:6px;
   padding:4px 9px;border-radius:999px;
-  background:rgba(16,43,39,.62);
-  border:1px solid rgba(213,179,106,.45);
-  color:var(--ivory);font-size:11px;letter-spacing:.4px;
-  pointer-events:none;opacity:.92;
+  background:rgba(7,24,20,.68);border:1px solid rgba(255,255,255,.16);
+  color:#f6efdd;font-size:10.5px;letter-spacing:.03em;
+  pointer-events:none;backdrop-filter:blur(4px);
 }
-.werkzeug-anzeige .punkt{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 1px #0006}
-.werkzeug-anzeige .punkt.radier{background:#fff;box-shadow:0 0 0 1px #59647c inset}
-.werkzeug-anzeige .staerke-wert{opacity:.72}
-
-/* Der kurze Hinweistext und die Statuszeile brauchen keinen Platz: die
-   gewählte Farbe sieht man am hervorgehobenen Farbpunkt, Fehler erscheinen
-   weiterhin unten in der Statuszeile. */
-#malHinweis{display:none}
-/* Am Handy alles eine Spur kleiner, damit das Brett mehr Platz behält. */
-@media (max-width:600px){
-  .seite{padding:8px 8px 12px;gap:6px}
-  .werkzeug{gap:6px 8px;padding:6px 8px;border-radius:10px}
-  .farbe{width:26px;height:26px;border-width:2px;position:relative}
-  /* Unsichtbarer größerer Tippbereich, damit die kleinen Punkte treffbar bleiben. */
-  .farbe::after{content:"";position:absolute;inset:-6px;border-radius:50%}
-  .farben{gap:6px}
-  .farbkreis{width:32px;height:32px;padding:2px;border-width:2px}
-  .knopf{padding:8px 9px;font-size:10px;letter-spacing:.5px}
-  .knopf-klein{padding:8px 9px;font-size:10px}
-  .kopf-rechts{gap:6px}
-  .staerke{font-size:10px;gap:5px}
-  .staerke .wort{display:none}
-  .staerke input[type=range]{width:74px}
-  .mitmaler{gap:6px}
-  .mitmaler .person{padding:3px 8px;font-size:11px}
-  /* Werkzeug-Anzeige am Handy eine Spur kleiner und näher in die Ecke. */
-  .werkzeug-anzeige{font-size:10px;padding:3px 7px;gap:5px;left:8px;bottom:8px;opacity:.88}
-  .werkzeug-anzeige .punkt{width:9px;height:9px}
+.werkzeug-anzeige .punkt{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.werkzeug-anzeige .punkt.radier{background:#fff;box-shadow:inset 0 0 0 1px #66727a}
+.werkzeug-anzeige .staerke-wert{opacity:.7}
+html[data-stil="maedchen"] .werkzeug-anzeige{background:rgba(255,247,251,.88);color:#4a1630;border-color:rgba(207,61,126,.28)}
+html[data-stil="buben"] .werkzeug-anzeige{border-radius:0;background:rgba(4,12,16,.9);border-color:#28515e;color:#c8ff3d;backdrop-filter:none}
+.pause-schleier{
+  position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;
+  background:rgba(7,20,17,.58);color:#fff;backdrop-filter:blur(5px);border-radius:2px;
 }
-/* Wer malt gerade: je Person ein Punkt in ihrer Farbe. */
-.mitmaler{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pause-schleier strong{font-family:var(--titel-schrift);font-size:26px;letter-spacing:.05em}
+.pause-schleier span{font-size:12px;opacity:.8}
+.pause-schleier .knopf{margin-top:8px;min-height:36px;padding:7px 14px;background:#fff;color:#17342b;border-color:#fff}
+.unterzeile{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-height:22px}
+.mitmaler{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
 .mitmaler:empty{display:none}
 .mitmaler .person{
-  display:inline-flex;align-items:center;gap:7px;
-  padding:5px 10px;border-radius:20px;
-  background:rgba(0,0,0,.22);
-  border:1px solid rgba(213,179,106,.35);
-  font-size:12px;color:var(--ivory);
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 8px;border-radius:999px;
+  background:var(--panel-3);border:1px solid var(--line-2);
+  color:var(--ink);font-size:10px;white-space:nowrap;max-width:160px;
 }
-.mitmaler .punkt{width:11px;height:11px;border-radius:50%;flex:0 0 auto;box-shadow:inset 0 0 0 1px #0006}
-.mitmaler .person.dran{border-color:var(--teal);box-shadow:0 0 12px #4df5c255}
-.mitmaler .malt{font-size:11px;color:var(--teal)}
-.mitmaler .legende{font-size:11px;color:var(--muted)}
+.mitmaler .person span{overflow:hidden;text-overflow:ellipsis}
+.mitmaler .person .punkt{width:8px;height:8px;border-radius:50%;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.24)}
+.mitmaler .person.dran{border-color:var(--accent-2)}
+.mitmaler .person .malt{font-size:9px;color:var(--accent-2);text-transform:uppercase;letter-spacing:.05em}
+.mitmaler .person .host{font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+html[data-stil="buben"] .mitmaler .person{border-radius:0}
+.status{margin:0;color:var(--muted);font-size:10.5px;line-height:1.35;text-align:right;flex:1;min-width:0}
+.status:empty{display:none}
+.status.fehler{color:var(--danger);font-weight:700}
+.status.gut{color:var(--accent-2)}
 
-/* ---- Grafikstil (zentral): Klassisch bleibt unverändert ---- */
-html[data-stil="maedchen"]{--table-dark:#f7a6d4;--table-light:#ffe0ef;--gold:#8f2450;--ivory:#3a0f24;--muted:#8f2450;--teal:#b06bff}
-html[data-stil="maedchen"] body{background:radial-gradient(ellipse at center,#ffe0ef 0%,#eb7bc0 75%);color:#3a0f24}
-html[data-stil="maedchen"] .kopf{border-bottom-color:rgba(239,122,168,.55)}
-html[data-stil="maedchen"] .kopf h1{color:#8f2450}
-html[data-stil="maedchen"] .kopf p{color:#8f2450}
-html[data-stil="maedchen"] .knopf{background:linear-gradient(180deg,#ffe3ef,#ffd9ec);border-color:#ef7aa8;color:#8f2450}
-html[data-stil="maedchen"] .knopf:hover{background:#ffeaf3}
-html[data-stil="maedchen"] .knopf.aktiv{background:linear-gradient(180deg,#ff9ec4,#eb7bc0);border-color:#ef7aa8;color:#3a0f24}
-html[data-stil="maedchen"] .werkzeug{background:rgba(255,246,250,.55);border-color:rgba(239,122,168,.35)}
-html[data-stil="maedchen"] .farbe{border-color:#ef7aa8}
-html[data-stil="maedchen"] .farbe.aktiv{border-color:#b06bff;box-shadow:none}
-html[data-stil="maedchen"] .farbkreis{border-color:#ef7aa8}
-html[data-stil="maedchen"] .farbkreis:hover{border-color:#b06bff}
-html[data-stil="maedchen"] .hinweis{color:#8f2450}
-html[data-stil="maedchen"] .staerke{color:#8f2450}
-html[data-stil="maedchen"] .staerke output{color:#3a0f24}
-html[data-stil="maedchen"] .staerke input[type=range]{accent-color:#b06bff}
-html[data-stil="maedchen"] .flaeche{border-color:rgba(239,122,168,.7)}
-html[data-stil="maedchen"] .status{color:#8f2450}
-html[data-stil="maedchen"] .seite:fullscreen{background:radial-gradient(ellipse at center,#ffe0ef 0%,#f7a6d4 75%)}
-html[data-stil="maedchen"] .werkzeug-anzeige{background:rgba(255,246,250,.8);border-color:rgba(239,122,168,.5);color:#3a0f24}
-html[data-stil="maedchen"] .mitmaler .person{background:rgba(255,246,250,.6);border-color:rgba(239,122,168,.4);color:#3a0f24}
-html[data-stil="maedchen"] .mitmaler .person.dran{border-color:#b06bff;box-shadow:none}
-html[data-stil="maedchen"] .mitmaler .malt{color:#7a2fbf}
-html[data-stil="maedchen"] .mitmaler .legende{color:#8f2450}
-html[data-stil="buben"]{--table-dark:#04070b;--table-light:#111316;--gold:#c8ff3d;--ivory:#e6e9ec;--muted:#adb4bc;--teal:#6dff4a}
-html[data-stil="buben"] body{background:radial-gradient(ellipse at center,#141a21 0%,#04070b 75%);color:#e6e9ec}
-html[data-stil="buben"] .kopf{border-bottom-color:rgba(224,36,47,.45)}
-html[data-stil="buben"] .kopf h1{color:#c8ff3d}
-html[data-stil="buben"] .kopf p{color:#adb4bc}
-html[data-stil="buben"] .knopf{background:linear-gradient(180deg,#1b1e23,#12161a);border-color:#e0242f;color:#e6e9ec}
-html[data-stil="buben"] .knopf:hover{background:#23262c}
-html[data-stil="buben"] .knopf.aktiv{background:linear-gradient(180deg,#c8ff3d,#8fd414);border-color:#6dff4a;color:#0b241d}
-html[data-stil="buben"] .werkzeug{background:rgba(0,0,0,.4);border-color:rgba(224,36,47,.25)}
-html[data-stil="buben"] .farbe{border-color:#2b3540}
-html[data-stil="buben"] .farbe.aktiv{border-color:#6dff4a;box-shadow:none}
-html[data-stil="buben"] .farbkreis{border-color:#2b3540}
-html[data-stil="buben"] .farbkreis:hover{border-color:#6dff4a}
-html[data-stil="buben"] .hinweis{color:#adb4bc}
-html[data-stil="buben"] .staerke{color:#adb4bc}
-html[data-stil="buben"] .staerke output{color:#e6e9ec}
-html[data-stil="buben"] .staerke input[type=range]{accent-color:#6dff4a}
-html[data-stil="buben"] .flaeche{border-color:rgba(224,36,47,.55)}
-html[data-stil="buben"] .status{color:#c8ff3d}
-html[data-stil="buben"] .seite:fullscreen{background:radial-gradient(ellipse at center,#141a21 0%,#04070b 75%)}
-html[data-stil="buben"] .werkzeug-anzeige{background:rgba(10,13,16,.82);border-color:rgba(224,36,47,.45);color:#e6e9ec}
-html[data-stil="buben"] .mitmaler .person{background:rgba(0,0,0,.45);border-color:rgba(224,36,47,.3);color:#e6e9ec}
-html[data-stil="buben"] .mitmaler .person.dran{border-color:#6dff4a;box-shadow:none}
-html[data-stil="buben"] .mitmaler .malt{color:#6dff4a}
-html[data-stil="buben"] .mitmaler .legende{color:#adb4bc}
+/* ---- Dialoge und Hilfe -------------------------------------------------- */
+.schleier{
+  position:fixed;inset:0;z-index:80;
+  display:flex;align-items:center;justify-content:center;
+  padding:18px;background:rgba(3,10,8,.66);backdrop-filter:blur(5px);
+}
+.dialog-panel{
+  width:min(470px,100%);max-height:calc(100dvh - 36px);overflow:auto;
+  padding:22px 22px 18px;
+  background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 28px 80px rgba(0,0,0,.55);
+}
+.dialog-panel h2{margin:0 0 9px;font-family:var(--titel-schrift);font-size:24px;line-height:1.15;color:var(--accent)}
+.dialog-panel p{margin:0;color:var(--muted);font-size:13px;line-height:1.6;white-space:pre-line}
+.dialog-knoepfe{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:20px}
+.dialog-knoepfe .knopf{min-height:39px;padding:8px 14px;font-size:11.5px}
+.hilfe-panel{
+  width:min(690px,100%);max-height:calc(100dvh - 36px);overflow:auto;
+  padding:24px 26px 22px;
+  background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 28px 80px rgba(0,0,0,.56);
+}
+.hilfe-panel h2{margin:0 0 4px;font-family:var(--titel-schrift);font-size:28px;color:var(--accent)}
+.hilfe-panel .hilfe-unter{margin:0 0 17px;color:var(--muted);font-size:12px}
+.hilfe-panel h3{margin:17px 0 6px;color:var(--accent);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.hilfe-panel p,.hilfe-panel li{color:var(--muted);font-size:12.5px;line-height:1.58}
+.hilfe-panel ul{margin:4px 0 0;padding-left:18px}
+.hilfe-panel kbd{font:inherit;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:1px 4px;background:var(--panel-3);color:var(--ink)}
+.hilfe-panel .knopf{margin-top:19px}
+
+/* ---- Mobil -------------------------------------------------------------- */
+@media (max-width:900px){
+  :root{--leisten-hoehe:52px;--werkzeug-breite:auto}
+  .leiste{padding:7px 9px;gap:7px}
+  .marke{gap:8px}
+  .marke-zeichen{width:31px;height:31px;border-radius:9px}
+  .marke-zeichen svg{width:19px;height:19px}
+  .marke h1{font-size:19px}
+  .marke p{display:none}
+  .leiste-rechts{gap:4px;flex-wrap:nowrap}
+  .verbindung{padding:4px 7px;font-size:9.5px;min-height:27px;gap:4px}
+  .modus-pille{display:none}
+  #hilfe,#vollbild,#beenden,#zumStart{padding:6px 7px;min-height:30px;font-size:10px}
+  #vollbild .vb-text{display:none}
+  #beenden .wort{display:none}
+  .malbereich{display:flex;flex-direction:column;gap:7px;padding:7px 8px 8px}
+  .zeichenbereich{order:1;flex:1;min-height:0}
+  .werkzeuge{order:2;flex:0 0 auto;max-height:38vh;padding:0 10px 6px;border-radius:var(--radius-klein)}
+  .werkzeug-gruppe{padding:6px 0 7px}
+  .gruppe-kopf{margin-bottom:5px}
+  .gruppe-kopf h2{font-size:10px}
+  .gruppe-kopf span{font-size:9.5px}
+  .palette{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px 8px}
+  .farbe{aspect-ratio:1;max-width:38px;justify-self:center}
+  .farb-zeile{margin-top:5px}
+  .farbwahl{width:34px;height:34px}
+  .werkzeug-segmente{display:flex;gap:6px;margin-top:0}
+  .werkzeug-knopf{flex:1;min-height:40px;font-size:10px}
+  .staerke{margin-top:5px;display:flex;align-items:center;gap:8px}
+  .staerke-kopf{margin:0;flex:0 0 auto;gap:4px}
+  .staerke-kopf span{font-size:9px}
+  .staerke-kopf output{font-size:10px}
+  .staerke input{flex:1;min-width:80px}
+  .aktionen-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .aktionen-grid .knopf{min-height:38px;font-size:9px;padding:4px 3px;gap:3px;flex-direction:column;letter-spacing:0}
+  .aktionen-grid .knopf kbd{display:none}
+  .aktionen-grid .knopf svg{width:15px;height:15px}
+  .aktionen-grid .breit{grid-column:span 1}
+  .werkzeug-fuss{display:none}
+  .brett-kopf{min-height:25px}
+  .brett-kopf h2{font-size:11px}
+  .brett-kopf small{font-size:9px}
+  .zoom-reihe button{min-width:27px;min-height:26px;font-size:11px}
+  .zoom-reihe #zoomWert{min-width:42px;font-size:9.5px}
+  .leinwandRahmen{padding:8px;border-radius:var(--radius-klein)}
+  .papier{padding:4px}
+  .werkzeug-anzeige{left:9px;bottom:9px;font-size:9px;padding:3px 7px}
+  .unterzeile{min-height:18px;gap:5px}
+  .status{font-size:9.5px}
+  .mitmaler .person{font-size:9px;padding:2px 6px}
+  .start{padding:12px 9px 18px}
+  .start-held{padding:19px 15px 16px}
+  .start-held h2{font-size:clamp(27px,9vw,38px)}
+  .start-text{font-size:12.5px;margin-bottom:15px}
+  .modus-wahl{grid-template-columns:1fr;gap:8px;margin-bottom:15px}
+  .modus-karte{min-height:0;padding:13px 13px 12px}
+  .modus-karte .modus-symbol{width:33px;height:33px;margin-bottom:8px;border-radius:9px}
+  .modus-karte .modus-symbol svg{width:20px;height:20px}
+  .modus-karte h3{font-size:19px}
+  .modus-karte p{font-size:11.5px}
+  .modus-karte .modus-fuss{margin-top:8px;font-size:9.5px}
+  .stil-block{padding-top:14px}
+  .stil-wahl{gap:6px}
+  .stil-karte{flex-direction:column;align-items:flex-start;gap:5px;padding:6px;min-height:0}
+  .stil-vorschau{width:100%;height:37px}
+  .stil-name{font-size:11px}
+  .stil-text small{display:none}
+  .start-fuss{margin-top:12px;padding-top:10px}
+  .start-fuss p{font-size:10px}
+  .dialog-panel{padding:18px 16px 15px}
+  .hilfe-panel{padding:19px 17px 17px}
+}
+@media (max-width:430px){
+  .marke h1{font-size:17px}
+  .verbindung .vb-wort{display:none}
+  .verbindung{padding:4px 6px;min-height:25px}
+  .verbindung i{width:8px;height:8px}
+  #hilfe,#vollbild,#beenden,#zumStart{min-height:29px;padding:5px 6px}
+  .malbereich{padding:5px 6px 6px}
+  .werkzeuge{max-height:39vh}
+  .palette{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px 6px}
+  .farbe{max-width:34px}
+  .aktionen-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .aktionen-grid .knopf{min-height:35px;font-size:8.5px}
+  .brett-kopf small{display:none}
+  .zoom-reihe #zoomWert{min-width:38px}
+  .leinwandRahmen{padding:6px}
+}
+@media (max-height:520px) and (orientation:landscape){
+  .start{place-items:start center}
+  .start-held{padding:12px 14px}
+  .start-held h2{font-size:25px}
+  .start-text{display:none}
+  .modus-wahl{grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}
+  .modus-karte{min-height:0;padding:9px}
+  .modus-karte .modus-symbol{display:none}
+  .modus-karte h3{font-size:16px}
+  .modus-karte p{display:none}
+  .stil-block{padding-top:8px}
+  .stil-vorschau{display:none}
+  .stil-karte{min-height:36px;flex-direction:row;align-items:center}
+  .stil-wahl{grid-template-columns:repeat(3,1fr)}
+  .start-fuss{display:none}
+  .werkzeuge{max-height:44vh}
+  .start-fuss p{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
 </style>
-<link rel="stylesheet" href="../schrift.css">
 </head>
 <body>
+<div id="app">
+  <header class="leiste">
+    <div class="marke">
+      <span class="marke-zeichen" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3a9 9 0 1 0 0 18h1.2a1.9 1.9 0 0 0 1.4-3.2 1.9 1.9 0 0 1 1.4-3.2H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
+          <circle cx="7.5" cy="10" r="1"/><circle cx="10" cy="6.8" r="1"/><circle cx="14.2" cy="7" r="1"/><circle cx="17" cy="9.7" r="1"/>
+        </svg>
+      </span>
+      <div class="marke-text">
+        <h1 id="titel">Malen</h1>
+        <p id="untertitel">Atelier · Papier · Farben</p>
+      </div>
+    </div>
+    <div class="leiste-rechts">
+      <span class="verbindung" id="verbindung" data-zustand="offline" title="Verbindungszustand"><i></i><span class="vb-wort">Einzelmodus</span></span>
+      <span class="modus-pille" id="modusPille" hidden>Gemeinsam</span>
+      <button type="button" class="knopf icon" id="hilfe" aria-label="Hilfe und Bedienung" title="Hilfe und Bedienung">?</button>
+      <button type="button" class="knopf icon" id="vollbild" title="Vollbild einschalten">
+        <span class="vb-symbol" aria-hidden="true">⛶</span><span class="vb-text">Vollbild</span>
+      </button>
+      <button type="button" class="knopf" id="zumStart" title="Zum Startbildschirm" hidden>↺ <span class="wort">Zum Start</span></button>
+      <button type="button" class="knopf" id="beenden" title="Malspiel beenden">◀ <span class="wort">Beenden</span></button>
+    </div>
+  </header>
 
-<div class="seite">
+  <main class="buehne">
+    <section class="start" id="startScreen" aria-labelledby="startTitel">
+      <div class="start-held">
+        <p class="start-kicker">TrashyGecko · Malspiel</p>
+        <h2 id="startTitel">Was möchtest du malen?</h2>
+        <p class="start-text">Nimm dir eine eigene Leinwand oder male mit anderen im selben Bild. Farben, Pinsel und Radierer liegen bereit – auf dem Rechner genauso wie am Handy.</p>
 
-  <div class="mitmaler" id="mitmaler" aria-live="polite"></div>
+        <div class="modus-wahl" id="modusWahl">
+          <button type="button" class="modus-karte" data-modus="solo">
+            <span class="modus-symbol" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 4.7-1.2L19.4 8.1a2.2 2.2 0 0 0-3.1-3.1L5.6 15.7 4 20Z"/><path d="m14.8 6.4 2.8 2.8"/><path d="M5.6 15.7 8.4 18.5"/></svg>
+            </span>
+            <h3>Selber malen</h3>
+            <p>Eine eigene Leinwand, alle Werkzeuge, Speichern und PNG. Funktioniert ohne Internet.</p>
+            <span class="modus-fuss">Ohne Verbindung starten <span aria-hidden="true">→</span></span>
+          </button>
+          <button type="button" class="modus-karte" data-modus="gemeinsam">
+            <span class="modus-symbol" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19.5c.4-3.2 2.4-5 5.5-5s5.1 1.8 5.5 5"/><path d="M15 14.7c2.5-.6 4.8.8 5.5 3.7"/></svg>
+            </span>
+            <h3>Mit anderen malen</h3>
+            <p>Gemeinsam auf einer Leinwand. Räume, Einladungen und Verbindung übernimmt der Connector.</p>
+            <span class="modus-fuss">Über den Connector <span aria-hidden="true">→</span></span>
+          </button>
+        </div>
 
-  <section class="werkzeug">
-    <div class="farben" id="farben"></div>
-    <label class="farbkreis" title="Eigene Farbe aussuchen">
-      <input type="color" id="farbkreis" value="#111111" aria-label="Eigene Farbe aussuchen">
-    </label>
-    <button type="button" id="radierer" class="knopf" aria-pressed="false">RADIERER</button>
-    <label class="staerke" for="staerke"><span class="wort">STÄRKE</span> <output id="staerkeWert">8</output>
-      <input type="range" id="staerke" min="2" max="40" step="1" value="8">
-    </label>
-    <span class="kopf-rechts">
-      <button type="button" id="vollbild" class="knopf knopf-klein" aria-pressed="false">⛶ VOLLBILD</button>
-      <button type="button" id="resetButton" class="knopf knopf-klein" hidden>ZURÜCKSETZEN</button>
-      <a href="../spiele.html" id="backButton" class="knopf knopf-klein">◀ SPIELE</a>
-    </span>
-    <p class="hinweis" id="malHinweis">Farbe wählen und loskritzeln.</p>
-  </section>
+        <div class="stil-block" id="stilBlock">
+          <div class="stil-kopf">
+            <h3>Grafikstil</h3>
+            <p id="stilHinweis">Gilt nur für dieses Gerät. Die Leinwand bleibt weiß.</p>
+          </div>
+          <div class="stil-wahl" id="stilWahl" role="group" aria-label="Grafikstil">
+            <button type="button" class="stil-karte" data-stil="normal" aria-pressed="false">
+              <span class="stil-vorschau" aria-hidden="true"></span>
+              <span class="stil-text"><span class="stil-name">Normal</span><small>Atelier</small></span>
+            </button>
+            <button type="button" class="stil-karte" data-stil="maedchen" aria-pressed="false">
+              <span class="stil-vorschau" aria-hidden="true"></span>
+              <span class="stil-text"><span class="stil-name">Mädchen</span><small>Papierwerkstatt</small></span>
+            </button>
+            <button type="button" class="stil-karte" data-stil="buben" aria-pressed="false">
+              <span class="stil-vorschau" aria-hidden="true"></span>
+              <span class="stil-text"><span class="stil-name">Buben</span><small>Neon-Labor</small></span>
+            </button>
+          </div>
+        </div>
 
-  <section class="flaeche">
-    <canvas id="blatt" width="1200" height="1697"></canvas>
-    <div class="felder" aria-hidden="true"><i id="gitterX"></i><i id="gitterY"></i></div>
-    <div class="werkzeug-anzeige" id="werkzeugAnzeige" aria-live="polite"></div>
-  </section>
+        <div class="start-fuss">
+          <button type="button" class="knopf" id="gespeichertLaden" hidden>Gespeichertes Bild laden</button>
+          <p id="startFuss">Tipp: Im Einzelmodus speichert „Speichern“ das Bild in diesem Browser. „PNG“ legt eine Bilddatei ab.</p>
+        </div>
+      </div>
+    </section>
 
-  <p class="status" id="status"></p>
+    <section class="malbereich" id="malScreen" hidden aria-label="Malen">
+      <aside class="werkzeuge" aria-label="Zeichenwerkzeuge">
+        <div class="werkzeug-gruppe">
+          <div class="gruppe-kopf"><h2>Farbe</h2><span id="farbeName">Schwarz</span></div>
+          <div class="palette" id="palette" role="group" aria-label="Farbpalette"></div>
+          <div class="farb-zeile">
+            <label class="farbwahl" title="Eigene Farbe aussuchen">
+              <input type="color" id="farbwahl" value="#111111" aria-label="Eigene Farbe aussuchen">
+            </label>
+            <div class="werkzeug-segmente" style="flex:1;margin-top:0">
+              <button type="button" class="werkzeug-knopf" id="pinsel" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 4.5 5 5"/><path d="M4 20c3.5.6 5-1.4 5.2-3.2.1-1.2-.7-2.2-1.8-2.6-1.1-.4-2.3 0-2.9 1C3.6 16.9 4 18.6 4 20Z"/><path d="M8.6 15 18.7 4.9a2 2 0 0 1 2.8 2.8L11.4 17.8"/></svg>
+                <span>Pinsel</span>
+              </button>
+              <button type="button" class="werkzeug-knopf" id="radierer" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 15 7-8a2.3 2.3 0 0 1 3.3-.2l5.4 4.7a2.3 2.3 0 0 1 .2 3.3L16 19H8l-4-4Z"/><path d="m9 10 7 6.4"/><path d="M16 19h4"/></svg>
+                <span>Radierer</span>
+              </button>
+            </div>
+          </div>
+          <label class="staerke" for="staerke">
+            <span class="staerke-kopf"><span>Stärke</span><output id="staerkeWert">8 px</output></span>
+            <input type="range" id="staerke" min="2" max="40" step="1" value="8">
+          </label>
+        </div>
 
+        <div class="werkzeug-gruppe">
+          <div class="gruppe-kopf"><h2>Bild</h2><span id="bildHinweis">Einzelmodus</span></div>
+          <div class="aktionen-grid">
+            <button type="button" class="knopf" id="undo" title="Rückgängig (Strg+Z)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a6 6 0 0 1 6 6"/></svg>
+              <span>Rückgängig</span><kbd>Strg+Z</kbd>
+            </button>
+            <button type="button" class="knopf" id="redo" title="Wiederholen (Strg+Umschalt+Z)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M20 12h-9a6 6 0 0 0-6 6"/></svg>
+              <span>Wiederholen</span><kbd>Strg+Y</kbd>
+            </button>
+            <button type="button" class="knopf breit" id="leeren" title="Leinwand löschen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v5M14 11v5"/></svg>
+              <span>Leinwand leeren</span>
+            </button>
+            <button type="button" class="knopf" id="speichern" title="Bild in diesem Browser speichern">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4"/><path d="M8 20v-6h8v6"/></svg>
+              <span>Speichern</span>
+            </button>
+            <button type="button" class="knopf" id="laden" title="Gespeichertes Bild laden">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h6l2 2h8v10H4V7Z"/><path d="M12 12v4M10 14l2-2 2 2"/></svg>
+              <span>Laden</span>
+            </button>
+            <button type="button" class="knopf breit" id="export" title="Als PNG-Datei herunterladen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 17v3h14v-3"/></svg>
+              <span>PNG exportieren</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="werkzeug-fuss" id="werkzeugFuss">
+          <kbd>B</kbd> Pinsel · <kbd>E</kbd> Radierer · <kbd>[</kbd><kbd>]</kbd> Stärke · <kbd>F</kbd> Vollbild<br>
+          Zwei Finger: verschieben und zoomen. Maus: rechtes Rad ziehen, Rad scrollen.
+        </div>
+      </aside>
+
+      <div class="zeichenbereich">
+        <div class="brett-kopf">
+          <div class="brett-titel">
+            <h2 id="brettName">Deine Leinwand</h2>
+            <small id="brettInfo">DIN A4 · 1200 × 1697 · ohne Verbindung</small>
+          </div>
+          <div class="zoom-reihe" aria-label="Zoom">
+            <button type="button" id="zoomAus" title="Verkleinern" aria-label="Verkleinern">−</button>
+            <button type="button" id="zoomWert" title="Ganze Leinwand zeigen">100 %</button>
+            <button type="button" id="zoomEin" title="Vergrößern" aria-label="Vergrößern">+</button>
+          </div>
+        </div>
+        <div class="leinwandRahmen" id="leinwandRahmen">
+          <div class="papier" id="papier">
+            <canvas id="blatt" width="1200" height="1697" tabindex="0" aria-label="Zeichenfläche"></canvas>
+            <div class="felder" aria-hidden="true"><i id="gitterX"></i><i id="gitterY"></i></div>
+            <div class="werkzeug-anzeige" id="werkzeugAnzeige" aria-live="polite"></div>
+            <div class="pause-schleier" id="pauseSchleier" hidden><strong>Pausiert</strong><span>Das Bild bleibt stehen.</span><button type="button" class="knopf haupt" id="pauseWeiter">Weiterspielen</button></div>
+          </div>
+        </div>
+        <div class="unterzeile">
+          <div class="mitmaler" id="mitmaler" aria-live="polite"></div>
+          <p class="status" id="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
+<div class="schleier" id="dialog" hidden>
+  <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="dialogTitel" aria-describedby="dialogText">
+    <h2 id="dialogTitel"></h2>
+    <p id="dialogText"></p>
+    <div class="dialog-knoepfe" id="dialogKnoepfe"></div>
+  </div>
+</div>
+
+<div class="schleier" id="hilfeBlatt" hidden>
+  <div class="hilfe-panel" role="dialog" aria-modal="true" aria-labelledby="hilfeTitel">
+    <h2 id="hilfeTitel">So wird gemalt</h2>
+    <p class="hilfe-unter">Alles Wichtige für Maus, Finger und gemeinsame Bilder.</p>
+    <h3>Einzelmodus</h3>
+    <ul>
+      <li>Farbe antippen, Pinselgröße wählen und mit Maus oder Finger zeichnen.</li>
+      <li><strong>Rückgängig</strong> und <strong>Wiederholen</strong> gelten für eigene Striche im Einzelmodus.</li>
+      <li><strong>Speichern</strong> legt das Bild in diesem Browser ab; <strong>Laden</strong> holt es zurück. <strong>PNG</strong> lädt eine Bilddatei herunter.</li>
+      <li><strong>Leinwand leeren</strong> fragt vorher nach. Das lässt sich nicht rückgängig machen.</li>
+    </ul>
+    <h3>Gemeinsam malen</h3>
+    <ul>
+      <li>Im Connector einen Raum öffnen und dort <strong>Malen</strong> wählen. Einladung und Beitritt laufen über den Connector.</li>
+      <li>Alle Striche gehen über den Server; jeder sieht sie in beiden Richtungen. Kurze Unterbrechungen werden nachgesendet.</li>
+      <li>Wer gerade im Raum ist, steht unter der Leinwand. Nur der Raum-Ersteller darf die gemeinsame Fläche leeren.</li>
+      <li>Verliert der Browser die Verbindung, bleibt das Bild stehen und der Zustand wird sichtbar gemeldet.</li>
+    </ul>
+    <h3>Bewegen und zoomen</h3>
+    <ul>
+      <li>Zwei Finger schieben und zoomen. Mit der Maus verschiebt die rechte oder mittlere Taste, das Rad scrollt, <kbd>Strg</kbd> + Rad zoomt.</li>
+      <li>Die Prozentanzeige über der Leinwand holt die ganze A4-Seite zurück.</li>
+    </ul>
+    <h3>Tastatur</h3>
+    <p><kbd>B</kbd> Pinsel · <kbd>E</kbd> Radierer · <kbd>[</kbd> <kbd>]</kbd> Stärke · <kbd>Strg</kbd>+<kbd>Z</kbd> zurück · <kbd>Strg</kbd>+<kbd>Umschalt</kbd>+<kbd>Z</kbd> vor · <kbd>F</kbd> Vollbild · <kbd>Esc</kbd> Dialog schließen.</p>
+    <button type="button" class="knopf haupt" id="hilfeSchliessen">Alles klar</button>
+  </div>
+</div>
+
+<script src="../spiel-start.js"></script>
+<script src="../zurueck.js" data-kein-knopf="1"></script>
 <script>
-const MAL = 1200;
+/* =========================================================================
+   MALEN – Schnittstelle 2.0.0
 
-const FARBEN = [
-  { wert:"#111111", titel:"Schwarz" },
-  { wert:"#e53935", titel:"Rot" },
-  { wert:"#fbc02d", titel:"Gelb" },
-  { wert:"#43a047", titel:"Grün" },
-  { wert:"#1e88e5", titel:"Blau" },
-  { wert:"#8e24aa", titel:"Lila" },
-  { wert:"#fb8c00", titel:"Orange" },
-  { wert:"#6d4c41", titel:"Braun" }
-];
+   Aktionen:
+     stand       Connector schiebt den Serverstand hinein (nur gemeinsam)
+     gesendet    Quittung für gesendete Striche
+     verbindung  Verbindungszustand und Meldung
+     spieler     Spielerliste des Raums
+     stil        setzt die Ansicht von außen
 
-// Jede Person bekommt eine eigene Farbe. Sie hängt an der Kennung, damit
-// Handy und Rechner dieselbe Person gleich einfärben (und damit farbig bleibt).
-const PERSON_FARBEN = [
-  "#e53935", "#1e88e5", "#43a047", "#8e24aa", "#fb8c00",
-  "#00897b", "#c2185b", "#5e35b1", "#00acc1", "#6d4c41"
-];
-const personFarben = new Map();   // Kennung -> Farbe
-const mitmalerNamen = new Map();  // Kennung -> Name
-const mitmalerDrauf = new Map();  // Kennung -> Zeitpunkt des letzten Strichs
+   Ereignisse:
+     malen:bereit · malen:strich · malen:leeren · malen:verlassen
+     malen:pausiert · malen:weiter
 
-const parameter = new URLSearchParams(location.search);
-const raum = (parameter.get("room") || "").trim().toUpperCase();
-const spielerId = parameter.get("id") || "";
-const spielerName = parameter.get("name") || "";
-const zusammen = !!(raum && spielerId);
+   Das Spiel liest keine Raum-, Namens- oder Kennungsdaten aus der Adresse
+   und ruft selbst kein /api/ auf. Im Einzelmodus gibt es keine Netzverbindung.
+   ========================================================================= */
+(function () {
+  "use strict";
 
-const blatt = document.getElementById("blatt");
-const stift = blatt.getContext("2d");
-const statusFeld = document.getElementById("status");
-// Unten steht nur etwas, wenn es etwas zu sagen gibt (Fehler, kurze
-// Bestätigung). statusBis sagt, wie lange die Zeile stehen bleiben darf.
-let statusBis = 0;
-function zeigeStatus(text, ms){
-  statusFeld.textContent = text || "";
-  statusBis = ms ? Date.now() + ms : 0;
-}
-const resetKnopf = document.getElementById("resetButton");
-const hinweis = document.getElementById("malHinweis");
-const farbkreis = document.getElementById("farbkreis");
-const werkzeugAnzeige = document.getElementById("werkzeugAnzeige");
-const radiererKnopf = document.getElementById("radierer");
-const staerkeFeld = document.getElementById("staerke");
-const staerkeWert = document.getElementById("staerkeWert");
-const gitterX = document.getElementById("gitterX");
-const seite = document.querySelector(".seite");
-const flaeche = document.querySelector(".flaeche");
-const vollbildKnopf = document.getElementById("vollbild");
-const gitterY = document.getElementById("gitterY");
+  var VERSION = "2.0.0";
+  var WELT_B = 1200;
+  var WELT_H = Math.round(1200 * Math.SQRT2);
+  var ZOOM_MIN = 1;
+  var ZOOM_MAX = 8;
+  var SPEICHER_BILD = "malen-bild";
+  var SPEICHER_STIL = "malen-stil";
+  var STILE = ["normal", "maedchen", "buben"];
+  var STIL_TEXTE = {
+    normal: "Atelier",
+    maedchen: "Papierwerkstatt",
+    buben: "Neon-Labor"
+  };
+  var FARBEN = [
+    { wert: "#111111", name: "Schwarz" },
+    { wert: "#ffffff", name: "Weiß" },
+    { wert: "#e53935", name: "Rot" },
+    { wert: "#fb8c00", name: "Orange" },
+    { wert: "#fbc02d", name: "Gelb" },
+    { wert: "#43a047", name: "Grün" },
+    { wert: "#00897b", name: "Türkis" },
+    { wert: "#1e88e5", name: "Blau" },
+    { wert: "#5e35b1", name: "Violett" },
+    { wert: "#d81b60", name: "Pink" },
+    { wert: "#6d4c41", name: "Braun" },
+    { wert: "#f2c7a5", name: "Haut" }
+  ];
+  var PERSON_FARBEN = ["#e53935", "#1e88e5", "#43a047", "#8e24aa", "#fb8c00", "#00897b", "#c2185b", "#5e35b1", "#00acc1", "#6d4c41"];
 
-let farbe = FARBEN[0].wert;
-let breite = 8;
-let radiert = false;        // Pinsel oder Radierer
-let zeichnet = false;
-let eigenerStrich = null;   // {color,width,points:[]}
-let alleStriche = [];       // alles, was auf dem Brett ist – fürs Neuzeichnen
-let epoche = -1;            // Fassung der Fläche laut Server
-let stand = 0;              // so viele Striche kennen wir vom Server
-let istAdmin = !zusammen;
+  function $(id) { return document.getElementById(id); }
+  function istObjekt(w) { return w !== null && typeof w === "object" && !Array.isArray(w); }
+  function kopie(w) { return JSON.parse(JSON.stringify(w)); }
+  function zahl(w, min, max) {
+    var n = Number(w);
+    if (!isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+  }
+  function stilWert(w) {
+    return STILE.indexOf(w) >= 0 ? w : "normal";
+  }
+  function neueId() {
+    try {
+      if (window.crypto && crypto.getRandomValues) {
+        var p = new Uint8Array(12);
+        crypto.getRandomValues(p);
+        var s = "";
+        for (var i = 0; i < p.length; i++) s += ("0" + p[i].toString(16)).slice(-2);
+        return s;
+      }
+    } catch (e) {}
+    return String(Date.now()) + Math.random().toString(36).slice(2, 12);
+  }
+  function personFarbe(id) {
+    if (!id) return "#7a8b83";
+    var summe = 0;
+    for (var i = 0; i < id.length; i++) summe = (summe * 31 + id.charCodeAt(i)) % 100003;
+    return PERSON_FARBEN[summe % PERSON_FARBEN.length];
+  }
 
-// Das Blatt ist vier Bildschirme groß: zwei Felder breit, zwei hoch. Der
-// sichtbare Ausschnitt davon ist ein Viertel, deshalb fängt zoom bei 2 an
-// (1 wäre das ganze Blatt auf einem Bildschirm).
-const WELT_B = MAL;                             // Breite des Blatts
-const WELT_H = Math.round(MAL * Math.SQRT2);    // Höhe: DIN A4 (1 : √2)
-const FELD_X = WELT_B / 2;
-const FELD_Y = WELT_H / 2;
-const ZOOM_MIN = 1;
-const ZOOM_MAX = 10;
-let zoom = 2;
-let kameraX = FELD_X / 2;   // linker Rand des Blicks in Brettkoordinaten
-let kameraY = FELD_Y / 2;   // oberer Rand des Blicks
-let zeiger = new Map();     // welche Finger / Maustasten gerade drücken
-let griff = null;           // läuft ein Verschieben / Zoomen?
+  /* ---------------------------------------------------------------- Zustand */
+  var S = {
+    startbildschirm: true,
+    laeuft: false,
+    pausiert: false,
+    modus: "solo",
+    stil: "normal",
+    stilVorgabe: false,
+    tick: 0
+  };
+  var striche = [];
+  var undoStapel = [];
+  var redoStapel = [];
+  var offen = Object.create(null);       // clientId -> noch nicht bestätigter Strich
+  var farbe = "#111111";
+  var farbenName = "Schwarz";
+  var breite = 8;
+  var radiert = false;
+  var zoom = 1;
+  var kameraX = 0;
+  var kameraY = 0;
+  var zeichnet = false;
+  var eigenerStrich = null;
+  var zeiger = new Map();
+  var griff = null;
+  var online = {
+    room: "",
+    id: "",
+    name: "",
+    admin: false,
+    players: [],
+    verbunden: false,
+    fehler: "",
+    ende: false
+  };
+  var mitmalerDrauf = Object.create(null);
+  var statusUhr = 0;
+  var letzterStil = "";
+  var hilfeOffen = false;
 
-// Sichtbarer Ausschnitt in Brettkoordinaten. Breite und Höhe getrennt,
-// weil das Blatt hochkant ist.
-function sichtBreite(){
-  return WELT_B / zoom;
-}
-function sichtHoehe(){
-  return WELT_H / zoom;
-}
+  /* ------------------------------------------------------------------ DOM */
+  var startScreen = $("startScreen");
+  var malScreen = $("malScreen");
+  var blatt = $("blatt");
+  var stift = blatt.getContext("2d");
+  var leinwandRahmen = $("leinwandRahmen");
+  var papier = $("papier");
+  var statusFeld = $("status");
+  var verbindungFeld = $("verbindung");
+  var modusPille = $("modusPille");
+  var brettName = $("brettName");
+  var brettInfo = $("brettInfo");
+  var mitmalerBox = $("mitmaler");
+  var werkzeugAnzeige = $("werkzeugAnzeige");
+  var farbwahl = $("farbwahl");
+  var palette = $("palette");
+  var staerkeFeld = $("staerke");
+  var staerkeWert = $("staerkeWert");
+  var pinselKnopf = $("pinsel");
+  var radiererKnopf = $("radierer");
+  var undoKnopf = $("undo");
+  var redoKnopf = $("redo");
+  var leerenKnopf = $("leeren");
+  var speichernKnopf = $("speichern");
+  var ladenKnopf = $("laden");
+  var exportKnopf = $("export");
+  var gespeichertLaden = $("gespeichertLaden");
+  var bildHinweis = $("bildHinweis");
+  var zoomWert = $("zoomWert");
+  var gitterX = $("gitterX");
+  var gitterY = $("gitterY");
+  var dialog = $("dialog");
+  var dialogTitel = $("dialogTitel");
+  var dialogText = $("dialogText");
+  var dialogKnoepfe = $("dialogKnoepfe");
+  var hilfeBlatt = $("hilfeBlatt");
 
-// --------------------------------------------------
-// FARBEN
-// --------------------------------------------------
+  /* --------------------------------------------------------------- Stil */
+  function stilLesen() {
+    try {
+      var gespeichert = localStorage.getItem(SPEICHER_STIL);
+      if (STILE.indexOf(gespeichert) >= 0) return gespeichert;
+    } catch (e) {}
+    try {
+      if (window.TGStil && typeof TGStil.hole === "function") {
+        var zentral = TGStil.hole();
+        if (zentral === "maedchen" || zentral === "buben") return zentral;
+      }
+    } catch (e) {}
+    return "normal";
+  }
 
-function baueFarben(){
-  const box = document.getElementById("farben");
-  FARBEN.forEach(eintrag=>{
-    const knopf = document.createElement("button");
-    knopf.type = "button";
-    knopf.className = "farbe";
-    knopf.style.background = eintrag.wert;
-    knopf.title = eintrag.titel;
-    knopf.dataset.wert = eintrag.wert;
-    knopf.setAttribute("aria-label", eintrag.titel);
-    if (eintrag.wert === farbe) knopf.classList.add("aktiv");
-    knopf.addEventListener("click", ()=>{
-      farbe = eintrag.wert;
-      farbkreis.value = eintrag.wert;
-      if (radiert) radiererUmschalten(false);
-      markiereFarbe();
-      hinweis.textContent = "Farbe " + eintrag.titel + " – jetzt malen.";
-    });
-    box.appendChild(knopf);
-  });
-}
-
-// --------------------------------------------------
-// FARBKREIS, RADIERER, STÄRKE
-// --------------------------------------------------
-
-function markiereFarbe(){
-  document.querySelectorAll("#farben .farbe").forEach(knopf=>{
-    knopf.classList.toggle("aktiv", knopf.dataset.wert === farbe && !radiert);
-  });
-  zeigeWerkzeug();
-}
-
-// Klein und unaufdringlich über dem Brett: was gerade eingestellt ist.
-function zeigeWerkzeug(){
-  if (!werkzeugAnzeige) return;
-  const punkt = document.createElement("i");
-  punkt.className = radiert ? "punkt radier" : "punkt";
-  if (!radiert) punkt.style.background = farbe;
-  const text = document.createElement("span");
-  text.textContent = radiert ? "Radierer" : "Pinsel";
-  const staerke = document.createElement("span");
-  staerke.className = "staerke-wert";
-  staerke.textContent = "· " + Math.round(breite) + " px";
-  while (werkzeugAnzeige.firstChild) werkzeugAnzeige.removeChild(werkzeugAnzeige.firstChild); werkzeugAnzeige.appendChild(punkt); werkzeugAnzeige.appendChild(text); werkzeugAnzeige.appendChild(staerke);
-}
-
-function radiererUmschalten(an){
-  radiert = !!an;
-  radiererKnopf.classList.toggle("aktiv", radiert);
-  radiererKnopf.setAttribute("aria-pressed", radiert ? "true" : "false");
-  markiereFarbe();
-  hinweis.textContent = radiert
-    ? "Radierer: wische über die Fläche."
-    : "Pinsel – Farbe " + farbe + ", jetzt malen.";
-}
-
-// Der Farbkreis öffnet die Farbauswahl des Geräts.
-farbkreis.addEventListener("input", ()=>{
-  farbe = farbkreis.value;
-  if (radiert) radiererUmschalten(false);
-  markiereFarbe();
-  hinweis.textContent = "Eigene Farbe " + farbe + " – jetzt malen.";
-});
-
-radiererKnopf.addEventListener("click", ()=> radiererUmschalten(!radiert));
-
-staerkeFeld.addEventListener("input", ()=>{
-  breite = Math.min(60, Math.max(2, Number(staerkeFeld.value) || 8));
-  staerkeWert.textContent = String(breite);
-  zeigeWerkzeug();
-});
-
-// --------------------------------------------------
-// ZEICHNEN
-// --------------------------------------------------
-
-// --------------------------------------------------
-// WER MAL'T WAS: eigene Farbe je Person
-// --------------------------------------------------
-
-function personFarbe(id){
-  if (!id) return "#102b27";
-  if (personFarben.has(id)) return personFarben.get(id);
-  let summe = 0;
-  for (let i = 0; i < id.length; i++) summe = (summe * 31 + id.charCodeAt(i)) % 100003;
-  const farbe = PERSON_FARBEN[summe % PERSON_FARBEN.length];
-  personFarben.set(id, farbe);
-  return farbe;
-}
-
-// Merkt sich, wer gerade einen Strich gemacht hat (für "malt" in der Liste).
-function personMalt(id){
-  if (!id || !zusammen) return;
-  mitmalerDrauf.set(id, Date.now());
-}
-
-// Zeile über dem Brett: wer im Raum ist und wer gerade malt.
-function mitmalerZeichnen(){
-  const box = document.getElementById("mitmaler");
-  if (!box || !zusammen) return;
-  const jetzt = Date.now();
-  box.innerHTML = "";
-  if (!mitmalerNamen.size) return;
-  mitmalerNamen.forEach((name, id)=>{
-    const person = document.createElement("span");
-    person.className = "person";
-    const malt = jetzt - (mitmalerDrauf.get(id) || 0) < 2500;
-    if (malt) person.classList.add("dran");
-    const punkt = document.createElement("i");
-    punkt.className = "punkt";
-    punkt.style.background = personFarbe(id);
-    const text = document.createElement("span");
-    text.textContent = name + (id === spielerId ? " (du)" : "");
-    person.append(punkt, text);
-    if (malt) {
-      const wort = document.createElement("span");
-      wort.className = "malt";
-      wort.textContent = "malt";
-      person.appendChild(wort);
+  function stilAnwenden(wert, merken) {
+    var w = stilWert(wert);
+    S.stil = w;
+    document.documentElement.dataset.stil = w;
+    document.documentElement.style.colorScheme = w === "buben" ? "dark" : "light";
+    var meta = $("themeFarbe");
+    if (meta) meta.content = w === "buben" ? "#05090d" : w === "maedchen" ? "#f7d9e6" : "#102b27";
+    $("untertitel").textContent = STIL_TEXTE[w] + " · Papier · Farben";
+    var karten = document.querySelectorAll(".stil-karte");
+    for (var i = 0; i < karten.length; i++) {
+      var an = karten[i].dataset.stil === w;
+      karten[i].classList.toggle("aktiv", an);
+      karten[i].setAttribute("aria-pressed", an ? "true" : "false");
     }
-    box.appendChild(person);
-  });
-}
+    if (merken) {
+      try { localStorage.setItem(SPEICHER_STIL, w); } catch (e) {}
+    }
+    if (letzterStil !== w) {
+      letzterStil = w;
+      requestAnimationFrame(function () { passeLeinwand(); });
+    }
+  }
 
-// Wer ist im Raum? Für die Namen über dem Brett.
-async function mitmalerHolen(){
-  if (!zusammen) return;
-  try{
-    const antwort = await fetch("/api/players?room=" + encodeURIComponent(raum), { cache: "no-store" });
-    if (!antwort.ok) return;
-    const liste = await antwort.json();
-    mitmalerNamen.clear();
-    (liste || []).forEach(person=>{
-      if (person && person.id) mitmalerNamen.set(person.id, person.name || "Maler");
+  /* ------------------------------------------------------------- Verbindung */
+  function setzeVerbindung(zustand, text) {
+    verbindungFeld.dataset.zustand = zustand;
+    var wort = verbindungFeld.querySelector(".vb-wort");
+    if (wort) wort.textContent = text;
+    verbindungFeld.title = text;
+  }
+
+  function zeigeStatus(text, ms, art) {
+    statusFeld.textContent = text || "";
+    statusFeld.className = "status" + (art ? " " + art : "");
+    statusUhr = ms ? Date.now() + ms : 0;
+  }
+
+  function verbindungAktualisieren() {
+    if (S.modus === "solo") {
+      setzeVerbindung("offline", "Einzelmodus");
+      modusPille.hidden = true;
+      return;
+    }
+    if (online.fehler) {
+      setzeVerbindung("fehler", "Getrennt");
+    } else if (online.verbunden) {
+      setzeVerbindung("ok", "Verbunden");
+    } else {
+      setzeVerbindung("wartet", "Verbinde …");
+    }
+    modusPille.hidden = false;
+    modusPille.textContent = "Gemeinsam" + (online.room ? " · " + online.room : "");
+  }
+
+  /* --------------------------------------------------------------- Start */
+  function startbildschirmZeigen(ohneFrage) {
+    if (!ohneFrage && S.laeuft && striche.length) {
+      frage({
+        titel: "Zum Startbildschirm?",
+        text: "Das aktuelle Bild bleibt nur erhalten, wenn du es vorher speicherst.",
+        ok: "Zum Start",
+        ab: "Weiter malen",
+        gefahr: true
+      }).then(function (ja) {
+        if (ja) startbildschirmSofort();
+      });
+      return;
+    }
+    startbildschirmSofort();
+  }
+
+  function startbildschirmSofort() {
+    var warGemeinsam = S.modus === "gemeinsam";
+    S.startbildschirm = true;
+    S.laeuft = false;
+    S.pausiert = false;
+    zeichnet = false;
+    eigenerStrich = null;
+    zeiger.clear();
+    griff = null;
+    startScreen.hidden = false;
+    malScreen.hidden = true;
+    $("zumStart").hidden = true;
+    document.body.classList.remove("mal-offen");
+    $("pauseSchleier").hidden = true;
+    if (warGemeinsam) {
+      try {
+        window.dispatchEvent(new CustomEvent("malen:verlassen", { detail: { grund: "start" } }));
+      } catch (e) {}
+    }
+    online = { room: "", id: "", name: "", admin: false, players: [], verbunden: false, fehler: "", ende: false };
+    striche = [];
+    undoStapel = [];
+    redoStapel = [];
+    offen = Object.create(null);
+    mitmalerDrauf = Object.create(null);
+    setzeVerbindung("offline", "Einzelmodus");
+    modusPille.hidden = true;
+    brettName.textContent = "Deine Leinwand";
+    bildHinweis.textContent = "Einzelmodus";
+    gespeichertPruefen();
+    startScreen.scrollTop = 0;
+  }
+
+  function partieStarten(modus, onlineDaten) {
+    S.startbildschirm = false;
+    S.laeuft = true;
+    S.pausiert = false;
+    S.modus = modus === "gemeinsam" ? "gemeinsam" : "solo";
+    S.tick = 0;
+    startScreen.hidden = true;
+    malScreen.hidden = false;
+    $("zumStart").hidden = S.modus === "gemeinsam";
+    document.body.classList.add("mal-offen");
+    $("pauseSchleier").hidden = true;
+    striche = [];
+    undoStapel = [];
+    redoStapel = [];
+    offen = Object.create(null);
+    mitmalerDrauf = Object.create(null);
+    zeigeWerkzeug();
+    markiereFarbe();
+    aktualisiereBildknoepfe();
+    if (S.modus === "gemeinsam") {
+      online = {
+        room: onlineDaten && onlineDaten.room ? String(onlineDaten.room) : "",
+        id: onlineDaten && onlineDaten.id ? String(onlineDaten.id) : "",
+        name: onlineDaten && onlineDaten.name ? String(onlineDaten.name) : "",
+        admin: !!(onlineDaten && onlineDaten.admin),
+        players: [],
+        verbunden: false,
+        fehler: "",
+        ende: false
+      };
+      brettName.textContent = "Gemeinsame Leinwand";
+      bildHinweis.textContent = "Gemeinsam";
+      setzeVerbindung("wartet", "Verbinde …");
+      modusPille.hidden = false;
+      zeigeStatus("Gemeinsame Leinwand – warte auf den Serverstand.", 0);
+    } else {
+      online = { room: "", id: "", name: "", admin: false, players: [], verbunden: false, fehler: "", ende: false };
+      brettName.textContent = "Deine Leinwand";
+      bildHinweis.textContent = "Einzelmodus";
+      setzeVerbindung("offline", "Einzelmodus");
+      modusPille.hidden = true;
+      zeigeStatus("Bereit – alles bleibt auf diesem Gerät.", 3500, "gut");
+    }
+    verbindungAktualisieren();
+    splerren();
+    requestAnimationFrame(function () {
+      passeLeinwand();
+      neuZeichnen();
     });
-    if (!mitmalerNamen.has(spielerId)) mitmalerNamen.set(spielerId, spielerName || "Maler");
-    mitmalerZeichnen();
-  }catch(fehler){}
-}
-
-// Ein Strich als Linie (oder Punkt). Wird zweimal gebraucht: einmal als Saum
-// in der Farbe der Person, einmal in der eigentlichen Farbe.
-function strichPfad(punkte, breite){
-  if (punkte.length === 1) {
-    stift.beginPath();
-    stift.arc(punkte[0][0], punkte[0][1], breite / 2, 0, Math.PI * 2);
-    stift.fill();
-    return;
-  }
-  stift.beginPath();
-  stift.moveTo(punkte[0][0], punkte[0][1]);
-  for (let i = 1; i < punkte.length; i++) stift.lineTo(punkte[i][0], punkte[i][1]);
-  stift.stroke();
-}
-
-function strichZeichnen(strich){
-  const punkte = strich.points || [];
-  if (!punkte.length) return;
-  const strichFarbe = strich.color || "#111111";
-  const strichBreite = strich.width || 8;
-  stift.lineCap = "round";
-  stift.lineJoin = "round";
-
-  // Saum in der Farbe der Person – beim Radieren (weiß) nicht, sonst bliebe
-  // eine farbige Spur vom Wegwischen stehen.
-  const saum = (zusammen && strich.author && strichFarbe.toLowerCase() !== "#ffffff")
-    ? personFarbe(strich.author) : "";
-  if (saum) {
-    stift.globalAlpha = 0.5;
-    stift.strokeStyle = saum;
-    stift.fillStyle = saum;
-    stift.lineWidth = strichBreite + 4;
-    strichPfad(punkte, strichBreite + 4);
-    stift.globalAlpha = 1;
+    setTimeout(passeLeinwand, 50);
   }
 
-  stift.strokeStyle = strichFarbe;
-  stift.fillStyle = strichFarbe;
-  stift.lineWidth = strichBreite;
-  strichPfad(punkte, strichBreite);
-}
+  function splerren() {
+    // Die Fläche bekommt den Fokus erst nach dem Aufbau; so kann die Tastatur
+    // sofort malen und die Leertaste scrollt nicht versehentlich.
+    try { blatt.focus({ preventScroll: true }); } catch (e) {}
+  }
 
-// --------------------------------------------------
-// BLICK: ZOOM UND VERSCHIEBEN
-// --------------------------------------------------
+  /* --------------------------------------------------------------- Dialog */
+  function frage(optionen) {
+    var o = optionen || {};
+    return new Promise(function (fertig) {
+      dialogTitel.textContent = o.titel || "Sicher?";
+      dialogText.textContent = o.text || "";
+      dialogKnoepfe.innerHTML = "";
+      var ab = document.createElement("button");
+      ab.type = "button";
+      ab.className = "knopf";
+      ab.textContent = o.ab || "Abbrechen";
+      var ja = document.createElement("button");
+      ja.type = "button";
+      ja.className = "knopf " + (o.gefahr ? "gefahr" : "haupt");
+      ja.textContent = o.ok || "Ja";
+      function schliessen(wert) {
+        dialog.hidden = true;
+        dialog.onclick = null;
+        dialogKnoepfe.onclick = null;
+        fertig(wert);
+      }
+      ab.addEventListener("click", function () { schliessen(false); });
+      ja.addEventListener("click", function () { schliessen(true); });
+      dialogKnoepfe.appendChild(ab);
+      dialogKnoepfe.appendChild(ja);
+      dialog.hidden = false;
+      ja.focus();
+      dialog.onclick = function (e) { if (e.target === dialog) schliessen(false); };
+      dialog.onkeydown = function (e) {
+        if (e.key === "Escape") { e.preventDefault(); schliessen(false); }
+      };
+    });
+  }
 
-function kameraKlemmen(){
-  kameraX = Math.min(Math.max(kameraX, 0), WELT_B - sichtBreite());
-  kameraY = Math.min(Math.max(kameraY, 0), WELT_H - sichtHoehe());
-}
+  function hilfeZeigen() {
+    hilfeBlatt.hidden = false;
+    hilfeOffen = true;
+    var b = $("hilfeSchliessen");
+    if (b) b.focus();
+  }
+  function hilfeSchliessen() {
+    hilfeBlatt.hidden = true;
+    hilfeOffen = false;
+  }
 
-// Bildschirmpunkt (CSS-Pixel) in Brettkoordinaten umrechnen.
-function aufDemBlatt(ereignis){
-  const rechteck = blatt.getBoundingClientRect();
-  return [
-    kameraX + (ereignis.clientX - rechteck.left) / rechteck.width * sichtBreite(),
-    kameraY + (ereignis.clientY - rechteck.top) / rechteck.height * sichtHoehe()
-  ];
-}
+  /* --------------------------------------------------------------- Hilfe */
+  function connectorAdresse() {
+    // Zentrale Navigation: lokal der lokale Connector, auf GitHub Pages die
+    // laufende Adresse, im APK die Online-Fassung.
+    if (window.TGNAV && typeof TGNAV.connectorZiel === "function") return TGNAV.connectorZiel();
+    if (location.protocol === "file:") return "https://trashygecko.onrender.com/connector";
+    return "../connector/connector.html";
+  }
 
-// Zeichenfläche auf den Ausschnitt einstellen: ein Brettpunkt = k Bildpunkte.
-function kameraSetzen(){
-  const k = blatt.width * zoom / WELT_B;
-  stift.setTransform(k, 0, 0, k, -kameraX * k, -kameraY * k);
-}
+  /* --------------------------------------------------------------- Farbe */
+  function baueFarben() {
+    palette.innerHTML = "";
+    FARBEN.forEach(function (eintrag) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "farbe";
+      b.style.background = eintrag.wert;
+      b.dataset.wert = eintrag.wert;
+      b.dataset.name = eintrag.name;
+      b.title = eintrag.name;
+      b.setAttribute("aria-label", "Farbe " + eintrag.name);
+      b.addEventListener("click", function () {
+        farbe = eintrag.wert;
+        farbenName = eintrag.name;
+        farbwahl.value = farbe;
+        if (radiert) radiererUmschalten(false);
+        markiereFarbe();
+        zeigeStatus("Farbe " + eintrag.name + " gewählt.", 1800);
+        blatt.focus({ preventScroll: true });
+      });
+      palette.appendChild(b);
+    });
+    markiereFarbe();
+  }
 
-// Alles neu zeichnen – nötig, sobald der Blick verschoben oder gezoomt wird.
-function neuZeichnen(){
-  stift.setTransform(1, 0, 0, 1, 0, 0);
-  stift.fillStyle = "#e7e1d3";              // Rand außerhalb des Bretts
-  stift.fillRect(0, 0, blatt.width, blatt.height);
-  kameraSetzen();
-  stift.fillStyle = "#ffffff";
-  stift.fillRect(0, 0, WELT_B, WELT_H);
+  function markiereFarbe() {
+    var knoepfe = palette.querySelectorAll(".farbe");
+    for (var i = 0; i < knoepfe.length; i++) {
+      knoepfe[i].classList.toggle("aktiv", !radiert && knoepfe[i].dataset.wert.toLowerCase() === farbe.toLowerCase());
+    }
+    $("farbeName").textContent = radiert ? "Radierer" : farbenName;
+    zeigeWerkzeug();
+  }
 
-  alleStriche.forEach(strichZeichnen);
-  linienSetzen();
-}
+  function zeigeWerkzeug() {
+    if (!werkzeugAnzeige) return;
+    werkzeugAnzeige.innerHTML = "";
+    var punkt = document.createElement("i");
+    punkt.className = radiert ? "punkt radier" : "punkt";
+    if (!radiert) punkt.style.background = farbe;
+    var text = document.createElement("span");
+    text.textContent = radiert ? "Radierer" : "Pinsel";
+    var st = document.createElement("span");
+    st.className = "staerke-wert";
+    st.textContent = "· " + Math.round(breite) + " px";
+    werkzeugAnzeige.appendChild(punkt);
+    werkzeugAnzeige.appendChild(text);
+    werkzeugAnzeige.appendChild(st);
+  }
 
-// Die vier Felder: hauchdünne Linien als Lage über der Fläche. Sie gehören
-// nicht zum Gemalten, verschwinden beim Radieren also nicht, und Striche
-// laufen einfach darüber – die Fläche bleibt ein Stück.
-function linienSetzen(){
-  const anteilX = 100 / sichtBreite();
-  const anteilY = 100 / sichtHoehe();
-  const x = (FELD_X - kameraX) * anteilX;
-  const y = (FELD_Y - kameraY) * anteilY;
-  gitterX.style.display = (x < 0 || x > 100) ? "none" : "block";
-  gitterX.style.left = x + "%";
-  gitterY.style.display = (y < 0 || y > 100) ? "none" : "block";
-  gitterY.style.top = y + "%";
-}
+  function radiererUmschalten(an) {
+    radiert = !!an;
+    radiererKnopf.classList.toggle("aktiv", radiert);
+    pinselKnopf.classList.toggle("aktiv", !radiert);
+    radiererKnopf.setAttribute("aria-pressed", radiert ? "true" : "false");
+    pinselKnopf.setAttribute("aria-pressed", radiert ? "false" : "true");
+    markiereFarbe();
+    zeigeStatus(radiert ? "Radierer: über die Fläche wischen." : "Pinsel: Farbe " + farbenName + ".", 1800);
+  }
 
-function verschieben(dxPixel, dyPixel){
-  const rechteck = blatt.getBoundingClientRect();
-  kameraX -= dxPixel / rechteck.width * sichtBreite();
-  kameraY -= dyPixel / rechteck.height * sichtHoehe();
-  kameraKlemmen();
-  neuZeichnen();
-}
+  function aktualisiereBildknoepfe() {
+    var solo = S.modus === "solo";
+    undoKnopf.disabled = !solo || !undoStapel.length;
+    redoKnopf.disabled = !solo || !redoStapel.length;
+    speichernKnopf.hidden = !solo;
+    ladenKnopf.hidden = !solo;
+    leerenKnopf.hidden = S.modus === "gemeinsam" && !online.admin;
+    undoKnopf.title = solo ? "Rückgängig (Strg+Z)" : "Im gemeinsamen Bild nicht verfügbar";
+    redoKnopf.title = solo ? "Wiederholen (Strg+Umschalt+Z)" : "Im gemeinsamen Bild nicht verfügbar";
+    ladenKnopf.disabled = !gespeichertLesen();
+    aktualisiereZoom();
+  }
 
-function zoomenUm(faktor, clientX, clientY){
-  const rechteck = blatt.getBoundingClientRect();
-  const punkt = [
-    kameraX + (clientX - rechteck.left) / rechteck.width * sichtBreite(),
-    kameraY + (clientY - rechteck.top) / rechteck.height * sichtHoehe()
-  ];
-  zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom * faktor));
-  kameraX = punkt[0] - (clientX - rechteck.left) / rechteck.width * sichtBreite();
-  kameraY = punkt[1] - (clientY - rechteck.top) / rechteck.height * sichtHoehe();
-  kameraKlemmen();
-  neuZeichnen();
-}
+  /* ---------------------------------------------------------------- Zeichnen */
+  function sichtBreite() { return WELT_B / zoom; }
+  function sichtHoehe() { return WELT_H / zoom; }
 
-// --------------------------------------------------
-// MALEN
-// --------------------------------------------------
+  function kameraKlemmen() {
+    kameraX = Math.min(Math.max(kameraX, 0), Math.max(0, WELT_B - sichtBreite()));
+    kameraY = Math.min(Math.max(kameraY, 0), Math.max(0, WELT_H - sichtHoehe()));
+  }
 
-function stiftFarbe(){
-  return radiert ? "#ffffff" : farbe;
-}
+  function aufDemBlatt(ereignis) {
+    var r = blatt.getBoundingClientRect();
+    return [
+      kameraX + (ereignis.clientX - r.left) / Math.max(1, r.width) * sichtBreite(),
+      kameraY + (ereignis.clientY - r.top) / Math.max(1, r.height) * sichtHoehe()
+    ];
+  }
 
-function punktAnhaengen(punkt){
-  const punkte = eigenerStrich.points;
-  const letzter = punkte[punkte.length - 1];
-  if (letzter && Math.abs(letzter[0] - punkt[0]) < 1.5 && Math.abs(letzter[1] - punkt[1]) < 1.5) return;
-  punkte.push(punkt);
-  // Nur das neue Stück zeichnen, nicht den ganzen Strich.
-  if (punkte.length === 1) {
-    strichZeichnen({ color: stiftFarbe(), width: breite, points: punkte });
-  } else {
+  function kameraSetzen(ctx) {
+    var k = blatt.width * zoom / WELT_B;
+    ctx.setTransform(k, 0, 0, k, -kameraX * k, -kameraY * k);
+  }
+
+  function strichPfad(ctx, punkte, breiteWert) {
+    if (!punkte || !punkte.length) return;
+    if (punkte.length === 1) {
+      ctx.beginPath();
+      ctx.arc(punkte[0][0], punkte[0][1], Math.max(0.6, breiteWert / 2), 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(punkte[0][0], punkte[0][1]);
+    for (var i = 1; i < punkte.length; i++) ctx.lineTo(punkte[i][0], punkte[i][1]);
+    ctx.stroke();
+  }
+
+  function strichZeichnen(ctx, strich, mitSaum) {
+    var punkte = strich.points || [];
+    if (!punkte.length) return;
+    var farbeStrich = strich.color || "#111111";
+    var breiteStrich = zahl(strich.width || 8, 1, 80);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    var saum = mitSaum && S.modus === "gemeinsam" && strich.author && String(farbeStrich).toLowerCase() !== "#ffffff" && String(farbeStrich).toLowerCase() !== "#fff"
+      ? personFarbe(strich.author) : "";
+    if (saum) {
+      ctx.globalAlpha = 0.38;
+      ctx.strokeStyle = saum;
+      ctx.fillStyle = saum;
+      ctx.lineWidth = breiteStrich + 3.5;
+      strichPfad(ctx, punkte, breiteStrich + 3.5);
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = farbeStrich;
+    ctx.fillStyle = farbeStrich;
+    ctx.lineWidth = breiteStrich;
+    strichPfad(ctx, punkte, breiteStrich);
+  }
+
+  function neuZeichnen() {
+    if (!blatt.width || !blatt.height) return;
+    stift.setTransform(1, 0, 0, 1, 0, 0);
+    stift.fillStyle = "#e5ded1";
+    stift.fillRect(0, 0, blatt.width, blatt.height);
+    kameraSetzen(stift);
+    stift.fillStyle = "#ffffff";
+    stift.fillRect(kameraX, kameraY, sichtBreite(), sichtHoehe());
+    for (var i = 0; i < striche.length; i++) strichZeichnen(stift, striche[i], true);
+    linienSetzen();
+  }
+
+  function linienSetzen() {
+    if (!gitterX || !gitterY) return;
+    var ax = 100 / sichtBreite();
+    var ay = 100 / sichtHoehe();
+    var x = (WELT_B / 2 - kameraX) * ax;
+    var y = (WELT_H / 2 - kameraY) * ay;
+    gitterX.style.display = x < 0 || x > 100 ? "none" : "block";
+    gitterX.style.left = x + "%";
+    gitterY.style.display = y < 0 || y > 100 ? "none" : "block";
+    gitterY.style.top = y + "%";
+  }
+
+  function passeLeinwand() {
+    if (!leinwandRahmen || malScreen.hidden) return;
+    var box = leinwandRahmen.getBoundingClientRect();
+    var rand = Math.max(10, parseFloat(getComputedStyle(leinwandRahmen).paddingLeft) || 12);
+    var papierRand = 0;
+    try { papierRand = (parseFloat(getComputedStyle(papier).paddingLeft) || 0) * 2; } catch (e) {}
+    var platzB = Math.max(80, box.width - rand * 2 - papierRand);
+    var platzH = Math.max(80, box.height - rand * 2 - papierRand);
+    var verhaeltnis = WELT_B / WELT_H;
+    var b = Math.min(platzB, platzH * verhaeltnis);
+    var h = b / verhaeltnis;
+    blatt.style.width = Math.round(b) + "px";
+    blatt.style.height = Math.round(h) + "px";
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var bw = Math.max(280, Math.round(b * dpr));
+    var bh = Math.round(bw * WELT_H / WELT_B);
+    if (blatt.width !== bw || blatt.height !== bh) {
+      blatt.width = bw;
+      blatt.height = bh;
+      neuZeichnen();
+    } else {
+      neuZeichnen();
+    }
+  }
+
+  function aktualisiereZoom() {
+    if (!zoomWert) return;
+    zoomWert.textContent = Math.round(zoom * 100) + " %";
+  }
+
+  function zoomenUm(faktor, clientX, clientY) {
+    if (S.modus === "gemeinsam" && S.pausiert) return;
+    var r = blatt.getBoundingClientRect();
+    var cx = clientX === undefined ? r.left + r.width / 2 : clientX;
+    var cy = clientY === undefined ? r.top + r.height / 2 : clientY;
+    var vorher = [kameraX + (cx - r.left) / Math.max(1, r.width) * sichtBreite(),
+                  kameraY + (cy - r.top) / Math.max(1, r.height) * sichtHoehe()];
+    zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom * faktor));
+    kameraX = vorher[0] - (cx - r.left) / Math.max(1, r.width) * sichtBreite();
+    kameraY = vorher[1] - (cy - r.top) / Math.max(1, r.height) * sichtHoehe();
+    kameraKlemmen();
+    aktualisiereZoom();
+    neuZeichnen();
+  }
+
+  function verschieben(dx, dy) {
+    var r = blatt.getBoundingClientRect();
+    kameraX -= dx / Math.max(1, r.width) * sichtBreite();
+    kameraY -= dy / Math.max(1, r.height) * sichtHoehe();
+    kameraKlemmen();
+    neuZeichnen();
+  }
+
+  /* --------------------------------------------------------------- Malen */
+  function stiftFarbe() { return radiert ? "#ffffff" : farbe; }
+
+  function punktAnhaengen(punkt) {
+    if (!eigenerStrich) return;
+    var punkte = eigenerStrich.points;
+    var letzter = punkte[punkte.length - 1];
+    if (letzter && Math.abs(letzter[0] - punkt[0]) < 0.65 && Math.abs(letzter[1] - punkt[1]) < 0.65) return;
+    punkte.push(punkt);
+    if (punkte.length === 1) {
+      strichZeichnen(stift, { color: stiftFarbe(), width: breite, points: punkte, author: online.id }, true);
+      return;
+    }
     stift.strokeStyle = stiftFarbe();
+    stift.fillStyle = stiftFarbe();
     stift.lineWidth = breite;
     stift.lineCap = "round";
     stift.lineJoin = "round";
@@ -682,345 +1542,849 @@ function punktAnhaengen(punkt){
     stift.lineTo(punkt[0], punkt[1]);
     stift.stroke();
   }
-}
 
-function strichStarten(ereignis){
-  zeichnet = true;
-  eigenerStrich = { color: stiftFarbe(), width: breite, points: [], author: spielerId || "" };
-  punktAnhaengen(aufDemBlatt(ereignis));
-}
-
-function strichBeenden(){
-  if (!zeichnet) return;
-  zeichnet = false;
-  const strich = eigenerStrich;
-  eigenerStrich = null;
-  if (!strich || !strich.points.length) return;
-  alleStriche.push(strich);
-  personMalt(spielerId);
-  if (zusammen) strichSenden(strich);
-  // Neu zeichnen, damit der Saum in der eigenen Farbe gleich mitkommt.
-  if (zusammen) {
-    neuZeichnen();
-    mitmalerZeichnen();
-  }
-}
-
-// Angefangenen Strich wegwerfen (z. B. wenn der zweite Finger dazukommt).
-function strichVerwerfen(){
-  if (!zeichnet) return;
-  zeichnet = false;
-  eigenerStrich = null;
-  neuZeichnen();
-}
-
-function zweiFingerMerken(){
-  const punkte = [...zeiger.values()];
-  if (punkte.length < 2) { griff = null; return; }
-  const dx = punkte[0].x - punkte[1].x;
-  const dy = punkte[0].y - punkte[1].y;
-  griff = {
-    art: "finger",
-    abstand: Math.max(1, Math.hypot(dx, dy)),
-    mitteX: (punkte[0].x + punkte[1].x) / 2,
-    mitteY: (punkte[0].y + punkte[1].y) / 2,
-    zoom: zoom,
-    kameraX: kameraX,
-    kameraY: kameraY
-  };
-}
-
-blatt.addEventListener("pointerdown", ereignis=>{
-  ereignis.preventDefault();
-  try { blatt.setPointerCapture(ereignis.pointerId); } catch (fehler) {}
-
-  // Rechte oder mittlere Maustaste schiebt die Fläche – keine Extraknöpfe.
-  if (ereignis.pointerType === "mouse" && ereignis.button !== 0) {
-    zeiger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
-    griff = { art: "maus", x: ereignis.clientX, y: ereignis.clientY };
-    blatt.style.cursor = "grabbing";
-    return;
+  function strichStarten(ereignis) {
+    if (S.pausiert) return;
+    zeichnet = true;
+    eigenerStrich = {
+      color: stiftFarbe(),
+      width: breite,
+      points: [],
+      author: online.id || "",
+      clientId: neueId()
+    };
+    punktAnhaengen(aufDemBlatt(ereignis));
   }
 
-  zeiger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
-  if (zeiger.size >= 2) {
-    // Zwei Finger: nicht malen, sondern schieben und zoomen. Der eben
-    // begonnene Punkt wird wieder verworfen, damit kein Klecks bleibt.
-    strichVerwerfen();
-    zweiFingerMerken();
-    return;
-  }
-  strichStarten(ereignis);
-});
-
-blatt.addEventListener("pointermove", ereignis=>{
-  if (zeiger.has(ereignis.pointerId)) {
-    zeiger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
-  }
-
-  if (griff && griff.art === "maus") {
-    verschieben(ereignis.clientX - griff.x, ereignis.clientY - griff.y);
-    griff.x = ereignis.clientX;
-    griff.y = ereignis.clientY;
-    return;
-  }
-
-  if (griff && griff.art === "finger" && zeiger.size >= 2) {
-    const punkte = [...zeiger.values()];
-    const rechteck = blatt.getBoundingClientRect();
-    const dx = punkte[0].x - punkte[1].x;
-    const dy = punkte[0].y - punkte[1].y;
-    const abstand = Math.max(1, Math.hypot(dx, dy));
-    const mitteX = (punkte[0].x + punkte[1].x) / 2;
-    const mitteY = (punkte[0].y + punkte[1].y) / 2;
-
-    zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, griff.zoom * abstand / griff.abstand));
-    const breiteAlt = WELT_B / griff.zoom;
-    const hoeheAlt = WELT_H / griff.zoom;
-    // Der Punkt, der unter der Finger-Mitte lag, bleibt dort stehen.
-    const weltX = griff.kameraX + (griff.mitteX - rechteck.left) / rechteck.width * breiteAlt;
-    const weltY = griff.kameraY + (griff.mitteY - rechteck.top) / rechteck.height * hoeheAlt;
-    kameraX = weltX - (mitteX - rechteck.left) / rechteck.width * sichtBreite();
-    kameraY = weltY - (mitteY - rechteck.top) / rechteck.height * sichtHoehe();
-    kameraKlemmen();
-    neuZeichnen();
-    return;
-  }
-
-  if (!zeichnet || !eigenerStrich) return;
-  punktAnhaengen(aufDemBlatt(ereignis));
-});
-
-function zeigerWeg(ereignis){
-  zeiger.delete(ereignis.pointerId);
-  if (griff && griff.art === "maus") {
-    griff = null;
-    blatt.style.cursor = "crosshair";
-    return;
-  }
-  if (griff && griff.art === "finger") {
-    if (zeiger.size >= 2) zweiFingerMerken(); else griff = null;
-    return;
-  }
-  strichBeenden();
-}
-
-blatt.addEventListener("pointerup", zeigerWeg);
-blatt.addEventListener("pointercancel", zeigerWeg);
-
-blatt.addEventListener("wheel", ereignis=>{
-  ereignis.preventDefault();
-
-  if (ereignis.ctrlKey || ereignis.metaKey) {
-    zoomenUm(Math.exp(-ereignis.deltaY * 0.002), ereignis.clientX, ereignis.clientY);
-    return;
-  }
-
-  // Ohne Strg schiebt das Rad – so klappt auch das Zwei-Finger-Wischen
-  // auf dem Touchpad. Mit Umschalt geht es waagerecht.
-  const rechteck = blatt.getBoundingClientRect();
-  const dx = ereignis.shiftKey ? ereignis.deltaY : ereignis.deltaX;
-  const dy = ereignis.shiftKey ? 0 : ereignis.deltaY;
-  kameraX += dx / rechteck.width * sichtBreite();
-  kameraY += dy / rechteck.height * sichtHoehe();
-  kameraKlemmen();
-  neuZeichnen();
-}, { passive: false });
-
-// Rechtsklick soll das Menü nicht aufziehen, sondern die Fläche schieben.
-blatt.addEventListener("contextmenu", ereignis=>ereignis.preventDefault());
-
-// Passt die Zeichenfläche an die Anzeige an (scharf auch auf dem Handy).
-// So groß wie möglich, aber im Verhältnis DIN A4 (210 : 297, hochkant) –
-// begrenzt von der Breite der Spalte und von der Höhe, die unter der
-// Werkzeugleiste übrig bleibt. So passt das Blatt ohne Scrollen auf den
-// Schirm (auch im Vollbild).
-function flaecheGroesse(){
-  const stil = getComputedStyle(seite);
-  const luecke = parseFloat(stil.rowGap) || 0;
-  // Nur sichtbare Nachbarn zählen: ausgeblendete Zeilen (leere Statuszeile,
-  // niemand malt gerade) nehmen auch keinen Platz und keine Lücke weg.
-  const andere = [...seite.children].filter(k => k !== flaeche && k.getClientRects().length);
-  const hoeheAndere = andere.reduce((summe, k) => summe + k.getBoundingClientRect().height, 0);
-  const platzHoehe = window.innerHeight
-    - parseFloat(stil.paddingTop) - parseFloat(stil.paddingBottom)
-    - hoeheAndere - luecke * andere.length - 8;   // Rand der Fläche + Reserve
-  const platzBreite = seite.clientWidth
-    - parseFloat(stil.paddingLeft) - parseFloat(stil.paddingRight) - 4;
-  // Breite so wählen, dass die A4-Höhe in den Platz passt.
-  const verhaeltnis = WELT_B / WELT_H;   // 0,707 – Breite pro Höhe
-  const kante = Math.max(180, Math.min(platzBreite, Math.floor(platzHoehe * verhaeltnis)));
-  blatt.style.width = kante + "px";
-}
-
-// Beim Verkleinern verschwindet die Bildlaufleiste erst nach dem Setzen der
-// Breite – dann ist ein paar Pixel mehr Platz. Deshalb einmal nachmessen.
-function flaecheNachmessen(){
-  flaecheGroesse();
-  blattGroesse();
-  requestAnimationFrame(() => { flaecheGroesse(); blattGroesse(); });
-}
-
-function vollbildUmschalten(){
-  if (document.fullscreenElement) {
-    document.exitFullscreen();
-  } else if (seite.requestFullscreen) {
-    seite.requestFullscreen();
-  }
-}
-
-function blattGroesse(){
-  const rechteck = blatt.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const breite = Math.max(240, Math.round(rechteck.width * dpr));
-  const hoehe = Math.round(breite * WELT_H / WELT_B);
-  if (blatt.width !== breite || blatt.height !== hoehe) {
-    blatt.width = breite;
-    blatt.height = hoehe;
-  }
-  neuZeichnen();
-}
-
-// --------------------------------------------------
-// MIT DEM SERVER ABGLEICHEN
-// --------------------------------------------------
-
-async function strichSenden(strich){
-  try{
-    await fetch("/api/malen?room=" + encodeURIComponent(raum) + "&action=draw", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: spielerId, strokes: [strich] })
-    });
-  }catch(fehler){
-    zeigeStatus("Verbindung kurz weg – der Strich geht beim nächsten Versuch mit.", 4000);
-  }
-}
-
-async function abgleichen(){
-  if (!zusammen) return;
-  try{
-    const antwort = await fetch(
-      "/api/malen?room=" + encodeURIComponent(raum) +
-      "&id=" + encodeURIComponent(spielerId) +
-      "&epoch=" + epoche + "&since=" + stand,
-      { cache: "no-store" }
-    );
-    if (!antwort.ok) {
-      zeigeStatus(antwort.status === 404
-        ? "Dieser Raum existiert nicht mehr."
-        : "Kein Zugriff – bitte im Connector neu betreten.", 5000);
-      return;
-    }
-    const daten = await antwort.json();
-
-    if (daten.epoch !== epoche) {
-      // Jemand hat die Fläche geleert (oder wir sind neu dabei).
-      alleStriche = (daten.strokes || []).slice();
-      epoche = daten.epoch;
-      stand = daten.rev;
-      neuZeichnen();
+  function strichBeenden() {
+    if (!zeichnet) return;
+    zeichnet = false;
+    var strich = eigenerStrich;
+    eigenerStrich = null;
+    if (!strich || !strich.points.length) return;
+    striche.push(strich);
+    S.tick++;
+    if (S.modus === "solo") {
+      undoStapel.push(strich);
+      redoStapel = [];
     } else {
-      (daten.strokes || []).forEach(strich=>{
-        // Eigene Striche liegen schon auf dem Brett.
-        if (strich.author === spielerId) return;
-        alleStriche.push(strich);
-        strichZeichnen(strich);
-        personMalt(strich.author);
-        mitmalerZeichnen();
-      });
-      stand = daten.rev;
+      offen[strich.clientId] = strich;
+      mitmalerDrauf[online.id] = Date.now();
+      try {
+        window.dispatchEvent(new CustomEvent("malen:strich", {
+          detail: { strich: kopie(strich), clientId: strich.clientId }
+        }));
+      } catch (e) {}
+      neuZeichnen();
+      zeichneMitmaler();
     }
-
-    if (daten.admin !== istAdmin) {
-      istAdmin = daten.admin;
-      resetKnopf.hidden = !istAdmin;
-    }
-    // Im Normalfall bleibt die Zeile unten leer; nur Meldungen stehen dort.
-    if (Date.now() > statusBis) statusFeld.textContent = "";
-  }catch(fehler){
-    zeigeStatus("Verbindung wird wiederhergestellt …");
+    aktualisiereBildknoepfe();
   }
-}
 
-async function flaecheZuruecksetzen(){
-  if (!zusammen) {
-    alleStriche = [];
-    stand = 0;
+  function strichVerwerfen() {
+    if (!zeichnet) return;
+    zeichnet = false;
+    eigenerStrich = null;
     neuZeichnen();
-    zeigeStatus("Fläche geleert.", 2500);
-    return;
   }
-  try{
-    const antwort = await fetch("/api/malen?room=" + encodeURIComponent(raum) + "&action=clear", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: spielerId })
-    });
-    if (!antwort.ok) {
-      zeigeStatus("Nur der Admin kann die Fläche leeren.", 4000);
+
+  function zweiFingerMerken() {
+    var p = Array.from(zeiger.values());
+    if (p.length < 2) { griff = null; return; }
+    var dx = p[0].x - p[1].x;
+    var dy = p[0].y - p[1].y;
+    griff = {
+      art: "finger",
+      abstand: Math.max(1, Math.sqrt(dx * dx + dy * dy)),
+      mitteX: (p[0].x + p[1].x) / 2,
+      mitteY: (p[0].y + p[1].y) / 2,
+      zoom: zoom,
+      kameraX: kameraX,
+      kameraY: kameraY
+    };
+  }
+
+  blatt.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (S.startbildschirm) return;
+    try { blatt.setPointerCapture(e.pointerId); } catch (f) {}
+    if (S.pausiert) { zeigeStatus("Pausiert – erst fortsetzen.", 1800); return; }
+    if (e.pointerType === "mouse" && e.button !== 0) {
+      zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      griff = { art: "maus", x: e.clientX, y: e.clientY };
+      blatt.style.cursor = "grabbing";
       return;
     }
-    alleStriche = [];
-    const daten = await antwort.json();
-    epoche = daten.epoch;
-    stand = 0;
-    neuZeichnen();
-    zeigeStatus("Fläche geleert – alle fangen neu an.", 2500);
-  }catch(fehler){
-    zeigeStatus("Zurücksetzen hat nicht geklappt.", 4000);
-  }
-}
-
-// Präsenz halten, damit man im Connector nicht aus dem Raum fällt.
-async function lebenszeichen(){
-  if (!zusammen) return;
-  try{
-    await fetch("/api/presence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ room: raum, id: spielerId, name: spielerName || "Maler" })
-    });
-  }catch(fehler){}
-}
-
-// --------------------------------------------------
-// START
-// --------------------------------------------------
-
-function starten(){
-  baueFarben();
-  zeigeWerkzeug();
-  flaecheNachmessen();
-
-  const zurueck = document.getElementById("backButton");
-  zurueck.href = zusammen ? "/connector" : "../spiele.html";
-
-  resetKnopf.hidden = !istAdmin;
-  resetKnopf.addEventListener("click", flaecheZuruecksetzen);
-  window.addEventListener("resize", flaecheNachmessen);
-  vollbildKnopf.addEventListener("click", vollbildUmschalten);
-  document.addEventListener("fullscreenchange", () => {
-    const an = !!document.fullscreenElement;
-    vollbildKnopf.textContent = an ? "⛶ VOLLBILD AUS" : "⛶ VOLLBILD";
-    vollbildKnopf.setAttribute("aria-pressed", an ? "true" : "false");
-    flaecheNachmessen();
+    zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zeiger.size >= 2) {
+      strichVerwerfen();
+      zweiFingerMerken();
+      return;
+    }
+    strichStarten(e);
   });
 
-  if (zusammen) {
-    lebenszeichen();
-    abgleichen();
-    mitmalerHolen();
-    setInterval(abgleichen, 600);
-    setInterval(lebenszeichen, 5000);
-    setInterval(mitmalerHolen, 5000);
-    setInterval(mitmalerZeichnen, 1000);
+  blatt.addEventListener("pointermove", function (e) {
+    if (zeiger.has(e.pointerId)) zeiger.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (griff && griff.art === "maus") {
+      verschieben(e.clientX - griff.x, e.clientY - griff.y);
+      griff.x = e.clientX;
+      griff.y = e.clientY;
+      return;
+    }
+    if (griff && griff.art === "finger" && zeiger.size >= 2) {
+      var p = Array.from(zeiger.values());
+      var r = blatt.getBoundingClientRect();
+      var dx = p[0].x - p[1].x;
+      var dy = p[0].y - p[1].y;
+      var abstand = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+      var mx = (p[0].x + p[1].x) / 2;
+      var my = (p[0].y + p[1].y) / 2;
+      zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, griff.zoom * abstand / griff.abstand));
+      var altB = WELT_B / griff.zoom;
+      var altH = WELT_H / griff.zoom;
+      var wx = griff.kameraX + (griff.mitteX - r.left) / Math.max(1, r.width) * altB;
+      var wy = griff.kameraY + (griff.mitteY - r.top) / Math.max(1, r.height) * altH;
+      kameraX = wx - (mx - r.left) / Math.max(1, r.width) * sichtBreite();
+      kameraY = wy - (my - r.top) / Math.max(1, r.height) * sichtHoehe();
+      kameraKlemmen();
+      aktualisiereZoom();
+      neuZeichnen();
+      return;
+    }
+    if (!zeichnet || !eigenerStrich) return;
+    var ereignisse = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (var i = 0; i < ereignisse.length; i++) punktAnhaengen(aufDemBlatt(ereignisse[i]));
+  });
+
+  function zeigerWeg(e) {
+    zeiger.delete(e.pointerId);
+    if (griff && griff.art === "maus") {
+      griff = null;
+      blatt.style.cursor = "crosshair";
+      return;
+    }
+    if (griff && griff.art === "finger") {
+      if (zeiger.size >= 2) zweiFingerMerken(); else griff = null;
+      return;
+    }
+    strichBeenden();
   }
-}
+  blatt.addEventListener("pointerup", zeigerWeg);
+  blatt.addEventListener("pointercancel", zeigerWeg);
 
-starten();
+  blatt.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      zoomenUm(Math.exp(-e.deltaY * 0.002), e.clientX, e.clientY);
+      return;
+    }
+    var r = blatt.getBoundingClientRect();
+    var dx = e.shiftKey ? e.deltaY : e.deltaX;
+    var dy = e.shiftKey ? 0 : e.deltaY;
+    verschieben(-dx, -dy);
+  }, { passive: false });
+
+  blatt.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+  /* --------------------------------------------------------------- Undo */
+  function undo() {
+    if (S.modus !== "solo") {
+      zeigeStatus("Rückgängig gehört nur zum Einzelmodus.", 2200);
+      return;
+    }
+    if (!undoStapel.length) {
+      zeigeStatus("Nichts mehr rückgängig zu machen.", 1800);
+      return;
+    }
+    var s = undoStapel.pop();
+    redoStapel.push(s);
+    for (var i = striche.length - 1; i >= 0; i--) {
+      if (striche[i] === s) { striche.splice(i, 1); break; }
+    }
+    S.tick++;
+    neuZeichnen();
+    aktualisiereBildknoepfe();
+    zeigeStatus("Rückgängig.", 1200);
+  }
+
+  function redo() {
+    if (S.modus !== "solo") {
+      zeigeStatus("Wiederholen gehört nur zum Einzelmodus.", 2200);
+      return;
+    }
+    if (!redoStapel.length) {
+      zeigeStatus("Nichts zu wiederholen.", 1800);
+      return;
+    }
+    var s = redoStapel.pop();
+    undoStapel.push(s);
+    striche.push(s);
+    S.tick++;
+    neuZeichnen();
+    aktualisiereBildknoepfe();
+    zeigeStatus("Wiederholt.", 1200);
+  }
+
+  /* --------------------------------------------------------------- Speichern */
+  function gespeichertLesen() {
+    try {
+      var text = localStorage.getItem(SPEICHER_BILD);
+      if (!text) return null;
+      var d = JSON.parse(text);
+      if (!d || !Array.isArray(d.striche)) return null;
+      return d;
+    } catch (e) { return null; }
+  }
+
+  function gespeichertPruefen() {
+    var d = gespeichertLesen();
+    if (d && d.striche.length) {
+      gespeichertLaden.hidden = false;
+      var zeit = "";
+      try {
+        if (d.gespeichert) zeit = " · " + new Date(d.gespeichert).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+      } catch (e) {}
+      gespeichertLaden.textContent = "Gespeichertes Bild laden (" + d.striche.length + " Striche" + zeit + ")";
+      gespeichertLaden.title = "Das zuletzt in diesem Browser gespeicherte Bild öffnen";
+    } else {
+      gespeichertLaden.hidden = true;
+    }
+    if (ladenKnopf) ladenKnopf.disabled = !d;
+  }
+
+  function speichern() {
+    if (S.modus !== "solo") return;
+    if (!striche.length) {
+      zeigeStatus("Noch nichts zum Speichern.", 2200, "fehler");
+      return;
+    }
+    function ablegen() {
+      try {
+        localStorage.setItem(SPEICHER_BILD, JSON.stringify({
+          version: 1,
+          gespeichert: Date.now(),
+          striche: striche
+        }));
+        gespeichertPruefen();
+        zeigeStatus("Bild in diesem Browser gespeichert.", 3200, "gut");
+      } catch (e) {
+        zeigeStatus("Speichern nicht möglich – der Browserspeicher ist voll.", 5000, "fehler");
+      }
+    }
+    if (gespeichertLesen()) {
+      frage({
+        titel: "Gespeichertes Bild überschreiben?",
+        text: "Im Browserspeicher liegt schon ein Bild. Der neue Stand ersetzt es.",
+        ok: "Überschreiben",
+        ab: "Behalten"
+      }).then(function (ja) { if (ja) ablegen(); });
+    } else {
+      ablegen();
+    }
+  }
+
+  function laden(ausStart) {
+    var d = gespeichertLesen();
+    if (!d || !d.striche) {
+      zeigeStatus("Kein gespeichertes Bild gefunden.", 2500, "fehler");
+      return;
+    }
+    function holen() {
+      if (S.startbildschirm) partieStarten("solo");
+      striche = d.striche.filter(function (s) { return s && Array.isArray(s.points) && s.points.length; });
+      undoStapel = [];
+      redoStapel = [];
+      S.tick = 0;
+      neuZeichnen();
+      aktualisiereBildknoepfe();
+      zeigeStatus("Gespeichertes Bild geladen.", 3000, "gut");
+    }
+    if (!ausStart && striche.length) {
+      frage({
+        titel: "Gespeichertes Bild laden?",
+        text: "Das aktuelle Bild wird dabei ersetzt.",
+        ok: "Laden",
+        ab: "Abbrechen",
+        gefahr: true
+      }).then(function (ja) { if (ja) holen(); });
+    } else {
+      holen();
+    }
+  }
+
+  function leeren() {
+    if (S.modus === "gemeinsam" && !online.admin) {
+      zeigeStatus("Nur der Raum-Ersteller kann die gemeinsame Fläche leeren.", 3500, "fehler");
+      return;
+    }
+    frage({
+      titel: "Leinwand wirklich leeren?",
+      text: S.modus === "gemeinsam"
+        ? "Alle sehen danach eine leere Fläche. Das lässt sich nicht rückgängig machen."
+        : "Das ganze Bild wird gelöscht. Das lässt sich nicht rückgängig machen.",
+      ok: "Leeren",
+      ab: "Behalten",
+      gefahr: true
+    }).then(function (ja) {
+      if (!ja) return;
+      if (S.modus === "gemeinsam") {
+        try {
+          window.dispatchEvent(new CustomEvent("malen:leeren", { detail: {} }));
+          zeigeStatus("Leeren gesendet – warte auf den Server.", 3000);
+        } catch (e) {}
+        return;
+      }
+      striche = [];
+      undoStapel = [];
+      redoStapel = [];
+      S.tick++;
+      neuZeichnen();
+      aktualisiereBildknoepfe();
+      zeigeStatus("Leinwand geleert.", 2200);
+    });
+  }
+
+  function exportPNG() {
+    if (!striche.length) {
+      zeigeStatus("Noch nichts zum Exportieren.", 2200, "fehler");
+      return;
+    }
+    var exportBlatt = document.createElement("canvas");
+    exportBlatt.width = WELT_B;
+    exportBlatt.height = WELT_H;
+    var ctx = exportBlatt.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, WELT_B, WELT_H);
+    for (var i = 0; i < striche.length; i++) strichZeichnen(ctx, striche[i], false);
+    var name = "malen-" + new Date().toISOString().slice(0, 10) + ".png";
+    function herunterladen(url) {
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { a.remove(); }, 0);
+      zeigeStatus("PNG exportiert.", 2600, "gut");
+    }
+    if (exportBlatt.toBlob) {
+      exportBlatt.toBlob(function (blob) {
+        if (!blob) { zeigeStatus("PNG konnte nicht erzeugt werden.", 3000, "fehler"); return; }
+        var url = URL.createObjectURL(blob);
+        herunterladen(url);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+      }, "image/png");
+    } else {
+      herunterladen(exportBlatt.toDataURL("image/png"));
+    }
+  }
+
+  /* --------------------------------------------------------------- Online */
+  function schluesselStrich(s) {
+    if (!s) return "";
+    if (s.clientId) return String(s.clientId);
+    return String(s.author || "") + "|" + String(s.color || "") + "|" + String(s.width || "") + "|" +
+      (s.points && s.points.length ? s.points[0].join(",") + "|" + s.points[s.points.length - 1].join(",") : "");
+  }
+
+  function stricheMischen(neu, ersetzen) {
+    if (!Array.isArray(neu)) return 0;
+    var bekannt = Object.create(null);
+    var i;
+    if (ersetzen) {
+      striche = [];
+    } else {
+      for (i = 0; i < striche.length; i++) bekannt[schluesselStrich(striche[i])] = true;
+    }
+    var dazu = 0;
+    for (i = 0; i < neu.length; i++) {
+      var s = neu[i];
+      if (!s || !Array.isArray(s.points) || !s.points.length) continue;
+      var k = schluesselStrich(s);
+      if (k && bekannt[k]) continue;
+      if (k) bekannt[k] = true;
+      striche.push(s);
+      dazu++;
+      if (s.author && s.author !== online.id) mitmalerDrauf[s.author] = Date.now();
+    }
+    // Noch nicht bestätigte eigene Striche bleiben sichtbar und werden nicht doppelt.
+    Object.keys(offen).forEach(function (id) {
+      var s = offen[id];
+      if (!s) return;
+      var k = schluesselStrich(s);
+      if (!bekannt[k]) {
+        bekannt[k] = true;
+        striche.push(s);
+        dazu++;
+      }
+    });
+    if (dazu) {
+      if (ersetzen) neuZeichnen();
+      else {
+        // Nur die neuen Striche zeichnen; der Blick bleibt, wo er ist.
+        kameraSetzen(stift);
+        for (var j = 0; j < neu.length; j++) {
+          if (!neu[j] || !Array.isArray(neu[j].points)) continue;
+          strichZeichnen(stift, neu[j], true);
+        }
+        Object.keys(offen).forEach(function (id) { strichZeichnen(stift, offen[id], true); });
+        linienSetzen();
+      }
+    }
+    return dazu;
+  }
+
+  function standUebernehmen(daten) {
+    if (!istObjekt(daten)) return { ok: false, fehler: "daten-muessen-objekt-sein" };
+    if (S.modus !== "gemeinsam") return { ok: false, fehler: "aktion-nicht-erlaubt" };
+    var ersetzen = !!daten.ersetzen || daten.epoch !== online.epoch;
+    if (typeof daten.epoch === "number") online.epoch = daten.epoch;
+    if (typeof daten.rev === "number") online.rev = daten.rev;
+    if (typeof daten.admin === "boolean") online.admin = daten.admin;
+    if (!online.admin) leerenKnopf.hidden = true;
+    else leerenKnopf.hidden = false;
+    if (Array.isArray(daten.players)) {
+      online.players = daten.players.slice();
+    }
+    if (daten.geleert) {
+      striche = [];
+      offen = Object.create(null);
+      undoStapel = [];
+      redoStapel = [];
+      ersetzen = true;
+    }
+    if (Array.isArray(daten.strokes)) {
+      stricheMischen(daten.strokes, ersetzen);
+    }
+    online.verbunden = true;
+    online.fehler = "";
+    online.ende = false;
+    verbindungAktualisieren();
+    zeichneMitmaler();
+    aktualisiereBildknoepfe();
+    if (Date.now() > statusUhr) zeigeStatus("");
+    return { ok: true, striche: striche.length };
+  }
+
+  function zeichneMitmaler() {
+    if (S.modus !== "gemeinsam") {
+      mitmalerBox.innerHTML = "";
+      return;
+    }
+    var jetzt = Date.now();
+    var liste = online.players.slice();
+    if (online.id && !liste.some(function (p) { return p && p.id === online.id; })) {
+      liste.unshift({ id: online.id, name: online.name || "Du", anwesend: true });
+    }
+    liste.sort(function (a, b) {
+      if (a.id === online.id) return -1;
+      if (b.id === online.id) return 1;
+      return String(a.name || "").localeCompare(String(b.name || ""), "de");
+    });
+    mitmalerBox.innerHTML = "";
+    liste.forEach(function (p) {
+      if (!p || !p.id) return;
+      if (p.anwesend === false) return;
+      var person = document.createElement("span");
+      person.className = "person";
+      var malt = jetzt - (mitmalerDrauf[p.id] || 0) < 2600;
+      if (malt) person.classList.add("dran");
+      var punkt = document.createElement("i");
+      punkt.className = "punkt";
+      punkt.style.background = personFarbe(p.id);
+      var text = document.createElement("span");
+      text.textContent = (p.name || "Maler") + (p.id === online.id ? " (du)" : "");
+      person.appendChild(punkt);
+      person.appendChild(text);
+      if (p.id === online.id && online.admin) {
+        var h = document.createElement("span");
+        h.className = "host";
+        h.textContent = "Host";
+        person.appendChild(h);
+      }
+      if (malt) {
+        var m = document.createElement("span");
+        m.className = "malt";
+        m.textContent = "malt";
+        person.appendChild(m);
+      }
+      mitmalerBox.appendChild(person);
+    });
+  }
+
+  /* -------------------------------------------------------------- API 2.0 */
+  var FELDER = ["stil", "modus", "online"];
+
+  function start(konfiguration) {
+    var k = konfiguration;
+    if (k === undefined || k === null) k = {};
+    if (!istObjekt(k)) return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+    var schluessel = Object.keys(k);
+    for (var i = 0; i < schluessel.length; i++) {
+      if (FELDER.indexOf(schluessel[i]) < 0) return { ok: false, fehler: "unbekanntes-feld", feld: schluessel[i] };
+    }
+    var neuerStil = S.stil;
+    if (Object.prototype.hasOwnProperty.call(k, "stil")) {
+      if (typeof k.stil !== "string") return { ok: false, fehler: "unbekanntes-feld", feld: "stil" };
+      neuerStil = stilWert(k.stil === "klassisch" ? "normal" : k.stil);
+      S.stilVorgabe = true;
+      $("stilBlock").hidden = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(k, "modus") && k.modus !== "solo" && k.modus !== "gemeinsam") {
+      return { ok: false, fehler: "unbekannter-modus" };
+    }
+    if (Object.prototype.hasOwnProperty.call(k, "online") && !istObjekt(k.online)) {
+      return { ok: false, fehler: "konfiguration-muss-objekt-sein" };
+    }
+    var onlineDaten = k.online || null;
+    if (onlineDaten) {
+      var erlaubt = ["room", "id", "name", "admin"];
+      for (var j = 0; j < Object.keys(onlineDaten).length; j++) {
+        if (erlaubt.indexOf(Object.keys(onlineDaten)[j]) < 0) return { ok: false, fehler: "unbekanntes-feld", feld: "online." + Object.keys(onlineDaten)[j] };
+      }
+      if (typeof onlineDaten.room !== "string" || typeof onlineDaten.id !== "string" || !onlineDaten.room || !onlineDaten.id) {
+        return { ok: false, fehler: "online-daten-fehlen" };
+      }
+      if (k.modus && k.modus !== "gemeinsam") return { ok: false, fehler: "modus-passt-nicht" };
+    }
+
+    // Eine Konfiguration mit ausschließlich "stil" richtet nur die Ansicht ein.
+    if (schluessel.length === 1 && schluessel[0] === "stil") {
+      stilAnwenden(neuerStil, false);
+      aktualisiereBildknoepfe();
+      return { ok: true, gestartet: false, laeuft: S.laeuft, stil: S.stil, modus: S.modus };
+    }
+    if (S.laeuft && !S.startbildschirm) return { ok: false, fehler: "spiel-laeuft" };
+
+    var zielModus = onlineDaten ? "gemeinsam" : (k.modus || "solo");
+    if (zielModus === "gemeinsam" && !onlineDaten) return { ok: false, fehler: "online-fehlt" };
+    stilAnwenden(neuerStil, false);
+    partieStarten(zielModus, onlineDaten);
+    return {
+      ok: true, gestartet: true, stil: S.stil, modus: S.modus,
+      version: VERSION, laeuft: S.laeuft
+    };
+  }
+
+  function einstellungen() {
+    return {
+      modi: ["solo", "gemeinsam"],
+      modus: S.modus,
+      stile: STILE.slice(),
+      stil: S.stil,
+      stilWahl: !S.stilVorgabe,
+      level: 1,
+      stufen: []
+    };
+  }
+
+  function zustand() {
+    return {
+      laeuft: S.laeuft,
+      pausiert: S.pausiert,
+      tick: S.tick,
+      richtung: { x: 0, y: 0 },
+      level: 1,
+      punkte: 0,
+      extras: [],
+      startbildschirm: S.startbildschirm,
+      modus: S.modus,
+      stil: S.stil,
+      stilWahl: !S.stilVorgabe,
+      striche: striche.map(function (s) {
+        return {
+          author: s.author || "",
+          clientId: s.clientId || "",
+          color: s.color || "#111111",
+          width: s.width || 8,
+          points: (s.points || []).map(function (p) { return [p[0], p[1]]; })
+        };
+      }),
+      anzahlStriche: striche.length,
+      zoom: zoom,
+      online: {
+        room: online.room,
+        id: online.id,
+        name: online.name,
+        admin: online.admin,
+        verbunden: online.verbunden,
+        fehler: online.fehler,
+        spieler: online.players.map(function (p) { return { id: p.id, name: p.name, anwesend: p.anwesend !== false }; })
+      }
+    };
+  }
+
+  function pause() {
+    if (!S.laeuft || S.startbildschirm) return { ok: false, fehler: "spiel-laeuft-nicht" };
+    if (!S.pausiert) {
+      S.pausiert = true;
+      $("pauseSchleier").hidden = false;
+      try { window.dispatchEvent(new CustomEvent("malen:pausiert", { detail: { tick: S.tick } })); } catch (e) {}
+    }
+    return { ok: true, pausiert: true };
+  }
+
+  function resume() {
+    if (!S.laeuft || S.startbildschirm) return { ok: false, fehler: "spiel-laeuft-nicht" };
+    if (S.pausiert) {
+      S.pausiert = false;
+      $("pauseSchleier").hidden = true;
+      try { window.dispatchEvent(new CustomEvent("malen:weiter", { detail: { tick: S.tick } })); } catch (e) {}
+    }
+    return { ok: true, pausiert: false };
+  }
+
+  function stop() {
+    if (S.laeuft && S.modus === "gemeinsam") {
+      try { window.dispatchEvent(new CustomEvent("malen:verlassen", { detail: { grund: "stop" } })); } catch (e) {}
+    }
+    startbildschirmSofort();
+    return { ok: true };
+  }
+
+  function aktion(name, daten) {
+    if (typeof name !== "string") return { ok: false, fehler: "unbekannte-aktion" };
+    if (daten !== undefined && daten !== null && !istObjekt(daten)) return { ok: false, fehler: "daten-muessen-objekt-sein" };
+    switch (name) {
+      case "stand":
+        return standUebernehmen(daten || {});
+      case "gesendet":
+        if (S.modus !== "gemeinsam") return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        (daten && Array.isArray(daten.ids) ? daten.ids : []).forEach(function (id) { delete offen[id]; });
+        online.verbunden = true;
+        online.fehler = "";
+        verbindungAktualisieren();
+        return { ok: true, offen: Object.keys(offen).length };
+      case "verbindung":
+        if (S.modus !== "gemeinsam") return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        online.verbunden = !!(daten && daten.ok);
+        online.fehler = daten && daten.text ? String(daten.text) : "";
+        if (daten && daten.ende) online.ende = true;
+        verbindungAktualisieren();
+        if (online.fehler) zeigeStatus(online.fehler, 0, "fehler");
+        else if (Date.now() > statusUhr) zeigeStatus("");
+        return { ok: true, verbunden: online.verbunden };
+      case "spieler":
+        if (S.modus !== "gemeinsam") return { ok: false, fehler: "aktion-nicht-erlaubt" };
+        if (daten && Array.isArray(daten.players)) {
+          online.players = daten.players.slice();
+          zeichneMitmaler();
+        }
+        return { ok: true };
+      case "hinweis":
+        if (daten && daten.text) zeigeStatus(String(daten.text), daten.fehler ? 4200 : 3200, daten.fehler ? "fehler" : "gut");
+        return { ok: true };
+      case "stil":
+        if (!daten || typeof daten.stil !== "string") return { ok: false, fehler: "unbekanntes-feld", feld: "stil" };
+        S.stilVorgabe = true;
+        $("stilBlock").hidden = true;
+        stilAnwenden(daten.stil, false);
+        return { ok: true, stil: S.stil };
+      default:
+        return { ok: false, fehler: "unbekannte-aktion" };
+    }
+  }
+
+  /* -------------------------------------------------------------- Anschlüsse */
+  $("hilfe").addEventListener("click", hilfeZeigen);
+  $("hilfeSchliessen").addEventListener("click", hilfeSchliessen);
+  hilfeBlatt.addEventListener("click", function (e) { if (e.target === hilfeBlatt) hilfeSchliessen(); });
+
+  $("beenden").addEventListener("click", function () {
+    function gehen() {
+      if (typeof window.tgZurueck === "function") window.tgZurueck();
+      else location.href = connectorAdresse();
+    }
+    if (S.laeuft && striche.length) {
+      frage({
+        titel: "Malen beenden?",
+        text: "Nicht gespeicherte Striche gehen verloren.",
+        ok: "Beenden",
+        ab: "Weiter malen",
+        gefahr: true
+      }).then(function (ja) { if (ja) gehen(); });
+    } else {
+      gehen();
+    }
+  });
+
+  $("zumStart").addEventListener("click", function () { startbildschirmZeigen(false); });
+  $("vollbild").addEventListener("click", function () {
+    if (window.TGSpiel && TGSpiel.vollbild) TGSpiel.vollbild.um();
+    else if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  });
+  if (window.TGSpiel && TGSpiel.vollbild && typeof TGSpiel.vollbild.knopf === "function") {
+    TGSpiel.vollbild.knopf($("vollbild"), {
+      textAn: "Vollbild aus", textAus: "Vollbild",
+      titelAn: "Vollbild beenden (Escape)", titelAus: "Vollbild einschalten"
+    });
+    TGSpiel.vollbild.beiWechsel(function () { setTimeout(passeLeinwand, 80); });
+  }
+
+  $("zoomAus").addEventListener("click", function () { zoomenUm(1 / 1.25); });
+  $("zoomEin").addEventListener("click", function () { zoomenUm(1.25); });
+  zoomWert.addEventListener("click", function () {
+    zoom = 1;
+    kameraX = 0;
+    kameraY = 0;
+    aktualisiereZoom();
+    neuZeichnen();
+    zeigeStatus("Ganze Leinwand.", 1200);
+  });
+
+  $("pinsel").addEventListener("click", function () { radiererUmschalten(false); });
+  $("radierer").addEventListener("click", function () { radiererUmschalten(true); });
+  farbwahl.addEventListener("input", function () {
+    farbe = farbwahl.value;
+    farbenName = "Eigene Farbe";
+    if (radiert) radiererUmschalten(false);
+    markiereFarbe();
+    zeigeStatus("Eigene Farbe " + farbe + " gewählt.", 1600);
+  });
+  staerkeFeld.addEventListener("input", function () {
+    breite = zahl(staerkeFeld.value, 2, 40);
+    staerkeWert.textContent = String(Math.round(breite)) + " px";
+    zeigeWerkzeug();
+  });
+  $("pauseWeiter").addEventListener("click", function () { resume(); });
+
+  undoKnopf.addEventListener("click", undo);
+  redoKnopf.addEventListener("click", redo);
+  leerenKnopf.addEventListener("click", leeren);
+  speichernKnopf.addEventListener("click", speichern);
+  ladenKnopf.addEventListener("click", function () { laden(false); });
+  exportKnopf.addEventListener("click", exportPNG);
+  gespeichertLaden.addEventListener("click", function () { laden(true); });
+
+  document.querySelectorAll(".modus-karte").forEach(function (karte) {
+    karte.addEventListener("click", function () {
+      if (karte.dataset.modus === "solo") {
+        start({ modus: "solo" });
+        return;
+      }
+      frage({
+        titel: "Mit anderen malen",
+        text: "Gemeinsam malen läuft über den Connector: dort einen Raum öffnen, „Malen“ wählen und andere einladen. Der Connector hält Raum, Verbindung und Serverstand – das Spiel selbst spricht nicht mit dem Server.",
+        ok: "Connector öffnen",
+        ab: "Hier bleiben"
+      }).then(function (ja) {
+        if (ja) location.href = connectorAdresse();
+      });
+    });
+  });
+
+  document.querySelectorAll(".stil-karte").forEach(function (karte) {
+    karte.addEventListener("click", function () {
+      if (S.stilVorgabe) return;
+      stilAnwenden(karte.dataset.stil, true);
+      zeigeStatus("Ansicht: " + STIL_TEXTE[S.stil] + ".", 1600);
+    });
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (hilfeOffen) {
+      if (e.key === "Escape") { e.preventDefault(); hilfeSchliessen(); }
+      return;
+    }
+    if (!dialog.hidden) {
+      if (e.key === "Escape") { e.preventDefault(); dialog.onkeydown && dialog.onkeydown(e); }
+      return;
+    }
+    var ziel = e.target;
+    var bedien = ziel && (
+      ziel.tagName === "BUTTON" || ziel.tagName === "INPUT" || ziel.tagName === "SELECT" ||
+      ziel.tagName === "TEXTAREA" || ziel.tagName === "A" || ziel.isContentEditable
+    );
+    if (bedien) return;
+    var strg = e.ctrlKey || e.metaKey;
+    if (strg && (e.key === "z" || e.key === "Z")) {
+      if (S.startbildschirm) return;
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    if (strg && (e.key === "y" || e.key === "Y")) {
+      if (S.startbildschirm) return;
+      e.preventDefault();
+      redo();
+      return;
+    }
+    if (strg || e.altKey) return;
+    if (e.key === "Escape") {
+      if (window.TGSpiel && TGSpiel.vollbild && TGSpiel.vollbild.ist()) return;
+      if (!hilfeBlatt.hidden) { hilfeSchliessen(); e.preventDefault(); }
+      return;
+    }
+    if (S.startbildschirm) return;
+    if (e.key === "b" || e.key === "B") { e.preventDefault(); radiererUmschalten(false); }
+    else if (e.key === "e" || e.key === "E") { e.preventDefault(); radiererUmschalten(true); }
+    else if (e.key === "f" || e.key === "F") { e.preventDefault(); $("vollbild").click(); }
+    else if (e.key === "[") {
+      e.preventDefault();
+      breite = Math.max(2, breite - 2);
+      staerkeFeld.value = String(breite);
+      staerkeWert.textContent = String(breite) + " px";
+      zeigeWerkzeug();
+    } else if (e.key === "]") {
+      e.preventDefault();
+      breite = Math.min(40, breite + 2);
+      staerkeFeld.value = String(breite);
+      staerkeWert.textContent = String(breite) + " px";
+      zeigeWerkzeug();
+    } else if (e.key === "+" || e.key === "=") {
+      e.preventDefault(); zoomenUm(1.2);
+    } else if (e.key === "-") {
+      e.preventDefault(); zoomenUm(1 / 1.2);
+    }
+  });
+
+  window.addEventListener("resize", function () { setTimeout(passeLeinwand, 40); });
+  window.addEventListener("orientationchange", function () { setTimeout(passeLeinwand, 160); });
+  document.addEventListener("fullscreenchange", function () { setTimeout(passeLeinwand, 100); });
+  if (window.ResizeObserver) {
+    try { new ResizeObserver(function () { passeLeinwand(); }).observe(leinwandRahmen); } catch (e) {}
+  }
+
+  // Statuszeile nur so lange stehen lassen, wie sie soll.
+  setInterval(function () {
+    if (statusUhr && Date.now() > statusUhr) {
+      statusFeld.textContent = "";
+      statusFeld.className = "status";
+      statusUhr = 0;
+    }
+    if (S.modus === "gemeinsam") zeichneMitmaler();
+  }, 700);
+
+  /* -------------------------------------------------------------- Anlauf */
+  stilAnwenden(stilLesen(), false);
+  baueFarben();
+  zeigeWerkzeug();
+  aktualisiereZoom();
+  gespeichertPruefen();
+  aktualisiereBildknoepfe();
+  setzeVerbindung("offline", "Einzelmodus");
+
+  var schnittstelle = {
+    version: VERSION,
+    bereit: true,
+    whenReady: function () { return Promise.resolve({ ok: true, version: VERSION }); },
+    start: start,
+    einstellungen: einstellungen,
+    zustand: zustand,
+    startbildschirm: function () { startbildschirmSofort(); return { ok: true }; },
+    stop: stop,
+    pause: pause,
+    resume: resume,
+    aktion: aktion
+  };
+  if (Object.freeze) Object.freeze(schnittstelle);
+  window.Malen = schnittstelle;
+
+  setTimeout(function () {
+    try { window.dispatchEvent(new CustomEvent("malen:bereit", { detail: { version: VERSION } })); } catch (e) {}
+  }, 0);
+})();
 </script>
-
-<script src="../verlassen.js"></script>
 </body>
 </html>

@@ -5,6 +5,51 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Rücknavigation folgt der tatsächlichen Herkunft
+
+**Auftrag:** Spiele führten über „Zurück“ grundsätzlich zum Online-Connector,
+auch wenn sie lokal gestartet wurden. Projektweit sollte jedes Spiel zu seiner
+Herkunft zurückfinden (lokale/veröffentlichte Spieleübersicht, lokaler/Online-
+Connector), mit sicher geprüftem Rücksprungziel.
+
+**Umsetzung:**
+
+- `spiele/zurueck.js` ist die einzige Navigationslogik: Herkunft aus
+  `?zurueck=`, sonst `document.referrer`, sonst Rahmen (`postMessage`), sonst
+  Spieleübersicht. Ziele werden geprüft (gleiche Herkunft,
+  `trashygecko.onrender.com`, `trashygecko-collab.github.io/Trashygecko/`;
+  nur Pfade unter `/spiele` oder `/connector`; `file:` nur mit `/spiele`-Pfad).
+  Fremde oder manipulierte Ziele werden verworfen.
+- Neue Schnittstelle `window.TGNAV` (`zurueckZiel()`, `connectorZiel()`,
+  `uebersichtZiel()`, `herkunft`, `geprueft`); `window.tgZurueck()` bleibt.
+- `spiele/spiele.html` hängt beim Klick auf eine Karte `?zurueck=<Übersicht>`
+  an – außer bei Karten, die bewusst in den Connector führen (Spiele mit
+  Mehrspieler-Teil, unverändert).
+- Beide Connectoren übergeben in `spielOeffnen` ihre eigene Adresse samt Pfad
+  und Parametern als `zurueck`.
+- `wuerfelspiele/rahmen.js` bindet die zentrale Navigation für alle 13
+  Würfelspiele ein; im Rahmen wird der Rahmen über `postMessage` geschlossen,
+  die Connector-Seite bleibt stehen.
+- 36 Spiele ohne eigenen Rückweg wurden nachgerüstet, 6 feste
+  `/connector`-Rücklinks auf `data-tg-zurueck` umgestellt, `malen`, `pimmel`
+  und `pong` von eigenen Connector-Adressen auf `TGNAV.connectorZiel()`
+  gebracht. Keine Spielmechanik und kein Design geändert.
+
+**Geprüft (lokal, Server 127.0.0.1:8791 und Connector 127.0.0.1:8770):**
+
+| Fall | Ergebnis |
+| --- | --- |
+| Übersicht → Spiel → Zurück (PC und 390×844) | „Zurück zur Spieleübersicht“ → `spiele.html` |
+| Connector → Spiel im Rahmen → Zurück (PC und 390×844) | Rahmen `about:blank`, Connector-URL unverändert |
+| Direktstart der Spielseite | „Zurück zur Spieleübersicht“ → `spiele.html` |
+| `?zurueck=https://evil.example/x` | verworfen, Ziel bleibt die Übersicht |
+| `?zurueck=https://trashygecko.onrender.com/admin` | verworfen, Ziel bleibt die Übersicht |
+
+Veröffentlichte Fälle (Online-Übersicht, Online-Connector) nach dem
+Render-Deploy geprüft; Einzelheiten im Prüfbericht.
+
+---
+
 ## 28.11.2026 · PNG-Smilies auf sichtbaren Inhalt beschnitten
 
 **Auftrag:** Nur statische PNGs im Smilie-Ordner

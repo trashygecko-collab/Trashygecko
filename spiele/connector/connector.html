@@ -1964,6 +1964,11 @@ function nachWiederverbindung(aktiv){
  const jetzt=Date.now();
  if(jetzt-letzteWiederholung<1500)return;
  letzteWiederholung=jetzt;
+ // Malen hat keinen Partiestatus am Server: Die Leinwand lebt im Raum weiter
+ // und wird vom eigenen Abgleich nachgeladen. Ein fehlendes "aktiv" darf den
+ // Rahmen deshalb nicht schließen, sonst wäre ein kurzer Netzausfall das Ende
+ // des gemeinsamen Bildes.
+ if(framePartie&&framePartie.gameId==="malen")return;
  if(framePartie&&!aktiv){
   rahmenLeeren();
   setRoomStatus("Die Partie ist am Server nicht mehr vorhanden – der Spielserver wurde neu gestartet. Chat und Spielstand von vorher sind verloren.");
@@ -2441,7 +2446,9 @@ function openGame(path, art, modus){
 // Gemeinsame Malfläche: am PC im rechten Rahmen, sonst im eigenen Tab.
 function openMalen(){
  if(!activeRoom||!sessionID)return;
- spielOeffnen("Malen",spielAdresse("/spiele/malen/malen.html"),{mehrspieler:true,gameId:"malen",pfad:"/spiele/malen/malen.html"});
+ // Raum, Kennung und Name stehen schon im Connector. Das Spiel bekommt sie
+ // über die Spiel-API; in der Adresse steht bewusst nichts davon.
+ spielOeffnen("Malen","/spiele/malen/malen.html?v=2",{mehrspieler:true,gameId:"malen",pfad:"/spiele/malen/malen.html"});
 }
 
 async function gameApiAction(gameId, action, data={}){
@@ -4836,7 +4843,7 @@ const BOTS_SPIELE={
  pig:"pig",schlangen:"schlangen",kniffel:"kniffel",zehntausend:"zehntausend",gaensespiel:"gaensespiel",schiffe:"schiffe",uno:"uno",maumau:"maumau",skyjo:"skyjo",schwimmen:"schwimmen",pong:"pong",tron:"tron",galgen:"galgen",arschloch:"arschloch",maexchen:"maexchen",sim:"sim",siebzehn:"siebzehn",sechsundsechzig:"sechsundsechzig",baccara:"baccara",poker:"poker",chicago:"chicago",shipcrew:"shipcrew",einsxeins:"einsxeins",bomberman:"bomberman",go:"go",paare:"paare",hold:"hold",memory:"memory",mastermind:"mastermind",cabo:"cabo",wortsuche:"wortsuche",domino:"domino",halma:"halma",risiko:"risiko",labyrinth:"labyrinth",bubble:"bubble",snake:"snake",tetris:"tetris",
  // Die 13 Würfelspiele laufen alle über dieselbe Regelmaschine (/api/wuerfel).
  "der-turm":"wuerfel",
-"eins-bis-sechzehn":"wuerfel",fenster:"wuerfel",
+ "eins-bis-sechzehn":"wuerfel",fenster:"wuerfel",
  "gestrichene-zwoelf":"wuerfel","hin-und-her":"wuerfel",
  jule:"wuerfel",paerchen:"wuerfel","plus-minus":"wuerfel",rentmeister:"wuerfel",
  streichhoelzer:"wuerfel","teure-sieben":"wuerfel","unter-oder-ueber":"wuerfel",
@@ -5082,10 +5089,14 @@ async function angebotAktion(action,spiel,tischId,zielId){
 // Bereit melden oder zurücknehmen – eine Tür für alle Spiele (Etappe 5).
 async function bereitAktion(spiel){
  if(!activeRoom||!sessionID)return false;
+ // Der gewünschte Zustand geht mit, nicht nur das Spiel: Sonst nimmt ein
+ // zweiter Klick die Bereitschaft wieder zurück, wenn die Kachel noch den
+ // alten Stand zeigt (der Stand ist bis zu drei Sekunden zwischengespeichert).
+ const bereit=bereitStand[spiel]||[];
  try{
   const r=await fetch("/api/bereit?room="+encodeURIComponent(activeRoom),{
    method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({id:sessionID,game:spiel})});
+   body:JSON.stringify({id:sessionID,game:spiel,bereit:bereit.indexOf(sessionID)<0})});
   if(!r.ok){
    tttStatus((await r.text()).trim()||"Bereit hat nicht geklappt.");
    return false;
@@ -6018,17 +6029,32 @@ function istPc(){
 // Welche Partie steckt gerade im Rahmen? null = Einzelspieler oder zu.
 let framePartie=null;
 
+/* Das Spiel bekommt beim Start den Weg zurück mit: die eigene Adresse
+   des Connectors samt Raum. Damit findet es auch dann zurück, wenn es nicht
+   im Rahmen läuft (eigener Tab, Handy-Sonderfall). */
+function mitHerkunft(url){
+ try{
+  var u=new URL(url, location.href);
+  if(!u.searchParams.has("zurueck")){
+   u.searchParams.set("zurueck", location.origin+location.pathname+location.search);
+  }
+  return u.href;
+ }catch(fehler){ return url; }
+}
+
 function spielOeffnen(name,url,info){
  const rahmen=document.getElementById("spielRahmen");
  document.getElementById("spielName").textContent=name;
  const rechtsTitel=document.getElementById("rechtsTitel");
  if(rechtsTitel)rechtsTitel.textContent=name;
  framePartie=info&&info.mehrspieler?{name:name,gameId:info.gameId||"",pfad:info.pfad||"",modus:(info&&info.modus)||""}:null;
+ url=mitHerkunft(url);
  if(rahmen.getAttribute("src")!==url)rahmen.src=url;
  document.body.classList.add("spiel-offen");
  tttTaktStarten();   // 1-s-Takt nur fuer das Tic-Tac-Toe-Brett im Rahmen
  schiffeTaktStarten();
  chicagoTaktStarten();
+ quizshowTaktStarten();
  labTaktStarten();   // Labyrinth: Stand und Zugreihenfolge laufen ueber den Connector
  soloAuswahl(false);   // Handy: Liste zuklappen, auch beim Wechsel des Spiels
  // Am Handy meldet sich die zentrale Bedienung an: Knopf, Zähler und
@@ -6048,7 +6074,7 @@ function stilFuerSpiel(){
 
 // Spiele mit Schnittstelle 2.0 nennen ihren Namensraum selbst. Nur diese
 // Namen werden angefasst; aeltere Spiele merken von all dem nichts.
-const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","Risiko"];
+const SPIEL_API_NAMEN=["SuperPimmelchen","TicTacToe","SchiffeVersenken","Chicago","VoigtZone","MenschAergereDichNicht","GoldMiner","Solitaer","Zehntausend","PacMan","Pong","DoodleJump","Malen","Scherzshow","Arkanoid","Risiko"];
 
 function apiImRahmen(){
  const rahmen=document.getElementById("spielRahmen");
@@ -6364,6 +6390,338 @@ if (window.TGStil && typeof TGStil.beiWechsel === "function") {
     const spiel = labSpiel();
     if (spiel) { try { spiel.api.aktion("thema", { thema: labThema() }); } catch (e) {} }
   });
+}
+
+/* --- Malen im Raum --------------------------------------------------------
+   Schnittstelle 2.0: Das Spiel kennt weder Raum noch Server. Der Connector
+   hält Kennung, Raum und Leinwandstand, schiebt den Stand über
+   aktion("stand") hinein und nimmt die Absichten des Spiels entgegen:
+   malen:strich (ein Strich) und malen:leeren (nur der Raum-Ersteller).
+   Dadurch bleibt die Leinwand bei einem Verbindungsabriss stehen; nichts
+   wird lokal als gemeinsamer Stand ausgegeben. */
+const MAL_TAKT = 850;
+let malTakt = 0, malSpielerTakt = 0;
+let malLaeuft = false, malSendet = false, malLeert = false;
+let malEpoch = null, malRev = 0, malGestoppt = false;
+let malQueue = [], malSpielerList = [];
+const malGehoert = new WeakSet();
+
+function malSpiel() {
+  const rahmen = document.getElementById("spielRahmen");
+  if (!rahmen) return null;
+  const src = rahmen.getAttribute("src") || "";
+  if (src.indexOf("/spiele/malen/") === -1) return null;
+  let innen = null;
+  try { innen = rahmen.contentWindow; } catch (e) { return null; }
+  const api = innen && innen.Malen;
+  if (!api || !api.bereit) return null;
+  return { api: api, fenster: innen };
+}
+
+function malAktion(spiel, name, daten) {
+  if (!spiel || !spiel.api || typeof spiel.api.aktion !== "function") return false;
+  try { spiel.api.aktion(name, daten || {}); return true; } catch (e) { return false; }
+}
+
+function malZuhören(spiel) {
+  if (!spiel || malGehoert.has(spiel.fenster)) return;
+  malGehoert.add(spiel.fenster);
+  spiel.fenster.addEventListener("malen:strich", function (ev) {
+    const d = ev && ev.detail ? ev.detail : {};
+    const strich = d.strich;
+    if (!strich || !Array.isArray(strich.points) || !strich.points.length) return;
+    const kennung = strich.clientId || d.clientId || "";
+    if (kennung && malQueue.some(function (s) { return s && s.clientId === kennung; })) return;
+    malQueue.push(strich);
+    malSenden();
+  });
+  spiel.fenster.addEventListener("malen:leeren", function () { malLeeren(); });
+  spiel.fenster.addEventListener("malen:verlassen", function () {
+    if (typeof rahmenLeeren === "function") rahmenLeeren();
+    if (typeof zeigeSpielHinweis === "function") zeigeSpielHinweis("Malen beendet.");
+  });
+}
+
+function malStarten(spiel) {
+  if (!spiel || !activeRoom || !sessionID) return false;
+  let z = null;
+  try { z = spiel.api.zustand ? spiel.api.zustand() : null; } catch (e) {}
+  if (z && z.laeuft && z.modus === "gemeinsam") return true;
+  if (malGestoppt) return false;
+  try {
+    const r = spiel.api.start({
+      stil: stilFuerSpiel(),
+      online: {
+        room: activeRoom,
+        id: sessionID,
+        name: playerName(),
+        admin: isRoomOwner
+      }
+    });
+    if (r && r.ok) {
+      malEpoch = null;
+      malRev = 0;
+      malQueue = [];
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function malVerbindung(spiel, ok, text, ende) {
+  malAktion(spiel, "verbindung", { ok: !!ok, text: text || "", ende: !!ende });
+}
+
+async function malSenden() {
+  if (malSendet || !malQueue.length) return;
+  const spiel = malSpiel();
+  if (!spiel || !activeRoom || !sessionID || malGestoppt) return;
+  const kandidaten = malQueue.slice(0, 16);
+  const ids = kandidaten.map(function (s) { return s && s.clientId ? s.clientId : ""; }).filter(Boolean);
+  malSendet = true;
+  try {
+    const antwort = await fetch("/api/malen?room=" + encodeURIComponent(activeRoom) + "&action=draw&id=" + encodeURIComponent(sessionID), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: sessionID, strokes: kandidaten })
+    });
+    if (!antwort.ok) throw new Error("HTTP " + antwort.status);
+    malQueue = malQueue.filter(function (s) { return kandidaten.indexOf(s) < 0; });
+    malAktion(spiel, "gesendet", { ids: ids });
+  } catch (e) {
+    malVerbindung(spiel, false, "Verbindung unterbrochen – die Striche werden nachgesendet.", false);
+  } finally {
+    malSendet = false;
+  }
+}
+
+async function malLeeren() {
+  if (malLeert) return;
+  const spiel = malSpiel();
+  if (!spiel || !activeRoom || !sessionID || malGestoppt) return;
+  malLeert = true;
+  try {
+    const antwort = await fetch("/api/malen?room=" + encodeURIComponent(activeRoom) + "&action=clear&id=" + encodeURIComponent(sessionID), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: sessionID })
+    });
+    if (!antwort.ok) {
+      malAktion(spiel, "hinweis", { text: antwort.status === 403 ? "Nur der Raum-Ersteller kann die Fläche leeren." : "Leeren hat nicht geklappt.", fehler: true });
+      return;
+    }
+    const d = await antwort.json().catch(function () { return {}; });
+    malEpoch = typeof d.epoch === "number" ? d.epoch : null;
+    malRev = 0;
+    malQueue = [];
+    malAktion(spiel, "stand", {
+      epoch: malEpoch === null ? 0 : malEpoch,
+      rev: 0,
+      strokes: [],
+      admin: true,
+      ersetzen: true,
+      geleert: true,
+      players: malSpielerList
+    });
+    malAktion(spiel, "hinweis", { text: "Fläche geleert – alle fangen neu an.", fehler: false });
+  } catch (e) {
+    malAktion(spiel, "hinweis", { text: "Leeren hat nicht geklappt.", fehler: true });
+  } finally {
+    malLeert = false;
+  }
+}
+
+async function malSpielerHolen() {
+  if (!activeRoom || !sessionID) return;
+  try {
+    const antwort = await fetch("/api/players?room=" + encodeURIComponent(activeRoom), { cache: "no-store" });
+    if (!antwort.ok) return;
+    const besitzer = antwort.headers.get("X-Room-Owner");
+    if (besitzer) isRoomOwner = besitzer === sessionID;
+    const liste = await antwort.json();
+    if (Array.isArray(liste)) {
+      malSpielerList = liste;
+      const spiel = malSpiel();
+      if (spiel) malAktion(spiel, "spieler", { players: liste });
+    }
+  } catch (e) {}
+}
+
+async function malAbgleich() {
+  const spiel = malSpiel();
+  if (!spiel || malGestoppt || malLaeuft) return;
+  if (!malStarten(spiel)) return;
+  malLaeuft = true;
+  try {
+    if (malQueue.length && !malSendet) await malSenden();
+    const ziel = "/api/malen?room=" + encodeURIComponent(activeRoom) +
+      "&id=" + encodeURIComponent(sessionID) +
+      "&epoch=" + (malEpoch === null ? -1 : malEpoch) +
+      "&since=" + malRev;
+    const antwort = await fetch(ziel, { cache: "no-store" });
+    if (!antwort.ok) {
+      if (antwort.status === 404) {
+        malGestoppt = true;
+        malVerbindung(spiel, false, "Dieser Raum existiert nicht mehr. Bitte im Connector neu betreten.", true);
+      } else {
+        malVerbindung(spiel, false, "Verbindung unterbrochen – der Stand bleibt stehen.", false);
+      }
+      return;
+    }
+    const d = await antwort.json();
+    const ersetzen = malEpoch === null || d.epoch !== malEpoch;
+    malEpoch = d.epoch;
+    malRev = d.rev;
+    malAktion(spiel, "stand", {
+      epoch: d.epoch,
+      rev: d.rev,
+      strokes: Array.isArray(d.strokes) ? d.strokes : [],
+      admin: !!d.admin,
+      ersetzen: ersetzen,
+      players: malSpielerList
+    });
+    malVerbindung(spiel, true, "", false);
+  } catch (e) {
+    malVerbindung(spiel, false, "Verbindung unterbrochen – der Stand bleibt stehen.", false);
+  } finally {
+    malLaeuft = false;
+  }
+}
+
+function malBrueckeAn() {
+  const spiel = malSpiel();
+  if (!spiel) return;
+  malZuhören(spiel);
+  if (!malTakt) {
+    malTakt = setInterval(function () { malAbgleich(); }, MAL_TAKT);
+    malSpielerTakt = setInterval(function () { malSpielerHolen(); }, 5000);
+  }
+  setTimeout(function () {
+    malEpoch = null;
+    malRev = 0;
+    malQueue = [];
+    malGestoppt = false;
+    malAbgleich();
+    malSpielerHolen();
+  }, 180);
+}
+
+/* --- Scherzshow im Raum ----------------------------------------------------
+   Die Bühne, die Regeln und die Bots gehören dem Spiel. Der Connector hält
+   nur den Serverstand, schiebt ihn mit aktion("stand") hinein und gibt die
+   Absichten des Spiels als POST an /api/quiz weiter. So bleibt die Show auch
+   im Connector dieselbe wie im direkten Start; der Stil kommt von außen. */
+const QUIZSHOW_TAKT=1000;
+let quizshowTakt=0;
+let quizshowLaeuft=false;
+const quizshowGehoert=new WeakSet();
+
+function quizshowSpiel(){
+ const treffer=apiImRahmen();
+ if(!treffer||treffer.name!=="Scherzshow")return null;
+ return treffer;
+}
+
+function quizshowZuhören(spiel){
+ if(!spiel||quizshowGehoert.has(spiel.fenster))return;
+ quizshowGehoert.add(spiel.fenster);
+ spiel.fenster.addEventListener("scherzshow:antwort",ev=>{
+  const d=ev&&ev.detail?ev.detail:{};
+  quizshowAktion("antwort",{wahl:Number(d.wahl)},"Verbindung unterbrochen – die Antwort wurde nicht gesendet.");
+ });
+ spiel.fenster.addEventListener("scherzshow:weiter",()=>{
+  quizshowAktion("weiter",{},"Verbindung unterbrochen – die nächste Frage wurde nicht angefragt.");
+ });
+ spiel.fenster.addEventListener("scherzshow:start",()=>{
+  quizshowAktion("start",{},"Die Show konnte nicht gestartet werden.");
+ });
+ spiel.fenster.addEventListener("scherzshow:bereit",()=>{
+  quizshowAktion("ready",{},"Die Bereitschaft wurde nicht gesendet.");
+ });
+ spiel.fenster.addEventListener("scherzshow:beitreten",()=>{
+  quizshowAktion("join",{},"Der Beitritt wurde nicht gesendet.");
+ });
+ spiel.fenster.addEventListener("scherzshow:neu",()=>{
+  quizshowAktion("reset",{},"Die neue Show wurde nicht angefragt.");
+ });
+}
+
+async function quizshowHolen(){
+ if(!activeRoom||!sessionID)return null;
+ try{
+  const r=await fetch("/api/quiz?room="+encodeURIComponent(activeRoom)+"&id="+encodeURIComponent(sessionID));
+  if(!r.ok)return null;
+  const d=await r.json();
+  currentQuizGame=d&&d.game?d.game:null;
+  return currentQuizGame;
+ }catch(e){ return null; }
+}
+
+// Spielstand und Stil in die Seite. start({stil}) ist die einzige Stilquelle;
+// die Online-Kennung kommt aus dem Connector, nie aus der Adresse.
+function quizshowStand(game,hinweis){
+ const spiel=quizshowSpiel();
+ if(!spiel)return false;
+ try{
+  const stand=spiel.api.zustand&&spiel.api.zustand();
+  if(!stand||!stand.online)spiel.api.start({stil:stilFuerSpiel(),online:{ich:sessionID,id:sessionID}});
+ }catch(e){}
+ try{
+  spiel.api.aktion("stand",game?Object.assign({},game,{hinweis:hinweis||""}):{game:null,hinweis:hinweis||""});
+ }catch(e){ return false; }
+ return true;
+}
+
+function quizshowWarten(hinweis){
+ return quizshowStand(null,hinweis||"");
+}
+
+async function quizshowAktion(aktion,daten,fehlertext){
+ if(quizshowLaeuft||!activeRoom||!sessionID)return;
+ quizshowLaeuft=true;
+ let text="";
+ try{
+  const r=await fetch("/api/quiz?room="+encodeURIComponent(activeRoom)+"&action="+encodeURIComponent(aktion),{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({id:sessionID},daten||{}))
+  });
+  if(!r.ok)text=(await r.text()).trim();
+ }catch(e){
+  text=fehlertext||"Verbindung unterbrochen – die Aktion wurde nicht gesendet.";
+ }
+ const g=await quizshowHolen();
+ if(g)quizshowStand(g,text);
+ else quizshowStand(null,text);
+ quizshowLaeuft=false;
+}
+
+// Nach jedem Laden des Rahmens: Zuhörer anmelden, Stil und Stand schieben.
+async function quizshowBrueckeAn(){
+ const spiel=quizshowSpiel();
+ if(!spiel)return false;
+ quizshowZuhören(spiel);
+ if(!activeRoom||!sessionID)return false;
+ const g=await quizshowHolen();
+ if(g)quizshowStand(g,"");
+ else quizshowWarten("");
+ return true;
+}
+
+function quizshowTaktStarten(){
+ if(quizshowTakt)return;
+ quizshowTakt=window.setInterval(async()=>{
+  if(document.hidden)return;
+  if(!framePartie||framePartie.gameId!=="quizshow")return;
+  const g=await quizshowHolen();
+  if(g)quizshowStand(g,"");
+  else quizshowWarten("");
+ },QUIZSHOW_TAKT);
+}
+
+function quizshowTaktStoppen(){
+ if(!quizshowTakt)return;
+ clearInterval(quizshowTakt);
+ quizshowTakt=0;
 }
 
 /* --- Tic Tac Toe im Raum --------------------------------------------------
@@ -6762,6 +7120,7 @@ function rahmenLeeren(){
  tttTaktStoppen();
  schiffeTaktStoppen();
  chicagoTaktStoppen();
+ quizshowTaktStoppen();
  document.body.classList.remove("spiel-offen");
  if(window.TGMobil)TGMobil.spielZu();
  const rahmen=document.getElementById("spielRahmen");
@@ -6833,7 +7192,7 @@ document.getElementById("spielRahmen").addEventListener("load",()=>{
 
 // Der Stil geht an jedes geladene Spiel und an jedes offene Spiel, sobald die
 // Wahl im Connector wechselt. Reine Übergabe, keine Spielsteuerung.
-document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); labBrueckeAn(); });
+document.getElementById("spielRahmen").addEventListener("load", () => { stilAnSpiel(); tttBrueckeAn(); schiffeBrueckeAn(); chicagoBrueckeAn(); quizshowBrueckeAn(); labBrueckeAn(); malBrueckeAn(); });
 window.addEventListener("tg-stil", () => {
  if(document.body.classList.contains("spiel-offen"))stilAnSpiel();
 });

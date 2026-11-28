@@ -657,7 +657,7 @@
     var kopf = document.createElement("header");
     kopf.className = "kopf";
     kopf.innerHTML = '<div><marke>TrashyGecko Würfelspiele</marke><p></p></div>' +
-      '<div class="zurueck"><a href="../spiele.html">← alle Spiele</a></div>';
+      '<div class="zurueck"><a href="../spiele.html" data-tg-zurueck>← alle Spiele</a></div>';
     kopf.querySelector("p").textContent = spiel.unter || "";
 
     /* Grafikstil: keine eigene Auswahl im Spiel. Die Wahl trifft allein der
@@ -891,4 +891,17 @@
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", los);
   else los();
+})();
+
+/* Rückweg: die zentrale Navigation (zurueck.js) versorgt den Link oben.
+   Sie kennt die Herkunft (Übersicht, Connector, Rahmen) und schließt im
+   Connector nur den Rahmen, statt die Seite zu wechseln. */
+(function () {
+  "​use strict";
+  if (document.querySelector("script[data-tg-nav]")) return;
+  var s = document.createElement("script");
+  s.src = "../zurueck.js";
+  s.dataset.keinKnopf = "1";
+  s.dataset.tgNav = "1";
+  document.body.appendChild(s);
 })();

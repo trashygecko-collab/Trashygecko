@@ -103,5 +103,29 @@
   });
 })();
 </script>
+<script id="tg-herkunft">
+/* Jedes Spiel erfährt, dass es aus dieser Übersicht gestartet wurde: der
+   Rückweg führt damit zur Übersicht (lokal oder veröffentlicht) und nicht
+   in den Connector. Karten, die bewusst in den Connector führen (Spiele mit
+   Mehrspieler-Teil), bleiben unangetastet – dort ist der Connector die
+   Herkunft. Läuft nach halle-online.js, damit dessen Umleitung Vorrang hat. */
+(function () {
+  "use strict";
+  document.addEventListener("click", function (ereignis) {
+    if (ereignis.defaultPrevented || ereignis.button) return;
+    if (ereignis.metaKey || ereignis.ctrlKey || ereignis.shiftKey) return;
+    var a = ereignis.target && ereignis.target.closest ? ereignis.target.closest("a.karte, a.hl") : null;
+    if (!a || !a.href || a.target === "_blank") return;
+    try {
+      var u = new URL(a.href);
+      if (u.origin !== location.origin) return;
+      // Ausdrücklich gewollte Connector-Links nicht umschreiben.
+      if (/\/connector(\.html|\/|$)/i.test(u.pathname)) return;
+      u.searchParams.set("zurueck", location.origin + location.pathname);
+      a.href = u.href;
+    } catch (fehler) { /* dann bleibt der Link, wie er ist */ }
+  });
+})();
+</script>
 </body>
 </html>
