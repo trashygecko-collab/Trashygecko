@@ -202,6 +202,7 @@ var tischspiel = map[string]bool{
 	"domino":            true,
 	"schlangen":         true,
 	"pig":               true,
+	"skyjo":             true,
 	"gaensespiel":       true,
 	"risiko":            true,
 	"labyrinth":         true,
@@ -346,6 +347,10 @@ func (r *Room) spielStatus(spiel string) (string, bool) {
 		}
 	case "labyrinth":
 		if g := r.Labyrinth; g != nil {
+			return g.Status, true
+		}
+	case "skyjo":
+		if g := r.Skyjo; g != nil {
 			return g.Status, true
 		}
 	case "menschaerger":

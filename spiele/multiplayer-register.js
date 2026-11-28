@@ -87,7 +87,7 @@ window.TGMultiplayer = {
       "text": "Sage vor dem Wurf unter, über oder genau sieben an – richtig bringt Punkte, falsch kostet." },
     { "id": "wuerfelpoker", "name": "Würfelpoker", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/wuerfelpoker.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Fünf Würfel, zwei Nachwürfe, drei Blätter – volle Pokerwertung, höchste Summe gewinnt." },
-    { "id": "skyjo", "name": "SKYJO", "kat": "karten", "pfad": "/spiele/kartenspiele/skyjo/skyjo.html", "api": "skyjo", "min": 2, "max": 8, "art": "einladung",
+    { "id": "skyjo", "name": "SKYJO", "kat": "karten", "pfad": "/spiele/kartenspiele/skyjo/skyjo.html", "api": "skyjo", "min": 2, "max": 8, "art": "tisch",
       "text": "Karten aufdecken und tauschen, am Ende zählt die niedrigste Summe." },
     { "id": "maumau", "name": "Mau Mau", "kat": "karten", "pfad": "/spiele/kartenspiele/maumau/maumau.html", "api": "maumau", "min": 2, "max": 7, "art": "tisch",
       "text": "Mau Mau: Farbe oder Zahl bedienen, sieben Karten ziehen, Mau sagen." },

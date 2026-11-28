@@ -622,6 +622,8 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 		Stufe  string `json:"stufe"`
 		Bots   int    `json:"bots"`
 		Sitze  int    `json:"spieler"`
+		Anzahl int    `json:"anzahl"`
+		Max    int    `json:"maxPlayers"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Ungültige Daten", http.StatusBadRequest)
@@ -672,7 +674,7 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 		g.Notiz = player.Name + " spielt gegen " + itoa(bots) + " Bots. Decke zwei Karten auf."
 		room.Skyjo = g
 
-	case "join":
+	case "create", "join":
 		g := room.Skyjo
 		if g == nil || g.Status == "finished" {
 			g = skyjoNeu(randomCode(), input.ID, player.Name, 2)
@@ -706,6 +708,12 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ziel := input.Sitze
+		if ziel == 0 {
+			ziel = input.Anzahl
+		}
+		if ziel == 0 {
+			ziel = input.Max
+		}
 		if ziel < len(g.Spieler) {
 			ziel = len(g.Spieler)
 		}
@@ -748,6 +756,9 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 		if len(g.Spieler) == 0 {
 			room.Skyjo = nil
 		}
+
+	case "ready":
+		// Bereitschaft ist im Raum nur ein Zeichen; Skyjo startet der Gastgeber.
 
 	case "reveal", "draw", "swap", "discard", "opencard", "nextround", "reset":
 		g := room.Skyjo
