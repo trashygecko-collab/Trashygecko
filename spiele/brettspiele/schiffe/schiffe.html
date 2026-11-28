@@ -91,7 +91,8 @@ a{color:var(--hell)}
 .schiff.ghost{opacity:.6}
 .schiff.ghost.ungueltig{opacity:.45}
 .schiff.gesetztbild{filter:none}
-.schiff.versenkt img{filter:grayscale(.6) brightness(.6) drop-shadow(0 1px 2px var(--schatten-2))}
+.schiff.versenkt img{filter:grayscale(.35) brightness(.92) contrast(1.06) drop-shadow(0 2px 4px #000000aa)}
+.schiff.versenkt{opacity:.96}
 .marke{position:absolute;width:10%;height:10%;display:flex;align-items:center;justify-content:center;
  font-size:12px;line-height:1;font-weight:bold;text-shadow:0 0 3px var(--marke-schatten),0 1px 2px var(--marke-schatten)}
 .marke.wasser{color:var(--marke-wasser)}
@@ -103,11 +104,11 @@ a{color:var(--hell)}
 #spiel{display:flex;flex-direction:column;align-items:center}
 #spiel .brett-block{margin-top:10px;width:100%}
 #spiel .brett-block.feind{margin-top:4px}
-#spiel .brett-rahmen{max-width:min(520px,calc((100svh - 300px)/2),100%)}
+#spiel .brett-rahmen{max-width:min(520px,calc((100svh - 340px)/2),100%)}
 
 /* Spruchband */
 .spruch{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
- max-width:min(520px,calc((100svh - 300px)/2),100%);height:76px;margin:10px auto 0;
+ max-width:min(520px,calc((100svh - 340px)/2),100%);height:76px;margin:10px auto 0;
  padding:8px 12px;border-radius:9px;border:1px solid var(--rand-3);
  background:linear-gradient(180deg,var(--spruch-a),var(--spruch-b));color:var(--spruch-text);text-align:center;
  box-shadow:0 1px 0 var(--glanz) inset,0 3px 12px var(--schatten);overflow:hidden;
@@ -247,6 +248,184 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
 .wahl-hinweis{margin-top:8px;font-size:12px;color:var(--muted);min-height:32px}
 .start-gross{display:block;width:100%;max-width:320px;margin:14px auto 0;font-size:17px;padding:13px}
 .start-fuss{margin:10px 0 0}
+/* ================= 28.11.2026: Ausbau zur Seeschlacht =================
+   Wellen, Trefferstellen, Effekte, Flottenleiste, Übergabe und Tonknopf.
+   Reine Anzeige – Regeln, Zugrecht und Serverstand bleiben unberührt. */
+:root{--welle-1:#ffffff14;--welle-2:#bfe8ff12;--welle-licht:#9fd8ff14;
+ --rahmen-a:#1b5470;--rahmen-b:#0d2f42;--fx-ring:#cdeeff;--fx-tropfen:#d8f2ff;
+ --fx-flamm:#ffb454;--fx-rauch:#dfe9ee}
+html[data-stil="maedchen"]{--welle-1:#ffffff66;--welle-2:#ffd9ec55;--welle-licht:#fff2fa88;
+ --rahmen-a:#ffd7e9;--rahmen-b:#f39fc7;--fx-ring:#ffffff;--fx-tropfen:#fff5fb;
+ --fx-flamm:#ffb3d0;--fx-rauch:#fff0f7}
+html[data-stil="buben"]{--welle-1:#5f8ea122;--welle-2:#e0242f18;--welle-licht:#3d7f9a1f;
+ --rahmen-a:#1a222b;--rahmen-b:#080c10;--fx-ring:#ffb3b8;--fx-tropfen:#cfe6f2;
+ --fx-flamm:#ff7a2f;--fx-rauch:#8a949c}
+
+.kopfzeile{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 2px;min-height:26px}
+.ton-knopf{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--still);
+ border-color:var(--rand-1);color:var(--muted)}
+.ton-knopf[aria-pressed="true"]{color:var(--titel);border-color:var(--achse)}
+
+/* Wasser: zwei weiche Wellenzüge und ein wanderndes Licht */
+.wellen{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;border-radius:5px;opacity:.7;
+ background-image:
+  repeating-linear-gradient(112deg,transparent 0 16px,var(--welle-1) 16px 19px,transparent 19px 42px),
+  repeating-linear-gradient(64deg,transparent 0 24px,var(--welle-2) 24px 27px,transparent 27px 58px);
+ background-size:210% 210%,190% 190%;
+ animation:wellenDrift 18s linear infinite}
+@keyframes wellenDrift{from{background-position:0 0,0 0}to{background-position:240px -160px,-200px 140px}}
+.wellen::after{content:"";position:absolute;inset:-28%;opacity:.5;
+ background:radial-gradient(closest-side,var(--welle-licht),transparent 72%);
+ animation:wellenLicht 12s ease-in-out infinite alternate}
+@keyframes wellenLicht{from{transform:translate(-10%,-6%) scale(1)}to{transform:translate(10%,8%) scale(1.16)}}
+
+/* Bordwand */
+.brett-rahmen{padding:5px;border-radius:13px;border:1px solid var(--rand-2);
+ background:linear-gradient(160deg,var(--rahmen-a),var(--rahmen-b));
+ box-shadow:0 8px 22px var(--schatten),0 1px 0 var(--glanz) inset}
+html[data-stil="buben"] .brett-rahmen{box-shadow:0 0 0 1px #e0242f40,0 10px 26px #000c,0 0 24px #e0242f1f inset}
+html[data-stil="maedchen"] .brett-rahmen{box-shadow:0 8px 20px #8f245026,0 1px 0 #ffffffb3 inset}
+html[data-stil="maedchen"] .schiff img{filter:brightness(1.1) saturate(.9) drop-shadow(0 0 2px #fff) drop-shadow(0 2px 4px #b0286a3d)}
+html[data-stil="buben"] .schiff img{filter:grayscale(.5) contrast(1.12) brightness(.78) drop-shadow(0 1px 2px #000000aa)}
+
+/* Dekoration nur in der Mädchen-Ansicht (Delfine, Muscheln) */
+.schmuck{position:absolute;inset:0;z-index:2;pointer-events:none;display:none}
+.schmuck span{position:absolute;font-size:18px;opacity:.45;filter:drop-shadow(0 1px 1px #ffffff88)}
+html[data-stil="maedchen"] .schmuck{display:block}
+.schmuck span:nth-child(1){left:3%;top:4%;animation:schmuck1 16s ease-in-out infinite}
+.schmuck span:nth-child(2){right:4%;bottom:5%;animation:schmuck2 19s ease-in-out infinite}
+.schmuck span:nth-child(3){right:8%;top:6%;opacity:.22;animation:schmuck1 22s ease-in-out infinite reverse}
+@keyframes schmuck1{0%,100%{transform:translate(0,0) rotate(-4deg)}50%{transform:translate(10px,6px) rotate(4deg)}}
+@keyframes schmuck2{0%,100%{transform:translate(0,0)}50%{transform:translate(-8px,-6px)}}
+
+/* Trefferstelle: ein Stück Rumpf mit Loch, genau im getroffenen Kästchen */
+.schaden{position:absolute;width:10%;height:10%;z-index:4;pointer-events:none;display:grid;place-items:center}
+.schaden i{position:relative;display:block;width:88%;height:88%;
+ background:linear-gradient(155deg,#8b9aa3,#465761 45%,#1d2a32);
+ clip-path:polygon(8% 26%,30% 8%,52% 18%,72% 6%,94% 26%,86% 60%,96% 86%,62% 94%,36% 84%,10% 92%,4% 56%);
+ box-shadow:0 1px 3px var(--schatten-3)}
+.schaden i::after{content:"";position:absolute;inset:24% 22%;border-radius:50%;
+ background:radial-gradient(circle,#fff5c9 0 16%,#ff9c33 34%,#8a2408 62%,#2a0d05 78%,transparent 84%);
+ box-shadow:0 0 7px #ff8a2faa;animation:glut 2.6s ease-in-out infinite}
+@keyframes glut{0%,100%{opacity:.75;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}
+.schaden.tot i{filter:grayscale(1) brightness(.55)}
+.schaden.tot i::after{background:radial-gradient(circle,#0c161b 0 42%,#22323a 62%,transparent 70%);box-shadow:none;animation:none}
+html[data-stil="maedchen"] .schaden i{background:linear-gradient(155deg,#ffd9e8,#e08fb6 45%,#a4537a)}
+html[data-stil="maedchen"] .schaden i::after{background:radial-gradient(circle,#fff 0 16%,#ff9ec4 34%,#b0286a 60%,#6b1436 78%,transparent 84%);box-shadow:0 0 7px #ff9ec4cc}
+html[data-stil="buben"] .schaden i{background:linear-gradient(155deg,#6d7a82,#2b363d 45%,#0d1519)}
+html[data-stil="buben"] .schaden i::after{box-shadow:0 0 10px #ff6a2fcc}
+
+/* Effekte: Spritzer, Fontäne, Rauch, Blasen */
+.effekte{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;border-radius:5px}
+.fx{position:absolute;width:10%;height:10%}
+.fx .ring{position:absolute;inset:6%;border-radius:50%;border:2px solid var(--fx-ring);opacity:.9;
+ animation:fxRing .8s ease-out forwards}
+@keyframes fxRing{from{transform:scale(.25);opacity:.9}to{transform:scale(2.4);opacity:0}}
+.fx .tropfen{position:absolute;left:50%;top:50%;width:11%;height:20%;border-radius:50% 50% 40% 40%;
+ background:var(--fx-tropfen);animation:fxTropfen .85s ease-out forwards}
+@keyframes fxTropfen{0%{transform:translate(-50%,-50%) scale(.4);opacity:.95}
+ 100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.25);opacity:0}}
+.fx .blitz{position:absolute;opacity:.85}
+.fx-wasser .blitz{inset:18%;border-radius:50%;background:var(--fx-tropfen);
+ animation:fxBlitz .35s ease-out forwards}
+@keyframes fxBlitz{to{opacity:0;transform:scale(1.7)}}
+.fx-treffer .blitz{inset:-12%;border-radius:50%;
+ background:radial-gradient(circle,var(--fx-flamm) 0 24%,transparent 66%);
+ animation:fxBlitz .55s ease-out forwards}
+.fx-treffer .fontaene{position:absolute;left:32%;bottom:14%;width:36%;height:0;border-radius:40% 40% 30% 30%;
+ background:linear-gradient(180deg,var(--fx-tropfen),transparent);transform-origin:bottom center;
+ animation:fxFontaene 1s ease-out forwards}
+@keyframes fxFontaene{0%{height:0;opacity:.9}40%{height:110%;opacity:.85}100%{height:150%;opacity:0}}
+.fx .rauch{position:absolute;left:18%;top:-12%;width:64%;height:64%;border-radius:50%;
+ background:radial-gradient(circle,var(--fx-rauch),transparent 72%);opacity:.5;
+ animation:fxRauch 1.3s ease-out forwards}
+@keyframes fxRauch{from{transform:scale(.5) translateY(0);opacity:.55}to{transform:scale(1.5) translateY(-24%);opacity:0}}
+.fx-versenkt .blitz{inset:-20%;border-radius:50%;
+ background:radial-gradient(circle,var(--fx-flamm) 0 22%,transparent 66%);
+ animation:fxBlitz .7s ease-out forwards}
+.fx-versenkt .ring{animation-duration:1.4s;border-width:3px}
+.fx-versenkt .blase{position:absolute;left:50%;bottom:20%;width:9%;height:9%;border-radius:50%;
+ border:1px solid var(--fx-tropfen);opacity:.8;animation:fxBlase 1.5s ease-out forwards}
+@keyframes fxBlase{from{transform:translate(-50%,0) scale(.4);opacity:.9}to{transform:translate(-50%,-180%) scale(1.1);opacity:0}}
+
+/* Untergang: das Wrack sackt ab (translate, damit die Drehung erhalten bleibt) */
+.schiff.untergehend{animation:untergang 1.9s ease-in forwards}
+@keyframes untergang{0%{opacity:0;translate:0 -6%}16%{opacity:1;translate:0 0}
+ 55%{opacity:.95;translate:0 3%}100%{opacity:.6;translate:0 9%}}
+
+/* Ab 1000 px liegen beide Felder nebeneinander, die Sprüche dazwischen –
+   das nutzt die Breite und macht die Schiffe deutlich größer. */
+#spiel{max-width:560px;margin-left:auto;margin-right:auto}
+@media (min-width:1000px){
+ main{max-width:1080px}
+ #spiel{display:grid;grid-template-columns:1fr 236px 1fr;gap:10px 14px;align-items:start;max-width:none}
+ #spiel .brett-block{margin-top:0;width:100%}
+ #spiel .brett-block.feind{grid-column:1;grid-row:1}
+ #spiel .brett-block.eigen{grid-column:3;grid-row:1}
+ #spiel .spruch{grid-column:2;grid-row:1;height:auto;min-height:120px;max-width:100%;margin:0;align-self:center}
+ #spiel .flotten-leiste{grid-column:1 / -1;grid-row:2;max-width:100%;margin:0}
+ #spiel .meldung,#spiel .note,#spiel .fehler,#spiel .legende{grid-column:1 / -1}
+ #spiel .brett-rahmen{max-width:min(100%,calc(100svh - 300px))}
+}
+
+/* Wer dran ist: das Gegnerfeld bekommt einen Goldrand */
+#spiel.dran .brett-block.feind .brett-rahmen{box-shadow:0 0 0 2px var(--gold-1),0 8px 22px var(--schatten)}
+
+/* Flottenleiste */
+.flotten-leiste{display:flex;flex-wrap:wrap;gap:8px;width:100%;
+ max-width:min(520px,calc((100svh - 340px)/2),100%);margin:8px auto 0}
+.flotten-gruppe{flex:1 1 220px;min-width:0;border:1px solid var(--rand-3);border-radius:8px;
+ background:var(--chip);padding:6px 8px}
+.flotten-titel{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+ color:var(--muted);margin-bottom:4px}
+.flotten-titel b{color:var(--text);font-weight:normal;letter-spacing:0}
+.flotten-chips{display:flex;gap:4px;flex-wrap:wrap}
+.flotten-chip{display:flex;align-items:center;gap:4px;padding:2px 5px;border-radius:6px;
+ border:1px solid var(--rand-4);font-size:10.5px;line-height:1.2;color:var(--muted);background:var(--still)}
+.flotten-chip img{height:13px;width:auto;max-width:30px;object-fit:contain;opacity:.8}
+.flotten-chip.getroffen{border-color:var(--treffer);color:var(--text)}
+.flotten-chip.weg{opacity:.5;text-decoration:line-through}
+.flotten-chip .punkte{display:inline-flex;gap:2px}
+.flotten-chip .punkte i{width:4px;height:4px;border-radius:50%;background:var(--rand-3)}
+.flotten-chip .punkte i.voll{background:var(--treffer)}
+
+/* Übergabe bei zwei Spielern: deckt das ganze Brett ab */
+#uebergabe{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:18px;
+ background:radial-gradient(circle at 50% 26%,var(--bg-1),var(--bg-3) 72%)}
+.uebergabe-karte{width:min(420px,94vw);text-align:center;background:var(--panel);
+ border:1px solid var(--rand-2);border-radius:16px;padding:22px 20px;
+ box-shadow:0 18px 48px var(--schatten-2),0 1px 0 var(--glanz) inset}
+.uebergabe-symbol{font-size:34px;line-height:1;margin-bottom:8px}
+.uebergabe-karte h2{font-size:19px;margin:0 0 8px}
+.uebergabe-karte p{color:var(--muted);font-size:14.5px;line-height:1.45;margin:0 0 16px}
+.uebergabe-karte button{width:100%;font-size:16px;padding:12px}
+
+/* Startbildschirm: Modus und Aufstellung */
+.start-titel{font-size:clamp(20px,5vw,27px)}
+.start-wahl{max-width:620px}
+.wahl-block h3{font-size:12px}
+.wahl-hinweis{min-height:28px;line-height:1.35}
+.start-gross{margin-top:16px}
+
+/* Handy: alles bleibt schmal */
+@media (max-width:520px){
+ .flotten-leiste{gap:6px;max-width:min(520px,calc((100svh - 296px)/2),100%)}
+ .flotten-gruppe{flex:1 1 46%;padding:4px 6px}
+ .flotten-titel{font-size:9.5px;margin-bottom:2px}
+ .flotten-chip{font-size:10px;padding:1px 4px}
+ .flotten-chip img{height:11px}
+ .spruch{height:60px}
+ #spiel .brett-rahmen,.spruch{max-width:min(520px,calc((100svh - 296px)/2),100%)}
+ .schmuck span{font-size:11px}
+}
+@media (orientation:landscape) and (max-height:560px){
+ .flotten-leiste{grid-column:1 / -1;max-width:100%}
+ .flotten-gruppe{flex:1 1 40%}
+}
+@media (prefers-reduced-motion:reduce){
+ .wellen,.wellen::after,.schaden i::after,.fx *,.schiff.untergehend,.schmuck span{animation:none!important}
+}
+
 </style>
 <script src="../../stil.js"></script>
 <link rel="stylesheet" href="../../schrift.css">
@@ -254,11 +433,22 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
 <body>
 <main>
 
+<div class="kopfzeile"><button type="button" class="ton-knopf" id="btnTon" aria-pressed="true"
+ title="Treffer-, Wasser- und Untergangsgeräusche">♪ Ton an</button></div>
+
 <section id="startwahl" hidden>
  <h2 class="start-titel">Schiffe versenken</h2>
  <div class="start-flotte" id="startFlotte" aria-hidden="true"></div>
  <div class="start-wahl">
   <div class="wahl-block">
+   <h3>Spielmodus</h3>
+   <div class="wahl-reihe" id="modusWahl">
+    <button type="button" class="wahl-knopf" data-modus="bot" aria-pressed="true">Gegen Computer</button>
+    <button type="button" class="wahl-knopf" data-modus="zwei" aria-pressed="false">Zwei Spieler</button>
+   </div>
+   <div class="wahl-hinweis" id="modusHinweis"></div>
+  </div>
+  <div class="wahl-block" id="stufeBlock">
    <h3>Gegner</h3>
    <div class="wahl-reihe" id="stufeWahl">
     <button type="button" class="wahl-knopf" data-stufe="leicht" aria-pressed="false">Leicht</button>
@@ -275,6 +465,14 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
     <button type="button" class="wahl-knopf" data-stil="buben" aria-pressed="false">Buben</button>
    </div>
   </div>
+  <div class="wahl-block">
+   <h3>Aufstellung</h3>
+   <div class="wahl-reihe" id="aufstellungWahl">
+    <button type="button" class="wahl-knopf" data-aufstellung="selbst" aria-pressed="true">Selbst setzen</button>
+    <button type="button" class="wahl-knopf" data-aufstellung="zufall" aria-pressed="false">Zufällig</button>
+   </div>
+   <div class="wahl-hinweis">Zufällig wird gleich gemischt – verschieben geht danach trotzdem.</div>
+  </div>
  </div>
  <button type="button" class="haupt start-gross" id="btnLos">Spiel starten</button>
  <p class="klein mitte start-fuss">10 × 10 Felder · fünf Schiffe mit 1, 2, 3, 4 und 5 Feldern</p>
@@ -284,8 +482,6 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
  <h2>Duell</h2>
  <p class="klein" id="startText"></p>
  <div class="fehler" id="fehlerStart"></div>
-</section>
-
 </section>
 
 <section id="setzen" hidden>
@@ -306,6 +502,7 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
   </div>
  </div>
  <div class="zeile" style="margin-top:12px">
+  <button id="btnZufall" class="still" type="button">Zufällig</button>
   <button id="btnLeeren" class="still" type="button">Zurücksetzen</button>
   <button id="btnFertig" class="haupt" type="button" disabled>Flotte fertig – Spiel bereit</button>
  </div>
@@ -328,9 +525,20 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
   <span class="spruch-text" id="spruchText">Die Sprüche stehen bereit – schieß los!</span>
  </div>
 
+ <div class="flotten-leiste" id="flottenLeiste">
+  <div class="flotten-gruppe">
+   <span class="flotten-titel">Deine Flotte · <b id="flotteEigenStand"></b></span>
+   <div class="flotten-chips" id="flotteEigen"></div>
+  </div>
+  <div class="flotten-gruppe">
+   <span class="flotten-titel">Gegner · <b id="flotteFeindStand"></b></span>
+   <div class="flotten-chips" id="flotteFeind"></div>
+  </div>
+ </div>
+
  <div class="brett-block eigen">
   <div class="brett-kopf">
-   <span class="wer">Dein Feld</span>
+   <span class="wer"><b id="eigenName">Dein Feld</b></span>
    <span class="klein" id="eigenInfo"></span>
   </div>
   <div id="spielEigen"></div>
@@ -358,7 +566,7 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
 <section id="regeln">
  <h2>Regeln</h2>
  <ol>
-  <li><b>Ziel:</b> Alle fünf Schiffe des Gegners versenken – gegen den Bot mit Leicht, Mittel oder Schwer auf dem eigenen Gerät, zu zweit über den Connector.</li>
+  <li><b>Ziel:</b> Alle fünf Schiffe des Gegners versenken – gegen den Bot mit Leicht, Mittel oder Schwer, zu zweit am selben Gerät oder über den Connector.</li>
   <li><b>Flotte:</b> Flugzeugträger (5 Felder), Zerstörer (4), Patrouillenboot (3), U-Boot (2) und Ente (1) – insgesamt 15 Trefferflächen auf 10 × 10 Feldern.</li>
   <li><b>Setzen:</b> Schiff in der Flottenanzeige antippen, mit <b>Drehen</b> (oder der Taste R) die Richtung wechseln, auf dem Feld die Position wählen – grün heißt gültig, rot geht nicht – und dann <b>Schiff setzen</b> drücken. Ein gesetztes Schiff lässt sich erneut antippen und verschieben. Ganz zum Schluss <b>Flotte fertig – Spiel bereit</b>. Schiffe dürfen sich nicht überschneiden und nicht über den Rand ragen.</li>
   <li><b>Start:</b> Das Gefecht beginnt, sobald deine Flotte bestätigt ist; der Bot hat seine Aufstellung schon gewählt. Du schießt zuerst.</li>
@@ -373,6 +581,15 @@ html[data-stil="maedchen"],html[data-stil="buben"]{--hell:var(--gold)}
  <p class="klein mitte"><a href="/connector">Zurück zum Connector</a></p>
 </section>
 </main>
+
+<div id="uebergabe" hidden>
+ <div class="uebergabe-karte" role="dialog" aria-modal="true" aria-labelledby="uebergabeTitel">
+  <div class="uebergabe-symbol" id="uebergabeSymbol">⚓</div>
+  <h2 id="uebergabeTitel">Gerät übergeben</h2>
+  <p id="uebergabeText">Deckung! Der andere Spieler übernimmt.</p>
+  <button type="button" class="haupt" id="uebergabeWeiter">Weiter</button>
+ </div>
+</div>
 
 <script>
 /* Online kommt alles über die Schnittstelle: Der Connector schiebt den Stand
@@ -614,6 +831,17 @@ let tick=0;
 let lokalStufe="mittel";
 let stilWahl=ladeStil();
 let stilVonAussen=false;
+/* 28.11.2026: Modi, Aufstellung, Ton und Effekte */
+const MODI=["bot","zwei"];
+const AUFSTELLUNGEN=["selbst","zufall"];
+const HS_IDS=["p1","p2"];
+let modus="bot";                 /* bot | zwei */
+let aufstellung="selbst";        /* selbst | zufall */
+let hs=null;                     /* Stand der Zwei-Spieler-Partie */
+let tonAn=true;
+let tonKontext=null;
+let effektStand={eigen:null,feind:null};
+let untergegangen=new Set();
 
 function ladeStil(){
  let wert="normal";
@@ -656,6 +884,19 @@ function startwahlKnoepfe(){
  });
  const hinweis=$("stufeHinweis");
  if(hinweis)hinweis.textContent=BOT_STUFEN_TEXT[lokalStufe]||"";
+ const mb=$("modusWahl");
+ if(mb)mb.querySelectorAll("[data-modus]").forEach(b=>{
+  b.setAttribute("aria-pressed",b.dataset.modus===modus?"true":"false");
+ });
+ const ab=$("aufstellungWahl");
+ if(ab)ab.querySelectorAll("[data-aufstellung]").forEach(b=>{
+  b.setAttribute("aria-pressed",b.dataset.aufstellung===aufstellung?"true":"false");
+ });
+ const sb=$("stufeBlock"); if(sb)sb.hidden=(modus==="zwei");
+ const mh=$("modusHinweis");
+ if(mh)mh.textContent=modus==="zwei"
+  ?"Zwei Spieler am selben Gerät – Aufstellen und Schießen mit Übergabe."
+  :"Du spielst gegen den Computer, er schießt nach seiner Stufe.";
  const block=$("stilBlock");
  if(block)block.hidden=stilVonAussen;
  stilKnoepfe();
@@ -677,6 +918,7 @@ function feldName(x,y){ return SPALTEN[x]+(y+1); }
 function lokalNeuePartie(stufe){
  if(BOT_STUFEN.indexOf(stufe)<0)stufe=lokalStufe;
  lokalStufe=stufe;
+ const ueberBox=$("uebergabe"); if(ueberBox)ueberBox.hidden=true;
  aufraeumen();
  pausiert=false;
  botFlotte=botFlotteLegen(Math.random);
@@ -694,9 +936,12 @@ function lokalNeuePartie(stufe){
    {id:BOT_ID,name:"Bot ("+BOT_STUFE_TEXT[stufe]+")",ready:true,fertig:true,treffer:0,versenkt:0}
   ],
   eigen:{fertig:false,schiffe:[],beschuss:botFeld(0)},
-  feind:{name:"Bot ("+BOT_STUFE_TEXT[stufe]+")",beschuss:botFeld(0)}
+  feind:{name:"Bot ("+BOT_STUFE_TEXT[stufe]+")",beschuss:botFeld(0),schiffe:botFlotte}
  };
+ untergegangen=new Set();
+ effektStand={eigen:null,feind:null};
  zeichne();
+ if(aufstellung==="zufall"){ zufallSetzen(false); zeichneSetzen(); }
 }
 
 function lokalFertig(){
@@ -820,6 +1065,7 @@ function neuStart(){
   return;
  }
  if(!game){ zeichne(); return; }
+ if(modus==="zwei"){ zweiNeuePartie(); return; }
  lokalNeuePartie(lokalStufe);
 }
 
@@ -838,7 +1084,23 @@ $("stilWahl").addEventListener("click",e=>{
  if(!b)return;
  stilSetzen(b.dataset.stil);
 });
-$("btnLos").addEventListener("click",()=>lokalNeuePartie());
+$("btnLos").addEventListener("click",()=>{
+ tonBereit();
+ if(modus==="zwei")zweiNeuePartie();
+ else lokalNeuePartie();
+});
+$("modusWahl").addEventListener("click",e=>{
+ const b=e.target.closest("[data-modus]");
+ if(!b)return;
+ modus=b.dataset.modus;
+ startwahlKnoepfe();
+});
+$("aufstellungWahl").addEventListener("click",e=>{
+ const b=e.target.closest("[data-aufstellung]");
+ if(!b)return;
+ aufstellung=b.dataset.aufstellung;
+ startwahlKnoepfe();
+});
 
 
 /* ---------------------------------------------------------- Aufstellung */
@@ -879,9 +1141,12 @@ function rahmenHtml(feld){
  for(let i=1;i<=GROESSE;i++)s+="<span>"+i+"</span>";
  s+='</div><div class="brett" id="brett-'+feld+'">';
  s+='<div class="gitter" id="gitter-'+feld+'"></div>';
+ s+='<div class="wellen"></div>';
+ s+='<div class="schmuck" aria-hidden="true"><span>🐬</span><span>🐚</span><span>🧜‍♀️</span></div>';
  s+='<div class="lage" id="lage-'+feld+'"></div>';
  s+='<div class="linien"></div>';
  s+='<div class="marken" id="marken-'+feld+'"></div>';
+ s+='<div class="effekte" id="effekte-'+feld+'"></div>';
  s+='</div></div></div>';
  return s;
 }
@@ -1564,7 +1829,7 @@ function spriteFuer(schiffe,i){
 }
 
 function zeichneSpiel(){
- const zug=meinZug();
+ const zug=meinZug()&&!pausiert&&!(hs&&hs.verdeckt);
 
  /* Gegnerfeld */
  $("spielFeind").innerHTML=rahmenHtml("feind");
@@ -1572,13 +1837,9 @@ function zeichneSpiel(){
   const v=game.feind&&game.feind.beschuss[y]?game.feind.beschuss[y][x]:0;
   return v===3?"versenkt":v===2?"treffer":v===1?"wasser":"";
  },zug);
- for(let y=0;y<GROESSE;y++){
-  for(let x=0;x<GROESSE;x++){
-   const v=game.feind&&game.feind.beschuss[y]?game.feind.beschuss[y][x]:0;
-   if(v===3)markeSetzen("feind",x,y,"versenkt");
-   else if(v===2)markeSetzen("feind",x,y,"treffer");
-   else if(v===1)markeSetzen("feind",x,y,"wasser");
-  }
+ if(game.feind&&game.feind.beschuss){
+  beschussMarken("feind",game.feind.beschuss);
+  wracksZeichnen("feind",game.feind.beschuss);
  }
  if(zug){
   document.querySelectorAll("#gitter-feind .zelle").forEach(b=>{
@@ -1589,8 +1850,8 @@ function zeichneSpiel(){
  /* Eigenes Feld */
  const schiffe=game.eigen.schiffe||[];
  const eigenZellen={};
- schiffe.forEach(s=>{
-  zellenVon(s.laenge,s.x,s.y,s.waagerecht).forEach(([x,y])=>{eigenZellen[x+","+y]=1;});
+ schiffe.forEach(sc=>{
+  zellenVon(sc.laenge,sc.x,sc.y,sc.waagerecht).forEach(([x,y])=>{eigenZellen[x+","+y]=1;});
  });
  $("spielEigen").innerHTML=rahmenHtml("eigen");
  gitterFuellen("eigen",(x,y)=>{
@@ -1600,25 +1861,27 @@ function zeichneSpiel(){
   if(v===1)return "wasser";
   return eigenZellen[x+","+y]?"belegt":"";
  },false);
- schiffe.forEach((s,i)=>{
-  schiffPlatzieren("eigen",s.x,s.y,s.laenge,s.waagerecht,spriteFuer(schiffe,i),s.versenkt?"versenkt":"gesetztbild");
+ schiffe.forEach(sc=>{
+  schiffPlatzieren("eigen",sc.x,sc.y,sc.laenge,sc.waagerecht,
+   bildFuerLaenge(sc.laenge),sc.versenkt?"versenkt":"gesetztbild");
  });
- for(let y=0;y<GROESSE;y++){
-  for(let x=0;x<GROESSE;x++){
-   const v=game.eigen.beschuss[y]?game.eigen.beschuss[y][x]:0;
-   if(v===2)markeSetzen("eigen",x,y,"treffer");
-   else if(v===3)markeSetzen("eigen",x,y,"versenkt");
-   else if(v===1)markeSetzen("eigen",x,y,"wasser");
-  }
- }
+ beschussMarken("eigen",game.eigen.beschuss);
 
  $("feindName").textContent=(game.feind&&game.feind.name)||"Gegner";
- $("feindInfo").textContent=zug?"Du bist dran – klick auf ein Feld":(botDenkt?"Der Bot zielt …":"Der Gegner ist dran");
+ const zweiSpieler=modus==="zwei"&&!ONLINE;
+ const eigenName=$("eigenName");
+ if(eigenName)eigenName.textContent=zweiSpieler?NAME:"Dein Feld";
+ $("feindInfo").textContent=zweiSpieler
+  ?(zug?NAME+" ist dran – klick auf ein Feld":"Gerät wird übergeben …")
+  :(zug?"Du bist dran – klick auf ein Feld":(botDenkt?"Der Bot zielt …":"Der Gegner ist dran"));
+ $("spiel").classList.toggle("dran",zug);
  const treffer=(game.eigen.beschuss||[]).reduce((n,zeile)=>n+zeile.filter(v=>v>0).length,0);
  $("eigenInfo").textContent="Treffer am eigenen Feld: "+treffer;
 
+ flottenLeiste();
  zieheMeldung();
  spruchPruefen();
+ effekteAusDiff();
  $("note").textContent=game.note||"";
 }
 
@@ -1710,6 +1973,7 @@ function setzenBestaetigen(){
 
 function flotteFertig(){
  if(istFest()||!alleGesetzt())return;
+ if(modus==="zwei"&&!ONLINE){ zweiFertig(); return; }
  if(!ONLINE){ lokalFertig(); return; }
  /* Online entscheidet der Server: Flotte als Absicht melden, Antwort ist der
    neue Stand über aktion("stand"). Bis dahin bleibt der Knopf gesperrt. */
@@ -1721,6 +1985,7 @@ function flotteFertig(){
 
 function schiessen(x,y){
  if(!meinZug()||zugGesendet)return false;
+ if(modus==="zwei"&&!ONLINE)return zweiSchuss(x,y);
  if(!ONLINE)return lokalSchuss(x,y);
  zugGesendet=true;               /* bis der neue Stand da ist, kein zweiter Schuss */
  ereignis("zug",{x:x,y:y});
@@ -1813,8 +2078,456 @@ document.addEventListener("keydown",e=>{
    der Connector die Seite mit start({online:…}) um. */
 stilSetzen(stilWahl,false);
 startFlotteFuellen();
+tonLaden();
 startwahlKnoepfe();
 zeichne();
+/* ============================================================ 28.11.2026
+   Seeschlacht-Ausbau: zwei Spieler am Gerät, Zufallsaufstellung, Flotten-
+   leiste, Trefferstellen, Wellen, Effekte und Ton. Die Mechanik bleibt in
+   botTreffer/botZiel; hier kommt Anzeige und der zweite lokale Modus dazu. */
+
+/* ---------------------------------------------------------- Ton (WebAudio,
+   ohne Dateien: Rauschen und kurze Töne, leise gehalten) */
+function tonBereit(){
+ if(tonKontext)return tonKontext;
+ try{
+  const Bau=window.AudioContext||window.webkitAudioContext;
+  if(!Bau)return null;
+  tonKontext=new Bau();
+ }catch(e){ tonKontext=null; }
+ return tonKontext;
+}
+
+function klang(art){
+ if(!tonAn)return;
+ const ctx=tonBereit(); if(!ctx)return;
+ try{ if(ctx.state==="suspended")ctx.resume(); }catch(e){}
+ const t=ctx.currentTime;
+ function rauschen(dauer,mitte,pegel){
+  const n=Math.max(1,Math.floor(ctx.sampleRate*dauer));
+  const puffer=ctx.createBuffer(1,n,ctx.sampleRate);
+  const daten=puffer.getChannelData(0);
+  for(let i=0;i<n;i++){ const k=1-i/n; daten[i]=(Math.random()*2-1)*k*k; }
+  const q=ctx.createBufferSource(); q.buffer=puffer;
+  const f=ctx.createBiquadFilter(); f.type="bandpass"; f.frequency.value=mitte; f.Q.value=.8;
+  const g=ctx.createGain(); g.gain.value=pegel;
+  q.connect(f); f.connect(g); g.connect(ctx.destination);
+  q.start(t); q.stop(t+dauer);
+ }
+ function ton(von,bis,dauer,pegel,form){
+  /* von/bis in Hz, dauer in Sekunden, pegel 0..1 – alles endliche Zahlen. */
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=form||"sine";
+  o.frequency.setValueAtTime(Math.max(20,von),t);
+  if(bis&&bis!==von&&bis>0)o.frequency.exponentialRampToValueAtTime(Math.max(20,bis),t+dauer);
+  g.gain.setValueAtTime(pegel,t);
+  g.gain.exponentialRampToValueAtTime(.0008,t+dauer);
+  o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+dauer);
+ }
+ try{
+  if(art==="wasser"){ rauschen(.35,1200,.16); ton(320,180,.22,.12,"sine"); }
+  else if(art==="treffer"){ rauschen(.45,700,.22); ton(120,55,.45,.2,"triangle"); ton(260,90,.3,.08,"sine"); }
+  else if(art==="versenkt"){ rauschen(.9,420,.2); ton(190,48,1.25,.22,"sawtooth"); ton(90,40,1.4,.14,"sine"); }
+ }catch(e){}
+}
+
+function tonSchalten(an){
+ tonAn=!!an;
+ const b=$("btnTon");
+ if(b){ b.setAttribute("aria-pressed",tonAn?"true":"false"); b.textContent=tonAn?"♪ Ton an":"♪ Ton aus"; }
+ try{ localStorage.setItem("schiffe-ton",tonAn?"an":"aus"); }catch(e){}
+ if(tonAn)tonBereit();
+}
+
+function tonLaden(){
+ let an=true;
+ try{ if(localStorage.getItem("schiffe-ton")==="aus")an=false; }catch(e){}
+ tonAn=an;
+ const b=$("btnTon");
+ if(b){ b.setAttribute("aria-pressed",an?"true":"false"); b.textContent=an?"♪ Ton an":"♪ Ton aus"; }
+}
+
+/* ---------------------------------------------------------- Effekte */
+
+function bildFuerLaenge(laenge){
+ const s=SCHIFFE.find(f=>f.laenge===laenge);
+ return s?s.bild:"ente";
+}
+
+function fx(feld,x,y,art){
+ const box=$("effekte-"+feld); if(!box)return;
+ const d=document.createElement("div");
+ d.className="fx fx-"+art;
+ d.style.left=(x*10)+"%"; d.style.top=(y*10)+"%";
+ const k=Math.max(4,(box.clientWidth||320)/10);   /* Kästchenkante in px */
+ const ring=document.createElement("span"); ring.className="ring"; d.appendChild(ring);
+ if(art==="wasser"){
+  const b=document.createElement("span"); b.className="blitz"; d.appendChild(b);
+  [[-.9,-1.5],[-.5,-1.9],[-.1,-1.2],[-1.2,-.7]].forEach((w,i)=>{
+   const t=document.createElement("span"); t.className="tropfen";
+   t.style.setProperty("--dx",(w[0]*k*0.45).toFixed(1)+"px");
+   t.style.setProperty("--dy",(w[1]*k*0.45).toFixed(1)+"px");
+   t.style.animationDelay=(i*35)+"ms";
+   d.appendChild(t);
+  });
+ }else if(art==="treffer"){
+  const b=document.createElement("span"); b.className="blitz"; d.appendChild(b);
+  const f=document.createElement("span"); f.className="fontaene"; d.appendChild(f);
+  const r=document.createElement("span"); r.className="rauch"; d.appendChild(r);
+  for(let i=0;i<3;i++){
+   const t=document.createElement("span"); t.className="tropfen";
+   t.style.setProperty("--dx",((i-1)*k*0.4).toFixed(1)+"px");
+   t.style.setProperty("--dy",(-k*(1.2+i*0.2)).toFixed(1)+"px");
+   t.style.animationDelay=(i*60)+"ms";
+   d.appendChild(t);
+  }
+ }else{
+  const b=document.createElement("span"); b.className="blitz"; d.appendChild(b);
+  const r=document.createElement("span"); r.className="rauch"; d.appendChild(r);
+  for(let i=0;i<4;i++){
+   const t=document.createElement("span"); t.className="blase";
+   t.style.left=(20+i*18)+"%";
+   t.style.animationDelay=(i*140)+"ms";
+   d.appendChild(t);
+  }
+ }
+ box.appendChild(d);
+ setTimeout(()=>d.remove(),art==="versenkt"?2100:1250);
+ klang(art);
+}
+
+function schadenSetzen(feld,x,y,tot){
+ const box=$("marken-"+feld); if(!box)return;
+ const d=document.createElement("div");
+ d.className="schaden"+(tot?" tot":"");
+ d.style.left=(x*10)+"%"; d.style.top=(y*10)+"%";
+ d.innerHTML="<i></i>";
+ box.appendChild(d);
+}
+
+/* Alle Beschussmarken eines Feldes: Wasserpunkt, Trefferstelle, Wrackstelle. */
+function beschussMarken(feld,beschuss){
+ if(!beschuss)return;
+ for(let y=0;y<GROESSE;y++){
+  const zeile=beschuss[y]; if(!zeile)continue;
+  for(let x=0;x<GROESSE;x++){
+   const v=zeile[x];
+   if(v===1)markeSetzen(feld,x,y,"wasser");
+   else if(v===2){ markeSetzen(feld,x,y,"treffer"); schadenSetzen(feld,x,y,false); }
+   else if(v===3){ markeSetzen(feld,x,y,"versenkt"); schadenSetzen(feld,x,y,true); }
+  }
+ }
+}
+
+/* Versenkte Schiffe aus dem Beschussbild: zusammenhängende 3er-Läufe. */
+function versenkteAus(beschuss){
+ const out=[];
+ if(!beschuss)return out;
+ const weg={};
+ for(let y=0;y<GROESSE;y++){
+  for(let x=0;x<GROESSE;x++){
+   if(!beschuss[y]||beschuss[y][x]!==3||weg[x+","+y])continue;
+   let w=0;
+   while(x+w<GROESSE&&beschuss[y][x+w]===3&&!weg[(x+w)+","+y])w++;
+   let h=0;
+   while(y+h<GROESSE&&beschuss[y+h]&&beschuss[y+h][x]===3&&!weg[x+","+(y+h)])h++;
+   const waagerecht=w>=h;
+   const laenge=Math.min(Math.max(w,h),5);   /* größtes Schiff ist fünf Felder */
+   for(let i=0;i<laenge;i++){
+    const zx=waagerecht?x+i:x, zy=waagerecht?y:y+i;
+    weg[zx+","+zy]=1;
+   }
+   out.push({x:x,y:y,laenge:laenge,waagerecht:waagerecht});
+  }
+ }
+ return out;
+}
+
+/* Versenkte Schiffe liegen als Wrack auf dem Feld – vollständig sichtbar. */
+function wracksZeichnen(feld,beschuss){
+ const bekannt=feld==="feind"&&game&&game.feind&&game.feind.schiffe;
+ const liste=(bekannt&&bekannt.length)
+  ?bekannt.filter(s=>s.versenkt).map(s=>({x:s.x,y:s.y,laenge:s.laenge,waagerecht:s.waagerecht}))
+  :versenkteAus(beschuss);
+ liste.forEach(s=>{
+  const el=schiffPlatzieren(feld,s.x,s.y,s.laenge,s.waagerecht,bildFuerLaenge(s.laenge),"versenkt");
+  if(!el)return;
+  const marke=s.x+","+s.y+","+s.laenge+","+(s.waagerecht?1:0);
+  if(!untergegangen.has(marke)){
+   untergegangen.add(marke);
+   el.classList.add("untergehend");
+   setTimeout(()=>el.classList.remove("untergehend"),2100);
+  }
+ });
+}
+
+/* Neue Marken seit dem letzten Zeichnen lösen die Effekte aus – egal ob der
+   Schuss lokal, vom Bot oder über den Connector kam. */
+function diffFeuern(feld,vor,jetzt){
+ for(let y=0;y<GROESSE;y++){
+  const a=vor[y], b=jetzt[y];
+  if(!a||!b)continue;
+  for(let x=0;x<GROESSE;x++){
+   const alt=a[x]||0, neu=b[x]||0;
+   if(neu<=alt)continue;
+   if(neu===1)fx(feld,x,y,"wasser");
+   else if(neu===2)fx(feld,x,y,"treffer");
+   else if(neu===3)fx(feld,x,y,"versenkt");
+  }
+ }
+}
+
+function effekteAusDiff(){
+ if(!game||game.status!=="spiel"){ effektStand={eigen:null,feind:null}; return; }
+ const kopie=f=>Array.isArray(f)?f.map(z=>Array.isArray(z)?z.slice():[]):null;
+ const jetzt={eigen:kopie(game.eigen&&game.eigen.beschuss),feind:kopie(game.feind&&game.feind.beschuss)};
+ const vor=effektStand;
+ effektStand=jetzt;
+ if(!vor||!vor.eigen||!vor.feind||!jetzt.eigen||!jetzt.feind)return;
+ diffFeuern("feind",vor.feind,jetzt.feind);
+ diffFeuern("eigen",vor.eigen,jetzt.eigen);
+}
+
+/* ---------------------------------------------------------- Flottenleiste */
+function chipHtml(s,bild,treffer,versenkt,titel){
+ let punkte="";
+ if(s.laenge<=10){
+  for(let k=0;k<s.laenge;k++)punkte+='<i class="'+(k<treffer?"voll":"")+'"></i>';
+ }
+ return '<span class="flotten-chip'+(treffer>0?" getroffen":"")+(versenkt?" weg":"")+
+  '" title="'+escapeHtml(titel||"")+'"><img src="'+BILD[bild]+'" alt="">'+
+  '<span>'+s.laenge+'</span><span class="punkte">'+punkte+'</span></span>';
+}
+
+function flottenLeiste(){
+ const eigenBox=$("flotteEigen"), feindBox=$("flotteFeind");
+ if(!eigenBox||!feindBox)return;
+ const eigen=(game&&game.eigen&&game.eigen.schiffe)||[];
+ eigenBox.innerHTML=eigen.length
+  ?eigen.map(s=>chipHtml(s,bildFuerLaenge(s.laenge),s.treffer||0,!!s.versenkt,schiffName(s.laenge))).join("")
+  :'<span class="flotten-chip">noch keine Flotte</span>';
+ const offen=eigen.filter(s=>!s.versenkt).length;
+ const eigenStand=$("flotteEigenStand");
+ if(eigenStand)eigenStand.textContent=eigen.length?(offen+" von "+SCHIFFE.length+" seebereit"):"";
+ const feindSchiffe=game&&game.feind&&game.feind.schiffe;
+ const feindStand=$("flotteFeindStand");
+ if(feindSchiffe&&feindSchiffe.length){
+  feindBox.innerHTML=feindSchiffe.map(s=>chipHtml(s,bildFuerLaenge(s.laenge),
+   s.versenkt?s.laenge:(s.treffer||0),!!s.versenkt,schiffName(s.laenge))).join("");
+  const weg=feindSchiffe.filter(s=>s.versenkt).length;
+  if(feindStand)feindStand.textContent=weg+" von "+SCHIFFE.length+" versenkt";
+ }else{
+  const b=game&&game.feind?game.feind.beschuss:null;
+  let treffer=0;
+  if(b)for(const z of b)for(const v of z){ if(v===2)treffer++; }
+  const weg=versenkteAus(b).length;
+  feindBox.innerHTML=SCHIFFE.map(s=>'<span class="flotten-chip'+(treffer?" getroffen":"")+
+   '"><img src="'+BILD[s.bild]+'" alt=""><span>'+s.laenge+'</span></span>').join("");
+  if(feindStand)feindStand.textContent=treffer+" Treffer · "+weg+" von "+SCHIFFE.length+" versenkt";
+ }
+}
+
+/* ---------------------------------------------------------- Zufallsaufstellung */
+function zufallSetzen(neuZeichnen){
+ if(!game||game.status!=="setzen"||istFest())return false;
+ const flotte=botFlotteLegen(Math.random);
+ setzung=SCHIFFE.map(()=>null);
+ flotte.forEach(f=>{
+  const i=SCHIFFE.findIndex((s,k)=>s.laenge===f.laenge&&!setzung[k]);
+  if(i>=0)setzung[i]={x:f.x,y:f.y,waagerecht:f.waagerecht};
+ });
+ vorschau=null;
+ const naechstes=setzung.findIndex(s=>!s);
+ auswahl=naechstes>=0?naechstes:auswahl;
+ if(neuZeichnen!==false)zeichneSetzen();
+ return true;
+}
+
+/* ---------------------------------------------------------- Zwei Spieler
+   Beide Flotten liegen nur im Speicher dieser Seite. Vor jedem Wechsel deckt
+   die Übergabe das ganze Brett ab, damit niemand die fremde Aufstellung sieht. */
+function anzahlMarken(feld,art){
+ let n=0;
+ if(!feld)return 0;
+ for(const z of feld){ if(!z)continue; for(const v of z){ if(v===art)n++; } }
+ return n;
+}
+
+function zweiNeuePartie(){
+ aufraeumen();
+ const box=$("uebergabe"); if(box)box.hidden=true;
+ untergegangen=new Set();
+ effektStand={eigen:null,feind:null};
+ modus="zwei";
+ pausiert=false;
+ tick=0;
+ untergegangen=new Set();
+ spruchStand=null;
+ hs={namen:["Spieler 1","Spieler 2"],flotten:[null,null],
+  beschuss:[botFeld(0),botFeld(0)],fertig:[false,false],
+  amZug:0,phase:"setzen",ende:false,verdeckt:false,meldung:"",art:""};
+ setzung=SCHIFFE.map(()=>null);
+ auswahl=0; richtung=true; vorschau=null;
+ zweiAnsichtSetzen();
+ zeichne();
+ if(aufstellung==="zufall")zufallSetzen(false)&&zeichneSetzen();
+}
+
+function zweiAnsichtSetzen(){
+ const i=hs.amZug, j=1-i;
+ ICH=HS_IDS[i]; NAME=hs.namen[i];
+ game={
+  hostId:HS_IDS[0],status:"setzen",zug:-1,zugId:null,meldung:hs.meldung||"",art:hs.art||"",
+  note:"Zwei Spieler am Gerät · "+hs.namen[i]+" stellt auf",
+  sieger:"",
+  spieler:[{id:HS_IDS[i],name:hs.namen[i],ready:true,fertig:hs.fertig[i],treffer:0,versenkt:0},
+           {id:HS_IDS[j],name:hs.namen[j],ready:true,fertig:hs.fertig[j],treffer:0,versenkt:0}],
+  eigen:{fertig:hs.fertig[i],schiffe:hs.flotten[i]||[],beschuss:hs.beschuss[j]},
+  feind:{name:hs.namen[j],beschuss:hs.beschuss[i],schiffe:hs.flotten[j]}
+ };
+}
+
+function zweiAnsichtSpiel(){
+ const i=hs.amZug, j=1-i;
+ ICH=HS_IDS[i]; NAME=hs.namen[i];
+ const meineTreffer=anzahlMarken(hs.beschuss[i],2)+anzahlMarken(hs.beschuss[i],3);
+ const gegnerTreffer=anzahlMarken(hs.beschuss[j],2)+anzahlMarken(hs.beschuss[j],3);
+ const verluste=hs.flotten[j]?hs.flotten[j].filter(s=>s.versenkt).length:0;
+ const eigeneVerluste=hs.flotten[i]?hs.flotten[i].filter(s=>s.versenkt).length:0;
+ game={
+  hostId:HS_IDS[0],status:"spiel",zug:i,zugId:ICH,meldung:hs.meldung||"",art:hs.art||"",
+  note:"Zwei Spieler am Gerät · "+hs.namen[0]+" gegen "+hs.namen[1]+" · "+tick+" Schüsse",
+  sieger:"",
+  spieler:[{id:ICH,name:NAME,ready:true,fertig:true,treffer:meineTreffer,versenkt:verluste},
+           {id:HS_IDS[j],name:hs.namen[j],ready:true,fertig:true,treffer:gegnerTreffer,versenkt:eigeneVerluste}],
+  eigen:{fertig:true,schiffe:hs.flotten[i],beschuss:hs.beschuss[j]},
+  feind:{name:hs.namen[j],beschuss:hs.beschuss[i],schiffe:hs.flotten[j]}
+ };
+}
+
+function uebergabeZeigen(titel,text){
+ if(!hs)return;
+ hs.verdeckt=true;
+ $("uebergabeTitel").textContent=titel||"Gerät übergeben";
+ $("uebergabeText").textContent=text||"";
+ const sym=$("uebergabeSymbol");
+ if(sym)sym.textContent=stilWahl==="maedchen"?"🐚":(stilWahl==="buben"?"⚓":"⚓");
+ $("uebergabe").hidden=false;
+ const b=$("uebergabeWeiter");
+ if(b){ try{ b.focus(); }catch(e){} }
+}
+
+function uebergabeWeiter(){
+ const box=$("uebergabe");
+ if(box)box.hidden=true;
+ if(!hs)return;
+ hs.verdeckt=false;
+ spruchStand=null;
+ if(hs.phase==="spiel"&&!hs.ende)zweiAnsichtSpiel();
+ else if(hs.phase==="setzen")zweiAnsichtSetzen();
+ zeichne();
+}
+
+function zweiFertig(){
+ if(!hs||hs.phase!=="setzen"||!alleGesetzt())return false;
+ const i=hs.amZug;
+ hs.flotten[i]=setzung.map((s,k)=>({x:s.x,y:s.y,laenge:SCHIFFE[k].laenge,
+  waagerecht:!!s.waagerecht,treffer:0,versenkt:false}));
+ hs.fertig[i]=true;
+ aufraeumen();
+ if(!hs.fertig[0]||!hs.fertig[1]){
+  const naechster=1-i;
+  hs.amZug=naechster;
+  setzung=SCHIFFE.map(()=>null);
+  auswahl=0; richtung=true; vorschau=null;
+  hs.meldung="";
+  zweiAnsichtSetzen();
+  zeichne();
+  uebergabeZeigen("Flotte von "+hs.namen[i]+" steht",
+   "Gerät an "+hs.namen[naechster]+" geben. Erst dann auf „Weiter“ tippen.");
+  return true;
+ }
+ hs.phase="spiel";
+ hs.amZug=0;
+ hs.beschuss=[botFeld(0),botFeld(0)];
+ hs.meldung="Beide Flotten sind versteckt. "+hs.namen[0]+" beginnt.";
+ hs.art="";
+ tick=0;
+ zweiAnsichtSpiel();
+ zeichne();
+ uebergabeZeigen("Beide Flotten stehen",
+  "Gerät an "+hs.namen[0]+" geben – "+hs.namen[0]+" schießt zuerst.");
+ return true;
+}
+
+function zweiSchuss(x,y){
+ if(!hs||hs.phase!=="spiel"||hs.ende||pausiert)return false;
+ if(hs.verdeckt)return false;
+ if(!(x>=0&&y>=0&&x<GROESSE&&y<GROESSE))return false;
+ const i=hs.amZug, j=1-i;
+ if(hs.beschuss[i][y][x]!==0)return false;
+ const r=botTreffer(hs.flotten[j],hs.beschuss[i],x,y);
+ tick++;
+ if(r.treffer){
+  if(r.versenkt){
+   hs.meldung="Versenkt: "+schiffName(r.versenkt.laenge)+" auf "+feldName(x,y)+"!";
+   hs.art="versenkt";
+  }else{
+   hs.meldung="Treffer auf "+feldName(x,y)+" – "+hs.namen[i]+" schießt noch einmal.";
+   hs.art="treffer";
+  }
+ }else{
+  hs.meldung="Wasser bei "+feldName(x,y)+".";
+  hs.art="wasser";
+ }
+ if(hs.flotten[j].every(s=>s.versenkt)){ zweiEnde(i); return true; }
+ if(!r.treffer){
+  hs.amZug=j;
+  hs.meldung="Wasser bei "+feldName(x,y)+" – "+hs.namen[j]+" ist dran.";
+  zweiAnsichtSpiel();
+  zeichne();
+  uebergabeZeigen("Wasser bei "+feldName(x,y),
+   hs.namen[j]+" ist dran. Gerät übergeben, dann auf „Weiter“ tippen.");
+  return true;
+ }
+ zweiAnsichtSpiel();
+ zeichne();
+ return true;
+}
+
+function zweiEnde(gewinner){
+ const i=gewinner, j=1-i;
+ hs.phase="ende";
+ hs.ende=true;
+ hs.amZug=i;
+ hs.verdeckt=false;
+ const box=$("uebergabe"); if(box)box.hidden=true;
+ zweiAnsichtSpiel();
+ game.status="ende";
+ game.zugId=null;
+ game.sieger=hs.namen[i];
+ game.meldung=hs.namen[i]+" hat alle fünf Schiffe von "+hs.namen[j]+" versenkt.";
+ game.art="versenkt";
+ game.note="Zwei Spieler am Gerät · "+tick+" Schüsse";
+ zeichne();
+ ereignis("ende",{grund:"gewonnen",punkte:game.spieler[0].versenkt,level:1,levelAnzahl:1,tick:tick});
+}
+
+/* ---------------------------------------------------------- Anschlüsse */
+$("btnZufall").addEventListener("click",()=>{
+ if(istFest())return;
+ zufallSetzen();
+});
+$("btnTon").addEventListener("click",()=>{
+ tonBereit();
+ tonSchalten(!tonAn);
+});
+$("uebergabeWeiter").addEventListener("click",()=>{
+ tonBereit();
+ uebergabeWeiter();
+});
+document.addEventListener("pointerdown",()=>{ tonBereit(); },{once:true});
+
 /* ---------------------------------------------------------- Schnittstelle 2.0.0 */
 
 function kopie(wert){
@@ -1828,7 +2541,7 @@ function antwortOk(zusatz){
 function schnittstelleStart(daten){
  if(daten!==undefined&&daten!==null){
   if(typeof daten!=="object"||Array.isArray(daten))return {ok:false,fehler:"konfiguration-muss-objekt-sein"};
-  const erlaubt=["stufe","stil","online"];
+  const erlaubt=["stufe","stil","online","modus","aufstellung"];
   for(const feld in daten){
    if(!Object.prototype.hasOwnProperty.call(daten,feld))continue;
    if(erlaubt.indexOf(feld)<0)return {ok:false,fehler:"unbekanntes-feld",feld:feld};
@@ -1837,12 +2550,21 @@ function schnittstelleStart(daten){
    if(typeof daten.stufe!=="string")return {ok:false,fehler:"stufe-muss-text-sein"};
    if(BOT_STUFEN.indexOf(daten.stufe)<0)return {ok:false,fehler:"unbekannte-stufe"};
   }
+  if(daten.modus!==undefined){
+   if(typeof daten.modus!=="string"||MODI.indexOf(daten.modus)<0)return {ok:false,fehler:"unbekannter-modus"};
+  }
+  if(daten.aufstellung!==undefined){
+   if(typeof daten.aufstellung!=="string"||AUFSTELLUNGEN.indexOf(daten.aufstellung)<0)return {ok:false,fehler:"unbekannte-aufstellung"};
+  }
  }
  if(daten&&typeof daten.online==="object"&&daten.online!==null){
   /* Connector-Rahmen: Kennung, Name und Gegner kommen von außen. */
   const o=daten.online;
   const marke=typeof o.marke==="string"?o.marke:"";
   ONLINE=true;
+  modus="bot";
+  aufstellung="selbst";
+  hs=null;
   if(typeof o.id==="string"&&o.id)ICH=o.id;
   if(typeof daten.stil==="string")stilSetzen(STILE.indexOf(daten.stil)>=0?daten.stil:"normal",false);
   $("btnStartbildschirm").hidden=true;
@@ -1867,31 +2589,46 @@ function schnittstelleStart(daten){
   }
   return {ok:false,fehler:"aktion-nicht-erlaubt"};
  }
- if(game&&(game.status==="setzen"||game.status==="spiel"))return {ok:false,fehler:"spiel-laeuft"};
-
  if(daten&&typeof daten.stil==="string"){
-  /* Stil von außen: anzeigen, aber die eigene Wahl nicht überschreiben. */
+  /* Stil von außen: anzeigen, aber die eigene Wahl nicht überschreiben.
+     Das geht auch während einer Partie (der Connector schiebt den Stil nach). */
   stilVonAussen=true;
   stilSetzen(STILE.indexOf(daten.stil)>=0?daten.stil:"normal",false);
   startwahlKnoepfe();
  }
- const nurStil=!!daten&&Object.prototype.hasOwnProperty.call(daten,"stil")&&!Object.prototype.hasOwnProperty.call(daten,"stufe");
- if(nurStil)return antwortOk({stil:stilWahl,gestartet:false});
+ const eigenesFeld=feld=>!!daten&&Object.prototype.hasOwnProperty.call(daten,feld);
+ const nurStil=eigenesFeld("stil")&&!eigenesFeld("stufe")&&!eigenesFeld("modus")&&!eigenesFeld("aufstellung");
+ if(nurStil){
+  if(game)zeichne();
+  return antwortOk({stil:stilWahl,gestartet:false});
+ }
+ if(game&&(game.status==="setzen"||game.status==="spiel"))return {ok:false,fehler:"spiel-laeuft"};
+ if(daten&&daten.modus)modus=daten.modus;
+ if(daten&&daten.aufstellung)aufstellung=daten.aufstellung;
+ startwahlKnoepfe();
+ if(modus==="zwei"){
+  zweiNeuePartie();
+  return antwortOk({modus:"zwei",stil:stilWahl,aufstellung:aufstellung,
+   schiffe:BOT_LAENGEN.slice(),gestartet:true});
+ }
  const stufe=daten&&daten.stufe?daten.stufe:lokalStufe;
  lokalNeuePartie(stufe);
- return antwortOk({stufe:stufe,stil:stilWahl,modus:"bot",schiffe:BOT_LAENGEN.slice(),gestartet:true});
+ return antwortOk({stufe:stufe,stil:stilWahl,modus:"bot",aufstellung:aufstellung,
+  schiffe:BOT_LAENGEN.slice(),gestartet:true});
 }
 
 function schnittstelleEinstellungen(){
  return Object.freeze({
   version:"2.0.0",
-  modi:Object.freeze(["bot"]),
-  modus:"bot",
+  modi:Object.freeze(MODI.slice()),
+  modus:modus,
   stufe:lokalStufe,
   stufen:Object.freeze(BOT_STUFEN.slice()),
   stil:stilWahl,
   stile:Object.freeze(STILE.slice()),
   stilWahl:!stilVonAussen,
+  aufstellung:aufstellung,
+  aufstellungen:Object.freeze(AUFSTELLUNGEN.slice()),
   schiffe:Object.freeze(BOT_LAENGEN.slice()),
   feld:GROESSE
  });
@@ -1909,13 +2646,15 @@ function schnittstelleZustand(){
   extras:[],
   startbildschirm:!game,
   online:ONLINE,
-  modus:"bot",
+  modus:ONLINE?"bot":modus,
+  aufstellung:aufstellung,
   stufe:lokalStufe,
   stil:stilWahl,
   stilWahl:!stilVonAussen,
   phase:game?game.status:"start",
   amZug:!!(game&&game.zugId===ICH),
   botDenkt:botDenkt,
+  uebergabe:!!(hs&&hs.verdeckt),
   eigen:game?{fertig:!!game.eigen.fertig,schiffe:kopie(game.eigen.schiffe),beschuss:kopie(game.eigen.beschuss)}:null,
   feind:game?{name:game.feind.name,beschuss:kopie(game.feind.beschuss)}:null,
   treffer:game?game.spieler[0].treffer:0,
@@ -1953,6 +2692,10 @@ function schnittstelleStop(){
  aufraeumen();
  pausiert=false;
  game=null;
+ hs=null;
+ const box=$("uebergabe"); if(box)box.hidden=true;
+ untergegangen=new Set();
+ effektStand={eigen:null,feind:null};
  zeichne();
  return antwortOk();
 }
@@ -2006,10 +2749,16 @@ function schnittstelleAktion(name,daten){
    if(game&&game.status==="ende")ereignis("neu",{});
    return antwortOk({phase:game?game.status:"start"});
   }
-  lokalNeuePartie(lokalStufe);
-  return antwortOk({phase:game?game.status:"start"});
+  if(modus==="zwei")zweiNeuePartie();
+  else lokalNeuePartie(lokalStufe);
+  return antwortOk({phase:game?game.status:"start",modus:modus});
  }
  if(name==="stand")return schnittstelleStand(d);
+ if(name==="ton"){
+  if(typeof d.an!=="boolean")return {ok:false,fehler:"aktion-nicht-erlaubt"};
+  tonSchalten(d.an);
+  return antwortOk({ton:tonAn});
+ }
  /* Online sind nur die Spielhandlungen erlaubt; Start, Pause und Neustart
     gehören dem Connector. */
  if(ONLINE&&["schiff","drehen","vorschau","setzen","fertig","schuss"].indexOf(name)<0){
@@ -2047,6 +2796,10 @@ function schnittstelleAktion(name,daten){
     flotteFertig();
     return antwortOk({phase:game?game.status:"setzen",gesendet:!istFest()});
    }
+   if(modus==="zwei"){
+    if(!zweiFertig())return {ok:false,fehler:"aktion-nicht-erlaubt"};
+    return antwortOk({phase:game.status});
+   }
    if(!lokalFertig())return {ok:false,fehler:"aktion-nicht-erlaubt"};
    return antwortOk({phase:game.status});
   }
@@ -2056,8 +2809,22 @@ function schnittstelleAktion(name,daten){
     if(!schiessen(d.x,d.y))return {ok:false,fehler:"aktion-nicht-erlaubt"};
     return antwortOk({gesendet:true,amZug:game.zugId===ICH});
    }
+   if(modus==="zwei"){
+    if(!zweiSchuss(d.x,d.y))return {ok:false,fehler:"aktion-nicht-erlaubt"};
+    return antwortOk({phase:game.status,amZug:game.zugId===ICH,versenkt:game.spieler[1].versenkt});
+   }
    if(!lokalSchuss(d.x,d.y))return {ok:false,fehler:"aktion-nicht-erlaubt"};
    return antwortOk({phase:game.status,amZug:game.zugId===ICH,versenkt:game.spieler[1].versenkt});
+  }
+  case "zufall":{
+   if(!imSetzen)return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   if(!zufallSetzen())return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   return antwortOk({gesetzt:setzung.filter(Boolean).length});
+  }
+  case "uebergabe":{
+   if(modus!=="zwei"||ONLINE||!hs||!hs.verdeckt)return {ok:false,fehler:"aktion-nicht-erlaubt"};
+   uebergabeWeiter();
+   return antwortOk({phase:hs.phase,amZug:hs.amZug});
   }
   default:
    return {ok:false,fehler:"unbekannte-aktion"};

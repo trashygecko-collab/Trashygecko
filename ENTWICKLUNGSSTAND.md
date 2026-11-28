@@ -5,6 +5,151 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Schiffe versenken: vollständiges Seeschlacht-Spiel
+
+**Auftrag:** `spiele/brettspiele/schiffe/schiffe.html` zum hochwertigen
+Seeschlacht-Spiel ausbauen – Brett, Schiffe, Effekte, drei Stufen, drei
+Stile, vier Spielmodi, Schnittstelle 2.0 erhalten. Vorher gesichert:
+`sicherung/schiffe-2026-11-28/` (beide Ablagen, Doku).
+
+**Was schon da war und blieb:** 10 × 10, Flotte 5/4/3/2/1 mit den fünf
+PNG-Grafiken (als Daten-URI eingebettet), Setzen/Drehen/Ziehen, Bot mit
+`leicht|mittel|schwer`, Schnittstelle 2.0 mit Ereignissen und die
+Online-Brücke des Connectors. Regeln, Trefferlogik (`botTreffer`) und
+Bot-Rechnung (`botZiel`) sind unverändert.
+
+**Neu im Spiel (2.108 → 2.876 Zeilen, 313.882 Bytes):**
+- **Zwei Spieler am Gerät:** eigener Modus `zwei`. Beide stellen
+  nacheinander auf, dazwischen und nach jedem Fehlschuss deckt `#uebergabe`
+  das ganze Brett ab („Gerät an Spieler 2 geben“). Treffer behalten den Zug,
+  Wasser gibt ihn ab, der Name des Spielers steht am eigenen Feld, das
+  Gegnerfeld bekommt bei Zug einen Goldrand.
+- **Zufallsaufstellung:** `aufstellung:"zufall"` beim Start und der Knopf
+  „Zufällig“ in der Aufstellung; Verschieben danach bleibt möglich.
+- **Flottenleiste:** alle fünf eigenen und gegnerischen Schiffe mit
+  Trefferpunkten und „versenkt“, dazu „x von 5 seebereit“ bzw.
+  „x von 5 versenkt“.
+- **Trefferstellen:** ein Rumpfstück mit Brandloch sitzt genau im
+  getroffenen Kästchen (auch auf dem eigenen Feld); versenkte Schiffe
+  liegen als ganzes Wrack mit allen Trefferstellen auf dem Feld.
+- **Effekte:** Wellen über dem Wasser, Spritzer beim Fehlschuss, Fontäne
+  mit Rauch beim Treffer, Untergang mit Blasen und Absacken. Drei
+  verschiedene Töne über WebAudio (kein Abspielmaterial): Wasser, Treffer,
+  Versenken; Schalter „♪ Ton“ (`schiffe-ton` gespeichert).
+- **Grafik:** ab 1000 px stehen beide Felder nebeneinander, die Sprüche
+  dazwischen; darunter bleibt es untereinander. `maedchen` ist pastellrosa
+  mit Delfin, Muschel und Meerjungfrau und hellen Schiffsaufklebern, `buben`
+  ist dunkles Stahlmeer mit roten Kanten und entsättigten Schiffen, `normal`
+  bleibt tiefblau. `prefers-reduced-motion` schaltet alle Animationen ab.
+- **Schnittstelle:** `start({modus,aufstellung})`, `einstellungen()` mit
+  `modi:["bot","zwei"]` und `aufstellungen:["selbst","zufall"]`,
+  `zustand()` mit `aufstellung` und `uebergabe`, Aktionen `zufall`,
+  `uebergabe` und `ton {an}`. Unbekannte Werte antworten
+  `unbekannter-modus` bzw. `unbekannte-aufstellung`, ohne den Zustand zu
+  ändern. `start({stil})` allein stellt weiter nur die Ansicht um – jetzt
+  auch während einer Partie (der Connector schiebt den Stil nach).
+
+**Gemessen (Chromium, eigener HTTP-Server, echter Seitenaufruf):**
+- Schnittstelle: `version` 2.0.0, eingefroren, `whenReady()` ok; `start('x')`
+  → `konfiguration-muss-objekt-sein`, `{foo:1}` → `unbekanntes-feld`,
+  `{modus:'drei'}` → `unbekannter-modus`, `{aufstellung:'x'}` →
+  `unbekannte-aufstellung`, `{stufe:'x'}` → `unbekannte-stufe`,
+  `{stufe:3}` → `stufe-muss-text-sein`, `pause()` ohne Partie →
+  `spiel-laeuft-nicht`, `aktion("quatsch")` → `unbekannte-aktion`,
+  `daten:"x"` → `daten-muessen-objekt-sein`; `zustand()` blieb nach jedem
+  Fehler gleich und liefert Kopien.
+- Bot-Partie: Zufallsaufstellung 5/5, `fertig` → `spiel`. Ganze Partie
+  gespielt: **verloren** nach 91 Schüssen (Bot Leicht), `schiffe:ende` mit
+  `{grund:"verloren",tick:180,…}` genau einmal vor der Ergebniskarte.
+  Sieg-Test (Testhilfe liest die Botflotte nur zum Zielen): 15 Treffer,
+  5 versenkt, „Gewonnen!“, `:ende {grund:"gewonnen"}`. `zustand().feind`
+  enthält nur `name` und `beschuss`, keine Schiffslage.
+- Zwei Spieler: Übergabe nach der Aufstellung (`uebergabe:true`, Schießen
+  gesperrt), Wechsel nach Wasser per Klick („Wasser bei F6“, Spieler 2 am
+  Zug, eigene Flotte von Spieler 2 sichtbar), Treffer behält den Zug
+  („Treffer auf A1 – Spieler 2 schießt noch einmal“), 15 gezielte Treffer →
+  „Spieler 1 hat alle fünf Schiffe von Spieler 2 versenkt“, `:ende` mit
+  `tick:15`.
+- Bot-Stufen: alle drei schießen im Spiel (je 1 Schuss nach dem ersten
+  Fehlschuss). Engine-Messung 400 Partien je Stufe unverändert **94,6 /
+  68,8 / 63,5** Schüsse bis alle fünf versenkt (Trefferquote 15,9 / 23,5 /
+  26,1 %); `botZiel(beschuss,rest,zufall,stufe)` nennt keine Flotte.
+- Drehen: `rotate(90deg)`, gesetztes Fünfer-Schiff 92 × 247 px, Überlappen
+  antwortet `aktion-nicht-erlaubt` und ändert nichts.
+- Effekte: Treffer → 1 × `.schaden` und `.fx-treffer`; Versenken →
+  `.fx-versenkt` und Wracks auf dem Feindfeld.
+- Stile am Brett: Wasser `rgb(12,44,62)` / `rgb(246,195,218)` /
+  `rgb(7,13,18)`, Rahmenverlauf und Schiffsfilter je Stil verschieden;
+  `prefers-reduced-motion` → `animation-name:none`.
+- Darstellung: PC 1280 × 800 → beide Felder **367 × 367** (Kästchen
+  36,5 px), Spruchband 236 px dazwischen, Leiste 1050 px, kein
+  Querscrollen, Seite 1226 px. Handy 390 × 844 → Feld **248 × 248**
+  (Kästchen 24,6 px), Leiste 274 × 112 px, `scrollWidth` 390, Startseite
+  657 px hoch, STARTEN endet bei 660 px (im Bild). 0 Konsolenfehler,
+  `node --check` auf dem ausgelösten Skript grün.
+- Online-Weg mit einer nachgebauten Connector-Brücke (zwei Rahmen, dieselben
+  Aufrufe `start({stil,online})` + `aktion("stand")` und Ereignisse
+  `schiffe:zug|setzen|neu`): kein Startbildschirm, Aufstellen über
+  `schiffe:setzen`, Schuss über `schiffe:zug`, Marken auf beiden Feldern,
+  Zugwechsel nach Wasser, Stilwechsel während der Partie, Wiederbeitritt
+  nach Neuladen stellt Brett, Marken und Phase wieder her, versenktes
+  Schiff als Wrack aus den 3er-Läufen („1 von 5 versenkt“), `stop()`
+  antwortet `{ok:true,ignoriert:true}`. **Grenze:** der echte
+  Connector-Server wurde dafür nicht gestartet (Go-Code unverändert; sein
+  Start öffnet ein Browserfenster), und es gab kein zweites echtes Gerät.
+
+**Sicherung:** `sicherung/schiffe-2026-11-28/` (schiffe.html beider
+Ablagen, SPIELE-SCHNITTSTELLE.md, ENTWICKLUNGSSTAND.md vor dem Umbau).
+
+## 28.11.2026 · Frogger: Schnittstelle 2.0 (`window.Frogger`)
+
+**Auftrag:** Das nächste Spiel nach dem Standard. In `SPIELE-SCHNITTSTELLE.md`
+stand Frogger als einziges Spiel noch unter „Noch ohne öffentliche
+Schnittstelle“.
+
+**Neu:** `spiele/frogger/frogger.html` meldet `window.Frogger`, Version
+**2.0.0**, eingefroren – `version`, `bereit`, `whenReady()`, `start()`,
+`einstellungen()`, `zustand()`, `startbildschirm()`, `stop()`, `pause()`,
+`resume()`, `aktion(name, daten)` und die Ereignisse
+`frogger:bereit|ende|pausiert|weiter`. Aktionen: `richtung {x,y}` (ein Satz,
+nur im Lauf), `start`, `pause`, `weiter`, `neu`. `tick` zählt die Sätze seit
+Partiebeginn, `zustand()` nennt dazu `leben`, `zeit`, `buchten`, `huepfend`,
+`levelAnzahl`, `stil`; `extras` sind die fünf Buchten. Spielmechanik, zwölf
+Level, Grafik, Tasten, Touch, Vollbild und die Speicher (`frogger-rekord`,
+`frogger-erreicht`) sind unverändert; die Datei wuchs von 1.750 auf 1.945
+Zeilen (Schnittstelle, Zähler, vier Ereignisse).
+
+**Stil:** `start({stil})` allein stellt nur die Ansicht um und lässt den
+Startbildschirm stehen (so kann der Connector `TGStil` übergeben, ohne eine
+Partie zu beginnen); ohne Connector gilt weiter `tg-stil`.
+
+**Gemessen (Chromium, 1280×800, eigener HTTP-Server, echter Seitenaufruf):**
+`version` `2.0.0`, `whenReady()` → `{ok:true,version:"2.0.0"}`, eingefroren;
+`start({level:4})` → `{ok:true,level:4,levelAnzahl:12}`; `start('x')` →
+`konfiguration-muss-objekt-sein`, `start({foo:1})` → `unbekanntes-feld`
+(`feld:"foo"`), `start({level:13})` und `{level:"3"}` →
+`level-muss-1-bis-12-sein`, zweiter Start → `spiel-laeuft`, `pause()` ohne
+Partie → `spiel-laeuft-nicht`, `aktion("springen")` → `unbekannte-aktion`,
+Diagonale, `0/0` und fehlende Daten → `aktion-nicht-erlaubt`, `daten:"x"` →
+`daten-muessen-objekt-sein` – der Zustand blieb jedes Mal gleich.
+`start({stil:"maedchen"})` ließ den Startbildschirm stehen (`data-stil`
+`maedchen`, Fläche `rgb(246,228,236)`), zurück auf `klassisch` ebenso.
+Ein Satz über `aktion` setzte `tick` 0 → 1 mit `richtung {0,-1}`, die
+Pfeiltaste danach 1 → 2 (ein Eingabe-Seam). `pause`/`resume` meldeten
+`pausiert:true/false` und feuerten `frogger:pausiert` und `frogger:weiter`
+mit `tick`; drei Sätze in die Straße kosteten alle drei Leben, `frogger:ende`
+kam vor der Ergebniskarte mit
+`{grund:"verloren",punkte:0,level:1,levelAnzahl:12,tick:3}`; `stop()` setzte
+auf die Auswahl zurück (`startbildschirm:true`, kein `:ende`), `aktion("neu")`
+startete Level 1 mit `tick:0`. **0 Konsolenfehler**, `node --check` auf dem
+ausgelösten Skript grün, beide Ablagen byte-gleich (md5 `d6a6f638…`).
+Der Connector wurde nicht angefasst: Frogger ist ein Einzelspieler-Spiel und
+holt sich die Ansicht selbst über `spiele/stil.js`; `SPIEL_API_NAMEN` bleibt
+deshalb unverändert.
+
+**Sicherung:** `sicherung/frogger-2026-11-28/frogger.vor.html` und
+`frogger.documents.vor.html` (beide vorherigen Fassungen).
+
 ## 27.11.2026 · Smileys: 583 im Bestand, 500er-Grenze entfernt, Vorschauen laden in Sicht
 
 **Auftrag:** Der Smiley-Ordner ist gewachsen, die Anleitung sprach noch von

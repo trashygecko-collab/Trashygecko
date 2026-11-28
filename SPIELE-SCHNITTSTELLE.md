@@ -416,9 +416,40 @@ bei seinem eigenen Umbau.
   Seiten im selben Browser beeinflussen sich also gegenseitig. Getrennte
   Schlüssel wären ein eigener Auftrag, weil sie bestehende Spielstände
   betreffen – bis dahin bleibt es so.
-- **Noch ohne öffentliche Schnittstelle:** `spiele/frogger/frogger.html`
-  (Neugestaltung 26.11.2026) – beim nächsten beauftragten Schritt bekommt es
-  `window.Frogger` nach diesem Standard.
+- **Frogger nach dem Standard (28.11.2026):**
+  `spiele/frogger/frogger.html`, Schnittstelle **2.0.0**, eingefroren –
+  `version`, `bereit`, `whenReady()`, `start()`, `einstellungen()`,
+  `zustand()`, `startbildschirm()`, `stop()`, `pause()`, `resume()`,
+  `aktion(name, daten)`; Ereignisse `frogger:bereit|ende|pausiert|weiter`.
+  Das Spiel ruft kein `/api/` auf und liest nichts aus der Adresse. `tick`
+  zählt die ausgeführten Sätze seit Partiebeginn (auf 0 bei `starten`,
+  `levelStarten`, `neuesSpiel`), `richtung` ist der letzte Satz. `zustand()`
+  nennt zusätzlich `leben`, `zeit`, `buchten`, `huepfend`, `levelAnzahl`,
+  `stil`; `extras` sind die fünf Buchten (`bucht-frei`/`bucht-voll`).
+  Ein gesperrter Rand antwortet `{ok:true, sprung:false}` – wie bei der Taste.
+- **Frogger-Aktionen:** `richtung {x,y}` (genau eine Achse ±1, nur im Lauf),
+  `start`, `pause`, `weiter` (auch während der Levelkarte), `neu`. Diagonale,
+  `0/0` und Text antworten mit `aktion-nicht-erlaubt` (Abschnitt 3.2 hat dafür
+  weiterhin keinen eigenen Code, wie bei Pimmel).
+- **Frogger-Start mit Stil:** `start({stil})` allein stellt nur die Ansicht um
+  (`klassisch`, `maedchen`, `buben`; `normal` = `klassisch`) und lässt den
+  Startbildschirm stehen – so kann der Connector die Wahl aus `spiele/stil.js`
+  übergeben, ohne eine Partie zu beginnen. Ohne Connector gilt weiter allein
+  `tg-stil`. `start({level})` startet eine Partie (1–12); außerhalb des
+  Bereichs `level-muss-1-bis-12-sein`, während einer Partie `spiel-laeuft`.
+- **Geprüft (28.11.2026, Chromium 1280×800, eigener HTTP-Server):** Version
+  `2.0.0`, `whenReady()` → `{ok:true,version:'2.0.0'}`, eingefroren; alle
+  Fehlercodes wie oben (`konfiguration-muss-objekt-sein`, `unbekanntes-feld`
+  mit `feld:'foo'`, `spiel-laeuft`, `spiel-laeuft-nicht`, `unbekannte-aktion`,
+  `daten-muessen-objekt-sein`); `start({stil:'maedchen'})` ließ den
+  Startbildschirm stehen (`data-stil` maedchen, Fläche `rgb(246,228,236)`);
+  ein Satz über `aktion` setzte `tick` 0 → 1, die Pfeiltaste danach 1 → 2
+  (derselbe Weg); `pause`/`resume` meldeten `pausiert` und feuerten
+  `frogger:pausiert`/`frogger:weiter` mit `tick`; drei Sätze in die Straße
+  kosteten alle Leben, `frogger:ende` kam mit
+  `{grund:'verloren',punkte:0,level:1,levelAnzahl:12,tick:3}`; `stop()` setzte
+  zurück auf die Auswahl, `aktion('neu')` startete Level 1 mit `tick:0`.
+  0 Konsolenfehler, `node --check` auf dem ausgelösten Skript grün.
 - **Bestehende Online-Spiele** holen Raum und Kennung heute noch aus der
   Adresse (`?room=…&id=…`). Der Standard verbietet das; der Umbau erfolgt
   spielweise mit dem jeweiligen Auftrag, nicht vorher.
@@ -487,8 +518,10 @@ bei seinem eigenen Umbau.
   `zustand().online` meldet den Rahmen.
 - **Schiffe-Aktionen:** `schiff {i}` (0–4), `drehen`, `vorschau {x,y}`,
   `setzen`, `fertig` (nur in der Setzphase), `schuss {x,y}` (nur im Spiel,
-  nur wenn man dran ist, nur unbeschossene Felder), `neu`, `stand`, `start`,
-  `pause`, `weiter` – alle über dieselben internen Funktionen wie Maus,
+  nur wenn man dran ist, nur unbeschossene Felder), `zufall` (Flotte mischen,
+  nur in der Setzphase), `uebergabe` (nur `zwei`, nur bei verdecktem Brett),
+  `ton {an}` (Ton an/aus), `neu`, `stand`, `start`, `pause`, `weiter` – alle
+  über dieselben internen Funktionen wie Maus,
   Ziehen, Touch und die Taste R. Online werden `fertig` und `schuss` zu
   Ereignissen (`schiffe:setzen`, `schiffe:zug`), `stand` nimmt den Stand des
   Connectors an; alles andere antwortet dort `aktion-nicht-erlaubt`. Fehlercodes nach Abschnitt 3.2; falscher Zustand
@@ -523,10 +556,11 @@ bei seinem eigenen Umbau.
   nach `startbildschirm()`, und `einstellungen().stilWahl` meldet `false`.
   Der Stil ist rein lokal, wird nie als Zug gesendet und bleibt im
   Mehrspieler je Spieler getrennt.
-- **Startbildschirm bei Schiffe versenken:** eigener Bereich mit Bot-Stufe,
-  Grafikstil, Grafikvorschau und „Spiel starten“; `einstellungen().modi`
-  nennt nur `["bot"]`. Online gibt es keine Auswahl – dort kommt die Partie
-  vom Connector.
+- **Startbildschirm bei Schiffe versenken:** eigener Bereich mit Spielmodus
+  (gegen Computer / zwei Spieler), Bot-Stufe, Grafikstil, Aufstellung
+  (selbst setzen / zufällig) und „Spiel starten“; `einstellungen().modi`
+  nennt `["bot","zwei"]`. Online gibt es keine Auswahl – dort kommt die
+  Partie vom Connector.
 - **Online über Relay wie Tic-Tac-Toe (26.11.2026):** Der Connector besitzt
   Raum, Kennung, Einladungen und die Abfrage beim Server; die Spielregeln
   liegen im Spiel. Er schiebt Kennung, Name, Gegner und den Stand hinein
@@ -541,6 +575,30 @@ bei seinem eigenen Umbau.
   Zug kommt als Fehlertext zurück und der Stand bleibt unverändert.
   `stop()` und `startbildschirm()` antworten online mit
   `{ok:true, ignoriert:true}`, „Zum Start“ ist dort ausgeblendet.
+- **Seeschlacht-Ausbau (28.11.2026):** Das Spiel ist jetzt ein vollständiges
+  Seeschlacht-Spiel; Regeln, Go-Server und Connector blieben unverändert.
+  **Modi:** `start({modus})` nimmt `bot` und `zwei`, `aufstellung` nimmt
+  `selbst` und `zufall` (Zufall legt die ganze Flotte, Verschieben geht
+  danach weiter). Bei `zwei` stellen beide Spieler nacheinander auf; vor
+  jedem Wechsel deckt `#uebergabe` das ganze Brett ab, nach einem
+  Fehlschuss ebenso. `zustand().uebergabe` meldet die Übergabe,
+  `aktion("uebergabe")` oder der Knopf „Weiter“ zeigt den nächsten Spieler.
+  Treffer behalten den Zug, Wasser gibt ihn ab. Unbekannte Modi antworten
+  `unbekannter-modus`, unbekannte Aufstellungen `unbekannte-aufstellung`;
+  der Zustand bleibt unverändert, `start({stil})` allein stellt weiter nur
+  die Ansicht um (auch während einer Partie).
+  **Anzeige:** Flottenleiste mit allen fünf eigenen und gegnerischen
+  Schiffen (Trefferpunkte, „versenkt“), Trefferstelle als Rumpfstück mit
+  Brandloch genau im getroffenen Kästchen, versenkte Schiffe als ganzes
+  Wrack, Wellen, Spritzer, Fontäne und Untergang, drei verschiedene Töne
+  über WebAudio (kein Abspielmaterial; Schalter `schiffe-ton`, „♪ Ton“).
+  **Stile:** `maedchen` färbt Wasser, Rahmen und Schiffe pastell und zeigt
+  Delfin, Muschel und Meerjungfrau; `buben` zeigt dunkles Stahlmeer, rote
+  Kanten und entsättigte Schiffe; `normal` bleibt tiefblau. Ab 1000 px
+  stehen beide Felder nebeneinander (367 px, 36,5-px-Kästchen), darunter
+  untereinander (390 × 844: 248 px, 24,6-px-Kästchen, kein Querscrollen).
+  **Bot unverändert:** drei Stufen, 400 Partien je Stufe 94,6 / 68,8 / 63,5
+  Schüsse; `botZiel(beschuss,rest,zufall,stufe)` liest keine Schiffslage.
 - **Goldminer nach dem Standard (26.11.2026):**
   `spiele/goldminer/goldminer.html`, Schnittstelle **2.0.0** wie Pimmel –
   `version`, `bereit`, `whenReady()`, `start()`, `einstellungen()`,
