@@ -5,6 +5,42 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · PNG-Smilies auf sichtbaren Inhalt beschnitten
+
+**Auftrag:** Nur statische PNGs im Smilie-Ordner
+(`spiele/connector/smilies`, samt Unterordnern) von vollständig transparenten
+Außenrändern befreien. GIFs, WebP und JPG bleiben unangetastet.
+
+**Bestand:** 342 PNG (davon 332 RGBA, 9 Paletten-PNG mit Transparenz, 1 RGB) in
+sechs Ordnern, zusammen 47.277.290 B; dazu 216 GIF, 24 WebP, 1 JPG, 1 MD – die
+letzten vier Gruppen wurden nicht angefasst.
+
+**Vorgehen:** Rand je Bild über die Alpha-Bounding-Box bestimmt
+(`convert('RGBA')` auch für Palettenbilder, damit deren Transparenz mitzählt),
+dann exakt dieser Bereich ausgeschnitten; kein Skalieren, kein Umfärben, kein
+Neuzeichnen. Backup vorher: `sicherung/smilies-png-2026-11-28/` (247 Dateien).
+Neue Fassungen zuerst separat erzeugt und geprüft, erst danach übernommen.
+
+**Ergebnis:**
+- **247** PNG hatten unnötigen Rand und wurden beschnitten, **95** blieben
+  unverändert (kein Rand). Keine Datei gelöscht, kein Name geändert.
+- **5.715.926 px** Randfläche entfallen – 14,0 % der Fläche dieser 247 Bilder
+  (im Schnitt war nur 86,0 % der Fläche sichtbar). Größte Fälle:
+  `ggll5-03.png` 69,5 %, `love/love (21).png` 58,1 %, `xxx/xxx (01).png` 58,0 %.
+- Dateigröße der 247: **32.856.402 → 28.847.971 B** (−4.008.431 B, **−12,2 %**);
+  alle PNG zusammen **47.277.290 → 43.268.859 B** (−4.008.431 B, −8,5 %).
+
+**Vorher-Nachher-Kontrolle (je Bild automatisch):** geschnittenes Bild ist
+pixelgleich zum Original im erhaltenen Bereich (RGBA-Differenz leer),
+Alpha-Verteilung im erhaltenen Bereich identisch (weiche Kanten bleiben),
+Bildmodus und Palettentransparenz erhalten, Maße exakt die Bounding-Box, keine
+Datei unter 8 px Kante. `lesen`/`load` ohne Warnung.
+
+**Nicht angefasst:** alle GIFs (auch animierte), WebP, JPG, die `.md`,
+Dateinamen, Reihenfolge, die Android-Bauartefakte unter
+`spiele/android/app/src/main/assets/www` und die Smiley-Liste im Connector
+(`smileyListe()` liest den Ordner; es kam nichts hinzu und nichts weg).
+
 ## 28.11.2026 · Dufte Hundert ersatzlos entfernt
 
 **Auftrag:** Das Würfelspiel „Dufte Hundert“ vollständig aus TrashyGecko
