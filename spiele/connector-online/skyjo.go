@@ -42,7 +42,10 @@ type SkyjoGame struct {
 	LastTurn    int       `json:"lastTurn"`
 	// StartNext ist der Spieler, der die nächste Runde beginnt – laut Regel
 	// der, der die letzte Runde beendet hat (-1 = keine Vorgabe).
-	StartNext   int       `json:"startNext"`
+	StartNext int `json:"startNext"`
+	// NextReady merkt, wer die nächste Runde schon bestätigt hat. Die Runde
+	// beginnt erst, wenn alle bestätigt haben; der Bot gilt immer als bereit.
+	NextReady   [2]bool   `json:"nextReady"`
 	Round       int       `json:"round"`
 	RoundScores [2]int    `json:"roundScores"`
 	Totals      [2]int    `json:"totals"`
@@ -92,6 +95,7 @@ func skyjoResetRound(g *SkyjoGame) {
 	g.DrawnSource = ""
 	g.Finisher = -1
 	g.LastTurn = -1
+	g.NextReady = [2]bool{}
 	g.RoundScores = [2]int{}
 	g.RoundWinner = ""
 	g.Note = "Decke zwei Karten auf."
@@ -321,6 +325,13 @@ func skyjoFinishRound(g *SkyjoGame) {
 	g.Note = "Runde " + skyjoNumber(g.Round) + " beendet – " + skyjoRoundText(g)
 }
 
+// skyjoNextRound beginnt die nächste Runde. Aufgerufen wird es nur, wenn
+// alle Spieler bestätigt haben – nie von selbst.
+func skyjoNextRound(g *SkyjoGame) {
+	g.Round++
+	skyjoResetRound(g)
+}
+
 func skyjoNumber(n int) string {
 	return strconv.Itoa(n)
 }
@@ -480,8 +491,18 @@ func (g *SkyjoGame) skyjoAktion(me int, akt string, index int, source string) (i
 		if g.Phase != "between" || g.Status != "active" {
 			return http.StatusConflict, "Eine neue Runde ist gerade nicht möglich."
 		}
-		g.Round++
-		skyjoResetRound(g)
+		// Nicht einer allein: Jeder bestätigt die nächste Runde, erst dann
+		// beginnt sie. Der Bot gilt als bereit, sonst wartete man ewig.
+		g.NextReady[me] = true
+		if b := skyjoBotIndex(g); b >= 0 {
+			g.NextReady[b] = true
+		}
+		if g.NextReady[0] && g.NextReady[1] {
+			skyjoNextRound(g)
+			break
+		}
+		g.Note = skyjoName(g, me) + " möchte weiter – " +
+			skyjoName(g, 1-me) + " bestätigt noch."
 
 	case "start":
 		// Kurzer Anstoß, damit die Anzeige nach dem Beitritt stimmt.
@@ -645,6 +666,21 @@ func skyjoHandler(w http.ResponseWriter, r *http.Request) {
 			mu.Unlock()
 			http.Error(w, meldung, status)
 			return
+		}
+		// Ist der andere Platz nicht mehr im Raum (Zeit abgelaufen, Tab zu),
+		// soll der verbliebene Spieler die nächste Runde nicht blockieren.
+		if action == "nextround" && game.Phase == "between" && game.Status == "active" {
+			other := 1 - me
+			otherID := game.RedID
+			if other == 1 {
+				otherID = game.BlueID
+			}
+			if _, da := room.Players[otherID]; !da {
+				game.NextReady[other] = true
+				if game.NextReady[0] && game.NextReady[1] {
+					skyjoNextRound(game)
+				}
+			}
 		}
 	default:
 		mu.Unlock()

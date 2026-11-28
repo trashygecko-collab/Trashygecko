@@ -35,7 +35,7 @@ func skyjoBotIndex(g *SkyjoGame) int {
 }
 
 // skyjoBotAmZug sagt, ob der Bot jetzt etwas tun muss. Zwischen den Runden
-// darf jeder die nächste anstoßen – das übernimmt der Bot nach kurzer Pause.
+// nie: Die Abrechnung bleibt stehen, bis der Mensch „Nächste Runde“ drückt.
 func skyjoBotAmZug(g *SkyjoGame, me int) bool {
 	if g == nil || g.Status != "active" || me < 0 {
 		return false
@@ -45,8 +45,6 @@ func skyjoBotAmZug(g *SkyjoGame, me int) bool {
 		return g.SetupPlayer == me
 	case "play", "reveal":
 		return g.Current == me
-	case "between":
-		return true
 	}
 	return false
 }
@@ -59,12 +57,7 @@ func skyjoBotTreiben(g *SkyjoGame, jetzt time.Time) bool {
 		return false
 	}
 	if g.BotFrist.IsZero() {
-		warte := botWartezeit(g.BotStufe)
-		if g.Phase == "between" {
-			// Erst soll der Mensch die Abrechnung sehen.
-			warte *= 2
-		}
-		g.BotFrist = jetzt.Add(warte)
+		g.BotFrist = jetzt.Add(botWartezeit(g.BotStufe))
 		return false
 	}
 	if jetzt.Before(g.BotFrist) {
@@ -74,14 +67,12 @@ func skyjoBotTreiben(g *SkyjoGame, jetzt time.Time) bool {
 	return skyjoBotSchritt(g, me)
 }
 
-// skyjoBotSchritt macht genau einen Schritt: aufdecken, ziehen, tauschen oder
-// die nächste Runde anstoßen.
+// skyjoBotSchritt macht genau einen Schritt: aufdecken, ziehen oder tauschen.
+// Die nächste Runde stößt nur der Mensch an.
 func skyjoBotSchritt(g *SkyjoGame, me int) bool {
 	switch g.Phase {
 	case "setup":
 		return skyjoBotTu(g, me, "reveal", skyjoBotVerdeckt(g, me), "")
-	case "between":
-		return skyjoBotTu(g, me, "nextround", 0, "")
 	case "reveal":
 		return skyjoBotTu(g, me, "opencard", skyjoBotAufdecken(g, me), "")
 	case "play":
