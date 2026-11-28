@@ -662,6 +662,9 @@ function istFest(){ return !!(game&&game.eigen&&game.eigen.fertig); }
 /* ---------------------------------------------------------- Bot-Engine
    Reine Rechnung ohne DOM. Der Abschnitt zwischen den beiden Marken wird von
    der Prüfung in arbeit/tmp/bot_pruefung.js unverändert ausgeführt. */
+/* „1 Schuss“, „3 Schüsse“ – die Infozeile soll nicht stolpern. */
+function schussZahl(n){ return n===1 ? "1 Schuss" : n+" Schüsse"; }
+
 /* --- Bot-Engine Anfang --- */
 const BOT_LAENGEN=[5,4,3,2,1];
 const BOT_STUFEN=["leicht","mittel","schwer"];
@@ -1047,7 +1050,7 @@ function lokalEnde(gewonnen){
  game.sieger=gewonnen?(game.spieler[0].name):game.spieler[1].name;
  game.meldung=gewonnen?"Alle fünf Schiffe des Bots sind versenkt.":"Der Bot hat deine ganze Flotte versenkt.";
  game.art=gewonnen?"versenkt":"wasser";
- game.note="Partie gegen "+game.spieler[1].name+" · "+tick+" Schüsse";
+ game.note="Partie gegen "+game.spieler[1].name+" · "+schussZahl(tick);
  zeichne();
  ereignis("ende",{
   grund:gewonnen?"gewonnen":"verloren",
@@ -2396,7 +2399,7 @@ function zweiAnsichtSpiel(){
  const eigeneVerluste=hs.flotten[i]?hs.flotten[i].filter(s=>s.versenkt).length:0;
  game={
   hostId:HS_IDS[0],status:"spiel",zug:i,zugId:ICH,meldung:hs.meldung||"",art:hs.art||"",
-  note:"Zwei Spieler am Gerät · "+hs.namen[0]+" gegen "+hs.namen[1]+" · "+tick+" Schüsse",
+  note:"Zwei Spieler am Gerät · "+hs.namen[0]+" gegen "+hs.namen[1]+" · "+schussZahl(tick),
   sieger:"",
   spieler:[{id:ICH,name:NAME,ready:true,fertig:true,treffer:meineTreffer,versenkt:verluste},
            {id:HS_IDS[j],name:hs.namen[j],ready:true,fertig:true,treffer:gegnerTreffer,versenkt:eigeneVerluste}],
@@ -2508,7 +2511,7 @@ function zweiEnde(gewinner){
  game.sieger=hs.namen[i];
  game.meldung=hs.namen[i]+" hat alle fünf Schiffe von "+hs.namen[j]+" versenkt.";
  game.art="versenkt";
- game.note="Zwei Spieler am Gerät · "+tick+" Schüsse";
+ game.note="Zwei Spieler am Gerät · "+schussZahl(tick);
  zeichne();
  ereignis("ende",{grund:"gewonnen",punkte:game.spieler[0].versenkt,level:1,levelAnzahl:1,tick:tick});
 }

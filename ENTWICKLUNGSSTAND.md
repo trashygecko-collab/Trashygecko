@@ -18,7 +18,7 @@ PNG-Grafiken (als Daten-URI eingebettet), Setzen/Drehen/Ziehen, Bot mit
 Online-Brücke des Connectors. Regeln, Trefferlogik (`botTreffer`) und
 Bot-Rechnung (`botZiel`) sind unverändert.
 
-**Neu im Spiel (2.108 → 2.876 Zeilen, 313.882 Bytes):**
+**Neu im Spiel (2.108 → 2.879 Zeilen, 314.033 Bytes):**
 - **Zwei Spieler am Gerät:** eigener Modus `zwei`. Beide stellen
   nacheinander auf, dazwischen und nach jedem Fehlschuss deckt `#uebergabe`
   das ganze Brett ab („Gerät an Spieler 2 geben“). Treffer behalten den Zug,
@@ -100,8 +100,8 @@ Bot-Rechnung (`botZiel`) sind unverändert.
 
 **Sicherung:** `sicherung/schiffe-2026-11-28/` (schiffe.html beider
 Ablagen, SPIELE-SCHNITTSTELLE.md, ENTWICKLUNGSSTAND.md vor dem Umbau).
-**Commit:** `9a05ed8` auf `main`, beide Ablagen gleich (md5
-`3481acab7e95a9592b042b915df7b55f`).
+**Ablagen:** beide gleich (2.879 Zeilen, 314.033 Bytes, md5 der
+LF-Fassung `9caf5195d376dbfcba0c5578a8761f16`).
 
 ## 28.11.2026 · Frogger: Schnittstelle 2.0 (`window.Frogger`)
 
