@@ -5,6 +5,56 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Dufte Hundert ersatzlos entfernt
+
+**Auftrag:** Das Würfelspiel „Dufte Hundert“ vollständig aus TrashyGecko
+nehmen – Spieldateien, Karte, Listen, Connector- und Bot-Einträge. Kein
+Ersatz, keine leeren Kategorien. Vorher gesichert:
+`sicherung/dufte-100-2026-11-28/` (17 Dateien, gespiegelte Pfade).
+
+**Entfernt:**
+- Spielseite `spiele/wuerfelspiele/dufte-hundert.html` und Regelmodul
+  `spiele/wuerfelspiele/spiele/dufte-hundert.js` (einzige Fassung; eigene
+  Grafiken hatte das Spiel nicht, es zeichnet im gemeinsamen Rahmen).
+- Übersicht `spiele/spiele.html`: Karte und alle vier Zählungen der Kategorie
+  Würfelspiele (**20 → 19**: ARIA-Label, Kopfzahl, Kachel „19 Spiele“,
+  „Alle 19 ansehen“); insgesamt 101 Karten, Brettspiele unverändert 22.
+- Sammlung `spiele/wuerfelspiele/index.html`: die Karte (**14 → 13**).
+- Suche `spiele/spieldaten.js`: Listeneintrag und Kurzbeschreibung.
+- Mehrspieler `spiele/multiplayer-register.js`: der Tisch-Eintrag.
+- `spiele/ergebnis-texte-uebersicht.md`: aus der Liste der Spiele mit
+  gemeinsamem Hook (13 Spiele).
+- Connector, beide Ablagen byte-gleich: die drei Tabellen in `angebot.go`
+  (Kategorie, Name, Bot-fähig), der Eintrag in `wuerfelKatalog`
+  (`wuerfel.go`), der Eintrag in `BOTS_SPIELE` (`connector.html`);
+  Zählkommentare 14 → 13.
+- Testtreiber (lokal, nicht im Repo): `spielzuege_test.go` (Klickfolge) und
+  `tabellen_test.go` (Katalogtabelle).
+
+**Erhalten:** die gemeinsame Würfelmaschine (`rahmen.js`, `online.js`,
+`TGW.wurfDannWahl`), Würfelgrafiken und alle 12 übrigen Spiele der Sammlung;
+die Treffer in `lob.js`, `pech.js`, `connector/lob.txt` und `pech.txt` sind
+das Wort „dufte“ in Sprüchen und bleiben.
+
+**Gemessen (Chromium, echter Seitenaufruf, lokal 8791):**
+- `spiele.html`: **19** Karten in der Würfelkategorie, Kopfzahl 19, Kachel
+  „19 Spiele“, „Alle 19 ansehen“, ARIA „Würfelspiele – 19 Spiele“; kein
+  „Dufte“ im Dokument; Brettspiele weiter 22, 101 Karten insgesamt.
+- `spiele/wuerfelspiele/index.html`: **13** Karten, kein Dufte-Link.
+- `dufte-hundert.html` → **404**; Der Turm, Eins bis Sechzehn und Jule laden
+  (200), keine JS-Fehler.
+- `node --check` auf `spieldaten.js` und `multiplayer-register.js` grün;
+  `gofmt -l` leer; `go build ./...` grün; `go test -run
+  'Angebot|Tabellen|Spielzuege|Wuerfel|Bots'` ok (11,5 s / 11,1 s) in
+  `connector` und `connector-online`.
+- Projektweite Textsuche nach „dufte-hundert“/„Dufte Hundert“/„Dufte100“ in
+  `spiele/`: keine Treffer außerhalb der Android-Bauartefakte, der Sicherung
+  und alter Binaries.
+
+**Nicht angefasst:** die erzeugten Android-Kopien unter
+`spiele/android/app/src/main/assets/www` samt `katalog.json`
+(gitignoriert, Bauartefakt), die APKs und die Playwright-Schnappschüsse.
+
 ## 28.11.2026 · Auf nach Boston ersatzlos entfernt
 
 **Auftrag:** Das Würfelspiel „Auf nach Boston“ (Brettspiel-Ablage, Kategorie

@@ -59,7 +59,6 @@ window.TGSpieldaten = (function () {
 
     /* --- Würfelspiel-Sammlung (lokal am selben Gerät) ------------------- */
     ["Der Turm", "wuerfelspiele/der-turm.html", "wuerfel", "lokal zwei computer"],
-    ["Dufte Hundert", "wuerfelspiele/dufte-hundert.html", "wuerfel", "lokal zwei computer"],
     ["Eins bis Sechzehn", "wuerfelspiele/eins-bis-sechzehn.html", "wuerfel", "lokal zwei computer"],
     ["Fenster würfeln", "wuerfelspiele/fenster.html", "wuerfel", "lokal zwei computer"],
     ["Gestrichene Zwölf", "wuerfelspiele/gestrichene-zwoelf.html", "wuerfel", "lokal zwei computer"],
@@ -160,7 +159,6 @@ window.TGSpieldaten = (function () {
     "brettspiele/pig/pig.html": "Würfeln und sammeln – aber vor der Eins aufhören.",
     "brettspiele/shipcrew/shipcrew.html": "Schiff, Kapitän, Crew – dann 500 Punkte sammeln.",
     "wuerfelspiele/der-turm.html": "Eigene Stichzahl treffen und Steine aus dem Turm holen.",
-    "wuerfelspiele/dufte-hundert.html": "Pasch wird multipliziert, sonst addiert – Ziel 100.",
     "wuerfelspiele/eins-bis-sechzehn.html": "Die Zahlen 1 bis 16 aus drei Würfeln bilden.",
     "wuerfelspiele/fenster.html": "Nur Zweien zählen – eine 1, zwei 4, drei 9.",
     "wuerfelspiele/gestrichene-zwoelf.html": "Summen von 2 bis 12 würfeln und streichen.",

@@ -73,8 +73,6 @@ window.TGMultiplayer = {
 
     { "id": "der-turm", "name": "Der Turm", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/der-turm.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Jeder hat eine eigene Stichzahl; Treffer holen Steine aus dem Turm – oder geben sie weiter." },
-    { "id": "dufte-hundert", "name": "Dufte Hundert", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/dufte-hundert.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
-      "text": "Zwei Würfel: Pasch wird multipliziert, sonst addiert. Wer zuerst 100 Punkte hat, gewinnt." },
     { "id": "eins-bis-sechzehn", "name": "Eins bis Sechzehn", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/eins-bis-sechzehn.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Bilde die Zahlen 1 bis 16 aus drei Würfeln – erst vorwärts, dann rückwärts." },
     { "id": "fenster", "name": "Fenster würfeln", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/fenster.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
