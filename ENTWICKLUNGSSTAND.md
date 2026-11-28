@@ -5,6 +5,49 @@ Was getestet wurde, gehört zusätzlich in [`PRUEFBERICHT-ANDROID.md`](PRUEFBERI
 
 ---
 
+## 28.11.2026 · Die böse Drei ersatzlos entfernt
+
+**Auftrag:** Das Würfelspiel „Die böse Drei“ vollständig aus TrashyGecko
+nehmen – Dateien, Karten, Listen, Connector-Einträge, Registrierungen. Kein
+Ersatz, keine leeren Karten. Vorher gesichert:
+`sicherung/boese-drei-2026-11-28/` (18 Dateien, beide Ablagen).
+
+**Entfernt:**
+- Spiel und Regelmodul: `spiele/wuerfelspiele/boese-drei.html`,
+  `spiele/wuerfelspiele/spiele/boese-drei.js` – nur diese eine Fassung, keine
+  weiteren Versionen außerhalb der Bauartefakte.
+- Übersicht `spiele/spiele.html`: die Karte und alle vier Zählungen der
+  Kategorie (Würfelspiele **23 → 22**, ARIA-Label, Kachel „22 Spiele“,
+  „Alle 22 ansehen“).
+- Sammlung `spiele/wuerfelspiele/index.html`: die Karte (**16 → 15**).
+- Suche `spiele/spieldaten.js`: Listeneintrag und Kurzbeschreibung.
+- Mehrspieler `spiele/multiplayer-register.js`: der Tisch-Eintrag.
+- Connector (beide Ablagen byte-gleich): die drei Tabellen in `angebot.go`
+  (Kategorie, Name, online), der Eintrag in `wuerfelKatalog` (`wuerfel.go`) und
+  in `BOTS_SPIELE` (`connector.html`); Zählkommentare 16 → 15.
+- `spiele/ergebnis-texte-uebersicht.md`: Kennung in der Liste (15 Spiele).
+- Tests (lokal, nicht im Repo): `spielzuege_test.go`, `tabellen_test.go`.
+
+**Erhalten:** die gemeinsame Würfelmaschine (`wuerfelspiele/rahmen.js`,
+`online.js`, `TGW.wurfDannWahl`, `TGW.plusMinusRunden`), die Würfelgrafiken und
+alle 14 übrigen Würfelspiele; das Modul hatte keine eigenen Grafiken.
+
+**Gemessen (Chromium, echter Seitenaufruf):**
+- `spiele.html`: **22** Karten in der Würfelkategorie, Kopfzahl 22, Kachel
+  „22 Spiele“, „Alle 22 ansehen“; kein „böse Drei“/`boese-drei` mehr im Dokument.
+- `spiele/wuerfelspiele/index.html`: **15** Karten, kein Böse-Drei-Link.
+- `boese-drei.html` → **404**; „Dufte Hundert“ lädt normal (Titel, Würfelknopf);
+  keine JS-Fehler.
+- `node --check` auf `spieldaten.js`, `multiplayer-register.js` grün;
+  `gofmt -l` auf allen geänderten Go-Dateien leer; `go build ./...` und
+  `go test -run 'Angebot|Tabellen|Spielzuege|Wuerfel|Bots' ./...` in
+  `connector` (**12,0 s**) und `connector-online` (**11,6 s**) grün.
+
+**Nicht angefasst:** die erzeugten Android-Kopien unter
+`spiele/android/app/src/main/assets/www` samt `katalog.json` (gitignoriert,
+Bauartefakt), die APKs und die Playwright-Schnappschüsse in
+`spiele/tests/...-snapshots`.
+
 ## 28.11.2026 · Die böse Eins ersatzlos entfernt
 
 **Auftrag:** Das Würfelspiel „Die böse Eins“ vollständig aus TrashyGecko

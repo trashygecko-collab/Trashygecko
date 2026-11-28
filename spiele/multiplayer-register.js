@@ -73,8 +73,6 @@ window.TGMultiplayer = {
     { "id": "pig", "name": "Pig", "kat": "wuerfel", "pfad": "/spiele/brettspiele/pig/pig.html", "api": "pig", "min": 2, "max": 4, "art": "tisch",
       "text": "Würfeln und sammeln, aber vor der Eins aufhören – sonst ist die Runde weg." },
 
-    { "id": "boese-drei", "name": "Die böse Drei", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/boese-drei.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
-      "text": "Würfle so oft du willst und sichere mit „Halten“ – eine Drei löscht den ganzen Zug." },
     { "id": "der-turm", "name": "Der Turm", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/der-turm.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
       "text": "Jeder hat eine eigene Stichzahl; Treffer holen Steine aus dem Turm – oder geben sie weiter." },
     { "id": "dufte-hundert", "name": "Dufte Hundert", "kat": "wuerfel", "pfad": "/spiele/wuerfelspiele/dufte-hundert.html", "api": "wuerfel", "min": 2, "max": 6, "art": "tisch",
